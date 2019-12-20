@@ -189,7 +189,7 @@ integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(use_probl
 L2error_velocityBA[level] = sqrt(abs(sum(integral4cells[:])));
 println("L2_velocity_error_BA = " * string(L2error_velocityBA[level]));
 
-plot
+#plot
 if (show_plots) && (level == maxlevel)
     pygui(true)
     
