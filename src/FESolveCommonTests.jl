@@ -1,6 +1,6 @@
 module FESolveCommonTests
 
-
+using ExtendableSparse
 using SparseArrays
 using LinearAlgebra
 using FESolveCommon
@@ -208,20 +208,21 @@ function TimeStiffnessMatrixP1()
   ii = Vector{Int64}(undef, (dim+1)^2*ncells);
   jj = Vector{Int64}(undef, (dim+1)^2*ncells);
   
-  println("\n Stiffness-Matrix with exact gradients (fast version)");
-  @time FESolveCommon.global_stiffness_matrix!(aa,ii,jj,grid);
-  M1 = sparse(ii,jj,aa);
-  show(size(M1))
-  println("\n Stiffness-Matrix with exact gradients");
+  println("\n Stiffness-Matrix with exact gradients and SparseArrays");
   FE = FiniteElements.get_P1FiniteElement(grid,false);
   @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
-  M2 = sparse(ii,jj,aa);
-  show(norm(M1-M2))
-  println("\n Stiffness-Matrix with ForwardDiff gradients");
+  @time M = sparse(ii,jj,aa);
+  println("\n Stiffness-Matrix with exact gradients and ExtendableSparse");
+  M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+  @time FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
+  @time ExtendableSparse.flush!(M2)
+  @time show(norm(M2))
+  @time show(norm(M-M2))
+  println("\n Stiffness-Matrix with ForwardDiff gradients and SparseArray");
   FE = FiniteElements.get_P1FiniteElement(grid,true);
   @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
   M3 = sparse(ii,jj,aa);
-  show(norm(M1-M3))
+  show(norm(M-M3))
 end
 
 

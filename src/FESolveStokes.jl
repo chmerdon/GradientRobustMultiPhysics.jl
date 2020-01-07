@@ -2,6 +2,7 @@ module FESolveStokes
 
 export solveStokesProblem!
 
+using ExtendableSparse
 using SparseArrays
 using LinearAlgebra
 using BenchmarkTools
@@ -113,6 +114,78 @@ function StokesOperator4FE!(aa, ii, jj, nu::Real, FE_velocity::FiniteElements.Fi
 end
 
 
+
+function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_velocity::FiniteElements.FiniteElement, FE_pressure::FiniteElements.FiniteElement, pressure_diagonal = 1e-12)
+
+    grid = FE_velocity.grid;
+    ncells::Int = size(grid.nodes4cells,1);
+    xdim::Int = size(grid.coords4nodes,2);
+    ndofs4cell_velocity::Int = size(FE_velocity.dofs4cells,2);
+    ndofs4cell_pressure::Int = size(FE_pressure.dofs4cells,2);
+    ndofs_velocity = FE_velocity.ndofs;;
+    ndofs4cell::Int = ndofs4cell_velocity+ndofs4cell_pressure;
+    celldim::Int = size(grid.nodes4cells,2);
+    
+    T = eltype(grid.coords4nodes);
+    quadorder = maximum([FE_pressure.polynomial_order + FE_velocity.polynomial_order-1, 2*(FE_velocity.polynomial_order-1)]);
+    qf = QuadratureFormula{T}(quadorder, xdim);
+
+    # pre-allocate memory for gradients
+    velogradients4cell = Array{Array{T,1}}(undef,ndofs4cell_velocity);
+    pressure4cell = Array{T,1}(undef,ndofs4cell_pressure);
+    for j = 1 : ndofs4cell_velocity
+        velogradients4cell[j] = zeros(T,xdim*xdim);
+    end
+    for j = 1 : ndofs4cell_pressure
+        pressure4cell[j] = 0.0;
+    end
+    
+    # quadrature loop
+    xref_mask = zeros(T,xdim)
+    trace_indices = 1:(xdim+1):xdim^2
+    for i in eachindex(qf.w)
+      for j=1:xdim
+        xref_mask[j] = qf.xref[i][j];
+      end
+      curindex = 0
+      for cell = 1 : ncells
+        # evaluate gradients at quadrature point
+        for dof_i = 1 : ndofs4cell_velocity
+            FE_velocity.bfun_grad![dof_i](velogradients4cell[dof_i],xref_mask,grid,cell);
+        end    
+        # evaluate pressures at quadrature point
+        for dof_i = 1 : ndofs4cell_pressure
+            pressure4cell[dof_i] = FE_pressure.bfun_ref[dof_i](xref_mask,grid,cell);
+        end
+        
+        for dof_i = 1 : ndofs4cell_velocity
+            # stiffness matrix for velocity
+            for dof_j = 1 : ndofs4cell_velocity
+                for k = 1 : xdim*xdim
+                    A[FE_velocity.dofs4cells[cell,dof_i],FE_velocity.dofs4cells[cell,dof_j]] += nu*(velogradients4cell[dof_i][k] * velogradients4cell[dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
+                end
+            end
+        end    
+        # divvelo x pressure matrix
+        for dof_i = 1 : ndofs4cell_velocity
+            for dof_j = 1 : ndofs4cell_pressure
+                for k = 1 : length(trace_indices)
+                    A[FE_velocity.dofs4cells[cell,dof_i],ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j]] -= (velogradients4cell[dof_i][trace_indices[k]] * pressure4cell[dof_j] * qf.w[i] * grid.volume4cells[cell]);
+                    A[ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j],FE_velocity.dofs4cells[cell,dof_i]] -= (velogradients4cell[dof_i][trace_indices[k]] * pressure4cell[dof_j] * qf.w[i] * grid.volume4cells[cell]);
+                end
+            end
+        end  
+        # pressure x pressure block (empty)
+        for dof_i = 1 : ndofs4cell_pressure, dof_j = 1 : ndofs4cell_pressure
+            if (dof_i == dof_j)
+                A[ndofs_velocity + FE_pressure.dofs4cells[cell,dof_i],ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j]] = pressure_diagonal;
+            end    
+        end
+      end  
+    end
+end
+
+
 # scalar functions times P1 basis functions
 function rhs_integrand4Stokes!(f!::Function,FE::FiniteElements.FiniteElement,dim)
     cache = zeros(eltype(FE.grid.coords4nodes),dim)
@@ -149,8 +222,10 @@ function assembleStokesSystem(nu::Real, volume_data!::Function,FE_velocity::Fini
     jj = Vector{Int64}(undef, ndofs4cell^2*ncells);
     
     println("assembling Stokes matrix for FE pair " * FE_velocity.name * " x " * FE_pressure.name * "...");
-    StokesOperator4FE!(aa,ii,jj,nu,FE_velocity,FE_pressure);
-    A = sparse(ii,jj,aa,ndofs,ndofs);
+    A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
+    assemble_Stokes_Operator4FE!(A,nu,FE_velocity,FE_pressure);
+    #StokesOperator4FE!(aa,ii,jj,nu,FE_velocity,FE_pressure);
+    #A = sparse(ii,jj,aa,ndofs,ndofs);
     
     # compute right-hand side vector
     rhsintegral4cells = zeros(Base.eltype(grid.coords4nodes),ncells,ndofs4cell_velocity); # f x FEbasis

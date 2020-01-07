@@ -3,6 +3,7 @@ module FESolveCommon
 export accumarray, computeBestApproximation!, computeFEInterpolation!, eval_interpolation_error!, eval_L2_interpolation_error!
 
 using SparseArrays
+using ExtendableSparse
 using LinearAlgebra
 using BenchmarkTools
 using FiniteElements
@@ -17,30 +18,7 @@ end
 
 
 
-# matrix for L2 bestapproximation
-function global_mass_matrix!(aa,ii,jj,grid::Grid.Mesh)
-    ncells::Int = size(grid.nodes4cells,1);
-    celldim::Int = size(grid.nodes4cells,2);
-    
-    # local mass matrix (the same on every triangle)
-    local_mass_matrix = (ones(Int64,celldim,celldim) + LinearAlgebra.I(celldim)) * 1 // ((celldim)*(celldim+1));
-    
-    # do the 'integration'
-    index = 0;
-    for i = 1:celldim, j = 1:celldim
-        for cell = 1 : ncells
-            @inbounds begin
-                ii[index+cell] = grid.nodes4cells[cell,i];
-                jj[index+cell] = grid.nodes4cells[cell,j];
-                aa[index+cell] = local_mass_matrix[i,j] * grid.volume4cells[cell];
-            end
-        end    
-        index += ncells;
-    end
-end
-
-
-# matrix for L2 bestapproximation
+# matrix for L2 bestapproximation intended for using with SparseArrays
 function global_mass_matrix4FE!(aa,ii,jj,grid::Grid.Mesh,FE::FiniteElements.FiniteElement)
     ncells::Int = size(grid.nodes4cells,1);
     ndofs4cell::Int = size(FE.dofs4cells,2);
@@ -104,41 +82,55 @@ function global_mass_matrix4FE!(aa,ii,jj,grid::Grid.Mesh,FE::FiniteElements.Fini
         end
 end
 
-# old version
-function global_mass_matrix_old!(aa,ii,jj,grid::Grid.Mesh)
-    ncells::Int = size(grid.nodes4cells,1);
-    ii[:] = repeat(grid.nodes4cells',3)[:];
-    jj[:] = repeat(grid.nodes4cells'[:]',3)[:];
-    aa[:] = repeat([2 1 1 1 2 1 1 1 2]'[:] * 1 // 12,ncells)[:].*repeat(grid.volume4cells',9)[:];
+
+# matrix for L2 bestapproximation that writes into an ExtendableSparseMatrix
+function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::FiniteElements.FiniteElement)
+    ncells::Int = size(FE.grid.nodes4cells,1);
+    ndofs4cell::Int = size(FE.dofs4cells,2);
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    
+        T = eltype(FE.grid.coords4nodes);
+        qf = QuadratureFormula{T}(2*(FE.polynomial_order), xdim);
+        
+        # pre-allocate memory for gradients
+        if FE.ncomponents > 1
+            evals4cell = Array{Array{T,1}}(undef,ndofs4cell);
+            for j = 1: ndofs4cell
+                evals4cell[j] = zeros(T,FE.ncomponents);
+            end
+        else
+            evals4cell = zeros(T,ndofs4cell)
+        end
+    
+        celldim::Int = size(FE.grid.nodes4cells,2);
+    
+        # quadrature loop
+        for i in eachindex(qf.w)
+            for cell = 1 : ncells
+                # evaluate basis functions at quadrature point
+                for dof_i = 1 : ndofs4cell
+                    evals4cell[dof_i] = FE.bfun_ref[dof_i](qf.xref[i],FE.grid,cell)
+                end 
+    
+                for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
+                    # fill upper right part and diagonal of matrix
+                    @inbounds begin
+                    for k = 1 : FE.ncomponents
+                        A[FE.dofs4cells[cell,dof_i],FE.dofs4cells[cell,dof_j]] += (evals4cell[dof_i][k]*evals4cell[dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                    end
+                    # fill lower left part of matrix
+                    if dof_j > dof_i
+                        for k = 1 : FE.ncomponents
+                            A[FE.dofs4cells[cell,dof_j],FE.dofs4cells[cell,dof_i]] += (evals4cell[dof_i][k]*evals4cell[dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                        end
+                    end    
+                    end
+                end
+            end
+        end
 end
 
-
-# matrix for H1 bestapproximation and gradients on each cell
-# version inspired by Matlab-AFEM group of C. Carstensen
-# based on the formula
-#
-# gradients = [1 1 1; coords]^{-1} [0 0; 1 0; 0 1];
-#
-function global_stiffness_matrix_with_gradients!(aa,ii,jj,gradients4cells,grid::Grid.Mesh)
-    ncells::Int = size(grid.nodes4cells,1);
-    dim::Int = size(grid.nodes4cells,2)-1;
-    
-    # compute local stiffness matrices
-    Aloc = zeros(typeof(grid.coords4nodes[1]),dim+1,dim+1,ncells);
-    for cell = 1 : ncells
-        if dim == 1
-            @views gradients4cells[:,:,cell] = [1,-1]' / grid.volume4cells[cell]
-        elseif dim == 2
-            @views gradients4cells[:,:,cell] = [1 1 1; grid.coords4nodes[grid.nodes4cells[cell,:],:]'] \ [0 0; 1 0;0 1];
-        end    
-        @views Aloc[:,:,cell] = grid.volume4cells[cell] .* (gradients4cells[:,:,cell] * gradients4cells[:,:,cell]');
-    end
-    
-    ii[:] = repeat(grid.nodes4cells',dim+1)[:];
-    jj[:] = repeat(grid.nodes4cells'[:]',dim+1)[:];
-    aa[:] = Aloc[:];
-end
-
+# stiffness matrix intended to use with SparseArrays
 function global_stiffness_matrix4FE!(aa,ii,jj,grid,FE::FiniteElements.FiniteElement)
     ncells::Int = size(grid.nodes4cells,1);
     ndofs4cell::Int = size(FE.dofs4cells,2);
@@ -156,7 +148,6 @@ function global_stiffness_matrix4FE!(aa,ii,jj,grid,FE::FiniteElements.FiniteElem
     fill!(aa,0.0);
     # compute local stiffness matrices
     curindex::Int = 0;
-    x = zeros(T,xdim);
     
     # pre-allocate memory for gradients
     gradients4cell = Array{Array{T,1}}(undef,ndofs4cell);
@@ -206,64 +197,56 @@ function global_stiffness_matrix4FE!(aa,ii,jj,grid,FE::FiniteElements.FiniteElem
 end
 
 
-
-#
-# matrix for H1 bestapproximation
-# this version is inspired by Julia iFEM (for dim=2)
-# (http://www.stochasticlifestyle.com/julia-ifem2)
-#
-# Explanations:
-# it uses that the gradient of a nodal basis functions
-# is constant and equal to the normal vector / height
-# of the opposite edge, this leads to
-#
-# int_T grad_j grad_k = |T| dot(n_j/h_j,n_k/h_k) = |T| dot(t_j/h_j,t_k/h_k)
-#
-# where t are the tangents (rotations do not change the integral)
-# moreover, the t_j/h_k can be expressed as differences of coordinates d_j = x_j+1 - x_j-1
-# leading to t_j = d_j/|E_j| which togehter with |E_j| h_j = 2 |T| leads to the simple formula
-#
-# int_T grad_j grad_k = |T| dot(n_j/h_j,n_k/h_k) = dot(d_j,df_k)/(4|T|)
-#
-function global_stiffness_matrix!(aa,ii,jj,grid::Grid.Mesh)
-    ncells::Int = size(grid.nodes4cells,1);
-    dim::Int = size(grid.nodes4cells,2)-1;
+# stiffness matrix assembly that writes into an ExtendableSparseMatrix
+function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::FiniteElements.FiniteElement)
+    ncells::Int = size(FE.grid.nodes4cells,1);
+    ndofs4cell::Int = size(FE.dofs4cells,2);
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    celldim::Int = size(FE.grid.nodes4cells,2);
     
-    if dim == 1
-        local_matrix = -ones(Int64,dim+1,dim+1) + 2 // 1 * LinearAlgebra.I(dim+1);
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FE.polynomial_order-1), xdim);
+    
+    # pre-allocate memory for gradients
+    gradients4cell = Array{Array{T,1}}(undef,ndofs4cell);
+    for j = 1: ndofs4cell
+        gradients4cell[j] = zeros(T,xdim);
+    end
+    
+    # quadrature loop
+    xref_mask = zeros(T,xdim)
+    for i in eachindex(qf.w)
+      for j=1:xdim
+        xref_mask[j] = qf.xref[i][j];
+      end
+      for cell = 1 : ncells
+      
+        # evaluate gradients at quadrature point
+        for dof_i = 1 : ndofs4cell
+           FE.bfun_grad![dof_i](gradients4cell[dof_i],xref_mask,FE.grid,cell);
+        end    
         
-        # do the 'integration'
-        index = 0;
-        for i = 1:dim+1, j = 1:dim+1
+        # fill fields aa,ii,jj
+        for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
+            # fill upper right part and diagonal of matrix
             @inbounds begin
-                ii[index+1:index+ncells] = view(grid.nodes4cells,:,i);
-                jj[index+1:index+ncells] = view(grid.nodes4cells,:,j);
-                aa[index+1:index+ncells] = local_matrix[i,j] / grid.volume4cells;
+            for k = 1 : xdim
+                A[FE.dofs4cells[cell,dof_i],FE.dofs4cells[cell,dof_j]] += (gradients4cell[dof_i][k]*gradients4cell[dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+            end
+            # fill lower left part of matrix
+            if dof_j > dof_i
+                for k = 1 : xdim
+                    A[FE.dofs4cells[cell,dof_j],FE.dofs4cells[cell,dof_i]] += (gradients4cell[dof_i][k]*gradients4cell[dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                end    
             end    
-            index += ncells;
+            end
         end
-    elseif dim == 2
-        ve = Array{typeof(grid.coords4nodes[1])}(undef, ncells,2,3);
-        # compute coordinate differences (= weighted tangents)
-        @views ve[:,:,3] = grid.coords4nodes[vec(grid.nodes4cells[:,2]),:]-grid.coords4nodes[vec(grid.nodes4cells[:,1]),:];
-        @views ve[:,:,1] = grid.coords4nodes[vec(grid.nodes4cells[:,3]),:]-grid.coords4nodes[vec(grid.nodes4cells[:,2]),:];
-        @views ve[:,:,2] = grid.coords4nodes[vec(grid.nodes4cells[:,1]),:]-grid.coords4nodes[vec(grid.nodes4cells[:,3]),:];
-    
-        # do the 'integration'
-        index = 0;
-        for i = 1:3, j = 1:3
-            @inbounds begin
-                ii[index+1:index+ncells] = view(grid.nodes4cells,:,i);
-                jj[index+1:index+ncells] = view(grid.nodes4cells,:,j);
-                aa[index+1:index+ncells] = sum(ve[:,:,i].* ve[:,:,j], dims=2) ./ (4 * grid.volume4cells);
-            end    
-            index += ncells;
-        end
-    end    
+      end  
+    end
 end
 
 
-# scalar functions times P1 basis functions
+# scalar functions times FE basis functions
 function rhs_integrandL2!(f!::Function,FE::FiniteElements.FiniteElement,dim)
     cache = zeros(eltype(FE.grid.coords4nodes),dim)
     basisval = zeros(eltype(FE.grid.coords4nodes),dim)
@@ -291,19 +274,14 @@ function assembleSystem(norm_lhs::String,norm_rhs::String,volume_data!::Function
     
     Grid.ensure_volume4cells!(grid);
     
-    
-    aa = Vector{typeof(grid.coords4nodes[1])}(undef, ndofscell^2*ncells);
-    ii = Vector{Int64}(undef, ndofscell^2*ncells);
-    jj = Vector{Int64}(undef, ndofscell^2*ncells);
-    
+    A = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
     if norm_lhs == "L2"
         println("mass matrix")
-        A = global_mass_matrix4FE!(aa,ii,jj,grid,FE);
+        assemble_mass_matrix4FE!(A,FE);
     elseif norm_lhs == "H1"
         println("stiffness matrix")
-        global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
+        assemble_stiffness_matrix4FE!(A,FE);
     end 
-    A = sparse(ii,jj,aa,FE.ndofs,FE.ndofs);
     
     # compute right-hand side vector
     rhsintegral4cells = zeros(Base.eltype(grid.coords4nodes),ncells,ndofscell); # f x FEbasis
