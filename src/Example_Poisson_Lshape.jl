@@ -5,17 +5,32 @@ using FiniteElements
 using FESolveCommon
 using FESolvePoisson
 using ForwardDiff
+using Triangulate
 ENV["MPLBACKEND"]="tkagg"
 using PyPlot
+
+function triangulate_lshape(maxarea)
+    triin=Triangulate.TriangulateIO()
+    triin.pointlist=Matrix{Cdouble}([-1 -1;
+                     0 -1;
+                     0 0;
+                     1 0;
+                     1 1;
+                     -1 1]')
+    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5 ; 5 6 ; 6 1 ]')
+    triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4, 5, 6])
+    (triout, vorout)=triangulate("pQa" * string(maxarea), triin)
+    
+    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'));
+end
 
 
 function main()
 
-
-#fem = "CR"
+fem = "CR"
 #fem = "P1"
 #fem = "P2"
-maxlevel = 4
+maxlevel = 5
 use_FDgradients = false
 show_plots = true
 show_convergence_history = true
@@ -58,56 +73,31 @@ function wrap_solution(result,x)
     result[1] = exact_solution(use_problem)(x)
 end    
 
-# define grid
-coords4nodes_init = [-1 -1;
-                     0 -1;
-                     0 0;
-                     1 0;
-                     1 1;
-                     0 1;
-                     -1 1;
-                     -1 0;
-                     -1//2 -1//2;
-                     -1//2 1//2;
-                     1//2 1//2];
-nodes4cells_init = [1 2 9;
-                    2 3 9;
-                    3 8 9;
-                    8 1 9;
-                    8 3 10;
-                    3 6 10;
-                    6 7 10;
-                    7 8 10;
-                    3 4 11;
-                    4 5 11;
-                    5 6 11;
-                    6 3 11];
-                    
-                    
-
 L2error = zeros(Float64,maxlevel)
 L2errorBA = zeros(Float64,maxlevel)
 ndofs = zeros(Int64,maxlevel)
                
 for level = 1 : maxlevel
 
-println("Loading grid...");
-grid = Grid.Mesh{Float64}(coords4nodes_init,nodes4cells_init,level);
+println("Loading grid by triangle...");
+maxarea = 4.0^(-level)
+grid = triangulate_lshape(maxarea)
 
-
+println("maxarea=, maxarea");
 println("nnodes=",size(grid.coords4nodes,1));
 println("ncells=",size(grid.nodes4cells,1));
 
 println("Solving Poisson problem...");
 #ensure_volume4cells!(grid);
+#ensure_nodes4faces!(grid);
 #show(grid.volume4cells)
 
 if fem == "P1"
-    FE = FiniteElements.get_P1FiniteElement(grid,true);
+    FE = FiniteElements.get_P1FiniteElement(grid,use_FDgradients);
 elseif fem == "CR"
-    FE = FiniteElements.get_CRFiniteElement(grid,true);
+    FE = FiniteElements.get_CRFiniteElement(grid,use_FDgradients);
 elseif fem == "P2"
-    FE = FiniteElements.get_P2FiniteElement(grid,true);
+    FE = FiniteElements.get_P2FiniteElement(grid,use_FDgradients);
 end    
 ndofs[level] = FE.ndofs;
 val4dofs = zeros(Base.eltype(grid.coords4nodes),FE.ndofs);

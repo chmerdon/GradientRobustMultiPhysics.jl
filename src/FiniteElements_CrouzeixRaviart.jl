@@ -27,7 +27,7 @@ function get_CRFiniteElement(grid::Grid.Mesh, FDgradients::Bool = false)
     @assert celldim >= 3
     if celldim == 3 # triangles
         bfun_ref = CRbasis_ref_2D;
-        xref4dofs4cell = [0.5 0.0; 0.0 0.5; 0.5 0.5];
+        xref4dofs4cell = [0.5 0; 0.5 0.5; 0 0.5];
         trafo = local2global_triangle();
         if FDgradients
             println("Initialising 2D CR-FiniteElement with ForwardDiff gradients...");
@@ -42,7 +42,6 @@ function get_CRFiniteElement(grid::Grid.Mesh, FDgradients::Bool = false)
                           triangle_CR_3_grad!(0)];
         end
     end    
-    
     return FiniteElement{T}("CR", grid,1, 1, nfaces, dofs4cells, dofs4faces, xref4dofs4cell, trafo, bfun_ref, bfun_grad!);
 end
 

@@ -3,6 +3,7 @@ module FESolvePoisson
 export solvePoissonProblem!
 
 using SparseArrays
+using ExtendableSparse
 using LinearAlgebra
 using BenchmarkTools
 using FiniteElements
@@ -21,7 +22,6 @@ function solvePoissonProblem!(val4dofs::Array,volume_data!::Function,boundary_da
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;
        b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
     end
-    
     println("solve");
     try
         val4dofs[:] = A\b;
@@ -34,6 +34,7 @@ function solvePoissonProblem!(val4dofs::Array,volume_data!::Function,boundary_da
             val4dofs[:] = Array{Float64,2}(A)\b;
         end
     end
+    
     
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b
