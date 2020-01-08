@@ -19,13 +19,13 @@ using ForwardDiff
 # - reconstruction (2nd set of bfun and bfun_grad? precompute coefficients?)
 struct FiniteElement{T <: Real}
     name::String;                 # name of finite element (used in messages)
-    grid::Grid.Mesh;              # link to grid
-    polynomial_order::Int;        # polyonomial degree of basis functions (used for quadrature)
-    ncomponents::Int;             # length of return value ofr basis functions, 1 = scalar, >1 vector-valued
-    ndofs::Int;                   # total number of degrees of freedom
+    grid::Grid.Mesh{T};           # link to grid
+    polynomial_order::Int64;      # polyonomial degree of basis functions (used for quadrature)
+    ncomponents::Int64;           # length of return value for basis functions, 1 = scalar, >1 vector-valued
+    ndofs::Int64;                 # total number of degrees of freedom
     dofs4cells::Array{Int64,2};   # dof numbers for each cell
     dofs4faces::Array{Int64,2};   # dof numbers for each face
-    xref4dofs4cell::Array{T,2};   # coordinates for degrees of freedom
+    xref4dofs4cell::Array{T,2};   # coordinates for degrees of freedom in reference domain
     loc2glob_trafo::Function;     # local2global trafo calculation (or should this better be part of grid?)
     bfun_ref::Vector{Function};   # basis functions evaluated in local coordinates
     bfun_grad!::Vector{Function}; # gradients of basis functions (either exactly given, or ForwardDiff of bfun) matrix
@@ -36,29 +36,10 @@ end
 function BreakFEIntoPieces(FE)
     ndofs = prod(size(FE.dofs4cells));
     dofs4cells = zeros(Int64,size(FE.dofs4cells));
-    dofs4faces = zeros(Int64,size(FE.grid.nodes4faces,1),0)
+    dofs4faces = zeros(Int64,size(FE.grid.nodes4faces,1),0); # no face dofs
     dofs4cells[:] = 1:ndofs;
     return FiniteElement(FE.name * " (broken)", FE.grid, FE.polynomial_order, FE.ncomponents, ndofs, dofs4cells, dofs4faces, FE.xref4dofs4cell, FE.loc2glob_trafo, FE.bfun_ref, FE.bfun_grad!);
 end
-   
-# wrapper for ForwardDiff & DiffResults
-function FDgradient(bfun::Function, x::Vector{T}, xdim = 1) where T <: Real
-    if xdim == 1
-        DRresult = DiffResults.GradientResult(Vector{T}(undef, length(x)));
-    else
-        DRresult = DiffResults.DiffResult(Vector{T}(undef, length(x)),Matrix{T}(undef,length(x),xdim));
-    end
-    function closure(result,x,xref,grid,cell)
-        f(a) = bfun(a,grid,cell);
-        if xdim == 1
-            ForwardDiff.gradient!(DRresult,f,x);
-        else
-            ForwardDiff.jacobian!(DRresult,f,x);
-        end    
-        result[:] = DiffResults.gradient(DRresult);
-    end    
-end
-
 
 function local2global_line()
     A = Matrix{Float64}(undef,1,1)
@@ -91,7 +72,6 @@ function local2global_triangle()
         end
     end    
 end
-
 
 function local2global_tetrahedron()
     A = Matrix{Float64}(undef,3,3)
