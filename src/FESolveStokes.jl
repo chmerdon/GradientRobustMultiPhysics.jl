@@ -12,109 +12,6 @@ using Grid
 using Quadrature
 
 
-function StokesOperator4FE!(aa, ii, jj, nu::Real, FE_velocity::FiniteElements.FiniteElement, FE_pressure::FiniteElements.FiniteElement, pressure_diagonal = 1e-12)
-
-    grid = FE_velocity.grid;
-    ncells::Int = size(grid.nodes4cells,1);
-    xdim::Int = size(grid.coords4nodes,2);
-    ndofs4cell_velocity::Int = size(FE_velocity.dofs4cells,2);
-    ndofs4cell_pressure::Int = size(FE_pressure.dofs4cells,2);
-    ndofs_velocity = FE_velocity.ndofs;;
-    ndofs4cell::Int = ndofs4cell_velocity+ndofs4cell_pressure;
-    celldim::Int = size(grid.nodes4cells,2);
-    
-    @assert length(aa) == ncells*(ndofs4cell^2);
-    @assert length(ii) == length(aa);
-    @assert length(jj) == length(aa);
-    
-    T = eltype(grid.coords4nodes);
-    quadorder = maximum([FE_pressure.polynomial_order + FE_velocity.polynomial_order-1, 2*(FE_velocity.polynomial_order-1)]);
-    qf = QuadratureFormula{T}(quadorder, xdim);
-    
-    # compute local stiffness matrices
-    curindex::Int = 0;
-    x = zeros(T,xdim);
-    
-    # pre-allocate memory for gradients
-    velogradients4cell = Array{Array{T,1}}(undef,ndofs4cell_velocity);
-    pressure4cell = Array{T,1}(undef,ndofs4cell_pressure);
-    for j = 1 : ndofs4cell_velocity
-        velogradients4cell[j] = zeros(T,xdim*xdim);
-    end
-    for j = 1 : ndofs4cell_pressure
-        pressure4cell[j] = 0.0;
-    end
-    
-    # quadrature loop
-    xref_mask = zeros(T,xdim)
-    fill!(aa, 0.0);
-    trace_indices = 1:(xdim+1):xdim^2
-    for i in eachindex(qf.w)
-      for j=1:xdim
-        xref_mask[j] = qf.xref[i][j];
-      end
-      curindex = 0
-      for cell = 1 : ncells
-        # evaluate gradients at quadrature point
-        for dof_i = 1 : ndofs4cell_velocity
-            FE_velocity.bfun_grad![dof_i](velogradients4cell[dof_i],xref_mask,grid,cell);
-        end    
-        # evaluate pressures at quadrature point
-        for dof_i = 1 : ndofs4cell_pressure
-            pressure4cell[dof_i] = FE_pressure.bfun_ref[dof_i](xref_mask,grid,cell);
-        end
-        
-        # fill fields aa,ii,jj
-        for dof_i = 1 : ndofs4cell_velocity
-            # stiffness matrix for velocity
-            for dof_j = 1 : ndofs4cell_velocity
-                curindex += 1;
-                for k = 1 : xdim*xdim
-                    aa[curindex] += nu*(velogradients4cell[dof_i][k] * velogradients4cell[dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
-                end
-                if (i == 1)
-                    ii[curindex] = FE_velocity.dofs4cells[cell,dof_i];
-                    jj[curindex] = FE_velocity.dofs4cells[cell,dof_j];
-                end    
-            end
-        end    
-        # divvelo x pressure matrix
-        for dof_i = 1 : ndofs4cell_velocity
-            for dof_j = 1 : ndofs4cell_pressure
-                curindex += 1;
-                for k = 1 : length(trace_indices)
-                    aa[curindex] -= (velogradients4cell[dof_i][trace_indices[k]] * pressure4cell[dof_j] * qf.w[i] * grid.volume4cells[cell]);
-                end
-                if (i == 1)
-                    ii[curindex] = FE_velocity.dofs4cells[cell,dof_i];
-                    jj[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j];
-                end  
-                #copy transpose
-                curindex += 1;
-                aa[curindex] = aa[curindex-1]
-                if (i == 1)
-                    ii[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j];
-                    jj[curindex] = FE_velocity.dofs4cells[cell,dof_i];
-                end 
-            end
-        end  
-        # pressure x pressure block (empty)
-        for dof_i = 1 : ndofs4cell_pressure, dof_j = 1 : ndofs4cell_pressure
-            curindex +=1
-            if (dof_i == dof_j)
-                aa[curindex] = pressure_diagonal;
-            end    
-            if (i == 1)
-                ii[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_i];
-                jj[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j];
-            end 
-        end
-      end  
-    end
-end
-
-
-
 function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_velocity::FiniteElements.FiniteElement, FE_pressure::FiniteElements.FiniteElement, pressure_diagonal = 1e-12)
 
     grid = FE_velocity.grid;
@@ -284,5 +181,114 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
     
     return norm(residual)
 end
+
+
+### DEPRECATED FUNCTIONS ###
+### only used for benchmarking ###
+
+
+function StokesOperator4FE!(aa, ii, jj, nu::Real, FE_velocity::FiniteElements.FiniteElement, FE_pressure::FiniteElements.FiniteElement, pressure_diagonal = 1e-12)
+
+    grid = FE_velocity.grid;
+    ncells::Int = size(grid.nodes4cells,1);
+    xdim::Int = size(grid.coords4nodes,2);
+    ndofs4cell_velocity::Int = size(FE_velocity.dofs4cells,2);
+    ndofs4cell_pressure::Int = size(FE_pressure.dofs4cells,2);
+    ndofs_velocity = FE_velocity.ndofs;;
+    ndofs4cell::Int = ndofs4cell_velocity+ndofs4cell_pressure;
+    celldim::Int = size(grid.nodes4cells,2);
+    
+    @assert length(aa) == ncells*(ndofs4cell^2);
+    @assert length(ii) == length(aa);
+    @assert length(jj) == length(aa);
+    
+    T = eltype(grid.coords4nodes);
+    quadorder = maximum([FE_pressure.polynomial_order + FE_velocity.polynomial_order-1, 2*(FE_velocity.polynomial_order-1)]);
+    qf = QuadratureFormula{T}(quadorder, xdim);
+    
+    # compute local stiffness matrices
+    curindex::Int = 0;
+    x = zeros(T,xdim);
+    
+    # pre-allocate memory for gradients
+    velogradients4cell = Array{Array{T,1}}(undef,ndofs4cell_velocity);
+    pressure4cell = Array{T,1}(undef,ndofs4cell_pressure);
+    for j = 1 : ndofs4cell_velocity
+        velogradients4cell[j] = zeros(T,xdim*xdim);
+    end
+    for j = 1 : ndofs4cell_pressure
+        pressure4cell[j] = 0.0;
+    end
+    
+    # quadrature loop
+    xref_mask = zeros(T,xdim)
+    fill!(aa, 0.0);
+    trace_indices = 1:(xdim+1):xdim^2
+    for i in eachindex(qf.w)
+      for j=1:xdim
+        xref_mask[j] = qf.xref[i][j];
+      end
+      curindex = 0
+      for cell = 1 : ncells
+        # evaluate gradients at quadrature point
+        for dof_i = 1 : ndofs4cell_velocity
+            FE_velocity.bfun_grad![dof_i](velogradients4cell[dof_i],xref_mask,grid,cell);
+        end    
+        # evaluate pressures at quadrature point
+        for dof_i = 1 : ndofs4cell_pressure
+            pressure4cell[dof_i] = FE_pressure.bfun_ref[dof_i](xref_mask,grid,cell);
+        end
+        
+        # fill fields aa,ii,jj
+        for dof_i = 1 : ndofs4cell_velocity
+            # stiffness matrix for velocity
+            for dof_j = 1 : ndofs4cell_velocity
+                curindex += 1;
+                for k = 1 : xdim*xdim
+                    aa[curindex] += nu*(velogradients4cell[dof_i][k] * velogradients4cell[dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
+                end
+                if (i == 1)
+                    ii[curindex] = FE_velocity.dofs4cells[cell,dof_i];
+                    jj[curindex] = FE_velocity.dofs4cells[cell,dof_j];
+                end    
+            end
+        end    
+        # divvelo x pressure matrix
+        for dof_i = 1 : ndofs4cell_velocity
+            for dof_j = 1 : ndofs4cell_pressure
+                curindex += 1;
+                for k = 1 : length(trace_indices)
+                    aa[curindex] -= (velogradients4cell[dof_i][trace_indices[k]] * pressure4cell[dof_j] * qf.w[i] * grid.volume4cells[cell]);
+                end
+                if (i == 1)
+                    ii[curindex] = FE_velocity.dofs4cells[cell,dof_i];
+                    jj[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j];
+                end  
+                #copy transpose
+                curindex += 1;
+                aa[curindex] = aa[curindex-1]
+                if (i == 1)
+                    ii[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j];
+                    jj[curindex] = FE_velocity.dofs4cells[cell,dof_i];
+                end 
+            end
+        end  
+        # pressure x pressure block (empty)
+        for dof_i = 1 : ndofs4cell_pressure, dof_j = 1 : ndofs4cell_pressure
+            curindex +=1
+            if (dof_i == dof_j)
+                aa[curindex] = pressure_diagonal;
+            end    
+            if (i == 1)
+                ii[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_i];
+                jj[curindex] = ndofs_velocity + FE_pressure.dofs4cells[cell,dof_j];
+            end 
+        end
+      end  
+    end
+end
+
+
+
 
 end

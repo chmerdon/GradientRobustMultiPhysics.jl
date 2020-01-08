@@ -18,71 +18,6 @@ end
 
 
 
-# matrix for L2 bestapproximation intended for using with SparseArrays
-function global_mass_matrix4FE!(aa,ii,jj,grid::Grid.Mesh,FE::FiniteElements.FiniteElement)
-    ncells::Int = size(grid.nodes4cells,1);
-    ndofs4cell::Int = size(FE.dofs4cells,2);
-    xdim::Int = size(grid.coords4nodes,2);
-    
-    # local mass matrix (the same on every triangle)
-    @assert length(aa) == ncells*ndofs4cell^2;
-    @assert length(ii) == ncells*ndofs4cell^2;
-    @assert length(jj) == ncells*ndofs4cell^2;
-
-        T = eltype(grid.coords4nodes);
-        qf = QuadratureFormula{T}(2*(FE.polynomial_order), xdim);
-        
-        # pre-allocate memory for gradients
-        if FE.ncomponents > 1
-            evals4cell = Array{Array{T,1}}(undef,ndofs4cell);
-            for j = 1: ndofs4cell
-                evals4cell[j] = zeros(T,FE.ncomponents);
-            end
-        else
-            evals4cell = zeros(T,ndofs4cell)
-        end
-    
-        fill!(aa,0.0);
-        curindex::Int = 0;
-        celldim::Int = size(grid.nodes4cells,2);
-    
-        # quadrature loop
-        for i in eachindex(qf.w)
-            curindex = 0
-            for cell = 1 : ncells
-                # evaluate basis functions at quadrature point
-                for dof_i = 1 : ndofs4cell
-                    evals4cell[dof_i] = FE.bfun_ref[dof_i](qf.xref[i],grid,cell)
-                end 
-        
-                # fill fields aa,ii,jj
-                for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
-                    curindex += 1;
-                    # fill upper right part and diagonal of matrix
-                    @inbounds begin
-                    for k = 1 : FE.ncomponents
-                        aa[curindex] += (evals4cell[dof_i][k]*evals4cell[dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
-                    end
-                    if (i == 1)
-                        ii[curindex] = FE.dofs4cells[cell,dof_i];
-                        jj[curindex] = FE.dofs4cells[cell,dof_j];
-                    end    
-                    # fill lower left part of matrix
-                    if dof_j > dof_i
-                        curindex += 1;
-                        if (i == length(qf.w))
-                            aa[curindex] = aa[curindex-1];
-                            ii[curindex] = FE.dofs4cells[cell,dof_j];
-                            jj[curindex] = FE.dofs4cells[cell,dof_i];
-                        end    
-                    end    
-                    end
-                end
-            end
-        end
-end
-
-
 # matrix for L2 bestapproximation that writes into an ExtendableSparseMatrix
 function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::FiniteElements.FiniteElement)
     ncells::Int = size(FE.grid.nodes4cells,1);
@@ -128,72 +63,6 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::FiniteElements.F
                 end
             end
         end
-end
-
-# stiffness matrix intended to use with SparseArrays
-function global_stiffness_matrix4FE!(aa,ii,jj,grid,FE::FiniteElements.FiniteElement)
-    ncells::Int = size(grid.nodes4cells,1);
-    ndofs4cell::Int = size(FE.dofs4cells,2);
-    xdim::Int = size(grid.coords4nodes,2);
-    celldim::Int = size(grid.nodes4cells,2);
-    
-    
-    @assert length(aa) == ncells*ndofs4cell^2;
-    @assert length(ii) == length(aa);
-    @assert length(jj) == length(aa);
-    
-    T = eltype(grid.coords4nodes);
-    qf = QuadratureFormula{T}(2*(FE.polynomial_order-1), xdim);
-    
-    fill!(aa,0.0);
-    # compute local stiffness matrices
-    curindex::Int = 0;
-    
-    # pre-allocate memory for gradients
-    gradients4cell = Array{Array{T,1}}(undef,ndofs4cell);
-    for j = 1: ndofs4cell
-        gradients4cell[j] = zeros(T,xdim);
-    end
-    
-    # quadrature loop
-    xref_mask = zeros(T,xdim)
-    for i in eachindex(qf.w)
-      for j=1:xdim
-        xref_mask[j] = qf.xref[i][j];
-      end
-      curindex = 0
-      for cell = 1 : ncells
-      
-        # evaluate gradients at quadrature point
-        for dof_i = 1 : ndofs4cell
-           FE.bfun_grad![dof_i](gradients4cell[dof_i],xref_mask,grid,cell);
-        end    
-        
-        # fill fields aa,ii,jj
-        for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
-            curindex += 1;
-            # fill upper right part and diagonal of matrix
-            @inbounds begin
-            for k = 1 : xdim
-                aa[curindex] += (gradients4cell[dof_i][k]*gradients4cell[dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
-            end
-            if (i == 1)
-                ii[curindex] = FE.dofs4cells[cell,dof_i];
-                jj[curindex] = FE.dofs4cells[cell,dof_j];
-            end    
-            # fill lower left part of matrix
-            if dof_j > dof_i
-                curindex += 1;
-                if (i == length(qf.w))
-                    aa[curindex] = aa[curindex-1];
-                    ii[curindex] = FE.dofs4cells[cell,dof_j];
-                    jj[curindex] = FE.dofs4cells[cell,dof_i];
-                end    
-            end    
-            end
-        end
-      end  
-    end
 end
 
 
@@ -478,5 +347,144 @@ function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE:
         end    
     end
 end
+
+
+
+
+### DEPRECATED FUNCTIONS ###
+### only used for benchmarking ###
+
+# matrix for L2 bestapproximation intended for using with SparseArrays
+function global_mass_matrix4FE!(aa,ii,jj,grid::Grid.Mesh,FE::FiniteElements.FiniteElement)
+    ncells::Int = size(grid.nodes4cells,1);
+    ndofs4cell::Int = size(FE.dofs4cells,2);
+    xdim::Int = size(grid.coords4nodes,2);
+    
+    # local mass matrix (the same on every triangle)
+    @assert length(aa) == ncells*ndofs4cell^2;
+    @assert length(ii) == ncells*ndofs4cell^2;
+    @assert length(jj) == ncells*ndofs4cell^2;
+
+        T = eltype(grid.coords4nodes);
+        qf = QuadratureFormula{T}(2*(FE.polynomial_order), xdim);
+        
+        # pre-allocate memory for gradients
+        if FE.ncomponents > 1
+            evals4cell = Array{Array{T,1}}(undef,ndofs4cell);
+            for j = 1: ndofs4cell
+                evals4cell[j] = zeros(T,FE.ncomponents);
+            end
+        else
+            evals4cell = zeros(T,ndofs4cell)
+        end
+    
+        fill!(aa,0.0);
+        curindex::Int = 0;
+        celldim::Int = size(grid.nodes4cells,2);
+    
+        # quadrature loop
+        for i in eachindex(qf.w)
+            curindex = 0
+            for cell = 1 : ncells
+                # evaluate basis functions at quadrature point
+                for dof_i = 1 : ndofs4cell
+                    evals4cell[dof_i] = FE.bfun_ref[dof_i](qf.xref[i],grid,cell)
+                end 
+        
+                # fill fields aa,ii,jj
+                for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
+                    curindex += 1;
+                    # fill upper right part and diagonal of matrix
+                    @inbounds begin
+                    for k = 1 : FE.ncomponents
+                        aa[curindex] += (evals4cell[dof_i][k]*evals4cell[dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
+                    end
+                    if (i == 1)
+                        ii[curindex] = FE.dofs4cells[cell,dof_i];
+                        jj[curindex] = FE.dofs4cells[cell,dof_j];
+                    end    
+                    # fill lower left part of matrix
+                    if dof_j > dof_i
+                        curindex += 1;
+                        if (i == length(qf.w))
+                            aa[curindex] = aa[curindex-1];
+                            ii[curindex] = FE.dofs4cells[cell,dof_j];
+                            jj[curindex] = FE.dofs4cells[cell,dof_i];
+                        end    
+                    end    
+                    end
+                end
+            end
+        end
+end
+
+
+# stiffness matrix intended to use with SparseArrays
+function global_stiffness_matrix4FE!(aa,ii,jj,grid,FE::FiniteElements.FiniteElement)
+    ncells::Int = size(grid.nodes4cells,1);
+    ndofs4cell::Int = size(FE.dofs4cells,2);
+    xdim::Int = size(grid.coords4nodes,2);
+    celldim::Int = size(grid.nodes4cells,2);
+    
+    
+    @assert length(aa) == ncells*ndofs4cell^2;
+    @assert length(ii) == length(aa);
+    @assert length(jj) == length(aa);
+    
+    T = eltype(grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FE.polynomial_order-1), xdim);
+    
+    fill!(aa,0.0);
+    # compute local stiffness matrices
+    curindex::Int = 0;
+    
+    # pre-allocate memory for gradients
+    gradients4cell = Array{Array{T,1}}(undef,ndofs4cell);
+    for j = 1: ndofs4cell
+        gradients4cell[j] = zeros(T,xdim);
+    end
+    
+    # quadrature loop
+    xref_mask = zeros(T,xdim)
+    for i in eachindex(qf.w)
+      for j=1:xdim
+        xref_mask[j] = qf.xref[i][j];
+      end
+      curindex = 0
+      for cell = 1 : ncells
+      
+        # evaluate gradients at quadrature point
+        for dof_i = 1 : ndofs4cell
+           FE.bfun_grad![dof_i](gradients4cell[dof_i],xref_mask,grid,cell);
+        end    
+        
+        # fill fields aa,ii,jj
+        for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
+            curindex += 1;
+            # fill upper right part and diagonal of matrix
+            @inbounds begin
+            for k = 1 : xdim
+                aa[curindex] += (gradients4cell[dof_i][k]*gradients4cell[dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
+            end
+            if (i == 1)
+                ii[curindex] = FE.dofs4cells[cell,dof_i];
+                jj[curindex] = FE.dofs4cells[cell,dof_j];
+            end    
+            # fill lower left part of matrix
+            if dof_j > dof_i
+                curindex += 1;
+                if (i == length(qf.w))
+                    aa[curindex] = aa[curindex-1];
+                    ii[curindex] = FE.dofs4cells[cell,dof_j];
+                    jj[curindex] = FE.dofs4cells[cell,dof_i];
+                end    
+            end    
+            end
+        end
+      end  
+    end
+end
+
+
 
 end

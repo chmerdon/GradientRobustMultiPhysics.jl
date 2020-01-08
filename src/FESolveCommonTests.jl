@@ -208,20 +208,19 @@ function TimeStiffnessMatrixP1()
   ii = Vector{Int64}(undef, (dim+1)^2*ncells);
   jj = Vector{Int64}(undef, (dim+1)^2*ncells);
   
-  println("\n Stiffness-Matrix with exact gradients and SparseArrays");
+  println("\n P1 Stiffness-Matrix with exact gradients and SparseArrays");
   FE = FiniteElements.get_P1FiniteElement(grid,false);
   @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
   @time M = sparse(ii,jj,aa);
-  println("\n Stiffness-Matrix with exact gradients and ExtendableSparse");
+  println("\n P1 Stiffness-Matrix with exact gradients and ExtendableSparse");
   M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
   @time FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
   @time ExtendableSparse.flush!(M2)
-  @time show(norm(M2))
-  @time show(norm(M-M2))
-  println("\n Stiffness-Matrix with ForwardDiff gradients and SparseArray");
+  show(norm(M-M2))
+  M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+  println("\n P1 Stiffness-Matrix with ForwardDiff gradients and SparseArray");
   FE = FiniteElements.get_P1FiniteElement(grid,true);
-  @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
-  M3 = sparse(ii,jj,aa);
+  @time FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
   show(norm(M-M3))
 end
 
@@ -237,16 +236,20 @@ function TimeStiffnessMatrixP2()
   ii = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
   jj = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
   
-  println("\n Stiffness-Matrix with exact gradients");
-  FE = FiniteElements.get_P2FiniteElement(grid, false);
+  println("\n P2 Stiffness-Matrix with exact gradients and SparseArrays");
+  FE = FiniteElements.get_P2FiniteElement(grid,false);
   @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
-  M1 = sparse(ii,jj,aa);
-  
-  println("\n Stiffness-Matrix with ForwardDiff gradients");
-  FE = FiniteElements.get_P2FiniteElement(grid, true);
-  @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
-  M2 = sparse(ii,jj,aa);
-  show(norm(M1-M2))
+  @time M = sparse(ii,jj,aa);
+  println("\n P2 Stiffness-Matrix with exact gradients and ExtendableSparse");
+  M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+  @time FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
+  @time ExtendableSparse.flush!(M2)
+  show(norm(M-M2))
+  M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+  println("\n P2 Stiffness-Matrix with ForwardDiff gradients and SparseArray");
+  FE = FiniteElements.get_P2FiniteElement(grid,true);
+  @time FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
+  show(norm(M-M3))
 end
 
 
@@ -261,48 +264,20 @@ function TimeStiffnessMatrixCR()
   ii = Vector{Int64}(undef, 9*ncells);
   jj = Vector{Int64}(undef, 9*ncells);
   
-  println("\n Stiffness-Matrix with exact gradients");
-  FE = FiniteElements.get_CRFiniteElement(grid, false);
+  println("\n CR Stiffness-Matrix with exact gradients and SparseArrays");
+  FE = FiniteElements.get_CRFiniteElement(grid,false);
   @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
-  M1 = sparse(ii,jj,aa);
-  
-  println("\n Stiffness-Matrix with ForwardDiff gradients");
-  FE = FiniteElements.get_CRFiniteElement(grid, true);
-  @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
-  M2 = sparse(ii,jj,aa);
-  show(norm(M1-M2))
-end
-
-function TimeMassMatrix()
-  grid = load_test_grid(5);
-  ncells::Int = size(grid.nodes4cells,1);
-  println("ncells=",ncells);
-  Grid.ensure_volume4cells!(grid);
-  dim=2
-  
-  aa = Vector{typeof(grid.coords4nodes[1])}(undef, (dim+1)^2*ncells);
-  ii = Vector{Int64}(undef, (dim+1)^2*ncells);
-  jj = Vector{Int64}(undef, (dim+1)^2*ncells);
-  gradients4cells = zeros(typeof(grid.coords4nodes[1]),dim+1,dim,ncells);
-  
-  # old mass matrix
-  println("\nold mass matrix routine...")
-  @time FESolveCommon.global_mass_matrix_old!(aa,ii,jj,grid);
-  M = sparse(ii,jj,aa);
-  
-  # new mass matrix
-  println("\nnew mass matrix routine...")
-  @time FESolveCommon.global_mass_matrix!(aa,ii,jj,grid);
-  M2 = sparse(ii,jj,aa);
-  
+  @time M = sparse(ii,jj,aa);
+  println("\n CR Stiffness-Matrix with exact gradients and ExtendableSparse");
+  M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+  @time FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
+  @time ExtendableSparse.flush!(M2)
   show(norm(M-M2))
-  
-  # new mass matrix
-  println("\nnew mass matrix routine with FE...")
-  FE = FiniteElements.get_P1FiniteElement(grid);
-  @time FESolveCommon.global_mass_matrix4FE!(aa,ii,jj,grid,FE);
-  M2 = sparse(ii,jj,aa);
-  show(norm(M-M2))
+  M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+  println("\n CR Stiffness-Matrix with ForwardDiff gradients and SparseArray");
+  FE = FiniteElements.get_CRFiniteElement(grid,true);
+  @time FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
+  show(norm(M-M3))
 end
 
 end
