@@ -33,7 +33,7 @@ function get_BRFiniteElement(grid::Grid.Mesh, FDgradients::Bool = false)
         dofs4faces[:,5] = 2*nnodes .+ Array(1:nfaces);
         
         bfun_ref = BRbasis_ref_2D;
-        xref4dofs4cell = [0.0 0.0; 1.0 0.0; 0.0 0.1;0.0 0.0; 1.0 0.0; 0.0 0.1; 0.5 0.0; 0.0 0.5; 0.5 0.5];
+        xref4dofs4cell = [0.0 0.0; 1.0 0.0; 0.0 1.0;0.0 0.0; 1.0 0.0; 0.0 1.0; 0.5 0.0; 0.5 0.5; 0.0 0.5];
         trafo = local2global_triangle();
         if FDgradients
             println("Initialising 2D Bernardi-Raugel-FiniteElement with ForwardDiff gradients...");
