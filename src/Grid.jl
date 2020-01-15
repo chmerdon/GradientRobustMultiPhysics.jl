@@ -23,6 +23,21 @@ mutable struct Mesh{T <: Real}
 end
 
 
+
+# show function for Grid
+function show(Grid::Mesh)
+
+    dim = size(Grid.nodes4cells,2) - 1;;
+    nnodes = size(Grid.coords4nodes,1);
+    ncells = size(Grid.nodes4cells,1);
+    
+	println("Mesh information");
+	println("    dim : $(dim)")
+	println(" nnodes : $(nnodes)")
+	println(" ncells : $(ncells)")
+end
+
+
 function Mesh{T}(coords,nodes,nrefinements) where {T<:Real}
     for j=1:nrefinements
         @assert size(nodes,2) <= 3
@@ -45,7 +60,7 @@ function uniform_refinement(coords4nodes::Array,nodes4cells::Array)
     
   nnodes = size(coords4nodes,1);
   ncells = size(nodes4cells,1);
-    
+
   if size(coords4nodes,2) == 1
     coords4nodes = @views [coords4nodes; 1 // 2 * (coords4nodes[nodes4cells[:,1],1] + coords4nodes[nodes4cells[:,2],1])];
     
@@ -55,7 +70,6 @@ function uniform_refinement(coords4nodes::Array,nodes4cells::Array)
             [nodes4cells[cell,1] nnodes+cell;
             nnodes+cell nodes4cells[cell,2]];
     end
-    
   elseif size(coords4nodes,2) == 2
     # compute nodes4faces
     nodes4faces = @views [nodes4cells[:,1] nodes4cells[:,2]; nodes4cells[:,2] nodes4cells[:,3]; nodes4cells[:,3] nodes4cells[:,1]];

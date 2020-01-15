@@ -12,19 +12,20 @@ using Grid
 
 
 # computes solution of Poisson problem
-function solvePoissonProblem!(val4dofs::Array,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE::FiniteElements.FiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
+function solvePoissonProblem!(val4dofs::Array,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE::AbstractH1FiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
     # assemble system 
     A, b = FESolveCommon.assembleSystem("H1","L2",volume_data!,grid,FE,quadrature_order);
     
     # apply boundary data
     bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,boundary_data!);
+    
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;
        b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
     end
-    println("solve");
+    
     try
-        val4dofs[:] = A\b;
+        @time val4dofs[:] = A\b;
     catch    
         println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
         try
@@ -34,8 +35,6 @@ function solvePoissonProblem!(val4dofs::Array,volume_data!::Function,boundary_da
             val4dofs[:] = Array{Float64,2}(A)\b;
         end
     end
-    
-    
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b
     residual[bdofs] .= 0

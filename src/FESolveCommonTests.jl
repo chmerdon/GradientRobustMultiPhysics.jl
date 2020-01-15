@@ -73,11 +73,11 @@ function TestInterpolation1D()
   # compute volume4cells
   Grid.ensure_volume4cells!(grid);  
   println("Testing P1 Interpolation in 1D...");
-  FE = FiniteElements.get_P1FiniteElement(grid);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getP1FiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   @time computeFEInterpolation!(val4dofs, volume_data1D!, grid, FE);
   integral4cells = zeros(size(grid.nodes4cells, 1), 1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data1D!, val4dofs, FE), grid, 1);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data1D!, val4dofs, FE), grid, 1);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
 
@@ -88,39 +88,24 @@ end
 function TestL2BestApproximation1D()
   grid = load_test_grid1D();
   println("Testing L2-Bestapproximation in 1D...");
-  FE = FiniteElements.get_P1FiniteElement(grid);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getP1FiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   computeBestApproximation!(val4dofs,"L2",volume_data1D!,volume_data1D!,grid,FE,2);
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data1D!, val4dofs, FE), grid, 1);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data1D!, val4dofs, FE), grid, 1);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
 end
-
-function TestL2BestApproximation1DBoundaryGrid()
-  grid = get_boundary_grid(load_test_grid(2););
-  println("Testing L2-Bestapproximation on boundary grid of 2D triangulation...");
-  FE = FiniteElements.get_P1FiniteElement(grid,true);
-  val4dofs = zeros(FE.ndofs);
-  computeBestApproximation!(val4dofs,"L2",volume_data_P1!,Nothing,grid,FE,2);
-  integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
-  integral = sum(integral4cells);
-  println("interpolation_error = " * string(integral));
-  return abs(integral) < eps(10.0)
-end
-
-
 
 function TestH1BestApproximation1D()
   grid = load_test_grid1D();
   println("Testing H1-Bestapproximation in 1D...");
-  FE = FiniteElements.get_P1FiniteElement(grid);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getP1FiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   computeBestApproximation!(val4dofs,"H1",volume_data_gradient!,volume_data1D!,grid,FE,2);
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data1D!, val4dofs, FE), grid, 1);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data1D!, val4dofs, FE), grid, 1);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
@@ -130,11 +115,11 @@ function TestInterpolation2D()
   grid = load_test_grid(0);
   Grid.ensure_volume4cells!(grid);  
   println("Testing P1 Interpolation in 2D...");
-  FE = FiniteElements.get_P1FiniteElement(grid);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getP1FiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   computeFEInterpolation!(val4dofs, volume_data_P1!, grid, FE);
   integral4cells = zeros(size(grid.nodes4cells, 1), 1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
@@ -143,13 +128,11 @@ end
 function TestL2BestApproximation2DP1()
   grid = load_test_grid();
   println("Testing L2-Bestapproximation in 2D for P1-FEM...");
-  FE = FiniteElements.get_P1FiniteElement(grid);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getP1FiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   computeBestApproximation!(val4dofs,"L2",volume_data_P1!,volume_data_P1!,grid,FE,2);
-  val4dofs2 = zeros(FE.ndofs);
-  computeFEInterpolation!(val4dofs2, volume_data_P1!, grid, FE);
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
@@ -158,11 +141,11 @@ end
 function TestL2BestApproximation2DP2()
   grid = load_test_grid();
   println("Testing L2-Bestapproximation in 2D for P2-FEM...");
-  FE = FiniteElements.get_P2FiniteElement(grid);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getP2FiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   computeBestApproximation!(val4dofs,"L2",volume_data_P2!,volume_data_P2!,grid,FE,4);
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data_P2!, val4dofs, FE), grid, 4);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data_P2!, val4dofs, FE), grid, 4);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
@@ -172,11 +155,11 @@ end
 function TestL2BestApproximation2DCR()
   grid = load_test_grid();
   println("Testing L2-Bestapproximation in 2D for CR-FEM...");
-  FE = FiniteElements.get_CRFiniteElement(grid);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getCRFiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   computeBestApproximation!(val4dofs,"L2",volume_data_P1!,volume_data_P1!,grid,FE,2);
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
@@ -186,11 +169,11 @@ end
 function TestH1BestApproximation2D()
   grid = load_test_grid();
   println("Testing H1-Bestapproximation in 2D...");
-  FE = FiniteElements.get_P1FiniteElement(grid,true);
-  val4dofs = zeros(FE.ndofs);
+  FE = FiniteElements.getP1FiniteElement(grid,1);
+  val4dofs = FiniteElements.createFEVector(FE);
   computeBestApproximation!(val4dofs,"H1",volume_data_gradient!,volume_data_P1!,grid,FE,2);
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells, eval_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
+  integrate!(integral4cells, eval_L2_interpolation_error!(volume_data_P1!, val4dofs, FE), grid, 1);
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
@@ -232,23 +215,28 @@ function TimeStiffnessMatrixP2()
   Grid.ensure_volume4cells!(grid);
   dim=2
   
-  aa = Vector{typeof(grid.coords4nodes[1])}(undef, (2*(dim+1))^2*ncells);
-  ii = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
-  jj = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
-  
   println("\n P2 Stiffness-Matrix with exact gradients and SparseArrays");
   FE = FiniteElements.get_P2FiniteElement(grid,false);
-  @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
-  @time M = sparse(ii,jj,aa);
+  @time begin
+    aa = Vector{typeof(grid.coords4nodes[1])}(undef, (2*(dim+1))^2*ncells);
+    ii = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
+    jj = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
+    FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,grid,FE);
+    M = sparse(ii,jj,aa);
+  end
   println("\n P2 Stiffness-Matrix with exact gradients and ExtendableSparse");
-  M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
-  @time FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
-  @time ExtendableSparse.flush!(M2)
+  @time begin
+    M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+    FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
+    ExtendableSparse.flush!(M2)
+  end  
   show(norm(M-M2))
-  M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
   println("\n P2 Stiffness-Matrix with ForwardDiff gradients and SparseArray");
-  FE = FiniteElements.get_P2FiniteElement(grid,true);
-  @time FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
+  @time begin
+    M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
+    FE = FiniteElements.get_P2FiniteElement(grid,true);
+    FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
+  end  
   show(norm(M-M3))
 end
 

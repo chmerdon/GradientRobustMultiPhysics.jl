@@ -6,66 +6,50 @@ using FESolveCommon
 using FESolvePoisson
 using ForwardDiff
 using Triangulate
-using Printf
-
 ENV["MPLBACKEND"]="tkagg"
 using PyPlot
 
-function triangulate_lshape(maxarea)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([-1 -1;
-                     0 -1;
-                     0 0;
-                     1 0;
-                     1 1;
-                     -1 1]')
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5 ; 5 6 ; 6 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4, 5, 6])
-    println(string(maxarea))
-    (triout, vorout)=triangulate("pQa$(@sprintf("%.16f", maxarea))", triin)
-    
-    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'));
+function get_line_grid(maxarea)
+    return Grid.Mesh{Float64}(Array{Float64,2}(Array{Float64,2}([0,1,2]')'),Array{Int64,2}([1 2;2 3]),ceil(log2(1/maxarea)));
 end
 
 function main()
-
-# CHOOSE A FEM
-#fem = "CR"
 fem = "P1"
 #fem = "P2"
 
-# CHOOSE A PROBLEM
-use_problem = "cubic"; f_order = 1; u_order = 3;
+maxlevel = 10
+use_FDgradients = false
+show_plots = true
+show_convergence_history = true
+use_problem = "quartic"; f_order = 2; u_order = 4;
+#use_problem = "cubic"; f_order = 1; u_order = 3;
 #use_problem = "quadratic"; f_order = 0; u_order = 2;
 #use_problem = "linear"; f_order = 0; u_order = 1;
 
-# FURTHER PARAMETERS
-maxlevel = 5
-show_plots = true
-show_convergence_history = true
-
-
 # define problem data
+
 
 function exact_solution(problem)
     function closure(x)
-        if problem == "cubic"
-            return -x[1]^3 - x[2]^3
+        if problem == "quartic"
+            return x[1]^4 - x[1]^3 +2*x[1]^2 - 3*x[1]
+        elseif problem == "cubic"
+            return -x[1]^3
         elseif problem == "quadratic"
-            return -x[1]^2 - x[2]^2
+            return -x[1]^2
         elseif problem == "linear"
-            return x[1] + x[2]
+            return x[1]
         end
     end   
 end    
 
 function volume_data!(problem)
-    hessian = [0.0 0.0;0.0 0.0]
+    hessian = [0.0]
     return function closure(result, x)  
         # compute Laplacian of exact solution
         u(x) = exact_solution(problem)(x)
         hessian = ForwardDiff.hessian(u,x)
-        result[1] = -(hessian[1] + hessian[4])
+        result[1] = -hessian[1]
     end    
 end
 
@@ -79,15 +63,13 @@ ndofs = zeros(Int64,maxlevel)
                
 for level = 1 : maxlevel
 
-println("Loading grid by triangle...");
-maxarea = 4.0^(-level)
-grid = triangulate_lshape(maxarea)
+
+maxarea = 2.0^(-level)
+grid = get_line_grid(maxarea)
 Grid.show(grid)
 
 if fem == "P1"
     FE = FiniteElements.getP1FiniteElement(grid,1);
-elseif fem == "CR"
-    FE = FiniteElements.getCRFiniteElement(grid,1);
 elseif fem == "P2"
     FE = FiniteElements.getP2FiniteElement(grid,1);
 end    
@@ -100,7 +82,7 @@ residual = solvePoissonProblem!(val4dofs,volume_data!(use_problem),wrap_solution
 println("  solve residual = " * string(residual))
 
 # compute velocity best approximation
-println("Solving L2 best approximation problem...");
+println("Solving L2 bestapproximation problem...");    
 val4dofsBA = FiniteElements.createFEVector(FE);
 residual = computeBestApproximation!(val4dofsBA,"L2",wrap_solution,wrap_solution,grid,FE,u_order + FiniteElements.get_polynomial_order(FE))
 println("  solve residual = " * string(residual));
@@ -116,11 +98,12 @@ println("L2_error_BA = " * string(L2errorBA[level]));
 
 
 # plot
-if (show_plots) && (level == maxlevel) && ndofs[level] < 5000
+if (show_plots) && (level == maxlevel)
     nodevals = FESolveCommon.eval_at_nodes(val4dofs,FE);
     pygui(true)
     PyPlot.figure(1)
-    PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),nodevals,cmap=get_cmap("ocean"))
+    I = sortperm(grid.coords4nodes[:])
+    PyPlot.plot(grid.coords4nodes[I],nodevals[I])
     PyPlot.title("Poisson Problem Solution")
     #show()
 end    
@@ -130,9 +113,9 @@ if (show_convergence_history)
     PyPlot.figure(2)
     PyPlot.loglog(ndofs,L2error,"-o")
     PyPlot.loglog(ndofs,L2errorBA,"-o")
-    PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
     PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-    PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
+    PyPlot.loglog(ndofs,ndofs.^(-2),"--",color = "gray")
+    PyPlot.loglog(ndofs,ndofs.^(-3),"--",color = "gray")
     PyPlot.legend(("L2 error","L2 error BA","O(h)","O(h^2)","O(h^3)"))
     PyPlot.title("Convergence history (fem=" * fem * " problem=" * use_problem * ")")
     ax = PyPlot.gca()

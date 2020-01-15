@@ -10,27 +10,42 @@ export QuadratureFormula, integrate, integrate_xref, integrate!, integrate2!
 #  coords::NTuple{intDim + 1, T}
 # end
 
-mutable struct QuadratureFormula{T <: Real}
+struct QuadratureFormula{T <: Real}
+  name::String
   xref::Array{Array{T, 1}}
   w::Array{T, 1}
+end
+
+# show function for Quadrature
+function show(Q::QuadratureFormula)
+
+    npoints = length(Q.xref);
+    dim = length(Q.xref[1]) - 1;
+	println("QuadratureFormula information");
+	println("     name : " * Q.name);
+	println("      dim : $(dim)")
+	println("  npoints : $(npoints)")
 end
 
 function QuadratureFormula{T}(order::Int, dim::Int = 2) where {T<:Real}
     # xref = Array{T}(undef,2)
     # w = Array{T}(undef, 1)
     
-    if order <= 1 # cell midpoint rule
+    if order <= 1
+        name = "midpoint rule"
         xref = Vector{Array{T,1}}(undef,1);
         xref[1] = ones(T,dim+1) * 1 // (dim+1)
         w = [1]
-    elseif order == 2 # face midpoint rule
+    elseif order == 2 # face midpoint rule  
         if dim == 2
+            name = "face midpoints rule"
             xref = Vector{Array{T,1}}(undef,3);
             xref[1] = [1//2,1//2,0//1];
             xref[2] = [0//1,1//2,1//2];
             xref[3] = [1//2,0//1,1//2];
             w = [1//3; 1//3; 1//3]     
         elseif dim == 1
+            name = "Simpson's rule"
             xref = Vector{Array{T,1}}(undef,3);
             xref[1] = [0 ,1];
             xref[2] = [1//2, 1//2];
@@ -38,13 +53,37 @@ function QuadratureFormula{T}(order::Int, dim::Int = 2) where {T<:Real}
             w = [1//6; 2//3; 1//6]     
         end
     else
-      xref, w = get_generic_quadrature_Stroud(order)
+        if dim == 1
+            name = "generic Gauss rule"
+            xref, w = get_generic_quadrature_Gauss(order)
+        else    
+            name = "generic Stroud rule"
+            xref, w = get_generic_quadrature_Stroud(order)
+        end    
     end
-    println("Loading quadrature formula of order " * string(order) * " and dimension " * string(dim));
-    return QuadratureFormula{T}(xref, w)
+    return QuadratureFormula{T}(name, xref, w)
 end
 
 
+function get_generic_quadrature_Gauss(order::Int)
+    ngpts::Int = div(order, 2) + 1
+    
+    # compute 1D Gauss points on interval [-1,1] and weights
+    gamma = (1 : ngpts-1) ./ sqrt.(4 .* (1 : ngpts-1).^2 .- ones(ngpts-1,1) );
+    F = eigen(diagm(1 => gamma[:], -1 => gamma[:]));
+    r = F.values;
+    w = 2*F.vectors[1,:].^2;
+    
+    # transform to interval [0,1]
+    r = .5 .* r .+ .5;
+    w = .5 .* w';
+    xref = Array{Array{Float64,1}}(undef,length(r))
+    for j = 1 : length(r)
+        xref[j] = [r[j],1-r[j]];
+    end
+    
+    return xref, w[:]
+end
   
 # computes quadrature points and weights by Stroud Conical Product rule
 function get_generic_quadrature_Stroud(order::Int)
