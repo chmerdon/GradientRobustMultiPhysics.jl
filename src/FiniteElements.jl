@@ -21,6 +21,7 @@ abstract type AbstractFiniteElement end
 # subtype for H1 conforming elements (also Crouzeix-Raviart)
 abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
  include("FEdefinitions/H1_P1.jl");
+ include("FEdefinitions/H1_MINI.jl");
  include("FEdefinitions/H1_P2.jl");
  include("FEdefinitions/H1_CR.jl");
  
@@ -43,6 +44,26 @@ function show(FE::AbstractFiniteElement)
 	println("        ndofs : $(nd)")
 	println("    polyorder : $(po)");
 	println("  maxdofs c/f : $(mdc)/$(mdf)")
+end
+
+function show_dofmap(FE::AbstractFiniteElement)
+	println("FiniteElement cell dofmap for " * FE.name);
+	for cell = 1 : size(FE.grid.nodes4cells,1)
+        print(string(cell) * " | ");
+        for j = 1 : FiniteElements.get_maxndofs4cell(FE)
+            print(string(FiniteElements.get_globaldof4cell(FE, cell, j)) * " ");
+        end
+        println("");
+	end
+	
+	println("\nFiniteElement face dofmap for " * FE.name);
+	for face = 1 : size(FE.grid.nodes4faces,1)
+        print(string(face) * " | ");
+        for j = 1 : FiniteElements.get_maxndofs4face(FE)
+            print(string(FiniteElements.get_globaldof4face(FE, face, j)) * " ");
+        end
+        println("");
+	end
 end
 
 function createFEVector(FE::AbstractFiniteElement)

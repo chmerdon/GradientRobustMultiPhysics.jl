@@ -106,9 +106,10 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
     dj::Int64 = 0
     @time begin
     for cell = 1 : ncells
+      
+      # evaluate tinverted (=transposed + inverted) jacobian of element trafo
+      loc2glob_trafo_tinv(trafo_jacobian,det,FE.grid,cell)
       for i in eachindex(qf.w)
-        # evaluate tinverted (=transposed + inverted) jacobian of element trafo
-        loc2glob_trafo_tinv(trafo_jacobian,det,FE.grid,cell)
       
         # evaluate gradients of basis function
         ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
@@ -288,11 +289,11 @@ function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!)
                 end    
                 basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(xref)
                 for l = 1:ndofs4face
-                    A4bface[k,l] = dot(basisvals[celldof2facedof[k]],basisvals[celldof2facedof[l]]);
+                    A4bface[k,l] = dot(basisvals[celldof2facedof[k],:],basisvals[celldof2facedof[l],:]);
                 end
                 
                 boundary_data!(temp,loc2glob_trafo(FE.grid,cell)(xref));
-                b4bface[k] = dot(temp,basisvals[celldof2facedof[k]]);
+                b4bface[k] = dot(temp,basisvals[celldof2facedof[k],:]);
             end
             val4dofs[bdofs4bface] = A4bface\b4bface;
             if norm(A4bface*val4dofs[bdofs4bface]-b4bface) > eps(1e3)
@@ -363,13 +364,14 @@ end
 function eval_FEfunction(coeffs, FE::AbstractFiniteElement)
     temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
     ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
+    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,FiniteElements.get_ncomponents(FE))
     function closure(result, x, xref, cellIndex)
         fill!(result,0.0)
+        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cellIndex)(xref)
         for j = 1 : ndofs4cell
-            temp = FE.bfun_ref[j](xref, FE.grid, cellIndex);
-            temp *= coeffs[FE.dofs4cells[cellIndex, j]];
+            di = FiniteElements.get_globaldof4cell(FE, cellIndex, j);
             for k = 1 : length(temp);
-                result[k] += temp[k] 
+                result[k] += basisvals[j,k] * coeffs[di];
             end    
         end    
     end
@@ -399,9 +401,8 @@ function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE:
 end
 
 
-function eval_at_nodes(val4dofs, FE::AbstractFiniteElement)
+function eval_at_nodes(val4dofs, FE::AbstractFiniteElement, offset::Int64 = 0)
     # evaluate at grid points
-    nodevals = zeros(size(FE.grid.coords4nodes,1))
     ndofs4node = zeros(size(FE.grid.coords4nodes,1))
     dim = size(FE.grid.nodes4cells,2) - 1;
     if dim == 1
@@ -414,19 +415,24 @@ function eval_at_nodes(val4dofs, FE::AbstractFiniteElement)
     ncomponents = FiniteElements.get_ncomponents(FE);
     ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
+    nodevals = zeros(size(FE.grid.coords4nodes,1),ncomponents)
     for cell = 1 : size(FE.grid.nodes4cells,1)
         for j = 1 : dim + 1
             basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(xref4dofs4cell[j,:])
             for dof = 1 : ndofs4cell;
-                    di = FiniteElements.get_globaldof4cell(FE, cell, dof);
-                    nodevals[FE.grid.nodes4cells[cell,j]] += basisvals[dof]*val4dofs[di] 
+                for k = 1 : ncomponents
+                    di = offset + FiniteElements.get_globaldof4cell(FE, cell, dof);
+                    nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[di] 
+                end   
             end
             ndofs4node[FE.grid.nodes4cells[cell,j]] +=1
         end    
     end
     
     # average
-    nodevals ./= ndofs4node
+    for k = 1 : ncomponents
+        nodevals[:,k] ./= ndofs4node
+    end
     
     return nodevals
 end   
