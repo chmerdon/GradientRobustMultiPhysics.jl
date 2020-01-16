@@ -18,38 +18,53 @@ function getMINIFiniteElement(grid,ncomponents)
     return H1MINIFiniteElement{T,dim,ncomponents}("MINI (H1FiniteElement, dim=$dim, ncomponents=$ncomponents)",grid, Array{T,2}(xref4dofs4cell))
 end 
 
-get_polynomial_order(FE::H1MINIFiniteElement) = 3; # todo: in 3D it will be 4 !!!
+get_xref4dof(FE::H1MINIFiniteElement, k) = xref4dofs4cell[k,:]
 
+# POLYNOMIAL ORDER
+get_polynomial_order(FE::H1MINIFiniteElement) = 3;
+
+# TOTAL NUMBER OF DOFS
 get_ndofs(FE::H1MINIFiniteElement{T,2,1} where T <: Real) = size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1);
 get_ndofs(FE::H1MINIFiniteElement{T,2,2} where T <: Real) = 2*(size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1));
 
-get_xref4dof(FE::H1MINIFiniteElement, k) = xref4dofs4cell[k,:]
-
+# MAXIMAL DOFS ON CELL
 get_maxndofs4cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real) = 4
 get_maxndofs4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real) = 8
 
+# MAXIMAL DOFS ON FACE
 get_maxndofs4face(FE::H1MINIFiniteElement{T,2,1} where T <: Real) = 2
 get_maxndofs4face(FE::H1MINIFiniteElement{T,2,2} where T <: Real) = 4
 
+# NUMBER OF COMPONENTS
 get_ncomponents(FE::H1MINIFiniteElement{T,2,1} where T <: Real) = 1
 get_ncomponents(FE::H1MINIFiniteElement{T,2,2} where T <: Real) = 2
 
-# function to get global dof numbers of local dofs on cells
-get_globaldof4cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real, cell, k) = (k <= 3) ? FE.grid.nodes4cells[cell,k] : size(FE.grid.coords4nodes,1) + cell
-get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, k) = Int(floor((k-1)/4))*(size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1)) + (((k-1) % 4 + 1 <= 3) ? FE.grid.nodes4cells[cell,(k-1) % 4 + 1] : size(FE.grid.coords4nodes,1) + cell);
+# LOCAL DOF TO GLOBAL DOF ON CELL
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real, cell, ::Val{1}) = FE.grid.nodes4cells[cell,1]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real, cell, ::Val{2}) = FE.grid.nodes4cells[cell,2]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real, cell, ::Val{3}) = FE.grid.nodes4cells[cell,3]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real, cell, ::Val{4}) = size(FE.grid.coords4nodes,1) + cell
 
-# function to get global dof numbers of local dofs on local face of cell
-get_globaldof4cellface(FE::H1MINIFiniteElement{T,1,1} where T <: Real, cell, face, k) = FE.grid.nodes4cells[cell,k]
-get_globaldof4cellface(FE::H1MINIFiniteElement{T,2,1} where T <: Real, cell, face, k) = FE.grid.nodes4faces[FE.grid.faces4cells[cell,face],k]
-get_globaldof4cellface(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, face, k) = Int(floor((k-1)/2))*(size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1)) + FE.grid.nodes4faces[FE.grid.faces4cells[cell,face],(k - 1) % 2 + 1]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{1}) = FE.grid.nodes4cells[cell,1]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{2}) = FE.grid.nodes4cells[cell,2]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{3}) = FE.grid.nodes4cells[cell,3]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{4}) = size(FE.grid.coords4nodes,1) + cell
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{5}) = size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) + FE.grid.nodes4cells[cell,1]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{6}) = size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) + FE.grid.nodes4cells[cell,2]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{7}) = size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) + FE.grid.nodes4cells[cell,3]
+get_globaldof4cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell, ::Val{8}) = 2*size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) + cell
 
-# function to get global dof numbers of local dofs on face
-# (only unique due to H1 conformity!!! do not implement for discontinuous elements)
-get_globaldof4face(FE::H1MINIFiniteElement{T,1,1} where T <: Real, face, k) = face
-get_globaldof4face(FE::H1MINIFiniteElement{T,2,1} where T <: Real, face, k) = FE.grid.nodes4faces[face,k]
-get_globaldof4face(FE::H1MINIFiniteElement{T,2,2} where T <: Real, face, k) = Int(floor((k-1)/2))*(size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1)) + FE.grid.nodes4faces[face,(k - 1) % 2 + 1]
+# LOCAL DOF TO GLOBAL DOF ON FACE
+get_globaldof4face(FE::H1MINIFiniteElement{T,2,1} where T <: Real, face, ::Val{1}) = FE.grid.nodes4faces[face,1]
+get_globaldof4face(FE::H1MINIFiniteElement{T,2,1} where T <: Real, face, ::Val{2}) = FE.grid.nodes4faces[face,2]
+
+get_globaldof4face(FE::H1MINIFiniteElement{T,2,2} where T <: Real, face, ::Val{1}) = FE.grid.nodes4faces[face,1]
+get_globaldof4face(FE::H1MINIFiniteElement{T,2,2} where T <: Real, face, ::Val{2}) = FE.grid.nodes4faces[face,2]
+get_globaldof4face(FE::H1MINIFiniteElement{T,2,2} where T <: Real, face, ::Val{3}) = size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) + FE.grid.nodes4faces[face,1]
+get_globaldof4face(FE::H1MINIFiniteElement{T,2,2} where T <: Real, face, ::Val{4}) = size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) + FE.grid.nodes4faces[face,2]
 
 
+# BASIS FUNCTIONS
 function get_all_basis_functions_on_cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real, cell)
     temp = 0.0;
     function closure(xref)

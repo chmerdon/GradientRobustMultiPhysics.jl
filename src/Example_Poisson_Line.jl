@@ -17,7 +17,7 @@ function main()
 fem = "P1"
 #fem = "P2"
 
-maxlevel = 10
+maxlevel = 13
 use_FDgradients = false
 show_plots = true
 show_convergence_history = true
@@ -69,10 +69,12 @@ grid = get_line_grid(maxarea)
 Grid.show(grid)
 
 if fem == "P1"
-    FE = FiniteElements.getP1FiniteElement(grid,1);
+    @time FE = FiniteElements.getP1FiniteElement(grid,1);
 elseif fem == "P2"
     FE = FiniteElements.getP2FiniteElement(grid,1);
-end    
+end  
+ensure_nodes4faces!(grid);
+ensure_volume4cells!(grid);
 FiniteElements.show(FE)
 ndofs[level] = FiniteElements.get_ndofs(FE);
 

@@ -119,11 +119,10 @@ println("L2_error_BA = " * string(L2errorBA[level]));
 
 
 # plot
-if (show_plots) && (level == maxlevel) && ndofs[level] < 5000
-    nodevals = FESolveCommon.eval_at_nodes(val4dofs,FE);
+if (show_plots) && (level == maxlevel) && ndofs[level] < 5
     pygui(true)
     PyPlot.figure(1)
-    PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),nodevals,cmap=get_cmap("ocean"))
+    PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),nodevals[:],cmap=get_cmap("ocean"))
     PyPlot.title("Poisson Problem Solution")
     #show()
 end    

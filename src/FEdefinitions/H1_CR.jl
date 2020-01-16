@@ -16,37 +16,68 @@ function getCRFiniteElement(grid,ncomponents)
 end   
 
 
+get_xref4dof(FE::H1CRFiniteElement, k) = xref4dofs4cell[k,:]
+
+# POLYNOMIAL ORDER
 get_polynomial_order(FE::H1CRFiniteElement) = 1;
 
+# TOTAL NUMBER OF DOFS
 get_ndofs(FE::H1CRFiniteElement{T,2,1} where T <: Real) = size(FE.grid.nodes4faces,1);
 get_ndofs(FE::H1CRFiniteElement{T,2,2} where T <: Real) = 2*size(FE.grid.nodes4faces,1);
 
-get_xref4dof(FE::H1CRFiniteElement, k) = xref4dofs4cell[k,:]
-
+# MAXIMAL DOFS ON CELL
 get_maxndofs4cell(FE::H1CRFiniteElement{T,2,1} where T <: Real) = 3
 get_maxndofs4cell(FE::H1CRFiniteElement{T,2,2} where T <: Real) = 6
 
+# MAXIMAL DOFS ON FACE
 get_maxndofs4face(FE::H1CRFiniteElement{T,2,1} where T <: Real) = 1
 get_maxndofs4face(FE::H1CRFiniteElement{T,2,2} where T <: Real) = 2
 
-# function to get number of components
+# NUMBER OF COMPONENTS
 get_ncomponents(FE::H1CRFiniteElement{T,2,1} where T <: Real) = 1
 get_ncomponents(FE::H1CRFiniteElement{T,2,2} where T <: Real) = 2
 
-# function to get global dof numbers of local dofs on cells
-get_globaldof4cell(FE::H1CRFiniteElement{T,2,1} where T <: Real, cell, k) = FE.grid.faces4cells[cell,k]
+# LOCAL DOF TO GLOBAL DOF ON CELL
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,1} where T <: Real, cell, ::Val{1}) = FE.grid.faces4cells[cell,1]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,1} where T <: Real, cell, ::Val{2}) = FE.grid.faces4cells[cell,2]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,1} where T <: Real, cell, ::Val{3}) = FE.grid.faces4cells[cell,3]
 
-# function to get global dof numbers of local dofs on local face of cell
-get_globaldof4cellface(FE::H1CRFiniteElement{T,2,1} where T <: Real, cell, face, k) = FE.grid.faces4cells[cell,face]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,2} where T <: Real, cell, ::Val{1}) = FE.grid.faces4cells[cell,1]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,2} where T <: Real, cell, ::Val{2}) = FE.grid.faces4cells[cell,2]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,2} where T <: Real, cell, ::Val{3}) = FE.grid.faces4cells[cell,3]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,2} where T <: Real, cell, ::Val{4}) = size(FE.grid.nodes4faces,1) + FE.grid.faces4cells[cell,1]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,2} where T <: Real, cell, ::Val{5}) = size(FE.grid.nodes4faces,1) + FE.grid.faces4cells[cell,2]
+get_globaldof4cell(FE::H1CRFiniteElement{T,2,2} where T <: Real, cell, ::Val{6}) = size(FE.grid.nodes4faces,1) + FE.grid.faces4cells[cell,3]
 
-# function to get global dof numbers of local dofs on face
-# (only unique due to H1 conformity!!! do not implement for discontinuous elements)
-get_globaldof4face(FE::H1CRFiniteElement{T,2,1} where T <: Real, face, k) = face
+# LOCAL DOF TO GLOBAL DOF ON FACE
+get_globaldof4face(FE::H1CRFiniteElement{T,2,1} where T <: Real, face, ::Val{1}) = face
 
+get_globaldof4face(FE::H1CRFiniteElement{T,2,2} where T <: Real, face, ::Val{1}) = face
+get_globaldof4face(FE::H1CRFiniteElement{T,2,2} where T <: Real, face, ::Val{2}) = size(FE.grid.nodes4faces,1) + face
+
+
+# BASIS FUNCTIONS
 function get_all_basis_functions_on_cell(FE::H1CRFiniteElement{T,2,1} where T <: Real, cell)
     function closure(xref)
         return [1 - 2*xref[2],
                 2*(xref[1]+xref[2]) - 1,
                 1 - 2*xref[1]]
+    end
+end
+
+function get_all_basis_functions_on_cell(FE::H1CRFiniteElement{T,2,2} where T <: Real, cell)
+    temp = 0.0;
+    temp2 = 0.0;
+    temp3 = 0.0;
+    function closure(xref)
+        temp = 1 - 2*xref[2]
+        temp2 = 2*(xref[1]+xref[2]) - 1
+        temp3 = 1 - 2*xref[1]
+        return [temp 0.0;
+                temp2 0.0;
+                temp3 0.0;
+                0.0 temp;
+                0.0 temp2;
+                0.0 temp3]
     end
 end

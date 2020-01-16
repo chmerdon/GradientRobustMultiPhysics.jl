@@ -25,12 +25,22 @@ abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
  include("FEdefinitions/H1_P2.jl");
  include("FEdefinitions/H1_CR.jl");
  
+# subtype for L2 conforming elements
+abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
+ include("FEdefinitions/L2_P0.jl");
+ 
 # subtype for Hdiv-conforming elements
 abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
 
 # subtype for Hcurl-conforming elements
 abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
+# mapper for Int{N} to Val{N}
+# dummy_array needed to avoid constructing Val{N} in each call
+# length of dummy array corressponds to be longest number of dofs
+dummy_array = [Val(1),Val(2),Val(3),Val(4),Val(5),Val(6),Val(7),Val(8),Val(9),Val(10),Val(11),Val(12)];
+get_globaldof4cell(FE, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
+get_globaldof4face(FE, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
 
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)
