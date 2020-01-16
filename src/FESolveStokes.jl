@@ -35,11 +35,11 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     for j = 1: xdim*ndofs4cell_velocity
         gradients4cell[j] = zeros(T,xdim);
     end
-    pressure_vals = Array{T,1}(undef,ndofs4cell_pressure);
+    pressure_vals = zeros(T,length(qf.w),ndofs4cell_pressure);
     
     # pre-allocate for derivatives of global2local trafo and basis function
-    #DRresult_grad = Matrix{T}(undef,xdim*ndofs4cell_velocity,celldim);
-    DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,xdim*ndofs4cell_velocity,celldim));
+    gradients_xref_cache = zeros(Float64,length(qf.w),xdim*ndofs4cell_velocity,celldim)
+    #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,xdim*ndofs4cell_velocity,celldim));
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
     
     dim = celldim - 1;
@@ -58,11 +58,15 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
       loc2glob_trafo_tinv(trafo_jacobian,det,FE_velocity.grid,cell)
+      
       for i in eachindex(qf.w)
       
         # evaluate gradients of basis function
-        #DRresult_grad[:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
-        ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
+        #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
+        if (cell == 1)
+            gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
+            pressure_vals[i,:] = FiniteElements.get_all_basis_functions_on_cell(FE_pressure, cell)(qf.xref[i])
+        end    
         
         # multiply tinverted jacobian of element trafo with gradient of basis function
         # which yields (by chain rule) the gradient in x coordinates
@@ -70,12 +74,11 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
             for k = 1 : xdim
                 gradients4cell[dof_i][k] = 0.0;
                 for j = 1 : xdim
-                    gradients4cell[dof_i][k] += trafo_jacobian[k,j]*DiffResults.gradient(DRresult_grad)[dof_i,j]
+                    gradients4cell[dof_i][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i,j]
                 end    
             end    
         end    
             
-        pressure_vals[:] = FiniteElements.get_all_basis_functions_on_cell(FE_pressure, cell)(qf.xref[i])
         
         
         # fill sparse array
@@ -95,7 +98,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
                 dj = ndofs_velocity + FiniteElements.get_globaldof4cell(FE_pressure, cell, dof_j);
                 temp = 0.0;
                 for c = 1 : xdim
-                    temp -= (gradients4cell[(c-1)*ndofs4cell_velocity+dof_i][c] * pressure_vals[dof_j] * qf.w[i] * grid.volume4cells[cell]);
+                    temp -= (gradients4cell[(c-1)*ndofs4cell_velocity+dof_i][c] * pressure_vals[i,dof_j] * qf.w[i] * grid.volume4cells[cell]);
                 end    
                 A[di,dj] += temp;
                 A[dj,di] += temp;
@@ -184,14 +187,14 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
     ndofs = ndofs_velocity + ndofs_pressure;
     fixed_pressure_dof = ndofs_velocity + 1;
-    println("fixing one pressure dof with dofnr=",fixed_pressure_dof);
+    
+    #println("fixing one pressure dof with dofnr=",fixed_pressure_dof);
     A[fixed_pressure_dof,fixed_pressure_dof] = 1e30;
     b[fixed_pressure_dof] = 0;
     val4dofs[fixed_pressure_dof] = 0;
     
-    println("solve");
     try
-        val4dofs[:] = A\b;
+        @time val4dofs[:] = A\b;
     catch    
         println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
         try

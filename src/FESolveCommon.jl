@@ -44,7 +44,9 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
             for cell = 1 : ncells
             
                 # evaluate basis functions at quadrature point
-                basisvals[:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
+                if (cell == 1)
+                    basisvals[:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
+                end    
                 
                 for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
                     di = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
@@ -89,7 +91,8 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
     end
     
     # pre-allocate for derivatives of global2local trafo and basis function
-    DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,ndofs4cell,celldim));
+    gradients_xref_cache = zeros(Float64,length(qf.w),ndofs4cell,celldim)
+    #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,ndofs4cell,celldim));
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
     
     dim = celldim - 1;
@@ -112,7 +115,11 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
       for i in eachindex(qf.w)
       
         # evaluate gradients of basis function
-        ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
+        #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
+        if (cell == 1)
+            gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
+        end    
+        
         
         # multiply tinverted jacobian of element trafo with gradient of basis function
         # which yields (by chain rule) the gradient in x coordinates
@@ -120,7 +127,7 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
             for k = 1 : xdim
                 gradients4cell[dof_i][k] = 0.0;
                 for j = 1 : xdim
-                    gradients4cell[dof_i][k] += trafo_jacobian[k,j]*DiffResults.gradient(DRresult_grad)[dof_i,j]
+                    gradients4cell[dof_i][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i,j]
                 end    
             end    
         end    

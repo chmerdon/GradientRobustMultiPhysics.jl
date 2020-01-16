@@ -160,7 +160,7 @@ L2error_velocityBA[level] = sqrt(abs(sum(integral4cells[:])));
 println("L2_velocity_error_BA = " * string(L2error_velocityBA[level]));
 
 #plot
-if (show_plots) && (level == maxlevel)
+if (show_plots) && (level == maxlevel) && ndofs[level] < 5000
     pygui(true)
     
     # evaluate velocity and pressure at grid points
