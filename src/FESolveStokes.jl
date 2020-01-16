@@ -36,6 +36,8 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
         gradients4cell[j] = zeros(T,xdim);
     end
     pressure_vals = zeros(T,length(qf.w),ndofs4cell_pressure);
+    dofs_velocity = zeros(Int64,ndofs4cell_velocity)
+    dofs_pressure = zeros(Int64,ndofs4cell_pressure)
     
     # pre-allocate for derivatives of global2local trafo and basis function
     gradients_xref_cache = zeros(Float64,length(qf.w),xdim*ndofs4cell_velocity,celldim)
@@ -52,12 +54,18 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     # quadrature loop
     temp::T = 0.0;
     det::T = 0.0;
-    di::Int64 = 0;
-    dj::Int64 = 0
     @time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
       loc2glob_trafo_tinv(trafo_jacobian,det,FE_velocity.grid,cell)
+      
+      # cache dofs
+      for dof_i = 1 : ndofs4cell_velocity
+          dofs_velocity[dof_i] = FiniteElements.get_globaldof4cell(FE_velocity, cell, dof_i);
+      end 
+      for dof_i = 1 : ndofs4cell_pressure
+          dofs_pressure[dof_i] = ndofs_velocity + FiniteElements.get_globaldof4cell(FE_pressure, cell, dof_i);
+      end    
       
       for i in eachindex(qf.w)
       
@@ -78,38 +86,33 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
                 end    
             end    
         end    
-            
         
         
         # fill sparse array
         for dof_i = 1 : ndofs4cell_velocity
             # stiffness matrix for velocity
-            di = FiniteElements.get_globaldof4cell(FE_velocity, cell, dof_i);
             for dof_j = 1 : ndofs4cell_velocity
-                dj = FiniteElements.get_globaldof4cell(FE_velocity, cell, dof_j);
                 for k = 1 : xdim
                     for c = 1 : xdim
-                        A[di,dj] += nu*(gradients4cell[(c-1)*ndofs4cell_velocity+dof_i][k] * gradients4cell[(c-1)*ndofs4cell_velocity+dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
+                        A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += nu*(gradients4cell[(c-1)*ndofs4cell_velocity+dof_i][k] * gradients4cell[(c-1)*ndofs4cell_velocity+dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
                     end
                 end
             end
             
             for dof_j = 1 : ndofs4cell_pressure
-                dj = ndofs_velocity + FiniteElements.get_globaldof4cell(FE_pressure, cell, dof_j);
                 temp = 0.0;
                 for c = 1 : xdim
                     temp -= (gradients4cell[(c-1)*ndofs4cell_velocity+dof_i][c] * pressure_vals[i,dof_j] * qf.w[i] * grid.volume4cells[cell]);
                 end    
-                A[di,dj] += temp;
-                A[dj,di] += temp;
+                A[dofs_velocity[dof_i],dofs_pressure[dof_j]] += temp;
+                A[dofs_pressure[dof_j],dofs_velocity[dof_i]] += temp;
             end
         end    
         
         # pressure x pressure block (empty)
         for dof_i = 1 : ndofs4cell_pressure, dof_j = 1 : ndofs4cell_pressure
             if (dof_i == dof_j)
-                di = ndofs_velocity + FiniteElements.get_globaldof4cell(FE_pressure, cell, dof_i);
-                A[di,di] = pressure_diagonal;
+                A[dofs_pressure[dof_j],dofs_pressure[dof_j]] = pressure_diagonal;
             end    
         end
       end  

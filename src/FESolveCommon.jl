@@ -36,31 +36,34 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
+    dofs = zeros(Int64,ndofs4cell)
     
     # quadrature loop
     temp = 0.0;
     @time begin    
         for i in eachindex(qf.w)
             for cell = 1 : ncells
-            
+                
                 # evaluate basis functions at quadrature point
                 if (cell == 1)
                     basisvals[:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
                 end    
                 
+                for dof_i = 1 : ndofs4cell
+                    dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
+                end
+                
                 for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
-                    di = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-                    dj = FiniteElements.get_globaldof4cell(FE, cell, dof_j);
                     # fill upper right part and diagonal of matrix
                     @inbounds begin
                       temp = 0.0
                       for k = 1 : ncomponents
                         temp += (basisvals[dof_i,k]*basisvals[dof_j,k] * qf.w[i] * FE.grid.volume4cells[cell]);
                       end
-                      A[di,dj] += temp;
+                      A[dofs[dof_i],dofs[dof_j]] += temp;
                       # fill lower left part of matrix
                       if dof_j > dof_i
-                        A[dj,di] += temp;
+                        A[dofs[dof_j],dofs[dof_i]] += temp;
                       end    
                     end
                 end
@@ -94,6 +97,7 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
     gradients_xref_cache = zeros(Float64,length(qf.w),ndofs4cell,celldim)
     #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,ndofs4cell,celldim));
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
+    dofs = zeros(Int64,ndofs4cell)
     
     dim = celldim - 1;
     if dim == 1
@@ -105,13 +109,16 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
     # quadrature loop
     temp::T = 0.0;
     det::T = 0.0;
-    di::Int64 = 0;
-    dj::Int64 = 0
     @time begin
     for cell = 1 : ncells
       
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
       loc2glob_trafo_tinv(trafo_jacobian,det,FE.grid,cell)
+      
+      for dof_i = 1 : ndofs4cell
+          dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
+      end      
+      
       for i in eachindex(qf.w)
       
         # evaluate gradients of basis function
@@ -134,17 +141,15 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
         
         # fill sparse array
         for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
-            di = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-            dj = FiniteElements.get_globaldof4cell(FE, cell, dof_j);
             # fill upper right part and diagonal of matrix
             temp = 0.0;
             for k = 1 : xdim
               temp += (gradients4cell[dof_i][k]*gradients4cell[dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
             end
-            A[di,dj] += temp;
+            A[dofs[dof_i],dofs[dof_j]] += temp;
             # fill lower left part of matrix
             if dof_j > dof_i
-              A[dj,di] += temp;
+              A[dofs[dof_j],dofs[dof_i]] += temp;
             end    
           end
       end  
