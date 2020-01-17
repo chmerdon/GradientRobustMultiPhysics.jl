@@ -32,10 +32,13 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     
     # pre-allocate memory for gradients
     gradients4cell = Array{Array{T,1}}(undef,xdim*ndofs4cell_velocity);
-    for j = 1: xdim*ndofs4cell_velocity
+    for j = 1 : xdim*ndofs4cell_velocity
         gradients4cell[j] = zeros(T,xdim);
     end
-    pressure_vals = zeros(T,length(qf.w),ndofs4cell_pressure);
+    pressure_vals = Array{Array{T,1}}(undef,length(qf.w))
+    for j = 1 : ndofs4cell_pressure
+        pressure_vals[j] = zeros(T,ndofs4cell_pressure);
+    end    
     dofs_velocity = zeros(Int64,ndofs4cell_velocity)
     dofs_pressure = zeros(Int64,ndofs4cell_pressure)
     
@@ -54,6 +57,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     # quadrature loop
     temp::T = 0.0;
     det::T = 0.0;
+    offsets = [0,ndofs4cell_velocity];
     @time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
@@ -73,7 +77,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
         #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
         if (cell == 1)
             gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
-            pressure_vals[i,:] = FiniteElements.get_all_basis_functions_on_cell(FE_pressure, cell)(qf.xref[i])
+            pressure_vals[i] = FiniteElements.get_all_basis_functions_on_cell(FE_pressure, cell)(qf.xref[i])
         end    
         
         # multiply tinverted jacobian of element trafo with gradient of basis function
@@ -92,18 +96,21 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
         for dof_i = 1 : ndofs4cell_velocity
             # stiffness matrix for velocity
             for dof_j = 1 : ndofs4cell_velocity
+                temp = 0.0;
                 for k = 1 : xdim
                     for c = 1 : xdim
-                        A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += nu*(gradients4cell[(c-1)*ndofs4cell_velocity+dof_i][k] * gradients4cell[(c-1)*ndofs4cell_velocity+dof_j][k] * qf.w[i] * grid.volume4cells[cell]);
+                        temp += gradients4cell[offsets[c]+dof_i][k] * gradients4cell[offsets[c]+dof_j][k];
                     end
                 end
+                A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp * nu * qf.w[i] * grid.volume4cells[cell];
             end
-            
+            # pressure x div velocity
             for dof_j = 1 : ndofs4cell_pressure
                 temp = 0.0;
                 for c = 1 : xdim
-                    temp -= (gradients4cell[(c-1)*ndofs4cell_velocity+dof_i][c] * pressure_vals[i,dof_j] * qf.w[i] * grid.volume4cells[cell]);
+                    temp -= gradients4cell[offsets[c]+dof_i][c];
                 end    
+                temp *= pressure_vals[i][dof_j] * qf.w[i] * grid.volume4cells[cell];
                 A[dofs_velocity[dof_i],dofs_pressure[dof_j]] += temp;
                 A[dofs_pressure[dof_j],dofs_velocity[dof_i]] += temp;
             end
@@ -112,12 +119,25 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
         # pressure x pressure block (empty)
         for dof_i = 1 : ndofs4cell_pressure, dof_j = 1 : ndofs4cell_pressure
             if (dof_i == dof_j)
-                A[dofs_pressure[dof_j],dofs_pressure[dof_j]] = pressure_diagonal;
+                A[dofs_pressure[dof_i],dofs_pressure[dof_j]] = pressure_diagonal;
             end    
         end
       end  
     end
   end  
+  println("hallo")
+  show(gradients_xref_cache[1,1,:])
+  show(gradients_xref_cache[1,2,:])
+  show(gradients_xref_cache[1,3,:])
+  show(gradients_xref_cache[1,4,:])
+  show(gradients_xref_cache[1,5,:])
+  show(gradients_xref_cache[1,6,:])
+  show(gradients_xref_cache[1,7,:])
+  show(gradients_xref_cache[1,8,:])
+  show(gradients_xref_cache[1,9,:])
+  show(gradients_xref_cache[1,10,:])
+  show(gradients_xref_cache[1,11,:])
+  show(gradients_xref_cache[1,12,:])
 end
 
 
@@ -157,18 +177,8 @@ function assembleStokesSystem(nu::Real, volume_data!::Function,FE_velocity::Fini
     assemble_Stokes_Operator4FE!(A,nu,FE_velocity,FE_pressure);
     
     # compute right-hand side vector
-    rhsintegral4cells = zeros(Base.eltype(grid.coords4nodes),ncells,ndofs4cell_velocity); # f x FEbasis
-    println("integrate rhs for velocity");
-    integrate!(rhsintegral4cells, rhs_integrand4Stokes!(volume_data!, FE_velocity,xdim), grid, quadrature_order, ndofs4cell_velocity);
-         
-    # accumulate right-hand side vector
     b = zeros(Float64,ndofs);
-    for cell = 1 : ncells
-        for dof_i = 1 : ndofs4cell_velocity
-            di = FiniteElements.get_globaldof4cell(FE_velocity, cell, dof_i);
-            b[di] += rhsintegral4cells[cell,dof_i]
-        end    
-    end
+    FESolveCommon.assemble_rhsL2!(b, volume_data!, FE_velocity)
     
     return A,b
 end

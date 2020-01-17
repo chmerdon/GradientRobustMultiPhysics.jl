@@ -17,7 +17,7 @@ function getP0FiniteElement(grid,ncomponents)
     elseif dim == 2    
         xref4dofs4cell = repeat([1//3 1//3],ncomponents);
     end    
-    return L2P0FiniteElement{T,dim,ncomponents}("P1 (H1FiniteElement, dim=$dim, ncomponents=$ncomponents)",grid, Array{T,2}(xref4dofs4cell))
+    return L2P0FiniteElement{T,dim,ncomponents}("P0 (H1FiniteElement, dim=$dim, ncomponents=$ncomponents)",grid, Array{T,2}(xref4dofs4cell))
 end 
 
 get_xref4dof(FE::L2P0FiniteElement, k) = xref4dofs4cell[k,:]

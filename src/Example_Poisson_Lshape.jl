@@ -32,8 +32,8 @@ function main()
 # CHOOSE A FEM
 #fem = "CR"
 #fem = "P1"
-#fem = "MINI"
-fem = "P2"
+fem = "MINI"
+#fem = "P2"
 
 # CHOOSE A PROBLEM
 use_problem = "cubic"; f_order = 1; u_order = 3;
@@ -49,24 +49,31 @@ show_convergence_history = true
 # define problem data
 
 function exact_solution(problem)
+    if problem == "cubic"
+        exponents = [3, 1]
+    elseif problem == "quadratic"
+        exponents = [2, 1]
+    elseif problem == "linear"
+        exponents = [1, 0]
+    end    
     function closure(x)
-        if problem == "cubic"
-            return -x[1]^3 - x[2]^3
-        elseif problem == "quadratic"
-            return -x[1]^2 - x[2]^2
-        elseif problem == "linear"
-            return x[1] + x[2]
-        end
+        return x[1]^exponents[1] - x[2]^exponents[2]
     end   
 end    
 
 function volume_data!(problem)
-    hessian = [0.0 0.0;0.0 0.0]
+    if problem == "cubic"
+        factors = [6, 0]
+        exponents = [1, 0]
+    elseif problem == "quadratic"
+        factors = [2, 0]
+        exponents = [0, 0]
+    elseif problem == "linear"
+        factors = [0, 0]
+        exponents = [0, 0]
+    end    
     return function closure(result, x)  
-        # compute Laplacian of exact solution
-        u(x) = exact_solution(problem)(x)
-        hessian = ForwardDiff.hessian(u,x)
-        result[1] = -(hessian[1] + hessian[4])
+        result[1] = -factors[1]*x[1]^exponents[1] + factors[2]*x[2]^exponents[2]
     end    
 end
 

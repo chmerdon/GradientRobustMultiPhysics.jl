@@ -79,15 +79,17 @@ end
 
 function get_all_basis_functions_on_cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, cell)
     temp = 0.0;
+    temp2 = 0.0;
     function closure(xref)
         temp = 1 - xref[1] - xref[2]
+        temp2 = temp*xref[1]*xref[2]
         return [temp 0.0;
                 xref[1] 0.0;
                 xref[2] 0.0;
-                temp*xref[1]*xref[2] 0.0;
+                temp2 0.0;
                 0.0 temp;
                 0.0 xref[1];
                 0.0 xref[2];
-                0.0 temp*xref[1]*xref[2]]
+                0.0 temp2]
     end
 end

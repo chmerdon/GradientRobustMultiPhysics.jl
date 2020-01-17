@@ -30,26 +30,41 @@ use_problem = "quartic"; f_order = 2; u_order = 4;
 
 
 function exact_solution(problem)
+    if problem == "quartic"
+        factors = [0, -3, 2, -1, 1]
+    elseif problem == "cubic"
+        factors = [0, 0, 0, -1, 0]
+    elseif problem == "quadratic"
+        factors = [0, 0, -1, 0, 0]
+    elseif problem == "linear"
+        factors = [0, 1, 0, 0, 0]
+    end    
+    temp = 0.0;
     function closure(x)
-        if problem == "quartic"
-            return x[1]^4 - x[1]^3 +2*x[1]^2 - 3*x[1]
-        elseif problem == "cubic"
-            return -x[1]^3
-        elseif problem == "quadratic"
-            return -x[1]^2
-        elseif problem == "linear"
-            return x[1]
+        temp = 0.0
+        for j=1:length(factors)
+            temp += factors[j]*x[1]^(j-1)
         end
+        return temp
     end   
 end    
 
 function volume_data!(problem)
-    hessian = [0.0]
+    if problem == "quartic"
+        factors = [4, -6, 12, 0, 0]
+    elseif problem == "cubic"
+        factors = [0, -6, 0, 0, 0]
+    elseif problem == "quadratic"
+        factors = [-2, 0, 0, 0, 0]
+    elseif problem == "linear"
+        factors = [0, 0, 0, 0, 0]
+    end    
     return function closure(result, x)  
         # compute Laplacian of exact solution
-        u(x) = exact_solution(problem)(x)
-        hessian = ForwardDiff.hessian(u,x)
-        result[1] = -hessian[1]
+        result[1] = 0.0
+        for j=1:length(factors)
+            result[1] -= factors[j]*x[1]^(j-1)
+        end
     end    
 end
 

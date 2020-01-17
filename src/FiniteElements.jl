@@ -26,7 +26,7 @@ abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
  include("FEdefinitions/H1_CR.jl");
  
 # subtype for L2 conforming elements
-abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
+abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
  include("FEdefinitions/L2_P0.jl");
  
 # subtype for Hdiv-conforming elements

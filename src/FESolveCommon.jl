@@ -35,30 +35,36 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
+    basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    for i in eachindex(qf.w)
+        basisvals[i] = zeros(T,ndofs4cell,ncomponents)
+    end    
     dofs = zeros(Int64,ndofs4cell)
     
     # quadrature loop
     temp = 0.0;
     @time begin    
-        for i in eachindex(qf.w)
-            for cell = 1 : ncells
+        for cell = 1 : ncells
+        
+            # get dofs
+            for dof_i = 1 : ndofs4cell
+                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
+            end
+            
+            for i in eachindex(qf.w)
                 
                 # evaluate basis functions at quadrature point
                 if (cell == 1)
-                    basisvals[:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
+                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
                 end    
                 
-                for dof_i = 1 : ndofs4cell
-                    dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-                end
                 
                 for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
                     # fill upper right part and diagonal of matrix
                     @inbounds begin
                       temp = 0.0
                       for k = 1 : ncomponents
-                        temp += (basisvals[dof_i,k]*basisvals[dof_j,k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                        temp += (basisvals[i][dof_i,k]*basisvals[i][dof_j,k] * qf.w[i] * FE.grid.volume4cells[cell]);
                       end
                       A[dofs[dof_i],dofs[dof_j]] += temp;
                       # fill lower left part of matrix
@@ -158,21 +164,146 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
 end
 
 
-# scalar functions times FE basis functions
-function rhs_integrandL2!(f!::Function,FE::AbstractH1FiniteElement,dim)
-    cache = zeros(eltype(FE.grid.coords4nodes),dim)
+function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement)
+    ncells::Int = size(FE.grid.nodes4cells,1);
     ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,dim)
-    function closure(result,x,xref,cellIndex::Int)
-        f!(cache, x)
-        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cellIndex)(xref)
-        for j=1:ndofs4cell
-            result[j] = 0.0
-            for d=1:dim
-                result[j] += cache[d] * basisvals[j,d]
-            end    
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim);
+     
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    for i in eachindex(qf.w)
+        basisvals[i] = zeros(T,ndofs4cell,ncomponents)
+    end    
+    dofs = zeros(Int64,ndofs4cell)
+    
+    dim = size(FE.grid.nodes4cells,2) - 1;
+    if dim == 1
+        loc2glob_trafo = FiniteElements.local2global_line()
+    elseif dim == 2
+        loc2glob_trafo = FiniteElements.local2global_triangle()
+    end    
+    
+    # quadrature loop
+    temp = 0.0;
+    fval = zeros(T,ncomponents)
+    @time begin    
+        for cell = 1 : ncells
+            # get dofs
+            for dof_i = 1 : ndofs4cell
+                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
+            end
+            for i in eachindex(qf.w)
+                
+                # evaluate basis functions at quadrature point
+                if (cell == 1)
+                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
+                end    
+                
+                # evaluate f
+                x = loc2glob_trafo(FE.grid,cell)(qf.xref[i]);
+                f!(fval, x)
+                
+                for dof_i = 1 : ndofs4cell
+                    # fill vector
+                    @inbounds begin
+                      temp = 0.0
+                      for k = 1 : ncomponents
+                        temp += (fval[k]*basisvals[i][dof_i,k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                      end
+                      b[dofs[dof_i]] += temp;
+                    end
+                end
+            end
         end
+    end    
+end
+
+
+function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement)
+    ncells::Int = size(FE.grid.nodes4cells,1);
+    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    celldim::Int = size(FE.grid.nodes4cells,2);
+    
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim);
+     
+    # pre-allocate memory for gradients
+    gradients4cell = Array{Array{T,1}}(undef,ndofs4cell);
+    for j = 1: ndofs4cell
+        gradients4cell[j] = zeros(T,xdim);
     end
+    
+    # pre-allocate for derivatives of global2local trafo and basis function
+    gradients_xref_cache = zeros(Float64,length(qf.w),ndofs4cell,celldim)
+    #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,ndofs4cell,celldim));
+    trafo_jacobian = Matrix{T}(undef,xdim,xdim);
+    dofs = zeros(Int64,ndofs4cell)
+    
+    dim = celldim - 1;
+    if dim == 1
+        loc2glob_trafo = FiniteElements.local2global_line()
+        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_line
+    elseif dim == 2
+        loc2glob_trafo = FiniteElements.local2global_triangle()
+        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_triangle
+    end    
+    
+    
+    # quadrature loop
+    temp = 0.0;
+    fval = zeros(T,xdim)
+    @time begin    
+        for cell = 1 : ncells
+      
+            # evaluate tinverted (=transposed + inverted) jacobian of element trafo
+            loc2glob_trafo_tinv(trafo_jacobian,det,FE.grid,cell)
+      
+            for dof_i = 1 : ndofs4cell
+                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
+            end      
+      
+            for i in eachindex(qf.w)
+      
+                # evaluate gradients of basis function
+                #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
+                if (cell == 1)
+                    gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
+                end    
+        
+        
+                # multiply tinverted jacobian of element trafo with gradient of basis function
+                # which yields (by chain rule) the gradient in x coordinates
+                for dof_i = 1 : ndofs4cell
+                    for k = 1 : xdim
+                        gradients4cell[dof_i][k] = 0.0;
+                        for j = 1 : xdim
+                            gradients4cell[dof_i][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i,j]
+                        end    
+                    end    
+                end 
+                
+                # evaluate f
+                x = loc2glob_trafo(FE.grid,cell)(qf.xref[i]);
+                f!(fval, x)
+                
+                for dof_i = 1 : ndofs4cell
+                    # fill vector
+                    @inbounds begin
+                      temp = 0.0
+                      for k = 1 : xdim
+                        temp += (fval[k] * gradients4cell[dof_i][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                      end
+                      b[dofs[dof_i]] += temp;
+                    end
+                end
+            end
+        end
+    end    
 end
 
 
@@ -230,23 +361,13 @@ function assembleSystem(norm_lhs::String,norm_rhs::String,volume_data!::Function
     end 
     
     # compute right-hand side vector
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
-    rhsintegral4cells = zeros(Base.eltype(grid.coords4nodes),ncells,ndofs4cell); # f x FEbasis
+    b = FiniteElements.createFEVector(FE);
     if norm_rhs == "L2"
-        integrate!(rhsintegral4cells,rhs_integrandL2!(volume_data!,FE,FiniteElements.get_ncomponents(FE)),grid,quadrature_order,ndofs4cell);
+        assemble_rhsL2!(b, volume_data!, FE)
     elseif norm_rhs == "H1"
-        @assert norm_lhs == "H1"
-        integrate!(rhsintegral4cells,rhs_integrandH1!(volume_data!,FE,celldim-1),grid,quadrature_order,ndofs4cell);
+        assemble_rhsH1!(b, volume_data!, FE)
     end
     
-    # accumulate right-hand side vector
-    b = FiniteElements.createFEVector(FE);
-    for cell = 1 : ncells
-        for dof_i = 1 : ndofs4cell
-            di = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-            b[di] += rhsintegral4cells[cell,dof_i]
-        end    
-    end
     
     return A,b
 end
