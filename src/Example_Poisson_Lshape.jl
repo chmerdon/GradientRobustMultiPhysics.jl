@@ -30,9 +30,9 @@ end
 function main()
 
 # CHOOSE A FEM
-#fem = "CR"
+fem = "CR"
 #fem = "P1"
-fem = "MINI"
+#fem = "MINI"
 #fem = "P2"
 
 # CHOOSE A PROBLEM

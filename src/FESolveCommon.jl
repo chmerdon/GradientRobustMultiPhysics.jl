@@ -85,6 +85,7 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
     ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
     xdim::Int = size(FE.grid.coords4nodes,2);
     celldim::Int = size(FE.grid.nodes4cells,2);
+    ncomponents::Int = FiniteElements.get_ncomponents(FE);
     
     T = eltype(FE.grid.coords4nodes);
     qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)-1), xdim);
@@ -94,13 +95,13 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
     end    
     
     # pre-allocate memory for gradients
-    gradients4cell = Array{Array{T,1}}(undef,ndofs4cell);
-    for j = 1: ndofs4cell
+    gradients4cell = Array{Array{T,1}}(undef,ncomponents*ndofs4cell);
+    for j = 1 : ncomponents*ndofs4cell
         gradients4cell[j] = zeros(T,xdim);
     end
     
     # pre-allocate for derivatives of global2local trafo and basis function
-    gradients_xref_cache = zeros(Float64,length(qf.w),ndofs4cell,celldim)
+    gradients_xref_cache = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,celldim)
     #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,ndofs4cell,celldim));
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
     dofs = zeros(Int64,ndofs4cell)
@@ -115,6 +116,7 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
     # quadrature loop
     temp::T = 0.0;
     det::T = 0.0;
+    offsets = [0,ndofs4cell];
     @time begin
     for cell = 1 : ncells
       
@@ -136,7 +138,7 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
         
         # multiply tinverted jacobian of element trafo with gradient of basis function
         # which yields (by chain rule) the gradient in x coordinates
-        for dof_i = 1 : ndofs4cell
+        for dof_i = 1 : ncomponents*ndofs4cell
             for k = 1 : xdim
                 gradients4cell[dof_i][k] = 0.0;
                 for j = 1 : xdim
@@ -150,7 +152,9 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
             # fill upper right part and diagonal of matrix
             temp = 0.0;
             for k = 1 : xdim
-              temp += (gradients4cell[dof_i][k]*gradients4cell[dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                for c = 1 : ncomponents
+                    temp += (gradients4cell[offsets[c]+dof_i][k]*gradients4cell[offsets[c]+dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                end
             end
             A[dofs[dof_i],dofs[dof_j]] += temp;
             # fill lower left part of matrix
