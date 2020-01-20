@@ -1,6 +1,8 @@
 using Triangulate
 using Grid
 using Quadrature
+using ExtendableSparse
+using LinearAlgebra
 using SparseArrays
 using FiniteElements
 using FESolveCommon
@@ -25,8 +27,8 @@ function main()
 
 #fem = "CR"
 #fem = "MINI"
-fem = "TH"
-#fem = "P2P0"
+#fem = "TH"
+fem = "P2P0"
 
 #use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
@@ -64,7 +66,7 @@ function exact_pressure(problem) # exact pressure
         elseif problem == "quadratic"
             return x[1] - 1//2;    
         elseif problem == "cubic"
-            return 0; #x[1]^2 + x[1]^2 - 2//3;    
+            return x[1]^2 + x[2]^2 - 2//3;    
         end
     end    
 end
@@ -113,6 +115,7 @@ function wrap_pressure(result,x)
 end    
 
 L2error_velocity = zeros(Float64,maxlevel)
+L2error_divergence = zeros(Float64,maxlevel)
 L2error_pressure = zeros(Float64,maxlevel)
 L2error_velocityBA = zeros(Float64,maxlevel)
 L2error_velocityVL = zeros(Float64,maxlevel)
@@ -157,20 +160,27 @@ ndofs[level] = ndofs_velocity + ndofs_pressure;
 val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
 residual = solveStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact_velocity!(use_problem),grid,FE_velocity,FE_pressure,FiniteElements.get_polynomial_order(FE_velocity)+f_order);
 println("residual = " * string(residual));
+    
+    # check divergence
+    B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
+    FESolveStokes.assemble_divdiv_Matrix!(B,FE_velocity);
+    divergence = sqrt(abs(dot(val4dofs[1:ndofs_velocity],B*val4dofs[1:ndofs_velocity])));
+    println("divergence = ",divergence);
+    L2error_divergence[level] = divergence;
 
 # compute pressure best approximation
 val4dofs_pressureBA = FiniteElements.createFEVector(FE_pressure);
-residual = computeBestApproximation!(val4dofs_pressureBA,"L2",wrap_pressure,Nothing,grid,FE_pressure,p_order + FiniteElements.get_polynomial_order(FE_pressure))
+residual = computeBestApproximation!(val4dofs_pressureBA,"L2",wrap_pressure,Nothing,FE_pressure,p_order + FiniteElements.get_polynomial_order(FE_pressure))
 println("residual = " * string(residual));
 
 # compute velocity best approximation
 val4dofs_velocityBA = FiniteElements.createFEVector(FE_velocity);
-residual = computeBestApproximation!(val4dofs_velocityBA,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),grid,FE_velocity,u_order+FiniteElements.get_polynomial_order(FE_velocity))
+residual = computeBestApproximation!(val4dofs_velocityBA,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_velocity,u_order+FiniteElements.get_polynomial_order(FE_velocity))
 println("residual = " * string(residual));
 
 # compute velocity solution of vector Laplacian (Poisson)
 val4dofs_velocityVL = FiniteElements.createFEVector(FE_velocity);
-residual = FESolvePoisson.solvePoissonProblem!(val4dofs_velocityVL,volume_data!(use_problem, true),exact_velocity!(use_problem),grid,FE_velocity,u_order+FiniteElements.get_polynomial_order(FE_velocity))
+residual = FESolvePoisson.solvePoissonProblem!(val4dofs_velocityVL,nu,volume_data!(use_problem, true),exact_velocity!(use_problem),FE_velocity,u_order+FiniteElements.get_polynomial_order(FE_velocity))
 println("residual = " * string(residual));
 
 # compute errors
@@ -222,6 +232,8 @@ println("\n L2 pressure BA error");
 show(L2error_pressureBA)
 println("\n L2 velocity error");
 show(L2error_velocity)
+println("\n L2 velocity divergence error");
+show(L2error_divergence)
 println("\n L2 velocity BA error");
 show(L2error_velocityBA)
 println("\n L2 velocity VL error");
@@ -230,6 +242,7 @@ show(L2error_velocityVL)
 if (show_convergence_history)
     PyPlot.figure(4)
     PyPlot.loglog(ndofs,L2error_velocity,"-o")
+    PyPlot.loglog(ndofs,L2error_divergence,"-o")
     PyPlot.loglog(ndofs,L2error_pressure,"-o")
     PyPlot.loglog(ndofs,L2error_velocityBA,"-o")
     PyPlot.loglog(ndofs,L2error_velocityVL,"-o")
@@ -237,7 +250,7 @@ if (show_convergence_history)
     PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
     PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
     PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-    PyPlot.legend(("L2 error velocity","L2 error pressure","L2 error velocity BA","L2 error velocity Poisson","L2 error pressure BA","O(h)","O(h^2)","O(h^3)"))
+    PyPlot.legend(("L2 error velocity","L2 error divergence","L2 error pressure","L2 error velocity BA","L2 error velocity Poisson","L2 error pressure BA","O(h)","O(h^2)","O(h^3)"))
     PyPlot.title("Convergence history (fem=" * fem * " problem=" * use_problem * ")")
     ax = PyPlot.gca()
     ax.grid(true)

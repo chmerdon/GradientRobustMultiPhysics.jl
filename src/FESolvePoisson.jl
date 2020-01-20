@@ -12,12 +12,17 @@ using Grid
 
 
 # computes solution of Poisson problem
-function solvePoissonProblem!(val4dofs::Array,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE::AbstractH1FiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
+function solvePoissonProblem!(val4dofs::Array, nu::Real, volume_data!::Function, boundary_data!, FE::AbstractH1FiniteElement, quadrature_order::Int, dirichlet_penalty = 1e60)
     # assemble system 
-    A, b = FESolveCommon.assembleSystem("H1","L2",volume_data!,grid,FE,quadrature_order);
+    A, b = FESolveCommon.assembleSystem(nu,"H1","L2",volume_data!,FE,quadrature_order);
     
     # apply boundary data
-    bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,boundary_data!);
+    celldim::Int = size(FE.grid.nodes4cells,2) - 1;
+    if (celldim == 1)
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,false);
+    else
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,true);
+    end
     
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;
@@ -29,7 +34,7 @@ function solvePoissonProblem!(val4dofs::Array,volume_data!::Function,boundary_da
     catch    
         println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
         try
-            val4dofs[:] = Array{typeof(grid.coords4nodes[1]),2}(A)\b;
+            val4dofs[:] = Array{typeof(FE.grid.coords4nodes[1]),2}(A)\b;
         catch OverflowError
             println("OverflowError (Rationals?): trying again as Float64 sparse matrix");
             val4dofs[:] = Array{Float64,2}(A)\b;

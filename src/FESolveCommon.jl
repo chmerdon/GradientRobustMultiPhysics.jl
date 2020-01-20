@@ -78,9 +78,70 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
     end    
 end
 
+# matrix for L2 bestapproximation on boundary faces that writes into an ExtendableSparseMatrix
+function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1FiniteElement)
+    ensure_bfaces!(FE.grid);
+    ensure_length4faces!(FE.grid);
+    nbfaces::Int = size(FE.grid.bfaces,1);
+    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim-1);
+    
+        Quadrature.show(qf)
+     
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    for i in eachindex(qf.w)
+        basisvals[i] = zeros(T,ndofs4face,ncomponents)
+    end    
+    dofs = zeros(Int64,ndofs4face)
+    
+    # quadrature loop
+    temp = 0.0;
+    face = 0;
+    @time begin    
+        for j in eachindex(FE.grid.bfaces)
+            face = FE.grid.bfaces[j];
+            # get dofs
+            for dof_i = 1 : ndofs4face
+                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
+            end
+            
+            for i in eachindex(qf.w)
+                
+                # evaluate basis functions at quadrature point
+                if (j == 1)
+                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_face(FE, face)(qf.xref[i])
+                end    
+                
+                
+                for dof_i = 1 : ndofs4face, dof_j = dof_i : ndofs4face
+                    # fill upper right part and diagonal of matrix
+                    @inbounds begin
+                      temp = 0.0
+                      for k = 1 : ncomponents
+                        temp += (basisvals[i][dof_i,k]*basisvals[i][dof_j,k] * qf.w[i] * FE.grid.length4faces[face]);
+                      end
+                      A[dofs[dof_i],dofs[dof_j]] += temp;
+                      # fill lower left part of matrix
+                      if dof_j > dof_i
+                        A[dofs[dof_j],dofs[dof_i]] += temp;
+                      end 
+                    end
+                end
+            end
+        end#
+    end      
+end
+
+
+
 
 # stiffness matrix assembly that writes into an ExtendableSparseMatrix
-function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1FiniteElement,talky = false)
+function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::AbstractH1FiniteElement,talky = false)
     ncells::Int = size(FE.grid.nodes4cells,1);
     ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
     xdim::Int = size(FE.grid.coords4nodes,2);
@@ -153,9 +214,10 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1F
             temp = 0.0;
             for k = 1 : xdim
                 for c = 1 : ncomponents
-                    temp += (gradients4cell[offsets[c]+dof_i][k]*gradients4cell[offsets[c]+dof_j][k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                    temp += gradients4cell[offsets[c]+dof_i][k]*gradients4cell[offsets[c]+dof_j][k];
                 end
             end
+            temp *= nu * qf.w[i] * FE.grid.volume4cells[cell]
             A[dofs[dof_i],dofs[dof_j]] += temp;
             # fill lower left part of matrix
             if dof_j > dof_i
@@ -217,6 +279,76 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement)
                       temp = 0.0
                       for k = 1 : ncomponents
                         temp += (fval[k]*basisvals[i][dof_i,k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                      end
+                      b[dofs[dof_i]] += temp;
+                    end
+                end
+            end
+        end
+    end    
+end
+
+function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
+    ensure_bfaces!(FE.grid);
+    ensure_length4faces!(FE.grid);
+    nbfaces::Int = size(FE.grid.bfaces,1);
+    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+    celldim::Int = size(FE.grid.nodes4cells,2) - 1;
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim-1);
+    
+        Quadrature.show(qf)
+     
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    for i in eachindex(qf.w)
+        basisvals[i] = zeros(T,ndofs4face,ncomponents)
+    end    
+    dofs = zeros(Int64,ndofs4face)
+    
+    loc2glob_trafo = FiniteElements.local2global_line()
+
+    temp = 0.0
+    fval = zeros(T,ncomponents)
+    x = zeros(T,xdim);
+    face = 0
+    @time begin    
+        for j in eachindex(FE.grid.bfaces)
+            face = FE.grid.bfaces[j];
+            # get dofs
+            for dof_i = 1 : ndofs4face
+                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
+            end
+            for i in eachindex(qf.w)
+                
+                # evaluate basis functions at quadrature point
+                if (j == 1)
+                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_face(FE, face)(qf.xref[i])
+                end    
+                
+                # evaluate f
+                fill!(x,0.0)
+                if celldim == 2
+                    for j = 1 : xdim
+                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 2], j] * qf.xref[i][1]
+                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j] * qf.xref[i][2]
+                    end
+                elseif celldim == 1
+                    for j = 1 : xdim
+                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j]
+                    end
+                end    
+                f!(fval, x)
+                
+                for dof_i = 1 : ndofs4face
+                    # fill vector
+                    @inbounds begin
+                      temp = 0.0
+                      for k = 1 : ncomponents
+                        temp += (fval[k]*basisvals[i][dof_i,k] * qf.w[i] * FE.grid.length4faces[face]);
                       end
                       b[dofs[dof_i]] += temp;
                     end
@@ -347,21 +479,21 @@ function rhs_integrandH1!(f!::Function,FE::AbstractH1FiniteElement,dim)
 end
 
 
-function assembleSystem(norm_lhs::String,norm_rhs::String,volume_data!::Function,grid::Grid.Mesh,FE::AbstractFiniteElement,quadrature_order::Int)
+function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!::Function,FE::AbstractFiniteElement,quadrature_order::Int)
 
-    ncells::Int = size(grid.nodes4cells,1);
-    nnodes::Int = size(grid.coords4nodes,1);
-    celldim::Int = size(grid.nodes4cells,2);
-    xdim::Int = size(grid.coords4nodes,2);
+    ncells::Int = size(FE.grid.nodes4cells,1);
+    nnodes::Int = size(FE.grid.coords4nodes,1);
+    celldim::Int = size(FE.grid.nodes4cells,2);
+    xdim::Int = size(FE.grid.coords4nodes,2);
     
-    Grid.ensure_volume4cells!(grid);
+    Grid.ensure_volume4cells!(FE.grid);
     
     ndofs = FiniteElements.get_ndofs(FE);
     A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs);
     if norm_lhs == "L2"
         assemble_mass_matrix4FE!(A,FE);
     elseif norm_lhs == "H1"
-        assemble_stiffness_matrix4FE!(A,FE);
+        assemble_stiffness_matrix4FE!(A,nu,FE);
     end 
     
     # compute right-hand side vector
@@ -376,15 +508,45 @@ function assembleSystem(norm_lhs::String,norm_rhs::String,volume_data!::Function
     return A,b
 end
 
+function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestapproximation = false)
+    if (boundary_data! == Nothing)
+        return []
+    else
+        if use_L2bestapproximation == false
+            computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,boundary_data!);
+        else
+            ndofs = FiniteElements.get_ndofs(FE);
+            B = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
+            assemble_bface_mass_matrix4FE!(B::ExtendableSparseMatrix,FE)
+            b = FiniteElements.createFEVector(FE);
+            assemble_rhsL2_on_bface!(b, boundary_data!, FE)
+        
+            ensure_bfaces!(FE.grid);
+            nbfaces::Int = size(FE.grid.bfaces,1);
+            ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+        
+            dofs = [];
+            for face in eachindex(FE.grid.bfaces)
+                for dof_i = 1 : ndofs4face
+                    append!(dofs,FiniteElements.get_globaldof4face(FE, FE.grid.bfaces[face], dof_i));
+                end
+            end
+        
+            unique!(dofs)
+            val4dofs[dofs] = B[dofs,dofs]\b[dofs];
+            return dofs
+        end    
+    end
+end
 
-function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!)
+
+function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,boundary_data!)
+
  # find boundary dofs
     xdim = FiniteElements.get_ncomponents(FE);
     ndofs::Int = FiniteElements.get_ndofs(FE);
     
     bdofs = [];
-    if (boundary_data! == Nothing)
-    else
         Grid.ensure_bfaces!(FE.grid);
         Grid.ensure_cells4faces!(FE.grid);
         xref = zeros(eltype(FE.xref4dofs4cell),size(FE.xref4dofs4cell,2));
@@ -437,18 +599,22 @@ function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!)
                 println("WARNING: large residual, boundary data may be inexact");
             end
         end    
-    end
     return unique(bdofs)
 end
 
 # computes Bestapproximation in approx_norm="L2" or "H1"
 # volume_data! for norm="H1" is expected to be the gradient of the function that is bestapproximated
-function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE::AbstractFiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
+function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_data!::Function,boundary_data!,FE::AbstractFiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
     # assemble system 
-    A, b = assembleSystem(approx_norm,approx_norm,volume_data!,grid,FE,quadrature_order);
+    A, b = assembleSystem(1.0,approx_norm,approx_norm,volume_data!,FE,quadrature_order);
     
     # apply boundary data
-    bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!);
+    celldim::Int = size(FE.grid.nodes4cells,2) - 1;
+    if (celldim == 1)
+        bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,false);
+    else
+        bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,true);
+    end
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;
        b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
@@ -460,7 +626,7 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
     catch    
         println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
         try
-            val4dofs[:] = Array{typeof(grid.coords4nodes[1]),2}(A)\b;
+            val4dofs[:] = Array{typeof(FE.grid.coords4nodes[1]),2}(A)\b;
         catch OverflowError
             println("OverflowError (Rationals?): trying again as Float64 sparse matrix");
             val4dofs[:] = Array{Float64,2}(A)\b;
@@ -475,7 +641,7 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
 end
 
 
-function computeFEInterpolation!(val4dofs::Array,source_function!::Function,grid::Grid.Mesh,FE::AbstractFiniteElement)
+function computeFEInterpolation!(val4dofs::Array,source_function!::Function,FE::AbstractFiniteElement)
     dim = size(FE.grid.nodes4cells,2) - 1;
     temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
     xref = zeros(eltype(FE.xref4dofs4cell),dim);
@@ -490,7 +656,7 @@ function computeFEInterpolation!(val4dofs::Array,source_function!::Function,grid
             for l = 1 : length(xref)
                 xref[l] = FE.xref4dofs4cell[k,l];
             end    
-            x = loc2glob_trafo(grid,j)(xref);
+            x = loc2glob_trafo(FE.grid,j)(xref);
             source_function!(temp,x);
             val4dofs[FiniteElements.get_globaldof4cell(FE,j,k),:] = temp;
         end    

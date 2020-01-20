@@ -3,7 +3,7 @@ module Grid
 using SparseArrays
 using LinearAlgebra
 
-export Mesh, ensure_volume4cells!, ensure_bfaces!, ensure_faces4cells!, ensure_nodes4faces!, ensure_cells4faces!, ensure_normal4faces!, get_boundary_grid
+export Mesh, ensure_volume4cells!, ensure_bfaces!, ensure_faces4cells!, ensure_nodes4faces!, ensure_cells4faces!, ensure_normal4faces!, ensure_length4faces!, get_boundary_grid
 
 mutable struct Mesh{T <: Real}
     coords4nodes::Array{T,2}
@@ -14,11 +14,12 @@ mutable struct Mesh{T <: Real}
     faces4cells::Array{Int,2}
     bfaces::Array{Int,1}
     cells4faces::Array{Int,2}
+    length4faces::Array{T,1}
     normal4faces::Array{T,2}
     
     function Mesh{T}(coords,nodes) where {T<:Real}
         # only 2d triangulations allowed yet
-        new(coords,nodes,[],[[] []],[[] []],[],[[] []],[[] []]);
+        new(coords,nodes,[],[[] []],[[] []],[],[[] []],[],[[] []]);
     end
 end
 
@@ -156,6 +157,26 @@ function uniform_refinement_old(coords4nodes::Array,nodes4cells::Array)
   end  
   return coords4nodes, nodes4cells_new;
 end
+
+
+function ensure_length4faces!(Grid::Mesh)
+    ensure_nodes4faces!(Grid)
+    celldim = size(Grid.nodes4faces,2) - 1;
+    nfaces::Int = size(Grid.nodes4faces,1);
+    if size(Grid.length4faces,1) != size(nfaces,1)
+        Grid.length4faces = zeros(eltype(Grid.coords4nodes),nfaces);
+        if celldim == 1 # also allow d-dimensional points on a line!
+            Grid.length4faces= zeros(eltype(Grid.coords4nodes),nfaces);
+            xdim::Int = size(Grid.coords4nodes,2)
+            for face = 1 : nfaces
+                for d = 1 : xdim
+                    Grid.length4faces[face] += (Grid.coords4nodes[Grid.nodes4faces[face,2],d] - Grid.coords4nodes[Grid.nodes4faces[face,1],d]).^2
+                end
+                 Grid.length4faces[face] = sqrt(Grid.length4faces[face]);    
+            end   
+        end
+    end        
+end  
 
 function ensure_volume4cells!(Grid::Mesh)
     celldim = size(Grid.nodes4cells,2) - 1;

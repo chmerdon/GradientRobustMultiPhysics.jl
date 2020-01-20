@@ -95,6 +95,13 @@ function get_all_basis_functions_on_cell(FE::H1P2FiniteElement{T,1,1} where T <:
     end
 end
 
+
+function get_all_basis_functions_on_face(FE::H1P2FiniteElement{T,1,1} where T <: Real, face)
+    function closure(xref)
+        return [1.0]
+    end
+end
+
 function get_all_basis_functions_on_cell(FE::H1P2FiniteElement{T,2,1} where T <: Real, cell)
     temp = 0.0;
     function closure(xref)
@@ -105,6 +112,17 @@ function get_all_basis_functions_on_cell(FE::H1P2FiniteElement{T,2,1} where T <:
                 4*temp*xref[1],
                 4*xref[1]*xref[2],
                 4*temp*xref[2]]
+    end
+end
+
+
+function get_all_basis_functions_on_face(FE::H1P2FiniteElement{T,2,1} where T <: Real, face)
+    temp = 0.0;
+    function closure(xref)
+        temp = 1 - xref[1]
+        return [2*temp*(temp - 1//2),
+                2*xref[1]*(xref[1] - 1//2),
+                4*temp*xref[1]]
     end
 end
 
@@ -137,6 +155,28 @@ function get_all_basis_functions_on_cell(FE::H1P2FiniteElement{T,2,2} where T <:
                 0.0 d;
                 0.0 e;
                 0.0 f]
+                
+    end
+end
+
+
+
+function get_all_basis_functions_on_face(FE::H1P2FiniteElement{T,2,2} where T <: Real, face)
+    temp = 0.0;
+    a = 0.0;
+    b = 0.0;
+    c = 0.0;
+    function closure(xref)
+        temp = 1 - xref[1];
+        a = 2*temp*(temp - 1//2);
+        b = 2*xref[1]*(xref[1] - 1//2);
+        c = 4*temp*xref[1];
+        return [a 0.0;    
+                b 0.0;
+                c 0.0;
+                0.0 a;
+                0.0 b;
+                0.0 c]
                 
     end
 end

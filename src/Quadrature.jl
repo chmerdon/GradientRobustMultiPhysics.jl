@@ -51,12 +51,22 @@ function QuadratureFormula{T}(order::Int, dim::Int = 2) where {T<:Real}
             xref[2] = [1//2, 1//2];
             xref[3] = [1,0];
             w = [1//6; 2//3; 1//6]     
-        end
+        elseif dim == 0
+            name = "point evaluation"
+            xref = Vector{Array{T,1}}(undef,1);
+            xref[1] = ones(T,1)
+            w = [1]
+        end    
     else
         if dim == 1
             name = "generic Gauss rule"
             xref, w = get_generic_quadrature_Gauss(order)
-        else    
+        elseif dim == 0
+            name = "point evaluation"
+            xref = Vector{Array{T,1}}(undef,1);
+            xref[1] = ones(T,1)
+            w = [1]
+        elseif dim == 2    
             name = "generic Stroud rule"
             xref, w = get_generic_quadrature_Stroud(order)
         end    
