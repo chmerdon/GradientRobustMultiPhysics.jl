@@ -28,7 +28,8 @@ function main()
 #fem = "CR"
 #fem = "MINI"
 #fem = "TH"
-fem = "P2P0"
+#fem = "P2P0"
+fem = "BR"
 
 #use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
@@ -140,8 +141,12 @@ elseif fem == "MINI"
     FE_velocity = FiniteElements.getMINIFiniteElement(grid,2);
     FE_pressure = FiniteElements.getP1FiniteElement(grid,1);
 elseif fem == "CR"
-    # CR
+    # Crouzeix--Raviart
     FE_velocity = FiniteElements.getCRFiniteElement(grid,2);
+    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+elseif fem == "BR"
+    # Bernardi--Raugel
+    FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
 elseif fem == "P2P0"
     # CP2P0

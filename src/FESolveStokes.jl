@@ -29,31 +29,35 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
     quadorder = 2*(FiniteElements.get_polynomial_order(FE_velocity)-1);
     qf = QuadratureFormula{T}(quadorder, xdim);
 
-    
-    # pre-allocate memory for gradients
-    gradients4cell = Array{Array{T,1}}(undef,xdim*ndofs4cell_velocity);
-    for j = 1 : xdim*ndofs4cell_velocity
-        gradients4cell[j] = zeros(T,xdim);
-    end
-    dofs_velocity = zeros(Int64,ndofs4cell_velocity)
-    
-    # pre-allocate for derivatives of global2local trafo and basis function
+    # pre-allocate gradients of basis function in reference coordinates
     gradients_xref_cache = zeros(Float64,length(qf.w),xdim*ndofs4cell_velocity,celldim)
-    #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,xdim*ndofs4cell_velocity,celldim));
-    trafo_jacobian = Matrix{T}(undef,xdim,xdim);
+    for i in eachindex(qf.w)
+        # evaluate gradients of basis function
+        gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE_velocity),qf.xref[i]);
+    end    
     
+    # determine needed trafo
     dim = celldim - 1;
     if dim == 1
         loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_line
     elseif dim == 2
         loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_triangle
     end    
-    
-    # quadrature loop
+    trafo_jacobian = Matrix{T}(undef,xdim,xdim);
+        
+    # pre-allocate memory for temporary stuff
+    gradients4cell = Array{Array{T,1}}(undef,xdim*ndofs4cell_velocity);
+    for j = 1 : xdim*ndofs4cell_velocity
+        gradients4cell[j] = zeros(T,xdim);
+    end
+    dofs_velocity = zeros(Int64,ndofs4cell_velocity)
+    coefficients_velocity = zeros(Float64,ndofs4cell_velocity,xdim)
     div_i::T = 0.0;
     div_j::T = 0.0;
     det::T = 0.0;
     offsets = [0,ndofs4cell_velocity];
+    
+    # audrature loop
     @time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
@@ -64,21 +68,17 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
           dofs_velocity[dof_i] = FiniteElements.get_globaldof4cell(FE_velocity, cell, dof_i);
       end 
       
-      for i in eachindex(qf.w)
+      FiniteElements.set_basis_coefficients_on_cell!(coefficients_velocity,FE_velocity,cell);
       
-        # evaluate gradients of basis function
-        #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
-        if (cell == 1)
-            gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
-        end    
-        
+      for i in eachindex(qf.w)
+    
         # multiply tinverted jacobian of element trafo with gradient of basis function
         # which yields (by chain rule) the gradient in x coordinates
-        for dof_i = 1 : xdim*ndofs4cell_velocity
-            for k = 1 : xdim
-                gradients4cell[dof_i][k] = 0.0;
+        for dof_i = 1 : ndofs4cell_velocity
+            for c=1 : xdim, k = 1 : xdim
+                gradients4cell[dof_i + offsets[c]][k] = 0.0;
                 for j = 1 : xdim
-                    gradients4cell[dof_i][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i,j]
+                    gradients4cell[dof_i + offsets[c]][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i + offsets[c],j] * coefficients_velocity[dof_i,c]
                 end    
             end    
         end    
@@ -105,7 +105,7 @@ end
 
 
 
-function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_velocity::FiniteElements.AbstractH1FiniteElement, FE_pressure::FiniteElements.AbstractH1FiniteElement, pressure_diagonal = 1e-12)
+function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_velocity::FiniteElements.AbstractH1FiniteElement, FE_pressure::FiniteElements.AbstractH1FiniteElement, pressure_diagonal = 1e-6)
 
     grid = FE_velocity.grid;
     ncells::Int = size(grid.nodes4cells,1);
@@ -114,6 +114,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     ndofs4cell_pressure::Int = FiniteElements.get_maxndofs4cell(FE_pressure);
     ncomponents::Int = FiniteElements.get_ncomponents(FE_velocity);
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
+    ndofs = ndofs_velocity + FiniteElements.get_ndofs(FE_pressure);
     ndofs4cell::Int = ndofs4cell_velocity+ndofs4cell_pressure;
     celldim::Int = size(grid.nodes4cells,2);
     
@@ -123,35 +124,40 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     quadorder = maximum([FiniteElements.get_polynomial_order(FE_pressure) + FiniteElements.get_polynomial_order(FE_velocity)-1, 2*(FiniteElements.get_polynomial_order(FE_velocity)-1)]);
     qf = QuadratureFormula{T}(quadorder, xdim);
 
-    
-    # pre-allocate memory for gradients
-    gradients4cell = Array{Array{T,1}}(undef,xdim*ndofs4cell_velocity);
-    for j = 1 : xdim*ndofs4cell_velocity
-        gradients4cell[j] = zeros(T,xdim);
-    end
-    pressure_vals = Array{Array{T,1}}(undef,length(qf.w))
-    for j = 1 : ndofs4cell_pressure
-        pressure_vals[j] = zeros(T,ndofs4cell_pressure);
-    end    
-    dofs_velocity = zeros(Int64,ndofs4cell_velocity)
-    dofs_pressure = zeros(Int64,ndofs4cell_pressure)
-    
-    # pre-allocate for derivatives of global2local trafo and basis function
+    # evaluate basis functions at quarature points in reference coordinates
     gradients_xref_cache = zeros(Float64,length(qf.w),xdim*ndofs4cell_velocity,celldim)
-    #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,xdim*ndofs4cell_velocity,celldim));
-    trafo_jacobian = Matrix{T}(undef,xdim,xdim);
+    pressure_vals = Array{Array{T,1}}(undef,length(qf.w))
+    for i in eachindex(qf.w)
+        # evaluate gradients of basis function
+        gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE_velocity),qf.xref[i]);
+        # evaluate pressure
+        pressure_vals[i] = FiniteElements.get_all_basis_functions_on_cell(FE_pressure)(qf.xref[i]);
+    end
     
+    # get needed trafo
     dim = celldim - 1;
     if dim == 1
         loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_line
     elseif dim == 2
         loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_triangle
     end    
+    trafo_jacobian = Matrix{T}(undef,xdim,xdim);
     
-    # quadrature loop
+    
+    # pre-allocate memory for temporary stuff
+    gradients4cell = Array{Array{T,1}}(undef,xdim*ndofs4cell_velocity);
+    for j = 1 : xdim*ndofs4cell_velocity
+        gradients4cell[j] = zeros(T,xdim);
+    end    
+    dofs_velocity = zeros(Int64,ndofs4cell_velocity)
+    dofs_pressure = zeros(Int64,ndofs4cell_pressure)
+    coefficients_velocity = zeros(Float64,ndofs4cell_velocity,xdim)
+    coefficients_pressure = zeros(Float64,ndofs4cell_pressure)
     temp::T = 0.0;
     det::T = 0.0;
     offsets = [0,ndofs4cell_velocity];
+    
+    # quadrature loop
     @time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
@@ -165,27 +171,22 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
           dofs_pressure[dof_i] = ndofs_velocity + FiniteElements.get_globaldof4cell(FE_pressure, cell, dof_i);
       end    
       
+      FiniteElements.set_basis_coefficients_on_cell!(coefficients_velocity,FE_velocity,cell);
+      FiniteElements.set_basis_coefficients_on_cell!(coefficients_pressure,FE_pressure,cell);
+      
       for i in eachindex(qf.w)
       
-        # evaluate gradients of basis function
-        #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
-        if (cell == 1)
-            gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE_velocity, cell),qf.xref[i]);
-            pressure_vals[i] = FiniteElements.get_all_basis_functions_on_cell(FE_pressure, cell)(qf.xref[i]);
-        end    
-        
         # multiply tinverted jacobian of element trafo with gradient of basis function
         # which yields (by chain rule) the gradient in x coordinates
-        for dof_i = 1 : xdim*ndofs4cell_velocity
-            for k = 1 : xdim
-                gradients4cell[dof_i][k] = 0.0;
+        for dof_i = 1 : ndofs4cell_velocity
+            for c=1 : xdim, k = 1 : xdim
+                gradients4cell[dof_i + offsets[c]][k] = 0.0;
                 for j = 1 : xdim
-                    gradients4cell[dof_i][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i,j]
+                    gradients4cell[dof_i + offsets[c]][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i + offsets[c],j] * coefficients_velocity[dof_i,c]
                 end    
             end    
         end    
-        
-        
+         
         # fill sparse array
         for dof_i = 1 : ndofs4cell_velocity
             # stiffness matrix for velocity
@@ -204,40 +205,22 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
                 for c = 1 : xdim
                     temp -= gradients4cell[offsets[c]+dof_i][c];
                 end    
-                temp *= pressure_vals[i][dof_j] * qf.w[i] * grid.volume4cells[cell];
+                temp *= pressure_vals[i][dof_j] * coefficients_pressure[dof_j] * qf.w[i] * grid.volume4cells[cell];
                 A[dofs_velocity[dof_i],dofs_pressure[dof_j]] += temp;
                 A[dofs_pressure[dof_j],dofs_velocity[dof_i]] += temp;
             end
         end    
         
-        # pressure x pressure block (empty)
-        for dof_i = 1 : ndofs4cell_pressure, dof_j = 1 : ndofs4cell_pressure
-            if (dof_i == dof_j)
-                A[dofs_pressure[dof_i],dofs_pressure[dof_j]] = pressure_diagonal;
-            end    
+        # Lagrange multiplier for integral mean
+        
+        for dof_i = 1 : ndofs4cell_pressure
+                temp = pressure_vals[i][dof_i] * coefficients_pressure[dof_i] * qf.w[i] * grid.volume4cells[cell];
+                A[dofs_pressure[dof_i],ndofs + 1] += temp;
+                A[ndofs + 1, dofs_pressure[dof_i]] += temp;
         end
       end  
     end
   end  
-end
-
-
-# scalar functions times P1 basis functions
-function rhs_integrand4Stokes!(f!::Function,FE::FiniteElements.AbstractFiniteElement,dim)
-    cache = zeros(eltype(FE.grid.coords4nodes),dim)
-    basisval = zeros(eltype(FE.grid.coords4nodes),dim)
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,dim)
-    function closure(result,x,xref,cellIndex::Int)
-        f!(cache, x);
-        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cellIndex)(xref)
-        for j=1:ndofs4cell
-            result[j] = 0.0;
-            for d=1:dim
-                result[j] += cache[d] * basisvals[j,d];
-            end    
-        end
-    end
 end
 
 function assembleStokesSystem(nu::Real, volume_data!::Function,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::AbstractFiniteElement,quadrature_order::Int)
@@ -254,7 +237,7 @@ function assembleStokesSystem(nu::Real, volume_data!::Function,FE_velocity::Fini
     Grid.ensure_volume4cells!(grid);
     
     println("assembling Stokes matrix for FE pair " * FE_velocity.name * " x " * FE_pressure.name * "...");
-    A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
+    A = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
     assemble_Stokes_Operator4FE!(A,nu,FE_velocity,FE_pressure);
     
     # compute right-hand side vector
@@ -269,10 +252,15 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
     # assemble system 
     A, b = assembleStokesSystem(nu, volume_data!,FE_velocity,FE_pressure,quadrature_order);
     
-    # remove one pressure dof (todo: don't do this with Neumann boundary)
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
     ndofs = ndofs_velocity + ndofs_pressure;
+    
+     # add value for Lagrange multiplier for integral mean
+    if length(val4dofs) == ndofs
+        append!(val4dofs,0.0);
+        append!(b,0.0); # add value for Lagrange multiplier for integral mean
+    end
     
     # apply boundary data
     bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,true);
@@ -281,14 +269,6 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
        b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
     end
     @assert maximum(bdofs) <= ndofs_velocity
-    
-    #println("fixing one pressure dof with dofnr=",fixed_pressure_dof);
-    fixed_pressure_dof = ndofs_velocity + 1;
-    A[fixed_pressure_dof,fixed_pressure_dof] = 1e30;
-    b[fixed_pressure_dof] = 0;
-    val4dofs[fixed_pressure_dof] = 0;
-    
-    
     
     try
         @time val4dofs[:] = A\b;
@@ -305,13 +285,6 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b
     residual[bdofs] .= 0
-    
-    # move integral mean to zero
-    integral_mean = integrate_xref(FESolveCommon.eval_FEfunction(val4dofs[ndofs_velocity+1:ndofs],FE_pressure),FE_pressure.grid, FiniteElements.get_polynomial_order(FE_pressure));
-    integral_mean ./= sum(FE_pressure.grid.volume4cells)
-    for i=1:ndofs_pressure
-        val4dofs[ndofs_velocity+i] -= integral_mean[1] 
-    end
     
     return norm(residual)
 end

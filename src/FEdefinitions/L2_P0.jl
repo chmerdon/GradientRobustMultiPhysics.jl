@@ -54,19 +54,19 @@ get_globaldof4cell(FE::L2P0FiniteElement{T,2,2} where T <: Real, cell, ::Val{2})
 
 
 # BASIS FUNCTIONS
-function get_all_basis_functions_on_cell(FE::L2P0FiniteElement{T,1,1} where T <: Real, cell)
+function get_all_basis_functions_on_cell(FE::L2P0FiniteElement{T,1,1} where T <: Real)
     function closure(xref)
         return [1.0]
     end
 end
 
-function get_all_basis_functions_on_cell(FE::L2P0FiniteElement{T,2,1} where T <: Real, cell)
+function get_all_basis_functions_on_cell(FE::L2P0FiniteElement{T,2,1} where T <: Real)
     function closure(xref)
         return [1.0]
     end
 end
 
-function get_all_basis_functions_on_cell(FE::L2P0FiniteElement{T,2,2} where T <: Real, cell)
+function get_all_basis_functions_on_cell(FE::L2P0FiniteElement{T,2,2} where T <: Real)
     function closure(xref)
         return [1.0 0.0;
                 0.0 1.0]

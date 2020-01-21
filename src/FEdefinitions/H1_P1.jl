@@ -70,20 +70,20 @@ get_globaldof4face(FE::H1P1FiniteElement{T,2,2} where T <: Real, face, ::Val{4})
 
 
 # BASIS FUNCTIONS
-function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,1,1} where T <: Real, cell)
+function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,1,1} where T <: Real)
     function closure(xref)
         return [1 - xref[1],
                 xref[1]]
     end
 end
 
-function get_all_basis_functions_on_face(FE::H1P1FiniteElement{T,1,1} where T <: Real, face)
+function get_all_basis_functions_on_face(FE::H1P1FiniteElement{T,1,1} where T <: Real)
     function closure(xref)
         return [1.0]
     end
 end
 
-function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,2,1} where T <: Real, cell)
+function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,2,1} where T <: Real)
     function closure(xref)
         return [1 - xref[1] - xref[2],
                 xref[1],
@@ -92,14 +92,14 @@ function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,2,1} where T <:
 end
 
 
-function get_all_basis_functions_on_face(FE::H1P1FiniteElement{T,2,1} where T <: Real, face)
+function get_all_basis_functions_on_face(FE::H1P1FiniteElement{T,2,1} where T <: Real)
     function closure(xref)
         return [1 - xref[1],
                 xref[1]]
     end
 end
 
-function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,2,2} where T <: Real, cell)
+function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,2,2} where T <: Real)
     temp = 0.0;
     function closure(xref)
         temp = 1 - xref[1] - xref[2];
@@ -113,7 +113,7 @@ function get_all_basis_functions_on_cell(FE::H1P1FiniteElement{T,2,2} where T <:
 end
 
 
-function get_all_basis_functions_on_face(FE::H1P1FiniteElement{T,2,2} where T <: Real, face)
+function get_all_basis_functions_on_face(FE::H1P1FiniteElement{T,2,2} where T <: Real)
     temp = 0.0;
     function closure(xref)
         temp = 1 - xref[1];

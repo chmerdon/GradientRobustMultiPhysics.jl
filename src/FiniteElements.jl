@@ -24,6 +24,7 @@ abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
  include("FEdefinitions/H1_MINI.jl");
  include("FEdefinitions/H1_P2.jl");
  include("FEdefinitions/H1_CR.jl");
+ include("FEdefinitions/H1_BR.jl");
  
 # subtype for L2 conforming elements
 abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
@@ -35,12 +36,24 @@ abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
 # subtype for Hcurl-conforming elements
 abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
+
+# basis function updates on cells and faces (to multiply e.g. by normal vector or reconstruction coefficients etc.)
+function set_basis_coefficients_on_cell!(coefficients, FE::AbstractFiniteElement, cell::Int64)
+    # default is one, replace if needed for special FE
+    fill!(coefficients,1.0)
+end    
+function set_basis_coefficients_on_face!(coefficients, FE::AbstractFiniteElement, face::Int64)
+    # default is one, replace if needed for special FE
+    fill!(coefficients,1.0)
+end    
+
+
 # mapper for Int{N} to Val{N}
 # dummy_array needed to avoid constructing Val{N} in each call
 # length of dummy array corressponds to be longest number of dofs
 dummy_array = [Val(1),Val(2),Val(3),Val(4),Val(5),Val(6),Val(7),Val(8),Val(9),Val(10),Val(11),Val(12)];
-get_globaldof4cell(FE, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
-get_globaldof4face(FE, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
+get_globaldof4cell(FE::AbstractFiniteElement, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
+get_globaldof4face(FE::AbstractFiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
 
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)

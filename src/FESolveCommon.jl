@@ -21,25 +21,29 @@ end
 
 
 # matrix for L2 bestapproximation that writes into an ExtendableSparseMatrix
-function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1FiniteElement, talky = false)
+function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1FiniteElement)
     ncells::Int = size(FE.grid.nodes4cells,1);
     ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
     qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim);
-    
-    if talky
-        Quadrature.show(qf)
-    end    
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
-    basisvals = Array{Array{T,2}}(undef,length(qf.w));
-    for i in eachindex(qf.w)
-        basisvals[i] = zeros(T,ndofs4cell,ncomponents)
+    if ncomponents > 1
+        basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    else
+        basisvals = Array{Array{T,1}}(undef,length(qf.w));
     end    
+    for i in eachindex(qf.w)
+        # evaluate basis functions at quadrature point
+        basisvals[i] = FiniteElements.get_all_basis_functions_on_cell(FE)(qf.xref[i])
+    end    
+                    
+                
     dofs = zeros(Int64,ndofs4cell)
+    coefficients = zeros(Float64,ndofs4cell,xdim)
     
     # quadrature loop
     temp = 0.0;
@@ -51,20 +55,15 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
                 dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
             end
             
+            FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
+            
             for i in eachindex(qf.w)
-                
-                # evaluate basis functions at quadrature point
-                if (cell == 1)
-                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
-                end    
-                
-                
                 for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
                     # fill upper right part and diagonal of matrix
                     @inbounds begin
                       temp = 0.0
                       for k = 1 : ncomponents
-                        temp += (basisvals[i][dof_i,k]*basisvals[i][dof_j,k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                        temp += (basisvals[i][dof_i,k]*basisvals[i][dof_j,k] * qf.w[i] * FE.grid.volume4cells[cell]) * coefficients[dof_i,k] * coefficients[dof_j,k];
                       end
                       A[dofs[dof_i],dofs[dof_j]] += temp;
                       # fill lower left part of matrix
@@ -88,16 +87,20 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1
     
     T = eltype(FE.grid.coords4nodes);
     qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim-1);
-    
-        Quadrature.show(qf)
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
-    basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    if ncomponents > 1
+        basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    else
+        basisvals = Array{Array{T,1}}(undef,length(qf.w));
+    end    
     for i in eachindex(qf.w)
-        basisvals[i] = zeros(T,ndofs4face,ncomponents)
+        # evaluate basis functions at quadrature point
+        basisvals[i] = FiniteElements.get_all_basis_functions_on_face(FE)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4face)
+    coefficients = zeros(Float64,ndofs4face,xdim)
     
     # quadrature loop
     temp = 0.0;
@@ -109,21 +112,16 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1
             for dof_i = 1 : ndofs4face
                 dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
             end
+            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
             
             for i in eachindex(qf.w)
-                
-                # evaluate basis functions at quadrature point
-                if (j == 1)
-                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_face(FE, face)(qf.xref[i])
-                end    
-                
                 
                 for dof_i = 1 : ndofs4face, dof_j = dof_i : ndofs4face
                     # fill upper right part and diagonal of matrix
                     @inbounds begin
                       temp = 0.0
                       for k = 1 : ncomponents
-                        temp += (basisvals[i][dof_i,k]*basisvals[i][dof_j,k] * qf.w[i] * FE.grid.length4faces[face]);
+                        temp += (basisvals[i][dof_i,k]*basisvals[i][dof_j,k] * qf.w[i] * FE.grid.length4faces[face]) * coefficients[dof_i,k] * coefficients[dof_j,k];
                       end
                       A[dofs[dof_i],dofs[dof_j]] += temp;
                       # fill lower left part of matrix
@@ -155,17 +153,22 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::Ab
         Quadrature.show(qf)
     end    
     
-    # pre-allocate memory for gradients
-    gradients4cell = Array{Array{T,1}}(undef,ncomponents*ndofs4cell);
-    for j = 1 : ncomponents*ndofs4cell
-        gradients4cell[j] = zeros(T,xdim);
-    end
-    
     # pre-allocate for derivatives of global2local trafo and basis function
     gradients_xref_cache = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,celldim)
     #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,ndofs4cell,celldim));
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
     dofs = zeros(Int64,ndofs4cell)
+    gradients4cell = Array{Array{T,1}}(undef,ncomponents*ndofs4cell);
+    coefficients = zeros(Float64,ndofs4cell,xdim)
+    for j = 1 : ncomponents*ndofs4cell
+        gradients4cell[j] = zeros(T,xdim);
+    end
+    for i in eachindex(qf.w)
+        # evaluate gradients of basis function
+        gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE),qf.xref[i]);
+    end    
+        
+    
     
     dim = celldim - 1;
     if dim == 1
@@ -188,22 +191,17 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::Ab
           dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
       end      
       
-      for i in eachindex(qf.w)
+      FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
       
-        # evaluate gradients of basis function
-        #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
-        if (cell == 1)
-            gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
-        end    
-        
+      for i in eachindex(qf.w)
         
         # multiply tinverted jacobian of element trafo with gradient of basis function
         # which yields (by chain rule) the gradient in x coordinates
-        for dof_i = 1 : ncomponents*ndofs4cell
-            for k = 1 : xdim
-                gradients4cell[dof_i][k] = 0.0;
+        for dof_i = 1 : ndofs4cell
+            for c=1 : ncomponents, k = 1 : xdim
+                gradients4cell[dof_i + offsets[c]][k] = 0.0;
                 for j = 1 : xdim
-                    gradients4cell[dof_i][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i,j]
+                    gradients4cell[dof_i + offsets[c]][k] += trafo_jacobian[k,j]*gradients_xref_cache[i,dof_i + offsets[c],j] * coefficients[dof_i,c]
                 end    
             end    
         end    
@@ -240,11 +238,16 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement)
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
-    basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    if ncomponents == 1
+        basisvals = Array{Array{T,1}}(undef,length(qf.w));
+    else
+        basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    end
     for i in eachindex(qf.w)
-        basisvals[i] = zeros(T,ndofs4cell,ncomponents)
+        basisvals[i] = FiniteElements.get_all_basis_functions_on_cell(FE)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4cell)
+    coefficients = zeros(Float64,ndofs4cell,xdim)
     
     dim = size(FE.grid.nodes4cells,2) - 1;
     if dim == 1
@@ -262,12 +265,10 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement)
             for dof_i = 1 : ndofs4cell
                 dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
             end
+            
+            FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
+            
             for i in eachindex(qf.w)
-                
-                # evaluate basis functions at quadrature point
-                if (cell == 1)
-                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(qf.xref[i])
-                end    
                 
                 # evaluate f
                 x = loc2glob_trafo(FE.grid,cell)(qf.xref[i]);
@@ -278,7 +279,7 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement)
                     @inbounds begin
                       temp = 0.0
                       for k = 1 : ncomponents
-                        temp += (fval[k]*basisvals[i][dof_i,k] * qf.w[i] * FE.grid.volume4cells[cell]);
+                        temp += (fval[k]*basisvals[i][dof_i,k]*coefficients[dof_i,k] * qf.w[i] * FE.grid.volume4cells[cell]);
                       end
                       b[dofs[dof_i]] += temp;
                     end
@@ -303,11 +304,16 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
-    basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    if ncomponents == 1
+        basisvals = Array{Array{T,1}}(undef,length(qf.w));
+    else
+        basisvals = Array{Array{T,2}}(undef,length(qf.w));
+    end
     for i in eachindex(qf.w)
-        basisvals[i] = zeros(T,ndofs4face,ncomponents)
+        basisvals[i] = FiniteElements.get_all_basis_functions_on_face(FE)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4face)
+    coefficients = zeros(Float64,ndofs4face,xdim)
     
     loc2glob_trafo = FiniteElements.local2global_line()
 
@@ -322,13 +328,10 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
             for dof_i = 1 : ndofs4face
                 dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
             end
+            
+            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+            
             for i in eachindex(qf.w)
-                
-                # evaluate basis functions at quadrature point
-                if (j == 1)
-                    basisvals[i][:] = FiniteElements.get_all_basis_functions_on_face(FE, face)(qf.xref[i])
-                end    
-                
                 # evaluate f
                 fill!(x,0.0)
                 if celldim == 2
@@ -348,7 +351,7 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
                     @inbounds begin
                       temp = 0.0
                       for k = 1 : ncomponents
-                        temp += (fval[k]*basisvals[i][dof_i,k] * qf.w[i] * FE.grid.length4faces[face]);
+                        temp += (fval[k]*basisvals[i][dof_i,k] * qf.w[i] * FE.grid.length4faces[face] * coefficients[dof_i,k]);
                       end
                       b[dofs[dof_i]] += temp;
                     end
@@ -406,9 +409,8 @@ function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement)
             for i in eachindex(qf.w)
       
                 # evaluate gradients of basis function
-                #ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
                 if (cell == 1)
-                    gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE, cell),qf.xref[i]);
+                    gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE),qf.xref[i]);
                 end    
         
         
@@ -440,42 +442,6 @@ function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement)
             end
         end
     end    
-end
-
-
-# vector functions times FE basis functions gradients
-function rhs_integrandH1!(f!::Function,FE::AbstractH1FiniteElement,dim)
-    cache = zeros(eltype(FE.grid.coords4nodes),dim)
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,dim)
-    T = eltype(FE.grid.coords4nodes);
-    celldim::Int = size(FE.grid.nodes4cells,2);
-    xdim::Int = size(FE.grid.coords4nodes,2);
-    DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, xdim), Matrix{T}(undef,ndofs4cell,xdim));
-    trafo_jacobian = Matrix{T}(undef,xdim,xdim);
-    dim = celldim - 1;
-    if dim == 1
-        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_line
-    elseif dim == 2
-        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_triangle
-    end    
-    function closure(result,x,xref,cell)
-        f!(cache, x)
-        # evaluate tinverted (=transposed + inverted) jacobian of element trafo
-        loc2glob_trafo_tinv(trafo_jacobian,det,FE.grid,cell)
-      
-        # evaluate gradients of basis function
-        ForwardDiff.jacobian!(DRresult_grad,FiniteElements.get_all_basis_functions_on_cell(FE, cell),xref);
-        
-        for j=1:ndofs4cell
-            result[j] = 0.0
-            for d=1:dim
-                for k = 1 : xdim
-                    result[j] += cache[d] * trafo_jacobian[d,k]*DiffResults.gradient(DRresult_grad)[j,k]
-                end    
-            end    
-        end
-    end
 end
 
 
@@ -586,7 +552,7 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,boundary_data!
                 for l = 1 : length(xref)
                     xref[l] = FE.xref4dofs4cell[celldof2facedof[k],l];
                 end    
-                basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(xref)
+                basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref)
                 for l = 1:ndofs4face
                     A4bface[k,l] = dot(basisvals[celldof2facedof[k],:],basisvals[celldof2facedof[l],:]);
                 end
@@ -640,7 +606,7 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
     return norm(residual)
 end
 
-
+# TODO: has to be rewritten!!!
 function computeFEInterpolation!(val4dofs::Array,source_function!::Function,FE::AbstractFiniteElement)
     dim = size(FE.grid.nodes4cells,2) - 1;
     temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
@@ -665,35 +631,37 @@ end
 
 
 function eval_FEfunction(coeffs, FE::AbstractFiniteElement)
-    temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
+    ncomponents = FiniteElements.get_ncomponents(FE);
     ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,FiniteElements.get_ncomponents(FE))
+    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
+    coefficients = zeros(Float64,ndofs4cell,ncomponents)
     function closure(result, x, xref, cellIndex)
         fill!(result,0.0)
-        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cellIndex)(xref)
+        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cellIndex)
         for j = 1 : ndofs4cell
             di = FiniteElements.get_globaldof4cell(FE, cellIndex, j);
-            for k = 1 : length(temp);
-                result[k] += basisvals[j,k] * coeffs[di];
+            for k = 1 : ncomponents;
+                result[k] += basisvals[j,k] * coeffs[di] * coefficients[j,k];
             end    
         end    
     end
 end
 
 function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE::AbstractFiniteElement)
-    temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
-    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
     ncomponents = FiniteElements.get_ncomponents(FE);
+    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
+    coefficients = zeros(Float64,ndofs4cell,ncomponents);
     function closure(result, x, xref, cellIndex)
         # evaluate exact function
         exact_function!(result, x);
         # subtract nodal interpolation
-        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cellIndex)(xref)
+        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref)
+        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cellIndex)
         for j = 1 : ndofs4cell
             di = FiniteElements.get_globaldof4cell(FE, cellIndex, j);
-            for k = 1 : length(temp);
-                result[k] -= basisvals[j,k] * coeffs_interpolation[di];
+            for k = 1 : ncomponents;
+                result[k] -= basisvals[j,k] * coeffs_interpolation[di] * coefficients[j,k];
             end    
         end   
         # square for L2 norm
@@ -719,13 +687,15 @@ function eval_at_nodes(val4dofs, FE::AbstractFiniteElement, offset::Int64 = 0)
     ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
     nodevals = zeros(size(FE.grid.coords4nodes,1),ncomponents)
+    coefficients = zeros(Float64,ndofs4cell,ncomponents)
     for cell = 1 : size(FE.grid.nodes4cells,1)
         for j = 1 : dim + 1
-            basisvals = FiniteElements.get_all_basis_functions_on_cell(FE, cell)(xref4dofs4cell[j,:])
+            basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref4dofs4cell[j,:])
+            FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
             for dof = 1 : ndofs4cell;
                 for k = 1 : ncomponents
                     di = offset + FiniteElements.get_globaldof4cell(FE, cell, dof);
-                    nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[di] 
+                    nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[di]*coefficients[dof,k];
                 end   
             end
             ndofs4node[FE.grid.nodes4cells[cell,j]] +=1
