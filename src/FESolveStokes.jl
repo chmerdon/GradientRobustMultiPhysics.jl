@@ -58,7 +58,7 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
     offsets = [0,ndofs4cell_velocity];
     
     # audrature loop
-    @time begin
+    #@time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
       loc2glob_trafo_tinv(trafo_jacobian,det,FE_velocity.grid,cell)
@@ -100,7 +100,7 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
         end    
       end  
     end
-  end  
+    #end  
 end
 
 
@@ -158,7 +158,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     offsets = [0,ndofs4cell_velocity];
     
     # quadrature loop
-    @time begin
+    #@time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
       loc2glob_trafo_tinv(trafo_jacobian,det,FE_velocity.grid,cell)
@@ -220,7 +220,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
         end
       end  
     end
-  end  
+    #end  
 end
 
 function assembleStokesSystem(nu::Real, volume_data!::Function,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::AbstractFiniteElement,quadrature_order::Int)
@@ -236,25 +236,38 @@ function assembleStokesSystem(nu::Real, volume_data!::Function,FE_velocity::Fini
     
     Grid.ensure_volume4cells!(grid);
     
-    println("assembling Stokes matrix for FE pair " * FE_velocity.name * " x " * FE_pressure.name * "...");
     A = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
     assemble_Stokes_Operator4FE!(A,nu,FE_velocity,FE_pressure);
     
     # compute right-hand side vector
     b = zeros(Float64,ndofs);
-    FESolveCommon.assemble_rhsL2!(b, volume_data!, FE_velocity)
+    FESolveCommon.assemble_rhsL2!(b, volume_data!, FE_velocity, quadrature_order)
     
     return A,b
 end
 
 
 function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
-    # assemble system 
-    A, b = assembleStokesSystem(nu, volume_data!,FE_velocity,FE_pressure,quadrature_order);
+    
     
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
     ndofs = ndofs_velocity + ndofs_pressure;
+    
+    println("\nSOLVING STOKES PROBLEM")
+    println(" |FEvelocity = " * FE_velocity.name)
+    println(" |FEpressure = " * FE_pressure.name)
+    println(" |totalndofs = ", ndofs)
+    println(" |");
+    println(" |PROGRESS")
+    
+    # assemble system 
+    @time begin
+        print("    |assembling...")
+        A, b = assembleStokesSystem(nu, volume_data!,FE_velocity,FE_pressure,quadrature_order);
+        println("finished")
+    end
+    
     
      # add value for Lagrange multiplier for integral mean
     if length(val4dofs) == ndofs
@@ -270,23 +283,29 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
     end
     @assert maximum(bdofs) <= ndofs_velocity
     
-    try
-        @time val4dofs[:] = A\b;
-    catch    
-        println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
+    @time begin
+        print("    |solving...")
         try
-            val4dofs[:] = Array{typeof(grid.coords4nodes[1]),2}(A)\b;
-        catch OverflowError
-            println("OverflowError (Rationals?): trying again as Float64 sparse matrix");
-            val4dofs[:] = Array{Float64,2}(A)\b;
+            val4dofs[:] = A\b;
+        catch    
+            println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
+            try
+                val4dofs[:] = Array{typeof(FE.grid.coords4nodes[1]),2}(A)\b;
+            catch OverflowError
+                println("OverflowError (Rationals?): trying again as Float64 sparse matrix");
+                val4dofs[:] = Array{Float64,2}(A)\b;
+            end
         end
+        println("finished")
     end
     
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b
     residual[bdofs] .= 0
+    residual = norm(residual);
+    println("    |residual=", residual)
     
-    return norm(residual)
+    return residual
 end
 
 

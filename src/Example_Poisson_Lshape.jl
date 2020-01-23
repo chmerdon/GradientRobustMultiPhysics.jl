@@ -106,14 +106,12 @@ ndofs[level] = FiniteElements.get_ndofs(FE);
 
 println("Solving Poisson problem...");    
 val4dofs = FiniteElements.createFEVector(FE);
-residual = solvePoissonProblem!(val4dofs,volume_data!(use_problem),wrap_solution,grid,FE,f_order + FiniteElements.get_polynomial_order(FE));
-println("  solve residual = " * string(residual))
+residual = solvePoissonProblem!(val4dofs,1.0,volume_data!(use_problem),wrap_solution,FE,f_order + FiniteElements.get_polynomial_order(FE));
 
-# compute velocity best approximation
+# compute best approximation
 println("Solving L2 best approximation problem...");
 val4dofsBA = FiniteElements.createFEVector(FE);
-residual = computeBestApproximation!(val4dofsBA,"L2",wrap_solution,wrap_solution,grid,FE,u_order + FiniteElements.get_polynomial_order(FE))
-println("  solve residual = " * string(residual));
+residual = computeBestApproximation!(val4dofsBA,"L2",wrap_solution,wrap_solution,FE,u_order + FiniteElements.get_polynomial_order(FE))
 
 # compute errors
 integral4cells = zeros(size(grid.nodes4cells,1),1);

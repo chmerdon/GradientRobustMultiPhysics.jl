@@ -32,6 +32,7 @@ abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
  
 # subtype for Hdiv-conforming elements
 abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
+ include("FEdefinitions/HDIV_RT0.jl");
 
 # subtype for Hcurl-conforming elements
 abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
@@ -52,8 +53,16 @@ end
 # dummy_array needed to avoid constructing Val{N} in each call
 # length of dummy array corressponds to be longest number of dofs
 dummy_array = [Val(1),Val(2),Val(3),Val(4),Val(5),Val(6),Val(7),Val(8),Val(9),Val(10),Val(11),Val(12)];
+
+# all elements allow for evaluation of basis functions on cells
 get_globaldof4cell(FE::AbstractFiniteElement, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
-get_globaldof4face(FE::AbstractFiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
+
+# H1 elements allow for continuous (= cell-independent) basis function evaluations on faces
+get_globaldof4face(FE::AbstractH1FiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
+
+# Hdiv elements should allow for continuous evaluations of normal-fluxes
+# maybe a good idea to offer a function for this?
+# 
 
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)
@@ -89,10 +98,12 @@ function show_dofmap(FE::AbstractFiniteElement)
 	end
 end
 
+# creates a zero vector of the correct length for the FE
 function createFEVector(FE::AbstractFiniteElement)
     return zeros(get_ndofs(FE));
 end
 
+# transformation for H1 elements on a line
 function local2global_line()
     A = Matrix{Float64}(undef,1,1)
     b = Vector{Float64}(undef,1)
@@ -107,6 +118,7 @@ function local2global_line()
     end    
 end
 
+# transformation for H1 elements on a triangle
 function local2global_triangle()
     A = Matrix{Float64}(undef,2,2)
     b = Vector{Float64}(undef,2)
@@ -127,6 +139,22 @@ function local2global_triangle()
     end    
 end
 
+
+# Piola transformation for Hdiv elements on a triangle
+function Piola_triangle!(grid)
+    det = 0.0;
+    return function closure(A,cell)
+        A[1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
+        A[1,2] = grid.coords4nodes[grid.nodes4cells[cell,3],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
+        A[2,1] = grid.coords4nodes[grid.nodes4cells[cell,2],2] - grid.coords4nodes[grid.nodes4cells[cell,1],2]
+        A[2,2] = grid.coords4nodes[grid.nodes4cells[cell,3],2] - grid.coords4nodes[grid.nodes4cells[cell,1],2]
+        det = A[1,1]*A[2,2] - A[1,2]*A[2,1]
+        return det
+    end    
+end
+
+
+# exact tinversion of transformation for H1 elements on a triangle
 function local2global_tinv_jacobian_triangle(A!,det!,grid,cell)
     # transposed inverse of A
     A![2,2] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
@@ -144,6 +172,7 @@ function local2global_tinv_jacobian_triangle(A!,det!,grid,cell)
 end
 
 
+# exact tinversion of transformation for H1 elements on a line
 function local2global_tinv_jacobian_line(A!,det!,grid,cell)
     # transposed inverse of A
     det! = grid.coords4nodes[grid.nodes4cells[cell,2],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
@@ -152,6 +181,7 @@ end
 
 
 
+# transformation for H1 elements on a tetrahedron
 function local2global_tetrahedron()
     A = Matrix{Float64}(undef,3,3)
     b = Vector{Float64}(undef,3)
@@ -174,29 +204,4 @@ function local2global_tetrahedron()
     end    
 end
 
-
-function fast_inv_and_transpose_2D!()
-    det = 0.0
-    temp = 0.0;
-    return function closure!(A::Matrix)
-        # compute determinant
-        det = (A[1,1]*A[2,2] - A[1,2]*A[2,1])
-        # invert and transpose
-        temp = A[2,2];
-        A[2,2] = A[1,1]/det
-        A[1,1] = temp/det
-        temp = A[2,1]
-        A[2,1] = -A[1,2]/det
-        A[1,2] = -temp/det
-    end  
-end
-
-
-function fast_inv_and_transpose_1D!()
-    return function closure!(A::Matrix)
-        A[1,1] = 1/A[1,1]
-    end  
-end
-
-
-end
+end #module

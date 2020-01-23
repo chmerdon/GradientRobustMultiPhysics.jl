@@ -3,23 +3,24 @@ module Grid
 using SparseArrays
 using LinearAlgebra
 
-export Mesh, ensure_volume4cells!, ensure_bfaces!, ensure_faces4cells!, ensure_nodes4faces!, ensure_cells4faces!, ensure_normal4faces!, ensure_length4faces!, get_boundary_grid
+export Mesh, ensure_volume4cells!, ensure_bfaces!, ensure_faces4cells!, ensure_nodes4faces!, ensure_cells4faces!, ensure_normal4faces!, ensure_length4faces!, ensure_signs4cells!, get_boundary_grid
 
 mutable struct Mesh{T <: Real}
     coords4nodes::Array{T,2}
-    nodes4cells::Array{Int,2}
+    nodes4cells::Array{Int64,2}
     
     volume4cells::Array{T,1}
-    nodes4faces::Array{Int,2}
-    faces4cells::Array{Int,2}
-    bfaces::Array{Int,1}
-    cells4faces::Array{Int,2}
+    nodes4faces::Array{Int64,2}
+    faces4cells::Array{Int64,2}
+    bfaces::Array{Int64,1}
+    cells4faces::Array{Int64,2}
     length4faces::Array{T,1}
     normal4faces::Array{T,2}
+    signs4cells::Array{Int64,2}
     
     function Mesh{T}(coords,nodes) where {T<:Real}
         # only 2d triangulations allowed yet
-        new(coords,nodes,[],[[] []],[[] []],[],[[] []],[],[[] []]);
+        new(coords,nodes,[],[[] []],[[] []],[],[[] []],[],[[] []],[[] []]);
     end
 end
 
@@ -211,33 +212,7 @@ function ensure_volume4cells!(Grid::Mesh)
            end
         end
     end        
-end    
-
-
-function ensure_volume4cells_old!(Grid::Mesh)
-    celldim = size(Grid.nodes4cells,2) - 1;
-    ncells::Int = size(Grid.nodes4cells,1);
-    @assert celldim <= 2
-    if size(Grid.volume4cells,1) != size(ncells,1)
-        if celldim == 1 # also allow d-dimensional points on a line!
-            Grid.volume4cells = zeros(eltype(Grid.coords4nodes),ncells);
-            xdim::Int = size(Grid.coords4nodes,2)
-            for cell = 1 : ncells
-                for d = 1 : xdim
-                    Grid.volume4cells[cell] += (Grid.coords4nodes[Grid.nodes4cells[cell,2],d] - Grid.coords4nodes[Grid.nodes4cells[cell,1],d]).^2
-                end
-                 Grid.volume4cells[cell] = sqrt(Grid.volume4cells[cell]);    
-            end    
-        elseif celldim == 2
-            Grid.volume4cells = 1 // 2 *(
-               Grid.coords4nodes[Grid.nodes4cells[:,1],1] .* (Grid.coords4nodes[Grid.nodes4cells[:,2],2] -  Grid.coords4nodes[Grid.nodes4cells[:,3],2])
-            .+ Grid.coords4nodes[Grid.nodes4cells[:,2],1] .* (Grid.coords4nodes[Grid.nodes4cells[:,3],2] - Grid.coords4nodes[Grid.nodes4cells[:,1],2])
-            .+ Grid.coords4nodes[Grid.nodes4cells[:,3],1] .* (Grid.coords4nodes[Grid.nodes4cells[:,1],2] - Grid.coords4nodes[Grid.nodes4cells[:,2],2]));
-        elseif celldim == 3
-            # todo
-        end
-    end        
-end  
+end   
 
 # determine the face numbers of the boundary faces
 # (they appear only once in faces4cells)
@@ -365,6 +340,26 @@ function ensure_faces4cells!(Grid::Mesh)
             # todo
             println("faces4cells for tets not yet implemented!")
             @assert dim <= 3
+        end
+    end    
+end
+
+
+# compute signs4cells
+function ensure_signs4cells!(Grid::Mesh)
+    dim::Int = size(Grid.nodes4cells,2)
+    if size(Grid.signs4cells,1) != size(Grid.nodes4cells,1)
+        @assert dim == 3
+        ensure_faces4cells!(Grid)
+        ensure_cells4faces!(Grid)
+        ncells::Int64 = size(Grid.nodes4cells,1)
+        Grid.signs4cells = ones(ncells,dim)
+        for cell = 1 : ncells
+            for f = 1 : dim
+                if Grid.cells4faces[Grid.faces4cells[cell,f],2] == cell
+                    Grid.signs4cells[cell,f] = -1;
+                end    
+            end
         end
     end    
 end

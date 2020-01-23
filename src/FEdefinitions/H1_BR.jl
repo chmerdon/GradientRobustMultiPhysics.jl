@@ -77,7 +77,7 @@ function get_all_basis_functions_on_cell(FE::H1BRFiniteElement{T,2,2} where T <:
 end
 
 function set_basis_coefficients_on_cell!(coefficients, FE::H1BRFiniteElement{T,2,2} where T <: Real, cell::Int64)
-    # default is one, replace if needed for special FE
+    # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[7,1] = FE.grid.normal4faces[FE.grid.faces4cells[cell,1],1];
     coefficients[7,2] = FE.grid.normal4faces[FE.grid.faces4cells[cell,1],2];
@@ -102,7 +102,7 @@ function get_all_basis_functions_on_face(FE::H1BRFiniteElement{T,2,2} where T <:
 end
 
 function set_basis_coefficients_on_face!(coefficients, FE::H1BRFiniteElement{T,2,2} where T <: Real, face::Int64)
-    # default is one, replace if needed for special FE
+    # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[5,1] = FE.grid.normal4faces[face,1];
     coefficients[5,2] = FE.grid.normal4faces[face,2];
