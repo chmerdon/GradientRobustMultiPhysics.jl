@@ -29,15 +29,17 @@ function main()
 #fem = "MINI"
 #fem = "TH"
 #fem = "P2P0"
-fem = "BR"
+#fem = "BR"
+fem = "BR+" # with reconstruction
 
-use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
+
+#use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
-#use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
+use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
 #use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
-maxlevel = 4
-nu = 1
+maxlevel = 3
+nu = 1e-4
 
 show_plots = true
 show_convergence_history = true
@@ -136,6 +138,7 @@ grid = triangulate_unitsquare(maxarea)
 Grid.show(grid)
 
 # load finite element
+use_reconstruction = false
 if fem == "TH"
     # Taylor--Hood
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
@@ -152,6 +155,11 @@ elseif fem == "BR"
     # Bernardi--Raugel
     FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+elseif fem == "BR+"
+    # Bernardi--Raugel with RT0 reconstruction
+    FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
+    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+    use_reconstruction = true
 elseif fem == "P2P0"
     # CP2P0
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
@@ -167,7 +175,7 @@ ndofs[level] = ndofs_velocity + ndofs_pressure;
 
 # solve Stokes problem
 val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
-residual = solveStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact_velocity!(use_problem),grid,FE_velocity,FE_pressure,FiniteElements.get_polynomial_order(FE_velocity)+f_order);
+residual = solveStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact_velocity!(use_problem),grid,FE_velocity,FE_pressure,FiniteElements.get_polynomial_order(FE_velocity)+f_order, use_reconstruction);
     
     # check divergence
     B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
@@ -215,7 +223,7 @@ val4dofs_RT0 = FiniteElements.createFEVector(FE_RT0);
 computeBestApproximation!(val4dofs_RT0,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_RT0,p_order + FiniteElements.get_polynomial_order(FE_RT0))
 integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(use_problem), val4dofs_RT0, FE_RT0), grid, error_order, 2);
 L2error_velocityRT[level] = sqrt(abs(sum(integral4cells[:])));
-println("L2_velocity_error_RT0 = " * string(L2error_velocityRT[level]));
+println("L2_velocity_error_RT0 = " * string(L2error_velocityRT[level]));    
 
 #plot
 if (show_plots) && (level == maxlevel) && ndofs[level] < 7500

@@ -351,17 +351,16 @@ function ensure_signs4cells!(Grid::Mesh)
     if size(Grid.signs4cells,1) != size(Grid.nodes4cells,1)
         @assert dim == 3
         ensure_faces4cells!(Grid)
-        ensure_cells4faces!(Grid)
         ncells::Int64 = size(Grid.nodes4cells,1)
         Grid.signs4cells = ones(ncells,dim)
         for cell = 1 : ncells
             for f = 1 : dim
-                if Grid.cells4faces[Grid.faces4cells[cell,f],2] == cell
-                    Grid.signs4cells[cell,f] = -1;
-                end    
+                if Grid.nodes4faces[Grid.faces4cells[cell,f],1] != Grid.nodes4cells[cell,f]
+                    Grid.signs4cells[cell,f] = -1
+                end       
             end
         end
-    end    
+    end   
 end
 
 

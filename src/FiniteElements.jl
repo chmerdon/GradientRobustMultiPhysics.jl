@@ -54,6 +54,10 @@ function set_basis_coefficients_on_face!(coefficients, FE::AbstractFiniteElement
     fill!(coefficients,1.0)
 end    
 
+function Hdivreconstruction_available(FE::AbstractFiniteElement)
+    return false
+end
+
 
 # mapper for Int{N} to Val{N}
 # dummy_array needed to avoid constructing Val{N} in each call

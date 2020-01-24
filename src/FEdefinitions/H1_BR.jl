@@ -61,9 +61,9 @@ function get_all_basis_functions_on_cell(FE::H1BRFiniteElement{T,2,2} where T <:
     fb3 = 0.0;
     function closure(xref)
         temp = 1 - xref[1] - xref[2];
-        fb1 = temp*xref[1];
-        fb2 = xref[1]*xref[2]
-        fb3 = temp*xref[2];
+        fb1 = 4*temp*xref[1];
+        fb2 = 4*xref[1]*xref[2]
+        fb3 = 4*temp*xref[2];
         return [temp 0.0;
                 xref[1] 0.0;
                 xref[2] 0.0;
@@ -92,7 +92,7 @@ function get_all_basis_functions_on_face(FE::H1BRFiniteElement{T,2,2} where T <:
     fb = 0.0;
     function closure(xref)
         temp = 1 - xref[1];
-        fb = temp*xref[1];
+        fb = 4*temp*xref[1];
         return [temp 0.0;
                 xref[1] 0.0;
                 0.0 temp;
@@ -107,3 +107,28 @@ function set_basis_coefficients_on_face!(coefficients, FE::H1BRFiniteElement{T,2
     coefficients[5,1] = FE.grid.normal4faces[face,1];
     coefficients[5,2] = FE.grid.normal4faces[face,2];
 end    
+
+function Hdivreconstruction_available(FE::H1BRFiniteElement{T,2,2} where T <: Real)
+    return true
+end
+
+function get_Hdivreconstruction_space(FE::H1BRFiniteElement{T,2,2} where T <: Real)
+    return getRT0FiniteElement(FE.grid)
+end
+
+function get_Hdivreconstruction_trafo!(T,FE)
+    ensure_length4faces!(FE.grid);
+    nfaces = size(FE.grid.nodes4faces,1)
+    nnodes = size(FE.grid.coords4nodes,1)
+    for face = 1 : nfaces
+        # reconstruction coefficients for P1 basis functions
+        for k = 1 : 2
+            node = FE.grid.nodes4faces[face,k]
+            T[node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+            T[nnodes+node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+        end
+        # reconstruction coefficient for quadratic face bubbles
+        T[2*nnodes+face,face] = 2 // 3 * FE.grid.length4faces[face]
+    end
+    return T
+end

@@ -223,31 +223,8 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     #end  
 end
 
-function assembleStokesSystem(nu::Real, volume_data!::Function,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::AbstractFiniteElement,quadrature_order::Int)
 
-    grid = FE_velocity.grid;
-    ncells::Int = size(grid.nodes4cells,1);
-    nnodes::Int = size(grid.coords4nodes,1);
-    celldim::Int = size(grid.nodes4cells,2);
-    xdim::Int = size(grid.coords4nodes,2);
-    ndofs_velocity::Int = FiniteElements.get_ndofs(FE_velocity);
-    ndofs4cell_velocity::Int = FiniteElements.get_maxndofs4cell(FE_velocity);
-    ndofs::Int = ndofs_velocity + FiniteElements.get_ndofs(FE_pressure);
-    
-    Grid.ensure_volume4cells!(grid);
-    
-    A = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
-    assemble_Stokes_Operator4FE!(A,nu,FE_velocity,FE_pressure);
-    
-    # compute right-hand side vector
-    b = zeros(Float64,ndofs);
-    FESolveCommon.assemble_rhsL2!(b, volume_data!, FE_velocity, quadrature_order)
-    
-    return A,b
-end
-
-
-function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
+function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, use_reconstruction::Bool = false, dirichlet_penalty::Float64 = 1e60)
     
     
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
@@ -263,11 +240,32 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
     
     # assemble system 
     @time begin
-        print("    |assembling...")
-        A, b = assembleStokesSystem(nu, volume_data!,FE_velocity,FE_pressure,quadrature_order);
+        print("    |assembling matrix...")
+        A = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
+        assemble_Stokes_Operator4FE!(A,nu,FE_velocity,FE_pressure);
         println("finished")
     end
-    
+        
+    @time begin
+        # compute right-hand side vector
+        print("    |assembling rhs...")
+        b = zeros(Float64,ndofs);
+        if use_reconstruction
+            @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
+            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity);
+            ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
+            b2 = zeros(Float64,ndofsHdiv);
+            FESolveCommon.assemble_rhsL2!(b2, volume_data!, FE_Reconstruction, quadrature_order)
+            println("finished")
+            print("    |Hdivreconstruction...")
+            T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
+            FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity);
+            b[1:ndofs_velocity] = T*b2;
+        else
+            FESolveCommon.assemble_rhsL2!(b, volume_data!, FE_velocity, quadrature_order)
+        end    
+        println("finished")
+    end
     
      # add value for Lagrange multiplier for integral mean
     if length(val4dofs) == ndofs
@@ -290,7 +288,7 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
         catch    
             println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
             try
-                val4dofs[:] = Array{typeof(FE.grid.coords4nodes[1]),2}(A)\b;
+                val4dofs[:] = Array{typeof(FE_velocity.grid.coords4nodes[1]),2}(A)\b;
             catch OverflowError
                 println("OverflowError (Rationals?): trying again as Float64 sparse matrix");
                 val4dofs[:] = Array{Float64,2}(A)\b;
