@@ -212,7 +212,7 @@ L2error_velocityVL[level] = sqrt(abs(sum(integral4cells[:])));
 FE_RT0 = FiniteElements.getRT0FiniteElement(grid);
 FiniteElements.show(FE_RT0)
 val4dofs_RT0 = FiniteElements.createFEVector(FE_RT0);
-computeBestApproximation!(val4dofs_RT0,"L2",exact_velocity!(use_problem),Nothing,FE_RT0,p_order + FiniteElements.get_polynomial_order(FE_RT0))
+computeBestApproximation!(val4dofs_RT0,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_RT0,p_order + FiniteElements.get_polynomial_order(FE_RT0))
 integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(use_problem), val4dofs_RT0, FE_RT0), grid, error_order, 2);
 L2error_velocityRT[level] = sqrt(abs(sum(integral4cells[:])));
 println("L2_velocity_error_RT0 = " * string(L2error_velocityRT[level]));

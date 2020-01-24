@@ -212,6 +212,60 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1
 end
 
 
+function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivRTFiniteElement)
+    ensure_bfaces!(FE.grid);
+    ensure_length4faces!(FE.grid);
+    nbfaces::Int = size(FE.grid.bfaces,1);
+    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim-1);
+     
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    basisvals = Array{Array{T,1}}(undef,length(qf.w));
+        
+    for i in eachindex(qf.w)
+        # evaluate basis functions at quadrature point
+        basisvals[i] = FiniteElements.get_all_basis_function_fluxes_on_face(FE)(qf.xref[i])
+    end    
+    dofs = zeros(Int64,ndofs4face)
+    coefficients = zeros(Float64,ndofs4face)
+    
+    # quadrature loop
+    det = 0.0;
+    temp = 0.0;
+    face = 0;
+    #@time begin    
+        for j in eachindex(FE.grid.bfaces)
+            face = FE.grid.bfaces[j];
+            # get dofs
+            for dof_i = 1 : ndofs4face
+                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
+            end
+            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+
+            det = FE.grid.length4faces[face]; # determinant of transformation on face
+            
+            for i in eachindex(qf.w)
+                
+                for dof_i = 1 : ndofs4face, dof_j = dof_i : ndofs4face
+                    # fill upper right part and diagonal of matrix
+                    @inbounds begin
+                      temp = (basisvals[i][dof_i]*basisvals[i][dof_j] * qf.w[i] * FE.grid.length4faces[face]) * coefficients[dof_i] * coefficients[dof_j] / det / det;
+                      A[dofs[dof_i],dofs[dof_j]] += temp;
+                      # fill lower left part of matrix
+                      if dof_j > dof_i
+                        A[dofs[dof_j],dofs[dof_i]] += temp;
+                      end 
+                    end
+                end
+            end
+        end#
+    #end      
+end
+
 
 
 # stiffness matrix assembly that writes into an ExtendableSparseMatrix
@@ -511,6 +565,77 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
         end
     end    
 end
+
+function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivRTFiniteElement)
+    ensure_bfaces!(FE.grid);
+    ensure_length4faces!(FE.grid);
+    nbfaces::Int = size(FE.grid.bfaces,1);
+    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+    celldim::Int = size(FE.grid.nodes4cells,2) - 1;
+    xdim::Int = size(FE.grid.coords4nodes,2);
+    
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T}(2*(FiniteElements.get_polynomial_order(FE)), xdim-1);
+    
+        Quadrature.show(qf)
+     
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    basisvals = Array{Array{T,1}}(undef,length(qf.w));
+    for i in eachindex(qf.w)
+        basisvals[i] = FiniteElements.get_all_basis_function_fluxes_on_face(FE)(qf.xref[i])
+    end    
+    dofs = zeros(Int64,ndofs4face)
+    coefficients = zeros(Float64,ndofs4face)
+    
+    # quadrature loop
+    det = 0.0
+    fval = zeros(T,ncomponents)
+    x = zeros(T,xdim);
+    face = 0
+    @time begin    
+        for j in eachindex(FE.grid.bfaces)
+            face = FE.grid.bfaces[j];
+            # get dofs
+            for dof_i = 1 : ndofs4face
+                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
+            end
+            
+            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+
+            det = FE.grid.length4faces[face]; # determinant of transformation on face
+            
+            for i in eachindex(qf.w)
+                # evaluate f
+                fill!(x,0.0)
+                if celldim == 2
+                    for j = 1 : xdim
+                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 2], j] * qf.xref[i][1]
+                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j] * qf.xref[i][2]
+                    end
+                elseif celldim == 1
+                    for j = 1 : xdim
+                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j]
+                    end
+                end    
+                f!(fval, x)
+
+                # multiply with normal and save in fval[1]
+                fval[1] = fval[1] * FE.grid.normal4faces[face,1] + fval[2] * FE.grid.normal4faces[face,2];
+                fval[2] = 0.0;
+
+                for dof_i = 1 : ndofs4face
+                    # fill vector
+                    # note: basisvals contain normalfluxes that have to be scaled with 1/det (Piola)
+                    @inbounds begin
+                      b[dofs[dof_i]] += (fval[1]*basisvals[i][dof_i,1]/det * qf.w[i] * FE.grid.length4faces[face] * coefficients[dof_i]);;
+                    end
+                end
+            end
+        end
+    end    
+end
+
 
 
 function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement)

@@ -3,7 +3,7 @@ module FiniteElements
 using Grid
 using LinearAlgebra
 
-export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement
+export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHdivRTFiniteElement, AbstractHdivBDMFiniteElement, AbstractHcurlFiniteElement
 
  #######################################################################################################
  #######################################################################################################
@@ -18,24 +18,30 @@ export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement
 # top level abstract type
 abstract type AbstractFiniteElement end
 
-# subtype for H1 conforming elements (also Crouzeix-Raviart)
-abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
- include("FEdefinitions/H1_P1.jl");
- include("FEdefinitions/H1_MINI.jl");
- include("FEdefinitions/H1_P2.jl");
- include("FEdefinitions/H1_CR.jl");
- include("FEdefinitions/H1_BR.jl");
+  # subtype for H1 conforming elements (also Crouzeix-Raviart)
+  abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
+    include("FEdefinitions/H1_P1.jl");
+    include("FEdefinitions/H1_MINI.jl");
+    include("FEdefinitions/H1_P2.jl");
+    include("FEdefinitions/H1_CR.jl");
+    include("FEdefinitions/H1_BR.jl");
  
-# subtype for L2 conforming elements
-abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
- include("FEdefinitions/L2_P0.jl");
+  # subtype for L2 conforming elements
+  abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
+    include("FEdefinitions/L2_P0.jl");
  
-# subtype for Hdiv-conforming elements
-abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
- include("FEdefinitions/HDIV_RT0.jl");
+  # subtype for Hdiv-conforming elements
+  abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
+    # subtype for Raviart-Thomas elements (only normal face fluxes)
+    abstract type AbstractHdivRTFiniteElement <: AbstractHdivFiniteElement end
+      include("FEdefinitions/HDIV_RT0.jl");
+    # subtype for Brezzi-Douglas elements (different handling of tangential face fluxes?)
+    abstract type AbstractHdivBDMFiniteElement <: AbstractHdivFiniteElement end
+      # TODO
 
-# subtype for Hcurl-conforming elements
-abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
+  # subtype for Hcurl-conforming elements
+  abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
+    # TODO
 
 
 # basis function updates on cells and faces (to multiply e.g. by normal vector or reconstruction coefficients etc.)
@@ -58,7 +64,7 @@ dummy_array = [Val(1),Val(2),Val(3),Val(4),Val(5),Val(6),Val(7),Val(8),Val(9),Va
 get_globaldof4cell(FE::AbstractFiniteElement, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
 
 # H1 elements allow for continuous (= cell-independent) basis function evaluations on faces
-get_globaldof4face(FE::AbstractH1FiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
+get_globaldof4face(FE::AbstractFiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
 
 # Hdiv elements should allow for continuous evaluations of normal-fluxes
 # maybe a good idea to offer a function for this?

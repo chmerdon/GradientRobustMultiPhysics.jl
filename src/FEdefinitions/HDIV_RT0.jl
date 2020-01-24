@@ -1,4 +1,4 @@
-struct HdivRT0FiniteElement{T, dim} <: AbstractHdivFiniteElement
+struct HdivRT0FiniteElement{T, dim} <: AbstractHdivRTFiniteElement
     name::String;                 # full name of finite element (used in messages)
     grid::Grid.Mesh{T};           # link to grid
     xref4dofs4cell::Array{T,2};   # coordinates for degrees of freedom in reference domain
@@ -9,6 +9,7 @@ function getRT0FiniteElement(grid)
     ensure_faces4cells!(grid);
     ensure_volume4cells!(grid);
     ensure_signs4cells!(grid);
+    ensure_normal4faces!(grid);
     T = eltype(grid.coords4nodes);
     dim = size(grid.nodes4cells,2) - 1;
     @assert dim == 2
@@ -41,9 +42,6 @@ get_globaldof4cell(FE::HdivRT0FiniteElement{T,2} where T <: Real, cell, ::Val{3}
 
 # LOCAL DOF TO GLOBAL DOF ON FACE
 get_globaldof4face(FE::HdivRT0FiniteElement{T,2} where T <: Real, face, ::Val{1}) = face
-# how to handle basis function evaluations on faces?
-# idea 1: only offer normal flux (constant)
-# idea 2: make it cell-dependent
 
 # BASIS FUNCTIONS
 function get_all_basis_functions_on_cell(FE::HdivRT0FiniteElement{T,2} where T <: Real)
@@ -53,6 +51,12 @@ function get_all_basis_functions_on_cell(FE::HdivRT0FiniteElement{T,2} where T <
                 xref[1]-1.0 xref[2]]
     end
 end
+
+function get_all_basis_function_fluxes_on_face(FE::HdivRT0FiniteElement{T,2} where T <: Real)
+    function closure(xref)
+        return [1.0]; # normal-flux of RT0 function on face
+    end
+end       
 
 function set_basis_coefficients_on_cell!(coefficients, FE::HdivRT0FiniteElement{T,2} where T <: Real, cell::Int64)
     # multiply by signs to ensure continuity of normal fluxes
