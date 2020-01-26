@@ -24,7 +24,7 @@ function triangulate_lshape(maxarea)
     println(string(maxarea))
     (triout, vorout)=triangulate("pQa$(@sprintf("%.16f", maxarea))", triin)
     
-    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'));
+    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'),Grid.ElemType2DTriangle());
 end
 
 function main()

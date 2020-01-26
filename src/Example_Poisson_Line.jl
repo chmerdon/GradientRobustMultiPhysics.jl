@@ -10,7 +10,7 @@ ENV["MPLBACKEND"]="tkagg"
 using PyPlot
 
 function get_line_grid(maxarea)
-    return Grid.Mesh{Float64}(Array{Float64,2}(Array{Float64,2}([0,1,2]')'),Array{Int64,2}([1 2;2 3]),ceil(log2(1/maxarea)));
+    return Grid.Mesh{Float64}(Array{Float64,2}(Array{Float64,2}([0,1,2]')'),Array{Int64,2}([1 2;2 3]),Grid.ElemType1DInterval(),ceil(log2(1/maxarea)));
 end
 
 function main()

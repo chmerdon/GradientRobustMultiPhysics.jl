@@ -19,7 +19,7 @@ function triangulate_unitsquare(maxarea)
     triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
     triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
     (triout, vorout)=triangulate("pQa" * string(maxarea), triin)
-    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'));
+    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'),Grid.ElemType2DTriangle());
 end
 
 

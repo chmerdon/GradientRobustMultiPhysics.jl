@@ -5,10 +5,13 @@ using LinearAlgebra
 
 export Mesh, ensure_volume4cells!, ensure_bfaces!, ensure_faces4cells!, ensure_nodes4faces!, ensure_cells4faces!, ensure_normal4faces!, ensure_length4faces!, ensure_signs4cells!, get_boundary_grid
 
+abstract type AbstractElemType end
+
 mutable struct Mesh{T <: Real}
     coords4nodes::Array{T,2}
     nodes4cells::Array{Int64,2}
-    
+
+    elemtypes::Array{AbstractElemType,1}
     volume4cells::Array{T,1}
     nodes4faces::Array{Int64,2}
     faces4cells::Array{Int64,2}
@@ -18,11 +21,28 @@ mutable struct Mesh{T <: Real}
     normal4faces::Array{T,2}
     signs4cells::Array{Int64,2}
     
-    function Mesh{T}(coords,nodes) where {T<:Real}
+    function Mesh{T}(coords,nodes,ET::AbstractElemType) where {T<:Real}
         # only 2d triangulations allowed yet
-        new(coords,nodes,[],[[] []],[[] []],[],[[] []],[],[[] []],[[] []]);
+        new(coords,nodes,[ET],[],[[] []],[[] []],[],[[] []],[],[[] []],[[] []]);
     end
 end
+
+
+
+  # subtype for elem types that require 1D integration
+  abstract type Abstract0DElemType <: AbstractElemType end
+    struct ElemType0DPoint <: Abstract0DElemType end
+
+  abstract type Abstract1DElemType <: AbstractElemType end
+    include("GRIDelemtypes/1D_interval.jl");
+
+  # subtype for elem types that require 2D integration
+  abstract type Abstract2DElemType <: AbstractElemType end
+    include("GRIDelemtypes/2D_triangle.jl");
+
+  # subtype for elem types that require 3D integration
+  abstract type Abstract3DElemType <: AbstractElemType end
+
 
 
 
@@ -40,12 +60,11 @@ function show(Grid::Mesh)
 end
 
 
-function Mesh{T}(coords,nodes,nrefinements) where {T<:Real}
+function Mesh{T}(coords,nodes,ET::AbstractElemType,nrefinements) where {T<:Real}
     for j=1:nrefinements
-        @assert size(nodes,2) <= 3
-        coords, nodes = uniform_refinement(coords,nodes)
+        coords, nodes = uniform_refinement(ET,coords,nodes)
     end
-    return Mesh{T}(coords,nodes);
+    return Mesh{T}(coords,nodes,ET);
 end
 
 # default constructor for Float64-typed triangulations
@@ -53,112 +72,9 @@ function Mesh(coords,nodes,nrefinements = 0)
     for j=1:nrefinements
         coords, nodes = uniform_refinement(coords,nodes)
     end
-    return Mesh{Float64}(coords,nodes);
+    return Mesh{Float64}(coords,nodes,ElemType2DTriangle());
 end
-
-
-# perform a uniform (red) refinement of the triangulation
-function uniform_refinement(coords4nodes::Array,nodes4cells::Array)
-    
-  nnodes = size(coords4nodes,1);
-  ncells = size(nodes4cells,1);
-
-  if size(coords4nodes,2) == 1
-    coords4nodes = @views [coords4nodes; 1 // 2 * (coords4nodes[nodes4cells[:,1],1] + coords4nodes[nodes4cells[:,2],1])];
-    
-    nodes4cells_new = zeros(Int,2*ncells,2);
-    for cell = 1 : ncells
-        nodes4cells_new[(1:2) .+ (cell-1)*2,:] = 
-            [nodes4cells[cell,1] nnodes+cell;
-            nnodes+cell nodes4cells[cell,2]];
-    end
-  elseif size(coords4nodes,2) == 2
-    # compute nodes4faces
-    nodes4faces = @views [nodes4cells[:,1] nodes4cells[:,2]; nodes4cells[:,2] nodes4cells[:,3]; nodes4cells[:,3] nodes4cells[:,1]];
-    
-    # sort each row ( faster than: sort!(Grid.nodes4faces, dims = 2);)
-    temp::Int64 = 0;
-    for j = 1 : 3*ncells
-        if nodes4faces[j,2] > nodes4faces[j,1]
-            temp = nodes4faces[j,1];
-            nodes4faces[j,1] = nodes4faces[j,2];
-            nodes4faces[j,2] = temp;
-        end
-    end
-        
-    # find unique rows -> this fixes the enumeration of the faces!
-    nodes4faces = unique(nodes4faces, dims = 1);
-    nfaces = size(nodes4faces,1);
-    
-    # compute and append face midpoints
-    coords4nodes = @views [coords4nodes; 1 // 2 * (coords4nodes[nodes4faces[:,1],:] + coords4nodes[nodes4faces[:,2],:])];
-    
-    # mapping to get number of new mipoint between two old nodes
-    newnode4nodes = @views sparse(nodes4faces[:,1],nodes4faces[:,2],(1:nfaces) .+ nnodes,nnodes,nnodes);
-    newnode4nodes = newnode4nodes + newnode4nodes';
-    
-    # build up new nodes4cells of uniform refinements
-    nodes4cells_new = zeros(Int,4*ncells,3);
-    newnodes = zeros(Int,3);
-    for cell = 1 : ncells
-        newnodes = map(j->(newnode4nodes[nodes4cells[cell,j],nodes4cells[cell,mod(j,3)+1]]),1:3);
-        nodes4cells_new[(1:4) .+ (cell-1)*4,:] = 
-            [nodes4cells[cell,1] newnodes[1] newnodes[3];
-            newnodes[1] nodes4cells[cell,2] newnodes[2];
-            newnodes[2] newnodes[3] newnodes[1];
-            newnodes[3] newnodes[2] nodes4cells[cell,3]];
-    end
-  end  
-  return coords4nodes, nodes4cells_new;
-end
-
-
-# perform a uniform (red) refinement of the triangulation
-function uniform_refinement_old(coords4nodes::Array,nodes4cells::Array)
-    
-  nnodes = size(coords4nodes,1);
-  ncells = size(nodes4cells,1);
-    
-  if size(coords4nodes,2) == 1
-    coords4nodes = [coords4nodes; 1 // 2 * (coords4nodes[nodes4cells[:,1],1] + coords4nodes[nodes4cells[:,2],1])];
-    
-    nodes4cells_new = zeros(Int,2*ncells,2);
-    for cell = 1 : ncells
-        nodes4cells_new[(1:2) .+ (cell-1)*2,:] = 
-            [nodes4cells[cell,1] nnodes+cell;
-            nnodes+cell nodes4cells[cell,2]];
-    end
-    
-  elseif size(coords4nodes,2) == 2
-    # compute nodes4faces
-    nodes4faces = [nodes4cells[:,1] nodes4cells[:,2]; nodes4cells[:,2] nodes4cells[:,3]; nodes4cells[:,3] nodes4cells[:,1]];
-    # find unique rows -> this fixes the enumeration of the faces!
-    sort!(nodes4faces, dims = 2); # sort each row
-    nodes4faces = unique(nodes4faces, dims = 1);
-    nfaces = size(nodes4faces,1);
-    
-    # compute and append face midpoints
-    coords4nodes = [coords4nodes; 1 // 2 * (coords4nodes[nodes4faces[:,1],:] + coords4nodes[nodes4faces[:,2],:])];
-    
-    # mapping to get number of new mipoint between two old nodes
-    newnode4nodes = sparse(nodes4faces[:,1],nodes4faces[:,2],(1:nfaces) .+       nnodes,nnodes,nnodes);
-    newnode4nodes = newnode4nodes + newnode4nodes';
-    
-    # build up new nodes4cells of uniform refinements
-    nodes4cells_new = zeros(Int,4*ncells,3);
-    newnodes = zeros(Int,3);
-    for cell = 1 : ncells
-        newnodes = map(j->(newnode4nodes[nodes4cells[cell,j],nodes4cells[cell,mod(j,3)+1]]),1:3);
-        nodes4cells_new[(1:4) .+ (cell-1)*4,:] = 
-            [nodes4cells[cell,1] newnodes[1] newnodes[3];
-            newnodes[1] nodes4cells[cell,2] newnodes[2];
-            newnodes[2] newnodes[3] newnodes[1];
-            newnodes[3] newnodes[2] nodes4cells[cell,3]];
-    end
-  end  
-  return coords4nodes, nodes4cells_new;
-end
-
+  
 
 function ensure_length4faces!(Grid::Mesh)
     ensure_nodes4faces!(Grid)

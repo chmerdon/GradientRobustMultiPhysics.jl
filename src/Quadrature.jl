@@ -10,7 +10,7 @@ export QuadratureFormula, integrate, integrate_xref, integrate!, integrate2!
 #  coords::NTuple{intDim + 1, T}
 # end
 
-struct QuadratureFormula{T <: Real}
+struct QuadratureFormula{T <: Real, ET <: Grid.AbstractElemType}
   name::String
   xref::Array{Array{T, 1}}
   w::Array{T, 1}
@@ -27,51 +27,52 @@ function show(Q::QuadratureFormula)
 	println("  npoints : $(npoints)")
 end
 
-function QuadratureFormula{T}(order::Int, dim::Int = 2) where {T<:Real}
+function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.AbstractElemType}
     # xref = Array{T}(undef,2)
     # w = Array{T}(undef, 1)
     
     if order <= 1
+        dim = (ET == Grid.ElemType2DTriangle) ? 2 : 1;
         name = "midpoint rule"
         xref = Vector{Array{T,1}}(undef,1);
         xref[1] = ones(T,dim+1) * 1 // (dim+1)
         w = [1]
     elseif order == 2 # face midpoint rule  
-        if dim == 2
-            name = "face midpoints rule"
+        if ET == Grid.ElemType2DTriangle;
+            name = "triangle: face midpoints rule"
             xref = Vector{Array{T,1}}(undef,3);
             xref[1] = [1//2,1//2,0//1];
             xref[2] = [0//1,1//2,1//2];
             xref[3] = [1//2,0//1,1//2];
             w = [1//3; 1//3; 1//3]     
-        elseif dim == 1
-            name = "Simpson's rule"
+        elseif ET == Grid.ElemType1DInterval;
+            name = "interval: Simpson's rule"
             xref = Vector{Array{T,1}}(undef,3);
             xref[1] = [0 ,1];
             xref[2] = [1//2, 1//2];
             xref[3] = [1,0];
             w = [1//6; 2//3; 1//6]     
-        elseif dim == 0
+        elseif ET == Grid.ElemType0DPoint;
             name = "point evaluation"
             xref = Vector{Array{T,1}}(undef,1);
             xref[1] = ones(T,1)
             w = [1]
         end    
     else
-        if dim == 1
-            name = "generic Gauss rule"
+        if ET == Grid.ElemType1DInterval;
+            name = "interval: generic Gauss rule"
             xref, w = get_generic_quadrature_Gauss(order)
-        elseif dim == 0
+        elseif ET == Grid.ElemType0DPoint;
             name = "point evaluation"
             xref = Vector{Array{T,1}}(undef,1);
             xref[1] = ones(T,1)
             w = [1]
-        elseif dim == 2    
-            name = "generic Stroud rule"
+        elseif ET == Grid.ElemType2DTriangle; 
+            name = "triangle: generic Stroud rule"
             xref, w = get_generic_quadrature_Stroud(order)
         end    
     end
-    return QuadratureFormula{T}(name, xref, w)
+    return QuadratureFormula{T, ET}(name, xref, w)
 end
 
 
@@ -166,7 +167,7 @@ function integrate(integrand!::Function, grid::Grid.Mesh, order::Int, resultdim 
     xdim::Int = size(grid.coords4nodes,2);
     
     T = Base.eltype(grid.coords4nodes);
-    qf = QuadratureFormula{T}(order, celldim);
+    qf = QuadratureFormula{T,typeof(grid.elemtypes[1])}(order);
     
     # compute volume4cells
     Grid.ensure_volume4cells!(grid);
@@ -201,7 +202,7 @@ function integrate!(integral4cells::Array, integrand!::Function, grid::Grid.Mesh
     xdim::Int = size(grid.coords4nodes,2);
     
     T = Base.eltype(grid.coords4nodes);
-    qf = QuadratureFormula{T}(order, celldim);
+    qf = QuadratureFormula{T,typeof(grid.elemtypes[1])}(order);
     
     # compute volume4cells
     Grid.ensure_volume4cells!(grid);
@@ -225,39 +226,6 @@ function integrate!(integral4cells::Array, integrand!::Function, grid::Grid.Mesh
           integral4cells[cell, j] += result[j] * qf.w[i] * grid.volume4cells[cell];
         end
       end  
-    end
-end
-
-
-# integrate a smooth function over the triangulation with arbitrary order
-function integrate_old!(integral4cells::Array, integrand!::Function, grid::Grid.Mesh, order::Int, resultdim = 1)
-    ncells::Int = size(grid.nodes4cells, 1);
-    dim::Int = size(grid.coords4nodes,2);
-    
-    # get quadrature point and weights
-    T = Base.eltype(grid.coords4nodes);
-    qf = QuadratureFormula{T}(order, dim);
-    nqp::Int = size(qf.xref, 1);
-    
-    # compute volume4cells
-    Grid.ensure_volume4cells!(grid);
-    
-    # loop over quadrature points
-    fill!(integral4cells, 0);
-    x = zeros(T, ncells, dim);
-    result = zeros(T, ncells, resultdim);
-    for qp = 1 : nqp
-        # map xref to x in each triangle
-        fill!(x, 0.0);
-        for d = 1 : dim+1
-          x += qf.xref[qp,d] .* view(grid.coords4nodes, view(grid.nodes4cells, :, d), :);
-        end
-        
-        # evaluate integrand multiply with quadrature weights
-        integrand!(result, x, qf.xref[qp, :])
-        for j = 1 : resultdim
-            @inbounds integral4cells[:,j] += result[:,j] .* grid.volume4cells * qf.w[qp];
-        end    
     end
 end
 

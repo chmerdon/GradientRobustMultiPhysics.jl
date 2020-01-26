@@ -27,7 +27,7 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
     
     T = eltype(grid.coords4nodes);
     quadorder = 2*(FiniteElements.get_polynomial_order(FE_velocity)-1);
-    qf = QuadratureFormula{T}(quadorder, xdim);
+    qf = QuadratureFormula{T,typeof(FE_velocity.grid.elemtypes[1])}(quadorder);
 
     # pre-allocate gradients of basis function in reference coordinates
     gradients_xref_cache = zeros(Float64,length(qf.w),xdim*ndofs4cell_velocity,celldim)
@@ -38,11 +38,7 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
     
     # determine needed trafo
     dim = celldim - 1;
-    if dim == 1
-        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_line
-    elseif dim == 2
-        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_triangle
-    end    
+    loc2glob_trafo_tinv = Grid.local2global_tinv_jacobian(FE_velocity.grid,FE_velocity.grid.elemtypes[1])
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
         
     # pre-allocate memory for temporary stuff
@@ -54,14 +50,13 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
     coefficients_velocity = zeros(Float64,ndofs4cell_velocity,xdim)
     div_i::T = 0.0;
     div_j::T = 0.0;
-    det::T = 0.0;
     offsets = [0,ndofs4cell_velocity];
     
     # audrature loop
     #@time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
-      loc2glob_trafo_tinv(trafo_jacobian,det,FE_velocity.grid,cell)
+      loc2glob_trafo_tinv(trafo_jacobian,cell)
       
       # cache dofs
       for dof_i = 1 : ndofs4cell_velocity
@@ -122,7 +117,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     
     T = eltype(grid.coords4nodes);
     quadorder = maximum([FiniteElements.get_polynomial_order(FE_pressure) + FiniteElements.get_polynomial_order(FE_velocity)-1, 2*(FiniteElements.get_polynomial_order(FE_velocity)-1)]);
-    qf = QuadratureFormula{T}(quadorder, xdim);
+    qf = QuadratureFormula{T,typeof(FE_velocity.grid.elemtypes[1])}(quadorder);
 
     # evaluate basis functions at quarature points in reference coordinates
     gradients_xref_cache = zeros(Float64,length(qf.w),xdim*ndofs4cell_velocity,celldim)
@@ -136,11 +131,7 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     
     # get needed trafo
     dim = celldim - 1;
-    if dim == 1
-        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_line
-    elseif dim == 2
-        loc2glob_trafo_tinv = FiniteElements.local2global_tinv_jacobian_triangle
-    end    
+    loc2glob_trafo_tinv = Grid.local2global_tinv_jacobian(FE_velocity.grid,FE_velocity.grid.elemtypes[1])
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
     
     
@@ -154,14 +145,13 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     coefficients_velocity = zeros(Float64,ndofs4cell_velocity,xdim)
     coefficients_pressure = zeros(Float64,ndofs4cell_pressure)
     temp::T = 0.0;
-    det::T = 0.0;
     offsets = [0,ndofs4cell_velocity];
     
     # quadrature loop
     #@time begin
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
-      loc2glob_trafo_tinv(trafo_jacobian,det,FE_velocity.grid,cell)
+      loc2glob_trafo_tinv(trafo_jacobian,cell)
       
       # cache dofs
       for dof_i = 1 : ndofs4cell_velocity

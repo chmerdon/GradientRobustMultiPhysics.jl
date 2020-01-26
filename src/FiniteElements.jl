@@ -113,105 +113,28 @@ function createFEVector(FE::AbstractFiniteElement)
     return zeros(get_ndofs(FE));
 end
 
-# transformation for H1 elements on a line
-function local2global_line()
-    A = Matrix{Float64}(undef,1,1)
-    b = Vector{Float64}(undef,1)
-    x = Vector{Real}(undef,1)
-    return function fix_cell(grid,cell)
-        b[1] = grid.coords4nodes[grid.nodes4cells[cell,1],1]
-        A[1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - b[1]
-        return function closure(xref)
-            x[1] = A[1,1]*xref[1] + b[1]
-            return x
-        end
-    end    
-end
-
-# transformation for H1 elements on a triangle
-function local2global_triangle()
-    A = Matrix{Float64}(undef,2,2)
-    b = Vector{Float64}(undef,2)
-    x = Vector{Real}(undef,2)
-    return function fix_cell(grid,cell)
-        b[1] = grid.coords4nodes[grid.nodes4cells[cell,1],1]
-        b[2] = grid.coords4nodes[grid.nodes4cells[cell,1],2]
-        A[1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - b[1]
-        A[1,2] = grid.coords4nodes[grid.nodes4cells[cell,3],1] - b[1]
-        A[2,1] = grid.coords4nodes[grid.nodes4cells[cell,2],2] - b[2]
-        A[2,2] = grid.coords4nodes[grid.nodes4cells[cell,3],2] - b[2]
-        return function closure(xref)
-            x[1] = A[1,1]*xref[1] + A[1,2]*xref[2] + b[1]
-            x[2] = A[2,1]*xref[1] + A[2,2]*xref[2] + b[2]
-            # faster than: x = A*xref + b
-            return x
-        end
-    end    
-end
-
-
-# Piola transformation for Hdiv elements on a triangle
-function Piola_triangle!(grid)
-    det = 0.0;
-    return function closure(A,cell)
-        A[1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
-        A[1,2] = grid.coords4nodes[grid.nodes4cells[cell,3],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
-        A[2,1] = grid.coords4nodes[grid.nodes4cells[cell,2],2] - grid.coords4nodes[grid.nodes4cells[cell,1],2]
-        A[2,2] = grid.coords4nodes[grid.nodes4cells[cell,3],2] - grid.coords4nodes[grid.nodes4cells[cell,1],2]
-        det = A[1,1]*A[2,2] - A[1,2]*A[2,1]
-        return det
-    end    
-end
-
-
-# exact tinversion of transformation for H1 elements on a triangle
-function local2global_tinv_jacobian_triangle(A!,det!,grid,cell)
-    # transposed inverse of A
-    A![2,2] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
-    A![2,1] = -grid.coords4nodes[grid.nodes4cells[cell,3],1] + grid.coords4nodes[grid.nodes4cells[cell,1],1]
-    A![1,2] = -grid.coords4nodes[grid.nodes4cells[cell,2],2] + grid.coords4nodes[grid.nodes4cells[cell,1],2]
-    A![1,1] = grid.coords4nodes[grid.nodes4cells[cell,3],2] - grid.coords4nodes[grid.nodes4cells[cell,1],2]
-        
-    # divide by  determinant
-    det! = A![1,1]*A![2,2] - A![1,2]*A![2,1]
-    
-    A![1] = A![1]/det!
-    A![2] = A![2]/det!
-    A![3] = A![3]/det!
-    A![4] = A![4]/det!
-end
-
-
-# exact tinversion of transformation for H1 elements on a line
-function local2global_tinv_jacobian_line(A!,det!,grid,cell)
-    # transposed inverse of A
-    det! = grid.coords4nodes[grid.nodes4cells[cell,2],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
-    A![1,1] = 1/det!
-end
-
-
-
-# transformation for H1 elements on a tetrahedron
-function local2global_tetrahedron()
-    A = Matrix{Float64}(undef,3,3)
-    b = Vector{Float64}(undef,3)
-    return function fix_cell(grid,cell)
-        b[1] = grid.coords4nodes[grid.nodes4cells[cell,1],1]
-        b[2] = grid.coords4nodes[grid.nodes4cells[cell,1],2]
-        b[2] = grid.coords4nodes[grid.nodes4cells[cell,1],3]
-        A[1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - b[1]
-        A[1,2] = grid.coords4nodes[grid.nodes4cells[cell,3],1] - b[1]
-        A[1,3] = grid.coords4nodes[grid.nodes4cells[cell,4],1] - b[1]
-        A[2,1] = grid.coords4nodes[grid.nodes4cells[cell,2],2] - b[2]
-        A[2,2] = grid.coords4nodes[grid.nodes4cells[cell,3],2] - b[2]
-        A[2,3] = grid.coords4nodes[grid.nodes4cells[cell,4],2] - b[2]
-        A[3,1] = grid.coords4nodes[grid.nodes4cells[cell,2],3] - b[3]
-        A[3,2] = grid.coords4nodes[grid.nodes4cells[cell,3],3] - b[3]
-        A[3,3] = grid.coords4nodes[grid.nodes4cells[cell,4],3] - b[3]
-        return function closure(xref)
-            x = A*xref + b
-        end
-    end    
-end
+# # transformation for H1 elements on a tetrahedron
+# should go to ELemType3DTetrahedron later
+# function local2global_tetrahedron()
+#     A = Matrix{Float64}(undef,3,3)
+#     b = Vector{Float64}(undef,3)
+#     return function fix_cell(grid,cell)
+#         b[1] = grid.coords4nodes[grid.nodes4cells[cell,1],1]
+#         b[2] = grid.coords4nodes[grid.nodes4cells[cell,1],2]
+#         b[2] = grid.coords4nodes[grid.nodes4cells[cell,1],3]
+#         A[1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - b[1]
+#         A[1,2] = grid.coords4nodes[grid.nodes4cells[cell,3],1] - b[1]
+#         A[1,3] = grid.coords4nodes[grid.nodes4cells[cell,4],1] - b[1]
+#         A[2,1] = grid.coords4nodes[grid.nodes4cells[cell,2],2] - b[2]
+#         A[2,2] = grid.coords4nodes[grid.nodes4cells[cell,3],2] - b[2]
+#         A[2,3] = grid.coords4nodes[grid.nodes4cells[cell,4],2] - b[2]
+#         A[3,1] = grid.coords4nodes[grid.nodes4cells[cell,2],3] - b[3]
+#         A[3,2] = grid.coords4nodes[grid.nodes4cells[cell,3],3] - b[3]
+#         A[3,3] = grid.coords4nodes[grid.nodes4cells[cell,4],3] - b[3]
+#         return function closure(xref)
+#             x = A*xref + b
+#         end
+#     end    
+# end
 
 end #module

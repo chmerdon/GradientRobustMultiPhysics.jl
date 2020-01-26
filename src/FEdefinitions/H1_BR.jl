@@ -116,7 +116,7 @@ function get_Hdivreconstruction_space(FE::H1BRFiniteElement{T,2,2} where T <: Re
     return getRT0FiniteElement(FE.grid)
 end
 
-function get_Hdivreconstruction_trafo!(T,FE)
+function get_Hdivreconstruction_trafo!(T,FE::H1BRFiniteElement{T,2,2} where T <: Real)
     ensure_length4faces!(FE.grid);
     nfaces = size(FE.grid.nodes4faces,1)
     nnodes = size(FE.grid.coords4nodes,1)

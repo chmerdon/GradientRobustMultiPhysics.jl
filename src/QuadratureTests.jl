@@ -9,20 +9,21 @@ export TestExactness
 function load_test_grid(nrefinements::Int = 0, dim::Int = 2)
     # define grid
     if dim == 1
-      coords4nodes_init = Array{Float64,2}([0.0 0.5 1.0]');
-      nodes4cells_init = [1 2; 2 3];
+        coords4nodes_init = Array{Float64,2}([0.0 0.5 1.0]');
+        nodes4cells_init = [1 2; 2 3];
+        return Grid.Mesh{Float64}(coords4nodes_init,nodes4cells_init,Grid.ElemType1DInterval(),nrefinements);
     elseif dim == 2
-      coords4nodes_init = [0.0 0.0;
+        coords4nodes_init = [0.0 0.0;
                         1.0 0.0;
                         1.0 1.0;
                         0.0 1.0;
                         0.5 0.5];
-      nodes4cells_init = [1 2 5;
+        nodes4cells_init = [1 2 5;
                         2 3 5;
                         3 4 5;
                         4 1 5];
+        return Grid.Mesh{Float64}(coords4nodes_init,nodes4cells_init,Grid.ElemType2DTriangle(),nrefinements);
     end                    
-    return Grid.Mesh(coords4nodes_init,nodes4cells_init,nrefinements);
 end
 
 function get_exact_function!(result,x,order,dim)
