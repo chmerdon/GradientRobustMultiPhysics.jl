@@ -35,6 +35,7 @@ end
 
   abstract type Abstract1DElemType <: AbstractElemType end
     include("GRIDelemtypes/1D_interval.jl");
+    include("GRIDelemtypes/1D_2Dline.jl");
 
   # subtype for elem types that require 2D integration
   abstract type Abstract2DElemType <: AbstractElemType end

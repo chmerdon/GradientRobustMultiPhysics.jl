@@ -32,7 +32,7 @@ use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
 #use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
 #use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
-maxlevel = 5
+maxlevel = 4
 nu = [1,1e-2,1e-4]
 
 show_convergence_history = true

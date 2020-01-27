@@ -23,7 +23,8 @@ end
 # matrix for L2 bestapproximation that writes into an ExtendableSparseMatrix
 function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1FiniteElement)
     ncells::Int = size(FE.grid.nodes4cells,1);
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
@@ -38,7 +39,7 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
     end    
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        basisvals[i] = FiniteElements.get_all_basis_functions_on_cell(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
     end    
                     
                 
@@ -48,32 +49,31 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
     # quadrature loop
     temp = 0.0;
     #@time begin    
-        for cell = 1 : ncells
+    for cell = 1 : ncells
         
-            # get dofs
-            for dof_i = 1 : ndofs4cell
-                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-            end
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+
+        # get coefficients
+        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
             
-            FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
-            
-            for i in eachindex(qf.w)
-                for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
-                    # fill upper right part and diagonal of matrix
-                    @inbounds begin
-                      temp = 0.0
-                      for k = 1 : ncomponents
+        for i in eachindex(qf.w)
+            for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
+                # fill upper right part and diagonal of matrix
+                @inbounds begin
+                    temp = 0.0
+                    for k = 1 : ncomponents
                         temp += (basisvals[i][dof_i,k]*basisvals[i][dof_j,k] * qf.w[i] * FE.grid.volume4cells[cell]) * coefficients[dof_i,k] * coefficients[dof_j,k];
-                      end
-                      A[dofs[dof_i],dofs[dof_j]] += temp;
-                      # fill lower left part of matrix
-                      if dof_j > dof_i
-                        A[dofs[dof_j],dofs[dof_i]] += temp;
-                      end    
                     end
+                    A[dofs[dof_i],dofs[dof_j]] += temp;
+                    # fill lower left part of matrix
+                    if dof_j > dof_i
+                        A[dofs[dof_j],dofs[dof_i]] += temp;
+                    end    
                 end
             end
-        end#
+        end
+    end
     #end    
 end
 
@@ -82,11 +82,12 @@ end
 # matrix for L2 bestapproximation that writes into an ExtendableSparseMatrix
 function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivFiniteElement)
     ncells::Int = size(FE.grid.nodes4cells,1);
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
-    qf = QuadratureFormula{T,typeof(FE.grid.elemtypes[1])}(2*(FiniteElements.get_polynomial_order(FE)));
+    qf = QuadratureFormula{T,typeof(ET)}(2*(FiniteElements.get_polynomial_order(FE)));
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
@@ -97,7 +98,7 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivFini
     end    
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        basisvals[i] = FiniteElements.get_all_basis_functions_on_cell(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
     end    
     transformed_basisvals = zeros(ndofs4cell,ncomponents);
                     
@@ -106,7 +107,7 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivFini
     coefficients = zeros(Float64,ndofs4cell,xdim)
 
     AT = zeros(Float64,2,2);
-    get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, FE.grid.elemtypes[1])
+    get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, ET)
     
     # quadrature loop
     temp = 0.0;
@@ -114,12 +115,12 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivFini
     #@time begin    
         for cell = 1 : ncells
             # get dofs
-            for dof_i = 1 : ndofs4cell
-                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-            end
+            FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
+            # get Piola trafo
             det = get_Piola_trafo_on_cell!(AT,cell);
             
+            # get coefficients
             FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
             
             for i in eachindex(qf.w)
@@ -157,8 +158,10 @@ end
 function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1FiniteElement)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
+    ET = FE.grid.elemtypes[1]
+    ETF = Grid.get_face_elemtype(ET);
     nbfaces::Int = size(FE.grid.bfaces,1);
-    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+    ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
@@ -173,7 +176,7 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1
     end    
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        basisvals[i] = FiniteElements.get_all_basis_functions_on_face(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ETF)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4face)
     coefficients = zeros(Float64,ndofs4face,xdim)
@@ -184,10 +187,11 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1
     #@time begin    
         for j in eachindex(FE.grid.bfaces)
             face = FE.grid.bfaces[j];
+            
             # get dofs
-            for dof_i = 1 : ndofs4face
-                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
-            end
+            FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
+
+            # get coefficients
             FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
             
             for i in eachindex(qf.w)
@@ -212,16 +216,17 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1
 end
 
 
-# TODO: use ElemTypes
-function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivRTFiniteElement)
+function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivFiniteElement)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
     nbfaces::Int = size(FE.grid.bfaces,1);
-    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+    ET = FE.grid.elemtypes[1]
+    ETF = Grid.get_face_elemtype(ET)
+    ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
-    qf = QuadratureFormula{T,Grid.ElemType1DInterval}(2*(FiniteElements.get_polynomial_order(FE)));
+    qf = QuadratureFormula{T,typeof(ETF)}(2*(FiniteElements.get_polynomial_order(FE)));
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
@@ -229,7 +234,7 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHd
         
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        basisvals[i] = FiniteElements.get_all_basis_function_fluxes_on_face(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_fluxes_on_elemtype(FE, ETF)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4face)
     coefficients = zeros(Float64,ndofs4face)
@@ -241,10 +246,11 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHd
     #@time begin    
         for j in eachindex(FE.grid.bfaces)
             face = FE.grid.bfaces[j];
+
             # get dofs
-            for dof_i = 1 : ndofs4face
-                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
-            end
+            FiniteElements.get_dofs_on_face!(dofs, FE, face, ETF);
+
+            # get coefficients
             FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
 
             det = FE.grid.length4faces[face]; # determinant of transformation on face
@@ -272,13 +278,14 @@ end
 # stiffness matrix assembly that writes into an ExtendableSparseMatrix
 function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::AbstractH1FiniteElement)
     ncells::Int = size(FE.grid.nodes4cells,1);
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
+    T = eltype(FE.grid.coords4nodes);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     xdim::Int = size(FE.grid.coords4nodes,2);
     celldim::Int = size(FE.grid.nodes4cells,2);
     ncomponents::Int = FiniteElements.get_ncomponents(FE);
     
-    T = eltype(FE.grid.coords4nodes);
-    qf = QuadratureFormula{T,typeof(FE.grid.elemtypes[1])}(2*(FiniteElements.get_polynomial_order(FE)-1));
+    qf = QuadratureFormula{T,typeof(ET)}(2*(FiniteElements.get_polynomial_order(FE)-1));
     
     # pre-allocate for derivatives of global2local trafo and basis function
     gradients_xref_cache = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,celldim)
@@ -292,15 +299,11 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::Ab
     end
     for i in eachindex(qf.w)
         # evaluate gradients of basis function
-        gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE),qf.xref[i]);
+        gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_elemtype(FE, ET),qf.xref[i]);
     end    
-        
-    
-    
-    dim = celldim - 1;
-    loc2glob_trafo_tinv = Grid.local2global_tinv_jacobian(FE.grid,FE.grid.elemtypes[1])
-      
-    
+
+    loc2glob_trafo_tinv = Grid.local2global_tinv_jacobian(FE.grid,ET)
+          
     # quadrature loop
     temp::T = 0.0;
     offsets = [0,ndofs4cell];
@@ -309,11 +312,11 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::Ab
       
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
       loc2glob_trafo_tinv(trafo_jacobian,cell)
-      
-      for dof_i = 1 : ndofs4cell
-          dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-      end      
-      
+
+      # get dofs
+      FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+
+      # get coefficients
       FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
       
       for i in eachindex(qf.w)
@@ -353,7 +356,8 @@ end
 
 function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement, quadrature_order::Int64)
     ncells::Int = size(FE.grid.nodes4cells,1);
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
@@ -367,12 +371,11 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement, quadratur
         basisvals = Array{Array{T,2}}(undef,length(qf.w));
     end
     for i in eachindex(qf.w)
-        basisvals[i] = FiniteElements.get_all_basis_functions_on_cell(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4cell)
     coefficients = zeros(Float64,ndofs4cell,xdim)
     
-    dim = size(FE.grid.nodes4cells,2) - 1;
     loc2glob_trafo = Grid.local2global(FE.grid,FE.grid.elemtypes[1])
     
     # quadrature loop
@@ -380,13 +383,14 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement, quadratur
     fval = zeros(T,ncomponents)
     #@time begin    
         for cell = 1 : ncells
+
             # get dofs
-            for dof_i = 1 : ndofs4cell
-                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-            end
+            FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
             
+            # get coefficients
             FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
 
+            # setup trafo on cell
             cell_trafo = loc2glob_trafo(cell)
             
             for i in eachindex(qf.w)
@@ -412,11 +416,12 @@ end
 
 function assemble_rhsL2!(b, f!::Function, FE::AbstractHdivFiniteElement, quadrature_order::Int64)
     ncells::Int = size(FE.grid.nodes4cells,1);
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
-    qf = QuadratureFormula{T,typeof(FE.grid.elemtypes[1])}(quadrature_order + FiniteElements.get_polynomial_order(FE));
+    qf = QuadratureFormula{T,typeof(ET)}(quadrature_order + FiniteElements.get_polynomial_order(FE));
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
@@ -426,14 +431,14 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractHdivFiniteElement, quadrat
         basisvals = Array{Array{T,2}}(undef,length(qf.w));
     end
     for i in eachindex(qf.w)
-        basisvals[i] = FiniteElements.get_all_basis_functions_on_cell(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
     end    
     transformed_basisvals = zeros(ndofs4cell,ncomponents);
     dofs = zeros(Int64,ndofs4cell)
     coefficients = zeros(Float64,ndofs4cell,xdim)
     
     dim = size(FE.grid.nodes4cells,2) - 1;
-    loc2glob_trafo = Grid.local2global(FE.grid,FE.grid.elemtypes[1])
+    loc2glob_trafo = Grid.local2global(FE.grid,ET)
     
     AT = zeros(Float64,2,2)
     get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, FE.grid.elemtypes[1])
@@ -445,12 +450,12 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractHdivFiniteElement, quadrat
    # @time begin    
         for cell = 1 : ncells
             # get dofs
-            for dof_i = 1 : ndofs4cell
-                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-            end
+            FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
             
+            # get coefficients
             FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
             
+            # get trafo and Piola trafo
             cell_trafo = loc2glob_trafo(cell)
             det = get_Piola_trafo_on_cell!(AT,cell);
             
@@ -490,10 +495,14 @@ end
 function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
+    ET = FE.grid.elemtypes[1]
+    ETF = Grid.get_face_elemtype(ET);
     nbfaces::Int = size(FE.grid.bfaces,1);
-    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
-    celldim::Int = size(FE.grid.nodes4cells,2) - 1;
+    ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     xdim::Int = size(FE.grid.coords4nodes,2);
+    
+    T = eltype(FE.grid.coords4nodes);
+    qf = QuadratureFormula{T,Grid.ElemType1DInterval}(2*(FiniteElements.get_polynomial_order(FE)));
     
     T = eltype(FE.grid.coords4nodes);
     qf = QuadratureFormula{T,Grid.ElemType1DInterval}(2*(FiniteElements.get_polynomial_order(FE)));
@@ -506,12 +515,12 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
         basisvals = Array{Array{T,2}}(undef,length(qf.w));
     end
     for i in eachindex(qf.w)
-        basisvals[i] = FiniteElements.get_all_basis_functions_on_face(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ETF)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4face)
     coefficients = zeros(Float64,ndofs4face,xdim)
     
-    loc2glob_trafo = Grid.local2global(FE.grid,Grid.ElemType1DInterval())
+    loc2glob_trafo = Grid.local2global_face(FE.grid, ET)
 
     temp = 0.0
     fval = zeros(T,ncomponents)
@@ -519,27 +528,21 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
     face = 0
     @time begin    
         for j in eachindex(FE.grid.bfaces)
+
             face = FE.grid.bfaces[j];
-            # get dofs
-            for dof_i = 1 : ndofs4face
-                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
-            end
             
+            # get dofs
+            FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
+
+            # get coefficients
             FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+
+            # get face trafo
+            face_trafo = loc2glob_trafo(face)
             
             for i in eachindex(qf.w)
                 # evaluate f
-                fill!(x,0.0)
-                if celldim == 2
-                    for j = 1 : xdim
-                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 2], j] * qf.xref[i][1]
-                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j] * qf.xref[i][2]
-                    end
-                elseif celldim == 1
-                    for j = 1 : xdim
-                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j]
-                    end
-                end    
+                x = face_trafo(qf.xref[i])
                 f!(fval, x)
                 
                 for dof_i = 1 : ndofs4face
@@ -557,22 +560,24 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
     end    
 end
 
-function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivRTFiniteElement)
+function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivFiniteElement)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
     nbfaces::Int = size(FE.grid.bfaces,1);
-    ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+    ET = FE.grid.elemtypes[1]
+    ETF = Grid.get_face_elemtype(ET)
+    ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     celldim::Int = size(FE.grid.nodes4cells,2) - 1;
     xdim::Int = size(FE.grid.coords4nodes,2);
     
     T = eltype(FE.grid.coords4nodes);
-    qf = QuadratureFormula{T,Grid.ElemType1DInterval}(2*(FiniteElements.get_polynomial_order(FE)));
+    qf = QuadratureFormula{T,typeof(ETF)}(2*(FiniteElements.get_polynomial_order(FE)));
      
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
     basisvals = Array{Array{T,1}}(undef,length(qf.w));
     for i in eachindex(qf.w)
-        basisvals[i] = FiniteElements.get_all_basis_function_fluxes_on_face(FE)(qf.xref[i])
+        basisvals[i] = FiniteElements.get_basis_fluxes_on_elemtype(FE, ETF)(qf.xref[i])
     end    
     dofs = zeros(Int64,ndofs4face)
     coefficients = zeros(Float64,ndofs4face)
@@ -585,11 +590,11 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivRTFiniteEleme
     @time begin    
         for j in eachindex(FE.grid.bfaces)
             face = FE.grid.bfaces[j];
+
             # get dofs
-            for dof_i = 1 : ndofs4face
-                dofs[dof_i] = FiniteElements.get_globaldof4face(FE, face, dof_i);
-            end
+            FiniteElements.get_dofs_on_face!(dofs, FE, face, ETF);
             
+            # get coefficients
             FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
 
             det = FE.grid.length4faces[face]; # determinant of transformation on face
@@ -629,12 +634,13 @@ end
 
 function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement, quadrature_order::Int)
     ncells::Int = size(FE.grid.nodes4cells,1);
-    ndofs4cell::Int = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1];
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     xdim::Int = size(FE.grid.coords4nodes,2);
     celldim::Int = size(FE.grid.nodes4cells,2);
     
     T = eltype(FE.grid.coords4nodes);
-    qf = QuadratureFormula{T,typeof(FE.grid.elemtypes[1])}(quadrature_order + min(0,FiniteElements.get_polynomial_order(FE) - 1));
+    qf = QuadratureFormula{T,typeof(ET)}(quadrature_order + min(0,FiniteElements.get_polynomial_order(FE) - 1));
      
     # pre-allocate memory for gradients
     gradients4cell = Array{Array{T,1}}(undef,ndofs4cell);
@@ -644,15 +650,15 @@ function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement, quadratur
     gradients_xref_cache = zeros(Float64,length(qf.w),ndofs4cell,celldim)
     for i in eachindex(qf.w)
         # evaluate gradients of basis function
-        gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_all_basis_functions_on_cell(FE),qf.xref[i]);
+        gradients_xref_cache[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_elemtype(FE, ET),qf.xref[i]);
     end    
     #DRresult_grad = DiffResults.DiffResult(Vector{T}(undef, celldim), Matrix{T}(undef,ndofs4cell,celldim));
     trafo_jacobian = Matrix{T}(undef,xdim,xdim);
     dofs = zeros(Int64,ndofs4cell)
     
     dim = celldim - 1;
-    loc2glob_trafo = Grid.local2global(FE.grid,FE.grid.elemtypes[1])
-    loc2glob_trafo_tinv = Grid.local2global_tinv_jacobian(FE.grid,FE.grid.elemtypes[1])
+    loc2glob_trafo = Grid.local2global(FE.grid,ET)
+    loc2glob_trafo_tinv = Grid.local2global_tinv_jacobian(FE.grid,ET)
     
     
     # quadrature loop
@@ -664,10 +670,10 @@ function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement, quadratur
             # evaluate tinverted (=transposed + inverted) jacobian of element trafo
             loc2glob_trafo_tinv(trafo_jacobian,cell)
       
-            for dof_i = 1 : ndofs4cell
-                dofs[dof_i] = FiniteElements.get_globaldof4cell(FE, cell, dof_i);
-            end      
+            # get dofs
+            FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);      
 
+            # get trafo
             cell_trafo = loc2glob_trafo(cell)
       
             for i in eachindex(qf.w)
@@ -745,20 +751,21 @@ function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestappr
             b = FiniteElements.createFEVector(FE);
             assemble_rhsL2_on_bface!(b, boundary_data!, FE)
         
+            ETF = Grid.get_face_elemtype(FE.grid.elemtypes[1]);
             ensure_bfaces!(FE.grid);
             nbfaces::Int = size(FE.grid.bfaces,1);
-            ndofs4face::Int = FiniteElements.get_maxndofs4face(FE);
+            ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
         
-            dofs = [];
+            bdofs = [];
+            dofs = zeros(Int64,ndofs4face)
             for face in eachindex(FE.grid.bfaces)
-                for dof_i = 1 : ndofs4face
-                    append!(dofs,FiniteElements.get_globaldof4face(FE, FE.grid.bfaces[face], dof_i));
-                end
+                FiniteElements.get_dofs_on_face!(dofs, FE, FE.grid.bfaces[face], ETF);
+                append!(bdofs,dofs)
             end
         
-            unique!(dofs)
-            val4dofs[dofs] = B[dofs,dofs]\b[dofs];
-            return dofs
+            unique!(bdofs)
+            val4dofs[bdofs] = B[bdofs,bdofs]\b[bdofs];
+            return bdofs
         end    
     end
 end
@@ -766,58 +773,82 @@ end
 
 function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,boundary_data!)
 
- # find boundary dofs
+    # find boundary dofs
     xdim = FiniteElements.get_ncomponents(FE);
     ndofs::Int = FiniteElements.get_ndofs(FE);
     
     bdofs = [];
-        Grid.ensure_bfaces!(FE.grid);
-        Grid.ensure_cells4faces!(FE.grid);
-        xref = zeros(eltype(FE.xref4dofs4cell),size(FE.xref4dofs4cell,2));
-        temp = zeros(eltype(FE.grid.coords4nodes),xdim);
-        dim = size(FE.grid.nodes4cells,2) - 1;
-        loc2glob_trafo = Grid.local2global(FE.grid,FE.grid.elemtypes[1])
-        cell::Int = 0;
-        j::Int = 1;
-        ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
-        ndofs4face = FiniteElements.get_maxndofs4face(FE);
-        basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,dim)
-        A4bface = Matrix{Float64}(undef,ndofs4face,ndofs4face)
-        b4bface = Vector{Float64}(undef,ndofs4face)
-        bdofs4bface = Vector{Int}(undef,ndofs4face)
-        celldof2facedof = zeros(Int,ndofs4face)
-        for i in eachindex(FE.grid.bfaces)
-            cell = FE.grid.cells4faces[FE.grid.bfaces[i],1];
-            for k = 1:ndofs4face
-                bdof = FiniteElements.get_globaldof4face(FE, FE.grid.bfaces[i], k);
-                bdofs4bface[k] = bdof;
-            end    
-            append!(bdofs,bdofs4bface);
-            # setup local system of equations to determine piecewise interpolation of boundary data
-            # find position of face dofs in cell dofs
-            for j=1:ndofs4cell, k = 1 : ndofs4face
-                    celldof = FiniteElements.get_globaldof4cell(FE, cell, j);
-                    if celldof == bdofs4bface[k]
-                        celldof2facedof[k] = j;
-                    end   
+    Grid.ensure_bfaces!(FE.grid);
+    Grid.ensure_cells4faces!(FE.grid);
+    T = eltype(FE.grid.coords4nodes)
+    ET = FE.grid.elemtypes[1]
+    ETF = Grid.get_face_elemtype(ET);
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
+    ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
+
+    xref = FiniteElements.get_xref4dof(FE, ET)
+    temp = zeros(eltype(FE.grid.coords4nodes),xdim);
+    dim = size(FE.grid.nodes4cells,2) - 1;
+    loc2glob_trafo = Grid.local2global(FE.grid, ET)
+
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    if ncomponents == 1
+        basisvals = Array{Array{T,1}}(undef,size(xref,1));
+    else
+        basisvals = Array{Array{T,2}}(undef,size(xref,1));
+    end
+    for i = 1:size(xref,1)
+        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref[i,:])
+    end    
+
+    cell::Int = 0;
+    j::Int = 1;
+    A4bface = Matrix{Float64}(undef,ndofs4face,ndofs4face)
+    b4bface = Vector{Float64}(undef,ndofs4face)
+    dofs4bface = zeros(Int64,ndofs4face)
+    dofs4cell = zeros(Int64,ndofs4cell)
+    celldof2facedof = zeros(Int,ndofs4face)
+    for i in eachindex(FE.grid.bfaces)
+
+        # find neighbouring cell
+        cell = FE.grid.cells4faces[FE.grid.bfaces[i],1];
+
+        # get dofs
+        FiniteElements.get_dofs_on_face!(dofs4bface, FE, FE.grid.bfaces[i], ETF);
+        FiniteElements.get_dofs_on_cell!(dofs4cell, FE, cell, ET);
+
+        # find position of face dofs in cell dofs
+        for j=1:ndofs4cell, k = 1 : ndofs4face
+            if dofs4cell[j] == dofs4bface[k]
+                celldof2facedof[k] = j;
+            end   
+        end
+
+        # append face dofs to bdofs
+        append!(bdofs,dofs4bface);
+
+        # setup trafo
+        trafo_on_cell = loc2glob_trafo(cell);
+
+        # setup local system of equations to determine piecewise interpolation of boundary data
+
+        # assemble matrix and right-hand side
+        for k = 1:ndofs4face
+            for l = 1:ndofs4face
+                A4bface[k,l] = dot(basisvals[celldof2facedof[k]][celldof2facedof[k],:],basisvals[celldof2facedof[k]][celldof2facedof[l],:]);
             end
-            # assemble matrix    
-            for k = 1:ndofs4face
-                for l = 1 : length(xref)
-                    xref[l] = FE.xref4dofs4cell[celldof2facedof[k],l];
-                end    
-                basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref)
-                for l = 1:ndofs4face
-                    A4bface[k,l] = dot(basisvals[celldof2facedof[k],:],basisvals[celldof2facedof[l],:]);
-                end
                 
-                boundary_data!(temp,loc2glob_trafo(cell)(xref));
-                b4bface[k] = dot(temp,basisvals[celldof2facedof[k],:]);
-            end
-            val4dofs[bdofs4bface] = A4bface\b4bface;
-            if norm(A4bface*val4dofs[bdofs4bface]-b4bface) > eps(1e3)
-                println("WARNING: large residual, boundary data may be inexact");
-            end
+            # evaluate Dirichlet data
+            boundary_data!(temp,trafo_on_cell(xref[celldof2facedof[k],:]));
+            b4bface[k] = dot(temp,basisvals[celldof2facedof[k]][celldof2facedof[k],:]);
+        end
+
+        # solve
+        val4dofs[dofs4bface] = A4bface\b4bface;
+        if norm(A4bface*val4dofs[dofs4bface]-b4bface) > eps(1e3)
+            println("WARNING: large residual, boundary data may be inexact");
+        end
         end    
     return unique(bdofs)
 end
@@ -879,20 +910,29 @@ end
 
 # TODO: has to be rewritten!!!
 function computeFEInterpolation!(val4dofs::Array,source_function!::Function,FE::AbstractH1FiniteElement)
-    dim = size(FE.grid.nodes4cells,2) - 1;
+    ET = FE.grid.elemtypes[1];
     temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
-    xref = zeros(eltype(FE.xref4dofs4cell),dim);
-    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
-    loc2glob_trafo = Grid.local2global(FE.grid,FE.grid.elemtypes[1])
-    for j = 1 : size(FE.grid.nodes4cells,1)
-        cell_trafo = loc2glob_trafo(j)
+    xref = FiniteElements.get_xref4dof(FE, ET)
+    ndofs4cell = FiniteElements.get_ndofs4elemtype(FE, ET);
+    loc2glob_trafo = Grid.local2global(FE.grid,ET)
+    dofs = zeros(Int64,ndofs4cell)
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    coefficients = zeros(Float64,ndofs4cell,ncomponents)
+    # loop over nodes
+    for cell = 1 : size(FE.grid.nodes4cells,1)
+        # get trafo
+        cell_trafo = loc2glob_trafo(cell)
+        
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs,FE,cell,ET)
+
+        # get coefficients
+        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+
         for k = 1 : ndofs4cell
-            for l = 1 : length(xref)
-                xref[l] = FE.xref4dofs4cell[k,l];
-            end    
-            x = cell_trafo(xref);
+            x = cell_trafo(xref[k, :]);
             source_function!(temp,x);
-            val4dofs[FiniteElements.get_globaldof4cell(FE,j,k),:] = temp;
+            val4dofs[dofs[k],:] = temp;
         end    
     end
 end
@@ -900,16 +940,23 @@ end
 
 function eval_FEfunction(coeffs, FE::AbstractH1FiniteElement)
     ncomponents = FiniteElements.get_ncomponents(FE);
-    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1];
+    ndofs4cell = FiniteElements.get_ndofs4elemtype(FE, ET);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
+    dofs = zeros(Int64,ndofs4cell)
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
-    function closure(result, x, xref, cellIndex)
+    function closure(result, x, xref, cell)
         fill!(result,0.0)
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cellIndex)
+
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs,FE,cell,ET)
+
+        # get coefficients
+        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+
         for j = 1 : ndofs4cell
-            di = FiniteElements.get_globaldof4cell(FE, cellIndex, j);
             for k = 1 : ncomponents;
-                result[k] += basisvals[j,k] * coeffs[di] * coefficients[j,k];
+                result[k] += basisvals[j,k] * coeffs[dofs[j]] * coefficients[j,k];
             end    
         end    
     end
@@ -917,19 +964,27 @@ end
 
 function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE::AbstractH1FiniteElement)
     ncomponents = FiniteElements.get_ncomponents(FE);
-    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
     coefficients = zeros(Float64,ndofs4cell,ncomponents);
-    function closure(result, x, xref, cellIndex)
+    dofs = zeros(Int64,ndofs4cell)
+    function closure(result, x, xref, cell)
         # evaluate exact function
         exact_function!(result, x);
-        # subtract nodal interpolation
-        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref)
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cellIndex)
+
+        # evaluate FE functions
+        basisvals = FiniteElements.get_basis_on_elemtype(FE, ET)(xref)
+
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+
+        # get coefficients
+        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
+
         for j = 1 : ndofs4cell
-            di = FiniteElements.get_globaldof4cell(FE, cellIndex, j);
             for k = 1 : ncomponents;
-                result[k] -= basisvals[j,k] * coeffs_interpolation[di] * coefficients[j,k];
+                result[k] -= basisvals[j,k] * coeffs_interpolation[dofs[j]] * coefficients[j,k];
             end    
         end   
         # square for L2 norm
@@ -942,26 +997,32 @@ end
 
 function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE::AbstractHdivFiniteElement)
     ncomponents = FiniteElements.get_ncomponents(FE);
-    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
     coefficients = zeros(Float64,ndofs4cell,ncomponents);
     AT = zeros(Float64,2,2)
-    get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, FE.grid.elemtypes[1])
+    get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, ET)
     det = 0.0;
+    dofs = zeros(Int64,ndofs4cell)
     function closure(result, x, xref, cellIndex)
         # evaluate exact function
         exact_function!(result, x);
         
         # subtract nodal interpolation
         det = get_Piola_trafo_on_cell!(AT,cellIndex);
-        basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref)
+        basisvals[:] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref)
+
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cellIndex, ET)
+
+        # get coefficients
         FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cellIndex)
 
         for j = 1 : ndofs4cell
-            di = FiniteElements.get_globaldof4cell(FE, cellIndex, j);
             for k = 1 : ncomponents
                 for l = 1: ncomponents
-                    result[k] -= AT[k,l] * basisvals[j,l] * coeffs_interpolation[di] * coefficients[j,k] / det;
+                    result[k] -= AT[k,l] * basisvals[j,l] * coeffs_interpolation[dofs[j]] * coefficients[j,k] / det;
                 end    
             end    
         end   
@@ -984,18 +1045,24 @@ function eval_at_nodes(val4dofs, FE::AbstractH1FiniteElement, offset::Int64 = 0)
     end    
     di = 0;
     ncomponents = FiniteElements.get_ncomponents(FE);
-    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
     nodevals = zeros(size(FE.grid.coords4nodes,1),ncomponents)
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
+    dofs = zeros(Int64,ndofs4cell)
     for cell = 1 : size(FE.grid.nodes4cells,1)
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+
+        # get coefficients
         FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+        
         for j = 1 : dim + 1
-            basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref4dofs4cell[j,:])
+            basisvals = FiniteElements.get_basis_on_elemtype(FE,ET)(xref4dofs4cell[j,:])
             for dof = 1 : ndofs4cell;
-                di = offset + FiniteElements.get_globaldof4cell(FE, cell, dof);
                 for k = 1 : ncomponents
-                    nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[di]*coefficients[dof,k];
+                    nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[dofs[dof]]*coefficients[dof,k];
                 end   
             end
             ndofs4node[FE.grid.nodes4cells[cell,j]] +=1
@@ -1017,25 +1084,33 @@ function eval_at_nodes(val4dofs, FE::AbstractHdivFiniteElement, offset::Int64 = 
     elseif dim == 2
         xref4dofs4cell = [0 0; 1 0; 0 1];
     end    
-    di = 0;
+    ET = FE.grid.elemtypes[1];
     ncomponents = FiniteElements.get_ncomponents(FE);
-    ndofs4cell = FiniteElements.get_maxndofs4cell(FE);
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
     nodevals = zeros(size(FE.grid.coords4nodes,1),ncomponents)
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
     AT = zeros(Float64,2,2)
-    get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, FE.grid.elemtypes[1])
+    get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, ET)
     det = 0.0;
+    dofs = zeros(Int64, ndofs4cell)
     for cell = 1 : size(FE.grid.nodes4cells,1)
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+
+        # get coefficients
+        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
+            
+        # get trafo
         det = get_Piola_trafo_on_cell!(AT,cell);
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+
         for j = 1 : dim + 1
-            basisvals = FiniteElements.get_all_basis_functions_on_cell(FE)(xref4dofs4cell[j,:])
+            basisvals[:] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref4dofs4cell[j,:])
+    
             for dof = 1 : ndofs4cell;
-                di = offset + FiniteElements.get_globaldof4cell(FE, cell, dof);
                 for k = 1 : ncomponents
                     for l = 1: ncomponents
-                        nodevals[FE.grid.nodes4cells[cell,j],k] +=  AT[k,l] * basisvals[dof,l]*val4dofs[di]*coefficients[dof,k] / det;
+                        nodevals[FE.grid.nodes4cells[cell,j],k] +=  AT[k,l] * basisvals[dof,l]*val4dofs[dofs[dof]]*coefficients[dof,k] / det;
                     end    
                 end   
             end

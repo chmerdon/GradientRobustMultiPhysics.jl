@@ -32,12 +32,7 @@ abstract type AbstractFiniteElement end
  
   # subtype for Hdiv-conforming elements
   abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
-    # subtype for Raviart-Thomas elements (only normal face fluxes)
-    abstract type AbstractHdivRTFiniteElement <: AbstractHdivFiniteElement end
-      include("FEdefinitions/HDIV_RT0.jl");
-    # subtype for Brezzi-Douglas elements (different handling of tangential face fluxes?)
-    abstract type AbstractHdivBDMFiniteElement <: AbstractHdivFiniteElement end
-      # TODO
+    include("FEdefinitions/HDIV_RT0.jl");
 
   # subtype for Hcurl-conforming elements
   abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
@@ -65,10 +60,10 @@ end
 dummy_array = [Val(1),Val(2),Val(3),Val(4),Val(5),Val(6),Val(7),Val(8),Val(9),Val(10),Val(11),Val(12)];
 
 # all elements allow for evaluation of basis functions on cells
-get_globaldof4cell(FE::AbstractFiniteElement, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
+#get_globaldof4cell(FE::AbstractFiniteElement, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
 
 # H1 elements allow for continuous (= cell-independent) basis function evaluations on faces
-get_globaldof4face(FE::AbstractFiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
+#get_globaldof4face(FE::AbstractFiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
 
 # Hdiv elements should allow for continuous evaluations of normal-fluxes
 # maybe a good idea to offer a function for this?
@@ -76,9 +71,10 @@ get_globaldof4face(FE::AbstractFiniteElement, face, N::Int64) = FiniteElements.g
 
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)
-	nd = get_ndofs(FE);
-	mdc = get_maxndofs4cell(FE);
-	mdf = get_maxndofs4face(FE);
+    nd = get_ndofs(FE);
+    ET = FE.grid.elemtypes[1];
+	mdc = get_ndofs4elemtype(FE,ET);
+	mdf = get_ndofs4elemtype(FE,Grid.get_face_elemtype(ET));
 	po = get_polynomial_order(FE);
 
 	println("FiniteElement information");
@@ -89,20 +85,28 @@ function show(FE::AbstractFiniteElement)
 end
 
 function show_dofmap(FE::AbstractFiniteElement)
-	println("FiniteElement cell dofmap for " * FE.name);
+    println("FiniteElement cell dofmap for " * FE.name);
+    ET = FE.grid.elemtypes[1];
+    ETF = Grid.get_face_elemtype(ET);
+    ndofs4cell = FiniteElements.get_ndofs4elemtype(FE, ET)
+    dofs = zeros(Int64,ndofs4cell)
 	for cell = 1 : size(FE.grid.nodes4cells,1)
         print(string(cell) * " | ");
-        for j = 1 : FiniteElements.get_maxndofs4cell(FE)
-            print(string(FiniteElements.get_globaldof4cell(FE, cell, j)) * " ");
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET)
+        for j = 1 : ndofs4cell
+            print(string(dofs[j]) * " ");
         end
         println("");
 	end
 	
 	println("\nFiniteElement face dofmap for " * FE.name);
+    ndofs4face = FiniteElements.get_ndofs4elemtype(FE, ETF)
+    dofs2 = zeros(Int64,ndofs4face)
 	for face = 1 : size(FE.grid.nodes4faces,1)
         print(string(face) * " | ");
-        for j = 1 : FiniteElements.get_maxndofs4face(FE)
-            print(string(FiniteElements.get_globaldof4face(FE, face, j)) * " ");
+        FiniteElements.get_dofs_on_face!(dofs2, FE, face, ETF)
+        for j = 1 : ndofs4face
+            print(string(dofs2[j]) * " ");
         end
         println("");
 	end

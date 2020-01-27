@@ -1,7 +1,6 @@
-struct HdivRT0FiniteElement{T, dim} <: AbstractHdivRTFiniteElement
+struct HdivRT0FiniteElement{T} <: AbstractHdivFiniteElement
     name::String;                 # full name of finite element (used in messages)
     grid::Grid.Mesh{T};           # link to grid
-    xref4dofs4cell::Array{T,2};   # coordinates for degrees of freedom in reference domain
 end
 
 function getRT0FiniteElement(grid)
@@ -11,40 +10,39 @@ function getRT0FiniteElement(grid)
     ensure_signs4cells!(grid);
     ensure_normal4faces!(grid);
     T = eltype(grid.coords4nodes);
-    dim = size(grid.nodes4cells,2) - 1;
-    @assert dim == 2
-    xref4dofs4cell = repeat([0.5 0; 0.5 0.5; 0 0.5],dim);
-    return HdivRT0FiniteElement{T,dim}("RT0 (HdivFiniteElement, dim=$dim)",grid, Array{T,2}(xref4dofs4cell))
+    return HdivRT0FiniteElement{T}("RT0 (HdivFiniteElement)",grid)
 end   
 
 
-get_xref4dof(FE::HdivRT0FiniteElement, k) = xref4dofs4cell[k,:]
+function get_xref4dof(FE::HdivRT0FiniteElement, ::Grid.ElemType2DTriangle) 
+    return Array{Float64,2}([0.5 0; 0.5 0.5; 0 0.5])
+end    
 
 # POLYNOMIAL ORDER
 get_polynomial_order(FE::HdivRT0FiniteElement) = 1;
 
 # TOTAL NUMBER OF DOFS
-get_ndofs(FE::HdivRT0FiniteElement{T,2} where T <: Real) = size(FE.grid.nodes4faces,1);
+get_ndofs(FE::HdivRT0FiniteElement) = size(FE.grid.nodes4faces,1);
 
-# MAXIMAL DOFS ON CELL
-get_maxndofs4cell(FE::HdivRT0FiniteElement{T,2} where T <: Real) = 3
-
-# MAXIMAL DOFS ON FACE
-get_maxndofs4face(FE::HdivRT0FiniteElement{T,2} where T <: Real) = 1
+# NUMBER OF DOFS ON ELEMTYPE
+get_ndofs4elemtype(FE::HdivRT0FiniteElement, ::Grid.Abstract1DElemType) = 1
+get_ndofs4elemtype(FE::HdivRT0FiniteElement, ::Grid.ElemType2DTriangle) = 3
 
 # NUMBER OF COMPONENTS
-get_ncomponents(FE::HdivRT0FiniteElement{T,2} where T <: Real) = 2
+get_ncomponents(FE::HdivRT0FiniteElement) = 2
 
 # LOCAL DOF TO GLOBAL DOF ON CELL
-get_globaldof4cell(FE::HdivRT0FiniteElement{T,2} where T <: Real, cell, ::Val{1}) = FE.grid.faces4cells[cell,1]
-get_globaldof4cell(FE::HdivRT0FiniteElement{T,2} where T <: Real, cell, ::Val{2}) = FE.grid.faces4cells[cell,2]
-get_globaldof4cell(FE::HdivRT0FiniteElement{T,2} where T <: Real, cell, ::Val{3}) = FE.grid.faces4cells[cell,3]
+function get_dofs_on_cell!(dofs,FE::HdivRT0FiniteElement, cell::Int64, ::Grid.ElemType2DTriangle)
+    dofs[:] = FE.grid.faces4cells[cell,:]
+end
 
 # LOCAL DOF TO GLOBAL DOF ON FACE
-get_globaldof4face(FE::HdivRT0FiniteElement{T,2} where T <: Real, face, ::Val{1}) = face
+function get_dofs_on_face!(dofs,FE::HdivRT0FiniteElement, face::Int64, ::Grid.Abstract1DElemType)
+    dofs[1] = face
+end
 
 # BASIS FUNCTIONS
-function get_all_basis_functions_on_cell(FE::HdivRT0FiniteElement{T,2} where T <: Real)
+function get_basis_on_elemtype(FE::HdivRT0FiniteElement, ::Grid.ElemType2DTriangle)
     function closure(xref)
         return [xref[1] xref[2]-1.0;
                 xref[1] xref[2];
@@ -52,13 +50,13 @@ function get_all_basis_functions_on_cell(FE::HdivRT0FiniteElement{T,2} where T <
     end
 end
 
-function get_all_basis_function_fluxes_on_face(FE::HdivRT0FiniteElement{T,2} where T <: Real)
+function get_basis_fluxes_on_elemtype(FE::HdivRT0FiniteElement, ::Grid.Abstract1DElemType)
     function closure(xref)
-        return [1.0]; # normal-flux of RT0 function on face
+        return [1.0]; # normal-flux of RT0 function on single triangle face
     end
 end       
 
-function set_basis_coefficients_on_cell!(coefficients, FE::HdivRT0FiniteElement{T,2} where T <: Real, cell::Int64)
+function set_basis_coefficients_on_cell!(coefficients, FE::HdivRT0FiniteElement, cell::Int64)
     # multiply by signs to ensure continuity of normal fluxes
     coefficients[1,1] = FE.grid.signs4cells[cell,1];
     coefficients[1,2] = FE.grid.signs4cells[cell,1];

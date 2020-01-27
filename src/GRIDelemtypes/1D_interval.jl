@@ -1,11 +1,15 @@
 struct ElemType1DInterval <: Abstract1DElemType end
 
-function get_reference_cordinates(elemtype::ElemType1DInterval)
+function get_reference_cordinates(::ElemType1DInterval)
     return [0, 1];
 end
 
+function get_face_elemtype(::ElemType1DInterval)
+    return ElemType0DPoint();
+end
+
 # perform a uniform (red) refinement of 1D intervals
-function uniform_refinement(ET::ElemType1DInterval,coords4nodes::Array,nodes4cells::Array)
+function uniform_refinement(::ElemType1DInterval,coords4nodes::Array,nodes4cells::Array)
     
     nnodes = size(coords4nodes,1);
     ncells = size(nodes4cells,1);
@@ -20,7 +24,7 @@ function uniform_refinement(ET::ElemType1DInterval,coords4nodes::Array,nodes4cel
 end
 
 # transformation for H1 elements on a line
-function local2global(grid::Mesh, elemtype::ElemType1DInterval)
+function local2global(grid::Mesh, ::ElemType1DInterval)
     A = Matrix{Float64}(undef,1,1)
     b = Vector{Float64}(undef,1)
     x = Vector{Real}(undef,1)
@@ -35,7 +39,7 @@ function local2global(grid::Mesh, elemtype::ElemType1DInterval)
 end
 
 # exact tinversion of transformation for H1 elements on a line
-function local2global_tinv_jacobian(grid::Mesh, elemtype::ElemType1DInterval)
+function local2global_tinv_jacobian(grid::Mesh, ::ElemType1DInterval)
     det = 0.0
     function closure(A!::Array{T,2},cell::Int64) where T <: Real
         # transposed inverse of A

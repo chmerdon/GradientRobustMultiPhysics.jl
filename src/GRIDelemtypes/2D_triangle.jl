@@ -1,16 +1,19 @@
 struct ElemType2DTriangle <: Abstract2DElemType end
 
 
-function get_reference_cordinates(ET::ElemType2DTriangle)
+function get_reference_cordinates(::ElemType2DTriangle)
     return [0 0;
             1 0;
             0 1]
 end
 
+function get_face_elemtype(::ElemType2DTriangle)
+    return ElemType1DInterval();
+end
 
 
 # perform a uniform (red) refinement of 2D triangles
-function uniform_refinement(ET::ElemType2DTriangle,coords4nodes::Array,nodes4cells::Array)
+function uniform_refinement(::ElemType2DTriangle,coords4nodes::Array,nodes4cells::Array)
     
     nnodes = size(coords4nodes,1);
     ncells = size(nodes4cells,1);
@@ -55,7 +58,7 @@ end
 
 
 # transformation for H1 elements on a triangle
-function local2global(grid::Mesh, ET::ElemType2DTriangle)
+function local2global(grid::Mesh, ::ElemType2DTriangle)
     A = Matrix{Float64}(undef,2,2)
     b = Vector{Float64}(undef,2)
     x = Vector{Real}(undef,2)
@@ -75,8 +78,26 @@ function local2global(grid::Mesh, ET::ElemType2DTriangle)
     end    
 end
 
+# transformation for H1 elements on a face
+function local2global_face(grid::Mesh, ::ElemType2DTriangle)
+    A = Matrix{Float64}(undef,2,1)
+    b = Vector{Float64}(undef,2)
+    x = Vector{Real}(undef,2)
+    return function fix_face(face)
+        b[1] = grid.coords4nodes[grid.nodes4faces[face,1],1]
+        b[2] = grid.coords4nodes[grid.nodes4faces[face,1],2]
+        A[1,1] = grid.coords4nodes[grid.nodes4faces[face,2],1] - b[1]
+        A[2,1] = grid.coords4nodes[grid.nodes4faces[face,2],2] - b[2]
+        return function closure(xref)
+            x[1] = A[1,1]*xref[1] + b[1]
+            x[2] = A[2,1]*xref[1] + b[2]
+            return x
+        end
+    end    
+end
+
 # exact tinversion of transformation for H1 elements on a line
-function local2global_tinv_jacobian(grid::Mesh, ET::ElemType2DTriangle)
+function local2global_tinv_jacobian(grid::Mesh, ::ElemType2DTriangle)
     det = 0.0
     function closure(A!::Array{T,2},cell::Int64) where T <: Real
         # transposed inverse of A
@@ -98,7 +119,7 @@ end
 
 
 # Piola transformation for Hdiv elements on a triangle
-function local2global_Piola(grid::Mesh, ET::ElemType2DTriangle)
+function local2global_Piola(grid::Mesh, ::ElemType2DTriangle)
     det = 0.0;
     return function closure(A!::Array{T,2},cell::Int64) where T <: Real
         A![1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - grid.coords4nodes[grid.nodes4cells[cell,1],1]
