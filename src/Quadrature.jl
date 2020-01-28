@@ -11,68 +11,71 @@ export QuadratureFormula, integrate, integrate_xref, integrate!, integrate2!
 # end
 
 struct QuadratureFormula{T <: Real, ET <: Grid.AbstractElemType}
-  name::String
-  xref::Array{Array{T, 1}}
-  w::Array{T, 1}
+    name::String
+    xref::Array{Array{T, 1}}
+    w::Array{T, 1}
 end
 
 # show function for Quadrature
-function show(Q::QuadratureFormula)
-
+function show(Q::QuadratureFormula{T,ET} where{T <: Real, ET <: Grid.AbstractElemType})
     npoints = length(Q.xref);
     dim = length(Q.xref[1]) - 1;
-	println("QuadratureFormula information");
-	println("     name : " * Q.name);
-	println("      dim : $(dim)")
-	println("  npoints : $(npoints)")
+	  println("QuadratureFormula information");
+	  println("     name : " * Q.name);
+	  println("      dim : $(dim)")
+	  println("  npoints : $(npoints)")
 end
 
-function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.AbstractElemType}
-    # xref = Array{T}(undef,2)
-    # w = Array{T}(undef, 1)
-    
+function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.Abstract1DElemType}
     if order <= 1
-        dim = (ET == Grid.ElemType2DTriangle) ? 2 : 1;
         name = "midpoint rule"
         xref = Vector{Array{T,1}}(undef,1);
-        xref[1] = ones(T,dim+1) * 1 // (dim+1)
+        xref[1] = ones(T,2) * 1 // 2
         w = [1]
-    elseif order == 2 # face midpoint rule  
-        if ET == Grid.ElemType2DTriangle;
-            name = "triangle: face midpoints rule"
-            xref = Vector{Array{T,1}}(undef,3);
-            xref[1] = [1//2,1//2,0//1];
-            xref[2] = [0//1,1//2,1//2];
-            xref[3] = [1//2,0//1,1//2];
-            w = [1//3; 1//3; 1//3]     
-        elseif ET == Grid.ElemType1DInterval;
-            name = "interval: Simpson's rule"
-            xref = Vector{Array{T,1}}(undef,3);
-            xref[1] = [0 ,1];
-            xref[2] = [1//2, 1//2];
-            xref[3] = [1,0];
-            w = [1//6; 2//3; 1//6]     
-        elseif ET == Grid.ElemType0DPoint;
-            name = "point evaluation"
-            xref = Vector{Array{T,1}}(undef,1);
-            xref[1] = ones(T,1)
-            w = [1]
-        end    
+    elseif order == 2
+        name = "interval: Simpson's rule"
+        xref = Vector{Array{T,1}}(undef,3);
+        xref[1] = [0 ,1];
+        xref[2] = [1//2, 1//2];
+        xref[3] = [1,0];
+        w = [1//6; 2//3; 1//6]     
     else
-        if ET == Grid.ElemType1DInterval;
-            name = "interval: generic Gauss rule"
-            xref, w = get_generic_quadrature_Gauss(order)
-        elseif ET == Grid.ElemType0DPoint;
-            name = "point evaluation"
-            xref = Vector{Array{T,1}}(undef,1);
-            xref[1] = ones(T,1)
-            w = [1]
-        elseif ET == Grid.ElemType2DTriangle; 
-            name = "triangle: generic Stroud rule"
-            xref, w = get_generic_quadrature_Stroud(order)
-        end    
+        name = "interval: generic Gauss rule"
+        xref, w = get_generic_quadrature_Gauss(order)
     end
     return QuadratureFormula{T, ET}(name, xref, w)
+end
+
+function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.Abstract0DElemType}
+    name = "point evaluation"
+    xref = Vector{Array{T,1}}(undef,1);
+    xref[1] = ones(T,1)
+    w = [1]
+    return QuadratureFormula{T, ET}(name, xref, w)
+end
+
+
+function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.ElemType2DTriangle}
+  # xref = Array{T}(undef,2)
+  # w = Array{T}(undef, 1)
+  
+  if order <= 1
+      name = "midpoint rule"
+      xref = Vector{Array{T,1}}(undef,1);
+      xref[1] = ones(T,3) * 1 // 3
+      w = [1]
+  elseif order == 2 # face midpoint rule  
+      name = "triangle: face midpoints rule"
+      xref = Vector{Array{T,1}}(undef,3);
+      xref[1] = [1//2,1//2,0//1];
+      xref[2] = [0//1,1//2,1//2];
+      xref[3] = [1//2,0//1,1//2];
+      w = [1//3; 1//3; 1//3]     
+  else
+      name = "triangle: generic Stroud rule"
+      xref, w = get_generic_quadrature_Stroud(order)
+  end
+  return QuadratureFormula{T, ET}(name, xref, w)
 end
 
 
