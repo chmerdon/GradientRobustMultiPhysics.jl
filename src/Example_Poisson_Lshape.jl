@@ -30,8 +30,8 @@ end
 function main()
 
 # CHOOSE A FEM
-fem = "CR"
-#fem = "P1"
+#fem = "CR"
+fem = "P1"
 #fem = "MINI"
 #fem = "P2"
 
@@ -41,7 +41,7 @@ use_problem = "cubic"; f_order = 1; u_order = 3;
 #use_problem = "linear"; f_order = 0; u_order = 1;
 
 # FURTHER PARAMETERS
-maxlevel = 6
+maxlevel = 4
 show_plots = true
 show_convergence_history = true
 
@@ -124,7 +124,8 @@ println("L2_error_BA = " * string(L2errorBA[level]));
 
 
 # plot
-if (show_plots) && (level == maxlevel) && ndofs[level] < 5
+if (show_plots) && (level == maxlevel) && ndofs[level] < 5000
+    nodevals = FESolveCommon.eval_at_nodes(val4dofs,FE);
     pygui(true)
     PyPlot.figure(1)
     PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),nodevals[:],cmap=get_cmap("ocean"))

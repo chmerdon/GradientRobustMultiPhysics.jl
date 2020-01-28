@@ -31,7 +31,7 @@ Features/Limitations:
 
 Next Goals:
 - implement RT1 (and possibly BDM1)
-- type-treed geometry elements (Point, Line, Triangle, Tetrahedron,...) linked
+- further improve steering by Grid.ElemTypes (Point, Line, Triangle, Tetrahedron,...)
 to objects nodes4cells of Mesh to choose correct transformation by multiple dispatch
 - sparse-matrices to save nodes4cells etc. to allow (in a far future) for different elements in Mesh and easier
 adjacency information (to build them up in 3D)

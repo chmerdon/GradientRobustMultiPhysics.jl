@@ -437,7 +437,6 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractHdivFiniteElement, quadrat
     dofs = zeros(Int64,ndofs4cell)
     coefficients = zeros(Float64,ndofs4cell,xdim)
     
-    dim = size(FE.grid.nodes4cells,2) - 1;
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
     
     AT = zeros(Float64,2,2)
@@ -582,6 +581,8 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivFiniteElement
     dofs = zeros(Int64,ndofs4face)
     coefficients = zeros(Float64,ndofs4face)
     
+    loc2glob_trafo = Grid.local2global_face(FE.grid, ET)
+    
     # quadrature loop
     det = 0.0
     fval = zeros(T,ncomponents)
@@ -597,21 +598,15 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivFiniteElement
             # get coefficients
             FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
 
+            # get face trafo
+            face_trafo = loc2glob_trafo(face)
+
+            # get Piola trafo (todo: use elemtype-steered trafo)
             det = FE.grid.length4faces[face]; # determinant of transformation on face
             
             for i in eachindex(qf.w)
                 # evaluate f
-                fill!(x,0.0)
-                if celldim == 2
-                    for j = 1 : xdim
-                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 2], j] * qf.xref[i][1]
-                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j] * qf.xref[i][2]
-                    end
-                elseif celldim == 1
-                    for j = 1 : xdim
-                        x[j] += FE.grid.coords4nodes[FE.grid.nodes4faces[face, 1], j]
-                    end
-                end    
+                x = face_trafo(qf.xref[i])
                 f!(fval, x)
 
                 # multiply with normal and save in fval[1]
@@ -1037,29 +1032,26 @@ end
 function eval_at_nodes(val4dofs, FE::AbstractH1FiniteElement, offset::Int64 = 0)
     # evaluate at grid points
     ndofs4node = zeros(size(FE.grid.coords4nodes,1))
-    dim = size(FE.grid.nodes4cells,2) - 1;
-    if dim == 1
-        xref4dofs4cell = Array{Float64,2}([0,1]')';
-    elseif dim == 2
-        xref4dofs4cell = [0 0; 1 0; 0 1];
-    end    
-    di = 0;
-    ncomponents = FiniteElements.get_ncomponents(FE);
     ET = FE.grid.elemtypes[1]
+    xref4dofs4cell = Grid.get_reference_cordinates(ET)
+    ncomponents = FiniteElements.get_ncomponents(FE);
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
     nodevals = zeros(size(FE.grid.coords4nodes,1),ncomponents)
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
     dofs = zeros(Int64,ndofs4cell)
-    for cell = 1 : size(FE.grid.nodes4cells,1)
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+    for j = 1 : size(xref4dofs4cell,1)
+        # get basisvals
+        basisvals[:] = FiniteElements.get_basis_on_elemtype(FE,ET)(xref4dofs4cell[j,:])
 
-        # get coefficients
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+        for cell = 1 : size(FE.grid.nodes4cells,1)
+
+            # get dofs
+            FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+
+            # get coefficients
+            FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
         
-        for j = 1 : dim + 1
-            basisvals = FiniteElements.get_basis_on_elemtype(FE,ET)(xref4dofs4cell[j,:])
             for dof = 1 : ndofs4cell;
                 for k = 1 : ncomponents
                     nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[dofs[dof]]*coefficients[dof,k];
@@ -1078,13 +1070,8 @@ end
 function eval_at_nodes(val4dofs, FE::AbstractHdivFiniteElement, offset::Int64 = 0)
     # evaluate at grid points
     ndofs4node = zeros(size(FE.grid.coords4nodes,1))
-    dim = size(FE.grid.nodes4cells,2) - 1;
-    if dim == 1
-        xref4dofs4cell = Array{Float64,2}([0,1]')';
-    elseif dim == 2
-        xref4dofs4cell = [0 0; 1 0; 0 1];
-    end    
-    ET = FE.grid.elemtypes[1];
+    ET = FE.grid.elemtypes[1]
+    xref4dofs4cell = Grid.get_reference_cordinates(ET)
     ncomponents = FiniteElements.get_ncomponents(FE);
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
@@ -1094,18 +1081,20 @@ function eval_at_nodes(val4dofs, FE::AbstractHdivFiniteElement, offset::Int64 = 
     get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, ET)
     det = 0.0;
     dofs = zeros(Int64, ndofs4cell)
-    for cell = 1 : size(FE.grid.nodes4cells,1)
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+    for j = 1 : size(xref4dofs4cell,1)
 
-        # get coefficients
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
+        basisvals[:] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref4dofs4cell[j,:])
+
+        for cell = 1 : size(FE.grid.nodes4cells,1)
+            # get dofs
+            FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+
+            # get coefficients
+            FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
             
-        # get trafo
-        det = get_Piola_trafo_on_cell!(AT,cell);
+            # get trafo
+            det = get_Piola_trafo_on_cell!(AT,cell);
 
-        for j = 1 : dim + 1
-            basisvals[:] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref4dofs4cell[j,:])
     
             for dof = 1 : ndofs4cell;
                 for k = 1 : ncomponents

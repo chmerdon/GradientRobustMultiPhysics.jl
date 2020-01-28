@@ -170,7 +170,8 @@ function integrate(integrand!::Function, grid::Grid.Mesh, order::Int, resultdim 
     xdim::Int = size(grid.coords4nodes,2);
     
     T = Base.eltype(grid.coords4nodes);
-    qf = QuadratureFormula{T,typeof(grid.elemtypes[1])}(order);
+    ET = grid.elemtypes[1];
+    qf = QuadratureFormula{T,typeof(ET)}(order);
     
     # compute volume4cells
     Grid.ensure_volume4cells!(grid);
