@@ -30,7 +30,7 @@ function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement, quadratur
     # quadrature loop
     temp = 0.0;
     fval = zeros(T,xdim)
-    @time begin    
+    #@time begin    
         for cell = 1 : ncells
       
             # evaluate tinverted (=transposed + inverted) jacobian of element trafo
@@ -71,5 +71,5 @@ function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement, quadratur
                 end
             end
         end
-    end    
+    #end    
 end

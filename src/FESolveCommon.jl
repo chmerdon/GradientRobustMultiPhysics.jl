@@ -49,19 +49,27 @@ function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!
     Grid.ensure_volume4cells!(FE.grid);
     
     ndofs = FiniteElements.get_ndofs(FE);
-    A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs);
-    if norm_lhs == "L2"
-        assemble_mass_matrix4FE!(A,FE);
-    elseif norm_lhs == "H1"
-        assemble_stiffness_matrix4FE!(A,nu,FE);
-    end 
+    @time begin
+        print("    |assembling matrix...")
+        A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs);
+        if norm_lhs == "L2"
+            assemble_mass_matrix4FE!(A,FE);
+        elseif norm_lhs == "H1"
+            assemble_stiffness_matrix4FE!(A,nu,FE);
+        end 
+        println("finished")
+    end
     
     # compute right-hand side vector
-    b = FiniteElements.createFEVector(FE);
-    if norm_rhs == "L2"
-        assemble_rhsL2!(b, volume_data!, FE, quadrature_order)
-    elseif norm_rhs == "H1"
-        assemble_rhsH1!(b, volume_data!, FE, quadrature_order)
+    @time begin
+        print("    |assembling rhs...")
+        b = FiniteElements.createFEVector(FE);
+        if norm_rhs == "L2"
+            assemble_rhsL2!(b, volume_data!, FE, quadrature_order)
+        elseif norm_rhs == "H1"
+            assemble_rhsH1!(b, volume_data!, FE, quadrature_order)
+        end
+        println("finished")
     end
     
     
@@ -194,11 +202,7 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
     println(" |PROGRESS")
 
     # assemble system 
-    @time begin
-        print("    |assembling...")
-        A, b = assembleSystem(1.0,approx_norm,approx_norm,volume_data!,FE,quadrature_order);
-        println("finished")
-    end
+    A, b = assembleSystem(1.0,approx_norm,approx_norm,volume_data!,FE,quadrature_order);
     
     # apply boundary data
     celldim::Int = size(FE.grid.nodes4cells,2) - 1;

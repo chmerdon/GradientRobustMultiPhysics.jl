@@ -58,6 +58,17 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
         end    
         println("finished")
     end
+
+    @time begin
+        # compute and apply boundary data
+        print("    |boundary data...")
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,true);
+        for i = 1 : length(bdofs)
+           A[bdofs[i],bdofs[i]] = dirichlet_penalty;
+           b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
+        end
+        println("finished")
+    end
     
      # add value for Lagrange multiplier for integral mean
     if length(val4dofs) == ndofs
@@ -65,13 +76,6 @@ function solveStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,bou
         append!(b,0.0); # add value for Lagrange multiplier for integral mean
     end
     
-    # apply boundary data
-    bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,true);
-    for i = 1 : length(bdofs)
-       A[bdofs[i],bdofs[i]] = dirichlet_penalty;
-       b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
-    end
-    @assert maximum(bdofs) <= ndofs_velocity
 
     @time begin
         print("    |solving...")

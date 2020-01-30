@@ -22,11 +22,7 @@ function solvePoissonProblem!(val4dofs::Array, nu::Real, volume_data!::Function,
     println(" |PROGRESS")
 
     # assemble system 
-    @time begin
-        print("    |assembling...")
-        A, b = FESolveCommon.assembleSystem(nu,"H1","L2",volume_data!,FE,quadrature_order);
-        println("finished")
-    end
+    A, b = FESolveCommon.assembleSystem(nu,"H1","L2",volume_data!,FE,quadrature_order);
 
     # apply boundary data
     celldim::Int = size(FE.grid.nodes4cells,2) - 1;

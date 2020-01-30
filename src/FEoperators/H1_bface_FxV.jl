@@ -29,7 +29,7 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
     fval = zeros(T,ncomponents)
     x = zeros(T,xdim);
     face = 0
-    @time begin    
+    #@time begin    
         for j in eachindex(FE.grid.bfaces)
 
             face = FE.grid.bfaces[j];
@@ -60,5 +60,5 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
                 end
             end
         end
-    end    
+    #end    
 end
