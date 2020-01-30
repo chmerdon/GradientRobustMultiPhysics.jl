@@ -179,7 +179,7 @@ residual = solveStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact_veloc
     
     # check divergence
     B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
-    FESolveStokes.assemble_divdiv_Matrix!(B,FE_velocity);
+    FESolveCommon.assemble_divdiv_Matrix!(B,FE_velocity);
     divergence = sqrt(abs(dot(val4dofs[1:ndofs_velocity],B*val4dofs[1:ndofs_velocity])));
     println("divergence = ",divergence);
     L2error_divergence[level] = divergence;
