@@ -55,7 +55,7 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1Finite
         FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
         # get coefficients
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
+        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET);
             
         for i in eachindex(qf.w)
             for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
@@ -121,7 +121,7 @@ function assemble_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHdivFini
             det = get_Piola_trafo_on_cell!(AT,cell);
             
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
+            FiniteElements.get_basis_coefficients_on_cell!(coefficients,FE,cell,ET);
             
             for i in eachindex(qf.w)
                 # use Piola transformation on basisvals
@@ -192,7 +192,7 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractH1
             FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
 
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+            FiniteElements.get_basis_coefficients_on_face!(coefficients,FE,face,ETF);
             
             for i in eachindex(qf.w)
                 
@@ -251,7 +251,7 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHd
             FiniteElements.get_dofs_on_face!(dofs, FE, face, ETF);
 
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+            FiniteElements.get_basis_coefficients_on_face!(coefficients,FE,face,ETF);
 
             det = FE.grid.length4faces[face]; # determinant of transformation on face
             
@@ -317,7 +317,7 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::Ab
       FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
       # get coefficients
-      FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
+      FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET);
       
       for i in eachindex(qf.w)
         
@@ -388,7 +388,7 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractH1FiniteElement, quadratur
             FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
             
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
+            FiniteElements.get_basis_coefficients_on_cell!(coefficients,FE,cell, ET);
 
             # setup trafo on cell
             cell_trafo = loc2glob_trafo(cell)
@@ -452,7 +452,7 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractHdivFiniteElement, quadrat
             FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
             
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_cell!(coefficients,FE,cell);
+            FiniteElements.get_basis_coefficients_on_cell!(coefficients,FE,cell,ET);
             
             # get trafo and Piola trafo
             cell_trafo = loc2glob_trafo(cell)
@@ -534,7 +534,7 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
             FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
 
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+            FiniteElements.get_basis_coefficients_on_face!(coefficients,FE,face,ETF);
 
             # get face trafo
             face_trafo = loc2glob_trafo(face)
@@ -596,7 +596,7 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivFiniteElement
             FiniteElements.get_dofs_on_face!(dofs, FE, face, ETF);
             
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_face!(coefficients,FE,face);
+            FiniteElements.get_basis_coefficients_on_face!(coefficients,FE,face,ETF);
 
             # get face trafo
             face_trafo = loc2glob_trafo(face)
@@ -922,7 +922,7 @@ function computeFEInterpolation!(val4dofs::Array,source_function!::Function,FE::
         FiniteElements.get_dofs_on_cell!(dofs,FE,cell,ET)
 
         # get coefficients
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET)
 
         for k = 1 : ndofs4cell
             x = cell_trafo(xref[k, :]);
@@ -947,7 +947,7 @@ function eval_FEfunction(coeffs, FE::AbstractH1FiniteElement)
         FiniteElements.get_dofs_on_cell!(dofs,FE,cell,ET)
 
         # get coefficients
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET)
 
         for j = 1 : ndofs4cell
             for k = 1 : ncomponents;
@@ -975,7 +975,7 @@ function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE:
         FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
         # get coefficients
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
+        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET);
 
         for j = 1 : ndofs4cell
             for k = 1 : ncomponents;
@@ -1012,7 +1012,7 @@ function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE:
         FiniteElements.get_dofs_on_cell!(dofs, FE, cellIndex, ET)
 
         # get coefficients
-        FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cellIndex)
+        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cellIndex, ET)
 
         for j = 1 : ndofs4cell
             for k = 1 : ncomponents
@@ -1050,11 +1050,11 @@ function eval_at_nodes(val4dofs, FE::AbstractH1FiniteElement, offset::Int64 = 0)
             FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell)
+            FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET)
         
             for dof = 1 : ndofs4cell;
                 for k = 1 : ncomponents
-                    nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[dofs[dof]]*coefficients[dof,k];
+                    nodevals[FE.grid.nodes4cells[cell,j],k] += basisvals[dof,k]*val4dofs[offset+dofs[dof]]*coefficients[dof,k];
                 end   
             end
             ndofs4node[FE.grid.nodes4cells[cell,j]] +=1
@@ -1090,7 +1090,7 @@ function eval_at_nodes(val4dofs, FE::AbstractHdivFiniteElement, offset::Int64 = 
             FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
             # get coefficients
-            FiniteElements.set_basis_coefficients_on_cell!(coefficients, FE, cell);
+            FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET);
             
             # get trafo
             det = get_Piola_trafo_on_cell!(AT,cell);

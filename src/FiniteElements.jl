@@ -40,11 +40,11 @@ abstract type AbstractFiniteElement end
 
 
 # basis function updates on cells and faces (to multiply e.g. by normal vector or reconstruction coefficients etc.)
-function set_basis_coefficients_on_cell!(coefficients, FE::AbstractFiniteElement, cell::Int64)
+function get_basis_coefficients_on_cell!(coefficients, FE::AbstractFiniteElement, cell::Int64, ::Grid.AbstractElemType)
     # default is one, replace if needed for special FE
     fill!(coefficients,1.0)
 end    
-function set_basis_coefficients_on_face!(coefficients, FE::AbstractFiniteElement, face::Int64)
+function get_basis_coefficients_on_face!(coefficients, FE::AbstractFiniteElement, face::Int64, ::Grid.AbstractElemType)
     # default is one, replace if needed for special FE
     fill!(coefficients,1.0)
 end    
@@ -53,21 +53,6 @@ function Hdivreconstruction_available(FE::AbstractFiniteElement)
     return false
 end
 
-
-# mapper for Int{N} to Val{N}
-# dummy_array needed to avoid constructing Val{N} in each call
-# length of dummy array corressponds to be longest number of dofs
-dummy_array = [Val(1),Val(2),Val(3),Val(4),Val(5),Val(6),Val(7),Val(8),Val(9),Val(10),Val(11),Val(12)];
-
-# all elements allow for evaluation of basis functions on cells
-#get_globaldof4cell(FE::AbstractFiniteElement, cell, N::Int64) = FiniteElements.get_globaldof4cell(FE, cell, dummy_array[N])
-
-# H1 elements allow for continuous (= cell-independent) basis function evaluations on faces
-#get_globaldof4face(FE::AbstractFiniteElement, face, N::Int64) = FiniteElements.get_globaldof4face(FE, face, dummy_array[N])
-
-# Hdiv elements should allow for continuous evaluations of normal-fluxes
-# maybe a good idea to offer a function for this?
-# 
 
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)
@@ -116,29 +101,5 @@ end
 function createFEVector(FE::AbstractFiniteElement)
     return zeros(get_ndofs(FE));
 end
-
-# # transformation for H1 elements on a tetrahedron
-# should go to ELemType3DTetrahedron later
-# function local2global_tetrahedron()
-#     A = Matrix{Float64}(undef,3,3)
-#     b = Vector{Float64}(undef,3)
-#     return function fix_cell(grid,cell)
-#         b[1] = grid.coords4nodes[grid.nodes4cells[cell,1],1]
-#         b[2] = grid.coords4nodes[grid.nodes4cells[cell,1],2]
-#         b[2] = grid.coords4nodes[grid.nodes4cells[cell,1],3]
-#         A[1,1] = grid.coords4nodes[grid.nodes4cells[cell,2],1] - b[1]
-#         A[1,2] = grid.coords4nodes[grid.nodes4cells[cell,3],1] - b[1]
-#         A[1,3] = grid.coords4nodes[grid.nodes4cells[cell,4],1] - b[1]
-#         A[2,1] = grid.coords4nodes[grid.nodes4cells[cell,2],2] - b[2]
-#         A[2,2] = grid.coords4nodes[grid.nodes4cells[cell,3],2] - b[2]
-#         A[2,3] = grid.coords4nodes[grid.nodes4cells[cell,4],2] - b[2]
-#         A[3,1] = grid.coords4nodes[grid.nodes4cells[cell,2],3] - b[3]
-#         A[3,2] = grid.coords4nodes[grid.nodes4cells[cell,3],3] - b[3]
-#         A[3,3] = grid.coords4nodes[grid.nodes4cells[cell,4],3] - b[3]
-#         return function closure(xref)
-#             x = A*xref + b
-#         end
-#     end    
-# end
 
 end #module

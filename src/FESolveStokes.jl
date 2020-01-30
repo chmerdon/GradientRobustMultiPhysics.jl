@@ -61,7 +61,7 @@ function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE_velocity::FiniteE
       FiniteElements.get_dofs_on_cell!(dofs_velocity,FE_velocity, cell, ET);
       
       # get coefficients
-      FiniteElements.set_basis_coefficients_on_cell!(coefficients_velocity,FE_velocity,cell);
+      FiniteElements.get_basis_coefficients_on_cell!(coefficients_velocity,FE_velocity,cell, ET);
       
       for i in eachindex(qf.w)
     
@@ -157,8 +157,8 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
       dofs_pressure .+= ndofs_velocity;
       
       # get coefficients
-      FiniteElements.set_basis_coefficients_on_cell!(coefficients_velocity,FE_velocity,cell);
-      FiniteElements.set_basis_coefficients_on_cell!(coefficients_pressure,FE_pressure,cell);
+      FiniteElements.get_basis_coefficients_on_cell!(coefficients_velocity,FE_velocity,cell, ET);
+      FiniteElements.get_basis_coefficients_on_cell!(coefficients_pressure,FE_pressure,cell, ET);
       
       for i in eachindex(qf.w)
       

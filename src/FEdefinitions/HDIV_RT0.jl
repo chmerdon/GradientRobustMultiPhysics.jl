@@ -56,7 +56,7 @@ function get_basis_fluxes_on_elemtype(FE::HdivRT0FiniteElement, ::Grid.Abstract1
     end
 end       
 
-function set_basis_coefficients_on_cell!(coefficients, FE::HdivRT0FiniteElement, cell::Int64)
+function get_basis_coefficients_on_cell!(coefficients, FE::HdivRT0FiniteElement, cell::Int64,  ::Grid.ElemType2DTriangle)
     # multiply by signs to ensure continuity of normal fluxes
     coefficients[1,1] = FE.grid.signs4cells[cell,1];
     coefficients[1,2] = FE.grid.signs4cells[cell,1];

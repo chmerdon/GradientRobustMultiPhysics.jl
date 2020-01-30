@@ -94,7 +94,7 @@ end
 function TestPoissonSolver2DCR()
   grid = load_test_grid();
   println("Testing H1-Bestapproximation via Poisson solver in 2D for CR-FEM...");
-  FE = FiniteElements.getCRFiniteElement(grid,1);
+  FE = FiniteElements.getCRFiniteElement(grid,2,1);
   val4dofs = FiniteElements.createFEVector(FE);
   residual = solvePoissonProblem!(val4dofs,1.0,volume_data_laplacian_P1!,volume_data_P1!,FE,1);
   println("solver residual = " * string(residual));

@@ -9,7 +9,7 @@ function getBRFiniteElement(grid,ncomponents)
     ensure_volume4cells!(grid);
     ensure_normal4faces!(grid);
     T = eltype(grid.coords4nodes);
-    return H1BRFiniteElement{T,ncomponents}("BR (H1FiniteElement, ncomponents=$ncomponents)",grid)
+    return H1BRFiniteElement{T,ncomponents}("BR (H1FiniteElement, dim=ncomponents=$ncomponents)",grid)
 end 
 
 function get_xref4dof(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) 
@@ -79,7 +79,7 @@ function get_basis_on_elemtype(FE::H1BRFiniteElement{T,2} where T <: Real, ::Gri
     end
 end
 
-function set_basis_coefficients_on_cell!(coefficients, FE::H1BRFiniteElement{T,2} where T <: Real, cell::Int64)
+function get_basis_coefficients_on_cell!(coefficients, FE::H1BRFiniteElement{T,2} where T <: Real, cell::Int64, ::Grid.ElemType2DTriangle)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[7,1] = FE.grid.normal4faces[FE.grid.faces4cells[cell,1],1];
@@ -90,7 +90,7 @@ function set_basis_coefficients_on_cell!(coefficients, FE::H1BRFiniteElement{T,2
     coefficients[9,2] = FE.grid.normal4faces[FE.grid.faces4cells[cell,3],2];
 end    
 
-function set_basis_coefficients_on_face!(coefficients, FE::H1BRFiniteElement{T,2} where T <: Real, face::Int64)
+function get_basis_coefficients_on_face!(coefficients, FE::H1BRFiniteElement{T,2} where T <: Real, face::Int64, ::Grid.Abstract1DElemType)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[5,1] = FE.grid.normal4faces[face,1];

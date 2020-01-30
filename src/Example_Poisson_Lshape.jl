@@ -31,8 +31,8 @@ function main()
 
 # CHOOSE A FEM
 #fem = "CR"
-fem = "P1"
-#fem = "MINI"
+#fem = "P1"
+# fem = "MINI"
 #fem = "P2"
 
 # CHOOSE A PROBLEM
@@ -95,9 +95,9 @@ Grid.show(grid)
 if fem == "P1"
     FE = FiniteElements.getP1FiniteElement(grid,1);
 elseif fem == "MINI"
-    FE = FiniteElements.getMINIFiniteElement(grid,1);
+    FE = FiniteElements.getMINIFiniteElement(grid,2,1);
 elseif fem == "CR"
-    FE = FiniteElements.getCRFiniteElement(grid,1);
+    FE = FiniteElements.getCRFiniteElement(grid,2,1);
 elseif fem == "P2"
     FE = FiniteElements.getP2FiniteElement(grid,1);
 end    

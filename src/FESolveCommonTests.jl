@@ -155,7 +155,7 @@ end
 function TestL2BestApproximation2DCR()
   grid = load_test_grid();
   println("Testing L2-Bestapproximation in 2D for CR-FEM...");
-  FE = FiniteElements.getCRFiniteElement(grid,1);
+  FE = FiniteElements.getCRFiniteElement(grid,2,1);
   val4dofs = FiniteElements.createFEVector(FE);
   computeBestApproximation!(val4dofs,"L2",volume_data_P1!,volume_data_P1!,FE,2);
   integral4cells = zeros(size(grid.nodes4cells,1),1);
@@ -177,95 +177,6 @@ function TestH1BestApproximation2D()
   integral = sum(integral4cells);
   println("interpolation_error = " * string(integral));
   return abs(integral) < eps(10.0)
-end
-
-
-function TimeStiffnessMatrixP1()
-  grid = load_test_grid(7);
-  ncells::Int = size(grid.nodes4cells,1);
-  println("ncells=",ncells);
-  Grid.ensure_volume4cells!(grid);
-  dim=2
-  
-  aa = Vector{typeof(grid.coords4nodes[1])}(undef, (dim+1)^2*ncells);
-  ii = Vector{Int64}(undef, (dim+1)^2*ncells);
-  jj = Vector{Int64}(undef, (dim+1)^2*ncells);
-  
-  println("\n P1 Stiffness-Matrix with exact gradients and SparseArrays");
-  FE = FiniteElements.get_P1FiniteElement(grid,false);
-  @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,FE);
-  @time M = sparse(ii,jj,aa);
-  println("\n P1 Stiffness-Matrix with exact gradients and ExtendableSparse");
-  M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
-  @time FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
-  @time ExtendableSparse.flush!(M2)
-  show(norm(M-M2))
-  M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
-  println("\n P1 Stiffness-Matrix with ForwardDiff gradients and SparseArray");
-  FE = FiniteElements.get_P1FiniteElement(grid,true);
-  @time FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
-  show(norm(M-M3))
-end
-
-
-function TimeStiffnessMatrixP2()
-  grid = load_test_grid(7);
-  ncells::Int = size(grid.nodes4cells,1);
-  println("ncells=",ncells);
-  Grid.ensure_volume4cells!(grid);
-  dim=2
-  
-  println("\n P2 Stiffness-Matrix with exact gradients and SparseArrays");
-  FE = FiniteElements.get_P2FiniteElement(grid,false);
-  @time begin
-    aa = Vector{typeof(grid.coords4nodes[1])}(undef, (2*(dim+1))^2*ncells);
-    ii = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
-    jj = Vector{Int64}(undef, (2*(dim+1))^2*ncells);
-    FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,FE);
-    M = sparse(ii,jj,aa);
-  end
-  println("\n P2 Stiffness-Matrix with exact gradients and ExtendableSparse");
-  @time begin
-    M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
-    FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
-    ExtendableSparse.flush!(M2)
-  end  
-  show(norm(M-M2))
-  println("\n P2 Stiffness-Matrix with ForwardDiff gradients and SparseArray");
-  @time begin
-    M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
-    FE = FiniteElements.get_P2FiniteElement(grid,true);
-    FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
-  end  
-  show(norm(M-M3))
-end
-
-
-function TimeStiffnessMatrixCR()
-  grid = load_test_grid(6);
-  ncells::Int = size(grid.nodes4cells,1);
-  println("ncells=",ncells);
-  Grid.ensure_volume4cells!(grid);
-  dim=2
-  
-  aa = Vector{typeof(grid.coords4nodes[1])}(undef, 9*ncells);
-  ii = Vector{Int64}(undef, 9*ncells);
-  jj = Vector{Int64}(undef, 9*ncells);
-  
-  println("\n CR Stiffness-Matrix with exact gradients and SparseArrays");
-  FE = FiniteElements.get_CRFiniteElement(grid,false);
-  @time FESolveCommon.global_stiffness_matrix4FE!(aa,ii,jj,FE);
-  @time M = sparse(ii,jj,aa);
-  println("\n CR Stiffness-Matrix with exact gradients and ExtendableSparse");
-  M2 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
-  @time FESolveCommon.assemble_stiffness_matrix4FE!(M2,FE);
-  @time ExtendableSparse.flush!(M2)
-  show(norm(M-M2))
-  M3 = ExtendableSparseMatrix{Float64,Int64}(FE.ndofs,FE.ndofs);
-  println("\n CR Stiffness-Matrix with ForwardDiff gradients and SparseArray");
-  FE = FiniteElements.get_CRFiniteElement(grid,true);
-  @time FESolveCommon.assemble_stiffness_matrix4FE!(M3,FE);
-  show(norm(M-M3))
 end
 
 end
