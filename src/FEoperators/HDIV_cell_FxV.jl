@@ -14,8 +14,9 @@ function assemble_rhsL2!(b, f!::Function, FE::AbstractHdivFiniteElement, quadrat
     else
         basisvals = Array{Array{T,2}}(undef,length(qf.w));
     end
+    FEbasis = FiniteElements.get_basis_on_elemtype(FE, ET)
     for i in eachindex(qf.w)
-        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
+        basisvals[i] = FEbasis(qf.xref[i])
     end    
     transformed_basisvals = zeros(ndofs4cell,ncomponents);
     dofs = zeros(Int64,ndofs4cell)

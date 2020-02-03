@@ -35,6 +35,7 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHd
             # get coefficients
             FiniteElements.get_basis_coefficients_on_face!(coefficients,FE,face,ETF);
 
+            # get Piola trafo (todo: use elemtype-steered trafo)
             det = FE.grid.length4faces[face]; # determinant of transformation on face
             
             for i in eachindex(qf.w)
@@ -52,5 +53,5 @@ function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractHd
                 end
             end
         end#
-    #end      
+    #end    
 end

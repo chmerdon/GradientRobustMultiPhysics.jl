@@ -28,22 +28,23 @@ function main()
 
 #fem = "CR"
 #fem = "MINI"
-fem = "TH"
+#fem = "TH"
 #fem = "P2P0"
-#fem = "BR"
+fem = "BR"
 #fem = "BR+" # with reconstruction
 
 
-#use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
+use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
 #use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
-use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
-maxlevel = 4
+#use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
+maxlevel = 5
+maxIterations = 20
 nu = 1
 
 compare_with_bestapproximations = false
-show_plots = false
+show_plots = true
 show_convergence_history = true
 
 
@@ -96,13 +97,20 @@ function volume_data!(problem, poisson = false)
             result[2] = -6.0*nu
             if poisson == false
                 result[1] += 1.0
+                # ugradu
+                result[1] += -18.0*x[1]^2*x[2]     
+                result[2] += -18.0*x[1]*x[2]^2
             end    
+
         elseif problem == "cubic"
             result[1] = 24.0*nu*x[2]
             result[2] = -24.0*nu*x[1]
             if poisson == false
                 result[1] += 2*x[1]
                 result[2] += 2*x[2]
+                # ugradu
+                result[1] += -48.0*x[1]^3*x[2]^2     
+                result[2] += -48.0*x[1]^2*x[2]^3
             end
         end
     end    
@@ -195,7 +203,7 @@ ndofs[level] = ndofs_velocity + ndofs_pressure;
 
 # solve Stokes problem
 val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
-residual = solveStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact_velocity!(use_problem),grid,FE_velocity,FE_pressure,FiniteElements.get_polynomial_order(FE_velocity)+f_order, use_reconstruction);
+residual = solveNavierStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact_velocity!(use_problem),grid,FE_velocity,FE_pressure,FiniteElements.get_polynomial_order(FE_velocity)+f_order, use_reconstruction, maxIterations);
     
 # check divergence
 B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
@@ -239,14 +247,14 @@ if compare_with_bestapproximations == true
     #println("L2_velocity_error_VL = " * string(L2error_velocityVL[level]));
 
 
-    # compute error of RT best-approximation
-    FE_RT = FiniteElements.getRT1FiniteElement(grid);
-    FiniteElements.show(FE_RT)
-    val4dofs_RT = FiniteElements.createFEVector(FE_RT);
-    computeBestApproximation!(val4dofs_RT,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_RT,p_order + FiniteElements.get_polynomial_order(FE_RT))
-    integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(use_problem), val4dofs_RT, FE_RT), grid, error_order, 2);
+    # compute error of RT0 best-approximation
+    FE_RT0 = FiniteElements.getRT0FiniteElement(grid);
+    FiniteElements.show(FE_RT0)
+    val4dofs_RT0 = FiniteElements.createFEVector(FE_RT0);
+    computeBestApproximation!(val4dofs_RT0,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_RT0,p_order + FiniteElements.get_polynomial_order(FE_RT0))
+    integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(use_problem), val4dofs_RT0, FE_RT0), grid, error_order, 2);
     L2error_velocityRT[level] = sqrt(abs(sum(integral4cells[:])));
-    #println("L2_velocity_error_RT = " * string(L2error_velocityRT[level]));    
+    #println("L2_velocity_error_RT0 = " * string(L2error_velocityRT[level]));    
 end    
 
 #plot

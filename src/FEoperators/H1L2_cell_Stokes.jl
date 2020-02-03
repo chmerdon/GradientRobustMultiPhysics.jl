@@ -6,7 +6,8 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     ndofs4cell_pressure::Int = FiniteElements.get_ndofs4elemtype(FE_pressure, ET);
     ncomponents::Int = FiniteElements.get_ncomponents(FE_velocity);
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
-    ndofs = ndofs_velocity + FiniteElements.get_ndofs(FE_pressure);
+    ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
+    ndofs = ndofs_velocity + ndofs_pressure;
     ndofs4cell::Int = ndofs4cell_velocity+ndofs4cell_pressure;
     ncells::Int = size(FE_velocity.grid.nodes4cells,1);
     xdim::Int = size(FE_velocity.grid.coords4nodes,2);
@@ -47,6 +48,28 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
     
     # quadrature loop
     #@time begin
+
+    # Lagrange multiplier for integral mean
+    # implemented via row vector
+    LM = zeros(Float64,ndofs_pressure)
+    for cell = 1 : ncells    
+        FiniteElements.get_dofs_on_cell!(dofs_pressure,FE_pressure, cell, ET);
+      
+        FiniteElements.get_basis_coefficients_on_cell!(coefficients_pressure,FE_pressure,cell, ET);
+        for i in eachindex(qf.w)
+            for dof_i = 1 : ndofs4cell_pressure
+                temp = pressure_vals[i][dof_i] * coefficients_pressure[dof_i] * qf.w[i] * FE_velocity.grid.volume4cells[cell];
+                LM[dofs_pressure[dof_i]] += temp;
+            end    
+        end    
+    end    
+    for dof = ndofs_pressure:-1:1
+        A[ndofs + 1, ndofs_velocity + dof] = LM[dof];
+        A[ndofs_velocity + dof, ndofs + 1] = LM[dof];
+    end
+
+    # Assembly rest of Stokes operators
+    # Du*Dv + div(u)*q + div(v)*p
     for cell = 1 : ncells
       # evaluate tinverted (=transposed + inverted) jacobian of element trafo
       loc2glob_trafo_tinv(trafo_jacobian,cell)
@@ -96,14 +119,6 @@ function assemble_Stokes_Operator4FE!(A::ExtendableSparseMatrix, nu::Real, FE_ve
                 A[dofs_pressure[dof_j],dofs_velocity[dof_i]] += temp;
             end
         end    
-        
-        # Lagrange multiplier for integral mean
-        
-        for dof_i = 1 : ndofs4cell_pressure
-                temp = pressure_vals[i][dof_i] * coefficients_pressure[dof_i] * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-                A[dofs_pressure[dof_i],ndofs + 1] += temp;
-                A[ndofs + 1, dofs_pressure[dof_i]] += temp;
-        end
       end  
     end
     #end  
