@@ -3,11 +3,9 @@ using Grid
 using Quadrature
 using ExtendableSparse
 using LinearAlgebra
-using SparseArrays
 using FiniteElements
 using FESolveCommon
-using FESolveStokes
-using FESolvePoisson
+using FESolveNavierStokes
 using ForwardDiff
 ENV["MPLBACKEND"]="tkagg"
 using PyPlot
@@ -27,10 +25,10 @@ end
 function main()
 
 #fem = "CR"
-#fem = "MINI"
+fem = "MINI"
 #fem = "TH"
 #fem = "P2P0"
-fem = "BR"
+#fem = "BR"
 #fem = "BR+" # with reconstruction
 
 
@@ -39,7 +37,7 @@ use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
 #use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
 #use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
-maxlevel = 5
+maxlevel = 4
 maxIterations = 20
 nu = 1
 

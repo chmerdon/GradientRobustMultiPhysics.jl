@@ -15,20 +15,18 @@ using Quadrature
 
 
 # MASS matrices on cells
-include("FEoperators/H1_cell_UxV.jl");
-include("FEoperators/HDIV_cell_UxV.jl");
+include("FEoperators/CELL_UxV.jl");
 
 # MASS matrices on boundary faces
 include("FEoperators/H1_bface_UxV.jl");
 include("FEoperators/HDIV_bface_UxV.jl");
 
 # STIFFNESS matrices on cells
-include("FEoperators/H1_cell_DUxDV.jl");
+include("FEoperators/CELL_DUxDV.jl");
 
 # LINEAR FUNCTIONALS on cells
-include("FEoperators/H1_cell_FxV.jl");
-include("FEoperators/H1_cell_FxDV.jl");
-include("FEoperators/HDIV_cell_FxV.jl");
+include("FEoperators/CELL_FxV.jl");
+include("FEoperators/CELL_FxDV.jl");
 
 # LINEAR FUNCTIONALS on boundary faces
 include("FEoperators/H1_bface_FxV.jl");

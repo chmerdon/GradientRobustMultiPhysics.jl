@@ -30,7 +30,7 @@ function main()
 
 # CHOOSE A FEM
 #fem = "CR"
-#fem = "P1"
+fem = "P1"
 # fem = "MINI"
 #fem = "P2"
 
@@ -40,7 +40,7 @@ use_problem = "cubic"; f_order = 1; u_order = 3;
 #use_problem = "linear"; f_order = 0; u_order = 1;
 
 # FURTHER PARAMETERS
-maxlevel = 4
+maxlevel = 5
 show_plots = true
 show_convergence_history = true
 

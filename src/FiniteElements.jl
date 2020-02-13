@@ -2,6 +2,8 @@ module FiniteElements
 
 using Grid
 using LinearAlgebra
+using Quadrature
+using ForwardDiff
 
 export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHdivRTFiniteElement, AbstractHdivBDMFiniteElement, AbstractHcurlFiniteElement
 
@@ -102,5 +104,138 @@ end
 function createFEVector(FE::AbstractFiniteElement)
     return zeros(get_ndofs(FE));
 end
+
+mutable struct FEbasis_caller{FEType <: AbstractFiniteElement}
+    FE::AbstractFiniteElement
+    refbasisvals::Array{Float64,3}
+    refgradients::Array{Float64,3}
+    coefficients::Array{Float64,2}
+    Ahandler::Function  # function that generates matrix trafo
+    A::Matrix{Float64}  # matrix trafo for gradients
+    det::Float64        # determinant of matrix
+    ncomponents::Int64
+    offsets::Array{Int64,1}
+    offsets2::Array{Int64,1}
+    current_cell::Int64
+    with_derivs::Bool
+end
+
+function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with_derivs::Bool)
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
+    
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    refbasisvals = zeros(Float64,length(qf.w),ndofs4cell,ncomponents);
+    for i in eachindex(qf.w)
+        # evaluate basis functions at quadrature point
+        refbasisvals[i,:,:] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
+    end    
+    coefficients = zeros(Float64,ndofs4cell,ncomponents)
+    Ahandler = Grid.local2global_tinv_jacobian(FE.grid,ET)
+    xdim = size(FE.grid.coords4nodes,2)
+    A = zeros(Float64,xdim,xdim)
+    offsets = 0:xdim:(ncomponents*xdim);
+    offsets2 = 0:ndofs4cell:ncomponents*ndofs4cell;
+    if with_derivs == false
+        refgradients = zeros(Float64,0,0,0)
+    else
+        refgradients = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,length(qf.xref[1]))
+        for i in eachindex(qf.w)
+            # evaluate gradients of basis function
+            refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_elemtype(FE, ET),qf.xref[i]);
+        end    
+    end
+    return FEbasis_caller{typeof(FE)}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,offsets,offsets2,0,with_derivs)
+    
+end    
+
+function updateFEbasis!(FEBC::FEbasis_caller{FET} where  FET <: AbstractH1FiniteElement, cell)
+    current_cell = cell;
+
+    # get coefficients
+    FiniteElements.get_basis_coefficients_on_cell!(FEBC.coefficients, FEBC.FE, cell, FEBC.FE.grid.elemtypes[1]);
+
+    # evaluate tinverted (=transposed + inverted) jacobian of element trafo
+    if FEBC.with_derivs
+        FEBC.Ahandler(FEBC.A, cell)
+    end    
+end
+
+function getFEbasis4qp!(basisvals,FEBC::FEbasis_caller{FET} where  FET <: AbstractH1FiniteElement,i)
+    for j = 1 : size(FEBC.refbasisvals,2), k = 1 : size(FEBC.refbasisvals,3)
+        basisvals[j,k] = FEBC.refbasisvals[i,j,k] * FEBC.coefficients[j,k]
+    end    
+end
+
+
+function getFEbasisgradients4qp!(gradients,FEBC::FEbasis_caller{FET} where  FET <: AbstractH1FiniteElement,i)
+    @assert FEBC.with_derivs
+    # multiply tinverted jacobian of element trafo with gradient of basis function
+    # which yields (by chain rule) the gradient in x coordinates
+    for dof_i = 1 : size(FEBC.refbasisvals,2)
+        for c = 1 : FiniteElements.get_ncomponents(FEBC.FE), k = 1 : size(FEBC.FE.grid.coords4nodes,2)
+            gradients[dof_i,k + FEBC.offsets[c]] = 0.0;
+            for j = 1 : size(FEBC.FE.grid.coords4nodes,2)
+                gradients[dof_i,k + FEBC.offsets[c]] += FEBC.A[k,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[c],j] * FEBC.coefficients[dof_i,c]
+            end    
+        end    
+    end    
+end
+
+
+function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, with_derivs::Bool)
+    ET = FE.grid.elemtypes[1]
+    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
+    
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FE);
+    refbasisvals = zeros(Float64,length(qf.w),ndofs4cell,ncomponents);
+    for i in eachindex(qf.w)
+        # evaluate basis functions at quadrature point
+        refbasisvals[i,:,:] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
+    end    
+    coefficients = zeros(Float64,ndofs4cell,ncomponents)
+    Ahandler = Grid.local2global_Piola(FE.grid, ET)
+    xdim = size(FE.grid.coords4nodes,2)
+    A = zeros(Float64,xdim,xdim)
+    offsets = 0:xdim:(ncomponents*xdim);
+    offsets2 = 0:ndofs4cell:ncomponents*ndofs4cell;
+    if with_derivs == false
+        refgradients = zeros(Float64,0,0,0)
+    else
+        refgradients = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,length(qf.xref[1]))
+        for i in eachindex(qf.w)
+            # evaluate gradients of basis function
+            refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_elemtype(FE, ET),qf.xref[i]);
+        end    
+    end
+    return FEbasis_caller{typeof(FE)}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,offsets,offsets2,0,with_derivs)
+end    
+
+function updateFEbasis!(FEBC::FEbasis_caller{FET} where  FET <: AbstractHdivFiniteElement, cell)
+    current_cell = cell;
+
+    # get Piola trafo
+    FEBC.det = FEBC.Ahandler(FEBC.A,cell);
+
+    # get coefficients
+    FiniteElements.get_basis_coefficients_on_cell!(FEBC.coefficients, FEBC.FE, cell, FEBC.FE.grid.elemtypes[1]);
+end
+
+function getFEbasis4qp!(basisvals,FEBC::FEbasis_caller{FET} where  FET <: AbstractHdivFiniteElement,i)
+    # use Piola transformation on basisvals
+    for j = 1 : size(FEBC.refbasisvals,2)
+        for k = 1 : size(FEBC.refbasisvals,3)
+            basisvals[j,k] = 0.0;
+            for l = 1 : size(FEBC.refbasisvals,3)
+                basisvals[j,k] += FEBC.A[k,l]*FEBC.refbasisvals[i,j,l];
+            end    
+            basisvals[j,k] *= FEBC.coefficients[j,k];
+            basisvals[j,k] /= FEBC.det;
+        end
+    end   
+end
+
 
 end #module
