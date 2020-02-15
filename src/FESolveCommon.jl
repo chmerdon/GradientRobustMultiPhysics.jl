@@ -18,8 +18,8 @@ using Quadrature
 include("FEoperators/CELL_UxV.jl");
 
 # MASS matrices on boundary faces
-include("FEoperators/H1_bface_UxV.jl");
-include("FEoperators/HDIV_bface_UxV.jl");
+include("FEoperators/BFACE_UxV.jl");
+#include("FEoperators/HDIV_bface_UxV.jl");
 
 # STIFFNESS matrices on cells
 include("FEoperators/CELL_DUxDV.jl");
@@ -29,12 +29,10 @@ include("FEoperators/CELL_FxV.jl");
 include("FEoperators/CELL_FxDV.jl");
 
 # LINEAR FUNCTIONALS on boundary faces
-include("FEoperators/H1_bface_FxV.jl");
-include("FEoperators/HDIV_bface_FxV.jl");
+include("FEoperators/BFACE_FxV.jl");
 
 # DIV-DIV matrices on cells
-include("FEoperators/HDIV_cell_divUxdivV.jl");
-
+include("FEoperators/CELL_DIVUxDIVV.jl");
 
 
 function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!::Function,FE::AbstractFiniteElement,quadrature_order::Int)

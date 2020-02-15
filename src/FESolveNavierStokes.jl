@@ -1,5 +1,6 @@
 module FESolveNavierStokes
 
+
 export solveNavierStokesProblem!
 
 using ExtendableSparse
@@ -14,8 +15,7 @@ using ForwardDiff
 
 
 # NAVIER-STOKES operators
-include("FEoperators/H1_cell_Stokes_ADUxDV.jl");
-include("FEoperators/HDIVxH1xHDIV_cell_Stokes_ADUxDV.jl");
+include("FEoperators/CELL_NAVIERSTOKES_AxDUxDV.jl");
 
 function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, use_reconstruction::Bool = false, maxiterations = 20, dirichlet_penalty::Float64 = 1e60)
         
@@ -90,10 +90,10 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
                 if use_reconstruction
                     val4dofs_hdiv = T'*val4dofs
                     Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs+1)
-                    assemble_ugradu_matrix4FE!(Atemp,val4dofs_hdiv,FE_Reconstruction, FE_velocity);    
+                    assemble_ugradu_matrix4FE!(Atemp,val4dofs_hdiv,FE_velocity,FE_Reconstruction);    
                     A += T*Atemp
                 else   
-                    assemble_ugradu_matrix4FE!(A,val4dofs,FE_velocity);
+                    assemble_ugradu_matrix4FE!(A,val4dofs,FE_velocity,FE_velocity);
                 end    
                 println("finished")
             end

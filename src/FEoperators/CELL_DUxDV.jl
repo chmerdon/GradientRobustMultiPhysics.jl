@@ -19,32 +19,32 @@ function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::Ab
     #@time begin
     for cell = 1 : size(FE.grid.nodes4cells,1)
 
-      # get dofs
-      FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+        # get dofs
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
-      # update FEbasis on cell
-      FiniteElements.updateFEbasis!(FEbasis, cell)
+        # update FEbasis on cell
+        FiniteElements.updateFEbasis!(FEbasis, cell)
       
-      for i in eachindex(qf.w)
+        for i in eachindex(qf.w)
         
-        # get FE basis gradients at quadrature point
-        FiniteElements.getFEbasisgradients4qp!(gradients, FEbasis, i)
+            # get FE basis gradients at quadrature point
+            FiniteElements.getFEbasisgradients4qp!(gradients, FEbasis, i)
 
-        # fill sparse array
-        for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
-            # fill upper right part and diagonal of matrix
-            temp = 0.0;
-            for k = 1 : size(gradients,2)
-                temp += gradients[dof_i,k]*gradients[dof_j,k];
+            # fill sparse array
+            for dof_i = 1 : ndofs4cell, dof_j = dof_i : ndofs4cell
+                # fill upper right part and diagonal of matrix
+                temp = 0.0;
+                for k = 1 : size(gradients,2)
+                    temp += gradients[dof_i,k]*gradients[dof_j,k];
+                end
+                temp *= nu * qf.w[i] * FE.grid.volume4cells[cell]
+                A[dofs[dof_i],dofs[dof_j]] += temp;
+                # fill lower left part of matrix
+                if dof_j > dof_i
+                    A[dofs[dof_j],dofs[dof_i]] += temp;
+                end    
             end
-            temp *= nu * qf.w[i] * FE.grid.volume4cells[cell]
-            A[dofs[dof_i],dofs[dof_j]] += temp;
-            # fill lower left part of matrix
-            if dof_j > dof_i
-              A[dofs[dof_j],dofs[dof_i]] += temp;
-            end    
-          end
-      end  
+        end  
     end
     #end
 end
