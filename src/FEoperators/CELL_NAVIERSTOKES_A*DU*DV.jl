@@ -1,4 +1,6 @@
-function assemble_ugradu_matrix4FE!(A::ExtendableSparseMatrix, dofs4a, FEU::AbstractH1FiniteElement, FEAV::AbstractFiniteElement)
+struct CELL_NAVIERSTOKES_AdotDUdotDV <: FiniteElements.AbstractFEOperator end
+
+function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_NAVIERSTOKES_AdotDUdotDV}, FEU::AbstractH1FiniteElement, FEAV::AbstractFiniteElement, dofs4a)
     # get quadrature formula
     T = eltype(FEU.grid.coords4nodes);
     ET = FEU.grid.elemtypes[1]

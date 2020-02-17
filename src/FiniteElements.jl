@@ -17,7 +17,8 @@ export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement
  #######################################################################################################
  #######################################################################################################
 
-# top level abstract type
+# top level abstract types
+abstract type AbstractFEOperator end
 abstract type AbstractFiniteElement end
 
   # subtype for H1 conforming elements (also Crouzeix-Raviart)

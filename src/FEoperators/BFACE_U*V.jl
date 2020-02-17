@@ -1,5 +1,7 @@
+struct BFACE_UdotV <: FiniteElements.AbstractFEOperator end
+
 # matrix for L2 bestapproximation on boundary faces that writes into an ExtendableSparseMatrix
-function assemble_bface_mass_matrix4FE!(A::ExtendableSparseMatrix,FE::AbstractFiniteElement)
+function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UdotV},FE::AbstractFiniteElement)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
   

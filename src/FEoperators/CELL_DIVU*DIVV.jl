@@ -1,4 +1,6 @@
-function assemble_divdiv_Matrix!(A::ExtendableSparseMatrix, FE::FiniteElements.AbstractFiniteElement)
+struct CELL_DIVUdotDIVV <: FiniteElements.AbstractFEOperator end
+
+function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DIVUdotDIVV}, FE::FiniteElements.AbstractFiniteElement)
 
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);

@@ -1,4 +1,6 @@
-function assemble_rhsH1!(b, f!::Function, FE::AbstractH1FiniteElement, quadrature_order::Int)
+struct CELL_FdotDV <: FiniteElements.AbstractFEOperator end
+
+function assemble_operator!(b, ::Type{CELL_FdotDV}, FE::AbstractH1FiniteElement, f!::Function, quadrature_order::Int)
     
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);

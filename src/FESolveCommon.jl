@@ -15,24 +15,24 @@ using Quadrature
 
 
 # MASS matrices on cells
-include("FEoperators/CELL_UxV.jl");
+include("FEoperators/CELL_U*V.jl");
 
 # MASS matrices on boundary faces
-include("FEoperators/BFACE_UxV.jl");
+include("FEoperators/BFACE_U*V.jl");
 #include("FEoperators/HDIV_bface_UxV.jl");
 
 # STIFFNESS matrices on cells
-include("FEoperators/CELL_DUxDV.jl");
+include("FEoperators/CELL_DU*DV.jl");
 
 # LINEAR FUNCTIONALS on cells
-include("FEoperators/CELL_FxV.jl");
-include("FEoperators/CELL_FxDV.jl");
+include("FEoperators/CELL_F*V.jl");
+include("FEoperators/CELL_F*DV.jl");
 
 # LINEAR FUNCTIONALS on boundary faces
-include("FEoperators/BFACE_FxV.jl");
+include("FEoperators/BFACE_F*V.jl");
 
 # DIV-DIV matrices on cells
-include("FEoperators/CELL_DIVUxDIVV.jl");
+include("FEoperators/CELL_DIVU*DIVV.jl");
 
 
 function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!::Function,FE::AbstractFiniteElement,quadrature_order::Int)
@@ -49,9 +49,9 @@ function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!
         print("    |assembling matrix...")
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs);
         if norm_lhs == "L2"
-            assemble_mass_matrix4FE!(A,FE);
+            assemble_operator!(A,CELL_UdotV,FE);
         elseif norm_lhs == "H1"
-            assemble_stiffness_matrix4FE!(A,nu,FE);
+            assemble_operator!(A,CELL_DUdotDV,FE,nu);
         end 
         println("finished")
     end
@@ -61,9 +61,9 @@ function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!
         print("    |assembling rhs...")
         b = FiniteElements.createFEVector(FE);
         if norm_rhs == "L2"
-            assemble_rhsL2!(b, volume_data!, FE, quadrature_order)
+            assemble_operator!(b, CELL_FdotV, FE, volume_data!, quadrature_order)
         elseif norm_rhs == "H1"
-            assemble_rhsH1!(b, volume_data!, FE, quadrature_order)
+            assemble_operator!(b, CELL_FdotDV, FE, volume_data!, quadrature_order)
         end
         println("finished")
     end
@@ -81,9 +81,9 @@ function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestappr
         else
             ndofs = FiniteElements.get_ndofs(FE);
             B = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
-            assemble_bface_mass_matrix4FE!(B::ExtendableSparseMatrix,FE)
+            assemble_operator!(B, BFACE_UdotV, FE)
             b = FiniteElements.createFEVector(FE);
-            assemble_rhsL2_on_bface!(b, boundary_data!, FE)
+            assemble_operator!(b, BFACE_FdotV, FE, boundary_data!, FiniteElements.get_polynomial_order(FE))
         
             ETF = Grid.get_face_elemtype(FE.grid.elemtypes[1]);
             ensure_bfaces!(FE.grid);

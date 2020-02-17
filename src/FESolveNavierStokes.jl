@@ -15,7 +15,7 @@ using ForwardDiff
 
 
 # NAVIER-STOKES operators
-include("FEoperators/CELL_NAVIERSTOKES_AxDUxDV.jl");
+include("FEoperators/CELL_NAVIERSTOKES_A*DU*DV.jl");
 
 function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, use_reconstruction::Bool = false, maxiterations = 20, dirichlet_penalty::Float64 = 1e60)
         
@@ -34,7 +34,7 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
     @time begin
         print("    |assembling linear part of matrix...")
         Alin = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
-        FESolveStokes.assemble_Stokes_Operator4FE!(Alin,nu,FE_velocity,FE_pressure);
+        FESolveStokes.assemble_operator!(Alin, FESolveStokes.CELL_STOKES, FE_velocity, FE_pressure, nu);
         println("finished")
     end
     
@@ -52,14 +52,14 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
             FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity);
             ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
             b2 = zeros(Float64,ndofsHdiv);
-            FESolveCommon.assemble_rhsL2!(b2, volume_data!, FE_Reconstruction, quadrature_order)
+            FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_Reconstruction, volume_data!, quadrature_order)
             println("finished")
             print("    |init Hdivreconstruction...")
             T = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofsHdiv)
             FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity);
             b = T*b2;
         else
-            FESolveCommon.assemble_rhsL2!(b, volume_data!, FE_velocity, quadrature_order)
+            FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_velocity, volume_data!, quadrature_order)
         end    
         println("finished")
     end
@@ -90,10 +90,10 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
                 if use_reconstruction
                     val4dofs_hdiv = T'*val4dofs
                     Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs+1)
-                    assemble_ugradu_matrix4FE!(Atemp,val4dofs_hdiv,FE_velocity,FE_Reconstruction);    
+                    assemble_operator!(Atemp,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_Reconstruction,val4dofs_hdiv);    
                     A += T*Atemp
                 else   
-                    assemble_ugradu_matrix4FE!(A,val4dofs,FE_velocity,FE_velocity);
+                    assemble_operator!(A,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_velocity,val4dofs);
                 end    
                 println("finished")
             end

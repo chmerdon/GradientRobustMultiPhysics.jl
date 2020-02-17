@@ -1,4 +1,6 @@
-function assemble_stiffness_matrix4FE!(A::ExtendableSparseMatrix,nu::Real,FE::AbstractFiniteElement)
+struct CELL_DUdotDV <: FiniteElements.AbstractFEOperator end
+
+function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DUdotDV}, FE::AbstractFiniteElement, nu::Real = 1.0)
     
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);

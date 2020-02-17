@@ -25,10 +25,10 @@ end
 function main()
 
 #fem = "CR"
-fem = "MINI"
+#fem = "MINI"
 #fem = "TH"
 #fem = "P2P0"
-#fem = "BR"
+fem = "BR"
 #fem = "BR+" # with reconstruction
 
 
@@ -37,12 +37,12 @@ use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
 #use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
 #use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
-maxlevel = 4
+maxlevel = 5
 maxIterations = 20
 nu = 1
 
 compare_with_bestapproximations = false
-show_plots = true
+show_plots = false
 show_convergence_history = true
 
 
@@ -156,8 +156,7 @@ L2error_pressureBA = zeros(Float64,maxlevel)
 ndofs = zeros(Int,maxlevel)
 
 for level = 1 : maxlevel
-
-println("Solving Stokes problem on refinement level...", level);
+println("Solving Stokes problem on refinement level $level of $maxlevel");
 println("Generating grid by triangle...");
 maxarea = 4.0^(-level)
 grid = triangulate_unitsquare(maxarea)
@@ -205,7 +204,7 @@ residual = solveNavierStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact
     
 # check divergence
 B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
-FESolveCommon.assemble_divdiv_Matrix!(B,FE_velocity);
+FESolveCommon.assemble_operator!(B,FESolveCommon.CELL_DIVUdotDIVV,FE_velocity);
 divergence = sqrt(abs(dot(val4dofs[1:ndofs_velocity],B*val4dofs[1:ndofs_velocity])));
 println("divergence = ",divergence);
 L2error_divergence[level] = divergence;

@@ -73,7 +73,7 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
     @time begin
         print("    |assembling matrix...")
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
-        assemble_Stokes_Operator4FE!(A,PD.viscosity,FE_velocity,FE_pressure);
+        assemble_operator!(A,CELL_STOKES,FE_velocity,FE_pressure,PD.viscosity);
         println("finished")
     end
         
@@ -88,7 +88,7 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
                 ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
                 b2 = zeros(Float64,ndofsHdiv);
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
-                FESolveCommon.assemble_rhsL2!(b2, PD.volumedata4region[region], FE_Reconstruction, quadorder)
+                FESolveCommon.assemble_operator!(b2, FESolveCommon.CELL_FdotV, FE_Reconstruction, PD.volumedata4region[region], quadorder)
                 println("finished")
                 print("    |Hdivreconstruction...")
                 T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
@@ -96,7 +96,7 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
                 b[1:ndofs_velocity] = T*b2;
             else
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_velocity)
-                FESolveCommon.assemble_rhsL2!(b, PD.volumedata4region[region], FE_velocity, quadorder)
+                FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_velocity, PD.volumedata4region[region], quadorder)
             end    
             println("finished")
         end

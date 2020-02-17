@@ -1,4 +1,7 @@
-function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
+struct BFACE_FdotV <: FiniteElements.AbstractFEOperator end
+
+
+function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement, f!::Function, quadorder_f::Int)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
   
@@ -6,7 +9,7 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
     T = eltype(FE.grid.coords4nodes);
     ET = FE.grid.elemtypes[1]
     ETF = Grid.get_face_elemtype(ET);
-    quadorder = 2*FiniteElements.get_polynomial_order(FE);
+    quadorder = quadorder_f + FiniteElements.get_polynomial_order(FE);
     qf = QuadratureFormula{T,typeof(ETF)}(quadorder);
      
     # generate caller for FE basis functions
@@ -59,7 +62,7 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractH1FiniteElement)
     #end    
 end
 
-function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivFiniteElement)
+function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractHdivFiniteElement, f!::Function, quadorder_f::Int)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
   
@@ -67,7 +70,7 @@ function assemble_rhsL2_on_bface!(b, f!::Function, FE::AbstractHdivFiniteElement
     T = eltype(FE.grid.coords4nodes);
     ET = FE.grid.elemtypes[1]
     ETF = Grid.get_face_elemtype(ET);
-    quadorder = 2*FiniteElements.get_polynomial_order(FE);
+    quadorder = quadorder_f + FiniteElements.get_polynomial_order(FE);
     qf = QuadratureFormula{T,typeof(ETF)}(quadorder);
      
     # generate caller for FE basis functions
