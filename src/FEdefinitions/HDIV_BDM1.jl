@@ -45,28 +45,20 @@ end
 
 # BASIS FUNCTIONS
 function get_basis_on_elemtype(FE::HdivBDM1FiniteElement, ::Grid.ElemType2DTriangle)
-    temp = 0.0;
-    a = [0.0 0.0];
-    b = [0.0 0.0];
-    c = [0.0 0.0];
     function closure(xref)
-        temp = 0.5 - xref[1] - xref[2]
-        a = [xref[1] xref[2]-1.0];
-        b = [xref[1] xref[2]];
-        c = [xref[1]-1.0 xref[2]];
-        return [a;
-                b;
-                c;
-                (12*temp).*a;
-                (12*(xref[1] - 0.5)).*b;
-                (12*(xref[2] - 0.5)).*c]
+        return [[xref[1] xref[2]-1.0];
+                [xref[1] xref[2]];
+                [xref[1]-1.0 xref[2]];
+                [3*xref[1] 3-6*xref[1]-3*xref[2]];
+                [-3*xref[1] 3*xref[2]];
+                [-3+3*xref[1]+6*xref[2] -3*xref[2]]]
     end
 end
 
 function get_basis_fluxes_on_elemtype(FE::HdivBDM1FiniteElement, ::Grid.Abstract1DElemType)
     function closure(xref)
         return [1.0 # normal-flux of RT0 function on single triangle face
-                12*(xref[1]-0.5)]; # linear normal-flux of BDM1 function
+                -3+6*xref[1]]; # linear normal-flux of BDM1 function
     end
 end       
 
@@ -84,10 +76,4 @@ function get_basis_coefficients_on_cell!(coefficients, FE::HdivBDM1FiniteElement
     coefficients[5,2] = 1;
     coefficients[6,1] = 1;
     coefficients[6,2] = 1;
-    coefficients[4,1] = FE.grid.signs4cells[cell,1];
-    coefficients[4,2] = FE.grid.signs4cells[cell,1];
-    coefficients[5,1] = FE.grid.signs4cells[cell,2];
-    coefficients[5,2] = FE.grid.signs4cells[cell,2];
-    coefficients[6,1] = FE.grid.signs4cells[cell,3];
-    coefficients[6,2] = FE.grid.signs4cells[cell,3];
 end  

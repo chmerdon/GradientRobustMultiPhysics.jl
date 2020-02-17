@@ -257,7 +257,7 @@ if compare_with_bestapproximations == true
 
 
     # compute error of RT best-approximation
-    FE_RT = FiniteElements.getRT1FiniteElement(grid);
+    FE_RT = FiniteElements.getBDM1FiniteElement(grid);
     FiniteElements.show(FE_RT)
     val4dofs_RT = FiniteElements.createFEVector(FE_RT);
     computeBestApproximation!(val4dofs_RT,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_RT,p_order + FiniteElements.get_polynomial_order(FE_RT))

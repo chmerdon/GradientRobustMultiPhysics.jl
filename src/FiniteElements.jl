@@ -38,6 +38,8 @@ abstract type AbstractFiniteElement end
     include("FEdefinitions/HDIV_RT0.jl");
     include("FEdefinitions/HDIV_RT1.jl");
 
+    include("FEdefinitions/HDIV_BDM1.jl");
+
   # subtype for Hcurl-conforming elements
   abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
     # TODO
