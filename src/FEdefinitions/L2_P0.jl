@@ -6,7 +6,7 @@ end
 function getP0FiniteElement(grid,ncomponents)
     ensure_volume4cells!(grid);
     T = eltype(grid.coords4nodes);
-    return L2P0FiniteElement{T,ncomponents}("P0 (H1FiniteElement, ncomponents=$ncomponents)",grid)
+    return L2P0FiniteElement{T,ncomponents}("P0 (L2FiniteElement, ncomponents=$ncomponents)",grid)
 end 
 
 function get_xref4dof(FE::L2P0FiniteElement{T,1} where {T <: Real}, ::Grid.Grid.Abstract0DElemType) 

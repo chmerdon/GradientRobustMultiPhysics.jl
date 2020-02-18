@@ -31,8 +31,9 @@ function main()
 #fem = "MINI"
 #fem = "TH"
 #fem = "P2P0"
+fem = "P2B"
 #fem = "BR"
-fem = "BR+" # with reconstruction
+#fem = "BR+" # with reconstruction
 
 
 #use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
@@ -160,7 +161,6 @@ L2error_velocity = zeros(Float64,maxlevel)
 L2error_divergence = zeros(Float64,maxlevel)
 L2error_pressure = zeros(Float64,maxlevel)
 L2error_velocityBA = zeros(Float64,maxlevel)
-L2error_velocityRT = zeros(Float64,maxlevel)
 L2error_velocityVL = zeros(Float64,maxlevel)
 L2error_pressureBA = zeros(Float64,maxlevel)
 ndofs = zeros(Int,maxlevel)
@@ -179,6 +179,10 @@ if fem == "TH"
     # Taylor--Hood
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
     FE_pressure = FiniteElements.getP1FiniteElement(grid,1);
+elseif fem == "P2B"
+    # P2-bubble
+    FE_velocity = FiniteElements.getP2BFiniteElement(grid,2,2);
+    FE_pressure = FiniteElements.getP1discFiniteElement(grid,1);
 elseif fem == "MINI"
     # MINI
     FE_velocity = FiniteElements.getMINIFiniteElement(grid,2,2);
@@ -257,17 +261,7 @@ if compare_with_bestapproximations == true
     #println("L2_velocity_error_BA = " * string(L2error_velocityBA[level]));
     integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(use_problem), val4dofs_velocityVL, FE_velocity), grid, error_order, 2);
     L2error_velocityVL[level] = sqrt(abs(sum(integral4cells[:])));
-    #println("L2_velocity_error_VL = " * string(L2error_velocityVL[level]));
-
-
-    # compute error of RT best-approximation
-    FE_RT = FiniteElements.getBDM1FiniteElement(grid);
-    FiniteElements.show(FE_RT)
-    val4dofs_RT = FiniteElements.createFEVector(FE_RT);
-    computeBestApproximation!(val4dofs_RT,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_RT,p_order + FiniteElements.get_polynomial_order(FE_RT))
-    integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(use_problem), val4dofs_RT, FE_RT), grid, error_order, 2);
-    L2error_velocityRT[level] = sqrt(abs(sum(integral4cells[:])));
-    #println("L2_velocity_error_RT = " * string(L2error_velocityRT[level]));    
+    #println("L2_velocity_error_VL = " * string(L2error_velocityVL[level]));    
 end    
 
 #plot
@@ -304,8 +298,6 @@ if compare_with_bestapproximations == true
     show(L2error_velocityBA)
     println("\n L2 velocity VL error");
     show(L2error_velocityVL)
-    println("\n L2 velocity RT error");
-    show(L2error_velocityRT)
 end    
 
 if (show_convergence_history)
@@ -316,14 +308,13 @@ if (show_convergence_history)
     if compare_with_bestapproximations == true
         PyPlot.loglog(ndofs,L2error_velocityBA,"-o")
         PyPlot.loglog(ndofs,L2error_velocityVL,"-o")
-        PyPlot.loglog(ndofs,L2error_velocityRT,"-o")
         PyPlot.loglog(ndofs,L2error_pressureBA,"-o")
     end    
     PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
     PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
     PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
     if compare_with_bestapproximations == true
-        PyPlot.legend(("L2 error velocity","L2 error divergence","L2 error pressure","L2 error velocity BA","L2 error velocity Poisson","L2 error velocity RT","L2 error pressure BA","O(h)","O(h^2)","O(h^3)"))
+        PyPlot.legend(("L2 error velocity","L2 error divergence","L2 error pressure","L2 error velocity BA","L2 error velocity Poisson","L2 error pressure BA","O(h)","O(h^2)","O(h^3)"))
     else
         PyPlot.legend(("L2 error velocity","L2 error divergence","L2 error pressure","O(h)","O(h^2)","O(h^3)"))
     end    

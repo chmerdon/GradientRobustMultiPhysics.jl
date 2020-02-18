@@ -30,9 +30,10 @@ function main()
 
 # CHOOSE A FEM
 #fem = "CR"
-fem = "P1"
+#fem = "P1"
 # fem = "MINI"
 #fem = "P2"
+fem = "P2B"
 
 # CHOOSE A PROBLEM
 use_problem = "cubic"; f_order = 1; u_order = 3;
@@ -99,6 +100,8 @@ elseif fem == "CR"
     FE = FiniteElements.getCRFiniteElement(grid,2,1);
 elseif fem == "P2"
     FE = FiniteElements.getP2FiniteElement(grid,1);
+elseif fem == "P2B"
+    FE = FiniteElements.getP2BFiniteElement(grid,2,1);
 end    
 FiniteElements.show(FE)
 ndofs[level] = FiniteElements.get_ndofs(FE);

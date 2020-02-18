@@ -23,31 +23,6 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_ve
     dofs_velocity = zeros(Int64,ndofs4cell_velocity)
     diagonal_entries = [1, 4]
 
-    # # Lagrange multiplier for integral mean
-    # # implemented via row vector
-    # LM = zeros(Float64,ndofs_pressure)
-    # for cell = 1 : size(FE_velocity.grid.nodes4cells,1);
-    #     # get dofs
-    #     FiniteElements.get_dofs_on_cell!(dofs_pressure,FE_pressure, cell, ET);
-      
-    #     # update FEbasis on cell
-    #     FiniteElements.updateFEbasis!(FEbasis_pressure, cell)
-
-    #     for i in eachindex(qf.w)
-    #         # get FE basis at quadrature point
-    #         FiniteElements.getFEbasis4qp!(basisvals_pressure, FEbasis_pressure, i)
-
-    #         for dof_i = 1 : ndofs4cell_pressure
-    #             temp = basisvals_pressure[dof_i] * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-    #             LM[dofs_pressure[dof_i]] += temp;
-    #         end    
-    #     end    
-    # end    
-    # for dof = ndofs_pressure:-1:1
-    #     A[ndofs + 1, ndofs_velocity + dof] = LM[dof];
-    #     A[ndofs_velocity + dof, ndofs + 1] = LM[dof];
-    # end
-
     # Assembly rest of Stokes operators
     # Du*Dv + div(u)*q + div(v)*p
     for cell = 1 : size(FE_velocity.grid.nodes4cells,1);
