@@ -1,6 +1,6 @@
 # juliaFE
 FiniteElements for Julia
-=========================
+-------------------------
 
 Learning julia by implementing finite elements
 
@@ -21,8 +21,8 @@ Dependencies on other Julia packages:
 
 Features/Limitations:
 - type-treed FiniteElements module into
-    H1 elements (so far P1,P2,MINI,BR,CR)
-    L2 elements (so far P0, provisorically masked as a H1 element)
+    H1 elements (so far P1,P2,P2B,MINI,BR,CR)
+    L2 elements (so far P0, P1disc, provisorically masked as a H1 element)
     Hdiv elements (so far RT0, RT1, BDM1)
     Hcurl elements (in future)
 - running solver for Poisson problems, L2 bestapproximation with Dirichlet boundary data, (Navier-)Stokes problem
@@ -32,13 +32,13 @@ Features/Limitations:
 
 
 Next Goals:
-- implement P2B-Stokes FEM (with and without RT1/BDM reconstruction)
 - implement solver for compressible Stokes problem
+- implement RT1/BDM2 reconstruction for P2B-Stokes FEM
+- add Pardiso solver (via Pardiso.jl)
 - further improve steering by Grid.ElemTypes (Point, Line, Triangle, Tetrahedron,...)
 to objects nodes4cells of Mesh to choose correct transformation by multiple dispatch
 - sparse-matrices to save nodes4cells etc. to allow (in a far future) for different elements in Mesh and easier adjacency information (to build them up in 3D)
 - different boundary conditions (dependent on regions in the cell)
-- add Pardiso solver (via Pardiso.jl)
 
 
 
