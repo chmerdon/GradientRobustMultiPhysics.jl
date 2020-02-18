@@ -26,13 +26,14 @@ end
 
 function main()
 
-fem = "BR"
+#fem = "BR"
+fem = "CR"
 
-use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
+#use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
 #use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
-#use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
+use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
 maxlevel = 4
 nu = [1,1e-2,1e-4]
 
@@ -155,8 +156,12 @@ Grid.show(grid)
 
 # load finite element
 if fem == "BR"
-    # Bernardi--Raugel with RT0 reconstruction
+    # Bernardi--Raugel with RT0/BDM1 reconstruction
     FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
+    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+elseif fem == "CR"
+    # Crouzeix--Raviart with RT0/BDM1 reconstruction
+    FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
 end    
 FiniteElements.show(FE_velocity)

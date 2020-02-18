@@ -94,3 +94,71 @@ function get_basis_on_elemtype(FE::H1CRFiniteElement{T,2,2} where {T <: Real}, :
                 0.0 1.0]
     end
 end
+
+
+
+# DISCRETE DIVERGENCE-PRESERVING HDIV-RECONSTRUCTION
+
+function Hdivreconstruction_available(FE::H1CRFiniteElement{T,2,2} where T <: Real)
+    return true
+end
+
+function get_Hdivreconstruction_space(FE::H1CRFiniteElement{T,2,2} where T <: Real, variant::Int = 1)
+    if (variant == 1)
+        return getRT0FiniteElement(FE.grid)
+    elseif (variant == 2)
+        return getBDM1FiniteElement(FE.grid)    
+    end    
+end
+
+function get_Hdivreconstruction_trafo!(T,FE::H1CRFiniteElement{T,2,2} where T <: Real, FE_hdiv::HdivRT0FiniteElement)
+    ensure_length4faces!(FE.grid);
+    nfaces = size(FE.grid.nodes4faces,1)
+    nnodes = size(FE.grid.coords4nodes,1)
+    for face = 1 : nfaces
+        # reconstruction coefficients for CR basis functions
+        T[face,face] = 1 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+        T[nfaces+face,face] = 1 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+    end
+    return T
+end
+
+
+function get_Hdivreconstruction_trafo!(T,FE::H1CRFiniteElement{T,2,2} where T <: Real, FE_hdiv::HdivBDM1FiniteElement)
+    ensure_length4faces!(FE.grid);
+    ensure_cells4faces!(FE.grid);
+    nfaces = size(FE.grid.nodes4faces,1)
+    nnodes = size(FE.grid.coords4nodes,1)
+    ncells = size(FE.grid.nodes4cells,1)
+    for face = 1 : nfaces
+        # reconstruction coefficients for CR basis functions
+        T[face,face] = 1 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+        T[nfaces+face,face] = 1 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+    end
+
+    cellfaces = [0 0 0 0 0]
+    neighbourfactor = [0.5 0.5 0.5 0.5 0.5]
+    factor = 1 // 3
+    for cell = 1 : ncells
+        cellfaces[2:4] = FE.grid.faces4cells[cell,:]
+        cellfaces[1] = cellfaces[4]
+        cellfaces[5] = cellfaces[2]
+        for j = 1 : 5
+            if FE.grid.cells4faces[cellfaces[j],2] > 0
+                neighbourfactor[j] = 1 // 2
+            else
+                neighbourfactor[j] = 0
+            end
+        end
+        
+
+        for j = 2 : 4
+            T[cellfaces[j],nfaces + cellfaces[j-1]] = factor * neighbourfactor[j-1] * FE.grid.length4faces[cellfaces[j-1]] * FE.grid.normal4faces[cellfaces[j-1],1]
+            T[nfaces + cellfaces[j],nfaces + cellfaces[j-1]] = factor * neighbourfactor[j-1] * FE.grid.length4faces[cellfaces[j-1]] * FE.grid.normal4faces[cellfaces[j-1],2]
+            T[cellfaces[j],nfaces + cellfaces[j+1]] = factor * neighbourfactor[j+1] * FE.grid.length4faces[cellfaces[j+1]] * FE.grid.normal4faces[cellfaces[j+1],1]
+            T[nfaces + cellfaces[j],nfaces + cellfaces[j+1]] = factor * neighbourfactor[j+1] * FE.grid.length4faces[cellfaces[j+1]] * FE.grid.normal4faces[cellfaces[j+1],2]
+        end    
+    end
+    return T
+end
+

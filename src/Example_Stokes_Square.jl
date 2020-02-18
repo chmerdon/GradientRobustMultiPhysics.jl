@@ -27,6 +27,7 @@ end
 function main()
 
 #fem = "CR"
+#fem = "CR+"
 #fem = "MINI"
 #fem = "TH"
 #fem = "P2P0"
@@ -173,7 +174,7 @@ grid = triangulate_unitsquare(maxarea)
 Grid.show(grid)
 
 # load finite element
-use_reconstruction = false
+use_reconstruction = 0
 if fem == "TH"
     # Taylor--Hood
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
@@ -186,6 +187,11 @@ elseif fem == "CR"
     # Crouzeix--Raviart
     FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+elseif fem == "CR+"
+    # Crouzeix--Raviart
+    FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
+    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+    use_reconstruction = 1
 elseif fem == "BR"
     # Bernardi--Raugel
     FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
@@ -194,9 +200,9 @@ elseif fem == "BR+"
     # Bernardi--Raugel with RT0 reconstruction
     FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-    use_reconstruction = true
+    use_reconstruction = 1
 elseif fem == "P2P0"
-    # CP2P0
+    # P2P0
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
 end    
