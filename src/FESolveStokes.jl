@@ -56,7 +56,7 @@ include("FEoperators/CELL_STOKES.jl");
 
 
 
-function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, dirichlet_penalty::Float64 = 1e60)
+function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60)
         
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
@@ -71,9 +71,14 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
     
     # assemble system 
     @time begin
+        # compute Stokes operator
         print("    |assembling matrix...")
-        A = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
+        A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean
         assemble_operator!(A,CELL_STOKES,FE_velocity,FE_pressure,PD.viscosity);
+
+        # compute integrals of pressure dofs
+        pm = zeros(Float64,ndofs_pressure,1)
+        FESolveCommon.assemble_operator!(pm,FESolveCommon.CELL_1dotV,FE_pressure);
         println("finished")
     end
         
@@ -113,11 +118,9 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
         println("finished")
     end
     
-     # add value for Lagrange multiplier for integral mean
-    if length(val4dofs) == ndofs
-        append!(val4dofs,0.0);
-        append!(b,0.0); # add value for Lagrange multiplier for integral mean
-    end
+    # fix one pressure value
+    A[ndofs,ndofs] = pressure_penalty;
+    b[ndofs] = 1;
 
     @time begin
         print("    |solving...")
@@ -134,6 +137,11 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
         end
         println("finished")
     end
+
+    # move pressure mean to zero
+    domain_area = sum(FE_pressure.grid.volume4cells[:])
+    mean = dot(pm[:],val4dofs[ndofs_velocity+1:end])/domain_area
+    val4dofs[ndofs_velocity+1:end] .-= mean;
     
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b

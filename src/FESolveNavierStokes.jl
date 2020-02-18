@@ -17,7 +17,7 @@ using ForwardDiff
 # NAVIER-STOKES operators
 include("FEoperators/CELL_NAVIERSTOKES_A*DU*DV.jl");
 
-function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, use_reconstruction::Bool = false, maxiterations = 20, dirichlet_penalty::Float64 = 1e60)
+function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, use_reconstruction::Bool = false, maxiterations = 20, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60)
         
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
@@ -33,20 +33,20 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
     # assemble system 
     @time begin
         print("    |assembling linear part of matrix...")
-        Alin = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
+        Alin = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean
         FESolveStokes.assemble_operator!(Alin, FESolveStokes.CELL_STOKES, FE_velocity, FE_pressure, nu);
+
+        # compute integrals of pressure dofs
+        pm = zeros(Float64,ndofs_pressure,1)
+        FESolveCommon.assemble_operator!(pm,FESolveCommon.CELL_1dotV,FE_pressure);
+        
         println("finished")
     end
     
-     # add value for Lagrange multiplier for integral mean
-     if length(val4dofs) == ndofs
-        append!(val4dofs,0.0);
-    end
-
     @time begin
         # compute right-hand side vector
         print("    |assembling rhs...")
-        b = zeros(Float64,ndofs+1);
+        b = zeros(Float64,ndofs);
         if use_reconstruction
             @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
             FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity);
@@ -70,7 +70,10 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
         bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,true);
         println("finished")
     end
-    
+
+    # fix one pressure value
+    Alin[ndofs,ndofs] = pressure_penalty;
+    b[ndofs] = 1;
     
     iteration::Int64 = 0
     res = zeros(Float64,ndofs+1)
@@ -129,6 +132,10 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
         println("      |solver residual=", residual)
     end
     
+    # move pressure mean to zero
+    domain_area = sum(FE_pressure.grid.volume4cells[:])
+    mean = dot(pm[:],val4dofs[ndofs_velocity+1:end])/domain_area
+    val4dofs[ndofs_velocity+1:end] .-= mean;
     
     return residual
 end

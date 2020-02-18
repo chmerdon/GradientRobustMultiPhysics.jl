@@ -25,6 +25,7 @@ include("FEoperators/BFACE_U*V.jl");
 include("FEoperators/CELL_DU*DV.jl");
 
 # LINEAR FUNCTIONALS on cells
+include("FEoperators/CELL_1*V.jl");
 include("FEoperators/CELL_F*V.jl");
 include("FEoperators/CELL_F*DV.jl");
 

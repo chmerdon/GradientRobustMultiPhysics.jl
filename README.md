@@ -26,13 +26,13 @@ Features/Limitations:
     Hdiv elements (so far RT0, RT1, BDM1)
     Hcurl elements (in future)
 - running solver for Poisson problems, L2 bestapproximation with Dirichlet boundary data, (Navier-)Stokes problem
-- pressure-robustness: Hdiv reconstruction for Stokes elements (so far BR/RT0)
+- pressure-robustness: Hdiv reconstruction for Stokes elements (so far BR/RT0, BR/BDM1, CR/RT0, CR/BDM1)
 - own Mesh class (so far only for 1D and 2D meshes into intervals and triangles)
 - own Quadrature class (with generic quadrature formulas for intervals and triangles)
 
 
 Next Goals:
-- implement BDM1 and P2B-Stokes FEM (with and without RT1/BDM reconstruction)
+- implement P2B-Stokes FEM (with and without RT1/BDM reconstruction)
 - implement solver for compressible Stokes problem
 - further improve steering by Grid.ElemTypes (Point, Line, Triangle, Tetrahedron,...)
 to objects nodes4cells of Mesh to choose correct transformation by multiple dispatch
@@ -40,8 +40,5 @@ to objects nodes4cells of Mesh to choose correct transformation by multiple disp
 - different boundary conditions (dependent on regions in the cell)
 - add Pardiso solver (via Pardiso.jl)
 
-
-Known issues:
-- Stokes solver slow for large number of dofs due to issue with ExtendableSparse that suffers from a non-sparse row/column in the matrix related to the pressure constraint
 
 
