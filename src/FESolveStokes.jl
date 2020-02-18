@@ -56,7 +56,7 @@ include("FEoperators/CELL_STOKES.jl");
 
 
 
-function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, use_reconstruction::Bool = false, dirichlet_penalty::Float64 = 1e60)
+function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, dirichlet_penalty::Float64 = 1e60)
         
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
@@ -82,9 +82,9 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
         b = zeros(Float64,ndofs);
         for region = 1 : length(PD.volumedata4region)
             print("    |assembling rhs in region $region...")
-            if use_reconstruction
+            if reconst_variant > 0
                 @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity);
+                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
                 ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
                 b2 = zeros(Float64,ndofsHdiv);
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
@@ -92,7 +92,7 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
                 println("finished")
                 print("    |Hdivreconstruction...")
                 T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
-                FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity);
+                FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
                 b[1:ndofs_velocity] = T*b2;
             else
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_velocity)
@@ -118,7 +118,6 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
         append!(val4dofs,0.0);
         append!(b,0.0); # add value for Lagrange multiplier for integral mean
     end
-    
 
     @time begin
         print("    |solving...")

@@ -21,6 +21,13 @@ export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement
 abstract type AbstractFEOperator end
 abstract type AbstractFiniteElement end
 
+  # subtype for Hdiv-conforming elements
+  abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
+    include("FEdefinitions/HDIV_RT0.jl");
+    include("FEdefinitions/HDIV_RT1.jl");
+
+    include("FEdefinitions/HDIV_BDM1.jl");
+
   # subtype for H1 conforming elements (also Crouzeix-Raviart)
   abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
     include("FEdefinitions/H1_P1.jl");
@@ -33,13 +40,6 @@ abstract type AbstractFiniteElement end
   abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
     include("FEdefinitions/L2_P0.jl");
  
-  # subtype for Hdiv-conforming elements
-  abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
-    include("FEdefinitions/HDIV_RT0.jl");
-    include("FEdefinitions/HDIV_RT1.jl");
-
-    include("FEdefinitions/HDIV_BDM1.jl");
-
   # subtype for Hcurl-conforming elements
   abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
     # TODO

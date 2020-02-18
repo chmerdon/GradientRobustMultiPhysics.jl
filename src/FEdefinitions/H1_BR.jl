@@ -104,11 +104,15 @@ function Hdivreconstruction_available(FE::H1BRFiniteElement{T,2} where T <: Real
     return true
 end
 
-function get_Hdivreconstruction_space(FE::H1BRFiniteElement{T,2} where T <: Real)
-    return getRT0FiniteElement(FE.grid)
+function get_Hdivreconstruction_space(FE::H1BRFiniteElement{T,2} where T <: Real, variant::Int = 1)
+    if (variant == 1)
+        return getRT0FiniteElement(FE.grid)
+    elseif (variant == 2)
+        return getBDM1FiniteElement(FE.grid)    
+    end    
 end
 
-function get_Hdivreconstruction_trafo!(T,FE::H1BRFiniteElement{T,2} where T <: Real)
+function get_Hdivreconstruction_trafo!(T,FE::H1BRFiniteElement{T,2} where T <: Real, FE_hdiv::HdivRT0FiniteElement)
     ensure_length4faces!(FE.grid);
     nfaces = size(FE.grid.nodes4faces,1)
     nnodes = size(FE.grid.coords4nodes,1)
@@ -118,6 +122,26 @@ function get_Hdivreconstruction_trafo!(T,FE::H1BRFiniteElement{T,2} where T <: R
             node = FE.grid.nodes4faces[face,k]
             T[node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
             T[nnodes+node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+        end
+        # reconstruction coefficient for quadratic face bubbles
+        T[2*nnodes+face,face] = 2 // 3 * FE.grid.length4faces[face]
+    end
+    return T
+end
+
+
+function get_Hdivreconstruction_trafo!(T,FE::H1BRFiniteElement{T,2} where T <: Real, FE_hdiv::HdivBDM1FiniteElement)
+    ensure_length4faces!(FE.grid);
+    nfaces = size(FE.grid.nodes4faces,1)
+    nnodes = size(FE.grid.coords4nodes,1)
+    for face = 1 : nfaces
+        # reconstruction coefficients for P1 basis functions
+        for k = 1 : 2
+            node = FE.grid.nodes4faces[face,k]
+            T[node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+            T[nnodes+node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+            T[node,nfaces+face] = -1 // 6 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+            T[nnodes+node,nfaces+face] = -1 // 6 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
         end
         # reconstruction coefficient for quadratic face bubbles
         T[2*nnodes+face,face] = 2 // 3 * FE.grid.length4faces[face]

@@ -31,11 +31,11 @@ function main()
 fem = "BDM1"
 
 
-#use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
-#use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
-#use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
-#use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
-use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
+#use_problem = "P7vortex"; u_order = 7; error_order = 6; 
+#use_problem = "constant"; u_order = 0; error_order = 0; 
+#use_problem = "linear"; u_order = 1; error_order = 2; 
+#use_problem = "quadratic"; u_order = 2; error_order = 4; 
+#use_problem = "cubic"; u_order = 3; error_order = 6;
 maxlevel = 5
 
 show_plots = true
@@ -96,7 +96,7 @@ ndofs[level] = FiniteElements.get_ndofs(FE);
 
 # compute Hdiv best-approximation
 val4dofs = FiniteElements.createFEVector(FE);
-computeBestApproximation!(val4dofs,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE,p_order + FiniteElements.get_polynomial_order(FE))
+computeBestApproximation!(val4dofs,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE,u_order + FiniteElements.get_polynomial_order(FE))
 
 # compute error of Hdiv best-approximation
 integral4cells = zeros(size(grid.nodes4cells,1),2);

@@ -147,8 +147,6 @@ PD.quadorder4region = [f_order]
 PD.volumedata4region[1] = volume_data!(use_problem, false)
 PD.boundarydata4bregion[1] = exact_velocity!(use_problem)
 PD.quadorder4bregion = [u_order]
-    
-
 FESolveStokes.show(PD);
 
 
