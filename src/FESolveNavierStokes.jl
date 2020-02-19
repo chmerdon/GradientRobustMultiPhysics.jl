@@ -47,16 +47,16 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
         # compute right-hand side vector
         print("    |assembling rhs...")
         b = zeros(Float64,ndofs);
-        if use_reconstruction
+        if use_reconstruction > 0
             @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity);
+            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, 1);
             ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
             b2 = zeros(Float64,ndofsHdiv);
-            FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_Reconstruction, volume_data!, quadrature_order)
+            FESolveCommon.assemble_operator!(b2, FESolveCommon.CELL_FdotV, FE_Reconstruction, volume_data!, quadrature_order)
             println("finished")
             print("    |init Hdivreconstruction...")
-            T = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofsHdiv)
-            FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity);
+            T = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofsHdiv)
+            FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
             b = T*b2;
         else
             FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_velocity, volume_data!, quadrature_order)
@@ -76,9 +76,9 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
     b[ndofs] = 1;
     
     iteration::Int64 = 0
-    res = zeros(Float64,ndofs+1)
+    res = zeros(Float64,ndofs)
     residual = 0.0
-    A = ExtendableSparseMatrix{Float64,Int64}(ndofs+1,ndofs+1) # +1 due to Lagrange multiplier for integral mean
+    A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
     for j=1:maxiterations
         iteration += 1
         println("    |entering iteration $iteration")
@@ -92,9 +92,10 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
             @time begin
                 if use_reconstruction
                     val4dofs_hdiv = T'*val4dofs
-                    Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs+1)
+                    Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs)
                     assemble_operator!(Atemp,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_Reconstruction,val4dofs_hdiv);    
-                    A += T*Atemp
+                    
+                    A  += T*Atemp
                 else   
                     assemble_operator!(A,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_velocity,val4dofs);
                 end    

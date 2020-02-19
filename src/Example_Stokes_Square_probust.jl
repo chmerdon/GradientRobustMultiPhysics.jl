@@ -26,8 +26,8 @@ end
 
 function main()
 
-#fem = "BR"
-fem = "CR"
+fem = "BR"
+#fem = "CR"
 
 #use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;

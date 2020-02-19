@@ -17,6 +17,7 @@ Dependencies on other Julia packages:
 - Triangulate
 - DiffResults
 - ForwardDiff
+- BenchmarkTools
 
 
 Features/Limitations:
