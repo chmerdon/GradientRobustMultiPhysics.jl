@@ -15,7 +15,7 @@ using ForwardDiff
 
 
 # NAVIER-STOKES operators
-include("FEoperators/CELL_NAVIERSTOKES_A*DU*DV.jl");
+include("FEoperators/CELL_NAVIERSTOKES_AdotDUdotDV.jl");
 
 function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, use_reconstruction::Bool = false, maxiterations = 20, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60)
         

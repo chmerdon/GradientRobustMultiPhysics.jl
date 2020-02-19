@@ -15,25 +15,25 @@ using Quadrature
 
 
 # MASS matrices on cells
-include("FEoperators/CELL_U*V.jl");
+include("FEoperators/CELL_UdotV.jl");
 
 # MASS matrices on boundary faces
-include("FEoperators/BFACE_U*V.jl");
+include("FEoperators/BFACE_UdotV.jl");
 #include("FEoperators/HDIV_bface_UxV.jl");
 
 # STIFFNESS matrices on cells
-include("FEoperators/CELL_DU*DV.jl");
+include("FEoperators/CELL_DUdotDV.jl");
 
 # LINEAR FUNCTIONALS on cells
-include("FEoperators/CELL_1*V.jl");
-include("FEoperators/CELL_F*V.jl");
-include("FEoperators/CELL_F*DV.jl");
+include("FEoperators/CELL_1dotV.jl");
+include("FEoperators/CELL_FdotV.jl");
+include("FEoperators/CELL_FdotDV.jl");
 
 # LINEAR FUNCTIONALS on boundary faces
-include("FEoperators/BFACE_F*V.jl");
+include("FEoperators/BFACE_FdotV.jl");
 
 # DIV-DIV matrices on cells
-include("FEoperators/CELL_DIVU*DIVV.jl");
+include("FEoperators/CELL_DIVUdotDIVV.jl");
 
 
 function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!::Function,FE::AbstractFiniteElement,quadrature_order::Int)
