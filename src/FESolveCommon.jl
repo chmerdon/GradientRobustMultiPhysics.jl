@@ -73,7 +73,7 @@ function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!
     return A,b
 end
 
-function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestapproximation = false)
+function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestapproximation = false, quadorder = 1)
     if (boundary_data! == Nothing)
         return []
     else
@@ -84,7 +84,7 @@ function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestappr
             B = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
             assemble_operator!(B, BFACE_UdotV, FE)
             b = FiniteElements.createFEVector(FE);
-            assemble_operator!(b, BFACE_FdotV, FE, boundary_data!, FiniteElements.get_polynomial_order(FE))
+            assemble_operator!(b, BFACE_FdotV, FE, boundary_data!, quadorder)
         
             ETF = Grid.get_face_elemtype(FE.grid.elemtypes[1]);
             ensure_bfaces!(FE.grid);
@@ -206,7 +206,7 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
     if (celldim == 1)
         bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,false);
     else
-        bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,true);
+        bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,true,FiniteElements.get_polynomial_order(FE));
     end
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;

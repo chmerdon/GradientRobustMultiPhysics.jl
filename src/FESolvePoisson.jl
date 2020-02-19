@@ -29,7 +29,7 @@ function solvePoissonProblem!(val4dofs::Array, nu::Real, volume_data!::Function,
     if (celldim == 1)
         bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,false);
     else
-        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,true);
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,true,FiniteElements.get_polynomial_order(FE));
     end
     
     for i = 1 : length(bdofs)

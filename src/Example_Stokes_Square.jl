@@ -14,36 +14,48 @@ using PyPlot
 using Printf
 
 
-function triangulate_unitsquare(maxarea)
+function triangulate_unitsquare(maxarea, refine_barycentric = false)
+    if refine_barycentric == true
+        maxarea *= 6
+    end    
     triin=Triangulate.TriangulateIO()
     triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
     triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
     triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
     (triout, vorout)=triangulate("pALVa$(@sprintf("%.16f", maxarea))", triin)
-    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'),Grid.ElemType2DTriangle());
+    coords4nodes = Array{Float64,2}(triout.pointlist');
+    nodes4cells = Array{Int64,2}(triout.trianglelist');
+    if refine_barycentric
+        coords4nodes, nodes4cells = Grid.barycentric_refinement(Grid.ElemType2DTriangle(),coords4nodes,nodes4cells)
+    end    
+    return Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
 end
 
 
 function main()
 
 #fem = "CR"
+#fem = "CRipm"
 #fem = "CR+"
 #fem = "MINI"
 #fem = "TH"
+#fem = "SV"
+fem = "SVipm"
 #fem = "P2P0"
-fem = "P2B"
+#fem = "P2B"
 #fem = "BR"
 #fem = "BR+" # with reconstruction
 
 
-#use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
+#use_problem = "P7vortex"; u_order = 7; error_order = 7; p_order = 3; f_order = 5;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
-#use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
-use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
-maxlevel = 6
+use_problem = "quadratic"; u_order = 2; error_order = 4; p_order = 1; f_order = 0;
+#use_problem = "cubic"; u_order = 3; error_order = 6; p_order = 2; f_order = 1;
+maxlevel = 3
 nu = 1
 
+solve_iterative = (fem == "SVipm" || fem == "CRipm") ? true : false
 compare_with_bestapproximations = true
 show_plots = false
 show_convergence_history = true
@@ -170,7 +182,7 @@ for level = 1 : maxlevel
 println("Solving Stokes problem on refinement level...", level);
 println("Generating grid by triangle...");
 maxarea = 4.0^(-level)
-grid = triangulate_unitsquare(maxarea)
+grid = triangulate_unitsquare(maxarea, (fem == "SV" || fem == "SVipm") ? true : false)
 Grid.show(grid)
 
 # load finite element
@@ -179,6 +191,10 @@ if fem == "TH"
     # Taylor--Hood
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
     FE_pressure = FiniteElements.getP1FiniteElement(grid,1);
+elseif (fem == "SV") || (fem == "SVipm")
+    # Scott-Vogelius
+    FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
+    FE_pressure = FiniteElements.getP1discFiniteElement(grid,1);
 elseif fem == "P2B"
     # P2-bubble
     FE_velocity = FiniteElements.getP2BFiniteElement(grid,2,2);
@@ -187,7 +203,7 @@ elseif fem == "MINI"
     # MINI
     FE_velocity = FiniteElements.getMINIFiniteElement(grid,2,2);
     FE_pressure = FiniteElements.getP1FiniteElement(grid,1);
-elseif fem == "CR"
+elseif (fem == "CR") || (fem == "CRipm")
     # Crouzeix--Raviart
     FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
@@ -220,8 +236,11 @@ ndofs[level] = ndofs_velocity + ndofs_pressure;
 
 # solve Stokes problem
 val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
-residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
-    
+if solve_iterative
+    residual = solveStokesProblem_iterative!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+else
+    residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+end
 # check divergence
 B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
 FESolveCommon.assemble_operator!(B,FESolveCommon.CELL_DIVUdotDIVV,FE_velocity);
@@ -247,11 +266,11 @@ if compare_with_bestapproximations == true
 
     # compute velocity best approximation
     val4dofs_velocityBA = FiniteElements.createFEVector(FE_velocity);
-    residual = computeBestApproximation!(val4dofs_velocityBA,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_velocity,u_order+FiniteElements.get_polynomial_order(FE_velocity))
+    residual = computeBestApproximation!(val4dofs_velocityBA,"L2",exact_velocity!(use_problem),exact_velocity!(use_problem),FE_velocity,u_order)
 
     # compute velocity solution of vector Laplacian (Poisson)
     val4dofs_velocityVL = FiniteElements.createFEVector(FE_velocity);
-    residual = FESolvePoisson.solvePoissonProblem!(val4dofs_velocityVL,nu,volume_data!(use_problem, true),exact_velocity!(use_problem),FE_velocity,u_order+FiniteElements.get_polynomial_order(FE_velocity))
+    residual = FESolvePoisson.solvePoissonProblem!(val4dofs_velocityVL,nu,volume_data!(use_problem, true),exact_velocity!(use_problem),FE_velocity,f_order)
 
     integrate!(integral4cells,eval_L2_interpolation_error!(wrap_pressure, val4dofs_pressureBA, FE_pressure), grid, error_order, 1);
     L2error_pressureBA[level] = sqrt(abs(sum(integral4cells)));
