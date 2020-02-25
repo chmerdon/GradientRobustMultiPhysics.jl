@@ -17,46 +17,20 @@ function barycentric_refinement(::ElemType2DTriangle,coords4nodes::Array,nodes4c
     
     nnodes = size(coords4nodes,1);
     ncells = size(nodes4cells,1);
-
-    # compute nodes4faces
-    nodes4faces = @views [nodes4cells[:,1] nodes4cells[:,2]; nodes4cells[:,2] nodes4cells[:,3]; nodes4cells[:,3] nodes4cells[:,1]];
     
-    # sort each row ( faster than: sort!(Grid.nodes4faces, dims = 2);)
-    temp::Int64 = 0;
-    for j = 1 : 3*ncells
-        if nodes4faces[j,2] > nodes4faces[j,1]
-            temp = nodes4faces[j,1];
-            nodes4faces[j,1] = nodes4faces[j,2];
-            nodes4faces[j,2] = temp;
-        end
-    end
-        
-    # find unique rows -> this fixes the enumeration of the faces!
-    nodes4faces = unique(nodes4faces, dims = 1);
-    nfaces = size(nodes4faces,1);
-    
-    # compute and append face midpoints and cell midpoints
+    # compute and append cell midpoints
     coords4nodes = @views [coords4nodes;
-                           1 // 2 * (coords4nodes[nodes4faces[:,1],:] + coords4nodes[nodes4faces[:,2],:])
                            1 // 3 * (coords4nodes[nodes4cells[:,1],:] + coords4nodes[nodes4cells[:,2],:] + coords4nodes[nodes4cells[:,3],:])];
     
-    # mapping to get number of new mipoint between two old nodes
-    newnode4nodes = @views sparse(nodes4faces[:,1],nodes4faces[:,2],(1:nfaces) .+ nnodes,nnodes,nnodes);
-    newnode4nodes = newnode4nodes + newnode4nodes';
-    
     # build up new nodes4cells of uniform refinements
-    nodes4cells_new = zeros(Int,6*ncells,3);
+    nodes4cells_new = zeros(Int,3*ncells,3);
     newnodes = zeros(Int,3);
     for cell = 1 : ncells
-        newnodes = map(j->(newnode4nodes[nodes4cells[cell,j],nodes4cells[cell,mod(j,3)+1]]),1:3);
-        newcenternode = nfaces + nnodes + cell
-        nodes4cells_new[(1:6) .+ (cell-1)*6,:] = 
-            [nodes4cells[cell,1] newnodes[1] newcenternode;
-             newnodes[1] nodes4cells[cell,2] newcenternode;
-             nodes4cells[cell,2] newnodes[2] newcenternode;
-             newnodes[2] nodes4cells[cell,3] newcenternode;
-             nodes4cells[cell,3] newnodes[3] newcenternode;
-             newnodes[3] nodes4cells[cell,1] newcenternode]
+        newcenternode = nnodes + cell
+        nodes4cells_new[(1:3) .+ (cell-1)*3,:] = 
+            [nodes4cells[cell,1] nodes4cells[cell,2] newcenternode;
+             nodes4cells[cell,2] nodes4cells[cell,3] newcenternode;
+             nodes4cells[cell,3] nodes4cells[cell,1] newcenternode]
     end  
   return coords4nodes, nodes4cells_new;
 end
