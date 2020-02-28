@@ -146,6 +146,7 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b
     residual[bdofs] .= 0
+    residual[ndofs] = 0
     residual = norm(residual);
     println("    |residual=", residual)
     

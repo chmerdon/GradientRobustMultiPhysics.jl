@@ -15,9 +15,6 @@ using Printf
 
 
 function triangulate_unitsquare(maxarea, refine_barycentric = false)
-    if refine_barycentric == true
-        maxarea *= 6
-    end    
     triin=Triangulate.TriangulateIO()
     triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
     triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
@@ -36,7 +33,7 @@ function main()
 
 #fem = "CR"
 #fem = "CRipm"
-#fem = "CR+"
+#fem = "CR+" # with reconstruction
 #fem = "MINI"
 #fem = "TH"
 fem = "SV"
@@ -47,16 +44,16 @@ fem = "SV"
 #fem = "BR+" # with reconstruction
 
 
-#use_problem = "P7vortex"; u_order = 7; error_order = 7; p_order = 3; f_order = 5;
+#use_problem = "P7vortex"; u_order = 7; error_order = 9; p_order = 3; f_order = 5;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
 #use_problem = "quadratic"; u_order = 2; error_order = 4; p_order = 1; f_order = 0;
 use_problem = "cubic"; u_order = 3; error_order = 6; p_order = 2; f_order = 1;
-maxlevel = 3
+maxlevel = 5
 nu = 1
 
 solve_iterative = (fem == "SVipm" || fem == "CRipm") ? true : false
-compare_with_bestapproximations = true
+compare_with_bestapproximations = false
 show_plots = false
 show_convergence_history = true
 
@@ -322,7 +319,7 @@ end
 if (show_convergence_history)
     PyPlot.figure()
     PyPlot.loglog(ndofs,L2error_velocity,"-o")
-    PyPlot.loglog(ndofs,L2error_divergence,"-o")
+    #PyPlot.loglog(ndofs,L2error_divergence,"-o")
     PyPlot.loglog(ndofs,L2error_pressure,"-o")
     if compare_with_bestapproximations == true
         PyPlot.loglog(ndofs,L2error_velocityBA,"-o")

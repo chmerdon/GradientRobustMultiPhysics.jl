@@ -31,7 +31,7 @@ function main()
 fem = "BDM1"
 
 
-#use_problem = "P7vortex"; u_order = 7; error_order = 6; 
+use_problem = "P7vortex"; u_order = 7; error_order = 6; 
 #use_problem = "constant"; u_order = 0; error_order = 0; 
 #use_problem = "linear"; u_order = 1; error_order = 2; 
 #use_problem = "quadratic"; u_order = 2; error_order = 4; 
