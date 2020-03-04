@@ -73,40 +73,60 @@ function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!
     return A,b
 end
 
-function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestapproximation = false, quadorder = 1)
-    if (boundary_data! == Nothing)
-        return []
-    else
-        if use_L2bestapproximation == false
-            computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,boundary_data!);
-        else
-            ndofs = FiniteElements.get_ndofs(FE);
-            B = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
-            assemble_operator!(B, BFACE_UdotV, FE)
-            b = FiniteElements.createFEVector(FE);
-            assemble_operator!(b, BFACE_FdotV, FE, boundary_data!, quadorder)
-        
-            ETF = Grid.get_face_elemtype(FE.grid.elemtypes[1]);
-            ensure_bfaces!(FE.grid);
-            nbfaces::Int = size(FE.grid.bfaces,1);
-            ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
-        
-            bdofs = [];
-            dofs = zeros(Int64,ndofs4face)
-            for face in eachindex(FE.grid.bfaces)
-                FiniteElements.get_dofs_on_face!(dofs, FE, FE.grid.bfaces[face], ETF);
+function computeDirichletBoundaryData!(val4dofs,FE,Dbids::Vector{Int64},boundary_data!::Vector{Function}, use_L2bestapproximation, quadorder::Vector{Int64})
+    nbregions = length(Dbids)
+    if use_L2bestapproximation == false
+        bdofs = [];
+        for j = 1 : nbregions
+            if boundary_data![j] != Nothing
+                dofs = computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbids[j],boundary_data![j]);    
                 append!(bdofs,dofs)
-            end
-        
-            unique!(bdofs)
-            val4dofs[bdofs] = B[bdofs,bdofs]\b[bdofs];
-            return bdofs
+            end    
         end    
-    end
+        unique!(bdofs)
+        return bdofs
+    else
+        ensure_bfaces!(FE.grid);
+        ETF = Grid.get_face_elemtype(FE.grid.elemtypes[1]);
+        nbfaces::Int = size(FE.grid.bfaces,1);
+        ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
+
+        # assemble operators
+        ndofs = FiniteElements.get_ndofs(FE);
+        B = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
+        assemble_operator!(B, BFACE_UdotV, FE, Dbids)
+        b = FiniteElements.createFEVector(FE);
+
+        # find all bdofs on selected boundary parts
+        bdofs = [];
+        dofs = zeros(Int64,ndofs4face)
+        for j = 1 : nbregions
+            if boundary_data![j] != Nothing
+                assemble_operator!(b, BFACE_FdotV, FE, Dbids[j], boundary_data![j], quadorder[j])
+                for face in eachindex(FE.grid.bfaces)
+                    if FE.grid.bregions[face] == Dbids[j]
+                        FiniteElements.get_dofs_on_face!(dofs, FE, FE.grid.bfaces[face], ETF);
+                        append!(bdofs,dofs)
+                    end    
+                end
+            end    
+        end    
+
+        # solve bestapproximation problem on boundary
+        unique!(bdofs)
+        val4dofs[bdofs] = B[bdofs,bdofs]\b[bdofs];
+        return bdofs
+    end    
+end
+
+function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestapproximation = false, quadorder = 1)
+    dummy = Vector{Function}(undef, 1)
+    dummy[1] = boundary_data!
+    computeDirichletBoundaryData!(val4dofs,FE,[0],dummy,use_L2bestapproximation,[quadorder])
 end
 
 
-function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,boundary_data!)
+function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_data!)
 
     # find boundary dofs
     xdim = FiniteElements.get_ncomponents(FE);
@@ -146,45 +166,48 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,boundary_data!
     celldof2facedof = zeros(Int,ndofs4face)
     for i in eachindex(FE.grid.bfaces)
 
-        # find neighbouring cell
-        cell = FE.grid.cells4faces[FE.grid.bfaces[i],1];
+        if (FE.grid.bregions[i] == Dbid)
 
-        # get dofs
-        FiniteElements.get_dofs_on_face!(dofs4bface, FE, FE.grid.bfaces[i], ETF);
-        FiniteElements.get_dofs_on_cell!(dofs4cell, FE, cell, ET);
+            # find neighbouring cell
+            cell = FE.grid.cells4faces[FE.grid.bfaces[i],1];
 
-        # find position of face dofs in cell dofs
-        for j=1:ndofs4cell, k = 1 : ndofs4face
-            if dofs4cell[j] == dofs4bface[k]
-                celldof2facedof[k] = j;
-            end   
-        end
+            # get dofs
+            FiniteElements.get_dofs_on_face!(dofs4bface, FE, FE.grid.bfaces[i], ETF);
+            FiniteElements.get_dofs_on_cell!(dofs4cell, FE, cell, ET);
 
-        # append face dofs to bdofs
-        append!(bdofs,dofs4bface);
-
-        # setup trafo
-        trafo_on_cell = loc2glob_trafo(cell);
-
-        # setup local system of equations to determine piecewise interpolation of boundary data
-
-        # assemble matrix and right-hand side
-        for k = 1:ndofs4face
-            for l = 1:ndofs4face
-                A4bface[k,l] = dot(basisvals[celldof2facedof[k]][celldof2facedof[k],:],basisvals[celldof2facedof[k]][celldof2facedof[l],:]);
+            # find position of face dofs in cell dofs
+            for j=1:ndofs4cell, k = 1 : ndofs4face
+                if dofs4cell[j] == dofs4bface[k]
+                    celldof2facedof[k] = j;
+                end   
             end
-                
-            # evaluate Dirichlet data
-            boundary_data!(temp,trafo_on_cell(xref[celldof2facedof[k],:]));
-            b4bface[k] = dot(temp,basisvals[celldof2facedof[k]][celldof2facedof[k],:]);
-        end
 
-        # solve
-        val4dofs[dofs4bface] = A4bface\b4bface;
-        if norm(A4bface*val4dofs[dofs4bface]-b4bface) > eps(1e3)
-            println("WARNING: large residual, boundary data may be inexact");
-        end
+            # append face dofs to bdofs
+            append!(bdofs,dofs4bface);
+
+            # setup trafo
+            trafo_on_cell = loc2glob_trafo(cell);
+
+            # setup local system of equations to determine piecewise interpolation of boundary data
+
+            # assemble matrix and right-hand side
+            for k = 1:ndofs4face
+                for l = 1:ndofs4face
+                    A4bface[k,l] = dot(basisvals[celldof2facedof[k]][celldof2facedof[k],:],basisvals[celldof2facedof[k]][celldof2facedof[l],:]);
+                end 
+                
+                # evaluate Dirichlet data
+                boundary_data!(temp,trafo_on_cell(xref[celldof2facedof[k],:]));
+                b4bface[k] = dot(temp,basisvals[celldof2facedof[k]][celldof2facedof[k],:]);
+            end
+
+            # solve
+            val4dofs[dofs4bface] = A4bface\b4bface;
+            if norm(A4bface*val4dofs[dofs4bface]-b4bface) > eps(1e3)
+                println("WARNING: large residual, boundary data may be inexact");
+            end
         end    
+    end    
     return unique(bdofs)
 end
 

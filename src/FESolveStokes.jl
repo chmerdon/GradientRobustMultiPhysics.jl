@@ -109,8 +109,16 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
 
     @time begin
         # compute and apply boundary data
-        print("    |boundary data...")
-        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,PD.boundarydata4bregion[1],true,PD.quadorder4bregion[1]);
+        println("    |boundary data...")
+        Dnboundary_ids = findall(x->x == 2, PD.boundarytype4bregion)
+        if length(Dnboundary_ids) > 0
+            print("       Do-nothing : ")
+            Base.show(Dnboundary_ids); println("");
+        end    
+        print("       Dirichlet : ")
+        Dbboundary_ids = findall(x->x == 1, PD.boundarytype4bregion)
+        Base.show(Dbboundary_ids); println("");
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,Dbboundary_ids, PD.boundarydata4bregion,true,PD.quadorder4bregion);
         for i = 1 : length(bdofs)
            A[bdofs[i],bdofs[i]] = dirichlet_penalty;
            b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;

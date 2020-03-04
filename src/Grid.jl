@@ -16,6 +16,7 @@ mutable struct Mesh{T <: Real}
     nodes4faces::Array{Int64,2}
     faces4cells::Array{Int64,2}
     bfaces::Array{Int64,1}
+    bregions::Array{Int64,1}
     cells4faces::Array{Int64,2}
     length4faces::Array{T,1}
     normal4faces::Array{T,2}
@@ -23,7 +24,7 @@ mutable struct Mesh{T <: Real}
     
     function Mesh{T}(coords,nodes,ET::AbstractElemType) where {T<:Real}
         # only 2d triangulations allowed yet
-        new(coords,nodes,[ET],[],[[] []],[[] []],[],[[] []],[],[[] []],[[] []]);
+        new(coords,nodes,[ET],[],[[] []],[[] []],[],[],[[] []],[],[[] []],[[] []]);
     end
 end
 
@@ -35,7 +36,7 @@ end
 
   abstract type Abstract1DElemType <: AbstractElemType end
     include("GRIDelemtypes/1D_interval.jl");
-    include("GRIDelemtypes/1D_2Dline.jl");
+  #  include("GRIDelemtypes/1D_2Dline.jl");
 
   # subtype for elem types that require 2D integration
   abstract type Abstract2DElemType <: AbstractElemType end
@@ -147,6 +148,24 @@ function ensure_bfaces!(Grid::Mesh)
             end    
         end
         Grid.bfaces = findall(takeface);
+        Grid.bregions = zeros(Int64,length(Grid.bfaces));
+    end
+end
+
+function assign_boundaryregions!(grid,nodes4bfaces,bregions)
+    ensure_bfaces!(grid)
+    ensure_nodes4faces!(grid)
+    nodes1 = [0, 0]
+    nodes2 = [0, 0]
+    for j = 1 : length(bregions)
+        nodes1[:] = sort(nodes4bfaces[:,j])
+        for k = 1 : length(grid.bfaces)
+            nodes2[:] = sort(grid.nodes4faces[grid.bfaces[k],:])
+            if (nodes1 == nodes2)
+                grid.bregions[k] = bregions[j]
+                break;
+            end
+        end        
     end
 end
 

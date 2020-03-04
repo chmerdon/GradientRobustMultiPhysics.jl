@@ -1,7 +1,7 @@
 struct BFACE_UdotV <: FiniteElements.AbstractFEOperator end
 
 # matrix for L2 bestapproximation on boundary faces that writes into an ExtendableSparseMatrix
-function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UdotV},FE::AbstractFiniteElement)
+function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UdotV},FE::AbstractFiniteElement, Dbids::Vector{Int64})
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
   
@@ -22,37 +22,39 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UdotV},FE::Ab
     # quadrature loop
     temp = 0.0;
     face = 0;
-    #@time begin    
-    for bface = 1 : size(FE.grid.bfaces,1)
+    #@time begin      
+    for r = 1 : length(Dbids),  bface = 1 : size(FE.grid.bfaces,1)
+        if FE.grid.bregions[bface] == Dbids[r]
 
-        face = FE.grid.bfaces[bface];
+            face = FE.grid.bfaces[bface];
          
-        # get dofs
-        FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
+            # get dofs
+            FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
  
-        # update FEbasis on face
-        FiniteElements.updateFEbasis!(FEbasis, face)
+            # update FEbasis on face
+            FiniteElements.updateFEbasis!(FEbasis, face)
              
-        for i in eachindex(qf.w)
-            # get FE basis at quadrature point
-            FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
+            for i in eachindex(qf.w)
+                # get FE basis at quadrature point
+                FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
             
                 for dof_i = 1 : ndofs4face, dof_j = dof_i : ndofs4face
                     # fill upper right part and diagonal of matrix
                     @inbounds begin
-                      temp = 0.0
-                      for k = 1 : ncomponents
-                        temp += basisvals[dof_i,k]*basisvals[dof_j,k];
-                      end
-                      temp *= qf.w[i] * FE.grid.length4faces[face];
-                      A[dofs[dof_i],dofs[dof_j]] += temp;
-                      # fill lower left part of matrix
-                      if dof_j > dof_i
-                        A[dofs[dof_j],dofs[dof_i]] += temp;
-                      end 
+                        temp = 0.0
+                        for k = 1 : ncomponents
+                            temp += basisvals[dof_i,k]*basisvals[dof_j,k];
+                        end
+                        temp *= qf.w[i] * FE.grid.length4faces[face];
+                        A[dofs[dof_i],dofs[dof_j]] += temp;
+                        # fill lower left part of matrix
+                        if dof_j > dof_i
+                            A[dofs[dof_j],dofs[dof_i]] += temp;
+                        end 
                     end
                 end
             end
         end
+    end    
     #end      
 end

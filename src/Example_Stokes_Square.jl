@@ -25,7 +25,9 @@ function triangulate_unitsquare(maxarea, refine_barycentric = false)
     if refine_barycentric
         coords4nodes, nodes4cells = Grid.barycentric_refinement(Grid.ElemType2DTriangle(),coords4nodes,nodes4cells)
     end    
-    return Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
+    grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
+    Grid.assign_boundaryregions!(grid,triout.segmentlist,triout.segmentmarkerlist);
+    return grid
 end
 
 
@@ -152,12 +154,15 @@ PD = FESolveStokes.StokesProblemDescription()
 PD.name = use_problem;
 PD.viscosity = nu;
 PD.volumedata4region = Vector{Function}(undef,1)
-PD.boundarydata4bregion = Vector{Function}(undef,1)
-PD.boundarytype4bregion = [1]
+PD.boundarydata4bregion = Vector{Function}(undef,4)
+PD.boundarytype4bregion = ones(length(PD.boundarydata4bregion))
+PD.quadorder4bregion = zeros(length(PD.boundarydata4bregion))
 PD.quadorder4region = [f_order]
 PD.volumedata4region[1] = volume_data!(use_problem, false)
-PD.boundarydata4bregion[1] = exact_velocity!(use_problem)
-PD.quadorder4bregion = [u_order]
+for j = 1 : length(PD.boundarytype4bregion)
+    PD.boundarydata4bregion[j] = exact_velocity!(use_problem)
+    PD.quadorder4bregion[j] = u_order
+end    
 FESolveStokes.show(PD);
 
 
