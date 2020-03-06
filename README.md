@@ -7,7 +7,9 @@ Learning julia by implementing finite elements
 Usage examples:
 - 1D Poisson problem: see Example_Poisson_Line.jl
 - 2D Poisson problem: see Example_Poisson_Lshape.jl
-- 2D Stokes problem: see Example_Stokes_Square.jl, Example_Stokes_Square_probust.jl
+- 2D Stokes problem: see Example_Stokes_HagenPoiseuille.jl
+                         Example_Stokes_Square.jl
+                         Example_Stokes_Square_probust.jl
 - 2D Navier-Stokes problem: see Example_NavierStokes_Square.jl 
 - 2D Hdiv bestapproximation: see Example_HdivBestApprox_Square.jl
 

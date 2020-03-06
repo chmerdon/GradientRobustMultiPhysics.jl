@@ -127,8 +127,10 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
     end
     
     # fix one pressure value
-    A[ndofs,ndofs] = pressure_penalty;
-    b[ndofs] = 1;
+    if length(Dnboundary_ids) == 0
+        A[ndofs,ndofs] = pressure_penalty;
+        b[ndofs] = 1;
+    end    
 
     @time begin
         print("    |solving...")
@@ -147,9 +149,11 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
     end
 
     # move pressure mean to zero
-    domain_area = sum(FE_pressure.grid.volume4cells[:])
-    mean = dot(pm[:],val4dofs[ndofs_velocity+1:end])/domain_area
-    val4dofs[ndofs_velocity+1:end] .-= mean;
+    if length(Dnboundary_ids) == 0
+        domain_area = sum(FE_pressure.grid.volume4cells[:])
+        mean = dot(pm[:],val4dofs[ndofs_velocity+1:end])/domain_area
+        val4dofs[ndofs_velocity+1:end] .-= mean;
+    end
     
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b

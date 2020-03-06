@@ -26,7 +26,6 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
     fval = zeros(T,ncomponents)
     face = 0;
     #@time begin    
-        show(Dbid)
     for bface = 1 : size(FE.grid.bfaces,1)
         if FE.grid.bregions[bface] == Dbid
 
