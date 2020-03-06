@@ -56,7 +56,7 @@ include("FEoperators/CELL_STOKES.jl");
 
 
 
-function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60)
+function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60, symmetry_penalty::Float64 = 1e10)
         
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
@@ -123,6 +123,12 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
            A[bdofs[i],bdofs[i]] = dirichlet_penalty;
            b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
         end
+        Dsymboundary_ids = findall(x->x == 3, PD.boundarytype4bregion)
+        if length(Dnboundary_ids) > 0
+            print("       Symmetry : ")
+            Base.show(Dsymboundary_ids); println("");
+            FESolveCommon.assemble_operator!(A, FESolveCommon.BFACE_UndotVn, FE_velocity, Dsymboundary_ids, symmetry_penalty)
+        end    
         println("finished")
     end
     

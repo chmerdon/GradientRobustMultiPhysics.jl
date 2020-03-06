@@ -44,6 +44,7 @@ fem = "TH"
 #fem = "BR+" # with reconstruction
 
 do_nothing_inlet = true
+symmetry_top = true
 maxlevel = 5
 nu = 1
 
@@ -95,7 +96,12 @@ PD.boundarydata4bregion[2] = exact_velocity!
 PD.quadorder4bregion[2] = 2
 
 # top-bottom is constant one (later symmetric boundary)
-PD.boundarydata4bregion[3] = ones_data!
+if symmetry_top
+    PD.boundarydata4bregion[3] = zero_data!
+    PD.boundarytype4bregion[3] = 3
+else
+    PD.boundarydata4bregion[3] = ones_data!
+end    
 
 # inlet/left boundary is do-nothing
 if do_nothing_inlet == true

@@ -19,6 +19,7 @@ include("FEoperators/CELL_UdotV.jl");
 
 # MASS matrices on boundary faces
 include("FEoperators/BFACE_UdotV.jl");
+include("FEoperators/BFACE_UndotVn.jl");
 #include("FEoperators/HDIV_bface_UxV.jl");
 
 # STIFFNESS matrices on cells
