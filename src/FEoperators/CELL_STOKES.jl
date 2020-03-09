@@ -49,7 +49,9 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_ve
                         temp += gradients_velocity[dof_i,k] * gradients_velocity[dof_j,k];
                     end
                     temp *= nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-                    A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp;
+                    if abs(temp > 1e-12)
+                        A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp;
+                    end    
                 end
                 # pressure x (-div) velocity
                 for dof_j = 1 : ndofs4cell_pressure

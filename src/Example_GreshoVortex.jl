@@ -25,7 +25,9 @@ function triangulate_unitsquare(maxarea, refine_barycentric = false)
     if refine_barycentric
         coords4nodes, nodes4cells = Grid.barycentric_refinement(Grid.ElemType2DTriangle(),coords4nodes,nodes4cells)
     end    
-    return Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
+    grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
+    Grid.assign_boundaryregions!(grid,triout.segmentlist,triout.segmentmarkerlist);
+    return grid
 end
 
 
@@ -33,19 +35,23 @@ function main()
 
 #fem = "CR"
 #fem = "CRipm"
-#fem = "CR+" # with reconstruction
+#fem = "CR+" # with RT0 reconstruction
+#fem = "CR++" # with BDM1 reconstruction
 #fem = "MINI"
 #fem = "TH"
-fem = "SV"
+#fem = "SV"
 #fem = "SVipm"
 #fem = "P2P0"
 #fem = "P2B"
 #fem = "BR"
-#fem = "BR+" # with reconstruction
+#fem = "BR+" # with RT0 reconstruction
+fem = "BR++" # with BDM1 reconstruction
 
-reflevel = 4
+reflevel = 3
+timesteps = 10
+dt = 0.01
 u_order = 5
-nu = 1
+nu = 1e-6
 error_order = 10
 
 solve_iterative = (fem == "SVipm" || fem == "CRipm") ? true : false
@@ -76,10 +82,7 @@ end
 PD = FESolveStokes.StokesProblemDescription()
 PD.name = "Gresho vortex"
 PD.viscosity = nu;
-PD.time_dependent = true;
-PD.initial_time = 0.0
-PD.final_time = 3.0
-PD.initial_velocity = exact_velocity!()
+PD.time_dependent_data = false;
 PD.volumedata4region = Vector{Function}(undef,1)
 PD.boundarydata4bregion = Vector{Function}(undef,1)
 PD.boundarytype4bregion = [1]
@@ -122,6 +125,11 @@ elseif fem == "CR+"
     FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
     use_reconstruction = 1
+elseif fem == "CR++"
+    # Crouzeix--Raviart
+    FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
+    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+    use_reconstruction = 2
 elseif fem == "BR"
     # Bernardi--Raugel
     FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
@@ -131,6 +139,11 @@ elseif fem == "BR+"
     FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
     use_reconstruction = 1
+elseif fem == "BR++"
+    # Bernardi--Raugel with RT0 reconstruction
+    FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
+    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
+    use_reconstruction = 2
 elseif fem == "P2P0"
     # P2P0
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
@@ -148,13 +161,20 @@ ndofs = ndofs_velocity + ndofs_pressure;
 val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs);
 residual = FESolveStokes.computeDivFreeBestApproximation!(val4dofs,exact_velocity!(),exact_velocity!(),FE_velocity,FE_pressure,u_order)
 
+# compute errors
+integral4cells = zeros(size(grid.nodes4cells,1),1);
+integral4cells = zeros(size(grid.nodes4cells,1),2);
+integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(), val4dofs[1:ndofs_velocity], FE_velocity), grid, error_order, 2);
+L2error_velocity = sqrt(abs(sum(integral4cells[:])));
+println("L2_velocity_error_initial = " * string(L2error_velocity));
 
-# solve Stokes problem
-#if solve_iterative
-#    residual = solveStokesProblem_iterative!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
-#else
-#    residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
-#end
+TSS = FESolveStokes.setupTransientStokesSolver(PD,FE_velocity,FE_pressure,val4dofs,use_reconstruction)
+
+for j = 1 : timesteps
+    FESolveStokes.PerformTimeStep(TSS,dt)
+end    
+
+val4dofs[:] = TSS.current_solution[:]
 
 # check divergence
 B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
@@ -162,12 +182,6 @@ FESolveCommon.assemble_operator!(B,FESolveCommon.CELL_DIVUdotDIVV,FE_velocity);
 divergence = sqrt(abs(dot(val4dofs[1:ndofs_velocity],B*val4dofs[1:ndofs_velocity])));
 println("divergence = ",divergence);
 
-# compute errors
-integral4cells = zeros(size(grid.nodes4cells,1),1);
-integral4cells = zeros(size(grid.nodes4cells,1),2);
-integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(), val4dofs[1:ndofs_velocity], FE_velocity), grid, error_order, 2);
-L2error_velocity = sqrt(abs(sum(integral4cells[:])));
-println("L2_velocity_error_initial = " * string(L2error_velocity));
 
 #plot
 if (show_plots)

@@ -1,7 +1,7 @@
 struct CELL_UdotV <: FiniteElements.AbstractFEOperator end
 
 # matrix for L2 bestapproximation that writes into an ExtendableSparseMatrix
-function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_UdotV},FE::AbstractFiniteElement)
+function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_UdotV},FE::AbstractFiniteElement, factor::Real = 1.0)
     
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);
@@ -39,7 +39,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_UdotV},FE::Abs
                     for k = 1 : ncomponents
                         temp += basisvals[dof_i,k]*basisvals[dof_j,k];
                     end
-                    temp *=  qf.w[i] * FE.grid.volume4cells[cell]
+                    temp *= factor * qf.w[i] * FE.grid.volume4cells[cell]
                     A[dofs[dof_i],dofs[dof_j]] += temp;
                     # fill lower left part of matrix
                     if dof_j > dof_i
