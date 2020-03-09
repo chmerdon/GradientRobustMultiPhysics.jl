@@ -34,7 +34,7 @@ function show(PD::StokesProblemDescription)
 	println("         name : " * PD.name);
 	println("    time-dep. : " * string(PD.time_dependent));
     if (PD.time_dependent)
-        println("time-interval : ["* PD.initial_time * "," * PD.final_time * "]");
+        println("time-interval : ["* string(PD.initial_time) * "," * string(PD.final_time) * "]");
     end    
     print("rhs is defined: ");
     if length(PD.volumedata4region) > 0
@@ -53,8 +53,61 @@ end
 
 # STOKES operator
 include("FEoperators/CELL_STOKES.jl");
+include("FEoperators/CELL_DIVFREE_UdotV.jl");
 
+function computeDivFreeBestApproximation!(val4dofs::Array, volume_data!::Function,boundary_data!, FE_velocity::FiniteElements.AbstractFiniteElement, FE_pressure::FiniteElements.AbstractFiniteElement, quadorder::Int = 1, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60)
+        
+    ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
+    ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
+    ndofs = ndofs_velocity + ndofs_pressure;
+    
+    println("\nSOLVING STOKES PROBLEM")
+    println(" |FEvelocity = " * FE_velocity.name)
+    println(" |FEpressure = " * FE_pressure.name)
+    println(" |totalndofs = ", ndofs)
+    println(" |");
+    println(" |PROGRESS")
+    
+    # assemble system 
+    @time begin
+        # compute Stokes operator
+        print("    |assembling matrix...")
+        A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean
+        assemble_operator!(A,CELL_DIVFREE_UdotV,FE_velocity,FE_pressure);
+    end
+        
+    @time begin
+        # compute right-hand side vector
+        b = zeros(Float64,ndofs);
+        print("    |assembling rhs...")
+        quadorder = quadorder + FiniteElements.get_polynomial_order(FE_velocity)
+        FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_velocity, volume_data!, quadorder)
+        println("finished")
+    end
 
+    @time begin
+        # compute and apply boundary data
+        println("    |incorporating boundary data...")
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,quadorder);
+        println("     ...finished")
+    end
+    
+    # fix one pressure value
+    #A[ndofs,ndofs] = pressure_penalty;
+    #b[ndofs] = 1;
+       
+    # solve
+    val4dofs[:] = A\b;
+    
+    # compute residual (exclude bdofs)
+    residual = A*val4dofs - b
+    residual[bdofs] .= 0
+    residual[ndofs] = 0
+    residual = norm(residual);
+    println("    |residual=", residual)
+    
+    return residual
+end
 
 function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60, symmetry_penalty::Float64 = 1e10)
         
@@ -109,7 +162,7 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
 
     @time begin
         # compute and apply boundary data
-        println("    |boundary data...")
+        println("    |incorporating boundary data...")
         Dnboundary_ids = findall(x->x == 2, PD.boundarytype4bregion)
         if length(Dnboundary_ids) > 0
             print("       Do-nothing : ")
@@ -129,7 +182,7 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
             Base.show(Dsymboundary_ids); println("");
             FESolveCommon.assemble_operator!(A, FESolveCommon.BFACE_UndotVn, FE_velocity, Dsymboundary_ids, symmetry_penalty)
         end    
-        println("finished")
+        println("     ...finished")
     end
     
     # fix one pressure value
