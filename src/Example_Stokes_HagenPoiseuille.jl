@@ -32,23 +32,25 @@ end
 
 
 function main()
+use_reconstruction = 0
+barycentric_refinement = false
 
-#fem = "CR"
-#fem = "CR+" # with reconstruction
-#fem = "MINI"
-fem = "TH"
-#fem = "SV"
-#fem = "P2P0"
-#fem = "P2B"
-#fem = "BR"
-#fem = "BR+" # with reconstruction
+#fem_velocity = "CR"; fem_pressure = "P0"
+#fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = 1
+#fem_velocity = "MINI"; fem_pressure = "P1"
+fem_velocity = "P2";  fem_pressure = "P1"
+#fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
+#fem_velocity = "P2"; fem_pressure = "P0"
+#fem_velocity = "P2B"; fem_pressure = "P1dc"
+#fem_velocity = "BR"; fem_pressure = "P0"
+#fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
 
 do_nothing_inlet = true
 symmetry_top = true
 maxlevel = 5
 nu = 1
 
-solve_iterative = (fem == "SVipm" || fem == "CRipm") ? true : false
+solve_iterative = false
 show_plots = true
 show_convergence_history = true
 
@@ -129,50 +131,12 @@ for level = 1 : maxlevel
 println("Solving Stokes problem on refinement level...", level);
 println("Generating grid by triangle...");
 maxarea = 4.0^(-level)
-grid = triangulate_unitsquare(maxarea, (fem == "SV" || fem == "SVipm") ? true : false)
+grid = triangulate_unitsquare(maxarea, barycentric_refinement)
 Grid.show(grid)
 
 # load finite element
-use_reconstruction = 0
-if fem == "TH"
-    # Taylor--Hood
-    FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
-    FE_pressure = FiniteElements.getP1FiniteElement(grid,1);
-elseif (fem == "SV") || (fem == "SVipm")
-    # Scott-Vogelius
-    FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
-    FE_pressure = FiniteElements.getP1discFiniteElement(grid,1);
-elseif fem == "P2B"
-    # P2-bubble
-    FE_velocity = FiniteElements.getP2BFiniteElement(grid,2,2);
-    FE_pressure = FiniteElements.getP1discFiniteElement(grid,1);
-elseif fem == "MINI"
-    # MINI
-    FE_velocity = FiniteElements.getMINIFiniteElement(grid,2,2);
-    FE_pressure = FiniteElements.getP1FiniteElement(grid,1);
-elseif (fem == "CR") || (fem == "CRipm")
-    # Crouzeix--Raviart
-    FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
-    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-elseif fem == "CR+"
-    # Crouzeix--Raviart
-    FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
-    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-    use_reconstruction = 1
-elseif fem == "BR"
-    # Bernardi--Raugel
-    FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
-    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-elseif fem == "BR+"
-    # Bernardi--Raugel with RT0 reconstruction
-    FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
-    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-    use_reconstruction = 1
-elseif fem == "P2P0"
-    # P2P0
-    FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
-    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-end    
+FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
+FE_pressure = FiniteElements.string2FE(fem_pressure,grid,2,1)
 FiniteElements.show(FE_velocity)
 FiniteElements.show(FE_pressure)
 #FiniteElements.show_dofmap(FE_velocity)
@@ -242,7 +206,7 @@ if (show_convergence_history)
     PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
     PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
     PyPlot.legend(("L2 error velocity","L2 error divergence","L2 error pressure","O(h)","O(h^2)","O(h^3)"))   
-    PyPlot.title("Convergence history (fem=" * fem * ")")
+    PyPlot.title("Convergence history (fem=" * fem_velocity * "/" * fem_pressure * ")")
     ax = PyPlot.gca()
     ax.grid(true)
 end    

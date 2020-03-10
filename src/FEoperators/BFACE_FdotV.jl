@@ -63,7 +63,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
     end
 end
 
-function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractHdivFiniteElement, f!::Function, quadorder_f::Int)
+function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractHdivFiniteElement, Dbid::Int64, f!::Function, quadorder_f::Int)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
   
@@ -89,38 +89,40 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractHdivFiniteElemen
     face = 0;
     #@time begin    
     for bface = 1 : size(FE.grid.bfaces,1)
+        if FE.grid.bregions[bface] == Dbid
 
-        face = FE.grid.bfaces[bface];
-         
-        # get dofs
-        FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
- 
-        # update FEbasis on face
-        FiniteElements.updateFEbasis!(FEbasis, face)
+            face = FE.grid.bfaces[bface];
+            
+            # get dofs
+            FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
+    
+            # update FEbasis on face
+            FiniteElements.updateFEbasis!(FEbasis, face)
 
-        # get face trafo
-        face_trafo = loc2glob_trafo(face)
-             
-        for i in eachindex(qf.w)
-            # get FE basis at quadrature point
-            FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
+            # get face trafo
+            face_trafo = loc2glob_trafo(face)
+                
+            for i in eachindex(qf.w)
+                # get FE basis at quadrature point
+                FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
 
-            # evaluate f
-            x = face_trafo(qf.xref[i])
-            f!(fval, x)
+                # evaluate f
+                x = face_trafo(qf.xref[i])
+                f!(fval, x)
 
-            # multiply with normal and save in fval[1]
-            fval[1] = fval[1] * FE.grid.normal4faces[face,1] + fval[2] * FE.grid.normal4faces[face,2];
-            fval[2] = 0.0;
-             
-            for dof_i = 1 : ndofs4face
-                # fill vector
-                @inbounds begin
-                    temp = 0.0
-                    for k = 1 : ncomponents
-                        temp += fval[k]*basisvals[dof_i,k];
+                # multiply with normal and save in fval[1]
+                fval[1] = fval[1] * FE.grid.normal4faces[face,1] + fval[2] * FE.grid.normal4faces[face,2];
+                fval[2] = 0.0;
+                
+                for dof_i = 1 : ndofs4face
+                    # fill vector
+                    @inbounds begin
+                        temp = 0.0
+                        for k = 1 : ncomponents
+                            temp += fval[k]*basisvals[dof_i,k];
+                        end
+                        b[dofs[dof_i]] += temp * qf.w[i] * FE.grid.length4faces[face];
                     end
-                    b[dofs[dof_i]] += temp * qf.w[i] * FE.grid.length4faces[face];
                 end
             end
         end    

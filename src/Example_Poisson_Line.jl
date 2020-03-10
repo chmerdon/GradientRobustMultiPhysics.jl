@@ -83,11 +83,7 @@ maxarea = 2.0^(-level)
 grid = get_line_grid(maxarea)
 Grid.show(grid)
 
-if fem == "P1"
-    FE = FiniteElements.getP1FiniteElement(grid,1);
-elseif fem == "P2"
-    FE = FiniteElements.getP2FiniteElement(grid,1);
-end  
+FE = FiniteElements.string2FE(fem, grid, 1, 1)
 ensure_nodes4faces!(grid);
 ensure_volume4cells!(grid);
 FiniteElements.show(FE)

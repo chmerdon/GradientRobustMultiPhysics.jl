@@ -14,26 +14,33 @@ using PyPlot
 using Printf
 
 
-function triangulate_unitsquare(maxarea)
+function triangulate_unitsquare(maxarea, refine_barycentric = false)
     triin=Triangulate.TriangulateIO()
     triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
     triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
     triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
     (triout, vorout)=triangulate("pALVa$(@sprintf("%.16f", maxarea))", triin)
-    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'),Grid.ElemType2DTriangle());
+    coords4nodes = Array{Float64,2}(triout.pointlist');
+    nodes4cells = Array{Int64,2}(triout.trianglelist');
+    if refine_barycentric
+        coords4nodes, nodes4cells = Grid.barycentric_refinement(Grid.ElemType2DTriangle(),coords4nodes,nodes4cells)
+    end    
+    grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
+    Grid.assign_boundaryregions!(grid,triout.segmentlist,triout.segmentmarkerlist);
+    return grid
 end
 
 
 function main()
 
-fem = "BR"
-#fem = "CR"
+fem_velocity = "CR"; fem_pressure = "P0"
+#fem_velocity = "BR"; fem_pressure = "P0"
 
-#use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
+use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 8;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
 #use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
-use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
+#use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
 maxlevel = 4
 nu = [1,1e-2,1e-4]
 
@@ -127,13 +134,16 @@ end
 # write data into problem description structure
 PD = FESolveStokes.StokesProblemDescription()
 PD.name = use_problem;
-PD.viscosity = 1;
 PD.volumedata4region = Vector{Function}(undef,1)
-PD.boundarydata4bregion = Vector{Function}(undef,1)
-PD.boundarytype4bregion = [1]
+PD.boundarydata4bregion = Vector{Function}(undef,4)
+PD.boundarytype4bregion = ones(length(PD.boundarydata4bregion))
+PD.quadorder4bregion = zeros(length(PD.boundarydata4bregion))
 PD.quadorder4region = [f_order]
-PD.boundarydata4bregion[1] = exact_velocity!(use_problem)
-PD.quadorder4bregion = [u_order]
+PD.volumedata4region[1] = volume_data!(use_problem, nu[1])
+for j = 1 : length(PD.boundarytype4bregion)
+    PD.boundarydata4bregion[j] = exact_velocity!(use_problem)
+    PD.quadorder4bregion[j] = u_order
+end    
 FESolveStokes.show(PD);
 
 function wrap_pressure(result,x)
@@ -155,15 +165,8 @@ grid = triangulate_unitsquare(maxarea)
 Grid.show(grid)
 
 # load finite element
-if fem == "BR"
-    # Bernardi--Raugel with RT0/BDM1 reconstruction
-    FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
-    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-elseif fem == "CR"
-    # Crouzeix--Raviart with RT0/BDM1 reconstruction
-    FE_velocity = FiniteElements.getCRFiniteElement(grid,2,2);
-    FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-end    
+FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
+FE_pressure = FiniteElements.string2FE(fem_pressure,grid,2,1)
 FiniteElements.show(FE_velocity)
 FiniteElements.show(FE_pressure)
 ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
@@ -210,8 +213,8 @@ if (show_convergence_history)
         PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
         PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
         PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-        PyPlot.legend(("L2 error velocity " * fem,"L2 error velocity " * fem * " (RT reconstruction)","L2 error velocity " * fem * " (BDM reconstruction)","O(h)","O(h^2)","O(h^3)"))
-        PyPlot.title("Convergence history (fem=" * fem * " nu=" * string(nu[nu_index]) * " problem=" * use_problem * ")")
+        PyPlot.legend(("L2 error velocity " * fem_velocity,"L2 error velocity " * fem_velocity * " (RT reconstruction)","L2 error velocity " * fem_velocity * " (BDM reconstruction)","O(h)","O(h^2)","O(h^3)"))
+        PyPlot.title("Convergence history (fem=" * fem_velocity * " nu=" * string(nu[nu_index]) * " problem=" * use_problem * ")")
         ax = PyPlot.gca()
         ax.grid(true)
     end    

@@ -81,16 +81,7 @@ grid = triangulate_unitsquare(maxarea)
 Grid.show(grid)
 
 # load finite element
-if fem == "RT0"
-    # Raviart-Thomas 0
-    FE = FiniteElements.getRT0FiniteElement(grid);
-elseif fem == "RT1"
-    # Raviart-Thomas 1
-    FE = FiniteElements.getRT1FiniteElement(grid);
-elseif fem == "BDM1"
-    # Brezzi-Douglas-Marini 1
-    FE = FiniteElements.getBDM1FiniteElement(grid);
-end    
+FE = FiniteElements.string2FE(fem,grid,2);
 FiniteElements.show(FE)
 ndofs[level] = FiniteElements.get_ndofs(FE);
 

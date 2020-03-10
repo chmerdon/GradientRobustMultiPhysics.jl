@@ -92,17 +92,7 @@ maxarea = 4.0^(-level)
 grid = triangulate_lshape(maxarea)
 Grid.show(grid)
 
-if fem == "P1"
-    FE = FiniteElements.getP1FiniteElement(grid,1);
-elseif fem == "MINI"
-    FE = FiniteElements.getMINIFiniteElement(grid,2,1);
-elseif fem == "CR"
-    FE = FiniteElements.getCRFiniteElement(grid,2,1);
-elseif fem == "P2"
-    FE = FiniteElements.getP2FiniteElement(grid,1);
-elseif fem == "P2B"
-    FE = FiniteElements.getP2BFiniteElement(grid,2,1);
-end    
+FE = FiniteElements.string2FE(fem,grid,2,1)
 FiniteElements.show(FE)
 ndofs[level] = FiniteElements.get_ndofs(FE);
 

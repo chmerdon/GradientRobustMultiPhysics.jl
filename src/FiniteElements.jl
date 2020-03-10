@@ -110,6 +110,43 @@ function show_dofmap(FE::AbstractFiniteElement)
 	end
 end
 
+function string2FE(fem::String, grid::Grid.Mesh, dim::Int, ncomponents::Int = 1)
+    if fem == "P1"
+        # piecewise linear (continuous)
+        FE = FiniteElements.getP1FiniteElement(grid,ncomponents);
+    elseif fem == "P0"    
+        # piecewise constant
+        FE = FiniteElements.getP0FiniteElement(grid,ncomponents);
+    elseif fem == "P1dc"
+        # piecewise linear (disccontinuous)
+        FE = FiniteElements.getP1discFiniteElement(grid,ncomponents);
+    elseif fem == "P2"
+        # piecewise quadratic (continuous)
+        FE = FiniteElements.getP2FiniteElement(grid,ncomponents);
+    elseif fem == "MINI"
+        # MINI element (P1 + cell bubbles)
+        FE = FiniteElements.getMINIFiniteElement(grid,dim,ncomponents);
+    elseif fem == "CR"
+        # Crouzeix--Raviart
+        FE = FiniteElements.getCRFiniteElement(grid,dim,ncomponents);
+    elseif fem == "BR"
+        # Bernardi--Raugel
+        FE = FiniteElements.getBRFiniteElement(grid,ncomponents);
+    elseif fem == "P2B"
+        # P2-bubble element (P2 + cell_bubbles in 2D/3D + face bubbles in 3D)
+        FE = FiniteElements.getP2BFiniteElement(grid,dim,ncomponents);
+    elseif fem == "RT0"
+        # Raviart-Thomas 0
+        FE = FiniteElements.getRT0FiniteElement(grid);
+    elseif fem == "RT1"
+        # Raviart-Thomas 1
+        FE = FiniteElements.getRT1FiniteElement(grid);
+    elseif fem == "BDM1"
+        # Brezzi-Douglas-Marini 1
+        FE = FiniteElements.getBDM1FiniteElement(grid);
+    end    
+end
+
 # creates a zero vector of the correct length for the FE
 function createFEVector(FE::AbstractFiniteElement)
     return zeros(get_ndofs(FE));
