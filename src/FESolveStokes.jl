@@ -352,7 +352,8 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
     ndofs = ndofs_velocity + ndofs_pressure;
-    val4dofs = deepcopy(initial_solution);
+    val4dofs = zeros(Float64,ndofs);
+    val4dofs[:] = initial_solution[:];
     
     println("\nSETUP TRANSIENT STOKES PROBLEM")
     println(" |FEvelocity = " * FE_velocity.name)
@@ -365,18 +366,18 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
     @time begin
         # compute Stokes operator
         print("    |assembling Stokes matrix...")
-        A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean
+        A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
         assemble_operator!(A,CELL_STOKES,FE_velocity,FE_pressure,PD.viscosity);
         println("finished")
 
         # compute mass matrixif reconst_variant > 0
         print("    |assembling mass matrix...")
-        M = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean
+        M = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
         if reconst_variant > 0
             @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
             FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
             ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
-            Mhdiv = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofsHdiv) # +1 due to Lagrange multiplier for integral mean
+            Mhdiv = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofsHdiv)
             FESolveCommon.assemble_operator!(Mhdiv,FESolveCommon.CELL_UdotV,FE_Reconstruction);
             println("finished")
             print("    |Hdivreconstruction...")
@@ -385,7 +386,7 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
             ExtendableSparse.flush!(Mhdiv)
             ExtendableSparse.flush!(T)
             Mtemp = T.cscmatrix*Mhdiv.cscmatrix
-            M.cscmatrix = Mtemp*T'
+            M.cscmatrix = Mtemp*T.cscmatrix'
         else
             FESolveCommon.assemble_operator!(M,FESolveCommon.CELL_UdotV,FE_velocity);
             println("finished")
@@ -451,7 +452,7 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
     end    
 
     rhsvector = zeros(Float64,ndofs)
-    SystemMatrix = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean
+    SystemMatrix = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
     return TransientStokesSolver(PD,FE_velocity,FE_pressure,A,M,bdofs,dirichlet_penalty,b,initial_solution,val4dofs,0.0,0,-999,SystemMatrix,rhsvector)
 end
 
@@ -465,17 +466,20 @@ function PerformTimeStep(TSS::TransientStokesSolver, dt::Real = 1 // 10)
     if TSS.current_dt != dt
         println("    |updating matrix...")
         TSS.current_dt = dt
-        TSS.SystemMatrix = deepcopy(TSS.StokesMatrix)
+        TSS.SystemMatrix = deepcopy(TSS.MassMatrix)
         ExtendableSparse.flush!(TSS.SystemMatrix)
-        TSS.SystemMatrix.cscmatrix.nzval .*= dt
-        ExtendableSparse.flush!(TSS.MassMatrix)
-        TSS.SystemMatrix.cscmatrix += TSS.MassMatrix.cscmatrix
+        TSS.SystemMatrix.cscmatrix.nzval .*= (1.0/dt)
+        ExtendableSparse.flush!(TSS.StokesMatrix)
+        TSS.SystemMatrix.cscmatrix += TSS.StokesMatrix.cscmatrix
+        ExtendableSparse.flush!(TSS.SystemMatrix)
     else
         println("    |skipping updating matrix (dt did not change)...")   
     end     
 
     println("    |updating rhs...")
-    TSS.rhsvector[:] = dt*TSS.datavector[:] + TSS.MassMatrix * TSS.last_solution
+    TSS.rhsvector = TSS.MassMatrix * TSS.current_solution
+    TSS.rhsvector .*= (1.0/dt)
+    TSS.rhsvector += TSS.datavector
     
     println("    |apply boundary data...")
     for i = 1 : length(TSS.bdofs)
@@ -486,8 +490,11 @@ function PerformTimeStep(TSS::TransientStokesSolver, dt::Real = 1 // 10)
     # solve for next time step
     # todo: reuse LU decomposition of matrix
     println("    |solving...")
-    TSS.last_solution[:] = TSS.current_solution[:]
+    TSS.last_solution = deepcopy(TSS.current_solution)
     TSS.current_solution = TSS.SystemMatrix\TSS.rhsvector
+
+    change = norm(TSS.last_solution - TSS.current_solution);
+    println("    |change=", change)
 
     # compute residual (exclude bdofs)
     TSS.rhsvector = TSS.SystemMatrix*TSS.current_solution - TSS.rhsvector

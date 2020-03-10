@@ -40,20 +40,22 @@ function main()
 #fem = "CR++" # with BDM1 reconstruction
 #fem = "MINI"
 #fem = "TH"
-#fem = "SV"
+fem = "SV"
 #fem = "SVipm"
 #fem = "P2P0"
 #fem = "P2B"
 #fem = "BR"
-fem = "BR+" # with RT0 reconstruction
+#fem = "BR+" # with RT0 reconstruction
 #fem = "BR++" # with BDM1 reconstruction
 
-reflevel = 5
+reflevel = 4
 dt = 0.01
-final_time = 0.1
+final_time = 1.0
+nonlinear = true
 timesteps::Int64 = floor(final_time / dt)
-error_computation_gaps = 10 # every xxx timesteps errors are calculated
-u_order = 5
+energy_computation_gaps = 2
+u_order =
+ 5
 nu = 1e-4
 error_order = 10
 
@@ -61,6 +63,11 @@ solve_iterative = (fem == "SVipm" || fem == "CRipm") ? true : false
 compare_with_bestapproximations = false
 show_plots = true
 show_convergence_history = true
+
+function zero_data!(result,x)
+    result[1] = 0.0;
+    result[2] = 0.0;
+end
 
 function exact_velocity!()
     r = 0.0
@@ -164,26 +171,43 @@ residual = FESolveStokes.computeDivFreeBestApproximation!(val4dofs,exact_velocit
 
 TSS = FESolveStokes.setupTransientStokesSolver(PD,FE_velocity,FE_pressure,val4dofs,use_reconstruction)
 
-velocity_error_L2 = []
-error_times = []
+velocity_energy = []
+energy_times = []
+
+
+if (show_plots)
+    pygui(true)
+    
+    # evaluate velocity and pressure at grid points
+    velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
+    speed = sqrt.(sum(velo.^2, dims = 2))
+    #pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
+
+    PyPlot.figure(1)
+    tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
+    PyPlot.axis("equal")
+    PyPlot.title("Stokes Problem Solution - velocity speed")
+    PyPlot.colorbar(tcf)
+end    
 
 for j = 0 : timesteps
 
-    if mod(j,error_computation_gaps) == 0
+    if mod(j,energy_computation_gaps) == 0
         println("computing errors")
         # compute errors
         integral4cells = zeros(size(grid.nodes4cells,1),1);
         integral4cells = zeros(size(grid.nodes4cells,1),2);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(), val4dofs[1:ndofs_velocity], FE_velocity), grid, error_order, 2);
-        append!(velocity_error_L2,sqrt(abs(sum(integral4cells[:]))));
-        append!(error_times,TSS.current_time);
+        integrate!(integral4cells,eval_L2_interpolation_error!(zero_data!, val4dofs[1:ndofs_velocity], FE_velocity), grid, error_order, 2);
+        append!(velocity_energy,sqrt(abs(sum(integral4cells[:]))));
+        append!(energy_times,TSS.current_time);
     end    
 
-    FESolveStokes.PerformTimeStep(TSS,dt)
-    #FESolveNavierStokes.PerformIMEXTimeStep(TSS,dt)
-end    
-
-val4dofs[:] = TSS.current_solution[:]
+    if nonlinear == false
+        FESolveStokes.PerformTimeStep(TSS,dt)
+    else
+        FESolveNavierStokes.PerformIMEXTimeStep(TSS,dt)
+    end
+    val4dofs[:] = TSS.current_solution[:]
 
 #plot
 if (show_plots)
@@ -195,7 +219,7 @@ if (show_plots)
     #pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
 
     PyPlot.figure(1)
-    PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
+    tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
     PyPlot.axis("equal")
     PyPlot.title("Stokes Problem Solution - velocity speed")
     #PyPlot.figure(1)
@@ -208,13 +232,15 @@ if (show_plots)
     #PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),pressure[:],cmap=get_cmap("ocean"))
     #PyPlot.title("Stokes Problem Solution - pressure")
     show()
-end
+end    
+end    
 
+Base.show(velocity_energy)
 
 if (show_convergence_history)
     PyPlot.figure()
-    PyPlot.loglog(error_times,velocity_error_L2,"-o")
-    PyPlot.legend(("L2 error velocity"))
+    PyPlot.loglog(energy_times,velocity_energy,"-o")
+    PyPlot.legend(("Energy"))
     PyPlot.title("Convergence history (fem=" * fem * ")")
     ax = PyPlot.gca()
     ax.grid(true)

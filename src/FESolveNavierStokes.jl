@@ -173,20 +173,23 @@ function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real 
     if TSS.current_dt != dt
         println("    |updating matrix...")
         TSS.current_dt = dt
-        TSS.SystemMatrix = deepcopy(TSS.StokesMatrix)
+        TSS.SystemMatrix = deepcopy(TSS.MassMatrix)
         ExtendableSparse.flush!(TSS.SystemMatrix)
-        TSS.SystemMatrix.cscmatrix.nzval .*= dt
-        ExtendableSparse.flush!(TSS.MassMatrix)
-        TSS.SystemMatrix.cscmatrix += TSS.MassMatrix.cscmatrix
+        TSS.SystemMatrix.cscmatrix.nzval .*= (1.0/dt)
+        ExtendableSparse.flush!(TSS.StokesMatrix)
+        TSS.SystemMatrix.cscmatrix += TSS.StokesMatrix.cscmatrix
+        ExtendableSparse.flush!(TSS.SystemMatrix)
     else
         println("    |skipping updating matrix (dt did not change)...")   
     end     
 
-    println("    |updating rhs...")
-    TSS.rhsvector[:] = TSS.datavector[:]
+    println("    |updating linear part of rhs...")
+    TSS.rhsvector = TSS.MassMatrix * TSS.current_solution
+    TSS.rhsvector .*= (1.0/dt)
+    TSS.rhsvector += TSS.datavector
+
+    println("    |updating nonlinear part of rhs...")
     assemble_operator!(TSS.rhsvector,CELL_NAVIERSTOKES_AdotDAdotDV,TSS.FE_velocity,TSS.FE_velocity,TSS.current_solution,TSS.current_solution)
-    TSS.rhsvector .* dt
-    TSS.rhsvector += TSS.MassMatrix * TSS.last_solution
     
     println("    |apply boundary data...")
     for i = 1 : length(TSS.bdofs)
