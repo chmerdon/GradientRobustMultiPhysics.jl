@@ -1,6 +1,6 @@
 struct CELL_STOKES <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_velocity::FiniteElements.AbstractFiniteElement, FE_pressure::FiniteElements.AbstractFiniteElement, nu::Real = 1.0, pressure_diagonal = 1e-8)
+function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_velocity::FiniteElements.AbstractFiniteElement, FE_pressure::FiniteElements.AbstractFiniteElement, nu::Real = 1.0, pressure_diagonal = 1e-14)
     
     # get quadrature formula
     T = eltype(FE_velocity.grid.coords4nodes);
@@ -66,7 +66,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_ve
             # pressure x pressure
             if (pressure_diagonal > 0)
                 for dof_i = 1 : ndofs4cell_pressure
-                    A[dofs_pressure[dof_i],dofs_pressure[dof_i]] += pressure_diagonal;
+                    A[dofs_pressure[dof_i],dofs_pressure[dof_i]] += pressure_diagonal * qf.w[i] * FE_velocity.grid.volume4cells[cell];
                 end
             end
         end  
