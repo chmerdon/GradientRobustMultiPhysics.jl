@@ -1,10 +1,10 @@
 using Printf
 
-function gridgen_unitsquare(maxarea, refine_barycentric = false)
+function gridgen_lshape(maxarea, refine_barycentric = false)
     triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
+    triin.pointlist=Matrix{Cdouble}([-1 -1; 0 -1; 0 0; 1 0; 1 1; -1 1]')
+    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5 ; 5 6 ; 6 1 ]')
+    triin.segmentmarkerlist=Vector{Int32}([1, 2, 2, 1, 1, 1])
     (triout, vorout)=triangulate("pALVa$(@sprintf("%.16f", maxarea))", triin)
     coords4nodes = Array{Float64,2}(triout.pointlist');
     nodes4cells = Array{Int64,2}(triout.trianglelist');

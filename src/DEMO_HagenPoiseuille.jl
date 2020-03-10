@@ -13,7 +13,6 @@
 using Triangulate
 using Grid
 using Quadrature
-using LinearAlgebra
 using FiniteElements
 using FESolveCommon
 using FESolveStokes
@@ -37,7 +36,7 @@ function main()
     maxdofs = 60000
 
     # other switches
-    show_plots = true
+    show_plots = false
     show_convergence_history = true
     use_reconstruction = 0 # do not change here
     barycentric_refinement = false # do not change here
@@ -78,13 +77,16 @@ function main()
     L2error_divergence = zeros(Float64,maxlevel)
     L2error_pressure = zeros(Float64,maxlevel)
     ndofs = zeros(Int,maxlevel)
-
+    grid = Nothing
+    FE_velocity = Nothing
+    FE_pressure = Nothing
+    val4dofs = Nothing
     for level = 1 : maxlevel
 
         println("Solving Stokes problem on refinement level...", level);
         println("Generating grid by triangle...");
         maxarea = 4.0^(-level)
-        grid = triangulate_unitsquare(maxarea, barycentric_refinement)
+        grid = gridgen_unitsquare(maxarea, barycentric_refinement)
         Grid.show(grid)
 
         # load finite element
@@ -100,6 +102,12 @@ function main()
         if ndofs[level] > maxdofs 
             println("terminating (maxdofs exceeded)...");
             maxlevel = level - 1
+            if (show_plots)
+                maxarea = 4.0^(-maxlevel)
+                grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+                FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
+                FE_pressure = FiniteElements.string2FE(fem_pressure,grid,2,1)
+            end    
             break
         end
 
@@ -115,25 +123,6 @@ function main()
         integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!, val4dofs[1:ndofs_velocity], FE_velocity), grid, 4, 2);
         L2error_velocity[level] = sqrt(abs(sum(integral4cells[:])));
 
-        #plot
-        if (show_plots) && (level == maxlevel) && ndofs[level] < 7500
-            pygui(true)
-            
-            # evaluate velocity and pressure at grid points
-            velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
-            pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
-
-            PyPlot.figure(1)
-            PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,1),cmap=get_cmap("ocean"))
-            PyPlot.title("Stokes Problem Solution - velocity component 1")
-            PyPlot.figure(2)
-            PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,2),cmap=get_cmap("ocean"))
-            PyPlot.title("Stokes Problem Solution - velocity component 2")
-            PyPlot.figure(3)
-            PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),pressure[:],cmap=get_cmap("ocean"))
-            PyPlot.title("Stokes Problem Solution - pressure")
-            show()
-        end
     end # loop over levels
 
     println("\n L2 pressure error");
@@ -142,6 +131,26 @@ function main()
     show(L2error_velocity)
     println("\n L2 velocity divergence error");
     show(L2error_divergence)
+
+    #plot
+    if (show_plots)
+        pygui(true)
+        
+        # evaluate velocity and pressure at grid points
+        velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
+        pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
+
+        PyPlot.figure(1)
+        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,1),cmap=get_cmap("ocean"))
+        PyPlot.title("Stokes Problem Solution - velocity component 1")
+        PyPlot.figure(2)
+        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,2),cmap=get_cmap("ocean"))
+        PyPlot.title("Stokes Problem Solution - velocity component 2")
+        PyPlot.figure(3)
+        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),pressure[:],cmap=get_cmap("ocean"))
+        PyPlot.title("Stokes Problem Solution - pressure")
+        show()
+    end
 
     if (show_convergence_history)
         PyPlot.figure()

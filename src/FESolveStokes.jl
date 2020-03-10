@@ -20,12 +20,12 @@ mutable struct StokesProblemDescription
     boundarydata4bregion:: Vector{Function}
     boundarytype4bregion:: Vector{Int64}
     quadorder4bregion:: Vector{Int64}
-    StokesProblemDescription() = new("undefined problem", false, 1.0)
+    StokesProblemDescription() = new("undefined Stokes problem", false, 1.0)
 end
 
 function show(PD::StokesProblemDescription)
 
-	println("Problem description");
+	println("StokesProblem description");
 	println("         name : " * PD.name);
 	println("    time-dep. : " * string(PD.time_dependent_data));
     print("rhs is defined: ");

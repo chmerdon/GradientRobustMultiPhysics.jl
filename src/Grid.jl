@@ -148,7 +148,7 @@ function ensure_bfaces!(Grid::Mesh)
             end    
         end
         Grid.bfaces = findall(takeface);
-        Grid.bregions = zeros(Int64,length(Grid.bfaces));
+        Grid.bregions = ones(Int64,length(Grid.bfaces));
     end
 end
 
