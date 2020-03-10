@@ -7,6 +7,7 @@ using SparseArrays
 using FiniteElements
 using FESolveCommon
 using FESolveStokes
+using FESolveNavierStokes
 using FESolvePoisson
 using ForwardDiff
 ENV["MPLBACKEND"]="tkagg"
@@ -44,22 +45,22 @@ function main()
 #fem = "P2P0"
 #fem = "P2B"
 #fem = "BR"
-#fem = "BR+" # with RT0 reconstruction
-fem = "BR++" # with BDM1 reconstruction
+fem = "BR+" # with RT0 reconstruction
+#fem = "BR++" # with BDM1 reconstruction
 
-reflevel = 3
-timesteps = 10
+reflevel = 5
 dt = 0.01
+final_time = 0.1
+timesteps::Int64 = floor(final_time / dt)
+error_computation_gaps = 10 # every xxx timesteps errors are calculated
 u_order = 5
-nu = 1e-6
+nu = 1e-4
 error_order = 10
 
 solve_iterative = (fem == "SVipm" || fem == "CRipm") ? true : false
 compare_with_bestapproximations = false
 show_plots = true
 show_convergence_history = true
-
-
 
 function exact_velocity!()
     r = 0.0
@@ -161,27 +162,28 @@ ndofs = ndofs_velocity + ndofs_pressure;
 val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs);
 residual = FESolveStokes.computeDivFreeBestApproximation!(val4dofs,exact_velocity!(),exact_velocity!(),FE_velocity,FE_pressure,u_order)
 
-# compute errors
-integral4cells = zeros(size(grid.nodes4cells,1),1);
-integral4cells = zeros(size(grid.nodes4cells,1),2);
-integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(), val4dofs[1:ndofs_velocity], FE_velocity), grid, error_order, 2);
-L2error_velocity = sqrt(abs(sum(integral4cells[:])));
-println("L2_velocity_error_initial = " * string(L2error_velocity));
-
 TSS = FESolveStokes.setupTransientStokesSolver(PD,FE_velocity,FE_pressure,val4dofs,use_reconstruction)
 
-for j = 1 : timesteps
+velocity_error_L2 = []
+error_times = []
+
+for j = 0 : timesteps
+
+    if mod(j,error_computation_gaps) == 0
+        println("computing errors")
+        # compute errors
+        integral4cells = zeros(size(grid.nodes4cells,1),1);
+        integral4cells = zeros(size(grid.nodes4cells,1),2);
+        integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!(), val4dofs[1:ndofs_velocity], FE_velocity), grid, error_order, 2);
+        append!(velocity_error_L2,sqrt(abs(sum(integral4cells[:]))));
+        append!(error_times,TSS.current_time);
+    end    
+
     FESolveStokes.PerformTimeStep(TSS,dt)
+    #FESolveNavierStokes.PerformIMEXTimeStep(TSS,dt)
 end    
 
 val4dofs[:] = TSS.current_solution[:]
-
-# check divergence
-B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
-FESolveCommon.assemble_operator!(B,FESolveCommon.CELL_DIVUdotDIVV,FE_velocity);
-divergence = sqrt(abs(dot(val4dofs[1:ndofs_velocity],B*val4dofs[1:ndofs_velocity])));
-println("divergence = ",divergence);
-
 
 #plot
 if (show_plots)
@@ -209,28 +211,14 @@ if (show_plots)
 end
 
 
-# if (show_convergence_history)
-#     PyPlot.figure()
-#     PyPlot.loglog(ndofs,L2error_velocity,"-o")
-#     #PyPlot.loglog(ndofs,L2error_divergence,"-o")
-#     PyPlot.loglog(ndofs,L2error_pressure,"-o")
-#     if compare_with_bestapproximations == true
-#         PyPlot.loglog(ndofs,L2error_velocityBA,"-o")
-#         PyPlot.loglog(ndofs,L2error_velocityVL,"-o")
-#         PyPlot.loglog(ndofs,L2error_pressureBA,"-o")
-#     end    
-#     PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
-#     PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-#     PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-#     if compare_with_bestapproximations == true
-#         PyPlot.legend(("L2 error velocity","L2 error divergence","L2 error pressure","L2 error velocity BA","L2 error velocity Poisson","L2 error pressure BA","O(h)","O(h^2)","O(h^3)"))
-#     else
-#         PyPlot.legend(("L2 error velocity","L2 error divergence","L2 error pressure","O(h)","O(h^2)","O(h^3)"))
-#     end    
-#     PyPlot.title("Convergence history (fem=" * fem * " problem=" * use_problem * ")")
-#     ax = PyPlot.gca()
-#     ax.grid(true)
-# end    
+if (show_convergence_history)
+    PyPlot.figure()
+    PyPlot.loglog(error_times,velocity_error_L2,"-o")
+    PyPlot.legend(("L2 error velocity"))
+    PyPlot.title("Convergence history (fem=" * fem * ")")
+    ax = PyPlot.gca()
+    ax.grid(true)
+end    
 
     
 end

@@ -1,10 +1,10 @@
-struct CELL_NAVIERSTOKES_AdotDUdotDV <: FiniteElements.AbstractFEOperator end
+struct CELL_NAVIERSTOKES_AdotDAdotDV <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_NAVIERSTOKES_AdotDUdotDV}, FEU::AbstractH1FiniteElement, FEAV::AbstractFiniteElement, dofs4a)
+function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_AdotDAdotDV}, FEU::AbstractH1FiniteElement, FEAV::AbstractFiniteElement, dofs4aAV, dofs4aU)
     # get quadrature formula
     T = eltype(FEU.grid.coords4nodes);
     ET = FEU.grid.elemtypes[1]
-    quadorder = 2*FiniteElements.get_polynomial_order(FEAV) + FiniteElements.get_polynomial_order(FEU)-1;
+    quadorder = 3*FiniteElements.get_polynomial_order(FEU);
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
@@ -27,7 +27,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_NAVIERSTOKES_A
     temp::T = 0.0
     det = 0.0;
     a4qp = zeros(Float64,xdim)
-    agradu = zeros(Float64,xdim)
+    agrada = zeros(Float64,xdim)
     #@time begin
     for cell = 1 : size(FEU.grid.nodes4cells,1)
       
@@ -53,28 +53,27 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_NAVIERSTOKES_A
             fill!(a4qp,0.0)
             for k = 1 : xdim
                 for dof_i = 1 : ndofs4cellAV
-                    a4qp[k] += dofs4a[dofsAV[dof_i]] * basisvalsAV[dof_i,k];
+                    a4qp[k] += dofs4aAV[dofsAV[dof_i]] * basisvalsAV[dof_i,k];
                 end
             end
         
-            # fill sparse array
+            # compute agrada
+            fill!(agrada,0.0)
             for dof_i = 1 : ndofs4cellU
-                # compute agradu
-                fill!(agradu,0.0)
                 for k = 1 : xdim
                     for c = 1 : ncomponents
-                        agradu[k] += a4qp[c]*gradientsU[dof_i,k+FEbasisU.offsets[c]]
+                        agrada[k] += a4qp[c] * dofs4aU[dofsU[dof_i]] *gradientsU[dof_i,k+FEbasisU.offsets[c]]
                     end
                 end    
+            end    
                 
-                for dof_j = 1 : ndofs4cellAV
-                    temp = 0.0;
-                    for k = 1 : xdim
-                        temp += agradu[k] * basisvalsAV[dof_j,k];
-                    end
-                    temp *= qf.w[i] * FEU.grid.volume4cells[cell]
-                    A[dofsU[dof_i],dofsAV[dof_j]] += temp;   
+            for dof_j = 1 : ndofs4cellAV
+                temp = 0.0;
+                for k = 1 : xdim
+                    temp += agrada[k] * basisvalsAV[dof_j,k];
                 end
+                temp *= qf.w[i] * FEU.grid.volume4cells[cell]
+                b[dofsAV[dof_j]] += temp;   
             end 
         end  
     end

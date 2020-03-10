@@ -16,8 +16,9 @@ using ForwardDiff
 
 # NAVIER-STOKES operators
 include("FEoperators/CELL_NAVIERSTOKES_AdotDUdotDV.jl");
+include("FEoperators/CELL_NAVIERSTOKES_AdotDAdotDV.jl");
 
-function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Function,boundary_data!,grid::Grid.Mesh,FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement,quadrature_order::Int, use_reconstruction::Bool = false, maxiterations = 20, dirichlet_penalty::Float64 = 1e60, pressure_penalty::Float64 = 1e60)
+function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, maxiterations::Int = 10, dirichlet_penalty::Float64 = 1e60, symmetry_penalty::Float64 = 1e10)
         
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
@@ -34,7 +35,7 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
     @time begin
         print("    |assembling linear part of matrix...")
         Alin = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean
-        FESolveStokes.assemble_operator!(Alin, FESolveStokes.CELL_STOKES, FE_velocity, FE_pressure, nu);
+        FESolveStokes.assemble_operator!(Alin, FESolveStokes.CELL_STOKES, FE_velocity, FE_pressure, PD.viscosity);
 
         # compute integrals of pressure dofs
         pm = zeros(Float64,ndofs_pressure,1)
@@ -45,35 +46,54 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
     
     @time begin
         # compute right-hand side vector
-        print("    |assembling rhs...")
         b = zeros(Float64,ndofs);
-        if use_reconstruction > 0
-            @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, 1);
-            ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
-            b2 = zeros(Float64,ndofsHdiv);
-            FESolveCommon.assemble_operator!(b2, FESolveCommon.CELL_FdotV, FE_Reconstruction, volume_data!, quadrature_order)
+        for region = 1 : length(PD.volumedata4region)
+            print("    |assembling rhs in region $region...")
+            if reconst_variant > 0
+                @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
+                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
+                ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
+                b2 = zeros(Float64,ndofsHdiv);
+                quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
+                FESolveCommon.assemble_operator!(b2, FESolveCommon.CELL_FdotV, FE_Reconstruction, PD.volumedata4region[region], quadorder)
+                println("finished")
+                print("    |Hdivreconstruction...")
+                T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
+                FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
+                b[1:ndofs_velocity] = T*b2;
+            else
+                quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_velocity)
+                FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_velocity, PD.volumedata4region[region], quadorder)
+            end    
             println("finished")
-            print("    |init Hdivreconstruction...")
-            T = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofsHdiv)
-            FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
-            b = T*b2;
-        else
-            FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_velocity, volume_data!, quadrature_order)
-        end    
-        println("finished")
+        end
     end
 
     @time begin
-        # compute boundary data
-        print("    |boundary data...")
-        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,true);
-        println("finished")
+        # compute and apply boundary data
+        println("    |incorporating boundary data...")
+        Dnboundary_ids = findall(x->x == 2, PD.boundarytype4bregion)
+        if length(Dnboundary_ids) > 0
+            print("       Do-nothing : ")
+            Base.show(Dnboundary_ids); println("");
+        end    
+        print("       Dirichlet : ")
+        Dbboundary_ids = findall(x->x == 1, PD.boundarytype4bregion)
+        Base.show(Dbboundary_ids); println("");
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,Dbboundary_ids, PD.boundarydata4bregion,true,PD.quadorder4bregion);
+        Dsymboundary_ids = findall(x->x == 3, PD.boundarytype4bregion)
+        if length(Dnboundary_ids) > 0
+            print("       Symmetry : ")
+            Base.show(Dsymboundary_ids); println("");
+            FESolveCommon.assemble_operator!(Alin, FESolveCommon.BFACE_UndotVn, FE_velocity, Dsymboundary_ids, symmetry_penalty)
+        end    
+        println("     ...finished")
     end
-
+    
     # fix one pressure value
-    Alin[ndofs,ndofs] = pressure_penalty;
-    b[ndofs] = 1;
+    if length(Dnboundary_ids) == 0
+        append!(bdofs,ndofs)
+    end    
     
     iteration::Int64 = 0
     res = zeros(Float64,ndofs)
@@ -90,12 +110,12 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
             # compute nonlinear term
             print("      |assembling nonlinear term...")
             @time begin
-                if use_reconstruction
+                if reconst_variant > 0
                     val4dofs_hdiv = T'*val4dofs
-                    Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs)
+                    Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofsHdiv)
                     assemble_operator!(Atemp,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_Reconstruction,val4dofs_hdiv);    
-                    
-                    A  += T*Atemp
+                    ExtendableSparse.flush!(Atemp)
+                    A.cscmatrix += Atemp.cscmatrix*T.cscmatrix'
                 else   
                     assemble_operator!(A,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_velocity,val4dofs);
                 end    
@@ -139,6 +159,56 @@ function solveNavierStokesProblem!(val4dofs::Array,nu::Real,volume_data!::Functi
     val4dofs[ndofs_velocity+1:end] .-= mean;
     
     return residual
+end
+
+
+
+function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real = 1 // 10)
+    @assert TSS.ProblemData.time_dependent_data == false # true case has to be implemented
+
+    # update matrix and right-hand side vector
+
+    println("    |time = ", TSS.current_time)
+    println("    |dt = ", TSS.current_dt)
+    if TSS.current_dt != dt
+        println("    |updating matrix...")
+        TSS.current_dt = dt
+        TSS.SystemMatrix = deepcopy(TSS.StokesMatrix)
+        ExtendableSparse.flush!(TSS.SystemMatrix)
+        TSS.SystemMatrix.cscmatrix.nzval .*= dt
+        ExtendableSparse.flush!(TSS.MassMatrix)
+        TSS.SystemMatrix.cscmatrix += TSS.MassMatrix.cscmatrix
+    else
+        println("    |skipping updating matrix (dt did not change)...")   
+    end     
+
+    println("    |updating rhs...")
+    TSS.rhsvector[:] = TSS.datavector[:]
+    assemble_operator!(TSS.rhsvector,CELL_NAVIERSTOKES_AdotDAdotDV,TSS.FE_velocity,TSS.FE_velocity,TSS.current_solution,TSS.current_solution)
+    TSS.rhsvector .* dt
+    TSS.rhsvector += TSS.MassMatrix * TSS.last_solution
+    
+    println("    |apply boundary data...")
+    for i = 1 : length(TSS.bdofs)
+        TSS.SystemMatrix[TSS.bdofs[i],TSS.bdofs[i]] = TSS.dirichlet_penalty;
+        TSS.rhsvector[TSS.bdofs[i]] = TSS.current_solution[TSS.bdofs[i]]*TSS.dirichlet_penalty;
+    end
+
+    # solve for next time step
+    # todo: reuse LU decomposition of matrix
+    println("    |solving...")
+    TSS.last_solution[:] = TSS.current_solution[:]
+    TSS.current_solution = TSS.SystemMatrix\TSS.rhsvector
+
+    # compute residual (exclude bdofs)
+    TSS.rhsvector = TSS.SystemMatrix*TSS.current_solution - TSS.rhsvector
+    TSS.rhsvector[TSS.bdofs] .= 0
+    residual = norm(TSS.rhsvector);
+    println("    |residual=", residual)
+
+    TSS.current_time += dt
+
+    return residual;
 end
 
 

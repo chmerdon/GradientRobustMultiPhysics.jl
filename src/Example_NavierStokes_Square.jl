@@ -12,13 +12,20 @@ using PyPlot
 using Printf
 
 
-function triangulate_unitsquare(maxarea)
+function triangulate_unitsquare(maxarea, refine_barycentric = false)    
     triin=Triangulate.TriangulateIO()
     triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
     triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
     triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
     (triout, vorout)=triangulate("pALVa$(@sprintf("%.16f", maxarea))", triin)
-    return Grid.Mesh{Float64}(Array{Float64,2}(triout.pointlist'),Array{Int64,2}(triout.trianglelist'),Grid.ElemType2DTriangle());
+    coords4nodes = Array{Float64,2}(triout.pointlist');
+    nodes4cells = Array{Int64,2}(triout.trianglelist');
+    if refine_barycentric
+        coords4nodes, nodes4cells = Grid.barycentric_refinement(Grid.ElemType2DTriangle(),coords4nodes,nodes4cells)
+    end    
+    grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
+    Grid.assign_boundaryregions!(grid,triout.segmentlist,triout.segmentmarkerlist);
+    return grid
 end
 
 
@@ -26,23 +33,24 @@ function main()
 
 #fem = "CR"
 #fem = "MINI"
-#fem = "TH"
+fem = "TH"
+#fem = "SV"
 #fem = "P2P0"
 #fem = "BR"
-fem = "BR+" # with reconstruction
+#fem = "BR+" # with reconstruction
 
 
 use_problem = "P7vortex"; u_order = 7; error_order = 6; p_order = 3; f_order = 5;
 #use_problem = "constant"; u_order = 0; error_order = 0; p_order = 0; f_order = 0;
 #use_problem = "linear"; u_order = 1; error_order = 2; p_order = 0; f_order = 0;
-#use_problem = "quadratic"; u_order = 2; error_order = 2; p_order = 1; f_order = 0;
+#use_problem = "quadratic"; u_order = 2; error_order = 4; p_order = 1; f_order = 4;
 #use_problem = "cubic"; u_order = 3; error_order = 4; p_order = 2; f_order = 1;
 maxlevel = 4
 maxIterations = 20
 nu = 1
 
 compare_with_bestapproximations = false
-show_plots = false
+show_plots = true
 show_convergence_history = true
 
 
@@ -96,8 +104,8 @@ function volume_data!(problem, poisson = false)
             if poisson == false
                 result[1] += 1.0
                 # ugradu
-                result[1] += -18.0*x[1]^2*x[2]     
-                result[2] += -18.0*x[1]*x[2]^2
+                result[1] += 18.0*x[1]^2*x[2]     
+                result[2] += 18.0*x[1]*x[2]^2
             end    
 
         elseif problem == "cubic"
@@ -107,8 +115,8 @@ function volume_data!(problem, poisson = false)
                 result[1] += 2*x[1]
                 result[2] += 2*x[2]
                 # ugradu
-                result[1] += -48.0*x[1]^3*x[2]^2     
-                result[2] += -48.0*x[1]^2*x[2]^3
+                result[1] += 48.0*x[1]^3*x[2]^2     
+                result[2] += 48.0*x[1]^2*x[2]^3
             end
         end
     end    
@@ -155,19 +163,41 @@ L2error_velocityVL = zeros(Float64,maxlevel)
 L2error_pressureBA = zeros(Float64,maxlevel)
 ndofs = zeros(Int,maxlevel)
 
+
+# write data into problem description structure
+PD = FESolveStokes.StokesProblemDescription()
+PD.name = use_problem;
+PD.viscosity = nu;
+PD.volumedata4region = Vector{Function}(undef,1)
+PD.boundarydata4bregion = Vector{Function}(undef,4)
+PD.boundarytype4bregion = ones(length(PD.boundarydata4bregion))
+PD.quadorder4bregion = zeros(length(PD.boundarydata4bregion))
+PD.quadorder4region = [f_order]
+PD.volumedata4region[1] = volume_data!(use_problem, false)
+for j = 1 : length(PD.boundarytype4bregion)
+    PD.boundarydata4bregion[j] = exact_velocity!(use_problem)
+    PD.quadorder4bregion[j] = u_order
+end    
+FESolveStokes.show(PD);
+
+
 for level = 1 : maxlevel
 println("Solving Stokes problem on refinement level $level of $maxlevel");
 println("Generating grid by triangle...");
 maxarea = 4.0^(-level)
-grid = triangulate_unitsquare(maxarea)
+grid = triangulate_unitsquare(maxarea, (fem == "SV" || fem == "SVipm") ? true : false)
 Grid.show(grid)
 
 # load finite element
-use_reconstruction = false
+use_reconstruction = 0
 if fem == "TH"
     # Taylor--Hood
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
     FE_pressure = FiniteElements.getP1FiniteElement(grid,1);
+elseif fem == "SV"
+    # Scott-Vogelius
+    FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
+    FE_pressure = FiniteElements.getP1discFiniteElement(grid,1);
 elseif fem == "MINI"
     # MINI
     FE_velocity = FiniteElements.getMINIFiniteElement(grid,2,2);
@@ -184,7 +214,7 @@ elseif fem == "BR+"
     # Bernardi--Raugel with RT0 reconstruction
     FE_velocity = FiniteElements.getBRFiniteElement(grid,2);
     FE_pressure = FiniteElements.getP0FiniteElement(grid,1);
-    use_reconstruction = true
+    use_reconstruction = 1
 elseif fem == "P2P0"
     # CP2P0
     FE_velocity = FiniteElements.getP2FiniteElement(grid,2);
@@ -200,7 +230,7 @@ ndofs[level] = ndofs_velocity + ndofs_pressure;
 
 # solve Stokes problem
 val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
-residual = solveNavierStokesProblem!(val4dofs,nu,volume_data!(use_problem),exact_velocity!(use_problem),grid,FE_velocity,FE_pressure,FiniteElements.get_polynomial_order(FE_velocity)+f_order, use_reconstruction, maxIterations);
+residual = solveNavierStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction, maxIterations);
     
 # check divergence
 B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)

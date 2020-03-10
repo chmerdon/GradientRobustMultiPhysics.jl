@@ -37,8 +37,8 @@ function main()
 #fem = "CRipm"
 #fem = "CR+" # with reconstruction
 #fem = "MINI"
-#fem = "TH"
-fem = "SV"
+fem = "TH"
+#fem = "SV"
 #fem = "SVipm"
 #fem = "P2P0"
 #fem = "P2B"

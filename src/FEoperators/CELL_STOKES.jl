@@ -17,7 +17,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_ve
     ncomponents::Int = FiniteElements.get_ncomponents(FE_velocity);
     FEbasis_velocity = FiniteElements.FEbasis_caller(FE_velocity, qf, true);
     FEbasis_pressure = FiniteElements.FEbasis_caller(FE_pressure, qf, false);
-    basisvals_pressure = zeros(Float64,ndofs4cell_pressure,ncomponents)
+    basisvals_pressure = zeros(Float64,ndofs4cell_pressure,1)
     gradients_velocity = zeros(Float64,ndofs4cell_velocity,ncomponents*ncomponents);
     dofs_pressure = zeros(Int64,ndofs4cell_pressure)
     dofs_velocity = zeros(Int64,ndofs4cell_velocity)
@@ -49,9 +49,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_ve
                         temp += gradients_velocity[dof_i,k] * gradients_velocity[dof_j,k];
                     end
                     temp *= nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-                    if abs(temp > 1e-12)
-                        A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp;
-                    end    
+                    A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp;    
                 end
                 # pressure x (-div) velocity
                 for dof_j = 1 : ndofs4cell_pressure
