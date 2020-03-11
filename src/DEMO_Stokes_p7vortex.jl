@@ -1,13 +1,12 @@
 #############################################
-### DEMONSTRATION SCRIPT HAGEN-POISEUILLE ###
+### DEMONSTRATION SCRIPT STOKES P7-VORTEX ###
 #############################################
 #
-# solves Hagen-Poiseuille test problem
+# solves Stokes test problem p7vortex
 #
 # demonstrates:
 #   - convergence rates of implemented finite element methods
-#     (2nd order finite elements methods should solve it exactly)
-#   - multiple boundary conditions (Dirichlet, do-nothing, symmetry boundary)
+#   - lack/presence of pressure-robustness for small nu
 #
 
 using Triangulate
@@ -21,14 +20,12 @@ using PyPlot
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
-include("PROBLEMdefinitions/STOKES_HagenPoiseuille.jl");
+include("PROBLEMdefinitions/STOKES_p7vortex.jl");
 
 
 function main()
 
     # problem modification switches
-    do_nothing_inlet = true
-    symmetry_top = true
     nu = 1
 
     # refinement termination criterions
@@ -47,30 +44,18 @@ function main()
     ########################
 
     #fem_velocity = "CR"; fem_pressure = "P0"
-    fem_velocity = "MINI"; fem_pressure = "P1"
+    #fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "MINI"; fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
     #fem_velocity = "P2"; fem_pressure = "P0"
     #fem_velocity = "P2B"; fem_pressure = "P1dc"
     #fem_velocity = "BR"; fem_pressure = "P0"
+    fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
 
 
     # load problem data
-    PD, exact_velocity!, exact_pressure! = getProblemData(nu, do_nothing_inlet ? 0.0 : -1.0, 4);
-    PD.viscosity = nu;
-
-    # top-bottom is constant one (later symmetric boundary)
-    if symmetry_top
-        PD.boundarydata4bregion[3] = (result,x) -> 0.0
-        PD.boundarytype4bregion[3] = 3
-    end    
-
-    # inlet/left boundary is do-nothing
-    if do_nothing_inlet == true
-        PD.boundarydata4bregion[4] = (result,x) -> 0.0
-        PD.boundarytype4bregion[4] = 2
-    end    
-
+    PD, exact_velocity!, exact_pressure! = getProblemData(nu, 4);
     FESolveStokes.show(PD);
 
     L2error_velocity = zeros(Float64,maxlevel)

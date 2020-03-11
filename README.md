@@ -4,14 +4,15 @@ FiniteElements for Julia
 
 Learning julia by implementing finite elements
 
-Usage examples:
-- 1D Poisson problem: see Example_Poisson_Line.jl
-- 2D Poisson problem: see Example_Poisson_Lshape.jl
-- 2D Stokes problem: see Example_Stokes_HagenPoiseuille.jl
-                         Example_Stokes_Square.jl
-                         Example_Stokes_Square_probust.jl
-- 2D Navier-Stokes problem: see Example_NavierStokes_Square.jl 
-- 2D Hdiv bestapproximation: see Example_HdivBestApprox_Square.jl
+DEMO scripts:
+- DEMO_Poisson1D.jl
+- DEMO_Poisson2D.jl
+- DEMO_HagenPoiseuille.jl
+- DEMO_HdivBA_polynomials.jl
+- DEMO_Stokes_p7vortex.jl
+- DEMO_Stokes_p7vortex_probustness.jl
+- DEMO_Stokes_polynomials.jl
+- DEMO_GreshoVortex.jl
 
 
 Dependencies on other Julia packages:
@@ -35,6 +36,7 @@ Features/Limitations:
 
 
 Next Goals:
+- more test cases based on new PROBLEMdefinitions
 - implement solver for compressible Stokes problem
 - implement RT1/BDM2 reconstruction for P2B-Stokes FEM
 - add Pardiso solver (via Pardiso.jl)

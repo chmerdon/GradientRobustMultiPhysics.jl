@@ -1,13 +1,12 @@
-#############################################
-### DEMONSTRATION SCRIPT HAGEN-POISEUILLE ###
-#############################################
+###############################################
+### DEMONSTRATION SCRIPT STOKES POLYNOMIALS ###
+###############################################
 #
-# solves Hagen-Poiseuille test problem
+# solves (Navier-)Stokes test problem polynomials of order (0,1,2,3)
 #
 # demonstrates:
 #   - convergence rates of implemented finite element methods
-#     (2nd order finite elements methods should solve it exactly)
-#   - multiple boundary conditions (Dirichlet, do-nothing, symmetry boundary)
+#   - exactness
 #
 
 using Triangulate
@@ -16,24 +15,25 @@ using Quadrature
 using FiniteElements
 using FESolveCommon
 using FESolveStokes
+using FESolveNavierStokes
 ENV["MPLBACKEND"]="tkagg"
 using PyPlot
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
-include("PROBLEMdefinitions/STOKES_HagenPoiseuille.jl");
+include("PROBLEMdefinitions/STOKES_2D_polynomials.jl");
 
 
 function main()
 
     # problem modification switches
-    do_nothing_inlet = true
-    symmetry_top = true
+    polynomial_order = 2
     nu = 1
+    nonlinear = true
 
     # refinement termination criterions
-    maxlevel = 7
-    maxdofs = 60000
+    maxlevel = 6
+    maxdofs = 50000
 
     # other switches
     show_plots = false
@@ -47,30 +47,18 @@ function main()
     ########################
 
     #fem_velocity = "CR"; fem_pressure = "P0"
-    fem_velocity = "MINI"; fem_pressure = "P1"
+    #fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "MINI"; fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
     #fem_velocity = "P2"; fem_pressure = "P0"
     #fem_velocity = "P2B"; fem_pressure = "P1dc"
-    #fem_velocity = "BR"; fem_pressure = "P0"
+    fem_velocity = "BR"; fem_pressure = "P0"
+    #em_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
 
 
     # load problem data
-    PD, exact_velocity!, exact_pressure! = getProblemData(nu, do_nothing_inlet ? 0.0 : -1.0, 4);
-    PD.viscosity = nu;
-
-    # top-bottom is constant one (later symmetric boundary)
-    if symmetry_top
-        PD.boundarydata4bregion[3] = (result,x) -> 0.0
-        PD.boundarytype4bregion[3] = 3
-    end    
-
-    # inlet/left boundary is do-nothing
-    if do_nothing_inlet == true
-        PD.boundarydata4bregion[4] = (result,x) -> 0.0
-        PD.boundarytype4bregion[4] = 2
-    end    
-
+    PD, exact_velocity!, exact_pressure! = getProblemData(polynomial_order, nu, nonlinear, 4);
     FESolveStokes.show(PD);
 
     L2error_velocity = zeros(Float64,maxlevel)
@@ -82,7 +70,12 @@ function main()
     val4dofs = Nothing
     for level = 1 : maxlevel
 
-        println("Solving Stokes problem on refinement level...", level);
+        if nonlinear
+            println("Solving Navier-Stokes problem on refinement level...", level);
+        else
+            println("Solving Stokes problem on refinement level...", level);
+        end
+
         println("Generating grid by triangle...");
         maxarea = 4.0^(-level)
         grid = gridgen_unitsquare(maxarea, barycentric_refinement)
@@ -112,14 +105,18 @@ function main()
 
         # solve Stokes problem
         val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
-        residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+        if nonlinear
+            residual = solveNavierStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+        else    
+            residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+        end
 
         # compute errors
         integral4cells = zeros(size(grid.nodes4cells,1),1);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_pressure!, val4dofs[ndofs_velocity+1:end], FE_pressure), grid, 2, 1);
+        integrate!(integral4cells,eval_L2_interpolation_error!(exact_pressure!, val4dofs[ndofs_velocity+1:end], FE_pressure), grid, 2*polynomial_order, 1);
         L2error_pressure[level] = sqrt(abs(sum(integral4cells)));
         integral4cells = zeros(size(grid.nodes4cells,1),2);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!, val4dofs[1:ndofs_velocity], FE_velocity), grid, 4, 2);
+        integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!, val4dofs[1:ndofs_velocity], FE_velocity), grid, 2*polynomial_order, 2);
         L2error_velocity[level] = sqrt(abs(sum(integral4cells[:])));
 
     end # loop over levels
