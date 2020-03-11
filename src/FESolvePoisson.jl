@@ -59,6 +59,7 @@ function solvePoissonProblem!(val4dofs::Array, PD::PoissonProblemDescription, FE
         print("    |assembling matrix...")
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
         FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_DUdotDV,FE,PD.diffusion);
+        println("finished")
     end
 
     @time begin
@@ -95,6 +96,7 @@ function solvePoissonProblem!(val4dofs::Array, PD::PoissonProblemDescription, FE
         end
         println("     ...finished")
     end
+
     
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;

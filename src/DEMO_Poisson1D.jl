@@ -66,8 +66,6 @@ function main()
 
         # generate FE
         FE = FiniteElements.string2FE(fem, grid, 1, 1)
-        ensure_nodes4faces!(grid);
-        ensure_volume4cells!(grid);
         FiniteElements.show(FE)
         ndofs[level] = FiniteElements.get_ndofs(FE);
 

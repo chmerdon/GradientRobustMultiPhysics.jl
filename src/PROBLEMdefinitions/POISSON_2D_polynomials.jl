@@ -1,4 +1,4 @@
-function getProblemData(polynomial_coefficients::Array{Float64,2}, nrBoundaryRegions::Int = 2)
+function getProblemData(polynomial_coefficients::Array{Float64,2}, nrBoundaryRegions::Int = 4)
 
     # auto-computing coefficients of - 2nd derivative
     l = size(polynomial_coefficients,2)
@@ -37,7 +37,7 @@ function getProblemData(polynomial_coefficients::Array{Float64,2}, nrBoundaryReg
     PD.boundarydata4bregion = Vector{Function}(undef,nrBoundaryRegions)
     PD.boundarytype4bregion = ones(nrBoundaryRegions)
     PD.quadorder4bregion = ones(length(PD.boundarydata4bregion))*2
-    for j = 1 : length(PD.boundarytype4bregion)
+    for j = 1 : nrBoundaryRegions
         PD.boundarydata4bregion[j] = exact_solution!
     end    
 

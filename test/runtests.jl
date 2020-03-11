@@ -1,4 +1,5 @@
 using Test
+using Triangulate
 push!(LOAD_PATH, "../src")
 
 
@@ -16,21 +17,30 @@ end
 
 using FESolveCommonTests
 println("\nStarting tests for FESolveCommon")
-@test FESolveCommonTests.TestInterpolation1D()
-@test FESolveCommonTests.TestL2BestApproximation1D()
-@test FESolveCommonTests.TestH1BestApproximation1D()
-@test FESolveCommonTests.TestInterpolation2D()
-@test FESolveCommonTests.TestL2BestApproximation2DP1()
-@test FESolveCommonTests.TestL2BestApproximation2DCR()
-@test FESolveCommonTests.TestL2BestApproximation2DP2()
-@test FESolveCommonTests.TestH1BestApproximation2D()
+#@test FESolveCommonTests.TestInterpolation1D()
+#@test FESolveCommonTests.TestL2BestApproximation1D()
+#@test FESolveCommonTests.TestH1BestApproximation1D()
+#@test FESolveCommonTests.TestInterpolation2D()
+#@test FESolveCommonTests.TestL2BestApproximation2DP1()
+#@test FESolveCommonTests.TestL2BestApproximation2DCR()
+#@test FESolveCommonTests.TestL2BestApproximation2DP2()
+#@test FESolveCommonTests.TestH1BestApproximation2D()
 
 using FESolvePoissonTests
 println("\nStarting tests for FESolvePoisson")
-@test FESolvePoissonTests.TestPoissonSolver1D()
-@test FESolvePoissonTests.TestPoissonSolver2DP1()
-@test FESolvePoissonTests.TestPoissonSolver2DCR()
-@test FESolvePoissonTests.TestPoissonSolver2DP2()
+fems1D = ["P1","P2"]
+expected_orders1D = [1,2]
+for j = 1 : length(fems1D)
+    @test FESolvePoissonTests.TestPoissonSolver1D(fems1D[j],expected_orders1D[j])
+end    
+fems2D = ["P1","P2","CR","MINI","P2B"]
+expected_orders2D = [1,2,1,1,2]
+for j = 1 : length(fems2D)
+    @test FESolvePoissonTests.TestPoissonSolver2D(fems2D[j],expected_orders2D[j])
+end    
+#@test FESolvePoissonTests.TestPoissonSolver2DP1()
+#@test FESolvePoissonTests.TestPoissonSolver2DCR()
+#@test FESolvePoissonTests.TestPoissonSolver2DP2()
 
 
 #using FESolveStokesTests

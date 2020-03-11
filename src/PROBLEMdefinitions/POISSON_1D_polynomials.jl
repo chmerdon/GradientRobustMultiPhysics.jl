@@ -1,4 +1,4 @@
-function getProblemData(polynomial_coefficients::Vector{Int64})
+function getProblemData(polynomial_coefficients::Vector{Float64})
 
     # auto-computing coefficients of - 2nd derivative
     polynomial_coefficients_rhs = zeros(Float64,length(polynomial_coefficients)-2)

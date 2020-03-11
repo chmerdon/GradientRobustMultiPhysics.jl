@@ -4,120 +4,52 @@ using SparseArrays
 using LinearAlgebra
 using FESolvePoisson
 using FESolveCommon
+using Triangulate
 using Grid
 using Quadrature
 using FiniteElements
 
 
-function load_test_grid(nrefinements::Int = 1)
-    # define grid
-    coords4nodes_init = [0.0 0.0;
-                        1.0 0.0;
-                        1.0 1.0;
-                        0.0 1.0;
-                        0.5 0.5];
-    nodes4cells_init = [1 2 5;
-                        2 3 5;
-                        3 4 5;
-                        4 1 5];
-               
-    return Grid.Mesh{Float64}(coords4nodes_init,nodes4cells_init,Grid.ElemType2DTriangle(),nrefinements);
-end
 
 
-function load_test_grid1D(nrefinements::Int = 0)
-    # define grid
-    coords4nodes_init = Array{Float64,2}([0.0 0.5 1.0]');
-    nodes4cells_init = [1 2; 2 3];
-    return Grid.Mesh{Float64}(coords4nodes_init,nodes4cells_init,Grid.ElemType1DInterval(),nrefinements);
-end
-
-
-
-  # define problem data
-  # = linear function f(x,y) = x + y and its derivatives
-  function volume_data1D!(result, x)
-    result[1] = x[1] + 1
-  end
+include("../src/PROBLEMdefinitions/GRID_unitinterval.jl")
+include("../src/PROBLEMdefinitions/POISSON_1D_polynomials.jl");
   
-  function volume_data_P1!(result, x)
-    result[1] = x[1] + x[2]
-  end
-  function volume_data_P2!(result, x)
-    result[1] = x[1]^2 + x[2]^2
-  end
-  
-  function volume_data_gradient!(result,x)
-    result = ones(Float64,size(x));
-  end
-  function volume_data_gradient_P2!(result,x)
-    result[1] = 2*x[1];
-    result[2] = 2*x[2];
-  end
-  
-  function volume_data_laplacian_P2!(result,x)
-    result[1] = -4;
-  end
-  function volume_data_laplacian_P1!(result,x)
-    result[1] = 0;
-  end
-  
-function TestPoissonSolver1D()
-  grid = load_test_grid1D();
-  println("Testing H1-Bestapproximation via Poisson solver in 1D...");
-  FE = FiniteElements.getP1FiniteElement(grid,1);
+function TestPoissonSolver1D(fem::String, order::Int)
+  println("Testing Poisson solver in 1D for fem=",fem);
+  polynomial_coefficients = ones(Float64,order+1)
+  PD, exact_solution! = getProblemData(polynomial_coefficients)
+  grid = gridgen_unitinterval(0.1)
+  FE = FiniteElements.string2FE(fem, grid, 1, 1)
   val4dofs = FiniteElements.createFEVector(FE);
-  residual = solvePoissonProblem!(val4dofs,1.0,volume_data_laplacian_P1!,volume_data1D!,FE,1);
+  residual = solvePoissonProblem!(val4dofs,PD,FE);
   println("solver residual = " * string(residual));
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells,eval_L2_interpolation_error!(volume_data1D!, val4dofs, FE),grid,1);
-  integral = sum(integral4cells);
-  println("interpolation_error = " * string(integral));
-  return abs(integral) < eps(10.0)
-end
-
-function TestPoissonSolver2DP1()
-  grid = load_test_grid(2);
-  println("Testing H1-Bestapproximation via Poisson solver in 2D for P1-FEM...");
-  FE = FiniteElements.getP1FiniteElement(grid,1);
-  val4dofs = FiniteElements.createFEVector(FE);
-  residual = solvePoissonProblem!(val4dofs,1.0,volume_data_laplacian_P1!,volume_data_P1!,FE,1);
-  println("solver residual = " * string(residual));
-  integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells,eval_L2_interpolation_error!(volume_data_P1!, val4dofs, FE),grid,1);
-  integral = sum(integral4cells);
-  println("interpolation_error = " * string(integral));
-  return abs(integral) < eps(10.0)
+  integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE),grid,1);
+  integral = sqrt(sum(integral4cells));
+  println("L2_error = " * string(integral));
+  return abs(integral) < eps(100.0)
 end
 
 
-function TestPoissonSolver2DCR()
-  grid = load_test_grid();
-  println("Testing H1-Bestapproximation via Poisson solver in 2D for CR-FEM...");
-  FE = FiniteElements.getCRFiniteElement(grid,2,1);
+include("../src/PROBLEMdefinitions/GRID_unitsquare.jl")
+include("../src/PROBLEMdefinitions/POISSON_2D_polynomials.jl");
+
+function TestPoissonSolver2D(fem::String, order::Int)
+  println("Testing Poisson solver in 2D for fem=",fem);
+  polynomial_coefficients = ones(Float64,2,order+1)
+  PD, exact_solution! = getProblemData(polynomial_coefficients)
+  FESolvePoisson.show(PD)
+  grid = gridgen_unitsquare(0.1)
+  FE = FiniteElements.string2FE(fem, grid, 2, 1)
   val4dofs = FiniteElements.createFEVector(FE);
-  residual = solvePoissonProblem!(val4dofs,1.0,volume_data_laplacian_P1!,volume_data_P1!,FE,1);
+  residual = solvePoissonProblem!(val4dofs,PD,FE);
   println("solver residual = " * string(residual));
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells,eval_L2_interpolation_error!(volume_data_P1!, val4dofs, FE),grid,1);
-  integral = sum(integral4cells);
-  println("interpolation_error = " * string(integral));
-  return abs(integral) < eps(10.0)
-end
-
-
-function TestPoissonSolver2DP2()
-  grid = load_test_grid(2);
-  println("Testing H1-Bestapproximation via Poisson solver in 2D for P2-FEM...");
-  FE = FiniteElements.getP2FiniteElement(grid,1);
-  val4dofs = FiniteElements.createFEVector(FE);
-  residual = solvePoissonProblem!(val4dofs,1.0,volume_data_laplacian_P2!,volume_data_P2!,FE,3);
-  println("solver residual = " * string(residual));
-  integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells,eval_L2_interpolation_error!(volume_data_P2!, val4dofs, FE),grid,4);
-  integral = sum(integral4cells);
-  println("interpolation_error = " * string(integral));
-  return abs(integral) < eps(10.0)
+  integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE),grid,1);
+  integral = sqrt(sum(integral4cells));
+  println("L2_error = " * string(integral));
+  return abs(integral) < eps(100.0)
 end
 
 
