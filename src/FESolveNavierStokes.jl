@@ -24,7 +24,7 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
     ndofs = ndofs_velocity + ndofs_pressure;
     
-    println("\nSOLVING STOKES PROBLEM")
+    println("\nSOLVING NAVIER-STOKES PROBLEM")
     println(" |FEvelocity = " * FE_velocity.name)
     println(" |FEpressure = " * FE_pressure.name)
     println(" |totalndofs = ", ndofs)

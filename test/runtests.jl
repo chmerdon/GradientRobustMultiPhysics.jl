@@ -1,5 +1,4 @@
 using Test
-using Triangulate
 push!(LOAD_PATH, "../src")
 
 
@@ -38,11 +37,13 @@ expected_orders2D = [1,2,1,1,2]
 for j = 1 : length(fems2D)
     @test FESolvePoissonTests.TestPoissonSolver2D(fems2D[j],expected_orders2D[j])
 end    
-#@test FESolvePoissonTests.TestPoissonSolver2DP1()
-#@test FESolvePoissonTests.TestPoissonSolver2DCR()
-#@test FESolvePoissonTests.TestPoissonSolver2DP2()
 
 
-#using FESolveStokesTests
-#println("\nStarting tests for FESolveStokes")
-#@test FESolveStokesTests.TestStokesTH()
+using FESolveStokesTests
+println("\nStarting tests for FESolveStokes")  
+fems_velocity2D = ["MINI","P2","CR","BR","P2B"]
+fems_pressure2D = ["P1","P1","P0","P0","P1dc"]
+expected_orders2D = [1,2,1,1,2]
+for j = 1 : length(fems2D)
+    @test FESolveStokesTests.TestStokesSolver2D(fems_velocity2D[j],fems_pressure2D[j],expected_orders2D[j])
+end   
