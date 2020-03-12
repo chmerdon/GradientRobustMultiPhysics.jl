@@ -36,14 +36,19 @@ Features/Limitations:
 
 
 Next Goals:
-- more test cases based on new PROBLEMdefinitions
+- multiple solves with same matrix (as in transient Stokes solver) should reuse LU      decomposition of sparse matrix
 - implement solver for compressible Stokes problem
+- fix interpolation for MINI and P2B element (cell bubble values depend on nodal values)
+- implement tests for Hdiv elements and reconstruction operators
 - implement RT1/BDM2 reconstruction for P2B-Stokes FEM
 - add Pardiso solver (via Pardiso.jl)
 - further improve steering by Grid.ElemTypes (Point, Line, Triangle, Tetrahedron,...)
 to objects nodes4cells of Mesh to choose correct transformation by multiple dispatch
 - sparse-matrices to save nodes4cells etc. to allow (in a far future) for different elements in Mesh and easier adjacency information (to build them up in 3D)
-- different boundary conditions (dependent on regions in the cell)
+
+
+Known Issues:
+- Navier-Stokes solve with CR element for a linear problem is not exact (Stokes solve is exact)
 
 
 
