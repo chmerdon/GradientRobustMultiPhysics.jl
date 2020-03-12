@@ -27,9 +27,9 @@ include("PROBLEMdefinitions/STOKES_2D_polynomials.jl");
 function main()
 
     # problem modification switches
-    polynomial_order = 2
+    polynomial_order = 1
     nu = 1
-    nonlinear = true
+    nonlinear = false
 
     # refinement termination criterions
     maxlevel = 6

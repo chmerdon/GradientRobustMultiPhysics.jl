@@ -85,11 +85,7 @@ function solvePoissonProblem!(val4dofs::Array, PD::PoissonProblemDescription, FE
         Dbboundary_ids = findall(x->x == 1, PD.boundarytype4bregion)
         Base.show(Dbboundary_ids); println("");
         celldim::Int = size(FE.grid.nodes4cells,2) - 1;
-        if (celldim == 1)
-            bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,Dbboundary_ids, PD.boundarydata4bregion,false,PD.quadorder4bregion);
-        else
-            bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,Dbboundary_ids, PD.boundarydata4bregion,true,PD.quadorder4bregion);
-        end    
+        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE,Dbboundary_ids, PD.boundarydata4bregion,celldim > 1,PD.quadorder4bregion);
         for i = 1 : length(bdofs)
            A[bdofs[i],bdofs[i]] = dirichlet_penalty;
            b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;

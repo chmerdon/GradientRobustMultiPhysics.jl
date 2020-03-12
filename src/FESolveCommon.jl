@@ -48,11 +48,12 @@ function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!
     
     ndofs = FiniteElements.get_ndofs(FE);
     @time begin
-        print("    |assembling matrix...")
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs);
         if norm_lhs == "L2"
+            print("    |assembling mass matrix...")
             assemble_operator!(A,CELL_UdotV,FE);
         elseif norm_lhs == "H1"
+            print("    |assembling stiffness matrix...")
             assemble_operator!(A,CELL_DUdotDV,FE,nu);
         end 
         println("finished")
@@ -216,43 +217,30 @@ end
 # volume_data! for norm="H1" is expected to be the gradient of the function that is bestapproximated
 function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_data!::Function,boundary_data!,FE::AbstractFiniteElement,quadrature_order::Int, dirichlet_penalty = 1e60)
 
-    println("\nCOMPUTING BESTAPPROXIMATION")
+    println("\nCOMPUTING " * approx_norm * " BESTAPPROXIMATION")
     println(" |   FE = " * FE.name)
     println(" |ndofs = ", FiniteElements.get_ndofs(FE))
     println(" |");
     println(" |PROGRESS")
 
     # assemble system 
-    A, b = assembleSystem(1.0,approx_norm,approx_norm,volume_data!,FE,quadrature_order);
+    A, b = assembleSystem(1.0,approx_norm,approx_norm,volume_data!,FE,FiniteElements.get_polynomial_order(FE) + quadrature_order);
     
     # apply boundary data
     celldim::Int = size(FE.grid.nodes4cells,2) - 1;
-    if (celldim == 1)
-        bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,false);
-    else
-        bdofs = computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,true,FiniteElements.get_polynomial_order(FE));
-    end
+    Dbids = sort(unique(FE.grid.bregions));
+    bd_data = Vector{Function}(undef,length(Dbids))
+    for j = 1 : length(Dbids)
+        bd_data[j] = boundary_data!
+    end    
+    bdofs = computeDirichletBoundaryData!(val4dofs,FE,Dbids,bd_data,celldim > 1,ones(Int64,length(Dbids))*quadrature_order);
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;
        b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
     end
 
     # solve
-    @time begin
-        print("    |solving...")
-        try
-            val4dofs[:] = A\b;
-        catch    
-            println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
-            try
-                val4dofs[:] = Array{typeof(FE.grid.coords4nodes[1]),2}(A)\b;
-            catch OverflowError
-                println("OverflowError (Rationals?): trying again as Float64 sparse matrix");
-                val4dofs[:] = Array{Float64,2}(A)\b;
-            end
-        end
-        println("finished")
-    end
+    val4dofs[:] = A\b;
     
     # compute residual (exclude bdofs)
     residual = A*val4dofs - b

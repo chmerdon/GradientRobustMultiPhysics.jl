@@ -1,7 +1,11 @@
 function getProblemData(polynomial_coefficients::Vector{Float64})
 
     # auto-computing coefficients of - 2nd derivative
+    polynomial_coefficients_grad = zeros(Float64,length(polynomial_coefficients)-1)
     polynomial_coefficients_rhs = zeros(Float64,length(polynomial_coefficients)-2)
+    for j = 1 : length(polynomial_coefficients) - 1
+        polynomial_coefficients_grad[j] = j*polynomial_coefficients[j+1]
+    end    
     for j = 1 : length(polynomial_coefficients) - 2
         polynomial_coefficients_rhs[j] = -j*(j+1)*polynomial_coefficients[j+2]
     end    
@@ -15,6 +19,13 @@ function getProblemData(polynomial_coefficients::Vector{Float64})
         end
     end    
 
+    function exact_gradient!(result,x)
+        result[1] = 0.0
+        for j=1:length(polynomial_coefficients_grad)
+            result[1] += polynomial_coefficients_grad[j]*x[1]^(j-1)
+        end
+    end    
+
     function volume_data!(result, x)  
         result[1] = 0.0
         for j=1:length(polynomial_coefficients_rhs)
@@ -23,7 +34,7 @@ function getProblemData(polynomial_coefficients::Vector{Float64})
     end
 
     PD = FESolvePoisson.PoissonProblemDescription()
-    PD.name = "1D Poission Test problem"
+    PD.name = "1D Poisson Test problem"
     PD.diffusion = 1.0;
     # volume data
     PD.volumedata4region = Vector{Function}(undef,1)
@@ -35,5 +46,5 @@ function getProblemData(polynomial_coefficients::Vector{Float64})
     PD.quadorder4bregion = [u_order]
     PD.boundarydata4bregion[1] = exact_solution!
 
-    return PD, exact_solution!
+    return PD, exact_solution!, exact_gradient!
 end

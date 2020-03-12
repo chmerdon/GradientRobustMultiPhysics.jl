@@ -20,7 +20,7 @@ function assemble_operator!(b, ::Type{CELL_FdotDV}, FE::AbstractH1FiniteElement,
     
     # quadrature loop
     temp = 0.0;
-    fval = zeros(T,ncomponents)
+    fval = zeros(T,xdim)
     #@time begin    
     for cell = 1 : size(FE.grid.nodes4cells,1)
       

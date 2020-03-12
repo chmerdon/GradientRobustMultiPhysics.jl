@@ -1,7 +1,5 @@
 module FESolvePoissonTests
 
-using SparseArrays
-using LinearAlgebra
 using FESolvePoisson
 using FESolveCommon
 using Triangulate
@@ -25,7 +23,7 @@ function TestPoissonSolver1D(fem::String, order::Int)
   residual = solvePoissonProblem!(val4dofs,PD,FE);
   println("solver residual = " * string(residual));
   integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE),grid,1);
+  integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE),grid,2*order+1);
   integral = sqrt(sum(integral4cells));
   println("L2_error = " * string(integral));
   return abs(integral) < eps(100.0)
@@ -45,8 +43,8 @@ function TestPoissonSolver2D(fem::String, order::Int)
   val4dofs = FiniteElements.createFEVector(FE);
   residual = solvePoissonProblem!(val4dofs,PD,FE);
   println("solver residual = " * string(residual));
-  integral4cells = zeros(size(grid.nodes4cells,1),1);
-  integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE),grid,1);
+  integral4cells = zeros(size(grid.nodes4cells,1),2);
+  integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE),grid,2*order+1,2);
   integral = sqrt(sum(integral4cells));
   println("L2_error = " * string(integral));
   return abs(integral) < eps(100.0)
