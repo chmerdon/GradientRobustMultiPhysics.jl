@@ -18,7 +18,7 @@ using ForwardDiff
 include("FEoperators/CELL_NAVIERSTOKES_AdotDUdotDV.jl");
 include("FEoperators/CELL_NAVIERSTOKES_AdotDAdotDV.jl");
 
-function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, maxiterations::Int = 10, dirichlet_penalty::Float64 = 1e60, symmetry_penalty::Float64 = 1e10)
+function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_pressure::FiniteElements.AbstractFiniteElement, reconst_variant::Int = 0, maxiterations::Int = 20, dirichlet_penalty::Float64 = 1e60, symmetry_penalty::Float64 = 1e10)
         
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
@@ -47,6 +47,9 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
     @time begin
         # compute right-hand side vector
         b = zeros(Float64,ndofs);
+        T = Nothing
+        ndofsHdiv = 0
+        FE_Reconstruction = Nothing
         for region = 1 : length(PD.volumedata4region)
             print("    |assembling rhs in region $region...")
             if reconst_variant > 0
@@ -58,9 +61,9 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
                 FESolveCommon.assemble_operator!(b2, FESolveCommon.CELL_FdotV, FE_Reconstruction, PD.volumedata4region[region], quadorder)
                 println("finished")
                 print("    |Hdivreconstruction...")
-                T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
+                T = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofsHdiv)
                 FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
-                b[1:ndofs_velocity] = T*b2;
+                b = T*b2;
             else
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_velocity)
                 FESolveCommon.assemble_operator!(b, FESolveCommon.CELL_FdotV, FE_velocity, PD.volumedata4region[region], quadorder)
