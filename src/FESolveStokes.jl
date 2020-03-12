@@ -89,10 +89,10 @@ function computeDivFreeBestApproximation!(val4dofs::Array, volume_data!::Functio
     #b[ndofs] = 1;
        
     # solve
-    val4dofs[:] = A\b;
+    val4dofs[1:ndofs] = A\b;
     
     # compute residual (exclude bdofs)
-    residual = A*val4dofs - b
+    residual = A*val4dofs[1:ndofs] - b
     residual[bdofs] .= 0
     residual[ndofs] = 0
     residual = norm(residual);
