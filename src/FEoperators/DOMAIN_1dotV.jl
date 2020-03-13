@@ -1,6 +1,6 @@
-struct CELL_1dotV <: FiniteElements.AbstractFEOperator end
+struct DOMAIN_1dotV <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(b, ::Type{CELL_1dotV}, FE::AbstractFiniteElement)
+function assemble_operator!(b, ::Type{DOMAIN_1dotV}, FE::AbstractFiniteElement)
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);
     ET = FE.grid.elemtypes[1]

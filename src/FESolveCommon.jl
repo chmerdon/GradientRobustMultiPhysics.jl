@@ -26,12 +26,15 @@ include("FEoperators/BFACE_UndotVn.jl");
 include("FEoperators/CELL_DUdotDV.jl");
 
 # LINEAR FUNCTIONALS on cells
-include("FEoperators/CELL_1dotV.jl");
 include("FEoperators/CELL_FdotV.jl");
 include("FEoperators/CELL_FdotDV.jl");
 
-# LINEAR FUNCTIONALS on boundary faces
+# LINEAR FUNCTIONALS on full domain
+include("FEoperators/DOMAIN_1dotV.jl");
+
+# LINEAR FUNCTIONALS on (boundary) faces
 include("FEoperators/BFACE_FdotV.jl");
+include("FEoperators/FACE_1dotVn.jl");
 
 # DIV-DIV matrices on cells
 include("FEoperators/CELL_DIVUdotDIVV.jl");

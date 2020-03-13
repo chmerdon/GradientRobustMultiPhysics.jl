@@ -242,7 +242,7 @@ function solveStokesProblem_iterative!(val4dofs::Array,PD::StokesProblemDescript
 
         # compute integrals of pressure dofs
         pm = zeros(Float64,ndofs_pressure,1)
-        FESolveCommon.assemble_operator!(pm,FESolveCommon.CELL_1dotV,FE_pressure);
+        FESolveCommon.assemble_operator!(pm,FESolveCommon.DOMAIN_1dotV,FE_pressure);
         println("finished")
     end
         
@@ -394,7 +394,7 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
 
         # compute integrals of pressure dofs
         pm = zeros(Float64,ndofs_pressure,1)
-        FESolveCommon.assemble_operator!(pm,FESolveCommon.CELL_1dotV,FE_pressure);
+        FESolveCommon.assemble_operator!(pm,FESolveCommon.DOMAIN_1dotV,FE_pressure);
         println("finished")
     end
         

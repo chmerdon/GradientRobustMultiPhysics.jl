@@ -15,7 +15,8 @@ using Quadrature
 mutable struct CompressibleStokesProblemDescription
     name::String
     time_dependent_data:: Bool
-    viscosity:: Float64
+    shear_modulus:: Float64
+    lambda:: Float64
     total_mass:: Float64
     equation_of_state:: Function
     volumedata4region:: Vector{Function}
@@ -23,7 +24,7 @@ mutable struct CompressibleStokesProblemDescription
     boundarydata4bregion:: Vector{Function}
     boundarytype4bregion:: Vector{Int64}
     quadorder4bregion:: Vector{Int64}
-    CompressibleStokesProblemDescription() = new("undefined compressible Stokes problem", false, 1.0, 1.0)
+    CompressibleStokesProblemDescription() = new("undefined compressible Stokes problem", false, 1.0, 1.0,-2.0/3.0)
 end
 
 function show(PD::CompressibleStokesProblemDescription)
@@ -47,14 +48,18 @@ mutable struct CompressibleStokesSolver
     ProblemData::CompressibleStokesProblemDescription
     FE_velocity::AbstractFiniteElement
     FE_densitypressure::AbstractFiniteElement
-    StokesMatrix::ExtendableSparseMatrix
+    GradGradMatrix::ExtendableSparseMatrix
+    DivPressureMatrix::ExtendableSparseMatrix
+    DivDivMatrix::ExtendableSparseMatrix
     MassMatrixV::ExtendableSparseMatrix
     MassMatrixD::ExtendableSparseMatrix
     bdofs::Vector{Int64}
     dirichlet_penalty::Float64
     datavector::Vector{Float64}
+    NormalFluxMatrix::ExtendableSparseMatrix
     last_velocity::Vector{Float64}
     last_density::Vector{Float64}
+    last_pressure::Vector{Float64}
     current_solution::Vector{Float64} # contains velocity and density
     current_time::Real
     current_iteration::Int64
@@ -71,7 +76,8 @@ end
 # we need operators FdotAdotV, 
 
 function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription, FE_velocity::FiniteElements.AbstractFiniteElement,FE_densitypressure::FiniteElements.AbstractFiniteElement, initial_velocity::Array, initial_density::Array, reconst_variant::Int = 0, dirichlet_penalty::Float64 = 1e60, symmetry_penalty::Float64 = 1e10)
-        
+    @assert typeof(FE_densitypressure) == FiniteElements.L2P0FiniteElement{Float64,1}
+
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
     ndofs_densitypressure = FiniteElements.get_ndofs(FE_densitypressure);
     ndofs = ndofs_velocity + 2*ndofs_densitypressure;
@@ -86,13 +92,29 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     println(" |totalndofs = ", ndofs)
     println(" |");
     println(" |PROGRESS")
+
+    Grid.ensure_cells4faces!(FE_velocity.grid)
+    Grid.ensure_signs4cells!(FE_velocity.grid)
+    nfaces = size(FE_velocity.grid.nodes4faces,1)
     
     # assemble system 
     @time begin
         # compute Stokes operator
-        print("    |assembling Laplacian...")
+        print("    |assembling Stokes operator...") # needs to be replaced by symmetric gradients later
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
-        FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_DUdotDV,FE_velocity,PD.viscosity);
+        B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
+        FESolveStokes.assemble_operator!(A,B,FESolveStokes.CELL_STOKES,FE_velocity,FE_densitypressure,PD.shear_modulus);
+        println("finished")
+
+        print("    |precomputing normal fluxes of velocity basis")
+        NFM = ExtendableSparseMatrix{Float64,Int64}(nfaces,ndofs_velocity)
+        FESolveCommon.assemble_operator!(NFM,FESolveCommon.FACE_1dotVn,FE_velocity);
+        
+
+
+        print("    |assembling DivDiv matrix...")
+        D = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
+        FESolveCommon.assemble_operator!(D,FESolveCommon.CELL_DIVUdotDIVV,FE_velocity,PD.lambda);
         println("finished")
 
         # compute mass matrix
@@ -174,58 +196,119 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     SystemMatrixV = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
     rhsvectorD = zeros(Float64,ndofs_densitypressure)
     SystemMatrixD = ExtendableSparseMatrix{Float64,Int64}(ndofs_densitypressure,ndofs_densitypressure)
-    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,A,Mv,Mp,bdofs,dirichlet_penalty,b,initial_velocity,initial_density,val4dofs,0.0,0,-999,SystemMatrixV,SystemMatrixD,rhsvectorV,rhsvectorD)
+    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,A,B,D,Mv,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,initial_density,val4dofs,0.0,0,-999,SystemMatrixV,SystemMatrixD,rhsvectorV,rhsvectorD)
 end
 
-function PerformTimeStep(TSS::CompressibleStokesSolver, dt::Real = 1 // 10)
-    @assert TSS.ProblemData.time_dependent_data == false # true case has to be implemented
+function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
+    @assert CSS.ProblemData.time_dependent_data == false # true case has to be implemented
 
     # update matrix and right-hand side vector
 
-    println("    |time = ", TSS.current_time)
-    println("    |dt = ", TSS.current_dt)
-    if TSS.current_dt != dt
-        println("    |updating matrix...")
-        TSS.current_dt = dt
-        TSS.SystemMatrix = deepcopy(TSS.MassMatrix)
-        ExtendableSparse.flush!(TSS.SystemMatrix)
-        TSS.SystemMatrix.cscmatrix.nzval .*= (1.0/dt)
-        ExtendableSparse.flush!(TSS.StokesMatrix)
-        TSS.SystemMatrix.cscmatrix += TSS.StokesMatrix.cscmatrix
-        ExtendableSparse.flush!(TSS.SystemMatrix)
+    println("    |time = ", CSS.current_time)
+    println("    |dt = ", dt)
+    if CSS.current_dt != dt
+        print("    |updating velocity matrix...")
+        CSS.current_dt = dt
+        CSS.SystemMatrixV = deepcopy(CSS.MassMatrixV)
+        ExtendableSparse.flush!(CSS.SystemMatrixV)
+        CSS.SystemMatrixV.cscmatrix.nzval .*= (1.0/dt)
+        ExtendableSparse.flush!(CSS.GradGradMatrix)
+        CSS.SystemMatrixV.cscmatrix += CSS.GradGradMatrix.cscmatrix
+        ExtendableSparse.flush!(CSS.DivDivMatrix)
+        CSS.SystemMatrixV.cscmatrix += CSS.DivDivMatrix.cscmatrix
+        ExtendableSparse.flush!(CSS.SystemMatrixV)
+        println("finished")
     else
         println("    |skipping updating matrix (dt did not change)...")   
     end     
-
-    println("    |updating rhs...")
-    TSS.rhsvector = TSS.MassMatrix * TSS.current_solution
-    TSS.rhsvector .*= (1.0/dt)
-    TSS.rhsvector += TSS.datavector
     
-    println("    |apply boundary data...")
-    for i = 1 : length(TSS.bdofs)
-        TSS.SystemMatrix[TSS.bdofs[i],TSS.bdofs[i]] = TSS.dirichlet_penalty;
-        TSS.rhsvector[TSS.bdofs[i]] = TSS.current_solution[TSS.bdofs[i]]*TSS.dirichlet_penalty;
+    ndofs_velocity = FiniteElements.get_ndofs(CSS.FE_velocity)
+    ndofs_densitypressure = FiniteElements.get_ndofs(CSS.FE_densitypressure)
+    CSS.last_velocity = CSS.current_solution[1:ndofs_velocity]
+
+
+    print("    |updating density matrix (upwinding)...")
+    # time derivative
+    CSS.SystemMatrixD = deepcopy(CSS.MassMatrixD)
+    ExtendableSparse.flush!(CSS.SystemMatrixD)
+    CSS.SystemMatrixD.cscmatrix.nzval .*= (1.0/dt)
+
+    # upwinding div(rho*u) = 0
+    fluxes = CSS.NormalFluxMatrix * CSS.last_velocity
+    # test divergence
+    # Base.show(sum(fluxes[CSS.FE_velocity.grid.faces4cells].*CSS.FE_velocity.grid.signs4cells,dims = 2))
+    for cell=1:length(CSS.last_density)
+        for j=1:3
+            face = CSS.FE_velocity.grid.faces4cells[cell,j]
+            other_cell = setdiff(CSS.FE_velocity.grid.cells4faces[face,:],cell)[1]
+            coeff = (other_cell == 0) ? 1.0 : 0.5
+            flux = fluxes[face]*CSS.FE_velocity.grid.signs4cells[cell,j]
+            if flux > 0
+                CSS.SystemMatrixD[cell,cell] += coeff*flux
+                if other_cell > 0
+                    CSS.SystemMatrixD[other_cell,cell] -= coeff*flux
+                end    
+            else   
+                if other_cell > 0
+                    CSS.SystemMatrixD[other_cell,other_cell] -= coeff*flux
+                    CSS.SystemMatrixD[cell,other_cell] += coeff*flux
+                end 
+
+            end
+        end
     end
+    println("finished")
+
+
+    print("    |updating rhs for density...")
+    CSS.last_density = CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure]
+    CSS.rhsvectorD = CSS.MassMatrixD * CSS.last_density
+    CSS.rhsvectorD .*= (1.0/dt)
+    println("finished")
+
+
+    print("    |solving for new density...")
+    CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure] = CSS.SystemMatrixD\CSS.rhsvectorD
+    println("finished")
+    changeD = norm(CSS.last_density - CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure]);
+    println("    |change_density=", changeD)
+    mass =  sum(CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure] .* CSS.FE_densitypressure.grid.volume4cells, dims = 1)
+    println("    |total_mass=", mass)
+
+
+    print("    |updating pressure by equation of state...")
+    CSS.ProblemData.equation_of_state(CSS.last_pressure,CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure])
+    println("finished")
+    
+    print("    |updating rhs for velocity...")
+    fill!(CSS.rhsvectorV,0.0)
+    #CSS.rhsvectorV = CSS.MassMatrixV * CSS.last_velocity
+    #CSS.rhsvectorV .*= (1.0/dt)
+    CSS.rhsvectorV += CSS.datavector
+    # add pressure gradient (of eqs'ed density) to rhs
+    CSS.rhsvectorV -= CSS.DivPressureMatrix * CSS.last_pressure
+    println("finished")
+    
+    print("    |apply boundary data...")
+    for i = 1 : length(CSS.bdofs)
+        CSS.SystemMatrixV[CSS.bdofs[i],CSS.bdofs[i]] = CSS.dirichlet_penalty;
+        CSS.rhsvectorV[CSS.bdofs[i]] = CSS.last_velocity[CSS.bdofs[i]]*CSS.dirichlet_penalty;
+    end
+    println("finished")
 
     # solve for next time step
     # todo: reuse LU decomposition of matrix
-    println("    |solving...")
-    TSS.last_solution = deepcopy(TSS.current_solution)
-    TSS.current_solution = TSS.SystemMatrix\TSS.rhsvector
+    print("    |solving for new velocity...")
+    CSS.current_solution[1:ndofs_velocity] = CSS.SystemMatrixV\CSS.rhsvectorV
+    println("finished")
 
-    change = norm(TSS.last_solution - TSS.current_solution);
-    println("    |change=", change)
+    changeV = norm(CSS.last_velocity - CSS.current_solution[1:ndofs_velocity]);
+    println("    |change_velocity=", changeV)
 
-    # compute residual (exclude bdofs)
-    TSS.rhsvector = TSS.SystemMatrix*TSS.current_solution - TSS.rhsvector
-    TSS.rhsvector[TSS.bdofs] .= 0
-    residual = norm(TSS.rhsvector);
-    println("    |residual=", residual)
+    CSS.current_time += dt
 
-    TSS.current_time += dt
 
-    return residual;
+    return changeV+changeD;
 end
 
 

@@ -39,7 +39,7 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
 
         # compute integrals of pressure dofs
         pm = zeros(Float64,ndofs_pressure,1)
-        FESolveCommon.assemble_operator!(pm,FESolveCommon.CELL_1dotV,FE_pressure);
+        FESolveCommon.assemble_operator!(pm,FESolveCommon.DOMAIN_1dotV,FE_pressure);
         
         println("finished")
     end

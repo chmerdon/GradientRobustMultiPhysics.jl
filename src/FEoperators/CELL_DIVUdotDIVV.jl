@@ -1,6 +1,6 @@
 struct CELL_DIVUdotDIVV <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DIVUdotDIVV}, FE::FiniteElements.AbstractFiniteElement)
+function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DIVUdotDIVV}, FE::FiniteElements.AbstractFiniteElement, factor::Real = 1.0)
 
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);
@@ -40,7 +40,7 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DIVUdotDIVV},
             for c = 1 : length(diagonal_entries)
                 div_i += gradients[dof_i,diagonal_entries[c]];
             end    
-            div_i *= qf.w[i] * FE.grid.volume4cells[cell];
+            div_i *= factor * qf.w[i] * FE.grid.volume4cells[cell];
             for dof_j = 1 : ndofs4cell
                 div_j = 0.0;
                 for c = 1 : xdim

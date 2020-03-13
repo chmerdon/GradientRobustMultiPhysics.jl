@@ -8,7 +8,7 @@ function getProblemData(nu::Real = 1.0, nrBoundaryRegions::Int = 4, rhs4poisson:
     function volume_data!(result,x)
         result[1] = nu*(4*(2*x[2]-1)*(3*x[1]^4-6*x[1]^3+6*x[1]^2*x[2]^2 - 6*x[1]^2*x[2] + 3*x[1]^2 -6*x[1]*x[2]^2 + 6*x[1]*x[2] + x[2]^2 - x[2]))
         result[2] = -nu*(4*(2*x[1]-1)*(3*x[2]^4-6*x[2]^3+6*x[2]^2*x[1]^2 - 6*x[2]^2*x[1] + 3*x[2]^2 -6*x[2]*x[1]^2 + 6*x[2]*x[1] + x[1]^2 - x[1]))
-        if rhs4poisson == false
+        if rhs4poisson == false # add pressure gradient
             result[1] += 3*x[1]^2
             result[2] += 3*x[2]^2
         end       
