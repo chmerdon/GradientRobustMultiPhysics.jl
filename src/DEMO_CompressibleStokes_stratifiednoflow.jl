@@ -54,8 +54,8 @@ function main()
 
     #fem_velocity = "CR"; fem_densitypressure = "P0"
     #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
-    fem_velocity = "BR"; fem_densitypressure = "P0"
-    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "BR"; fem_densitypressure = "P0"
+    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
 
 
 
@@ -75,7 +75,7 @@ function main()
         result[2] = -1.0
     end    
 
-    
+
     # transform into compressible getProblemData
     PD = FESolveCompressibleStokes.CompressibleStokesProblemDescription()
     PD.name = "stratified no-flow";

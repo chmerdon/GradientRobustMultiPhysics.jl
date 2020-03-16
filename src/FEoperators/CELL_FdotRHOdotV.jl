@@ -1,6 +1,6 @@
 struct CELL_FdotRHOdotV <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(b, ::Type{CELL_FdotRHOdotV}, FEV::AbstractFiniteElement, FERHO::AbstractFiniteElement, dofs4RHO, f!::Function, quadrature_order::Int64)
+function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotRHOdotV}, FEV::AbstractFiniteElement, FERHO::AbstractFiniteElement, f!::Function, quadrature_order::Int64)
     # get quadrature formula
     T = eltype(FEV.grid.coords4nodes);
     ET = FEV.grid.elemtypes[1]
@@ -49,21 +49,15 @@ function assemble_operator!(b, ::Type{CELL_FdotRHOdotV}, FEV::AbstractFiniteElem
             # evaluate f
             x = cell_trafo(qf.xref[i]);
             f!(fval, x)
-
-            # evaluate rho
-            rho = 0.0
-            for dof_i = 1 : ndofs4cellRHO
-                rho += dofs4RHO[dofsRHO[dof_i]] * basisvalsRHO[dof_i,1]
-            end
                 
-            for dof_i = 1 : ndofs4cellV
+            for dof_i = 1 : ndofs4cellV, dof_j = 1 : ndofs4cellRHO
                 # fill vector
                 @inbounds begin
                     temp = 0.0
                     for k = 1 : ncomponents
                         temp += fval[k]*basisvalsV[dof_i,k];
                     end
-                    b[dofsV[dof_i]] += temp * qf.w[i] * FEV.grid.volume4cells[cell] * rho;
+                    A[dofsV[dof_i],dofsRHO[dof_j]] += temp * qf.w[i] * FEV.grid.volume4cells[cell] * basisvalsRHO[dof_j,1];
                 end
             end
         end

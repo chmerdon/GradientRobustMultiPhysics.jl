@@ -57,6 +57,7 @@ mutable struct CompressibleStokesSolver
     GradGradMatrix::ExtendableSparseMatrix
     DivPressureMatrix::ExtendableSparseMatrix
     DivDivMatrix::ExtendableSparseMatrix
+    GravityMatrix::ExtendableSparseMatrix
     MassMatrixV::ExtendableSparseMatrix
     MassMatrixD::ExtendableSparseMatrix
     bdofs::Vector{Int64}
@@ -174,6 +175,29 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         end
     end
 
+    # add gravity
+    G = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
+    if PD.quadorder4gravity > -1
+        G = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
+        @time begin
+            # compute gravity matrix
+            print("    |assembling gravity matrix...")
+            if reconst_variant > 0
+                    G2 = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs_densitypressure)
+                    assemble_operator!(G2, CELL_FdotRHOdotV, FE_Reconstruction, FE_densitypressure, PD.gravity, PD.quadorder4gravity)
+                    println("finished")
+                    print("    |Hdivreconstruction...")
+                    ExtendableSparse.flush!(G2)
+                    G.cscmatrix = T.cscmatrix*G2.cscmatrix;
+            else
+                assemble_operator!(G, CELL_FdotRHOdotV, FE_velocity, FE_densitypressure, PD.gravity, PD.quadorder4gravity)
+            end    
+            println("finished")
+        end
+    else
+        print("    |skipping gravity matrix (not defined)...")
+    end
+
     @time begin
         # compute and apply boundary data
         println("    |incorporating boundary data...")
@@ -204,7 +228,7 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     rhsvectorD = zeros(Float64,ndofs_densitypressure)
     SystemMatrixD = ExtendableSparseMatrix{Float64,Int64}(ndofs_densitypressure,ndofs_densitypressure)
     fluxes = zeros(Float64,nfaces)
-    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,A,B,D,Mv,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,initial_density,val4dofs,0.0,0,-999,SystemMatrixV,SystemMatrixD,fluxes,rhsvectorV,rhsvectorD)
+    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,A,B,D,G,Mv,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,initial_density,val4dofs,0.0,0,-999,SystemMatrixV,SystemMatrixD,fluxes,rhsvectorV,rhsvectorD)
 end
 
 function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
@@ -304,7 +328,7 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
 
     # add gravity
     if CSS.ProblemData.quadorder4gravity > -1
-        assemble_operator!(CSS.rhsvectorV, CELL_FdotRHOdotV, CSS.FE_velocity, CSS.FE_densitypressure,  CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure], CSS.ProblemData.gravity, CSS.ProblemData.quadorder4gravity)             
+        CSS.rhsvectorV += CSS.GravityMatrix * CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure]
     end
 
     println("finished")
