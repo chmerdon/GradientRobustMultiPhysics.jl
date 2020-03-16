@@ -12,6 +12,10 @@ using FESolveNavierStokes
 using Grid
 using Quadrature
 
+
+# COMPRESSIBLE STOKES operators
+include("FEoperators/CELL_FdotRHOdotV.jl"); # gravity rhs
+
 mutable struct CompressibleStokesProblemDescription
     name::String
     time_dependent_data:: Bool
@@ -21,6 +25,8 @@ mutable struct CompressibleStokesProblemDescription
     equation_of_state:: Function
     volumedata4region:: Vector{Function}
     quadorder4region:: Vector{Int64}
+    gravity:: Function
+    quadorder4gravity:: Int64 # -1 means not defined
     boundarydata4bregion:: Vector{Function}
     boundarytype4bregion:: Vector{Int64}
     quadorder4bregion:: Vector{Int64}
@@ -66,6 +72,7 @@ mutable struct CompressibleStokesSolver
     current_dt::Float64
     SystemMatrixV::ExtendableSparseMatrix
     SystemMatrixD::ExtendableSparseMatrix
+    fluxes::Vector{Float64}
     rhsvectorV::Vector{Float64}
     rhsvectorD::Vector{Float64}
 end
@@ -196,7 +203,8 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     SystemMatrixV = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
     rhsvectorD = zeros(Float64,ndofs_densitypressure)
     SystemMatrixD = ExtendableSparseMatrix{Float64,Int64}(ndofs_densitypressure,ndofs_densitypressure)
-    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,A,B,D,Mv,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,initial_density,val4dofs,0.0,0,-999,SystemMatrixV,SystemMatrixD,rhsvectorV,rhsvectorD)
+    fluxes = zeros(Float64,nfaces)
+    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,A,B,D,Mv,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,initial_density,val4dofs,0.0,0,-999,SystemMatrixV,SystemMatrixD,fluxes,rhsvectorV,rhsvectorD)
 end
 
 function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
@@ -234,15 +242,16 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
     CSS.SystemMatrixD.cscmatrix.nzval .*= (1.0/dt)
 
     # upwinding div(rho*u) = 0
-    fluxes = CSS.NormalFluxMatrix * CSS.last_velocity
+    CSS.fluxes = CSS.NormalFluxMatrix * CSS.last_velocity
     # test divergence
     # Base.show(sum(fluxes[CSS.FE_velocity.grid.faces4cells].*CSS.FE_velocity.grid.signs4cells,dims = 2))
+    flux = 0.0
     for cell=1:length(CSS.last_density)
         for j=1:3
             face = CSS.FE_velocity.grid.faces4cells[cell,j]
             other_cell = setdiff(CSS.FE_velocity.grid.cells4faces[face,:],cell)[1]
             coeff = (other_cell == 0) ? 1.0 : 0.5
-            flux = fluxes[face]*CSS.FE_velocity.grid.signs4cells[cell,j]
+            flux = CSS.fluxes[face]*CSS.FE_velocity.grid.signs4cells[cell,j]
             if flux > 0
                 CSS.SystemMatrixD[cell,cell] += coeff*flux
                 if other_cell > 0
@@ -282,11 +291,22 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
     
     print("    |updating rhs for velocity...")
     fill!(CSS.rhsvectorV,0.0)
+
+    # add time derivative of velocity
     CSS.rhsvectorV = CSS.MassMatrixV * CSS.last_velocity
     CSS.rhsvectorV .*= (1.0/dt)
+
+    # add f * V
     CSS.rhsvectorV += CSS.datavector
+
     # add pressure gradient (of eqs'ed density) to rhs
     CSS.rhsvectorV -= CSS.DivPressureMatrix * CSS.last_pressure
+
+    # add gravity
+    if CSS.ProblemData.quadorder4gravity > -1
+        assemble_operator!(CSS.rhsvectorV, CELL_FdotRHOdotV, CSS.FE_velocity, CSS.FE_densitypressure,  CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure], CSS.ProblemData.gravity, CSS.ProblemData.quadorder4gravity)             
+    end
+
     println("finished")
     
     print("    |apply boundary data...")

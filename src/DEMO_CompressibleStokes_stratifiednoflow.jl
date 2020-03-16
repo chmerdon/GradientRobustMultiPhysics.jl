@@ -17,7 +17,6 @@ using PyPlot
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
-include("PROBLEMdefinitions/STOKES_p7vortex.jl");
 
 
 function main()
@@ -26,11 +25,11 @@ function main()
     shear_modulus = 1.0
     lambda = 0.0
     c = 10
-    total_mass = 1
-    gamma = 1
-    dt = shear_modulus*1.0/c
+    total_mass = 2.0
+    gamma = 1 # exact_denisty only exact for gamma = 1 !!!
+    dt = shear_modulus*0.5/c
     maxT = 1000
-    stationarity_tolerance = 1e-12
+    stationarity_tolerance = 1e-10
 
     function equation_of_state!(pressure,density)
         for j=1:length(density)
@@ -59,24 +58,37 @@ function main()
     #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
 
 
-    # load problem data (for incompressible Stokes p7 vortex)
-    PDic, exact_velocity! = getProblemData(shear_modulus, 4, true);
 
-    function exact_density!(result,x)
-        result[1] = 1.0
+    function zero_data!(result,x)
+        fill!(result,0.0)
+    end    
+    
+
+    d = log(total_mass/(c*(exp(1)^(1/c)-1.0)))
+    show(exp(d))
+    function exact_density!(result,x) # only exact for gamma = 1
+        result[1] = exp((1-x[2])/c + d)
+    end 
+
+    function gravity!(result,x)
+        result[1] = 0
+        result[2] = -1.0
     end    
 
+    
     # transform into compressible getProblemData
     PD = FESolveCompressibleStokes.CompressibleStokesProblemDescription()
-    PD.name = "P7 vortex compressible";
+    PD.name = "stratified no-flow";
     PD.shear_modulus = shear_modulus
     PD.lambda = lambda
     PD.total_mass = total_mass
-    PD.quadorder4gravity = -1
-    PD.volumedata4region = PDic.volumedata4region
-    PD.boundarydata4bregion = PDic.boundarydata4bregion
-    PD.boundarytype4bregion = PDic.boundarytype4bregion
-    PD.quadorder4bregion = PDic.quadorder4bregion
+    PD.volumedata4region = [zero_data!]
+    PD.gravity = gravity!
+    PD.quadorder4gravity = 0
+    PD.quadorder4region = [0]
+    PD.boundarydata4bregion = [zero_data!,zero_data!,zero_data!,zero_data!]
+    PD.boundarytype4bregion = [1,1,1,1]
+    PD.quadorder4bregion = [0,0,0,0]
     PD.equation_of_state = equation_of_state!
     FESolveCompressibleStokes.show(PD);
 
@@ -118,10 +130,9 @@ function main()
         end
 
 
-        # solve for initial value by best approximation 
+        # initial velocity is zero
         val4dofs = zeros(Float64,ndofs[level]);
-        residual = FESolveStokes.computeDivFreeBestApproximation!(val4dofs,exact_velocity!,exact_velocity!,FE_velocity,FE_densitypressure,7)
-
+        
         Grid.ensure_volume4cells!(grid)
         initial_density = FiniteElements.createFEVector(FE_densitypressure)
         initial_density[:] .= total_mass
@@ -141,7 +152,7 @@ function main()
         integrate!(integral4cells,eval_L2_interpolation_error!(exact_density!, val4dofs[ndofs_velocity+1:end], FE_densitypressure), grid, order_error, 1);
         L2error_density[level] = sqrt(abs(sum(integral4cells)));
         integral4cells = zeros(size(grid.nodes4cells,1),2);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!, val4dofs[1:ndofs_velocity], FE_velocity), grid, order_error, 2);
+        integrate!(integral4cells,eval_L2_interpolation_error!(zero_data!, val4dofs[1:ndofs_velocity], FE_velocity), grid, order_error, 2);
         L2error_velocity[level] = sqrt(abs(sum(integral4cells[:])));
 
     end # loop over levels
