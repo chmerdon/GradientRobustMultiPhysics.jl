@@ -25,10 +25,10 @@ function main()
     # problem modification switches
     shear_modulus = 1.0
     lambda = 0.0
-    c = 1
+    c = 10
     total_mass = 1
     gamma = 1
-    dt = shear_modulus*0.1/c
+    dt = shear_modulus*1.0/c
     maxT = 1000
     stationarity_tolerance = 1e-10
 

@@ -282,8 +282,8 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
     
     print("    |updating rhs for velocity...")
     fill!(CSS.rhsvectorV,0.0)
-    #CSS.rhsvectorV = CSS.MassMatrixV * CSS.last_velocity
-    #CSS.rhsvectorV .*= (1.0/dt)
+    CSS.rhsvectorV = CSS.MassMatrixV * CSS.last_velocity
+    CSS.rhsvectorV .*= (1.0/dt)
     CSS.rhsvectorV += CSS.datavector
     # add pressure gradient (of eqs'ed density) to rhs
     CSS.rhsvectorV -= CSS.DivPressureMatrix * CSS.last_pressure
