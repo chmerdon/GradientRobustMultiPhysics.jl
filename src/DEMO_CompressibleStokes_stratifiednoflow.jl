@@ -1,8 +1,14 @@
-##########################################################
-### DEMONSTRATION SCRIPT STOKES P7-VORTEX COMPRESSIBLE ###
-##########################################################
+##################################################################
+### DEMONSTRATION SCRIPT COMPRESSIBLE STOKES STRATIFIEDNO-FLOW ###
+##################################################################
 #
-# solves compressible Stokes test problem p7vortex
+# solves compressible Stokes test problem stratified no-flow
+#
+# means: exact velocity solution is zero, density is non-constant and only y-dependent
+#
+#
+# demonstrates:
+#   - gradient-robustness (use_reconstruction > 0) important to get much more accuracy of hydrostic solution
 #
 
 using Triangulate
@@ -27,7 +33,7 @@ function main()
     c = 10
     total_mass = 2.0
     gamma = 1 # exact_denisty only exact for gamma = 1 !!!
-    dt = shear_modulus*0.5/c
+    dt = shear_modulus*0.2/c
     maxT = 1000
     stationarity_tolerance = 1e-10
 
@@ -53,9 +59,9 @@ function main()
     ########################
 
     #fem_velocity = "CR"; fem_densitypressure = "P0"
-    #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
     #fem_velocity = "BR"; fem_densitypressure = "P0"
-    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
 
 
 
