@@ -1,7 +1,7 @@
 using DiffResults
 using ForwardDiff
 
-function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; symmetric_gradient::Bool = false, c::Real = 1.0, gamma::Real = 1.0, density_power::Real = 0.0, total_mass::Real = 1.0, nrBoundaryRegions::Int = 4)
+function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_gravity::Bool, symmetric_gradient::Bool = false, c::Real = 1.0, gamma::Real = 1.0, density_power::Real = 0.0, total_mass::Real = 1.0, nrBoundaryRegions::Int = 4)
 
 
     function exact_density!(result, x) # exact density
@@ -52,13 +52,14 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; symmetric_gradient::
     velo_rotated(a) = ForwardDiff.gradient(exact_streamfunction,a);
     velo1 = x -> -velo_rotated(x)[2]/exact_density(x)
     velo2 = x -> velo_rotated(x)[1]/exact_density(x)
+    gravity = [0.0,-1.0]
     function volume_data!(result,x)
         fill!(result,0.0)
 
         # add friction term
         ForwardDiff.hessian!(hessian,velo1,x)
         if symmetric_gradient == false
-            result[1] -= nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
+            result[1] -= 2*nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
         else
             result[1] -= nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
             result[1] -= nu * (DiffResults.hessian(hessian)[1])
@@ -69,7 +70,7 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; symmetric_gradient::
         
         ForwardDiff.hessian!(hessian,velo2,x)
         if symmetric_gradient == false
-            result[2] -= nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
+            result[2] -= 2*nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
         else
             result[2] -= nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
             result[1] -= nu * (DiffResults.hessian(hessian)[2])
@@ -86,6 +87,11 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; symmetric_gradient::
         result[2] += DiffResults.gradient(pgrad)[2]
 
         # remove gravity effect (todo)
+        if use_gravity
+            exact_density!(rho,x)
+            result[1] -= rho[1] * gravity[1]
+            result[2] -= rho[1] * gravity[2]
+        end
     end
 
 
@@ -94,7 +100,7 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; symmetric_gradient::
 
     # parameters
     PD.name = "P7 vortex compressible";
-    PD.shear_modulus = (symmetric_gradient) ? 2*nu : nu;
+    PD.shear_modulus = (symmetric_gradient) ? nu : 2*nu;
     PD.lambda = lambda
     PD.total_mass = total_mass
     PD.use_symmetric_gradient = symmetric_gradient
@@ -114,7 +120,18 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; symmetric_gradient::
     end    
 
     # gravity
-    PD.quadorder4gravity = -1
+
+    function gravity!(result,x)
+        result[1] = 0
+        result[2] = -1.0
+    end    
+
+    if use_gravity
+        PD.gravity = gravity!
+        PD.quadorder4gravity = 0
+    else 
+        PD.quadorder4gravity = -1
+    end
 
     # equation of state
     PD.equation_of_state = equation_of_state!

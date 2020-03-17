@@ -32,7 +32,7 @@ include("PROBLEMdefinitions/CSTOKES_p7vortex.jl");
 function main()
 
     # problem modification switches
-    shear_modulus = 1.0 # coefficient for Laplacian/div(symgrad)
+    shear_modulus = 1.0 # coefficient for Laplacian/div(eps(u))
     lambda = -2.0/3.0*shear_modulus # coefficient for grad(div(u))
     total_mass = 1
     c = 1 # coefficient of density in equation of state (inverse of squared Mach number)
@@ -40,14 +40,15 @@ function main()
     density_power = 2 # density will be a polynomial of this degree
 
     # discretisation parameter
-    dt = (2*shear_modulus + lambda)*0.1/c # time step has to be small enough for convergence
+    dt = (2*shear_modulus + lambda)*0.2/c # time step has to be small enough for convergence
     stationarity_tolerance = 1e-12 # termination condition for time loop
-    symmetric_gradient = false # = true may not work correctly atm
+    symmetric_gradient = true # use div(eps(u)) instead of Laplacian
     maxT = 1000 # termination condition for time loop
     initial_density_bestapprox = true # otherwise constant initial density is used
+    use_gravity = true # adds a density-dependent gravity term
 
     # refinement termination criterions
-    maxlevel = 4
+    maxlevel = 3
     maxdofs = 40000
 
     # other switches
@@ -68,11 +69,12 @@ function main()
 
 
     # load problem data
-    PD, exact_velocity!, exact_density!, exact_pressure! = getProblemData(shear_modulus, lambda; symmetric_gradient = symmetric_gradient, gamma = gamma, c = c, density_power = density_power, nrBoundaryRegions = 4);
+    PD, exact_velocity!, exact_density!, exact_pressure! = getProblemData(shear_modulus, lambda; use_gravity = use_gravity, symmetric_gradient = symmetric_gradient, gamma = gamma, c = c, density_power = density_power, nrBoundaryRegions = 4);
     FESolveCompressibleStokes.show(PD);
 
     L2error_velocity = zeros(Float64,maxlevel)
     L2error_density = zeros(Float64,maxlevel)
+    nrIterations = zeros(Int64,maxlevel)
     ndofs = zeros(Int,maxlevel)
     grid = Nothing
     FE_velocity = Nothing
@@ -124,6 +126,7 @@ function main()
 
         change = 1
         while ((change > stationarity_tolerance) && (maxT > CSS.current_time))
+            nrIterations[level] += 1
             change = FESolveCompressibleStokes.PerformTimeStep(CSS,dt)
         end    
 
@@ -144,6 +147,8 @@ function main()
     show(L2error_density)
     println("\n L2 velocity error");
     show(L2error_velocity)
+    println("\n nrIterations");
+    show(nrIterations)
 
     #plot
     if (show_plots)
