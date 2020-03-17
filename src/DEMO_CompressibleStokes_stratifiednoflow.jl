@@ -28,14 +28,15 @@ include("PROBLEMdefinitions/GRID_unitsquare.jl")
 function main()
 
     # problem modification switches
-    shear_modulus = 1.0
+    shear_modulus = 1
+    symmetric_gradient = true
     lambda = 0.0
     c = 10
     total_mass = 2.0
-    gamma = 1 # exact_denisty only exact for gamma = 1 !!!
+    gamma = 1 # exact_density only exact for gamma = 1 !!!
     dt = shear_modulus*0.2/c
     maxT = 1000
-    stationarity_tolerance = 1e-10
+    stationarity_tolerance = 1e-11
 
     function equation_of_state!(pressure,density)
         for j=1:length(density)
@@ -44,7 +45,7 @@ function main()
     end    
 
     # refinement termination criterions
-    maxlevel = 4
+    maxlevel = 5
     maxdofs = 40000
 
     # other switches
@@ -59,9 +60,9 @@ function main()
     ########################
 
     #fem_velocity = "CR"; fem_densitypressure = "P0"
-    fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
     #fem_velocity = "BR"; fem_densitypressure = "P0"
-    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
 
 
 
@@ -86,6 +87,7 @@ function main()
     PD = FESolveCompressibleStokes.CompressibleStokesProblemDescription()
     PD.name = "stratified no-flow";
     PD.shear_modulus = shear_modulus
+    PD.use_symmetric_gradient = symmetric_gradient
     PD.lambda = lambda
     PD.total_mass = total_mass
     PD.volumedata4region = [zero_data!]

@@ -75,7 +75,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_ve
 end
 
 
-function assemble_operator!(A::ExtendableSparseMatrix, B::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_velocity::FiniteElements.AbstractFiniteElement, FE_pressure::FiniteElements.AbstractFiniteElement, nu::Real = 1.0, pressure_diagonal = 1e-6)
+function assemble_operator!(A::ExtendableSparseMatrix, B::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_velocity::FiniteElements.AbstractFiniteElement, FE_pressure::FiniteElements.AbstractFiniteElement, nu::Real = 1.0, symmetric_gradient = false)
     
     # get quadrature formula
     T = eltype(FE_velocity.grid.coords4nodes);
@@ -97,7 +97,7 @@ function assemble_operator!(A::ExtendableSparseMatrix, B::ExtendableSparseMatrix
     dofs_pressure = zeros(Int64,ndofs4cell_pressure)
     dofs_velocity = zeros(Int64,ndofs4cell_velocity)
     diagonal_entries = [1, 4]
-
+    transposed_entries = [1, 3, 2, 4]
     # Assembly rest of Stokes operators
     # Du*Dv + div(u)*q + div(v)*p
     for cell = 1 : size(FE_velocity.grid.nodes4cells,1);
@@ -122,7 +122,14 @@ function assemble_operator!(A::ExtendableSparseMatrix, B::ExtendableSparseMatrix
                     for k = 1 : size(gradients_velocity,2)
                         temp += gradients_velocity[dof_i,k] * gradients_velocity[dof_j,k];
                     end
-                    temp *= nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];
+                    if symmetric_gradient
+                        for k = 1 : size(gradients_velocity,2)
+                            temp += gradients_velocity[dof_i,transposed_entries[k]] * gradients_velocity[dof_j,k];
+                        end
+                        temp *= 1//2 * nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];
+                    else    
+                        temp *= nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];
+                    end    
                     A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp;
                 end
                 # pressure x (-div) velocity

@@ -20,6 +20,7 @@ mutable struct CompressibleStokesProblemDescription
     name::String
     time_dependent_data:: Bool
     shear_modulus:: Float64
+    use_symmetric_gradient:: Bool
     lambda:: Float64
     total_mass:: Float64
     equation_of_state:: Function
@@ -30,7 +31,7 @@ mutable struct CompressibleStokesProblemDescription
     boundarydata4bregion:: Vector{Function}
     boundarytype4bregion:: Vector{Int64}
     quadorder4bregion:: Vector{Int64}
-    CompressibleStokesProblemDescription() = new("undefined compressible Stokes problem", false, 1.0, 1.0,-2.0/3.0)
+    CompressibleStokesProblemDescription() = new("undefined compressible Stokes problem", false, 1.0, false,-2.0/3.0,1.0)
 end
 
 function show(PD::CompressibleStokesProblemDescription)
@@ -111,14 +112,13 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         print("    |assembling Stokes operator...") # needs to be replaced by symmetric gradients later
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
         B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
-        FESolveStokes.assemble_operator!(A,B,FESolveStokes.CELL_STOKES,FE_velocity,FE_densitypressure,PD.shear_modulus);
+        FESolveStokes.assemble_operator!(A,B,FESolveStokes.CELL_STOKES,FE_velocity,FE_densitypressure,(PD.use_symmetric_gradient) ? 2*PD.shear_modulus : PD.shear_modulus, PD.use_symmetric_gradient);
         println("finished")
 
         print("    |precomputing normal fluxes of velocity basis")
         NFM = ExtendableSparseMatrix{Float64,Int64}(nfaces,ndofs_velocity)
         FESolveCommon.assemble_operator!(NFM,FESolveCommon.FACE_1dotVn,FE_velocity);
-        
-
+        println("finished")
 
         print("    |assembling DivDiv matrix...")
         D = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
@@ -139,7 +139,7 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
             Mhdiv = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofsHdiv)
             FESolveCommon.assemble_operator!(Mhdiv,FESolveCommon.CELL_UdotV,FE_Reconstruction);
             println("finished")
-            print("    |Hdivreconstruction...")
+            print("    |Hdivreconstruction mass matrix...")
             T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
             FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
             ExtendableSparse.flush!(Mhdiv)
@@ -165,7 +165,7 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
                 FESolveCommon.assemble_operator!(b2, FESolveCommon.CELL_FdotV, FE_Reconstruction, PD.volumedata4region[region], quadorder)
                 println("finished")
-                print("    |Hdivreconstruction...")
+                print("    |Hdivreconstruction rhs...")
                 b = T*b2;
             else
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_velocity)
@@ -186,7 +186,7 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
                     G2 = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs_densitypressure)
                     assemble_operator!(G2, CELL_FdotRHOdotV, FE_Reconstruction, FE_densitypressure, PD.gravity, PD.quadorder4gravity)
                     println("finished")
-                    print("    |Hdivreconstruction...")
+                    print("    |Hdivreconstruction gravity matrix...")
                     ExtendableSparse.flush!(G2)
                     G.cscmatrix = T.cscmatrix*G2.cscmatrix;
             else
