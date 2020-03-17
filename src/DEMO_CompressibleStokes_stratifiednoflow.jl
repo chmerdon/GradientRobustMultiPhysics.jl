@@ -34,7 +34,7 @@ function main()
     c = 10
     total_mass = 2.0
     gamma = 1 # exact_density only exact for gamma = 1 !!!
-    dt = shear_modulus*0.2/c
+    dt = shear_modulus*0.5/c
     maxT = 1000
     stationarity_tolerance = 1e-11
 
@@ -45,7 +45,7 @@ function main()
     end    
 
     # refinement termination criterions
-    maxlevel = 5
+    maxlevel = 4
     maxdofs = 40000
 
     # other switches
@@ -102,11 +102,13 @@ function main()
 
     L2error_velocity = zeros(Float64,maxlevel)
     L2error_density = zeros(Float64,maxlevel)
+    nrIterations = zeros(Int64,maxlevel)
     ndofs = zeros(Int,maxlevel)
     grid = Nothing
     FE_velocity = Nothing
     FE_densitypressure = Nothing
-    val4dofs = Nothing
+    velocity = Nothing
+    density = Nothing
     for level = 1 : maxlevel
 
         println("Solving compressible Stokes problem on refinement level...", level);
@@ -139,28 +141,29 @@ function main()
 
 
         # initial velocity is zero
-        val4dofs = zeros(Float64,ndofs[level]);
+        velocity = zeros(Float64,ndofs_velocity);
         
-        Grid.ensure_volume4cells!(grid)
-        initial_density = FiniteElements.createFEVector(FE_densitypressure)
-        initial_density[:] .= total_mass
-        CSS = FESolveCompressibleStokes.setupCompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,val4dofs[1:ndofs_velocity],initial_density,use_reconstruction)
+        # initial density is constant
+        density = FiniteElements.createFEVector(FE_densitypressure)
+        density[:] .= total_mass
+        CSS = FESolveCompressibleStokes.setupCompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,velocity,density,use_reconstruction)
 
         change = 1
         while ((change > stationarity_tolerance) && (maxT > CSS.current_time))
-
+            nrIterations[level] += 1
             change = FESolveCompressibleStokes.PerformTimeStep(CSS,dt)
         end    
 
-        val4dofs[:] = CSS.current_solution[:]
+        velocity[:] = CSS.current_velocity[:]
+        density[:] = CSS.current_density[:]
 
 
         # compute errors
         integral4cells = zeros(size(grid.nodes4cells,1),1);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_density!, val4dofs[ndofs_velocity+1:end], FE_densitypressure), grid, order_error, 1);
+        integrate!(integral4cells,eval_L2_interpolation_error!(exact_density!, density, FE_densitypressure), grid, order_error, 1);
         L2error_density[level] = sqrt(abs(sum(integral4cells)));
         integral4cells = zeros(size(grid.nodes4cells,1),2);
-        integrate!(integral4cells,eval_L2_interpolation_error!(zero_data!, val4dofs[1:ndofs_velocity], FE_velocity), grid, order_error, 2);
+        integrate!(integral4cells,eval_L2_interpolation_error!(zero_data!, velocity, FE_velocity), grid, order_error, 2);
         L2error_velocity[level] = sqrt(abs(sum(integral4cells[:])));
 
     end # loop over levels
@@ -169,17 +172,18 @@ function main()
     show(L2error_density)
     println("\n L2 velocity error");
     show(L2error_velocity)
+    println("\n nrIterations");
+    show(nrIterations)
 
     #plot
     if (show_plots)
         pygui(true)
         
         # evaluate velocity and pressure at grid points
-        velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
-        density = FESolveCommon.eval_at_nodes(val4dofs,FE_densitypressure,FiniteElements.get_ndofs(FE_velocity));
+        velo = FESolveCommon.eval_at_nodes(velocity,FE_velocity);
+        density = FESolveCommon.eval_at_nodes(density,FE_densitypressure);
         speed = sqrt.(sum(velo.^2, dims = 2))
-        #pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
-
+        
         PyPlot.figure(1)
         tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
         PyPlot.axis("equal")
