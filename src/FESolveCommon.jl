@@ -230,16 +230,19 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
     A, b = assembleSystem(1.0,approx_norm,approx_norm,volume_data!,FE,FiniteElements.get_polynomial_order(FE) + quadrature_order);
     
     # apply boundary data
-    celldim::Int = size(FE.grid.nodes4cells,2) - 1;
-    Dbids = sort(unique(FE.grid.bregions));
-    bd_data = Vector{Function}(undef,length(Dbids))
-    for j = 1 : length(Dbids)
-        bd_data[j] = boundary_data!
-    end    
-    bdofs = computeDirichletBoundaryData!(val4dofs,FE,Dbids,bd_data,celldim > 1,ones(Int64,length(Dbids))*quadrature_order);
-    for i = 1 : length(bdofs)
-       A[bdofs[i],bdofs[i]] = dirichlet_penalty;
-       b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
+    bdofs = []
+    if boundary_data! != Nothing
+        celldim::Int = size(FE.grid.nodes4cells,2) - 1;
+        Dbids = sort(unique(FE.grid.bregions));
+        bd_data = Vector{Function}(undef,length(Dbids))
+        for j = 1 : length(Dbids)
+            bd_data[j] = boundary_data!
+        end    
+        bdofs = computeDirichletBoundaryData!(val4dofs,FE,Dbids,bd_data,celldim > 1,ones(Int64,length(Dbids))*quadrature_order);
+        for i = 1 : length(bdofs)
+        A[bdofs[i],bdofs[i]] = dirichlet_penalty;
+        b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;
+        end
     end
 
     # solve

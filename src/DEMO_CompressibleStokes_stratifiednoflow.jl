@@ -177,14 +177,15 @@ function main()
         # evaluate velocity and pressure at grid points
         velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
         density = FESolveCommon.eval_at_nodes(val4dofs,FE_densitypressure,FiniteElements.get_ndofs(FE_velocity));
+        speed = sqrt.(sum(velo.^2, dims = 2))
+        #pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
 
         PyPlot.figure(1)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,1),cmap=get_cmap("ocean"))
-        PyPlot.title("velocity component 1")
+        tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
+        PyPlot.axis("equal")
+        PyPlot.title("velocity speed")
+
         PyPlot.figure(2)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,2),cmap=get_cmap("ocean"))
-        PyPlot.title("velocity component 2")
-        PyPlot.figure(3)
         PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),density[:],cmap=get_cmap("ocean"))
         PyPlot.title("density")
         show()

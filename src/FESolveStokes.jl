@@ -79,9 +79,11 @@ function computeDivFreeBestApproximation!(val4dofs::Array, volume_data!::Functio
 
     @time begin
         # compute and apply boundary data
-        println("    |incorporating boundary data...")
-        bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,quadorder);
-        println("     ...finished")
+        if boundary_data! != Nothing
+            println("    |incorporating boundary data (full Dirichlet)...")
+            bdofs = FESolveCommon.computeDirichletBoundaryData!(val4dofs,FE_velocity,boundary_data!,quadorder);
+            println("     ...finished")
+        end
     end
     
     # fix one pressure value

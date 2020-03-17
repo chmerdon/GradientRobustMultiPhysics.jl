@@ -126,10 +126,8 @@ function assemble_operator!(A::ExtendableSparseMatrix, B::ExtendableSparseMatrix
                         for k = 1 : size(gradients_velocity,2)
                             temp += gradients_velocity[dof_i,transposed_entries[k]] * gradients_velocity[dof_j,k];
                         end
-                        temp *= 1//2 * nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-                    else    
-                        temp *= nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-                    end    
+                    end
+                    temp *= nu * qf.w[i] * FE_velocity.grid.volume4cells[cell];    
                     A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp;
                 end
                 # pressure x (-div) velocity

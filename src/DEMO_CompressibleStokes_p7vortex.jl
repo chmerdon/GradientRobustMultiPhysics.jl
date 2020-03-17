@@ -2,7 +2,16 @@
 ### DEMONSTRATION SCRIPT STOKES P7-VORTEX COMPRESSIBLE ###
 ##########################################################
 #
-# solves compressible Stokes test problem p7vortex
+# solves compressible Stokes test problem p7vortex for densities of arbitrary polynomial degree
+#
+# theta = stream function as in p7vortex example
+# velocity = curl(theta) / density
+#
+# hence density*velocity is divergence-free
+#
+# demonstrates:
+#   - convergence rates of compressible Stokes solver
+#   - benefits of gradient-robustness (use_reconstruction > 0) for small shear_moduli
 #
 
 using Triangulate
@@ -23,14 +32,19 @@ include("PROBLEMdefinitions/CSTOKES_p7vortex.jl");
 function main()
 
     # problem modification switches
-    shear_modulus = 1.0
-    lambda = 0.0
-    c = 10
+    shear_modulus = 1.0 # coefficient for Laplacian/div(symgrad)
+    lambda = -2.0/3.0*shear_modulus # coefficient for grad(div(u))
     total_mass = 1
-    gamma = 1
-    dt = shear_modulus*1.0/c
-    maxT = 1000
-    stationarity_tolerance = 1e-12
+    c = 1 # coefficient of density in equation of state (inverse of squared Mach number)
+    gamma = 2 # exponent of density in equation of state
+    density_power = 2 # density will be a polynomial of this degree
+
+    # discretisation parameter
+    dt = (2*shear_modulus + lambda)*0.1/c # time step has to be small enough for convergence
+    stationarity_tolerance = 1e-12 # termination condition for time loop
+    symmetric_gradient = false # = true may not work correctly atm
+    maxT = 1000 # termination condition for time loop
+    initial_density_bestapprox = true # otherwise constant initial density is used
 
     # refinement termination criterions
     maxlevel = 4
@@ -53,8 +67,8 @@ function main()
     #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
 
 
-    # load problem data (for incompressible Stokes p7 vortex)
-    PD, exact_velocity!, exact_density!, exact_pressure! = getProblemData(shear_modulus, lambda; gamma = gamma, c = c, nrBoundaryRegions = 4);
+    # load problem data
+    PD, exact_velocity!, exact_density!, exact_pressure! = getProblemData(shear_modulus, lambda; symmetric_gradient = symmetric_gradient, gamma = gamma, c = c, density_power = density_power, nrBoundaryRegions = 4);
     FESolveCompressibleStokes.show(PD);
 
     L2error_velocity = zeros(Float64,maxlevel)
@@ -99,14 +113,17 @@ function main()
         val4dofs = zeros(Float64,ndofs[level]);
         residual = FESolveStokes.computeDivFreeBestApproximation!(val4dofs,exact_velocity!,exact_velocity!,FE_velocity,FE_densitypressure,7)
 
-        Grid.ensure_volume4cells!(grid)
         initial_density = FiniteElements.createFEVector(FE_densitypressure)
-        initial_density[:] .= total_mass
+        if initial_density_bestapprox
+            residual = FESolveCommon.computeBestApproximation!(initial_density,"L2",exact_density!,Nothing,FE_densitypressure,density_power)    
+        else
+            initial_density[:] .= total_mass
+        end
+
         CSS = FESolveCompressibleStokes.setupCompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,val4dofs[1:ndofs_velocity],initial_density,use_reconstruction)
 
         change = 1
         while ((change > stationarity_tolerance) && (maxT > CSS.current_time))
-
             change = FESolveCompressibleStokes.PerformTimeStep(CSS,dt)
         end    
 
@@ -135,14 +152,14 @@ function main()
         # evaluate velocity and pressure at grid points
         velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
         density = FESolveCommon.eval_at_nodes(val4dofs,FE_densitypressure,FiniteElements.get_ndofs(FE_velocity));
-
+        speed = sqrt.(sum(velo.^2, dims = 2))
+        
         PyPlot.figure(1)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,1),cmap=get_cmap("ocean"))
-        PyPlot.title("velocity component 1")
+        tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
+        PyPlot.axis("equal")
+        PyPlot.title("velocity speed")
+
         PyPlot.figure(2)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,2),cmap=get_cmap("ocean"))
-        PyPlot.title("velocity component 2")
-        PyPlot.figure(3)
         PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),density[:],cmap=get_cmap("ocean"))
         PyPlot.title("density")
         show()

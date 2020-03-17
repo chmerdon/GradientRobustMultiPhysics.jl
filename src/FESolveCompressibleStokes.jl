@@ -112,10 +112,10 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         print("    |assembling Stokes operator...") # needs to be replaced by symmetric gradients later
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
         B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
-        FESolveStokes.assemble_operator!(A,B,FESolveStokes.CELL_STOKES,FE_velocity,FE_densitypressure,(PD.use_symmetric_gradient) ? 2*PD.shear_modulus : PD.shear_modulus, PD.use_symmetric_gradient);
+        FESolveStokes.assemble_operator!(A,B,FESolveStokes.CELL_STOKES,FE_velocity,FE_densitypressure, PD.shear_modulus, PD.use_symmetric_gradient);
         println("finished")
 
-        print("    |precomputing normal fluxes of velocity basis")
+        print("    |precomputing normal fluxes of velocity basis...")
         NFM = ExtendableSparseMatrix{Float64,Int64}(nfaces,ndofs_velocity)
         FESolveCommon.assemble_operator!(NFM,FESolveCommon.FACE_1dotVn,FE_velocity);
         println("finished")
