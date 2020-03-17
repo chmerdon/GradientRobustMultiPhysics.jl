@@ -97,7 +97,7 @@ function main()
 
         # solve Stokes problem
         val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
-        residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+        residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, reconst_variant = use_reconstruction);
 
         # compute errors
         integral4cells = zeros(size(grid.nodes4cells,1),1);

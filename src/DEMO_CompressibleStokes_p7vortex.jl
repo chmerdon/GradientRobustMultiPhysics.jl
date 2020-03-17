@@ -17,7 +17,7 @@ using PyPlot
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
-include("PROBLEMdefinitions/STOKES_p7vortex.jl");
+include("PROBLEMdefinitions/CSTOKES_p7vortex.jl");
 
 
 function main()
@@ -31,12 +31,6 @@ function main()
     dt = shear_modulus*1.0/c
     maxT = 1000
     stationarity_tolerance = 1e-12
-
-    function equation_of_state!(pressure,density)
-        for j=1:length(density)
-            pressure[j] = c*density[j]^gamma
-        end    
-    end    
 
     # refinement termination criterions
     maxlevel = 4
@@ -60,24 +54,7 @@ function main()
 
 
     # load problem data (for incompressible Stokes p7 vortex)
-    PDic, exact_velocity! = getProblemData(shear_modulus, 4, true);
-
-    function exact_density!(result,x)
-        result[1] = 1.0
-    end    
-
-    # transform into compressible getProblemData
-    PD = FESolveCompressibleStokes.CompressibleStokesProblemDescription()
-    PD.name = "P7 vortex compressible";
-    PD.shear_modulus = shear_modulus
-    PD.lambda = lambda
-    PD.total_mass = total_mass
-    PD.quadorder4gravity = -1
-    PD.volumedata4region = PDic.volumedata4region
-    PD.boundarydata4bregion = PDic.boundarydata4bregion
-    PD.boundarytype4bregion = PDic.boundarytype4bregion
-    PD.quadorder4bregion = PDic.quadorder4bregion
-    PD.equation_of_state = equation_of_state!
+    PD, exact_velocity!, exact_density!, exact_pressure! = getProblemData(shear_modulus, lambda; gamma = gamma, c = c, nrBoundaryRegions = 4);
     FESolveCompressibleStokes.show(PD);
 
     L2error_velocity = zeros(Float64,maxlevel)
