@@ -30,8 +30,9 @@ function main()
     # problem modification switches
     shear_modulus = 1
     symmetric_gradient = true
+    nonlinear_convection = true
     lambda = 0.0
-    c = 10
+    c = 1
     total_mass = 2.0
     gamma = 1 # exact_density only exact for gamma = 1 !!!
     dt = shear_modulus*0.5/c
@@ -45,7 +46,7 @@ function main()
     end    
 
     # refinement termination criterions
-    maxlevel = 4
+    maxlevel = 3
     maxdofs = 40000
 
     # other switches
@@ -72,7 +73,6 @@ function main()
     
 
     d = log(total_mass/(c*(exp(1)^(1/c)-1.0)))
-    show(exp(d))
     function exact_density!(result,x) # only exact for gamma = 1
         result[1] = exp((1-x[2])/c + d)
     end 
@@ -88,6 +88,7 @@ function main()
     PD.name = "stratified no-flow";
     PD.shear_modulus = shear_modulus
     PD.use_symmetric_gradient = symmetric_gradient
+    PD.use_nonlinear_convection = nonlinear_convection
     PD.lambda = lambda
     PD.total_mass = total_mass
     PD.volumedata4region = [zero_data!]
@@ -113,7 +114,7 @@ function main()
 
         println("Solving compressible Stokes problem on refinement level...", level);
         println("Generating grid by triangle...");
-        maxarea = 4.0^(-level-1)
+        maxarea = 4.0^(-level-2)
         grid = gridgen_unitsquare(maxarea, barycentric_refinement)
         Grid.show(grid)
 

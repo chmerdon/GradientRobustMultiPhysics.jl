@@ -1,7 +1,7 @@
 using DiffResults
 using ForwardDiff
 
-function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_gravity::Bool, symmetric_gradient::Bool = false, c::Real = 1.0, gamma::Real = 1.0, density_power::Real = 0.0, total_mass::Real = 1.0, nrBoundaryRegions::Int = 4)
+function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_nonlinear_convection::Bool, use_gravity::Bool, symmetric_gradient::Bool = false, c::Real = 1.0, gamma::Real = 1.0, density_power::Real = 0.0, total_mass::Real = 1.0, nrBoundaryRegions::Int = 4)
 
 
     function exact_density!(result, x) # exact density
@@ -47,7 +47,7 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_gravity::Bool, s
     # volume_data by ForwardDiff
     hessian = [0.0 0.0;0.0 0.0]
     p(x) = exact_pressure(x)
-    pgrad = DiffResults.GradientResult([0.0,0.0]);
+    grad = DiffResults.GradientResult([0.0,0.0]);
     hessian = DiffResults.HessianResult([0.0,0.0]);
     velo_rotated(a) = ForwardDiff.gradient(exact_streamfunction,a);
     velo1 = x -> -velo_rotated(x)[2]/exact_density(x)
@@ -82,15 +82,26 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_gravity::Bool, s
         #
         
         # add gradient of pressure
-        ForwardDiff.gradient!(pgrad,p,x);
-        result[1] += DiffResults.gradient(pgrad)[1]
-        result[2] += DiffResults.gradient(pgrad)[2]
+        ForwardDiff.gradient!(grad,p,x);
+        result[1] += DiffResults.gradient(grad)[1]
+        result[2] += DiffResults.gradient(grad)[2]
 
         # remove gravity effect (todo)
         if use_gravity
             exact_density!(rho,x)
             result[1] -= rho[1] * gravity[1]
             result[2] -= rho[1] * gravity[2]
+        end
+
+        # add rho*(u*grad)u term
+        if use_nonlinear_convection
+            exact_density!(rho,x)
+            ForwardDiff.gradient!(grad,velo1,x);
+            result[1] += velo1(x) * DiffResults.gradient(grad)[1]
+            result[1] += velo2(x) * DiffResults.gradient(grad)[2]
+            ForwardDiff.gradient!(grad,velo2,x);
+            result[2] += velo1(x) * DiffResults.gradient(grad)[1]
+            result[2] += velo2(x) * DiffResults.gradient(grad)[2]
         end
     end
 
@@ -104,6 +115,7 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_gravity::Bool, s
     PD.lambda = lambda
     PD.total_mass = total_mass
     PD.use_symmetric_gradient = symmetric_gradient
+    PD.use_nonlinear_convection = use_nonlinear_convection
 
     # boundar data
     PD.boundarydata4bregion = Vector{Function}(undef,nrBoundaryRegions)

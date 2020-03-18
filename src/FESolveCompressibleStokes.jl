@@ -16,14 +16,16 @@ using Quadrature
 
 # COMPRESSIBLE STOKES operators
 include("FEoperators/CELL_FdotRHOdotV.jl"); # gravity rhs
+include("FEoperators/CELL_NAVIERSTOKES_RHOdotAdotDAdotDV.jl"); # nonlinear IMEX term 4 rhs
 
 mutable struct CompressibleStokesProblemDescription
     name::String
     time_dependent_data:: Bool
     shear_modulus:: Float64
-    use_symmetric_gradient:: Bool
     lambda:: Float64
     total_mass:: Float64
+    use_symmetric_gradient:: Bool
+    use_nonlinear_convection:: Bool
     equation_of_state:: Function
     volumedata4region:: Vector{Function}
     quadorder4region:: Vector{Int64}
@@ -32,7 +34,7 @@ mutable struct CompressibleStokesProblemDescription
     boundarydata4bregion:: Vector{Function}
     boundarytype4bregion:: Vector{Int64}
     quadorder4bregion:: Vector{Int64}
-    CompressibleStokesProblemDescription() = new("undefined compressible Stokes problem", false, 1.0, false,-2.0/3.0,1.0)
+    CompressibleStokesProblemDescription() = new("undefined compressible Stokes problem", false, 1.0, -2.0/3.0,1.0, false, false)
 end
 
 function show(PD::CompressibleStokesProblemDescription)
@@ -340,6 +342,12 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
 
         # add pressure gradient (of eqs'ed density) to rhs
         CSS.rhsvectorV -= CSS.DivPressureMatrix * CSS.current_pressure
+
+        # add nonlinear use_nonlinear_convection
+        if CSS.ProblemData.use_nonlinear_convection
+            assemble_operator!(CSS.rhsvectorV,CELL_NAVIERSTOKES_RHOdotAdotDAdotDV,CSS.FE_velocity,CSS.FE_velocity,CSS.FE_densitypressure,CSS.current_velocity,CSS.current_velocity,CSS.current_density)
+        end     
+    
 
         # add gravity
         if CSS.ProblemData.quadorder4gravity > -1

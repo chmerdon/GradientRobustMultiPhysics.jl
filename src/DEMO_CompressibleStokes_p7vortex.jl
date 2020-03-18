@@ -35,6 +35,7 @@ function main()
     shear_modulus = 1.0 # coefficient for Laplacian/div(eps(u))
     lambda = -2.0/3.0*shear_modulus # coefficient for grad(div(u))
     total_mass = 1
+    nonlinear_convection = true
     c = 1 # coefficient of density in equation of state (inverse of squared Mach number)
     gamma = 2 # exponent of density in equation of state
     density_power = 2 # density will be a polynomial of this degree
@@ -69,7 +70,7 @@ function main()
 
 
     # load problem data
-    PD, exact_velocity!, exact_density!, exact_pressure! = getProblemData(shear_modulus, lambda; use_gravity = use_gravity, symmetric_gradient = symmetric_gradient, gamma = gamma, c = c, density_power = density_power, nrBoundaryRegions = 4);
+    PD, exact_velocity!, exact_density!, exact_pressure! = getProblemData(shear_modulus, lambda; use_nonlinear_convection = nonlinear_convection, use_gravity = use_gravity, symmetric_gradient = symmetric_gradient, gamma = gamma, c = c, density_power = density_power, nrBoundaryRegions = 4);
     FESolveCompressibleStokes.show(PD);
 
     L2error_velocity = zeros(Float64,maxlevel)
