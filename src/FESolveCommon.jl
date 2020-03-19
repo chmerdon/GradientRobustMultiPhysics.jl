@@ -16,6 +16,7 @@ using Quadrature
 
 # MASS matrices on cells
 include("FEoperators/CELL_UdotV.jl");
+include("FEoperators/CELL_FdotUdotV.jl");
 
 # MASS matrices on boundary faces
 include("FEoperators/BFACE_UdotV.jl");
@@ -24,6 +25,7 @@ include("FEoperators/BFACE_UndotVn.jl");
 
 # STIFFNESS matrices on cells
 include("FEoperators/CELL_DUdotDV.jl");
+include("FEoperators/CELL_MdotDUdotDV.jl");
 
 # LINEAR FUNCTIONALS on cells
 include("FEoperators/CELL_FdotV.jl");

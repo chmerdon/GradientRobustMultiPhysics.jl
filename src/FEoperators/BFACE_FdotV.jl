@@ -15,6 +15,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
     # generate caller for FE basis functions
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     ncomponents::Int = FiniteElements.get_ncomponents(FE);
+    xdim = size(FE.grid.coords4nodes,2)
     FEbasis = FiniteElements.FEbasis_caller_face(FE, qf, false);
     basisvals = zeros(Float64,ndofs4face,ncomponents)
     dofs = zeros(Int64,ndofs4face)
@@ -24,6 +25,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
     # quadrature loop
     temp = 0.0;
     fval = zeros(T,ncomponents)
+    x = zeros(T,xdim)
     face = 0;
     #@time begin    
     for bface = 1 : size(FE.grid.bfaces,1)
@@ -45,7 +47,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
                 FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
 
                 # evaluate f
-                x = face_trafo(qf.xref[i])
+                x[:] = face_trafo(qf.xref[i])
                 f!(fval, x)
              
                 for dof_i = 1 : ndofs4face
@@ -77,6 +79,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractHdivFiniteElemen
     # generate caller for FE basis functions
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     ncomponents::Int = FiniteElements.get_ncomponents(FE);
+    xdim = size(FE.grid.coords4nodes,2)
     FEbasis = FiniteElements.FEbasis_caller_face(FE, qf, false);
     basisvals = zeros(Float64,ndofs4face,ncomponents)
     dofs = zeros(Int64,ndofs4face)
@@ -86,6 +89,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractHdivFiniteElemen
     # quadrature loop
     temp = 0.0;
     fval = zeros(T,ncomponents)
+    x = zeros(T,xdim)
     face = 0;
     #@time begin    
     for bface = 1 : size(FE.grid.bfaces,1)
@@ -107,7 +111,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractHdivFiniteElemen
                 FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
 
                 # evaluate f
-                x = face_trafo(qf.xref[i])
+                x[:] = face_trafo(qf.xref[i])
                 f!(fval, x)
 
                 # multiply with normal and save in fval[1]

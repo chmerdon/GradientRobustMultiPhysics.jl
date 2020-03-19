@@ -1,4 +1,4 @@
-function getProblemData(polynomial_coefficients::Array{Float64,2}, nrBoundaryRegions::Int = 4)
+function getProblemData(polynomial_coefficients::Array{Float64,2}, diffusion, nrBoundaryRegions::Int = 4)
 
     # auto-computing coefficients of - 2nd derivative
     l = size(polynomial_coefficients,2)
@@ -29,15 +29,45 @@ function getProblemData(polynomial_coefficients::Array{Float64,2}, nrBoundaryReg
 
     function volume_data!(result, x)  
         result[1] = 0.0
-        for j=1:l-2
-            result[1] += polynomial_coefficients_rhs[1,j]*x[1]^(j-1)
-            result[1] += polynomial_coefficients_rhs[2,j]*x[2]^(j-1)
+        if typeof(diffusion) <: Real
+            for j=1:l-2
+                result[1] += polynomial_coefficients_rhs[1,j]*x[1]^(j-1)
+                result[1] += polynomial_coefficients_rhs[2,j]*x[2]^(j-1)
+            end    
+            result[1] *= diffusion
+        elseif length(diffusion) == 2
+            for j=1:l-2
+                result[1] += polynomial_coefficients_rhs[1,j]*x[1]^(j-1)*diffusion[1]
+                result[1] += polynomial_coefficients_rhs[2,j]*x[2]^(j-1)*diffusion[2]
+            end    
+        elseif length(diffusion) == 4
+            for j=1:l-2
+                result[1] += polynomial_coefficients_rhs[1,j]*x[1]^(j-1)*diffusion[1]
+                result[1] += polynomial_coefficients_rhs[2,j]*x[2]^(j-1)*diffusion[4]
+            end    
         end
     end
 
+    function diffusion!(result, x)
+        fill!(result,0.0)
+        if typeof(diffusion) <: Real
+            result[1] = diffusion
+        elseif length(diffusion) == 2
+            result[1] = diffusion[1]
+            result[4] = diffusion[2]
+        else
+            result[:] = diffusion[:]
+        end    
+    end    
+
     PD = FESolvePoisson.PoissonProblemDescription()
     PD.name = "2D Poisson Test problem"
-    PD.diffusion = 1.0;
+    if typeof(diffusion) <: Real
+        PD.diffusion = diffusion;
+    else
+        PD.diffusion = diffusion!
+    end        
+    PD.quadorder4diffusion = 0;
     # volume data
     PD.volumedata4region = Vector{Function}(undef,1)
     PD.volumedata4region[1] = volume_data! 

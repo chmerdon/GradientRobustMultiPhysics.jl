@@ -12,6 +12,7 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotRHOdotV},
     ndofs4cellV::Int = FiniteElements.get_ndofs4elemtype(FEV, ET);
     ndofs4cellRHO::Int = FiniteElements.get_ndofs4elemtype(FERHO, ET);
     ncomponents::Int = FiniteElements.get_ncomponents(FEV);
+    xdim::Int = size(FE.grid.coords4nodes,2)
     FEbasisV = FiniteElements.FEbasis_caller(FEV, qf, false);
     FEbasisRHO = FiniteElements.FEbasis_caller(FERHO, qf, false);
     basisvalsV = zeros(Float64,ndofs4cellV,ncomponents)
@@ -25,6 +26,7 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotRHOdotV},
     # quadrature loop
     temp = 0.0;
     fval = zeros(T,ncomponents)
+    x = zeros(T,xdim)
     rho = 0.0;
     #@time begin    
     for cell = 1 : ncells
@@ -47,7 +49,7 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotRHOdotV},
             FiniteElements.getFEbasis4qp!(basisvalsRHO, FEbasisRHO, i)
 
             # evaluate f
-            x = cell_trafo(qf.xref[i]);
+            x[:] = cell_trafo(qf.xref[i]);
             f!(fval, x)
                 
             for dof_i = 1 : ndofs4cellV, dof_j = 1 : ndofs4cellRHO

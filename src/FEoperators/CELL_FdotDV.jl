@@ -21,6 +21,7 @@ function assemble_operator!(b, ::Type{CELL_FdotDV}, FE::AbstractH1FiniteElement,
     # quadrature loop
     temp = 0.0;
     fval = zeros(T,xdim)
+    x = zeros(T,xdim)
     #@time begin    
     for cell = 1 : size(FE.grid.nodes4cells,1)
       
@@ -39,7 +40,7 @@ function assemble_operator!(b, ::Type{CELL_FdotDV}, FE::AbstractH1FiniteElement,
             FiniteElements.getFEbasisgradients4qp!(gradients, FEbasis, i)
                 
             # evaluate f
-            x = cell_trafo(qf.xref[i]);
+            x[:] = cell_trafo(qf.xref[i]);
             f!(fval, x)
                 
             for dof_i = 1 : ndofs4cell

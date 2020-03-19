@@ -50,9 +50,14 @@ function main()
     #polynomial_coefficients = [0 0 -1; 1 0.5 0.5]  # quadratic
     #polynomial_coefficients = [0 1; 0.5 -1]   # linear
     #polynomial_coefficients = [1 0; 0.5 0]   # constant
+
+    #diffusion = 1.0 # scalar constant diffusion
+    #diffusion = [2.0 0.5] # diagonal constant diffusion matrix
+    #diffusion = [2.0 0.0; 0.0 0.5] # arbitrary non-diagonal constant diffusion matrix
+    diffusion = [2.0 0.5; 0.5 0.5] # arbitrary non-diagonal constant diffusion matrix (symmetric positive definit)
     
     # load problem data
-    PD, exact_solution! = getProblemData(polynomial_coefficients);
+    PD, exact_solution! = getProblemData(polynomial_coefficients, diffusion);
     FESolvePoisson.show(PD);
 
     L2error = zeros(Float64,maxlevel)
