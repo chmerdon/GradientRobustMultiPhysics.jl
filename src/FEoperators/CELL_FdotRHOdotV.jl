@@ -12,7 +12,7 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotRHOdotV},
     ndofs4cellV::Int = FiniteElements.get_ndofs4elemtype(FEV, ET);
     ndofs4cellRHO::Int = FiniteElements.get_ndofs4elemtype(FERHO, ET);
     ncomponents::Int = FiniteElements.get_ncomponents(FEV);
-    xdim::Int = size(FE.grid.coords4nodes,2)
+    xdim::Int = size(FEV.grid.coords4nodes,2)
     FEbasisV = FiniteElements.FEbasis_caller(FEV, qf, false);
     FEbasisRHO = FiniteElements.FEbasis_caller(FERHO, qf, false);
     basisvalsV = zeros(Float64,ndofs4cellV,ncomponents)

@@ -15,6 +15,7 @@ using Quadrature
 
 
 # COMPRESSIBLE STOKES operators
+include("FEoperators/CELL_RHOdotUdotV.jl"); # gravity rhs
 include("FEoperators/CELL_FdotRHOdotV.jl"); # gravity rhs
 include("FEoperators/CELL_NAVIERSTOKES_RHOdotAdotDAdotDV.jl"); # nonlinear IMEX term 4 rhs
 
@@ -58,11 +59,13 @@ mutable struct CompressibleStokesSolver
     ProblemData::CompressibleStokesProblemDescription
     FE_velocity::AbstractFiniteElement
     FE_densitypressure::AbstractFiniteElement
+    FE_reconst::AbstractFiniteElement
     GradGradMatrix::ExtendableSparseMatrix
     DivPressureMatrix::ExtendableSparseMatrix
     DivDivMatrix::ExtendableSparseMatrix
     GravityMatrix::ExtendableSparseMatrix
-    MassMatrixV::ExtendableSparseMatrix
+    ReconstMatrix::ExtendableSparseMatrix
+    ReconstMassMatrix::ExtendableSparseMatrix
     MassMatrixD::ExtendableSparseMatrix
     bdofs::Vector{Int64}
     dirichlet_penalty::Float64
@@ -132,24 +135,17 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         Mp = ExtendableSparseMatrix{Float64,Int64}(ndofs_densitypressure,ndofs_densitypressure)
         FESolveCommon.assemble_operator!(Mp,FESolveCommon.CELL_UdotV,FE_densitypressure);
         println("finished")
-        print("    |assembling mass matrix for velocity...")
-        Mv = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
         if reconst_variant > 0
             @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
             FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
             ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
-            Mhdiv = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofsHdiv)
-            FESolveCommon.assemble_operator!(Mhdiv,FESolveCommon.CELL_UdotV,FE_Reconstruction);
-            println("finished")
-            print("    |Hdivreconstruction mass matrix...")
             T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
             FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
-            ExtendableSparse.flush!(Mhdiv)
-            ExtendableSparse.flush!(T)
-            Mtemp = T.cscmatrix*Mhdiv.cscmatrix
-            Mv.cscmatrix = Mtemp*T.cscmatrix'
+            MvR = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
         else
-            FESolveCommon.assemble_operator!(Mv,FESolveCommon.CELL_UdotV,FE_velocity);
+            FE_Reconstruction = FE_velocity;
+            T = ExtendableSparseMatrix{Float64,Int64}(0,0)
+            MvR = ExtendableSparseMatrix{Float64,Int64}(0,0)
         end    
         println("finished")
         
@@ -248,7 +244,7 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     rhsvectorD = zeros(Float64,ndofs_densitypressure)
     SystemMatrixD = ExtendableSparseMatrix{Float64,Int64}(ndofs_densitypressure,ndofs_densitypressure)
     fluxes = zeros(Float64,nfaces)
-    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,A,B,D,G,Mv,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,velocity,density,pressure,0.0,0,-999,SystemMatrixV,SystemMatrixD,fluxes,rhsvectorV,rhsvectorD)
+    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,FE_Reconstruction,A,B,D,G,T,MvR,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,velocity,density,pressure,0.0,0,-999,SystemMatrixV,SystemMatrixD,fluxes,rhsvectorV,rhsvectorD)
 end
 
 function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
@@ -256,21 +252,10 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
 
     # update matrix and right-hand side vector
 
+    println("    |")
     println("    |time + dt = " * string(CSS.current_time) * " + " * string(dt))
-    if CSS.current_dt != dt
-        print("    |updating velocity matrix (dt changed)...")
-        CSS.current_dt = dt
-        CSS.SystemMatrixV = deepcopy(CSS.MassMatrixV)
-        ExtendableSparse.flush!(CSS.SystemMatrixV)
-        CSS.SystemMatrixV.cscmatrix.nzval .*= (1.0/dt)
-        ExtendableSparse.flush!(CSS.GradGradMatrix)
-        CSS.SystemMatrixV.cscmatrix += CSS.GradGradMatrix.cscmatrix
-        ExtendableSparse.flush!(CSS.DivDivMatrix)
-        CSS.SystemMatrixV.cscmatrix += CSS.DivDivMatrix.cscmatrix
-        ExtendableSparse.flush!(CSS.SystemMatrixV)
-        println("finished")  
-    end     
-    
+    CSS.current_dt = dt
+
     ndofs_velocity = FiniteElements.get_ndofs(CSS.FE_velocity)
     ndofs_densitypressure = FiniteElements.get_ndofs(CSS.FE_densitypressure)
     CSS.last_velocity = CSS.current_velocity
@@ -286,7 +271,7 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
         # upwinding div(rho*u) = 0
         CSS.fluxes = CSS.NormalFluxMatrix * CSS.last_velocity
         # test divergence
-        # Base.show(sum(fluxes[CSS.FE_velocity.grid.faces4cells].*CSS.FE_velocity.grid.signs4cells,dims = 2))
+        #Base.show(sum(CSS.fluxes[CSS.FE_velocity.grid.faces4cells].*CSS.FE_velocity.grid.signs4cells,dims = 2))
         flux = 0.0
         face = 0
         other_cell = 0
@@ -324,8 +309,8 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
 
         print("    |solving for new density...")
         CSS.current_density = CSS.SystemMatrixD\CSS.rhsvectorD
-        println("finished")
         changeD = norm(CSS.last_density - CSS.current_density);
+        println("finished (change=" * string(changeD) * ")")
 
         #print("    |updating pressure by equation of state...")
         CSS.ProblemData.equation_of_state(CSS.current_pressure,CSS.current_density)
@@ -333,12 +318,33 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
         
         #print("    |updating rhs for velocity...")
 
-        # add time derivative of velocity
-        CSS.rhsvectorV = CSS.MassMatrixV * CSS.last_velocity
-        CSS.rhsvectorV .*= (1.0/dt)
 
-        # add f * V
+        #print("    |updating velocity mass matrix...")
+        if CSS.FE_reconst != CSS.FE_velocity
+            fill!(CSS.ReconstMassMatrix.cscmatrix.nzval,0.0)
+            assemble_operator!(CSS.ReconstMassMatrix,CELL_RHOdotUdotV,CSS.FE_velocity,CSS.FE_reconst,CSS.FE_densitypressure,CSS.current_density);
+            ExtendableSparse.flush!(CSS.ReconstMassMatrix)
+            ExtendableSparse.flush!(CSS.ReconstMatrix)
+            CSS.SystemMatrixV.cscmatrix = CSS.ReconstMassMatrix.cscmatrix*CSS.ReconstMatrix.cscmatrix'
+        else
+            fill!(CSS.SystemMatrixV.cscmatrix.nzval,0.0)
+            assemble_operator!(CSS.SystemMatrixV,CELL_RHOdotUdotV,CSS.FE_velocity,CSS.FE_velocity,CSS.FE_densitypressure,CSS.current_density);
+        end    
+        #println("finished")
+
+        ExtendableSparse.flush!(CSS.SystemMatrixV)
+        CSS.SystemMatrixV.cscmatrix.nzval .*= (1.0/dt)
+        # up to here the SystemMatrix equals the MassMatrixV
+        # add time derivative of velocity to rhs
+        CSS.rhsvectorV = CSS.SystemMatrixV * CSS.last_velocity
         CSS.rhsvectorV += CSS.datavector
+
+        # complete SystemMatrixV
+        ExtendableSparse.flush!(CSS.GradGradMatrix)
+        CSS.SystemMatrixV.cscmatrix += CSS.GradGradMatrix.cscmatrix
+        ExtendableSparse.flush!(CSS.DivDivMatrix)
+        CSS.SystemMatrixV.cscmatrix += CSS.DivDivMatrix.cscmatrix
+        ExtendableSparse.flush!(CSS.SystemMatrixV)
 
         # add pressure gradient (of eqs'ed density) to rhs
         CSS.rhsvectorV -= CSS.DivPressureMatrix * CSS.current_pressure
@@ -366,12 +372,10 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
         # todo: reuse LU decomposition of matrix
         print("    |solving for new velocity...")
         CSS.current_velocity = CSS.SystemMatrixV\CSS.rhsvectorV
-        println("finished")
-
         changeV = norm(CSS.last_velocity - CSS.current_velocity);
-        println("    |change density/velocity=" * string(changeD) * "/" * string(changeV))
-        #mass =  sum(CSS.current_solution[ndofs_velocity+1:ndofs_velocity+ndofs_densitypressure] .* CSS.FE_densitypressure.grid.volume4cells, dims = 1)
-        #println("    |total_mass=", mass)
+        println("finished (change=" * string(changeV) * ")")
+        #mass =  sum(CSS.current_density .* CSS.FE_densitypressure.grid.volume4cells, dims = 1)
+        #println("    |total mass=", mass)
 
         CSS.current_time += dt
     #end

@@ -62,8 +62,8 @@ function main()
 
     #fem_velocity = "CR"; fem_densitypressure = "P0"
     #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
-    #fem_velocity = "BR"; fem_densitypressure = "P0"
-    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    fem_velocity = "BR"; fem_densitypressure = "P0"
+    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
 
 
 
