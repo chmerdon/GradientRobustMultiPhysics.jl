@@ -16,6 +16,7 @@ using FiniteElements
 using FESolveCommon
 using FESolveStokes
 using FESolveNavierStokes
+using ExtendableSparse
 ENV["MPLBACKEND"]="tkagg"
 using PyPlot
 
@@ -27,16 +28,16 @@ include("PROBLEMdefinitions/STOKES_2D_polynomials.jl");
 function main()
 
     # problem modification switches
-    polynomial_order = 1
+    polynomial_order = 0
     nu = 1
-    nonlinear = false
+    nonlinear = true
 
     # refinement termination criterions
-    maxlevel = 6
+    maxlevel = 5
     maxdofs = 50000
 
     # other switches
-    show_plots = false
+    show_plots = true
     show_convergence_history = true
     use_reconstruction = 0 # do not change here
     barycentric_refinement = false # do not change here
@@ -53,8 +54,8 @@ function main()
     #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
     #fem_velocity = "P2"; fem_pressure = "P0"
     #fem_velocity = "P2B"; fem_pressure = "P1dc"
-    fem_velocity = "BR"; fem_pressure = "P0"
-    #em_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "BR"; fem_pressure = "P0"
+    fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
 
 
     # load problem data
@@ -63,6 +64,7 @@ function main()
 
     L2error_velocity = zeros(Float64,maxlevel)
     L2error_pressure = zeros(Float64,maxlevel)
+    ndofs_velocity = 0
     ndofs = zeros(Int,maxlevel)
     grid = Nothing
     FE_velocity = Nothing
@@ -99,6 +101,7 @@ function main()
                 grid = gridgen_unitsquare(maxarea, barycentric_refinement)
                 FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
                 FE_pressure = FiniteElements.string2FE(fem_pressure,grid,2,1)
+                ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
             end    
             break
         end
@@ -131,7 +134,15 @@ function main()
         pygui(true)
         
         # evaluate velocity and pressure at grid points
-        velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
+        if use_reconstruction > 0
+            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, use_reconstruction);
+            T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,FiniteElements.get_ndofs(FE_Reconstruction))
+            FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
+            val4dofs_Hdiv = T'*val4dofs[1:ndofs_velocity];
+            velo = FESolveCommon.eval_at_nodes(val4dofs_Hdiv,FE_Reconstruction);
+        else
+            velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
+        end    
         pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
 
         PyPlot.figure(1)

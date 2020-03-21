@@ -111,16 +111,24 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
         
         if (iteration > 1)
             # compute nonlinear term
-            print("      |assembling nonlinear term...")
             @time begin
                 if reconst_variant > 0
-                    val4dofs_hdiv = T'*val4dofs
+                    use_reconstruction4A = false
                     Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofsHdiv)
-                    assemble_operator!(Atemp,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_Reconstruction,val4dofs_hdiv);    
+                    if use_reconstruction4A
+                        print("      |assembling nonlinear term (A*D)U*V (reconstruction in A & V)...")
+                        val4dofs_hdiv = val4dofs'*T
+                        assemble_operator!(Atemp,CELL_NAVIERSTOKES_AdotDUdotDV,FE_Reconstruction,FE_velocity,FE_Reconstruction,val4dofs_hdiv);    
+                    else    
+                        print("      |assembling nonlinear term (A*D)U*V (reconstruction only in V)...")
+                        assemble_operator!(Atemp,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_velocity,FE_Reconstruction,val4dofs);    
+                    end    
                     ExtendableSparse.flush!(Atemp)
+                    ExtendableSparse.flush!(A)
                     A.cscmatrix += Atemp.cscmatrix*T.cscmatrix'
                 else   
-                    assemble_operator!(A,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_velocity,val4dofs);
+                    print("      |assembling nonlinear term (A*D)U*V...")
+                    assemble_operator!(A,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_velocity,FE_velocity,val4dofs);
                 end    
                 println("finished")
             end
