@@ -334,8 +334,10 @@ mutable struct TransientStokesSolver
     ProblemData::StokesProblemDescription
     FE_velocity::AbstractFiniteElement
     FE_pressure::AbstractFiniteElement
+    FE_reconst::AbstractFiniteElement
     StokesMatrix::ExtendableSparseMatrix
     MassMatrix::ExtendableSparseMatrix
+    ReconstructionMatrix::ExtendableSparseMatrix
     bdofs::Vector{Int64}
     dirichlet_penalty::Float64
     datavector::Vector{Float64}
@@ -390,6 +392,8 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
             Mtemp = T.cscmatrix*Mhdiv.cscmatrix
             M.cscmatrix = Mtemp*T.cscmatrix'
         else
+            FE_Reconstruction = FE_velocity
+            T = ExtendableSparseMatrix{Float64,Int64}(0,0)
             FESolveCommon.assemble_operator!(M,FESolveCommon.CELL_UdotV,FE_velocity);
             println("finished")
         end    
@@ -455,7 +459,7 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
 
     rhsvector = zeros(Float64,ndofs)
     SystemMatrix = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
-    return TransientStokesSolver(PD,FE_velocity,FE_pressure,A,M,bdofs,dirichlet_penalty,b,initial_solution,val4dofs,0.0,0,-999,SystemMatrix,rhsvector)
+    return TransientStokesSolver(PD,FE_velocity,FE_pressure,FE_Reconstruction,A,M,T,bdofs,dirichlet_penalty,b,initial_solution,val4dofs,0.0,0,-999,SystemMatrix,rhsvector)
 end
 
 function PerformTimeStep(TSS::TransientStokesSolver, dt::Real = 1 // 10)

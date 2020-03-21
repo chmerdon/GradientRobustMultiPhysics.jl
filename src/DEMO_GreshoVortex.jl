@@ -45,11 +45,12 @@ function main()
 
     #fem_velocity = "CR"; fem_pressure = "P0"
     #fem_velocity = "MINI"; fem_pressure = "P1"
-    fem_velocity = "P2";  fem_pressure = "P1"
+    #fem_velocity = "P2";  fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
     #fem_velocity = "P2"; fem_pressure = "P0"
     #fem_velocity = "P2B"; fem_pressure = "P1dc"
     #fem_velocity = "BR"; fem_pressure = "P0"
+    fem_velocity = "BR"; fem_pressure = "P0";  use_reconstruction = 1
 
 
     # load problem data

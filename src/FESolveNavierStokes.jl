@@ -200,7 +200,13 @@ function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real 
     TSS.rhsvector += TSS.datavector
 
     println("    |updating nonlinear part of rhs...")
-    assemble_operator!(TSS.rhsvector,CELL_NAVIERSTOKES_AdotDAdotDV,TSS.FE_velocity,TSS.FE_velocity,TSS.current_solution,TSS.current_solution)
+    if (TSS.FE_reconst != TSS.FE_velocity)
+        temp = zeros(Float64,size(TSS.ReconstructionMatrix,2))
+        assemble_operator!(temp,CELL_NAVIERSTOKES_AdotDAdotDV,TSS.FE_velocity,TSS.FE_velocity,TSS.FE_reconst,TSS.current_solution,TSS.current_solution)
+        TSS.rhsvector += TSS.ReconstructionMatrix*temp
+    else
+        assemble_operator!(TSS.rhsvector,CELL_NAVIERSTOKES_AdotDAdotDV,TSS.FE_velocity,TSS.FE_velocity,TSS.FE_velocity,TSS.current_solution,TSS.current_solution)
+    end    
     
     println("    |apply boundary data...")
     for i = 1 : length(TSS.bdofs)
