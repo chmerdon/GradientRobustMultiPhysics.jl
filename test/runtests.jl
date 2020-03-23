@@ -59,10 +59,9 @@ end
 
 using FESolveNavierStokesTests
 println("\nStarting tests for FESolveNavierStokes")  
-fems_velocity2D = ["MINI","P2","BR","P2B"]
-fems_pressure2D = ["P1","P1","P0","P1dc"]
-# CR/P0 not included yet
-expected_orders2D = [1,2,1,2]
+fems_velocity2D = ["MINI","P2","BR","CR","P2B"]
+fems_pressure2D = ["P1","P1","P0","P0","P1dc"]
+expected_orders2D = [1,2,1,1,2]
 for j = 1 : length(fems_velocity2D)
     @test FESolveNavierStokesTests.TestNavierStokesSolver2D(fems_velocity2D[j],fems_pressure2D[j],expected_orders2D[j])
 end   
