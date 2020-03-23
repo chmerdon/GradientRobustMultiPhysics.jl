@@ -22,7 +22,7 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_AdotDAdotDV}, FEA::Abstra
     dofsU = zeros(Int64,ndofs4cellU)
     dofsA = zeros(Int64,ndofs4cellA)
     dofsV = zeros(Int64,ndofs4cellV)
-    
+
     # quadrature loop
     temp::T = 0.0
     det = 0.0;
@@ -61,13 +61,14 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_AdotDAdotDV}, FEA::Abstra
         
             # compute agrada
             fill!(agrada,0.0)
+
             for dof_i = 1 : ndofs4cellU
                 for k = 1 : xdim
                     for c = 1 : ncomponents
-                        agrada[k] += a4qp[c] * dofs4aU[dofsU[dof_i]] *gradientsU[dof_i,k+FEbasisU.offsets[c]]
+                        agrada[k] += a4qp[c] * dofs4aU[dofsU[dof_i]] * gradientsU[dof_i,c+FEbasisU.offsets[k]]
                     end
                 end    
-            end    
+            end
                 
             for dof_j = 1 : ndofs4cellV
                 temp = 0.0;

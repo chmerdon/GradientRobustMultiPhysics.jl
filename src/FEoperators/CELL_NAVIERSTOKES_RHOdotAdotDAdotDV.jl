@@ -76,7 +76,7 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_RHOdotAdotDAdotDV}, FEU::
             for dof_i = 1 : ndofs4cellU
                 for k = 1 : xdim
                     for c = 1 : ncomponents
-                        agrada[k] += a4qp[c] * dofs4aU[dofsU[dof_i]] *gradientsU[dof_i,k+FEbasisU.offsets[c]]
+                        agrada[k] += a4qp[c] * dofs4aU[dofsU[dof_i]] *gradientsU[dof_i,c+FEbasisU.offsets[k]]
                     end
                 end    
             end    

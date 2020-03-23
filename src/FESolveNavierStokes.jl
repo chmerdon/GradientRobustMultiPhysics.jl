@@ -110,11 +110,16 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
         A = deepcopy(Alin)
         
         if (iteration > 1)
+
+            #test = zeros(Float64,ndofs_velocity)
+            #assemble_operator!(test,CELL_NAVIERSTOKES_AdotDAdotDV,FE_velocity,FE_velocity,FE_velocity,val4dofs,val4dofs);
+            #Base.show(test'*val4dofs[1:ndofs_velocity])
+
             # compute nonlinear term
             @time begin
                 if reconst_variant > 0
                     use_reconstruction4A = false
-                    Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofsHdiv)
+                    Atemp = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofs)
                     if use_reconstruction4A
                         print("      |assembling nonlinear term (A*D)U*V (reconstruction in A & V)...")
                         val4dofs_hdiv = val4dofs'*T
@@ -125,7 +130,7 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
                     end    
                     ExtendableSparse.flush!(Atemp)
                     ExtendableSparse.flush!(A)
-                    A.cscmatrix += Atemp.cscmatrix*T.cscmatrix'
+                    A.cscmatrix += T.cscmatrix*Atemp.cscmatrix
                 else   
                     print("      |assembling nonlinear term (A*D)U*V...")
                     assemble_operator!(A,CELL_NAVIERSTOKES_AdotDUdotDV,FE_velocity,FE_velocity,FE_velocity,val4dofs);
@@ -143,7 +148,6 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
                 break;
             end    
         end    
-
 
         # apply boundary data
         for i = 1 : length(bdofs)

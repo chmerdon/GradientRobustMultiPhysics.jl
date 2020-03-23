@@ -28,9 +28,10 @@ include("PROBLEMdefinitions/STOKES_2D_polynomials.jl");
 function main()
 
     # problem modification switches
-    polynomial_order = 0
+    polynomial_order = 2
     nu = 1
     nonlinear = true
+    maxIterations = 20
 
     # refinement termination criterions
     maxlevel = 5
@@ -50,12 +51,12 @@ function main()
     #fem_velocity = "CR"; fem_pressure = "P0"
     #fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = 1
     #fem_velocity = "MINI"; fem_pressure = "P1"
-    #fem_velocity = "P2";  fem_pressure = "P1"
+    fem_velocity = "P2";  fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
     #fem_velocity = "P2"; fem_pressure = "P0"
     #fem_velocity = "P2B"; fem_pressure = "P1dc"
     #fem_velocity = "BR"; fem_pressure = "P0"
-    fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
 
 
     # load problem data
@@ -109,7 +110,7 @@ function main()
         # solve Stokes problem
         val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs[level]);
         if nonlinear
-            residual = solveNavierStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+            residual = solveNavierStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction, maxIterations);
         else    
             residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure; reconst_variant = use_reconstruction);
         end

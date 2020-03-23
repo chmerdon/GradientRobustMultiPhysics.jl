@@ -184,22 +184,9 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
         append!(bdofs,ndofs)
     end    
 
-    @time begin
-        print("    |solving...")
-        try
-            val4dofs[:] = A\b;
-        catch    
-            println("Unsupported Number type for sparse lu detected: trying again with dense matrix");
-            try
-                val4dofs[:] = Array{typeof(FE_velocity.grid.coords4nodes[1]),2}(A)\b;
-            catch OverflowError
-                println("OverflowError (Rationals?): trying again as Float64 sparse matrix");
-                val4dofs[:] = Array{Float64,2}(A)\b;
-            end
-        end
-        println("finished")
-    end
-
+    # solve
+    val4dofs[:] = A\b;
+    
     # move pressure mean to zero
     if length(Dnboundary_ids) == 0
         domain_area = sum(FE_pressure.grid.volume4cells[:])

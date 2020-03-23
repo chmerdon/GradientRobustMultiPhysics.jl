@@ -20,8 +20,8 @@ function getProblemData(order::Int, nu::Real = 1.0, nonlinear = false, nrBoundar
             if rhs4poisson == false
                 result[1] += 1.0
                 if nonlinear
-                    result[1] += 18.0*x[1]^2*x[2]     
-                    result[2] += 18.0*x[1]*x[2]^2
+                    result[1] -= 18.0*x[1]^2*x[2]     
+                    result[2] -= 18.0*x[1]*x[2]^2
                 end    
             end    
         elseif order == 3
@@ -31,8 +31,8 @@ function getProblemData(order::Int, nu::Real = 1.0, nonlinear = false, nrBoundar
                 result[1] += 2*x[1]
                 result[2] += 2*x[2]
                 if nonlinear
-                    result[1] += 48.0*x[1]^3*x[2]^2     
-                    result[2] += 48.0*x[1]^2*x[2]^3
+                    result[1] -= 48.0*x[1]^3*x[2]^2     
+                    result[2] -= 48.0*x[1]^2*x[2]^3
                 end
             end
         end    

@@ -65,7 +65,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_NAVIERSTOKES_A
                 fill!(agradu,0.0)
                 for k = 1 : xdim
                     for c = 1 : ncomponents
-                        agradu[k] += a4qp[c]*gradientsU[dof_i,k+FEbasisU.offsets[c]]
+                        agradu[k] += a4qp[c]*gradientsU[dof_i,c+FEbasisU.offsets[k]]
                     end
                 end    
                 
@@ -75,7 +75,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_NAVIERSTOKES_A
                         temp += agradu[k] * basisvalsV[dof_j,k];
                     end
                     temp *= qf.w[i] * FEU.grid.volume4cells[cell]
-                    A[dofsU[dof_i],dofsV[dof_j]] += temp;   
+                    A[dofsV[dof_j],dofsU[dof_i]] += temp;   
                 end
             end 
         end  
