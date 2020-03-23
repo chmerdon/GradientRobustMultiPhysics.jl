@@ -55,7 +55,7 @@ include("../src/PROBLEMdefinitions/POISSON_2D_polynomials.jl");
 function TestInterpolation2D(fem::String, order::Int)
   println("Testing FE interpolation in 2D for fem=",fem);
   polynomial_coefficients = ones(Float64,2,order+1)
-  PD, exact_solution! = getProblemData(polynomial_coefficients)
+  PD, exact_solution! = getProblemData(polynomial_coefficients, 1.0)
   grid = gridgen_unitsquare(0.1)
   FE = FiniteElements.string2FE(fem, grid, 2, 1)
   val4dofs = FiniteElements.createFEVector(FE);
@@ -70,7 +70,7 @@ end
 function TestBestApproximation2D(norm::String, fem::String, order::Int)
   println("Testing " * norm * " bestapproximation in 2D for fem=",fem);
   polynomial_coefficients = ones(Float64,2,order+1)
-  PD, exact_solution!, exact_gradient! = getProblemData(polynomial_coefficients)
+  PD, exact_solution!, exact_gradient! = getProblemData(polynomial_coefficients, 1.0)
   grid = gridgen_unitsquare(0.1)
   FE = FiniteElements.string2FE(fem, grid, 2, 1)
   val4dofs = FiniteElements.createFEVector(FE);

@@ -161,7 +161,7 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_
         basisvals = Array{Array{T,2}}(undef,size(xref,1));
     end
     for i = 1:size(xref,1)
-        basisvals[i] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref[i,:])
+        basisvals[i] = FiniteElements.get_basis_on_cell(FE, ET)(xref[i,:])
     end    
 
     cell::Int = 0;
@@ -325,7 +325,7 @@ function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE:
         exact_function!(result, x);
 
         # evaluate FE functions
-        basisvals = FiniteElements.get_basis_on_elemtype(FE, ET)(xref)
+        basisvals = FiniteElements.get_basis_on_cell(FE, ET)(xref)
 
         # get dofs
         FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
@@ -398,7 +398,7 @@ function eval_at_nodes(val4dofs, FE::AbstractH1FiniteElement, offset::Int64 = 0)
     dofs = zeros(Int64,ndofs4cell)
     for j = 1 : size(xref4dofs4cell,1)
         # get basisvals
-        basisvals[:] = FiniteElements.get_basis_on_elemtype(FE,ET)(xref4dofs4cell[j,:])
+        basisvals[:] = FiniteElements.get_basis_on_cell(FE,ET)(xref4dofs4cell[j,:])
 
         for cell = 1 : size(FE.grid.nodes4cells,1)
 

@@ -43,7 +43,7 @@ function get_dofs_on_face!(dofs,FE::H1BRFiniteElement{T,2} where {T <: Real}, fa
 end
 
 # BASIS FUNCTIONS
-function get_basis_on_elemtype(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.Abstract1DElemType)
+function get_basis_on_face(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.Abstract1DElemType)
     temp = 0.0;
     fb = 0.0;
     function closure(xref)
@@ -57,7 +57,7 @@ function get_basis_on_elemtype(FE::H1BRFiniteElement{T,2} where T <: Real, ::Gri
     end            
 end
 
-function get_basis_on_elemtype(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.ElemType2DTriangle)
     temp = 0.0;
     fb1 = 0.0;
     fb2 = 0.0;

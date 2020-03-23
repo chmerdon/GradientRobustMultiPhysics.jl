@@ -59,7 +59,7 @@ end
 
 # BASIS FUNCTIONS
 
-function get_basis_on_elemtype(FE::H1MINIFiniteElement{T,2,1} where T <: Real, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::H1MINIFiniteElement{T,2,1} where T <: Real, ::Grid.ElemType2DTriangle)
     temp = 0.0;
     cb = 0.0;
     function closure(xref)
@@ -72,7 +72,7 @@ function get_basis_on_elemtype(FE::H1MINIFiniteElement{T,2,1} where T <: Real, :
     end
 end
 
-function get_basis_on_elemtype(FE::H1MINIFiniteElement{T,2,2} where T <: Real, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::H1MINIFiniteElement{T,2,2} where T <: Real, ::Grid.ElemType2DTriangle)
     temp = 0.0;
     cb = 0.0;
     function closure(xref)
@@ -90,14 +90,14 @@ function get_basis_on_elemtype(FE::H1MINIFiniteElement{T,2,2} where T <: Real, :
 end
 
 
-function get_basis_on_elemtype(FE::H1MINIFiniteElement{T,2,1} where T <: Real, ::Grid.Abstract1DElemType)
+function get_basis_on_face(FE::H1MINIFiniteElement{T,2,1} where T <: Real, ::Grid.Abstract1DElemType)
     function closure(xref)
         return [1 - xref[1],
                 xref[1]]
     end
 end
 
-function get_basis_on_elemtype(FE::H1MINIFiniteElement{T,2,2} where T <: Real, ::Grid.Abstract1DElemType)
+function get_basis_on_face(FE::H1MINIFiniteElement{T,2,2} where T <: Real, ::Grid.Abstract1DElemType)
     temp = 0.0;
     function closure(xref)
         temp = 1 - xref[1];

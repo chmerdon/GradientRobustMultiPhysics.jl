@@ -44,7 +44,7 @@ function get_dofs_on_face!(dofs,FE::HdivBDM1FiniteElement, face::Int64, ::Grid.A
 end
 
 # BASIS FUNCTIONS
-function get_basis_on_elemtype(FE::HdivBDM1FiniteElement, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::HdivBDM1FiniteElement, ::Grid.ElemType2DTriangle)
     function closure(xref)
         return [[xref[1] xref[2]-1.0];
                 [xref[1] xref[2]];
@@ -55,7 +55,7 @@ function get_basis_on_elemtype(FE::HdivBDM1FiniteElement, ::Grid.ElemType2DTrian
     end
 end
 
-function get_basis_fluxes_on_elemtype(FE::HdivBDM1FiniteElement, ::Grid.Abstract1DElemType)
+function get_basis_fluxes_on_face(FE::HdivBDM1FiniteElement, ::Grid.Abstract1DElemType)
     function closure(xref)
         return [1.0 # normal-flux of RT0 function on single triangle face
                 -3+6*xref[1]]; # linear normal-flux of BDM1 function

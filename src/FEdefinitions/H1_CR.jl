@@ -56,7 +56,7 @@ function get_dofs_on_face!(dofs,FE::H1CRFiniteElement{T,2,2} where {T <: Real}, 
 end
 
 # BASIS FUNCTIONS
-function get_basis_on_elemtype(FE::H1CRFiniteElement{T,2,1} where {T <: Real}, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::H1CRFiniteElement{T,2,1} where {T <: Real}, ::Grid.ElemType2DTriangle)
     temp = 0.0;
     function closure(xref)
         return [1 - 2*xref[2];
@@ -65,13 +65,13 @@ function get_basis_on_elemtype(FE::H1CRFiniteElement{T,2,1} where {T <: Real}, :
     end
 end
 
-function get_basis_on_elemtype(FE::H1CRFiniteElement{T,2,1} where {T <: Real}, ::Grid.Abstract1DElemType)
+function get_basis_on_face(FE::H1CRFiniteElement{T,2,1} where {T <: Real}, ::Grid.Abstract1DElemType)
     function closure(xref)
         return [1.0]
     end
 end
 
-function get_basis_on_elemtype(FE::H1CRFiniteElement{T,2,2} where {T <: Real}, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::H1CRFiniteElement{T,2,2} where {T <: Real}, ::Grid.ElemType2DTriangle)
     temp = 0.0;
     temp2 = 0.0;
     temp3 = 0.0;
@@ -88,7 +88,7 @@ function get_basis_on_elemtype(FE::H1CRFiniteElement{T,2,2} where {T <: Real}, :
     end            
 end
 
-function get_basis_on_elemtype(FE::H1CRFiniteElement{T,2,2} where {T <: Real}, ::Grid.Abstract1DElemType)
+function get_basis_on_face(FE::H1CRFiniteElement{T,2,2} where {T <: Real}, ::Grid.Abstract1DElemType)
     function closure(xref)
         return [1.0 0.0;
                 0.0 1.0]

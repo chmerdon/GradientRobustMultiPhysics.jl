@@ -77,7 +77,7 @@ function get_dofs_on_face!(dofs,FE::H1P2FiniteElement{T,2} where {T <: Real}, fa
 end
 
 # BASIS FUNCTIONS
-function get_basis_on_elemtype(FE::H1P2FiniteElement{T,1} where T <: Real, ::Grid.Abstract1DElemType)
+function get_basis_on_cell(FE::H1P2FiniteElement{T,1} where T <: Real, ::Grid.Abstract1DElemType)
     temp = 0.0;
     function closure(xref)
         temp = 1 - xref[1]
@@ -87,7 +87,7 @@ function get_basis_on_elemtype(FE::H1P2FiniteElement{T,1} where T <: Real, ::Gri
     end
 end
 
-function get_basis_on_elemtype(FE::H1P2FiniteElement{T,2} where T <: Real, ::Grid.Abstract1DElemType)
+function get_basis_on_cell(FE::H1P2FiniteElement{T,2} where T <: Real, ::Grid.Abstract1DElemType)
     temp = 0.0;
     a = 0.0;
     b = 0.0;
@@ -105,7 +105,7 @@ function get_basis_on_elemtype(FE::H1P2FiniteElement{T,2} where T <: Real, ::Gri
     end
 end
 
-function get_basis_on_elemtype(FE::H1P2FiniteElement{T,1} where T <: Real, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::H1P2FiniteElement{T,1} where T <: Real, ::Grid.ElemType2DTriangle)
     temp = 0.0;
     function closure(xref)
         temp = 1 - xref[1] - xref[2]
@@ -118,7 +118,7 @@ function get_basis_on_elemtype(FE::H1P2FiniteElement{T,1} where T <: Real, ::Gri
     end
 end
 
-function get_basis_on_elemtype(FE::H1P2FiniteElement{T,2} where T <: Real, ::Grid.ElemType2DTriangle)
+function get_basis_on_cell(FE::H1P2FiniteElement{T,2} where T <: Real, ::Grid.ElemType2DTriangle)
     temp = 0.0;
     a = 0.0;
     b = 0.0;
@@ -148,4 +148,9 @@ function get_basis_on_elemtype(FE::H1P2FiniteElement{T,2} where T <: Real, ::Gri
                 0.0 f]
                 
     end
+end
+
+
+function get_basis_on_face(FE::H1P2FiniteElement, ET::Grid.AbstractElemType)
+    return get_basis_on_cell(FE, ET)
 end

@@ -52,12 +52,12 @@ end
 
 
 # BASIS FUNCTIONS
-function get_basis_on_elemtype(FE::L2P0FiniteElement{T,1} where T <: Real, ::Grid.Abstract2DElemType)
+function get_basis_on_cell(FE::L2P0FiniteElement{T,1} where T <: Real, ::Grid.Abstract2DElemType)
     function closure(xref)
         return [1.0]
     end
 end
-function get_basis_on_elemtype(FE::L2P0FiniteElement{T,2} where T <: Real, ::Grid.Abstract2DElemType)
+function get_basis_on_cell(FE::L2P0FiniteElement{T,2} where T <: Real, ::Grid.Abstract2DElemType)
     function closure(xref)
         return [1.0 0.0;
                 0.0 1.0]

@@ -181,7 +181,7 @@ function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with
     refbasisvals = zeros(Float64,length(qf.w),ndofs4cell,ncomponents);
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        refbasisvals[i,:,:] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
+        refbasisvals[i,:,:] = FiniteElements.get_basis_on_cell(FE, ET)(qf.xref[i])
     end    
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
     Ahandler = Grid.local2global_tinv_jacobian(FE.grid,ET)
@@ -195,7 +195,7 @@ function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with
         refgradients = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,length(qf.xref[1]))
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
-            refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_elemtype(FE, ET),qf.xref[i]);
+            refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_cell(FE, ET),qf.xref[i]);
         end    
     end
     return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs)
@@ -210,7 +210,7 @@ function FEbasis_caller_face(FE::AbstractH1FiniteElement, qf::QuadratureFormula,
     refbasisvals = zeros(Float64,length(qf.w),ndofs4face,ncomponents);
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        refbasisvals[i,:,:] = FiniteElements.get_basis_on_elemtype(FE, ETF)(qf.xref[i])
+        refbasisvals[i,:,:] = FiniteElements.get_basis_on_face(FE, ETF)(qf.xref[i])
     end    
     coefficients = zeros(Float64,ndofs4face,ncomponents)
     Ahandler = Grid.local2global_tinv_jacobian(FE.grid,ETF)
@@ -232,7 +232,7 @@ function FEbasis_caller_face(FE::AbstractHdivFiniteElement, qf::QuadratureFormul
     refbasisvals = zeros(Float64,length(qf.w),ndofs4face,ncomponents);
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        refbasisvals[i,:,:] = FiniteElements.get_basis_fluxes_on_elemtype(FE, ETF)(qf.xref[i])
+        refbasisvals[i,:,:] = FiniteElements.get_basis_fluxes_on_face(FE, ETF)(qf.xref[i])
     end    
     coefficients = zeros(Float64,ndofs4face,ncomponents)
     Ahandler = (x) -> 0; #dummy function
@@ -298,7 +298,7 @@ function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, wi
     refbasisvals = zeros(Float64,length(qf.w),ndofs4cell,ncomponents);
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        refbasisvals[i,:,:] = FiniteElements.get_basis_on_elemtype(FE, ET)(qf.xref[i])
+        refbasisvals[i,:,:] = FiniteElements.get_basis_on_cell(FE, ET)(qf.xref[i])
     end    
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
     Ahandler = Grid.local2global_Piola(FE.grid, ET)
@@ -312,7 +312,7 @@ function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, wi
         refgradients = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,length(qf.xref[1]))
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
-            refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_elemtype(FE, ET),qf.xref[i]);
+            refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_cell(FE, ET),qf.xref[i]);
         end    
     end
     return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs)
