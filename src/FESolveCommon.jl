@@ -440,7 +440,7 @@ function eval_at_nodes(val4dofs, FE::AbstractHdivFiniteElement, offset::Int64 = 
     dofs = zeros(Int64, ndofs4cell)
     for j = 1 : size(xref4dofs4cell,1)
 
-        basisvals[:] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref4dofs4cell[j,:])
+        basisvals[:] = FiniteElements.get_basis_on_cell(FE, ET)(xref4dofs4cell[j,:])
 
         for cell = 1 : size(FE.grid.nodes4cells,1)
             # get dofs

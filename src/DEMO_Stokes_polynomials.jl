@@ -111,7 +111,7 @@ function main()
         if nonlinear
             residual = solveNavierStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
         else    
-            residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, use_reconstruction);
+            residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure; reconst_variant = use_reconstruction);
         end
 
         # compute errors
