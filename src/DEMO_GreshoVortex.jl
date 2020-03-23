@@ -2,7 +2,12 @@
 ### DEMONSTRATION SCRIPT GRESH0-VORTEX ###
 ##########################################
 #
-# solves transient Gresho vortex test problem
+# solves transient Gresho vortex test Problem
+#
+# demonstrates:
+#   - setup and run of a transient Stokes solver
+#   - benefit of pressure-robustness (usre_reconstruction > 0) in material derivative#
+#     (concerning shape preservation and energy decay)
 #
 
 using Triangulate
@@ -22,10 +27,10 @@ include("PROBLEMdefinitions/STOKES_GreshoVortex.jl");
 function main()
 
     # problem configuration
-    nu = 1e-3
-    reflevel = 4
+    nu = 2e-4
+    reflevel = 5
     dt = 0.01
-    final_time = 1.0
+    final_time = 0.25
     nonlinear = true
     timesteps::Int64 = floor(final_time / dt)
     energy_computation_gaps = 2
@@ -35,7 +40,7 @@ function main()
     # other switches
     show_plots = true
     show_convergence_history = true
-    use_reconstruction = 0 # do not change here
+    use_reconstruction = [0] # do not change here
     barycentric_refinement = false # do not change here
 
 
@@ -50,7 +55,7 @@ function main()
     #fem_velocity = "P2"; fem_pressure = "P0"
     #fem_velocity = "P2B"; fem_pressure = "P1dc"
     #fem_velocity = "BR"; fem_pressure = "P0"
-    fem_velocity = "BR"; fem_pressure = "P0";  use_reconstruction = 1
+    fem_velocity = "BR"; fem_pressure = "P0";  use_reconstruction = [0,1]
 
 
     # load problem data
@@ -73,76 +78,98 @@ function main()
     ndofs = ndofs_velocity + ndofs_pressure;
 
     # solve for initial value by best approximation 
-    val4dofs = zeros(Base.eltype(grid.coords4nodes),ndofs);
-    residual = FESolveStokes.computeDivFreeBestApproximation!(val4dofs,exact_velocity!,exact_velocity!,FE_velocity,FE_pressure,u_order)
-
-    TSS = FESolveStokes.setupTransientStokesSolver(PD,FE_velocity,FE_pressure,val4dofs,use_reconstruction)
-
-    velocity_energy = []
-    energy_times = []
+    val4dofs = Array{Array{Float64,1}}(undef,length(use_reconstruction))
+    for k= 1 : length(use_reconstruction)
+        val4dofs[k] = zeros(Base.eltype(grid.coords4nodes),ndofs);
+    end    
+    residual = FESolveStokes.computeDivFreeBestApproximation!(val4dofs[1],exact_velocity!,exact_velocity!,FE_velocity,FE_pressure,u_order)
+    for k= 2 : length(use_reconstruction)
+        val4dofs[k] = deepcopy(val4dofs[1])
+    end    
 
     function zero_data!(result,x)
         fill!(result,0.0)
     end
+    
+    TSS = Array{FESolveStokes.TransientStokesSolver,1}(undef,length(use_reconstruction))
+    velocity_energy = Array{Array{Float64,1},1}(undef,length(use_reconstruction))
+    energy_times = []
 
-    if (show_plots)
-        pygui(true)
-        
-        # evaluate velocity and pressure at grid points
-        velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
-        speed = sqrt.(sum(velo.^2, dims = 2))
-        
-        PyPlot.figure(1)
-        tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
-        PyPlot.axis("equal")
-        PyPlot.title("Stokes Problem Solution - velocity speed")
-        PyPlot.colorbar(tcf)
-    end    
-
-    for j = 0 : timesteps
-
-        if mod(j,energy_computation_gaps) == 0
-            println("computing errors")
-            # compute errors
-            integral4cells = zeros(size(grid.nodes4cells,1),1);
-            integral4cells = zeros(size(grid.nodes4cells,1),2);
-            integrate!(integral4cells,eval_L2_interpolation_error!(zero_data!, val4dofs[1:ndofs_velocity], FE_velocity), grid, error_order, 2);
-            append!(velocity_energy,sqrt(abs(sum(integral4cells[:]))));
-            append!(energy_times,TSS.current_time);
-        end    
-
-        if nonlinear == false
-            FESolveStokes.PerformTimeStep(TSS,dt)
-        else
-            FESolveNavierStokes.PerformIMEXTimeStep(TSS,dt)
-        end
-        val4dofs[:] = TSS.current_solution[:]
-
-        #plot
+    for k = 1 : length(use_reconstruction)
+        velocity_energy[k] = []
+        TSS[k] = FESolveStokes.setupTransientStokesSolver(PD,FE_velocity,FE_pressure,val4dofs[k],use_reconstruction[k])
+  
         if (show_plots)
             pygui(true)
             
             # evaluate velocity and pressure at grid points
-            velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
+            velo = FESolveCommon.eval_at_nodes(val4dofs[k],FE_velocity);
             speed = sqrt.(sum(velo.^2, dims = 2))
-            #pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
-
-            PyPlot.figure(1)
+            
+            PyPlot.figure(k)
             tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
             PyPlot.axis("equal")
-            PyPlot.title("Stokes Problem Solution - velocity speed")
-            show()
-        end    
+            PyPlot.title("velocity speed (reconst = " * string(use_reconstruction[k]) * ")")
+            PyPlot.colorbar(tcf)
+        end      
+    end
+
+    
+
+    for j = 0 : timesteps
+        if mod(j,energy_computation_gaps) == 0
+            append!(energy_times,TSS[1].current_time)
+        end
+
+        for k = 1 : length(use_reconstruction)
+            
+            if mod(j,energy_computation_gaps) == 0
+                println("computing errors")
+                # compute errors
+                integral4cells = zeros(size(grid.nodes4cells,1),1);
+                integral4cells = zeros(size(grid.nodes4cells,1),2);
+                integrate!(integral4cells,eval_L2_interpolation_error!(zero_data!, val4dofs[k][1:ndofs_velocity], FE_velocity), grid, error_order, 2);
+                append!(velocity_energy[k],sqrt(abs(sum(integral4cells[:]))));
+            end    
+
+            if nonlinear == false
+                FESolveStokes.PerformTimeStep(TSS[k],dt)
+            else
+                FESolveNavierStokes.PerformIMEXTimeStep(TSS[k],dt)
+            end
+            val4dofs[k] = deepcopy(TSS[k].current_solution[:])
+
+            #plot
+            if (show_plots)
+                pygui(true)
+                
+                # evaluate velocity and pressure at grid points
+                velo = FESolveCommon.eval_at_nodes(val4dofs[k],FE_velocity);
+                speed = sqrt.(sum(velo.^2, dims = 2))
+                #pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
+
+                PyPlot.figure(k)
+                tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
+                PyPlot.axis("equal")
+                PyPlot.title("velocity speed (reconst = " * string(use_reconstruction[k]) * ")")
+                show()
+            end    
+        end
     end    
 
-    Base.show(velocity_energy)
+    #Base.show(energy_times)
+    #Base.show(velocity_energy)
 
     if (show_convergence_history)
-       PyPlot.figure()
-       PyPlot.loglog(energy_times,velocity_energy,"-o")
-       PyPlot.legend(("Energy"))
-       ax = PyPlot.gca()
-       ax.grid(true)
+        PyPlot.figure()
+        labels = []
+        for k = 1 : length(use_reconstruction)
+            PyPlot.loglog(energy_times[:],velocity_energy[k][:],"-o")
+            append!(labels,["Energy reconst = " * string(use_reconstruction[k])])
+        end     
+        PyPlot.legend(labels)
+        ax = PyPlot.gca()
+        ax.grid(true)
     end    
 
 end

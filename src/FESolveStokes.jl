@@ -53,7 +53,7 @@ function computeDivFreeBestApproximation!(val4dofs::Array, volume_data!::Functio
     ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
     ndofs = ndofs_velocity + ndofs_pressure;
     
-    println("\nSOLVING STOKES PROBLEM")
+    println("\nSOLVING DIVFREE-BESTAPPROXIMATION PROBLEM")
     println(" |FEvelocity = " * FE_velocity.name)
     println(" |FEpressure = " * FE_pressure.name)
     println(" |totalndofs = ", ndofs)
@@ -467,8 +467,8 @@ function PerformTimeStep(TSS::TransientStokesSolver, dt::Real = 1 // 10)
 
     # update matrix and right-hand side vector
 
-    println("    |time = ", TSS.current_time)
-    println("    |dt = ", TSS.current_dt)
+    println("    |")
+    println("    |time + dt = " * string(TSS.current_time) * " + " * string(dt))
     if TSS.current_dt != dt
         println("    |updating matrix...")
         TSS.current_dt = dt
@@ -487,7 +487,7 @@ function PerformTimeStep(TSS::TransientStokesSolver, dt::Real = 1 // 10)
     TSS.rhsvector .*= (1.0/dt)
     TSS.rhsvector += TSS.datavector
     
-    println("    |apply boundary data...")
+    # println("    |apply boundary data...")
     for i = 1 : length(TSS.bdofs)
         TSS.SystemMatrix[TSS.bdofs[i],TSS.bdofs[i]] = TSS.dirichlet_penalty;
         TSS.rhsvector[TSS.bdofs[i]] = TSS.current_solution[TSS.bdofs[i]]*TSS.dirichlet_penalty;
@@ -495,18 +495,18 @@ function PerformTimeStep(TSS::TransientStokesSolver, dt::Real = 1 // 10)
 
     # solve for next time step
     # todo: reuse LU decomposition of matrix
-    println("    |solving...")
+    print("    |solving...")
     TSS.last_solution = deepcopy(TSS.current_solution)
     TSS.current_solution = TSS.SystemMatrix\TSS.rhsvector
 
-    change = norm(TSS.last_solution - TSS.current_solution);
-    println("    |change=", change)
+    #change = norm(TSS.last_solution - TSS.current_solution);
+    #println("    |change=", change)
 
     # compute residual (exclude bdofs)
     TSS.rhsvector = TSS.SystemMatrix*TSS.current_solution - TSS.rhsvector
     TSS.rhsvector[TSS.bdofs] .= 0
     residual = norm(TSS.rhsvector);
-    println("    |residual=", residual)
+    println(" (residual=" * string(residual) *")")
 
     TSS.current_time += dt
 

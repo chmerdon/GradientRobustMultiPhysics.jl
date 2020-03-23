@@ -179,8 +179,8 @@ function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real 
 
     # update matrix and right-hand side vector
 
-    println("    |time = ", TSS.current_time)
-    println("    |dt = ", TSS.current_dt)
+    println("    |")
+    println("    |time + dt = " * string(TSS.current_time) * " + " * string(dt))
     if TSS.current_dt != dt
         println("    |updating matrix...")
         TSS.current_dt = dt
@@ -194,12 +194,14 @@ function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real 
         println("    |skipping updating matrix (dt did not change)...")   
     end     
 
-    println("    |updating linear part of rhs...")
+    println("    |updating rhs...")
+
+    # reload linear part
     TSS.rhsvector = TSS.MassMatrix * TSS.current_solution
     TSS.rhsvector .*= (1.0/dt)
     TSS.rhsvector += TSS.datavector
 
-    println("    |updating nonlinear part of rhs...")
+    # nonlinear part
     if (TSS.FE_reconst != TSS.FE_velocity)
         temp = zeros(Float64,size(TSS.ReconstructionMatrix,2))
         assemble_operator!(temp,CELL_NAVIERSTOKES_AdotDAdotDV,TSS.FE_velocity,TSS.FE_velocity,TSS.FE_reconst,TSS.current_solution,TSS.current_solution)
@@ -208,7 +210,7 @@ function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real 
         assemble_operator!(TSS.rhsvector,CELL_NAVIERSTOKES_AdotDAdotDV,TSS.FE_velocity,TSS.FE_velocity,TSS.FE_velocity,TSS.current_solution,TSS.current_solution)
     end    
     
-    println("    |apply boundary data...")
+    #println("    |apply boundary data...")
     for i = 1 : length(TSS.bdofs)
         TSS.SystemMatrix[TSS.bdofs[i],TSS.bdofs[i]] = TSS.dirichlet_penalty;
         TSS.rhsvector[TSS.bdofs[i]] = TSS.current_solution[TSS.bdofs[i]]*TSS.dirichlet_penalty;
@@ -216,7 +218,7 @@ function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real 
 
     # solve for next time step
     # todo: reuse LU decomposition of matrix
-    println("    |solving...")
+    print("    |solving...")
     TSS.last_solution[:] = TSS.current_solution[:]
     TSS.current_solution = TSS.SystemMatrix\TSS.rhsvector
 
@@ -224,7 +226,7 @@ function PerformIMEXTimeStep(TSS::FESolveStokes.TransientStokesSolver, dt::Real 
     TSS.rhsvector = TSS.SystemMatrix*TSS.current_solution - TSS.rhsvector
     TSS.rhsvector[TSS.bdofs] .= 0
     residual = norm(TSS.rhsvector);
-    println("    |residual=", residual)
+    println(" (residual=" * string(residual) *")")
 
     TSS.current_time += dt
 
