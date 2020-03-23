@@ -83,7 +83,6 @@ function ensure_length4faces!(Grid::Mesh)
     celldim = size(Grid.nodes4faces,2) - 1;
     nfaces::Int = size(Grid.nodes4faces,1);
     if size(Grid.length4faces,1) != size(nfaces,1)
-        Grid.length4faces = zeros(eltype(Grid.coords4nodes),nfaces);
         if celldim == 1 # also allow d-dimensional points on a line!
             Grid.length4faces= zeros(eltype(Grid.coords4nodes),nfaces);
             xdim::Int = size(Grid.coords4nodes,2)
@@ -93,6 +92,8 @@ function ensure_length4faces!(Grid::Mesh)
                 end
                  Grid.length4faces[face] = sqrt(Grid.length4faces[face]);    
             end   
+        elseif celldim == 0 # points of length 1
+            Grid.length4faces = ones(eltype(Grid.coords4nodes),nfaces);
         end
     end        
 end  

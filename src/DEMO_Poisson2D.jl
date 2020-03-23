@@ -40,13 +40,13 @@ function main()
     #fem = "CR"
     #fem = "P1"
     #fem = "MINI"
-    fem = "P2"
-    #fem = "P2B"
+    #fem = "P2"
+    fem = "P2B"
 
     # choose coefficients of exact solution
 
     polynomial_coefficients = [0 -3 2 -1 1; 0 2 -1 0 -0.5] # quartic
-    #polynomial_coefficients = [0 0 0 -1; 0 1 0 1] # cubic
+    #polynomial_coefficients = [0 0 0 -1.0; 0 1.0 0 1.0] # cubic
     #polynomial_coefficients = [0 0 -1; 1 0.5 0.5]  # quadratic
     #polynomial_coefficients = [0 1; 0.5 -1]   # linear
     #polynomial_coefficients = [1 0; 0.5 0]   # constant
@@ -62,6 +62,7 @@ function main()
 
     L2error = zeros(Float64,maxlevel)
     L2errorBA = zeros(Float64,maxlevel)
+    Estimator = zeros(Float64,maxlevel)
     ndofs = zeros(Int64,maxlevel)            
     val4dofs = Nothing
     FE = Nothing
@@ -110,6 +111,15 @@ function main()
         L2errorBA[level] = sqrt(abs(sum(integral4cells)));
         println("L2_error_BA = " * string(L2errorBA[level]));
 
+        # compute error estimator
+        nfaces = size(FE.grid.nodes4faces,1)
+        J = zeros(Float64,nfaces,2)
+        FESolveCommon.assemble_operator!(J,FESolveCommon.FACE_JDAdotJDA,FE,val4dofs)
+
+
+        Estimator[level] = sqrt.(sum(sum(J, dims=2).*FE.grid.length4faces[:].^3, dims = 1))[1]
+        println("estimator = " * string(Estimator[level]));
+
     end
 
 
@@ -127,10 +137,11 @@ function main()
         PyPlot.figure(2)
         PyPlot.loglog(ndofs[1:maxlevel],L2error[1:maxlevel],"-o")
         PyPlot.loglog(ndofs[1:maxlevel],L2errorBA[1:maxlevel],"-o")
+        PyPlot.loglog(ndofs[1:maxlevel],Estimator[1:maxlevel],"-o")
+        PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
         PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-2),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-3),"--",color = "gray")
-        PyPlot.legend(("L2 error","L2 error BA","O(h)","O(h^2)","O(h^3)"))
+        PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
+        PyPlot.legend(("L2 error","L2 error BA","estimator","O(h)","O(h^2)","O(h^3)"))
         PyPlot.title("Convergence history (fem=" * fem * ")")
         ax = PyPlot.gca()
         ax.grid(true)

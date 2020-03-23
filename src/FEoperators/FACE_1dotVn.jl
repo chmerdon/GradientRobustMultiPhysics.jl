@@ -1,7 +1,6 @@
 struct FACE_1dotVn <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(A::ExtendableSparseMatrix,::Type{FACE_1dotVn},FE::AbstractFiniteElement, factor::Float64 = 1.0)
-    ensure_bfaces!(FE.grid);
+function assemble_operator!(A::ExtendableSparseMatrix,::Type{FACE_1dotVn},FE::Union{AbstractH1FiniteElement, AbstractHdivFiniteElement}, factor::Float64 = 1.0)
     ensure_length4faces!(FE.grid);
     ensure_normal4faces!(FE.grid);
   

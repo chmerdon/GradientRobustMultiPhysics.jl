@@ -37,6 +37,7 @@ include("FEoperators/DOMAIN_1dotV.jl");
 # LINEAR FUNCTIONALS on (boundary) faces
 include("FEoperators/BFACE_FdotV.jl");
 include("FEoperators/FACE_1dotVn.jl");
+include("FEoperators/FACE_JDAdotJDA.jl");
 
 # DIV-DIV matrices on cells
 include("FEoperators/CELL_DIVUdotDIVV.jl");
@@ -362,7 +363,7 @@ function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE:
         
         # subtract nodal interpolation
         det = get_Piola_trafo_on_cell!(AT,cellIndex);
-        basisvals[:] = FiniteElements.get_basis_on_elemtype(FE, ET)(xref)
+        basisvals[:] = FiniteElements.get_basis_on_cell(FE, ET)(xref)
 
         # get dofs
         FiniteElements.get_dofs_on_cell!(dofs, FE, cellIndex, ET)
