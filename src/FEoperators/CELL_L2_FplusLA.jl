@@ -1,6 +1,6 @@
 struct CELL_L2_FplusLA <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElement, f!::Function, quadrature_order::Int, val4dofsA, nu::Real)
+function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElement, f!::Function, quadrature_order::Int, val4dofsA, diffusion)
     
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);
@@ -17,6 +17,15 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
     dofs = zeros(Int64,ndofs4cell)
 
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
+
+    if typeof(diffusion) <: Real
+        diffusion_matrix = zeros(Float64,xdim,xdim)
+        for j= 1 : xdim
+            diffusion_matrix[j,j] = diffusion
+        end    
+    else
+        diffusion_matrix = diffusion    
+    end
     
     # quadrature loop
     temp = 0.0;
@@ -37,7 +46,7 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
         for i in eachindex(qf.w)
         
             # get FE basis gradients at quadrature point
-            FiniteElements.getFEbasislaplacians4qp!(laplacian, FEbasis, i)
+            FiniteElements.getFEbasislaplacians4qp!(laplacian, FEbasis, i, diffusion_matrix)
                 
             # evaluate f
             x[:] = cell_trafo(qf.xref[i]);
@@ -49,7 +58,6 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
                     for dof_i = 1 : ndofs4cell
                         temp += laplacian[dof_i,k] * val4dofsA[dofs[dof_i]];
                     end
-                    temp *= nu
                     temp += fval[k];
                     b[cell] += temp^2 * qf.w[i] * FE.grid.volume4cells[cell];
                 end    

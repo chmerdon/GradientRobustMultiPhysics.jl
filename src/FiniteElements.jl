@@ -306,17 +306,18 @@ function getFEbasisgradients4qp!(gradients,FEBC::FEbasis_caller{FET,AssembleType
     end    
 end
 
-function getFEbasislaplacians4qp!(laplacians,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
+function getFEbasislaplacians4qp!(laplacians,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i,diffusion_matrix)
     @assert FEBC.with_2nd_derivs
-    # multiply tinverted jacobian of element trafo with gradient of basis function
-    # which yields (by chain rule) the gradient in x coordinates
     for dof_i = 1 : size(FEBC.refbasisvals,2)
         for c = 1 : FEBC.ncomponents
             laplacians[dof_i,c] = 0.0;
-            for j = 1 : FEBC.xdim # add second derivatives partial x_j^2
-                for k = 1 : FEBC.xdim, l = 1 : FEBC.xdim
-                    laplacians[dof_i,c] += FEBC.A[j,k]*FEBC.A[j,l]*FEBC.refgradients_2ndorder[i,dof_i + FEBC.offsets2[k],l]
-                end
+            for xi = 1 : FEBC.xdim, xj = 1: FEBC.xdim
+                # add second derivatives diffusion[j,k]*partial^2 (x_i x_j)
+                if diffusion_matrix[xi,xj] != 0
+                    for k = 1 : FEBC.xdim, l = 1 : FEBC.xdim
+                        laplacians[dof_i,c] += diffusion_matrix[xi,xj]*FEBC.A[xi,k]*FEBC.A[xj,l]*FEBC.refgradients_2ndorder[i,dof_i + FEBC.offsets2[k],l]
+                    end
+                end    
             end    
             laplacians[dof_i,c] *= FEBC.coefficients[dof_i,c]
         end    

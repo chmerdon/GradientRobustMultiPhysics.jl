@@ -45,13 +45,13 @@ function main()
 
     # choose coefficients of exact solution
 
-    polynomial_coefficients = [0 -3 2 -1 1; 0 2 -1 0 -0.5] # quartic
+    #polynomial_coefficients = [0 -3 2 -1 1; 0 2 -1 0 -0.5] # quartic
     #polynomial_coefficients = [0 0 0 -1.0; 0 1.0 0 1.0] # cubic
-    #polynomial_coefficients = [0 0 -1; 1 0.5 0.5]  # quadratic
+    polynomial_coefficients = [0 0 -1; 1 0.5 0.5]  # quadratic
     #polynomial_coefficients = [0 1; 0.5 -1]   # linear
     #polynomial_coefficients = [1 0; 0.5 0]   # constant
 
-    diffusion = 1.0 # scalar constant diffusion
+    diffusion = 10.0 # scalar constant diffusion
     #diffusion = [2.0 0.5] # diagonal constant diffusion matrix
     #diffusion = [2.0 0.0; 0.0 0.5] # arbitrary non-diagonal constant diffusion matrix
     #diffusion = [2.0 0.5; 0.5 0.5] # arbitrary non-diagonal constant diffusion matrix (symmetric positive definit)
