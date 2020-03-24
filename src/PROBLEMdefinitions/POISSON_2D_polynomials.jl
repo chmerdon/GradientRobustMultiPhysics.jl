@@ -71,7 +71,7 @@ function getProblemData(polynomial_coefficients::Array{Float64,2}, diffusion, nr
     # volume data
     PD.volumedata4region = Vector{Function}(undef,1)
     PD.volumedata4region[1] = volume_data! 
-    PD.quadorder4region = [0]
+    PD.quadorder4region = ones(Int64,1)*(l-3)
     # boundary data
     PD.boundarydata4bregion = Vector{Function}(undef,nrBoundaryRegions)
     PD.boundarytype4bregion = ones(nrBoundaryRegions)

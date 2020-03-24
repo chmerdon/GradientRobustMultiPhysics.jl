@@ -1,6 +1,6 @@
-struct FACE_JDAdotJDA <: FiniteElements.AbstractFEOperator end
+struct FACE_L2_JumpDA <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(b,::Type{FACE_JDAdotJDA},FE::AbstractH1FiniteElement,  dofs4A)
+function assemble_operator!(b,::Type{FACE_L2_JumpDA},FE::AbstractH1FiniteElement, dofs4A)
     ensure_length4faces!(FE.grid);
     ensure_faces4cells!(FE.grid);
     ensure_cells4faces!(FE.grid);
@@ -45,7 +45,6 @@ function assemble_operator!(b,::Type{FACE_JDAdotJDA},FE::AbstractH1FiniteElement
                 qf.xref[:] = qf.xref[end:-1:1]
             end
         end
-        Base.show(qf.xref)
 
         # generate FEbasis
         FEbasis[j] = FiniteElements.FEbasis_caller(FE, qf, true);

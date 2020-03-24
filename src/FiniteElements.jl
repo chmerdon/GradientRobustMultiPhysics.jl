@@ -152,6 +152,11 @@ function createFEVector(FE::AbstractFiniteElement)
     return zeros(get_ndofs(FE));
 end
 
+function vector_hessian(f, x)
+    n = length(x)
+    return ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
+end
+
 abstract type AbstractAssembleType end
 abstract type AssembleTypeCELL <: AbstractAssembleType end
 abstract type AssembleTypeFACE <: AbstractAssembleType end
@@ -160,6 +165,7 @@ mutable struct FEbasis_caller{FEType <: AbstractFiniteElement, AT<:AbstractAssem
     FE::AbstractFiniteElement
     refbasisvals::Array{Float64,3}
     refgradients::Array{Float64,3}
+    refgradients_2ndorder::Array{Float64,3}
     coefficients::Array{Float64,2}
     Ahandler::Function  # function that generates matrix trafo
     A::Matrix{Float64}  # matrix trafo for gradients
@@ -170,9 +176,10 @@ mutable struct FEbasis_caller{FEType <: AbstractFiniteElement, AT<:AbstractAssem
     offsets2::Array{Int64,1}
     current_item::Int64
     with_derivs::Bool
+    with_2nd_derivs::Bool
 end
 
-function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with_derivs::Bool)
+function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with_derivs::Bool, with_2nd_derivs::Bool = false)
     ET = FE.grid.elemtypes[1]
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     
@@ -196,12 +203,23 @@ function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
             refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_cell(FE, ET),qf.xref[i]);
+        end 
+    end
+
+    if with_2nd_derivs == false
+        refgradients_2ndorder = zeros(Float64,0,0,0)
+    else
+        refgradients_2ndorder = zeros(Float64,length(qf.w),ncomponents*ndofs4cell*length(qf.xref[1]),length(qf.xref[1]))
+        for i in eachindex(qf.w)
+            # evaluate gradients of basis function
+            #refgradients_2ndorder[i,:,:]
+            refgradients_2ndorder[i,:,:] = vector_hessian(FiniteElements.get_basis_on_cell(FE, ET),qf.xref[i])
         end    
     end
-    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs)
+    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs, with_2nd_derivs)
 end    
 
-function FEbasis_caller_face(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with_derivs::Bool)
+function FEbasis_caller_face(FE::AbstractH1FiniteElement, qf::QuadratureFormula)
     ETF = Grid.get_face_elemtype(FE.grid.elemtypes[1])
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     
@@ -218,12 +236,12 @@ function FEbasis_caller_face(FE::AbstractH1FiniteElement, qf::QuadratureFormula,
     A = zeros(Float64,xdim,xdim)
     offsets = 0:xdim:(ncomponents*xdim);
     offsets2 = 0:ndofs4face:ncomponents*ndofs4face;
-    @assert with_derivs == false
     refgradients = zeros(Float64,0,0,0)
-    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs)
+    refgradients_2ndorder = zeros(Float64,0,0,0)
+    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,false,false)
 end  
 
-function FEbasis_caller_face(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, with_derivs::Bool)
+function FEbasis_caller_face(FE::AbstractHdivFiniteElement, qf::QuadratureFormula)
     ETF = Grid.get_face_elemtype(FE.grid.elemtypes[1])
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     
@@ -240,9 +258,9 @@ function FEbasis_caller_face(FE::AbstractHdivFiniteElement, qf::QuadratureFormul
     A = zeros(Float64,1,1)
     offsets = [0];
     offsets2 = [0];
-    @assert with_derivs == false
     refgradients = zeros(Float64,0,0,0)
-    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs)
+    refgradients_2ndorder = zeros(Float64,0,0,0)
+    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,false,false)
 end 
 
 function updateFEbasis!(FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement, cell)
@@ -252,7 +270,7 @@ function updateFEbasis!(FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <:
     FiniteElements.get_basis_coefficients_on_cell!(FEBC.coefficients, FEBC.FE, cell, FEBC.FE.grid.elemtypes[1]);
 
     # evaluate tinverted (=transposed + inverted) jacobian of element trafo
-    if FEBC.with_derivs
+    if FEBC.with_derivs || FEBC.with_2nd_derivs
         FEBC.Ahandler(FEBC.A, cell)
     end    
 end
@@ -288,6 +306,23 @@ function getFEbasisgradients4qp!(gradients,FEBC::FEbasis_caller{FET,AssembleType
     end    
 end
 
+function getFEbasislaplacians4qp!(laplacians,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
+    @assert FEBC.with_2nd_derivs
+    # multiply tinverted jacobian of element trafo with gradient of basis function
+    # which yields (by chain rule) the gradient in x coordinates
+    for dof_i = 1 : size(FEBC.refbasisvals,2)
+        for c = 1 : FEBC.ncomponents
+            laplacians[dof_i,c] = 0.0;
+            for j = 1 : FEBC.xdim # add second derivatives partial x_j^2
+                for k = 1 : FEBC.xdim, l = 1 : FEBC.xdim
+                    laplacians[dof_i,c] += FEBC.A[j,k]*FEBC.A[j,l]*FEBC.refgradients_2ndorder[i,dof_i + FEBC.offsets2[k],l]
+                end
+            end    
+            laplacians[dof_i,c] *= FEBC.coefficients[dof_i,c]
+        end    
+    end    
+end
+
 
 function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, with_derivs::Bool)
     ET = FE.grid.elemtypes[1]
@@ -315,7 +350,8 @@ function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, wi
             refgradients[i,:,:] = ForwardDiff.jacobian(FiniteElements.get_basis_on_cell(FE, ET),qf.xref[i]);
         end    
     end
-    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs)
+    refgradients_2ndorder = zeros(Float64,0,0,0)
+    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs,false)
 end    
 
 function updateFEbasis!(FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractHdivFiniteElement, cell)

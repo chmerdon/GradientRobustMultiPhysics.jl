@@ -16,7 +16,7 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     ncomponents::Int = FiniteElements.get_ncomponents(FE);
     xdim = size(FE.grid.coords4nodes,2)
-    FEbasis = FiniteElements.FEbasis_caller_face(FE, qf, false);
+    FEbasis = FiniteElements.FEbasis_caller_face(FE, qf);
     basisvals = zeros(Float64,ndofs4face,ncomponents)
     dofs = zeros(Int64,ndofs4face)
     

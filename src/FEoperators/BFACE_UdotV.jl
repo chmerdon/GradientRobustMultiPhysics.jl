@@ -15,7 +15,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UdotV},FE::Ab
     # generate caller for FE basis functions
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
     ncomponents::Int = FiniteElements.get_ncomponents(FE);
-    FEbasis = FiniteElements.FEbasis_caller_face(FE, qf, false);
+    FEbasis = FiniteElements.FEbasis_caller_face(FE, qf);
     basisvals = zeros(Float64,ndofs4face,ncomponents)
     dofs = zeros(Int64,ndofs4face)
     

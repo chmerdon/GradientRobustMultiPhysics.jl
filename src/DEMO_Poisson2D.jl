@@ -40,8 +40,8 @@ function main()
     #fem = "CR"
     #fem = "P1"
     #fem = "MINI"
-    #fem = "P2"
-    fem = "P2B"
+    fem = "P2"
+    #fem = "P2B"
 
     # choose coefficients of exact solution
 
@@ -51,10 +51,10 @@ function main()
     #polynomial_coefficients = [0 1; 0.5 -1]   # linear
     #polynomial_coefficients = [1 0; 0.5 0]   # constant
 
-    #diffusion = 1.0 # scalar constant diffusion
+    diffusion = 1.0 # scalar constant diffusion
     #diffusion = [2.0 0.5] # diagonal constant diffusion matrix
     #diffusion = [2.0 0.0; 0.0 0.5] # arbitrary non-diagonal constant diffusion matrix
-    diffusion = [2.0 0.5; 0.5 0.5] # arbitrary non-diagonal constant diffusion matrix (symmetric positive definit)
+    #diffusion = [2.0 0.5; 0.5 0.5] # arbitrary non-diagonal constant diffusion matrix (symmetric positive definit)
     
     # load problem data
     PD, exact_solution! = getProblemData(polynomial_coefficients, diffusion);
@@ -114,10 +114,14 @@ function main()
         # compute error estimator
         nfaces = size(FE.grid.nodes4faces,1)
         J = zeros(Float64,nfaces,2)
-        FESolveCommon.assemble_operator!(J,FESolveCommon.FACE_JDAdotJDA,FE,val4dofs)
-
-
+        FESolveCommon.assemble_operator!(J,FESolveCommon.FACE_L2_JumpDA,FE,val4dofs)
         Estimator[level] = sqrt.(sum(sum(J, dims=2).*FE.grid.length4faces[:].^3, dims = 1))[1]
+
+        ncells = size(FE.grid.nodes4cells,1)
+        V = zeros(Float64,ncells)
+        FESolveCommon.assemble_operator!(V,FESolveCommon.CELL_L2_FplusLA,FE,PD.volumedata4region[1],PD.quadorder4region[1],val4dofs,diffusion)
+        Estimator[level] += sqrt.(sum(V.*FE.grid.volume4cells[:].^4, dims = 1))[1]
+
         println("estimator = " * string(Estimator[level]));
 
     end
