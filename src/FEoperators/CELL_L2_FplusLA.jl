@@ -1,11 +1,11 @@
 struct CELL_L2_FplusLA <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElement, f!::Function, quadrature_order::Int, val4dofsA, diffusion)
+function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElement, f!::Function, quadrature_order::Int, val4dofsA, diffusion!, diffusion_quadorder::Int = 0)
     
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);
     ET = FE.grid.elemtypes[1]
-    quadorder = 2*(quadrature_order + FiniteElements.get_polynomial_order(FE) - 2);
+    quadorder = 2*max(quadrature_order,FiniteElements.get_polynomial_order(FE) - 2 + diffusion_quadorder);
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
@@ -18,13 +18,13 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
 
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
 
-    if typeof(diffusion) <: Real
-        diffusion_matrix = zeros(Float64,xdim,xdim)
+    diffusion_matrix = zeros(Float64,xdim,xdim)
+    constant_diffusion = false
+    if typeof(diffusion!) <: Real
+        constant_diffusion = true
         for j= 1 : xdim
-            diffusion_matrix[j,j] = diffusion
-        end    
-    else
-        diffusion_matrix = diffusion    
+            diffusion_matrix[j,j] = diffusion!
+        end      
     end
     
     # quadrature loop
@@ -45,7 +45,12 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
       
         for i in eachindex(qf.w)
         
-            # get FE basis gradients at quadrature point
+            # evaluate diffusion matrix
+            if constant_diffusion == false
+                diffusion!(diffusion_matrix, x)
+            end    
+
+            # get div(diffusion_matrix*DV) of FE basis functions at quadrature point
             FiniteElements.getFEbasislaplacians4qp!(laplacian, FEbasis, i, diffusion_matrix)
                 
             # evaluate f

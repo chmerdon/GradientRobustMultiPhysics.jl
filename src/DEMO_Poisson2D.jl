@@ -15,23 +15,28 @@ using Quadrature
 using FiniteElements
 using FESolveCommon
 using FESolvePoisson
+using FEEstimate
 ENV["MPLBACKEND"]="tkagg"
 using PyPlot
 
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_lshape.jl")
+include("PROBLEMdefinitions/GRID_unitsquare.jl")
 include("PROBLEMdefinitions/POISSON_2D_polynomials.jl");
 
 function main()
 
-    # refinement termination criterions
+    # grid and refinement termination criterions
+    gridgenerator = gridgen_unitsquare
+    #gridgenerator = gridgen_lshape
     maxlevel = 15
     maxdofs = 20000
 
     # other switches
     show_plots = true
     show_convergence_history = true
+    do_estimation = true
 
     ########################
     ### CHOOSE FEM BELOW ###
@@ -45,16 +50,16 @@ function main()
 
     # choose coefficients of exact solution
 
-    #polynomial_coefficients = [0 -3 2 -1 1; 0 2 -1 0 -0.5] # quartic
+    polynomial_coefficients = [0 -3 2 -1 1; 0 2 -1 0 -0.5] # quartic
     #polynomial_coefficients = [0 0 0 -1.0; 0 1.0 0 1.0] # cubic
-    polynomial_coefficients = [0 0 -1; 1 0.5 0.5]  # quadratic
+    #polynomial_coefficients = [0 0 -1; 1 0.5 0.5]  # quadratic
     #polynomial_coefficients = [0 1; 0.5 -1]   # linear
     #polynomial_coefficients = [1 0; 0.5 0]   # constant
 
-    diffusion = 10.0 # scalar constant diffusion
+    #diffusion = 10.0 # scalar constant diffusion
     #diffusion = [2.0 0.5] # diagonal constant diffusion matrix
     #diffusion = [2.0 0.0; 0.0 0.5] # arbitrary non-diagonal constant diffusion matrix
-    #diffusion = [2.0 0.5; 0.5 0.5] # arbitrary non-diagonal constant diffusion matrix (symmetric positive definit)
+    diffusion = [2.0 0.5; 0.5 0.5] # arbitrary non-diagonal constant diffusion matrix (symmetric positive definit)
     
     # load problem data
     PD, exact_solution! = getProblemData(polynomial_coefficients, diffusion);
@@ -63,6 +68,7 @@ function main()
     L2error = zeros(Float64,maxlevel)
     L2errorBA = zeros(Float64,maxlevel)
     Estimator = zeros(Float64,maxlevel)
+    estimator4cells = Nothing
     ndofs = zeros(Int64,maxlevel)            
     val4dofs = Nothing
     FE = Nothing
@@ -71,7 +77,7 @@ function main()
 
         # generate grid
         maxarea = 4.0^(-level)
-        grid = gridgen_lshape(maxarea)
+        grid = gridgenerator(maxarea)
         Grid.show(grid)
 
         # generate FE
@@ -87,7 +93,7 @@ function main()
             maxlevel = level - 1
             if show_plots
                 maxarea = 4.0^(-maxlevel)
-                grid = gridgen_lshape(maxarea)
+                grid = gridgenerator(maxarea)
                 FE = FiniteElements.string2FE(fem, grid, 2, 1)
             end    
             break
@@ -111,18 +117,12 @@ function main()
         L2errorBA[level] = sqrt(abs(sum(integral4cells)));
         println("L2_error_BA = " * string(L2errorBA[level]));
 
-        # compute error estimator
-        nfaces = size(FE.grid.nodes4faces,1)
-        J = zeros(Float64,nfaces,2)
-        FESolveCommon.assemble_operator!(J,FESolveCommon.FACE_L2_JumpDA,FE,val4dofs)
-        Estimator[level] = sqrt.(sum(sum(J, dims=2).*FE.grid.length4faces[:].^3, dims = 1))[1]
-
-        ncells = size(FE.grid.nodes4cells,1)
-        V = zeros(Float64,ncells)
-        FESolveCommon.assemble_operator!(V,FESolveCommon.CELL_L2_FplusLA,FE,PD.volumedata4region[1],PD.quadorder4region[1],val4dofs,diffusion)
-        Estimator[level] += sqrt.(sum(V.*FE.grid.volume4cells[:].^4, dims = 1))[1]
-
-        println("estimator = " * string(Estimator[level]));
+        # compute L2 error estimator
+        if do_estimation
+            estimator4cells = zeros(Float64,size(FE.grid.nodes4cells,1))
+            Estimator[level] = FEEstimate.estimate_cellwise!(estimator4cells,PD,FE,val4dofs,0)
+            println("estimator = " * string(Estimator[level]));
+        end    
 
     end
 
@@ -134,18 +134,34 @@ function main()
         PyPlot.figure(1)
         PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),nodevals[:],cmap=get_cmap("ocean"))
         PyPlot.title("Poisson Problem Solution")
+
+        if (do_estimation)
+            FE_P0 = FiniteElements.string2FE("P0", grid, 2, 1)
+            eta = FESolveCommon.eval_at_nodes(estimator4cells,FE_P0);
+            PyPlot.figure(2)
+            tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),eta[:])
+            PyPlot.axis("equal")
+            PyPlot.colorbar(tcf)
+            PyPlot.title("error estimator")
+        end
         #show()
     end    
 
     if (show_convergence_history)
-        PyPlot.figure(2)
+        PyPlot.figure()
         PyPlot.loglog(ndofs[1:maxlevel],L2error[1:maxlevel],"-o")
         PyPlot.loglog(ndofs[1:maxlevel],L2errorBA[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs[1:maxlevel],Estimator[1:maxlevel],"-o")
+        if do_estimation
+             PyPlot.loglog(ndofs[1:maxlevel],Estimator[1:maxlevel],"-o")
+        end     
         PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
         PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
         PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-        PyPlot.legend(("L2 error","L2 error BA","estimator","O(h)","O(h^2)","O(h^3)"))
+        if do_estimation
+            PyPlot.legend(("L2 error","L2 error BA","error estimator","O(h)","O(h^2)","O(h^3)"))
+        else
+            PyPlot.legend(("L2 error","L2 error BA","O(h)","O(h^2)","O(h^3)"))
+        end    
         PyPlot.title("Convergence history (fem=" * fem * ")")
         ax = PyPlot.gca()
         ax.grid(true)
