@@ -399,6 +399,20 @@ function getFEbasis4qp!(basisvals,FEBC::FEbasis_caller{FET,AssembleTypeFACE} whe
     end    
 end
 
+function getFEbasisdivergence4qp!(divergences,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
+    # Piola transformation preserves divergence (up to a factor 1/det(A))
+    for dof_i = 1 : size(FEBC.refbasisvals,2)
+        divergences[dof_i,1] = 0.0;
+        for k = 1 : FEBC.xdim
+            for j = 1 : FEBC.xdim
+                divergences[dof_i,1] += FEBC.A[k,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[k],j]
+            end    
+            divergences[dof_i,1] *= FEBC.coefficients[dof_i,1]
+        end    
+    end    
+end
+
+
 function getFEbasisdivergence4qp!(divergences,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractHdivFiniteElement,i)
     # Piola transformation preserves divergence (up to a factor 1/det(A))
     for dof_i = 1 : size(FEBC.refbasisvals,2)
@@ -409,6 +423,7 @@ function getFEbasisdivergence4qp!(divergences,FEBC::FEbasis_caller{FET,AssembleT
         divergences[dof_i,1] *= FEBC.coefficients[dof_i,1]/FEBC.det;
     end    
 end
+
 
 
 end #module

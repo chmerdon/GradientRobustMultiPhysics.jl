@@ -1,6 +1,6 @@
 struct CELL_FdotDIVV <: FiniteElements.AbstractFEOperator end
 
-function assemble_operator!(b, ::Type{CELL_FdotDIVV}, FE::AbstractH1FiniteElement, f!::Function, quadrature_order::Int)
+function assemble_operator!(b, ::Type{CELL_FdotDIVV}, FE::AbstractFiniteElement, f!::Function, quadrature_order::Int)
     
     # get quadrature formula
     T = eltype(FE.grid.coords4nodes);
@@ -16,16 +16,14 @@ function assemble_operator!(b, ::Type{CELL_FdotDIVV}, FE::AbstractH1FiniteElemen
     @assert ncomponents == xdim
 
     FEbasis = FiniteElements.FEbasis_caller(FE, qf, true);
-    gradients = zeros(Float64,ndofs4cell,ncomponents*xdim);
+    divergences = zeros(Float64,ndofs4cell,1);
     dofs = zeros(Int64,ndofs4cell)
 
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
     
     # quadrature loop
-    temp = 0.0;
     fval = zeros(T,xdim)
     x = zeros(T,xdim)
-    diagonal_entries = [1, 4]
     #@time begin    
     for cell = 1 : size(FE.grid.nodes4cells,1)
       
@@ -41,7 +39,7 @@ function assemble_operator!(b, ::Type{CELL_FdotDIVV}, FE::AbstractH1FiniteElemen
         for i in eachindex(qf.w)
         
             # get FE basis gradients at quadrature point
-            FiniteElements.getFEbasisgradients4qp!(gradients, FEbasis, i)
+            FiniteElements.getFEbasisdivergence4qp!(divergences, FEbasis, i)
                 
             # evaluate f
             x[:] = cell_trafo(qf.xref[i]);
@@ -50,11 +48,7 @@ function assemble_operator!(b, ::Type{CELL_FdotDIVV}, FE::AbstractH1FiniteElemen
             for dof_i = 1 : ndofs4cell
                 # fill vector
                 @inbounds begin
-                    temp = 0.0
-                    for k = 1 : xdim
-                        temp += gradients[dof_i,diagonal_entries[k]];
-                    end
-                    b[dofs[dof_i]] += temp * fval[1] * qf.w[i] * FE.grid.volume4cells[cell];
+                    b[dofs[dof_i]] += divergences[dof_i] * fval[1] * qf.w[i] * FE.grid.volume4cells[cell];
                 end    
             end
         end

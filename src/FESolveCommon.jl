@@ -7,7 +7,6 @@ using ExtendableSparse
 using LinearAlgebra
 using BenchmarkTools
 using FiniteElements
-using DiffResults
 using ForwardDiff
 using Grid
 using Quadrature

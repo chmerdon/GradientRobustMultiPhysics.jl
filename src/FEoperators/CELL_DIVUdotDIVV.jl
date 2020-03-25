@@ -13,14 +13,10 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DIVUdotDIVV},
     ncomponents::Int = FiniteElements.get_ncomponents(FE);
     xdim = size(FE.grid.coords4nodes,2)
     FEbasis = FiniteElements.FEbasis_caller(FE, qf, true);
-    gradients = zeros(Float64,ndofs4cell,ncomponents*xdim);
+    divergences = zeros(Float64,ndofs4cell,1);
     dofs = zeros(Int64,ndofs4cell)
-    diagonal_entries = [1, 4]
           
     # quadrature loop
-    temp = 0.0;
-    div_i::T = 0.0;
-    div_j::T = 0.0;
     #@time begin
     for cell = 1 : size(FE.grid.nodes4cells,1)
       # get dofs
@@ -32,22 +28,11 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DIVUdotDIVV},
       for i in eachindex(qf.w)
         
         # get FE basis gradients at quadrature point
-        FiniteElements.getFEbasisgradients4qp!(gradients, FEbasis, i)
+        FiniteElements.getFEbasisdivergence4qp!(divergencess, FEbasis, i)
         
         # div x div
-        for dof_i = 1 : ndofs4cell
-            div_i = 0.0;
-            for c = 1 : length(diagonal_entries)
-                div_i += gradients[dof_i,diagonal_entries[c]];
-            end    
-            div_i *= factor * qf.w[i] * FE.grid.volume4cells[cell];
-            for dof_j = 1 : ndofs4cell
-                div_j = 0.0;
-                for c = 1 : xdim
-                    div_j += gradients[dof_j,diagonal_entries[c]];
-                end    
-                A[dofs[dof_i],dofs[dof_j]] += div_j*div_i;
-            end
+        for dof_i = 1 : ndofs4cell, dof_j = 1 : ndofs4cell
+            A[dofs[dof_i],dofs[dof_j]] += divergences[dof_i] * divergences[dot_j] * factor * qf.w[i] * FE.grid.volume4cells[cell];
         end    
       end  
     end
