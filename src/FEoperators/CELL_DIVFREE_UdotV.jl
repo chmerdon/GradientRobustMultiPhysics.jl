@@ -133,7 +133,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_DIVFREE_UdotV}
                 end
                 # pressure x (-div) velocity
                 for dof_j = 1 : ndofs4cell_pressure
-                    temp *= divergences_velocity[dof_i] * basisvals_pressure[dof_j] * qf.w[i] * FE_velocity.grid.volume4cells[cell];
+                    temp = -divergences_velocity[dof_i] * basisvals_pressure[dof_j] * qf.w[i] * FE_velocity.grid.volume4cells[cell];
                     A[dofs_velocity[dof_i],dofs_pressure[dof_j]] += temp;
                     A[dofs_pressure[dof_j],dofs_velocity[dof_i]] += temp;
                 end

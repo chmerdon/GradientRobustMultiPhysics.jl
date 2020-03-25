@@ -39,7 +39,10 @@ function main()
     ### CHOOSE FEM BELOW ###
     ########################
 
-    fem_stress = "P1"; fem_divergence = "P0"
+    #fem_stress = "RT0"; fem_divergence = "P0"
+    #fem_stress = "RT1"; fem_divergence = "P1dc"
+    fem_stress = "BDM1"; fem_divergence = "P0"
+    #fem_stress = "P1"; fem_divergence = "P0"
     #fem_stress = "P2"; fem_divergence = "P1dc"
 
     diffusion = 1.0 # scalar constant diffusion
