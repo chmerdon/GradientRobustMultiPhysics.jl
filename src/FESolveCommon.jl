@@ -29,6 +29,7 @@ include("FEoperators/CELL_MdotDUdotDV.jl");
 
 # LINEAR FUNCTIONALS on cells
 include("FEoperators/CELL_FdotV.jl");
+include("FEoperators/CELL_FdotDIVV.jl");
 include("FEoperators/CELL_FdotDV.jl");
 include("FEoperators/CELL_L2_FplusLA.jl");
 
@@ -37,11 +38,14 @@ include("FEoperators/DOMAIN_1dotV.jl");
 
 # LINEAR FUNCTIONALS on (boundary) faces
 include("FEoperators/BFACE_FdotV.jl");
+include("FEoperators/BFACE_FndotVn.jl");
+include("FEoperators/BFACE_FdotVn.jl");
 include("FEoperators/FACE_1dotVn.jl");
 include("FEoperators/FACE_L2_JumpDA.jl");
 
 # DIV-DIV matrices on cells
 include("FEoperators/CELL_DIVUdotDIVV.jl");
+include("FEoperators/CELL_UdotDIVV.jl");
 
 
 function assembleSystem(nu::Real, norm_lhs::String,norm_rhs::String,volume_data!::Function,FE::AbstractFiniteElement,quadrature_order::Int)
@@ -111,7 +115,12 @@ function computeDirichletBoundaryData!(val4dofs,FE,Dbids::Vector{Int64},boundary
         dofs = zeros(Int64,ndofs4face)
         for j = 1 : nbregions
             if boundary_data![j] != Nothing
-                assemble_operator!(b, BFACE_FdotV, FE, Dbids[j], boundary_data![j], quadorder[j])
+                if typeof(FE) <: AbstractH1FiniteElement
+                    assemble_operator!(b, BFACE_FdotV, FE, Dbids[j], boundary_data![j], quadorder[j])
+                elseif typeof(FE) <: AbstractHdivFiniteElement
+                    assemble_operator!(b, BFACE_FndotVn, FE, Dbids[j], boundary_data![j], quadorder[j])
+                else
+                end        
                 for face in eachindex(FE.grid.bfaces)
                     if FE.grid.bregions[face] == Dbids[j]
                         FiniteElements.get_dofs_on_face!(dofs, FE, FE.grid.bfaces[face], ETF);

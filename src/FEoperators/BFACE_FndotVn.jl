@@ -1,7 +1,6 @@
-struct BFACE_FdotV <: FiniteElements.AbstractFEOperator end
+struct BFACE_FndotVn <: FiniteElements.AbstractFEOperator end
 
-
-function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement, Dbid::Int64, f!::Function, quadorder_f::Int)
+function assemble_operator!(b, ::Type{BFACE_FndotVn}, FE::AbstractHdivFiniteElement, Dbid::Int64, f!::Function, quadorder_f::Int)
     ensure_bfaces!(FE.grid);
     ensure_length4faces!(FE.grid);
   
@@ -32,16 +31,16 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
         if FE.grid.bregions[bface] == Dbid
 
             face = FE.grid.bfaces[bface];
-         
+            
             # get dofs
             FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
- 
+    
             # update FEbasis on face
             FiniteElements.updateFEbasis!(FEbasis, face)
 
             # get face trafo
             face_trafo = loc2glob_trafo(face)
-             
+                
             for i in eachindex(qf.w)
                 # get FE basis at quadrature point
                 FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
@@ -49,7 +48,11 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
                 # evaluate f
                 x[:] = face_trafo(qf.xref[i])
                 f!(fval, x)
-             
+
+                # multiply with normal and save in fval[1]
+                fval[1] = fval[1] * FE.grid.normal4faces[face,1] + fval[2] * FE.grid.normal4faces[face,2];
+                fval[2] = 0.0;
+                
                 for dof_i = 1 : ndofs4face
                     # fill vector
                     @inbounds begin
@@ -60,7 +63,8 @@ function assemble_operator!(b, ::Type{BFACE_FdotV}, FE::AbstractH1FiniteElement,
                         b[dofs[dof_i]] += temp * qf.w[i] * FE.grid.length4faces[face];
                     end
                 end
-            end    
-        end
+            end
+        end    
     end
+    #end    
 end

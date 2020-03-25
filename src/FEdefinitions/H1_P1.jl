@@ -56,7 +56,8 @@ function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, ce
     dofs[:] = FE.grid.nodes4cells[cell,:]
 end
 function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.ElemType2DTriangle)
-    dofs[:] = [FE.grid.nodes4cells[cell,:] size(FE.grid.coords4nodes,1)+FE.grid.nodes4cells[cell,:]]
+    dofs[1:3] = FE.grid.nodes4cells[cell,:]
+    dofs[4:6] = size(FE.grid.coords4nodes,1) .+ dofs[1:3]
 end
 
 function get_dofs_on_face!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, face::Int64, ::Grid.Grid.Abstract0DElemType)
@@ -81,6 +82,17 @@ function get_basis_on_cell(FE::H1P1FiniteElement{T,1} where T <: Real, ::Grid.Ab
     function closure(xref)
         return [1 - xref[1],
                 xref[1]]
+    end
+end
+
+function get_basis_on_cell(FE::H1P1FiniteElement{T,2} where T <: Real, ::Grid.Abstract1DElemType)
+    temp = 0.0;
+    function closure(xref)
+        temp = 1 - xref[1]
+        return [temp 0.0;
+                xref[1] 0.0;
+                0.0 temp;
+                0.0 xref[1]]
     end
 end
 
