@@ -17,8 +17,7 @@ using FiniteElements
 using FESolveCommon
 using FESolveStokes
 using FESolveNavierStokes
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_square.jl")
@@ -30,16 +29,15 @@ function main()
     nu = 2e-4
     reflevel = 5
     dt = 0.01
-    final_time = 0.25
+    final_time = 0.2
     nonlinear = true
     timesteps::Int64 = floor(final_time / dt)
-    energy_computation_gaps = 2
+    energy_computation_gaps = 1
     u_order = 10
     error_order = 10
 
     # other switches
     show_plots = true
-    show_convergence_history = true
     use_reconstruction = [0] # do not change here
     barycentric_refinement = false # do not change here
 
@@ -97,22 +95,39 @@ function main()
 
     for k = 1 : length(use_reconstruction)
         velocity_energy[k] = []
-        TSS[k] = FESolveStokes.setupTransientStokesSolver(PD,FE_velocity,FE_pressure,val4dofs[k],use_reconstruction[k])
-  
-        if (show_plots)
-            pygui(true)
-            
-            # evaluate velocity and pressure at grid points
+        TSS[k] = FESolveStokes.setupTransientStokesSolver(PD,FE_velocity,FE_pressure,val4dofs[k],use_reconstruction[k])   
+    end
+
+    # plot
+    scalarview = Array{VTKView.ScalarView,1}(undef,length(use_reconstruction))
+    velo = zeros(Float64,size(FE_velocity.grid.coords4nodes,1),2)
+    speed = zeros(Float64,size(FE_velocity.grid.coords4nodes,1),1)
+    dataset=VTKView.DataSet()
+    xyplot=VTKView.XYPlot()
+    if (show_plots)
+        frame=VTKView.StaticFrame()
+        clear!(frame)
+        layout!(frame,length(use_reconstruction)+1,1)
+        size!(frame,1500,500)
+        VTKView.simplexgrid!(dataset,Array{Float64,2}(grid.coords4nodes'),Array{Int32,2}(grid.nodes4cells'))
+
+        # scalar view
+        for k = 1 : length(use_reconstruction)
+            scalarview[k]=VTKView.ScalarView()
             velo = FESolveCommon.eval_at_nodes(val4dofs[k],FE_velocity);
             speed = sqrt.(sum(velo.^2, dims = 2))
-            
-            PyPlot.figure(k)
-            tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
-            PyPlot.axis("equal")
-            PyPlot.title("velocity speed (reconst = " * string(use_reconstruction[k]) * ")")
-            PyPlot.colorbar(tcf)
-        end      
-    end
+            pointscalar!(dataset,speed[:],"|U" * string(use_reconstruction[k]) *"|")
+            data!(scalarview[k],dataset,"|U" * string(use_reconstruction[k]) *"|")
+            addview!(frame,scalarview[k],k)
+        end  
+
+         # XY plot
+         addview!(frame,xyplot,length(use_reconstruction)+1)
+         clear!(xyplot)
+         
+        # show
+        display(frame)
+    end    
 
     
 
@@ -140,36 +155,27 @@ function main()
             val4dofs[k] = deepcopy(TSS[k].current_solution[:])
 
             #plot
-            if (show_plots)
-                pygui(true)
-                
-                # evaluate velocity and pressure at grid points
-                velo = FESolveCommon.eval_at_nodes(val4dofs[k],FE_velocity);
-                speed = sqrt.(sum(velo.^2, dims = 2))
-                #pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
+            if (k == length(use_reconstruction)) && (show_plots)
+                # update scalar view
+                for k = 1 : length(use_reconstruction)
+                    velo[:] = FESolveCommon.eval_at_nodes(val4dofs[k],FE_velocity);
+                    speed[:] = sqrt.(sum(velo.^2, dims = 2))
+                    pointscalar!(dataset,speed[:],"|U" * string(use_reconstruction[k]) *"|")
 
-                PyPlot.figure(k)
-                tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
-                PyPlot.axis("equal")
-                PyPlot.title("velocity speed (reconst = " * string(use_reconstruction[k]) * ")")
-                show()
+                    if mod(j,energy_computation_gaps) == 0
+                        clear!(xyplot)
+                        for k = 1 : length(use_reconstruction)
+                            plotlegend!(xyplot,"Energy ( " * string(use_reconstruction[k]) * ")")
+                            plotcolor!(xyplot,(k == 1) ? 1 : 0,(k == 2) ? 1 : 0,(k == 3) ? 1 : 0)
+                            addplot!(xyplot,Array{Float64,1}(energy_times[:]),velocity_energy[k][:])
+                        end     
+                    end
+                end    
+
+                # show
+                display(frame)
             end    
         end
-    end    
-
-    #Base.show(energy_times)
-    #Base.show(velocity_energy)
-
-    if (show_convergence_history)
-        PyPlot.figure()
-        labels = []
-        for k = 1 : length(use_reconstruction)
-            PyPlot.loglog(energy_times[:],velocity_energy[k][:],"-o")
-            append!(labels,["Energy reconst = " * string(use_reconstruction[k])])
-        end     
-        PyPlot.legend(labels)
-        ax = PyPlot.gca()
-        ax.grid(true)
     end    
 
 end

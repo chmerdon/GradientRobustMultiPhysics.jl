@@ -15,8 +15,7 @@ using Quadrature
 using FiniteElements
 using FESolveCommon
 using FESolveStokes
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
@@ -33,8 +32,7 @@ function main()
     maxdofs = 60000
 
     # other switches
-    show_plots = false
-    show_convergence_history = true
+    show_plots = true
     use_reconstruction = 0 # do not change here
     barycentric_refinement = false # do not change here
 
@@ -43,15 +41,15 @@ function main()
     ### CHOOSE FEM BELOW ###
     ########################
 
-    #fem_velocity = "CR"; fem_pressure = "P0"
-    #fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = 1
-    #fem_velocity = "MINI"; fem_pressure = "P1"
-    #fem_velocity = "P2";  fem_pressure = "P1"
-    #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
-    #fem_velocity = "P2"; fem_pressure = "P0"
-    #fem_velocity = "P2B"; fem_pressure = "P1dc"
-    #fem_velocity = "BR"; fem_pressure = "P0"
-    fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "CR"; fem_pressure = "P0"; expectedorder = 1
+    #fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = 1; expectedorder = 1
+    #fem_velocity = "MINI"; fem_pressure = "P1"; expectedorder = 1
+    #fem_velocity = "P2";  fem_pressure = "P1"; expectedorder = 2
+    #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true; expectedorder = 2
+    #fem_velocity = "P2"; fem_pressure = "P0"; expectedorder = 2
+    #fem_velocity = "P2B"; fem_pressure = "P1dc"; expectedorder = 2
+    #fem_velocity = "BR"; fem_pressure = "P0"; expectedorder = 1
+    fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1; expectedorder = 1
 
 
     # load problem data
@@ -114,37 +112,57 @@ function main()
     println("\n L2 velocity error");
     show(L2error_velocity)
 
-    #plot
+    
+    # plot
     if (show_plots)
-        pygui(true)
-        
-        # evaluate velocity and pressure at grid points
+        frame=VTKView.StaticFrame()
+        clear!(frame)
+        layout!(frame,4,1)
+        size!(frame,1500,500)
+
+        # grid view
+        frametitle!(frame,"    final grid     |  discrete solution (speed, pressure)  | error convergence history")
+        dataset=VTKView.DataSet()
+        VTKView.simplexgrid!(dataset,Array{Float64,2}(grid.coords4nodes'),Array{Int32,2}(grid.nodes4cells'))
+        gridview=VTKView.GridView()
+        data!(gridview,dataset)
+        addview!(frame,gridview,1)
+
+        # scalar view
+        scalarview=VTKView.ScalarView()
         velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
-        pressure = FESolveCommon.eval_at_nodes(val4dofs,FE_pressure,FiniteElements.get_ndofs(FE_velocity));
+        speed = sqrt.(sum(velo.^2, dims = 2))
+        pointscalar!(dataset,speed[:],"|U|")
+        data!(scalarview,dataset,"|U|")
+        addview!(frame,scalarview,2)
 
-        PyPlot.figure(1)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,1),cmap=get_cmap("ocean"))
-        PyPlot.title("Stokes Problem Solution - velocity component 1")
-        PyPlot.figure(2)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,2),cmap=get_cmap("ocean"))
-        PyPlot.title("Stokes Problem Solution - velocity component 2")
-        PyPlot.figure(3)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),pressure[:],cmap=get_cmap("ocean"))
-        PyPlot.title("Stokes Problem Solution - pressure")
-        show()
-    end
+        scalarview2=VTKView.ScalarView()
+        pres = FESolveCommon.eval_at_nodes(val4dofs[FiniteElements.get_ndofs(FE_velocity)+1:end],FE_pressure);
+        pointscalar!(dataset,pres[:],"p")
+        data!(scalarview2,dataset,"p")
+        addview!(frame,scalarview2,3)
 
-    if (show_convergence_history)
-        PyPlot.figure()
-        PyPlot.loglog(ndofs[1:maxlevel],L2error_velocity[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs[1:maxlevel],L2error_pressure[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-        PyPlot.legend(("L2 error velocity","L2 error pressure","O(h)","O(h^2)","O(h^3)"))   
-        PyPlot.title("Convergence history (fem=" * fem_velocity * "/" * fem_pressure * ")")
-        ax = PyPlot.gca()
-        ax.grid(true)
+        # XY plot
+        plot=VTKView.XYPlot()
+        addview!(frame,plot,4)
+        clear!(plot)
+        plotlegend!(plot,"L2 error velocity ($fem_velocity)")
+        plotcolor!(plot,1,0,0)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_velocity[1:maxlevel]))
+        plotlegend!(plot,"L2 error pressure ($fem_pressure)")
+        plotcolor!(plot,0,0,1)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_pressure[1:maxlevel]))
+
+        expectedorderL2velo = expectedorder + 1
+        plotlegend!(plot,"O(h^$expectedorder)")
+        plotcolor!(plot,0.67,0.67,0.67)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorder/2))))
+        plotlegend!(plot,"O(h^$expectedorderL2velo)")
+        plotcolor!(plot,0.33,0.33,0.33)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorderL2velo/2))))
+
+        # show
+        display(frame)
     end    
 
         

@@ -28,11 +28,11 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_DIVUdotDIVV},
       for i in eachindex(qf.w)
         
         # get FE basis gradients at quadrature point
-        FiniteElements.getFEbasisdivergence4qp!(divergencess, FEbasis, i)
+        FiniteElements.getFEbasisdivergence4qp!(divergences, FEbasis, i)
         
         # div x div
         for dof_i = 1 : ndofs4cell, dof_j = 1 : ndofs4cell
-            A[dofs[dof_i],dofs[dof_j]] += divergences[dof_i] * divergences[dot_j] * factor * qf.w[i] * FE.grid.volume4cells[cell];
+            A[dofs[dof_i],dofs[dof_j]] += divergences[dof_i] * divergences[dof_j] * factor * qf.w[i] * FE.grid.volume4cells[cell];
         end    
       end  
     end

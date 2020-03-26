@@ -150,12 +150,11 @@ function main()
         # XY plot
         plot=VTKView.XYPlot()
         addview!(frame,plot,3)
-        pointscalar!(dataset,L2error,"V")
         clear!(plot)
         plotlegend!(plot,"L2 error Poisson ($fem)")
         plotcolor!(plot,1,0,0)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error[1:maxlevel]))
-        plotlegend!(plot,"L2 error BestApprox ($fem)")
+        plotlegend!(plot,"L2 error L2BestApprox ($fem)")
         plotcolor!(plot,0,0,1)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2errorBA[1:maxlevel]))
     

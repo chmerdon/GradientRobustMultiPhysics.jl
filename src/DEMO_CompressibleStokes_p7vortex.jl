@@ -21,8 +21,7 @@ using FiniteElements
 using FESolveCommon
 using FESolveStokes
 using FESolveCompressibleStokes
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
@@ -54,7 +53,6 @@ function main()
 
     # other switches
     show_plots = true
-    show_convergence_history = true
     use_reconstruction = 0 # do not change here
     barycentric_refinement = false # do not change here
     order_error = 10
@@ -155,37 +153,57 @@ function main()
     println("\n nrIterations");
     show(nrIterations)
 
-    #plot
+    # plot
     if (show_plots)
-        pygui(true)
-        
-        # evaluate velocity and pressure at grid points
+        frame=VTKView.StaticFrame()
+        clear!(frame)
+        layout!(frame,4,1)
+        size!(frame,1500,500)
+
+        # grid view
+        frametitle!(frame,"    final grid     |  discrete solution (speed, density)  | error convergence history")
+        dataset=VTKView.DataSet()
+        VTKView.simplexgrid!(dataset,Array{Float64,2}(grid.coords4nodes'),Array{Int32,2}(grid.nodes4cells'))
+        gridview=VTKView.GridView()
+        data!(gridview,dataset)
+        addview!(frame,gridview,1)
+
+        # scalar view
+        scalarview=VTKView.ScalarView()
         velo = FESolveCommon.eval_at_nodes(velocity,FE_velocity);
-        density = FESolveCommon.eval_at_nodes(density,FE_densitypressure);
         speed = sqrt.(sum(velo.^2, dims = 2))
-        
-        PyPlot.figure(1)
-        tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),speed[:])
-        PyPlot.axis("equal")
-        PyPlot.title("velocity speed")
+        pointscalar!(dataset,speed[:],"|U|")
+        data!(scalarview,dataset,"|U|")
+        addview!(frame,scalarview,2)
 
-        PyPlot.figure(2)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),density[:],cmap=get_cmap("ocean"))
-        PyPlot.title("density")
-        show()
-    end
+        scalarview2=VTKView.ScalarView()
+        density = FESolveCommon.eval_at_nodes(density,FE_densitypressure);
+        pointscalar!(dataset,density[:],"rho")
+        data!(scalarview2,dataset,"rho")
+        addview!(frame,scalarview2,3)
 
-    if (show_convergence_history)
-        PyPlot.figure()
-        PyPlot.loglog(ndofs[1:maxlevel],L2error_velocity[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs[1:maxlevel],L2error_density[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-        PyPlot.legend(("L2 error velocity","L2 error density","O(h)","O(h^2)","O(h^3)"))   
-        PyPlot.title("Convergence history (fem=" * fem_velocity * "/" * fem_densitypressure * ")")
-        ax = PyPlot.gca()
-        ax.grid(true)
+        # XY plot
+        plot=VTKView.XYPlot()
+        addview!(frame,plot,4)
+        clear!(plot)
+        plotlegend!(plot,"L2 error velocity ($fem_velocity)")
+        plotcolor!(plot,1,0,0)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_velocity[1:maxlevel]))
+        plotlegend!(plot,"L2 error density ($fem_densitypressure)")
+        plotcolor!(plot,0,0,1)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_density[1:maxlevel]))
+
+        expectedorder = 1
+        expectedorderL2velo = 2
+        plotlegend!(plot,"O(h^$expectedorder)")
+        plotcolor!(plot,0.67,0.67,0.67)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorder/2))))
+        plotlegend!(plot,"O(h^$expectedorderL2velo)")
+        plotcolor!(plot,0.33,0.33,0.33)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorderL2velo/2))))
+
+        # show
+        display(frame)
     end    
 
         

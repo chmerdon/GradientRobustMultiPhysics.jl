@@ -169,9 +169,11 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
     end
     
     # move pressure mean to zero
-    domain_area = sum(FE_pressure.grid.volume4cells[:])
-    mean = dot(pm[:],val4dofs[ndofs_velocity+1:end])/domain_area
-    val4dofs[ndofs_velocity+1:end] .-= mean;
+    if length(Dnboundary_ids) == 0
+        domain_area = sum(FE_pressure.grid.volume4cells[:])
+        mean = dot(pm[:],val4dofs[ndofs_velocity+1:end])/domain_area
+        val4dofs[ndofs_velocity+1:end] .-= mean;
+    end
     
     return residual
 end

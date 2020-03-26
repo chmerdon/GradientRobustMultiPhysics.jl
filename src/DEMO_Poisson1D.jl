@@ -14,8 +14,7 @@ using Quadrature
 using FiniteElements
 using FESolveCommon
 using FESolvePoisson
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 
 # load problem data and common grid generator
@@ -36,8 +35,8 @@ function main()
     ### CHOOSE FEM BELOW ###
     ########################
 
-    fem = "P1"
-    #fem = "P2"
+    fem = "P1"; expectedorder = 1
+    #fem = "P2"; expectedorder = 2
 
     # choose coefficients of exact solution
 
@@ -55,6 +54,7 @@ function main()
     L2errorBA = zeros(Float64,maxlevel)
     ndofs = zeros(Int64,maxlevel)            
     val4dofs = Nothing
+    val4dofsBA = Nothing
     FE = Nothing
     grid = Nothing
     for level = 1 : maxlevel
@@ -101,30 +101,49 @@ function main()
 
     end
 
-
     # plot
     if (show_plots)
-        nodevals = FESolveCommon.eval_at_nodes(val4dofs,FE);
-        pygui(true)
-        PyPlot.figure(1)
-        I = sortperm(grid.coords4nodes[:])
-        PyPlot.plot(grid.coords4nodes[I],nodevals[I])
-        PyPlot.title("Poisson Problem Solution")
-        #show()
-    end    
+        frame=VTKView.StaticFrame()
+        clear!(frame)
+        layout!(frame,2,1)
+        size!(frame,1000,500)
+        frametitle!(frame,"  discrete solution  | error convergence history")
+        
 
-    if (show_convergence_history)
-        PyPlot.figure(2)
-        PyPlot.loglog(ndofs[1:maxlevel],L2error[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs[1:maxlevel],L2errorBA[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-2),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-3),"--",color = "gray")
-        PyPlot.legend(("L2 error","L2 error BA","O(h)","O(h^2)","O(h^3)"))
-        PyPlot.title("Convergence history (fem=" * fem * ")")
-        ax = PyPlot.gca()
-        ax.grid(true)
-    end 
+        # XY solution plot
+        plot=VTKView.XYPlot()
+        addview!(frame,plot,1)
+        clear!(plot)
+        nodevals = FESolveCommon.eval_at_nodes(val4dofs,FE);
+        I = sortperm(grid.coords4nodes[:])
+        plotlegend!(plot,"Poisson solution")
+        plotcolor!(plot,1,0,0)
+        addplot!(plot,grid.coords4nodes[I],nodevals[I])
+        nodevalsBA = FESolveCommon.eval_at_nodes(val4dofsBA,FE);
+        I = sortperm(grid.coords4nodes[:])
+        plotlegend!(plot,"L2 best approximation")
+        plotcolor!(plot,0,0,1)
+        addplot!(plot,grid.coords4nodes[I],nodevalsBA[I])
+        
+        # XY error plot
+        plot=VTKView.XYPlot()
+        addview!(frame,plot,2)
+        clear!(plot)
+        plotlegend!(plot,"L2 error Poisson ($fem)")
+        plotcolor!(plot,1,0,0)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error[1:maxlevel]))
+        plotlegend!(plot,"L2 error L2BestApprox ($fem)")
+        plotcolor!(plot,0,0,1)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2errorBA[1:maxlevel]))
+    
+        expectedorderL2 = Float64(expectedorder + 1)
+        plotlegend!(plot,"O(h^$expectedorderL2)")
+        plotcolor!(plot,0.5,0.5,0.5)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorderL2))))
+    
+        # show
+        display(frame)
+    end    
 
 
 end

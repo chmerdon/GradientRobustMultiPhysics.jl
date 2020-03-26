@@ -13,8 +13,7 @@ using Quadrature
 using FiniteElements
 using FESolveCommon
 using FESolvePoisson
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 
 # load problem data and common grid generator
@@ -24,8 +23,8 @@ include("PROBLEMdefinitions/POISSON_1D_polynomials.jl");
 function main()
 
     # refinement
-    reflevel = 1
-    reflevel_exact = 5
+    reflevel = 2
+    reflevel_exact = 6
 
     # other switches
     show_plots = true
@@ -39,9 +38,9 @@ function main()
 
     # choose coefficients of exact solution
 
-    #polynomial_coefficients = [0, -3.0, 2.0, -1.0, 1.0] # quartic
+    polynomial_coefficients = [0, -3.0, 2.0, -1.0, 1.0] # quartic
     #polynomial_coefficients = [0, 0, 0, -1.0]  # cubic
-    polynomial_coefficients = [1.0, 1.0, 1.0]  # quadratic
+    #polynomial_coefficients = [1.0, 1.0, 1.0]  # quadratic
     #polynomial_coefficients = [0, 1.0]   # linear
     #polynomial_coefficients = [1.0, 0]   # constant
     
@@ -89,6 +88,44 @@ function main()
         PyPlot.plot(grid_exact.coords4nodes[I],nodevals_exact[I])
         PyPlot.title("interpolation (nodal values only) vs exact solution")
         #show()
+    end  
+    
+    # plot
+    if (show_plots)
+        frame=VTKView.StaticFrame()
+        clear!(frame)
+        layout!(frame,1,1)
+        size!(frame,1000,500)
+        frametitle!(frame,"interpolation vs. exact")
+        
+
+        # XY solution plot
+        plot=VTKView.XYPlot()
+        addview!(frame,plot,1)
+        clear!(plot)
+
+        # interpolation
+        nodevals = FESolveCommon.eval_at_nodes(val4dofs,FE);
+        I = sortperm(grid.coords4nodes[:])
+        plotlegend!(plot,"interpolation")
+        plotcolor!(plot,1,0,0)
+        addplot!(plot,grid.coords4nodes[I],nodevals[I])
+
+        # exact 
+        grid_exact = gridgen_unitinterval(2.0^(-reflevel_exact))
+        nodevals_exact = zeros(Float64,size(grid_exact.coords4nodes,1))
+        result = [0.0]
+        for j = 1 : size(grid_exact.coords4nodes,1)
+            exact_solution!(result,grid_exact.coords4nodes[j,:]); 
+            nodevals_exact[j] = result[1]
+        end
+        I = sortperm(grid_exact.coords4nodes[:])
+        plotlegend!(plot,"exact")
+        plotcolor!(plot,0,0,1)
+        addplot!(plot,grid_exact.coords4nodes[I],nodevals_exact[I])
+
+        # show
+        display(frame)
     end    
 
 
