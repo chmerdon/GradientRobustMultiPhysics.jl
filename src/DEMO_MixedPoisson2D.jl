@@ -1,12 +1,15 @@
-#######################################
-### DEMONSTRATION SCRIPT POISSON 2D ###
-#######################################
+#############################################
+### DEMONSTRATION SCRIPT MIXED POISSON 2D ###
+#############################################
 #
-# solves 2D polynomial Poisson test problems on L-shaped domain
+# solves 2D polynomial Poisson test problems in mixed formulation
+# meaning find some sigma in Hdiv with
+#
+# sigma = grad u   &   div(sigma) = -f
 #
 # demonstrates:
 #   - convergence rates of implemented finite element methods
-#   - comparison of Poisson solution and L2 bestapproximation
+#   - comparison of mixed Poisson solution and L2 bestapproximation
 
 
 using Grid

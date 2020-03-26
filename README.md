@@ -20,8 +20,9 @@ DEMO scripts:
 Dependencies on other Julia packages:
 - ExtendableSparse
 - Triangulate
-- DiffResults
+- VTKView
 - ForwardDiff
+- DiffResults
 - BenchmarkTools
 
 

@@ -16,8 +16,7 @@ using FiniteElements
 using FESolveCommon
 using FESolvePoisson
 using FEEstimate
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 
 # load problem data and common grid generator
@@ -35,18 +34,17 @@ function main()
 
     # other switches
     show_plots = true
-    show_convergence_history = true
     do_estimation = true
 
     ########################
     ### CHOOSE FEM BELOW ###
     ########################
 
-    #fem = "CR"
-    #fem = "P1"
-    #fem = "MINI"
-    fem = "P2"
-    #fem = "P2B"
+    #fem = "CR"; expectedorder = 1
+    #fem = "P1"; expectedorder = 1
+    #fem = "MINI"; expectedorder = 1
+    fem = "P2"; expectedorder = 2
+    #fem = "P2B"; expectedorder = 2
 
     # choose coefficients of exact solution
 
@@ -129,45 +127,46 @@ function main()
 
     # plot
     if (show_plots)
+        frame=VTKView.StaticFrame()
+        clear!(frame)
+        layout!(frame,3,1)
+        size!(frame,1500,500)
+
+        # grid view
+        frametitle!(frame,"    final grid     |  discrete solution  | error convergence history")
+        dataset=VTKView.DataSet()
+        VTKView.simplexgrid!(dataset,Array{Float64,2}(grid.coords4nodes'),Array{Int32,2}(grid.nodes4cells'))
+        gridview=VTKView.GridView()
+        data!(gridview,dataset)
+        addview!(frame,gridview,1)
+
+        # scalar view
+        scalarview=VTKView.ScalarView()
         nodevals = FESolveCommon.eval_at_nodes(val4dofs,FE);
-        pygui(true)
-        PyPlot.figure(1)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),nodevals[:],cmap=get_cmap("ocean"))
-        PyPlot.title("Poisson Problem Solution")
+        pointscalar!(dataset,nodevals[:,1],"U")
+        data!(scalarview,dataset,"U")
+        addview!(frame,scalarview,2)
 
-        if (do_estimation)
-            FE_P0 = FiniteElements.string2FE("P0", grid, 2, 1)
-            eta = FESolveCommon.eval_at_nodes(estimator4cells,FE_P0);
-            PyPlot.figure(2)
-            tcf = PyPlot.tricontourf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),eta[:])
-            PyPlot.axis("equal")
-            PyPlot.colorbar(tcf)
-            PyPlot.title("error estimator")
-        end
-        #show()
+        # XY plot
+        plot=VTKView.XYPlot()
+        addview!(frame,plot,3)
+        pointscalar!(dataset,L2error,"V")
+        clear!(plot)
+        plotlegend!(plot,"L2 error Poisson ($fem)")
+        plotcolor!(plot,1,0,0)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error[1:maxlevel]))
+        plotlegend!(plot,"L2 error BestApprox ($fem)")
+        plotcolor!(plot,0,0,1)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2errorBA[1:maxlevel]))
+    
+        expectedorderL2 = expectedorder + 1
+        plotlegend!(plot,"O(h^$expectedorderL2)")
+        plotcolor!(plot,0.5,0.5,0.5)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorderL2/2))))
+    
+        # show
+        display(frame)
     end    
-
-    if (show_convergence_history)
-        PyPlot.figure()
-        PyPlot.loglog(ndofs[1:maxlevel],L2error[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs[1:maxlevel],L2errorBA[1:maxlevel],"-o")
-        if do_estimation
-             PyPlot.loglog(ndofs[1:maxlevel],Estimator[1:maxlevel],"-o")
-        end     
-        PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-        if do_estimation
-            PyPlot.legend(("L2 error","L2 error BA","error estimator","O(h)","O(h^2)","O(h^3)"))
-        else
-            PyPlot.legend(("L2 error","L2 error BA","O(h)","O(h^2)","O(h^3)"))
-        end    
-        PyPlot.title("Convergence history (fem=" * fem * ")")
-        ax = PyPlot.gca()
-        ax.grid(true)
-    end 
-
-
 end
 
 
