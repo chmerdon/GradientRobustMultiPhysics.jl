@@ -31,6 +31,7 @@ include("FEoperators/CELL_FdotV.jl");
 include("FEoperators/CELL_FdotDIVV.jl");
 include("FEoperators/CELL_FdotDV.jl");
 include("FEoperators/CELL_L2_FplusLA.jl");
+include("FEoperators/CELL_L2_FplusDIVA.jl");
 
 # LINEAR FUNCTIONALS on full domain
 include("FEoperators/DOMAIN_1dotV.jl");
@@ -41,6 +42,7 @@ include("FEoperators/BFACE_FndotVn.jl");
 include("FEoperators/BFACE_FdotVn.jl");
 include("FEoperators/FACE_1dotVn.jl");
 include("FEoperators/FACE_L2_JumpDA.jl");
+include("FEoperators/FACE_L2_JumpA.jl");
 
 # DIV-DIV matrices on cells
 include("FEoperators/CELL_DIVUdotDIVV.jl");

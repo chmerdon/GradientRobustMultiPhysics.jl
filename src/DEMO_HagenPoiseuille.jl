@@ -159,6 +159,12 @@ function main()
         pointscalar!(dataset,speed[:],"|U|")
         data!(scalarview,dataset,"|U|")
         addview!(frame,scalarview,2)
+        
+        vectorview=VTKView.VectorView()
+        pointvector!(dataset,Array{Float64,2}(velo'),"U")
+        data!(vectorview,dataset,"U")
+        quiver!(vectorview,10,10)
+        addview!(frame,vectorview,2)
 
         scalarview2=VTKView.ScalarView()
         pres = FESolveCommon.eval_at_nodes(val4dofs[FiniteElements.get_ndofs(FE_velocity)+1:end],FE_pressure);

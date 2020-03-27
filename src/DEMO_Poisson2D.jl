@@ -157,7 +157,10 @@ function main()
         plotlegend!(plot,"L2 error L2BestApprox ($fem)")
         plotcolor!(plot,0,0,1)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2errorBA[1:maxlevel]))
-    
+        plotlegend!(plot,"Estimator ($fem)")
+        plotcolor!(plot,0,1,0)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(Estimator[1:maxlevel]))
+        
         expectedorderL2 = expectedorder + 1
         plotlegend!(plot,"O(h^$expectedorderL2)")
         plotcolor!(plot,0.5,0.5,0.5)
