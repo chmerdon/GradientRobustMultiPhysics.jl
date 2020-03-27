@@ -11,7 +11,11 @@ function assemble_operator!(b, ::Type{CELL_L2_CURLA}, FE::AbstractFiniteElement,
     # generate caller for FE basis functions
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     xdim::Int = size(FE.grid.coords4nodes,2)
-    FEbasis = FiniteElements.FEbasis_caller(FE, qf, true); # <-- second bool is for 2nd derviatives
+    if typeof(FE) <: AbstractH1FiniteElement
+        FEbasis = FiniteElements.FEbasis_caller(FE, qf, true);
+    elseif typeof(FE) <: AbstractHdivFiniteElement
+        FEbasis = FiniteElements.FEbasis_caller(FE, qf, false, true); # <-- second bool needed for for curl derviatives
+    end    
     curls = zeros(Float64,ndofs4cell,1);
     dofs = zeros(Int64,ndofs4cell)
 

@@ -168,18 +168,20 @@ mutable struct FEbasis_caller{FEType <: AbstractFiniteElement, AT<:AbstractAssem
     refgradients_2ndorder::Array{Float64,3}
     coefficients::Array{Float64,2}
     Ahandler::Function  # function that generates matrix trafo
+    Piolahandler::Function  # function that generates Piola trafo matrix
     A::Matrix{Float64}  # matrix trafo for gradients
+    Piola::Matrix{Float64} # matrix trafo for Hdiv or Hcurl elements
     det::Float64        # determinant of matrix
     ncomponents::Int64
     xdim::Int64
     offsets::Array{Int64,1}
     offsets2::Array{Int64,1}
     current_item::Int64
-    with_derivs::Bool
-    with_2nd_derivs::Bool
+    with_standard_derivs::Bool
+    with_higher_derivs::Bool
 end
 
-function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with_derivs::Bool, with_2nd_derivs::Bool = false)
+function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with_standard_derivs::Bool, with_higher_derivs::Bool = false)
     ET = FE.grid.elemtypes[1]
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     
@@ -192,11 +194,13 @@ function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with
     end    
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
     Ahandler = Grid.local2global_tinv_jacobian(FE.grid,ET)
+    Piolahandler = (x) -> 0; #dummy function
     xdim = size(FE.grid.coords4nodes,2)
     A = zeros(Float64,xdim,xdim)
+    Piola = zeros(Float64,0,0)
     offsets = 0:xdim:(ncomponents*xdim);
     offsets2 = 0:ndofs4cell:ncomponents*ndofs4cell;
-    if with_derivs == false
+    if with_standard_derivs == false
         refgradients = zeros(Float64,0,0,0)
     else
         refgradients = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,length(qf.xref[1]))
@@ -206,7 +210,7 @@ function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with
         end 
     end
 
-    if with_2nd_derivs == false
+    if with_higher_derivs == false
         refgradients_2ndorder = zeros(Float64,0,0,0)
     else
         refgradients_2ndorder = zeros(Float64,length(qf.w),ncomponents*ndofs4cell*length(qf.xref[1]),length(qf.xref[1]))
@@ -216,7 +220,7 @@ function FEbasis_caller(FE::AbstractH1FiniteElement, qf::QuadratureFormula, with
             refgradients_2ndorder[i,:,:] = vector_hessian(FiniteElements.get_basis_on_cell(FE, ET),qf.xref[i])
         end    
     end
-    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs, with_2nd_derivs)
+    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,Piolahandler,A,Piola,0.0,ncomponents,xdim,offsets,offsets2,0,with_standard_derivs, with_higher_derivs)
 end    
 
 function FEbasis_caller_face(FE::AbstractH1FiniteElement, qf::QuadratureFormula)
@@ -232,13 +236,15 @@ function FEbasis_caller_face(FE::AbstractH1FiniteElement, qf::QuadratureFormula)
     end    
     coefficients = zeros(Float64,ndofs4face,ncomponents)
     Ahandler = Grid.local2global_tinv_jacobian(FE.grid,ETF)
+    Piolahandler = (x) -> 0; #dummy function
     xdim = size(FE.grid.coords4nodes,2)
     A = zeros(Float64,xdim,xdim)
+    Piola = zeros(Float64,0,0)
     offsets = 0:xdim:(ncomponents*xdim);
     offsets2 = 0:ndofs4face:ncomponents*ndofs4face;
     refgradients = zeros(Float64,0,0,0)
     refgradients_2ndorder = zeros(Float64,0,0,0)
-    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,false,false)
+    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,Piolahandler,A,Piola,0.0,ncomponents,xdim,offsets,offsets2,0,false,false)
 end  
 
 function FEbasis_caller_face(FE::AbstractHdivFiniteElement, qf::QuadratureFormula)
@@ -254,13 +260,15 @@ function FEbasis_caller_face(FE::AbstractHdivFiniteElement, qf::QuadratureFormul
     end    
     coefficients = zeros(Float64,ndofs4face,ncomponents)
     Ahandler = (x) -> 0; #dummy function
+    Piolahandler = (x) -> 0; #dummy function
     xdim = size(FE.grid.coords4nodes,2)
-    A = zeros(Float64,1,1)
+    A = zeros(Float64,0,0)
+    Piola = zeros(Float64,0,0)
     offsets = [0];
     offsets2 = [0];
     refgradients = zeros(Float64,0,0,0)
     refgradients_2ndorder = zeros(Float64,0,0,0)
-    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,false,false)
+    return FEbasis_caller{typeof(FE),AssembleTypeFACE}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,Piolahandler,A,Piola,0.0,ncomponents,xdim,offsets,offsets2,0,false,false)
 end 
 
 function updateFEbasis!(FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement, cell)
@@ -270,7 +278,7 @@ function updateFEbasis!(FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <:
     FiniteElements.get_basis_coefficients_on_cell!(FEBC.coefficients, FEBC.FE, cell, FEBC.FE.grid.elemtypes[1]);
 
     # evaluate tinverted (=transposed + inverted) jacobian of element trafo
-    if FEBC.with_derivs || FEBC.with_2nd_derivs
+    if FEBC.with_standard_derivs || FEBC.with_higher_derivs
         FEBC.Ahandler(FEBC.A, cell)
     end    
 end
@@ -292,7 +300,7 @@ end
 
 
 function getFEbasisgradients4qp!(gradients,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
-    @assert FEBC.with_derivs
+    @assert FEBC.with_standard_derivs
     # multiply tinverted jacobian of element trafo with gradient of basis function
     # which yields (by chain rule) the gradient in x coordinates
     for dof_i = 1 : size(FEBC.refbasisvals,2)
@@ -308,27 +316,25 @@ function getFEbasisgradients4qp!(gradients,FEBC::FEbasis_caller{FET,AssembleType
 end
 
 function getFEbasiscurls4qp!(curls,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
-    @assert FEBC.with_derivs
+    @assert FEBC.with_standard_derivs
     @assert FEBC.xdim == 2 # 3D curl not yet implemented
     @assert FEBC.xdim == FEBC.ncomponents # only defined for vector-fields
 
     # in 2D : curl = du2/dx - du1/dy
     for dof_i = 1 : size(FEBC.refbasisvals,2)
-        for c = 1 : FEBC.xdim
-            curls[dof_i,1] = 0.0;
-            for j = 1 : FEBC.xdim
-                # du2/dx
-                curls[dof_i,1] += FEBC.A[1,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[2],j]
-                # -du1/dy
-                curls[dof_i,1] -= FEBC.A[2,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[1],j]
-            end
-            curls[dof_i,1] *= FEBC.coefficients[dof_i,1]
-        end    
+        curls[dof_i,1] = 0.0;
+        for j = 1 : FEBC.xdim
+            # du2/dx
+            curls[dof_i,1] += FEBC.A[1,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[2],j]
+            # -du1/dy
+            curls[dof_i,1] -= FEBC.A[2,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[1],j]
+        end
+        curls[dof_i,1] *= FEBC.coefficients[dof_i,1]
     end    
 end
 
 function getFEbasislaplacians4qp!(laplacians,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i,diffusion_matrix)
-    @assert FEBC.with_2nd_derivs
+    @assert FEBC.with_higher_derivs
     for dof_i = 1 : size(FEBC.refbasisvals,2)
         for c = 1 : FEBC.ncomponents
             laplacians[dof_i,c] = 0.0;
@@ -346,7 +352,7 @@ function getFEbasislaplacians4qp!(laplacians,FEBC::FEbasis_caller{FET,AssembleTy
 end
 
 
-function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, with_derivs::Bool)
+function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, with_divergence::Bool, with_other_derivatives::Bool = false)
     ET = FE.grid.elemtypes[1]
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     
@@ -358,12 +364,14 @@ function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, wi
         refbasisvals[i,:,:] = FiniteElements.get_basis_on_cell(FE, ET)(qf.xref[i])
     end    
     coefficients = zeros(Float64,ndofs4cell,ncomponents)
-    Ahandler = Grid.local2global_Piola(FE.grid, ET)
+    Ahandler = Grid.local2global_tinv_jacobian(FE.grid,ET)
     xdim = size(FE.grid.coords4nodes,2)
     A = zeros(Float64,xdim,xdim)
+    Piola = zeros(Float64,xdim,xdim)
+    Piolahandler = Grid.local2global_Piola(FE.grid, ET)
     offsets = 0:xdim:(ncomponents*xdim);
     offsets2 = 0:ndofs4cell:ncomponents*ndofs4cell;
-    if with_derivs == false
+    if (with_divergence == false) && (with_other_derivatives == false)
         refgradients = zeros(Float64,0,0,0)
     else
         refgradients = zeros(Float64,length(qf.w),ncomponents*ndofs4cell,length(qf.xref[1]))
@@ -373,17 +381,21 @@ function FEbasis_caller(FE::AbstractHdivFiniteElement, qf::QuadratureFormula, wi
         end    
     end
     refgradients_2ndorder = zeros(Float64,0,0,0)
-    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,A,0.0,ncomponents,xdim,offsets,offsets2,0,with_derivs,false)
+    return FEbasis_caller{typeof(FE),AssembleTypeCELL}(FE,refbasisvals,refgradients,refgradients_2ndorder,coefficients,Ahandler,Piolahandler,A,Piola,0.0,ncomponents,xdim,offsets,offsets2,0,with_divergence,with_other_derivatives)
 end    
 
 function updateFEbasis!(FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractHdivFiniteElement, cell)
     current_item = cell;
 
     # get Piola trafo
-    FEBC.det = FEBC.Ahandler(FEBC.A,cell);
+    FEBC.det = FEBC.Piolahandler(FEBC.Piola,cell);
 
     # get coefficients
     FiniteElements.get_basis_coefficients_on_cell!(FEBC.coefficients, FEBC.FE, cell, FEBC.FE.grid.elemtypes[1]);
+
+    if FEBC.with_higher_derivs # todo: not needed if only divergence of Hdiv function is computed!
+        FEBC.Ahandler(FEBC. A, cell)
+    end    
 end
 
 
@@ -403,7 +415,7 @@ function getFEbasis4qp!(basisvals,FEBC::FEbasis_caller{FET,AssembleTypeCELL} whe
         for k = 1 : FEBC.xdim
             basisvals[j,k] = 0.0;
             for l = 1 : FEBC.xdim
-                basisvals[j,k] += FEBC.A[k,l]*FEBC.refbasisvals[i,j,l];
+                basisvals[j,k] += FEBC.Piola[k,l]*FEBC.refbasisvals[i,j,l];
             end    
             basisvals[j,k] *= FEBC.coefficients[j,k];
             basisvals[j,k] /= FEBC.det;
@@ -445,6 +457,25 @@ function getFEbasisdivergence4qp!(divergences,FEBC::FEbasis_caller{FET,AssembleT
     end    
 end
 
+
+
+function getFEbasiscurls4qp!(curls,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractHdivFiniteElement,i)
+    @assert FEBC.with_higher_derivs
+    @assert FEBC.xdim == 2 # 3D curl not yet implemented
+    @assert FEBC.xdim == FEBC.ncomponents # only defined for vector-fields
+
+    # in 2D : curl = du2/dx - du1/dy
+    for dof_i = 1 : size(FEBC.refbasisvals,2)
+        curls[dof_i,1] = 0.0;
+        for j = 1 : FEBC.xdim, k = 1 : FEBC.xdim
+            # du2/dx
+            curls[dof_i,1] += FEBC.A[1,j]*FEBC.Piola[2,k]*FEBC.refgradients[i,dof_i + FEBC.offsets2[k],j]
+            # -du1/dy
+            curls[dof_i,1] -= FEBC.A[2,j]*FEBC.Piola[1,k]*FEBC.refgradients[i,dof_i + FEBC.offsets2[k],j]
+        end
+        curls[dof_i,1] *= FEBC.coefficients[dof_i,1]    
+    end    
+end
 
 
 end #module
