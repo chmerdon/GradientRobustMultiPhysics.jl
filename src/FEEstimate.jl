@@ -44,9 +44,14 @@ function estimate_cellwise!(estimator4cell::Array, PD::FESolvePoisson.PoissonPro
     FESolveCommon.assemble_operator!(estimator4cell,FESolveCommon.CELL_L2_FplusDIVA,FE_stress,PD.volumedata4region[1],PD.quadorder4region[1],discrete_solution)
     estimator4cell .*= FE_stress.grid.volume4cells[:] # todo: use diameter
     total_estimator += sqrt.(sum(estimator4cell, dims = 1))[1]
-    estimator4cell += sum(estimator4face[FE_stress.grid.faces4cells], dims = 2)
+    estimator4cell[:] += sum(estimator4face[FE_stress.grid.faces4cells], dims = 2)
 
-    # todo: 2nd volume term h_T || curl(sigma) || (vanishes for RT0)
+    # 2nd volume term h_T || curl(sigma) || (vanishes for RT0)
+    estimator4cell2 = zeros(Float64,ncells)
+    FESolveCommon.assemble_operator!(estimator4cell2,FESolveCommon.CELL_L2_CURLA,FE_stress,discrete_solution)
+    estimator4cell2 .*= FE_stress.grid.volume4cells[:] # todo: use diameter
+    total_estimator += sqrt.(sum(estimator4cell2, dims = 1))[1]
+    estimator4cell += estimator4cell2
 
 
     return total_estimator

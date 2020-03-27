@@ -299,9 +299,30 @@ function getFEbasisgradients4qp!(gradients,FEBC::FEbasis_caller{FET,AssembleType
         for c = 1 : FEBC.ncomponents, k = 1 : FEBC.xdim
             gradients[dof_i,k + FEBC.offsets[c]] = 0.0;
             for j = 1 : FEBC.xdim
-               gradients[dof_i,k + FEBC.offsets[c]] += FEBC.A[k,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[c],j]
+                # compute duc/dxk
+                gradients[dof_i,k + FEBC.offsets[c]] += FEBC.A[k,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[c],j]
             end    
             gradients[dof_i,k + FEBC.offsets[c]] *= FEBC.coefficients[dof_i,c]
+        end    
+    end    
+end
+
+function getFEbasiscurls4qp!(curls,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
+    @assert FEBC.with_derivs
+    @assert FEBC.xdim == 2 # 3D curl not yet implemented
+    @assert FEBC.xdim == FEBC.ncomponents # only defined for vector-fields
+
+    # in 2D : curl = du2/dx - du1/dy
+    for dof_i = 1 : size(FEBC.refbasisvals,2)
+        for c = 1 : FEBC.xdim
+            curls[dof_i,1] = 0.0;
+            for j = 1 : FEBC.xdim
+                # du2/dx
+                curls[dof_i,1] += FEBC.A[1,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[2],j]
+                # -du1/dy
+                curls[dof_i,1] -= FEBC.A[2,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[1],j]
+            end
+            curls[dof_i,1] *= FEBC.coefficients[dof_i,1]
         end    
     end    
 end

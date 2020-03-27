@@ -100,12 +100,14 @@ function main()
 
     # plot
     scalarview = Array{VTKView.ScalarView,1}(undef,length(use_reconstruction))
+    vectorview = Array{VTKView.VectorView,1}(undef,length(use_reconstruction))
     velo = zeros(Float64,size(FE_velocity.grid.coords4nodes,1),2)
     speed = zeros(Float64,size(FE_velocity.grid.coords4nodes,1),1)
     dataset=VTKView.DataSet()
     xyplot=VTKView.XYPlot()
     if (show_plots)
         frame=VTKView.StaticFrame()
+        frametitle!(frame,"t = " * string(TSS[1].current_time))
         clear!(frame)
         layout!(frame,length(use_reconstruction)+1,1)
         size!(frame,1500,500)
@@ -119,6 +121,12 @@ function main()
             pointscalar!(dataset,speed[:],"|U" * string(use_reconstruction[k]) *"|")
             data!(scalarview[k],dataset,"|U" * string(use_reconstruction[k]) *"|")
             addview!(frame,scalarview[k],k)
+        
+            vectorview[k]=VTKView.VectorView()
+            pointvector!(dataset,Array{Float64,2}(velo'),"U" * string(use_reconstruction[k]))
+            data!(vectorview[k],dataset,"U" * string(use_reconstruction[k]))
+            quiver!(vectorview[k],10,10)
+            addview!(frame,vectorview[k],k)
         end  
 
          # XY plot
@@ -156,11 +164,16 @@ function main()
 
             #plot
             if (k == length(use_reconstruction)) && (show_plots)
+                frametitle!(frame,"t = " * string(TSS[1].current_time))
                 # update scalar view
                 for k = 1 : length(use_reconstruction)
                     velo[:] = FESolveCommon.eval_at_nodes(val4dofs[k],FE_velocity);
                     speed[:] = sqrt.(sum(velo.^2, dims = 2))
                     pointscalar!(dataset,speed[:],"|U" * string(use_reconstruction[k]) *"|")
+                    
+                    pointvector!(dataset,Array{Float64,2}(velo'),"U" * string(use_reconstruction[k]))
+                    data!(vectorview[k],dataset,"U" * string(use_reconstruction[k]))
+                    quiver!(vectorview[k],10,10)
 
                     if mod(j,energy_computation_gaps) == 0
                         clear!(xyplot)

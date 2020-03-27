@@ -32,6 +32,7 @@ include("FEoperators/CELL_FdotDIVV.jl");
 include("FEoperators/CELL_FdotDV.jl");
 include("FEoperators/CELL_L2_FplusLA.jl");
 include("FEoperators/CELL_L2_FplusDIVA.jl");
+include("FEoperators/CELL_L2_CURLA.jl");
 
 # LINEAR FUNCTIONALS on full domain
 include("FEoperators/DOMAIN_1dotV.jl");

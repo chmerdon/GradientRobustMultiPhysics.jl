@@ -19,7 +19,7 @@ using FiniteElements
 using FESolveCommon
 using FESolvePoisson
 using FEEstimate
-using PyPlot
+using VTKView
 
 
 # load problem data and common grid generator
@@ -41,11 +41,11 @@ function main()
     ### CHOOSE FEM BELOW ###
     ########################
 
-    fem_stress = "RT0"; fem_divergence = "P0"; expectedorder = 1
+    #fem_stress = "RT0"; fem_divergence = "P0"; expectedorder = 1
     #fem_stress = "RT1"; fem_divergence = "P1dc"; expectedorder = 2
     #fem_stress = "BDM1"; fem_divergence = "P0"; expectedorder = 2
     #fem_stress = "P1"; fem_divergence = "P0"; expectedorder = 1
-    #fem_stress = "P2"; fem_divergence = "P1dc"; expectedorder = 2
+    fem_stress = "P2"; fem_divergence = "P1dc"; expectedorder = 2
 
     diffusion = 1.0 # scalar constant diffusion
 
