@@ -25,6 +25,7 @@ include("FEoperators/BFACE_UndotVn.jl");
 # STIFFNESS matrices on cells
 include("FEoperators/CELL_DUdotDV.jl");
 include("FEoperators/CELL_MdotDUdotDV.jl");
+include("FEoperators/CELL_FdotDUdotV.jl")
 
 # LINEAR FUNCTIONALS on cells
 include("FEoperators/CELL_FdotV.jl");

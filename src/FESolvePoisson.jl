@@ -16,14 +16,16 @@ using Grid
 mutable struct PoissonProblemDescription
     name::String
     time_dependent_data:: Bool
-    diffusion
-    quadorder4diffusion
+    diffusion # Real/Matrix or matrix-valued function
+    quadorder4diffusion::Int64
+    convection # vector-valued function
+    quadorder4convection::Int64
     volumedata4region:: Vector{Function}
     quadorder4region:: Vector{Int64}
     boundarydata4bregion:: Vector{Function}
     boundarytype4bregion:: Vector{Int64}
     quadorder4bregion:: Vector{Int64}
-    PoissonProblemDescription() = new("undefined Poisson problem", false)
+    PoissonProblemDescription() = new("undefined Poisson problem", false,1.0,0,Nothing,-1)
 end
 
 function show(PD::PoissonProblemDescription)
@@ -66,6 +68,10 @@ function solvePoissonProblem!(val4dofs::Array, PD::PoissonProblemDescription, FE
             print("    |assembling matrix (variable, matrix-valued diffusion)...")
             FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_MdotDUdotDV,FE,PD.diffusion, PD.quadorder4diffusion);
         end        
+        if PD.quadorder4convection > -1
+            print("    |assembling convection matrix...")
+            FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_FdotDUdotV,FE,PD.convection,PD.quadorder4convection);
+        end
         println("finished")
     end
 
