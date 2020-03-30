@@ -9,11 +9,8 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusDIVA}, FE::AbstractFiniteElem
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    xdim::Int = size(FE.grid.coords4nodes,2)
     FEbasis = FiniteElements.FEbasis_caller(FE, qf, true);
-    divergences = zeros(Float64,ndofs4cell,1);
-    dofs = zeros(Int64,ndofs4cell)
+    divergences = zeros(Float64,FEbasis.ndofs4item,1);
 
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
 
@@ -28,16 +25,13 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusDIVA}, FE::AbstractFiniteElem
     
     # quadrature loop
     temp = 0.0;
-    fval = zeros(T,xdim)
-    x = zeros(T,xdim)
+    fval = zeros(T,FEbasis.xdim)
+    x = zeros(T,FEbasis.xdim)
     #@time begin    
     for cell = 1 : size(FE.grid.nodes4cells,1)
       
         # update FEbasis on cell
-        FiniteElements.updateFEbasis!(FEbasis, cell)
-      
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);      
+        FiniteElements.updateFEbasis!(FEbasis, cell)  
 
         # get trafo
         cell_trafo = loc2glob_trafo(cell)
@@ -58,8 +52,8 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusDIVA}, FE::AbstractFiniteElem
                 
             @inbounds begin
                 temp = 0.0
-                for dof_i = 1 : ndofs4cell
-                    temp += divergences[dof_i,1] * val4dofsA[dofs[dof_i]];
+                for dof_i = 1 : FEbasis.ndofs4item
+                    temp += divergences[dof_i,1] * val4dofsA[FEbasis.current_dofs[dof_i]];
                 end
                 temp += fval[1];
                 b[cell] += temp^2 * qf.w[i] * FE.grid.volume4cells[cell];

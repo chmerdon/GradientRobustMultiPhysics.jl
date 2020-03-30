@@ -31,11 +31,6 @@ function assemble_operator!(b,::Type{FACE_L2_JumpDA},FE::AbstractH1FiniteElement
     # generate caller for FE basis functions on cell faces
     nfaces4cell = size(FE.grid.faces4cells,2);
     FEbasis = Array{FiniteElements.FEbasis_caller}(undef,nfaces4cell)
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    ncomponents::Int = FiniteElements.get_ncomponents(FE);
-    xdim = size(FE.grid.coords4nodes,2)
-    gradients = zeros(Float64,ndofs4cell,ncomponents*xdim);
-    dofs = zeros(Int64,ndofs4cell)
 
     for j = 1 : nfaces4cell
         # move zero in qf.xref one position backward
@@ -53,9 +48,11 @@ function assemble_operator!(b,::Type{FACE_L2_JumpDA},FE::AbstractH1FiniteElement
             qf.xref[:] = qf.xref[end:-1:1]
         end
     end
+
+    gradients = zeros(Float64,FEbasis[1].ndofs4item,FEbasis[1].ncomponents*FEbasis[1].xdim);
           
     # quadrature loop
-    jump4face4qp = zeros(Float64,length(qf.xref),xdim*ncomponents);
+    jump4face4qp = zeros(Float64,length(qf.xref),FEbasis[1].xdim*FEbasis[1].ncomponents);
     cell = 0
     nac = 0
     pos = 
@@ -73,9 +70,6 @@ function assemble_operator!(b,::Type{FACE_L2_JumpDA},FE::AbstractH1FiniteElement
                 # find position of face in adjacentcell
                 # (to choose correct quadrature formula/FEbasis_caller)
                 pos = findall(x->x == face, FE.grid.faces4cells[cell,:])
-                
-                # get dofs on adjacent cell
-                FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
                 FiniteElements.updateFEbasis!(FEbasis[pos[1]], cell)
         
@@ -85,13 +79,13 @@ function assemble_operator!(b,::Type{FACE_L2_JumpDA},FE::AbstractH1FiniteElement
                     FiniteElements.getFEbasisgradients4qp!(gradients, FEbasis[pos[1]], i)
 
                     # compute jump
-                    for dof_i = 1 : ndofs4cell
+                    for dof_i = 1 : FEbasis[pos[1]].ndofs4item
                         # fill upper right part and diagonal of matrix
                         for k = 1 : size(gradients,2)
                             if (ac == 1)
-                                jump4face4qp[i,k] += gradients[dof_i,k] * dofs4A[dofs[dof_i]];
+                                jump4face4qp[i,k] += gradients[dof_i,k] * dofs4A[FEbasis[pos[1]].current_dofs[dof_i]];
                             else
-                                jump4face4qp[length(qf.xref)+1-i,k] -= gradients[dof_i,k] * dofs4A[dofs[dof_i]];
+                                jump4face4qp[length(qf.xref)+1-i,k] -= gradients[dof_i,k] * dofs4A[FEbasis[pos[1]].current_dofs[dof_i]];
                             end    
                         end
                     end

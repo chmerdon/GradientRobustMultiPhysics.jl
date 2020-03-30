@@ -8,11 +8,6 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_RHOdotAdotDAdotDV}, FEU::
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
-    ndofs4cellU::Int = FiniteElements.get_ndofs4elemtype(FEU, ET);
-    ndofs4cellAV::Int = FiniteElements.get_ndofs4elemtype(FEAV, ET);
-    ndofs4cellRHO::Int = FiniteElements.get_ndofs4elemtype(FERHO, ET);
-    ncomponents::Int = FiniteElements.get_ncomponents(FEU);
-    xdim = size(FEU.grid.coords4nodes,2)
     FEbasisU = FiniteElements.FEbasis_caller(FEU, qf, true);
     FEbasisRHO = FiniteElements.FEbasis_caller(FERHO, qf, true);
     if FEU == FEAV
@@ -20,27 +15,19 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_RHOdotAdotDAdotDV}, FEU::
     else
         FEbasisAV = FiniteElements.FEbasis_caller(FEAV, qf, true);
     end    
-    gradientsU = zeros(Float64,ndofs4cellU,ncomponents*xdim);
-    basisvalsAV = zeros(Float64,ndofs4cellAV,ncomponents)
-    basisvalsRHO = zeros(Float64,ndofs4cellRHO,ncomponents)
-    dofsU = zeros(Int64,ndofs4cellU)
-    dofsAV = zeros(Int64,ndofs4cellAV)
-    dofsRHO = zeros(Int64,ndofs4cellRHO)
+    gradientsU = zeros(Float64,FEbasisU.ndofs4item,FEbasisU.ncomponents*FEbasisU.xdim);
+    basisvalsAV = zeros(Float64,FEbasisAV.ndofs4item,FEbasisAV.ncomponents)
+    basisvalsRHO = zeros(Float64,FEbasisRHO.ndofs4item,FEbasisRHO.ncomponents)
     
     # quadrature loop
     temp::T = 0.0
     det = 0.0;
     rho = 0.0
-    a4qp = zeros(Float64,xdim)
-    agrada = zeros(Float64,xdim)
+    a4qp = zeros(Float64,FEbasisAV.xdim)
+    agrada = zeros(Float64,FEbasisAV.xdim)
     #@time begin
     for cell = 1 : size(FEU.grid.nodes4cells,1)
       
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofsU, FEU, cell, ET);
-        FiniteElements.get_dofs_on_cell!(dofsAV, FEAV, cell, ET);
-        FiniteElements.get_dofs_on_cell!(dofsRHO, FERHO, cell, ET);
-
         # update FEbasis on cell
         FiniteElements.updateFEbasis!(FEbasisU, cell)
         FiniteElements.updateFEbasis!(FEbasisRHO, cell)
@@ -59,35 +46,35 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_RHOdotAdotDAdotDV}, FEU::
 
             # compute a in quadrature point
             fill!(a4qp,0.0)
-            for k = 1 : xdim
-                for dof_i = 1 : ndofs4cellAV
-                    a4qp[k] += dofs4aAV[dofsAV[dof_i]] * basisvalsAV[dof_i,k];
+            for k = 1 : FEbasisAV.xdim
+                for dof_i = 1 : FEbasisAV.ndofs4item
+                    a4qp[k] += dofs4aAV[FEbasisAV.current_dofs[dof_i]] * basisvalsAV[dof_i,k];
                 end
             end
 
             # compute rho in quadrature point
             rho = 0.0
-            for dof_i = 1 : ndofs4cellRHO
-                rho += dofs4RHO[dofsRHO[dof_i]] * basisvalsRHO[dof_i,1];
+            for dof_i = 1 : FEbasisRHO.ndofs4item
+                rho += dofs4RHO[FEbasisRHO.current_dofs[dof_i]] * basisvalsRHO[dof_i,1];
             end
         
             # compute agrada
             fill!(agrada,0.0)
-            for dof_i = 1 : ndofs4cellU
-                for k = 1 : xdim
-                    for c = 1 : ncomponents
-                        agrada[k] += a4qp[c] * dofs4aU[dofsU[dof_i]] *gradientsU[dof_i,c+FEbasisU.offsets[k]]
+            for dof_i = 1 : FEbasisU.ndofs4item
+                for k = 1 : FEbasisU.xdim
+                    for c = 1 : FEbasisU.ncomponents
+                        agrada[k] += a4qp[c] * dofs4aU[FEbasisU.current_dofs[dof_i]] *gradientsU[dof_i,c+FEbasisU.offsets[k]]
                     end
                 end    
             end    
                 
-            for dof_j = 1 : ndofs4cellAV
+            for dof_j = 1 : FEbasisAV.ndofs4item
                 temp = 0.0;
-                for k = 1 : xdim
+                for k = 1 : FEbasisAV.xdim
                     temp += agrada[k] * basisvalsAV[dof_j,k];
                 end
                 temp *= rho * qf.w[i] * FEU.grid.volume4cells[cell]
-                b[dofsAV[dof_j]] -= temp;   
+                b[FEbasisAV.current_dofs[dof_j]] -= temp;   
             end 
         end  
     end

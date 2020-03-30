@@ -9,15 +9,12 @@ function assemble_operator!(b, ::Type{CELL_L2_CURLA}, FE::AbstractFiniteElement,
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    xdim::Int = size(FE.grid.coords4nodes,2)
     if typeof(FE) <: AbstractH1FiniteElement
         FEbasis = FiniteElements.FEbasis_caller(FE, qf, true);
     elseif typeof(FE) <: AbstractHdivFiniteElement
         FEbasis = FiniteElements.FEbasis_caller(FE, qf, false, true); # <-- second bool needed for for curl derviatives
     end    
-    curls = zeros(Float64,ndofs4cell,1);
-    dofs = zeros(Int64,ndofs4cell)
+    curls = zeros(Float64,FEbasis.ndofs4item,1);
 
     # diffusion_matrix = zeros(Float64,xdim,xdim)
     # constant_diffusion = false
@@ -36,9 +33,6 @@ function assemble_operator!(b, ::Type{CELL_L2_CURLA}, FE::AbstractFiniteElement,
         # update FEbasis on cell
         FiniteElements.updateFEbasis!(FEbasis, cell)
       
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
-      
         for i in eachindex(qf.w)
         
             # evaluate diffusion matrix
@@ -51,8 +45,8 @@ function assemble_operator!(b, ::Type{CELL_L2_CURLA}, FE::AbstractFiniteElement,
                 
             @inbounds begin
                 temp = 0.0
-                for dof_i = 1 : ndofs4cell
-                    temp += curls[dof_i,1] * val4dofsA[dofs[dof_i]];
+                for dof_i = 1 : FEbasis.ndofs4item
+                    temp += curls[dof_i,1] * val4dofsA[FEbasis.current_dofs[dof_i]];
                 end
                 b[cell] += temp^2 * qf.w[i] * FE.grid.volume4cells[cell];
             end

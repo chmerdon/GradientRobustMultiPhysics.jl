@@ -9,25 +9,19 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotDUdotV}, 
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    ncomponents::Int = FiniteElements.get_ncomponents(FE);
-    xdim = size(FE.grid.coords4nodes,2)
     FEbasis = FiniteElements.FEbasis_caller(FE, qf, true);
-    gradients = zeros(Float64,ndofs4cell,ncomponents*xdim);
-    basisvals = zeros(Float64,ndofs4cell,ncomponents);
-    dofs = zeros(Int64,ndofs4cell)
+    gradients = zeros(Float64,FEbasis.ndofs4item,FEbasis.ncomponents*FEbasis.xdim);
+    basisvals = zeros(Float64,FEbasis.ndofs4item,FEbasis.ncomponents);
 
+    # trafo for evaluation of f
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
           
     # quadrature loop
     temp = 0.0;
-    fval = zeros(Float64,ncomponents*xdim)
-    x = zeros(Float64,xdim)
+    fval = zeros(Float64,FEbasis.ncomponents*FEbasis.xdim)
+    x = zeros(Float64,FEbasis.xdim)
     #@time begin
     for cell = 1 : size(FE.grid.nodes4cells,1)
-
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
 
         # update FEbasis on cell
         FiniteElements.updateFEbasis!(FEbasis, cell)
@@ -46,13 +40,13 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotDUdotV}, 
             f!(fval, x)
 
             # fill sparse array
-            for dof_i = 1 : ndofs4cell
+            for dof_i = 1 : FEbasis.ndofs4item
                 temp = 0.0;
                 for k = 1 : size(gradients,2)
                     temp += gradients[dof_i,k]*fval[k];
                 end
-                for dof_j = 1 : ndofs4cell
-                    A[dofs[dof_i],dofs[dof_j]] += temp * basisvals[dof_j] * qf.w[i] * FE.grid.volume4cells[cell];
+                for dof_j = 1 : FEbasis.ndofs4item
+                    A[FEbasis.current_dofs[dof_i],FEbasis.current_dofs[dof_j]] += temp * basisvals[dof_j] * qf.w[i] * FE.grid.volume4cells[cell];
                 end    
             end
         end  

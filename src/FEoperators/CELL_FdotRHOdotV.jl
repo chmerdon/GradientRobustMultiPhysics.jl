@@ -8,32 +8,21 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotRHOdotV},
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
      
     # generate caller for FE basis functions
-    ncells::Int = size(FEV.grid.nodes4cells,1);
-    ndofs4cellV::Int = FiniteElements.get_ndofs4elemtype(FEV, ET);
-    ndofs4cellRHO::Int = FiniteElements.get_ndofs4elemtype(FERHO, ET);
-    ncomponents::Int = FiniteElements.get_ncomponents(FEV);
-    xdim::Int = size(FEV.grid.coords4nodes,2)
     FEbasisV = FiniteElements.FEbasis_caller(FEV, qf, false);
     FEbasisRHO = FiniteElements.FEbasis_caller(FERHO, qf, false);
-    basisvalsV = zeros(Float64,ndofs4cellV,ncomponents)
-    basisvalsRHO = zeros(Float64,ndofs4cellRHO,1)
-    dofsV = zeros(Int64,ndofs4cellV)
-    dofsRHO = zeros(Int64,ndofs4cellRHO)
+    basisvalsV = zeros(Float64,FEbasisV.ndofs4item,FEbasisV.ncomponents)
+    basisvalsRHO = zeros(Float64,FEbasisRHO.ndofs4item,1)
     
     # call trafo (needed to evaluate f)
     loc2glob_trafo = Grid.local2global(FEV.grid,ET)
     
     # quadrature loop
     temp = 0.0;
-    fval = zeros(T,ncomponents)
-    x = zeros(T,xdim)
+    fval = zeros(T,FEbasisV.ncomponents)
+    x = zeros(T,FEbasisV.xdim)
     rho = 0.0;
     #@time begin    
-    for cell = 1 : ncells
-
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofsV, FEV, cell, ET);
-        FiniteElements.get_dofs_on_cell!(dofsRHO, FERHO, cell, ET);
+    for cell = 1 : size(FEV.grid.nodes4cells,1)
             
         # update FEbasis on cell
         FiniteElements.updateFEbasis!(FEbasisV, cell)
@@ -52,14 +41,14 @@ function assemble_operator!(A::ExtendableSparseMatrix, ::Type{CELL_FdotRHOdotV},
             x[:] = cell_trafo(qf.xref[i]);
             f!(fval, x)
                 
-            for dof_i = 1 : ndofs4cellV, dof_j = 1 : ndofs4cellRHO
+            for dof_i = 1 : FEbasisV.ndofs4item, dof_j = 1 : FEbasisRHO.ndofs4item
                 # fill vector
                 @inbounds begin
                     temp = 0.0
-                    for k = 1 : ncomponents
+                    for k = 1 : FEbasisV.ncomponents
                         temp += fval[k]*basisvalsV[dof_i,k];
                     end
-                    A[dofsV[dof_i],dofsRHO[dof_j]] += temp * qf.w[i] * FEV.grid.volume4cells[cell] * basisvalsRHO[dof_j,1];
+                    A[FEbasisV.current_dofs[dof_i],FEbasisRHO.current_dofs[dof_j]] += temp * qf.w[i] * FEV.grid.volume4cells[cell] * basisvalsRHO[dof_j,1];
                 end
             end
         end

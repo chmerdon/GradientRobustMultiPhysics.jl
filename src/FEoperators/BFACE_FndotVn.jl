@@ -12,28 +12,22 @@ function assemble_operator!(b, ::Type{BFACE_FndotVn}, FE::AbstractHdivFiniteElem
     qf = QuadratureFormula{T,typeof(ETF)}(quadorder);
      
     # generate caller for FE basis functions
-    ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
-    ncomponents::Int = FiniteElements.get_ncomponents(FE);
-    xdim = size(FE.grid.coords4nodes,2)
     FEbasis = FiniteElements.FEbasis_caller_face(FE, qf);
-    basisvals = zeros(Float64,ndofs4face,ncomponents)
-    dofs = zeros(Int64,ndofs4face)
+    basisvals = zeros(Float64,FEbasis.ndofs4item,FEbasis.ncomponents)
     
+    # trafo for evaluation of f
     loc2glob_trafo = Grid.local2global_face(FE.grid, ET)
 
     # quadrature loop
     temp = 0.0;
-    fval = zeros(T,ncomponents)
-    x = zeros(T,xdim)
+    fval = zeros(T,FEbasis.xdim)
+    x = zeros(T,FEbasis.xdim)
     face = 0;
     #@time begin    
     for bface = 1 : size(FE.grid.bfaces,1)
         if FE.grid.bregions[bface] == Dbid
 
             face = FE.grid.bfaces[bface];
-            
-            # get dofs
-            FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
     
             # update FEbasis on face
             FiniteElements.updateFEbasis!(FEbasis, face)
@@ -53,14 +47,14 @@ function assemble_operator!(b, ::Type{BFACE_FndotVn}, FE::AbstractHdivFiniteElem
                 fval[1] = fval[1] * FE.grid.normal4faces[face,1] + fval[2] * FE.grid.normal4faces[face,2];
                 fval[2] = 0.0;
                 
-                for dof_i = 1 : ndofs4face
+                for dof_i = 1 : FEbasis.ndofs4item
                     # fill vector
                     @inbounds begin
                         temp = 0.0
-                        for k = 1 : ncomponents
+                        for k = 1 : FEbasis.ncomponents
                             temp += fval[k]*basisvals[dof_i,k];
                         end
-                        b[dofs[dof_i]] += temp * qf.w[i] * FE.grid.length4faces[face];
+                        b[FEbasis.current_dofs[dof_i]] += temp * qf.w[i] * FE.grid.length4faces[face];
                     end
                 end
             end

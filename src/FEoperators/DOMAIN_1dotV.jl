@@ -8,19 +8,12 @@ function assemble_operator!(b, ::Type{DOMAIN_1dotV}, FE::AbstractFiniteElement)
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
      
     # generate caller for FE basis functions
-    ncells::Int = size(FE.grid.nodes4cells,1);
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    ncomponents::Int = FiniteElements.get_ncomponents(FE);
     FEbasis = FiniteElements.FEbasis_caller(FE, qf, false);
-    basisvals = zeros(Float64,ndofs4cell,ncomponents)
-    dofs = zeros(Int64,ndofs4cell)
+    basisvals = zeros(Float64,FEbasis.ndofs4item,FEbasis.ncomponents)
     
     # quadrature loop
     #@time begin    
-    for cell = 1 : ncells
-
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+    for cell = 1 : size(FE.grid.nodes4cells,1);
             
         # update FEbasis on cell
         FiniteElements.updateFEbasis!(FEbasis, cell)
@@ -30,10 +23,10 @@ function assemble_operator!(b, ::Type{DOMAIN_1dotV}, FE::AbstractFiniteElement)
             # get FE basis at quadrature point
             FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
                 
-            for dof_i = 1 : ndofs4cell
+            for dof_i = 1 : FEbasis.ndofs4item
                 # fill vector
-                for k = 1 : ncomponents
-                    @inbounds b[dofs[dof_i],k] += basisvals[dof_i,k] * qf.w[i] * FE.grid.volume4cells[cell];
+                for k = 1 : FEbasis.ncomponents
+                    @inbounds b[FEbasis.current_dofs[dof_i],k] += basisvals[dof_i,k] * qf.w[i] * FE.grid.volume4cells[cell];
                 end    
             end
         end

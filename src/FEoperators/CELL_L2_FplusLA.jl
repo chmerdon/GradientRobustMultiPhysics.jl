@@ -9,16 +9,12 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    ncomponents::Int = FiniteElements.get_ncomponents(FE);
-    xdim::Int = size(FE.grid.coords4nodes,2)
     FEbasis = FiniteElements.FEbasis_caller(FE, qf, false, true); # <-- second bool is for 2nd derviatives
-    laplacian = zeros(Float64,ndofs4cell,ncomponents);
-    dofs = zeros(Int64,ndofs4cell)
+    laplacian = zeros(Float64,FEbasis.ndofs4item,FEbasis.ncomponents);
 
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
 
-    diffusion_matrix = zeros(Float64,xdim,xdim)
+    diffusion_matrix = zeros(Float64,FEbasis.xdim,FEbasis.xdim)
     constant_diffusion = false
     if typeof(diffusion!) <: Real
         constant_diffusion = true
@@ -29,16 +25,13 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
     
     # quadrature loop
     temp = 0.0;
-    fval = zeros(T,xdim)
-    x = zeros(T,xdim)
+    fval = zeros(T,FEbasis.xdim)
+    x = zeros(T,FEbasis.xdim)
     #@time begin    
     for cell = 1 : size(FE.grid.nodes4cells,1)
       
         # update FEbasis on cell
-        FiniteElements.updateFEbasis!(FEbasis, cell)
-      
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);      
+        FiniteElements.updateFEbasis!(FEbasis, cell)    
 
         # get trafo
         cell_trafo = loc2glob_trafo(cell)
@@ -58,10 +51,10 @@ function assemble_operator!(b, ::Type{CELL_L2_FplusLA}, FE::AbstractH1FiniteElem
             f!(fval, x)
                 
             @inbounds begin
-                for k = 1 : ncomponents
+                for k = 1 : FEbasis.ncomponents
                     temp = 0.0
-                    for dof_i = 1 : ndofs4cell
-                        temp += laplacian[dof_i,k] * val4dofsA[dofs[dof_i]];
+                    for dof_i = 1 : FEbasis.ndofs4item
+                        temp += laplacian[dof_i,k] * val4dofsA[FEbasis.current_dofs[dof_i]];
                     end
                     temp += fval[k];
                     b[cell] += temp^2 * qf.w[i] * FE.grid.volume4cells[cell];

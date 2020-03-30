@@ -7,31 +7,23 @@ function assemble_operator!(b, ::Type{CELL_FdotDIVV}, FE::AbstractFiniteElement,
     ET = FE.grid.elemtypes[1]
     quadorder = quadrature_order + FiniteElements.get_polynomial_order(FE) - 1;
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
-    
-    # generate caller for FE basis functions
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    ncomponents::Int = FiniteElements.get_ncomponents(FE);
-    xdim::Int = size(FE.grid.coords4nodes,2)
 
-    @assert ncomponents == xdim
-
+    # get FEbasis caller
     FEbasis = FiniteElements.FEbasis_caller(FE, qf, true);
-    divergences = zeros(Float64,ndofs4cell,1);
-    dofs = zeros(Int64,ndofs4cell)
+    divergences = zeros(Float64,FEbasis.ndofs4item,1);
+    @assert FEbasis.ncomponents == FEbasis.xdim
 
+    # get trafo for evaluation of f
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
     
     # quadrature loop
-    fval = zeros(T,xdim)
-    x = zeros(T,xdim)
+    fval = zeros(T,FEbasis.xdim)
+    x = zeros(T,FEbasis.xdim)
     #@time begin    
     for cell = 1 : size(FE.grid.nodes4cells,1)
       
         # update FEbasis on cell
-        FiniteElements.updateFEbasis!(FEbasis, cell)
-      
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);      
+        FiniteElements.updateFEbasis!(FEbasis, cell)    
 
         # get trafo
         cell_trafo = loc2glob_trafo(cell)
@@ -45,10 +37,10 @@ function assemble_operator!(b, ::Type{CELL_FdotDIVV}, FE::AbstractFiniteElement,
             x[:] = cell_trafo(qf.xref[i]);
             f!(fval, x)
                 
-            for dof_i = 1 : ndofs4cell
+            for dof_i = 1 : FEbasis.ndofs4item
                 # fill vector
                 @inbounds begin
-                    b[dofs[dof_i]] += divergences[dof_i] * fval[1] * qf.w[i] * FE.grid.volume4cells[cell];
+                    b[FEbasis.current_dofs[dof_i]] += divergences[dof_i] * fval[1] * qf.w[i] * FE.grid.volume4cells[cell];
                 end    
             end
         end

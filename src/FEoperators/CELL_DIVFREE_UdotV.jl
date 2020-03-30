@@ -9,19 +9,12 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_DIVFREE_UdotV}
     qf = QuadratureFormula{T,typeof(ET)}(quadorder);
     
     # generate caller for FE basis functions
-    ndofs4cell_velocity::Int = FiniteElements.get_ndofs4elemtype(FE_velocity, ET);
-    ndofs4cell_pressure::Int = FiniteElements.get_ndofs4elemtype(FE_pressure, ET);
     ndofs_velocity = FiniteElements.get_ndofs(FE_velocity);
-    ndofs_pressure = FiniteElements.get_ndofs(FE_pressure);
-    ndofs = ndofs_velocity + ndofs_pressure;
-    ncomponents::Int = FiniteElements.get_ncomponents(FE_velocity);
     FEbasis_velocity = FiniteElements.FEbasis_caller(FE_velocity, qf, true);
     FEbasis_pressure = FiniteElements.FEbasis_caller(FE_pressure, qf, false);
-    basisvals_pressure = zeros(Float64,ndofs4cell_pressure,1)
-    basisvals_velocity = zeros(Float64,ndofs4cell_velocity,ncomponents)
-    divergences_velocity = zeros(Float64,ndofs4cell_velocity,1);
-    dofs_pressure = zeros(Int64,ndofs4cell_pressure)
-    dofs_velocity = zeros(Int64,ndofs4cell_velocity)
+    basisvals_pressure = zeros(Float64,FEbasis_pressure.ndofs4item,1)
+    basisvals_velocity = zeros(Float64,FEbasis_velocity.ndofs4item,FEbasis_velocity.ncomponents)
+    divergences_velocity = zeros(Float64,FEbasis_velocity.ndofs4item,1);
     diagonal_entries = [1, 4]
 
     # Assembly rest of Stokes operators
@@ -31,11 +24,9 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_DIVFREE_UdotV}
         # update FEbasis on cell
         FiniteElements.updateFEbasis!(FEbasis_pressure, cell)
         FiniteElements.updateFEbasis!(FEbasis_velocity, cell)
-      
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs_velocity,FE_velocity, cell, ET);
-        FiniteElements.get_dofs_on_cell!(dofs_pressure,FE_pressure, cell, ET);
-        dofs_pressure .+= ndofs_velocity;
+
+        # add offset to pressure dofs
+        FEbasis_pressure.current_dofs .+= ndofs_velocity;
       
         for i in eachindex(qf.w)
             # get FE basis at quadrature point
@@ -43,33 +34,32 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_DIVFREE_UdotV}
             FiniteElements.getFEbasis4qp!(basisvals_velocity, FEbasis_velocity, i)
             FiniteElements.getFEbasisdivergence4qp!(divergences_velocity, FEbasis_velocity, i)
 
-            for dof_i = 1 : ndofs4cell_velocity
+            for dof_i = 1 : FEbasis_velocity.ndofs4item
             
                 # stiffness matrix for velocity
-                for dof_j = 1 : ndofs4cell_velocity
+                for dof_j = 1 : FEbasis_velocity.ndofs4item
                     temp = 0.0;
-                    for k = 1 : ncomponents
+                    for k = 1 : FEbasis_velocity.ncomponents
                         temp += basisvals_velocity[dof_i,k] * basisvals_velocity[dof_j,k];
                     end
                     temp *= factor * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-                    A[dofs_velocity[dof_i],dofs_velocity[dof_j]] += temp;
+                    A[FEbasis_velocity.current_dofs[dof_i],FEbasis_velocity.current_dofs[dof_j]] += temp;
                 end
                 # pressure x (-div) velocity
-                for dof_j = 1 : ndofs4cell_pressure
+                for dof_j = 1 : FEbasis_pressure.ndofs4item
                     temp = -divergences_velocity[dof_i] * basisvals_pressure[dof_j] * qf.w[i] * FE_velocity.grid.volume4cells[cell];
-                    A[dofs_velocity[dof_i],dofs_pressure[dof_j]] += temp;
-                    A[dofs_pressure[dof_j],dofs_velocity[dof_i]] += temp;
+                    A[FEbasis_velocity.current_dofs[dof_i],FEbasis_pressure.current_dofs[dof_j]] += temp;
+                    A[FEbasis_pressure.current_dofs[dof_j],FEbasis_velocity.current_dofs[dof_i]] += temp;
                 end
             end    
 
             # pressure x pressure
             if (pressure_diagonal > 0)
-                for dof_i = 1 : ndofs4cell_pressure
-                    A[dofs_pressure[dof_i],dofs_pressure[dof_i]] += pressure_diagonal * qf.w[i] * FE_velocity.grid.volume4cells[cell];
+                for dof_i = 1 : FEbasis_pressure.ndofs4item
+                    A[FEbasis_pressure.current_dofs[dof_i],FEbasis_pressure.current_dofs[dof_i]] += pressure_diagonal * qf.w[i] * FE_velocity.grid.volume4cells[cell];
                 end
             end
         end  
     end
     #end  
 end
-

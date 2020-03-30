@@ -14,13 +14,10 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UndotVn},FE::
     qf = QuadratureFormula{T,typeof(ETF)}(quadorder);
      
     # generate caller for FE basis functions
-    ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
-    ncomponents::Int = FiniteElements.get_ncomponents(FE);
     FEbasis = FiniteElements.FEbasis_caller_face(FE, qf);
-    basisvals = zeros(Float64,ndofs4face,ncomponents)
-    dofs = zeros(Int64,ndofs4face)
+    basisvals = zeros(Float64,FEbasis.ndofs4item,FEbasis.ncomponents)
 
-    @assert ncomponents == size(FE.grid.normal4faces,2)
+    @assert FEbasis.ncomponents == size(FE.grid.normal4faces,2)
     
     # quadrature loop
     temp = 0.0;
@@ -30,9 +27,6 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UndotVn},FE::
         if FE.grid.bregions[bface] == Dbids[r]
 
             face = FE.grid.bfaces[bface];
-         
-            # get dofs
-            FiniteElements.get_dofs_on_face!(dofs,FE,face,ETF);
  
             # update FEbasis on face
             FiniteElements.updateFEbasis!(FEbasis, face)
@@ -41,18 +35,18 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{BFACE_UndotVn},FE::
                 # get FE basis at quadrature point
                 FiniteElements.getFEbasis4qp!(basisvals, FEbasis, i)
             
-                for dof_i = 1 : ndofs4face, dof_j = dof_i : ndofs4face
+                for dof_i = 1 : FEbasis.ndofs4item, dof_j = dof_i : FEbasis.ndofs4item
                     # fill upper right part and diagonal of matrix
                     @inbounds begin
                         temp = 0.0
-                        for k = 1 : ncomponents
+                        for k = 1 : FEbasis.ncomponents
                             temp += basisvals[dof_i,k]*FE.grid.normal4faces[face,k]*basisvals[dof_j,k]*FE.grid.normal4faces[face,k];
                         end
                         temp *= factor * qf.w[i] * FE.grid.length4faces[face];
-                        A[dofs[dof_i],dofs[dof_j]] += temp;
+                        A[FEbasis.current_dofs[dof_i],FEbasis.current_dofs[dof_j]] += temp;
                         # fill lower left part of matrix
                         if dof_j > dof_i
-                            A[dofs[dof_j],dofs[dof_i]] += temp;
+                            A[FEbasis.current_dofs[dof_j],FEbasis.current_dofs[dof_i]] += temp;
                         end 
                     end
                 end
