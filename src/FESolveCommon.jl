@@ -162,7 +162,7 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
 
-    xref = FiniteElements.get_xref4dof(FE, ET)
+    xref = FiniteElements.get_xref4dof(FE, ET)[1]
     temp = zeros(eltype(FE.grid.coords4nodes),xdim);
     dim = size(FE.grid.nodes4cells,2) - 1;
     loc2glob_trafo = Grid.local2global(FE.grid, ET)
@@ -170,12 +170,12 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FE);
     if ncomponents == 1
-        basisvals = Array{Array{T,1}}(undef,size(xref,1));
+        basisvals = Array{Array{T,1}}(undef,length(xref));
     else
-        basisvals = Array{Array{T,2}}(undef,size(xref,1));
+        basisvals = Array{Array{T,2}}(undef,length(xref));
     end
-    for i = 1:size(xref,1)
-        basisvals[i] = FiniteElements.get_basis_on_cell(FE, ET)(xref[i,:])
+    for i = 1:length(xref)
+        basisvals[i] = FiniteElements.get_basis_on_cell(FE, ET)(xref[i])
     end    
 
     cell::Int = 0;
@@ -218,7 +218,7 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_
                 end 
                 
                 # evaluate Dirichlet data
-                boundary_data!(temp,trafo_on_cell(xref[celldof2facedof[k],:]));
+                boundary_data!(temp,trafo_on_cell(xref[celldof2facedof[k]]));
                 b4bface[k] = dot(temp,basisvals[celldof2facedof[k]][celldof2facedof[k],:]);
             end
 
@@ -273,31 +273,46 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
     return residual
 end
 
-# TODO: has to be rewritten!!!
+# Interpolation for H1 FiniteElements
+# requires FEdefinition to define the two functions
+# get_xref4dof : reference coordinats of point evaluation for local dofnumber
+# get_interpolation_matrix : to manage interference of other dofs that are nonzero at xref4dof
+#                            (usually just the identity matrix, but may be different in case of
+#                             additional bubbles are present or if other basis functions are used)
 function computeFEInterpolation!(val4dofs::Array,source_function!::Function,FE::AbstractH1FiniteElement)
+    
+    # get xref and interpolation matrix
     ET = FE.grid.elemtypes[1];
-    temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
-    xref = FiniteElements.get_xref4dof(FE, ET)
-    ndofs4cell = FiniteElements.get_ndofs4elemtype(FE, ET);
+    xref, InterpolationMatrix = FiniteElements.get_xref4dof(FE, ET)
+    dofs = zeros(Int64,length(xref))
+    coefficients = zeros(Float64,length(xref),FiniteElements.get_ncomponents(FE))
+    offsets = 0:length(xref):size(InterpolationMatrix,2)
+
+    # trafo for evaluation of source function
     loc2glob_trafo = Grid.local2global(FE.grid,ET)
-    dofs = zeros(Int64,ndofs4cell)
-    ncomponents = FiniteElements.get_ncomponents(FE);
-    coefficients = zeros(Float64,ndofs4cell,ncomponents)
-    # loop over nodes
+
+    #@time begin    
+    temp = zeros(Float64,FiniteElements.get_ncomponents(FE));
     for cell = 1 : size(FE.grid.nodes4cells,1)
+
         # get trafo
         cell_trafo = loc2glob_trafo(cell)
-        
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs,FE,cell,ET)
 
-        # get coefficients
+        # get dofs and coefficients (needed for FE like BR)
         FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET)
+        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
+        val4dofs[dofs] .= 0.0 
 
-        for k = 1 : ndofs4cell
-            x = cell_trafo(xref[k, :]);
+        for i = 1 : length(xref)
+            # evaluate function at reference point for dof
+            x = cell_trafo(xref[i]);
+            fill!(temp,0.0)
             source_function!(temp,x);
-            val4dofs[dofs[k],:] = temp;
+
+            # add function value to dof and subtract interferences of other dofs
+            for d = 1 : FiniteElements.get_ncomponents(FE)
+                val4dofs[dofs] += (InterpolationMatrix[d][i,:].*coefficients[:,d])*temp[d];
+            end    
         end    
     end
 end

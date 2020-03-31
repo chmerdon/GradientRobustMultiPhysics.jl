@@ -2,6 +2,7 @@ module FiniteElements
 
 using Grid
 using LinearAlgebra
+using SparseArrays
 using Quadrature
 using ForwardDiff
 
@@ -16,6 +17,16 @@ export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement
  ### FF    II N    NN II   TT   EEEEEE     EEEEEE LLLLLL EEEEEE M     M EEEEEE N    NN   TT   SSSSSS ###
  #######################################################################################################
  #######################################################################################################
+
+# generate sparse identity matrices where some diagonal entries are set to zero
+function speyec(n::Int,zd::Vector)
+    Ic = SparseMatrixCSC(I,n,n)
+    for j=1 : length(zd)
+        Ic[zd[j],zd[j]] = 0.0
+    end
+    return Ic
+end
+
 
 # top level abstract types
 abstract type AbstractFEOperator end

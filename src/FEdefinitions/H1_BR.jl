@@ -13,7 +13,26 @@ function getBRFiniteElement(grid,ncomponents)
 end 
 
 function get_xref4dof(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) 
-    return [0 0; 1 0; 0 1; 0.0; 1 0; 0 1; 0.5 0; 0.5 0.5; 0 0.5]
+    xref = Array{Array{Float64,1},1}(undef,9)
+    xref[1] = Array{Float64,1}([0, 0])
+    xref[2] = Array{Float64,1}([1, 0])
+    xref[3] = Array{Float64,1}([0, 1])
+    xref[1] = Array{Float64,1}([0, 0])
+    xref[[4,5,6]] = xref[[1,2,3]]
+    xref[7] = Array{Float64,1}([0.5, 0])
+    xref[8] = Array{Float64,1}([0.5, 0.5])
+    xref[9] = Array{Float64,1}([0, 0.5])
+    InterpolationMatrix = zeros(Float64,9,9)
+    InterpolationMatrix[1:3,1:3] = Matrix{Float64}(I,3,3)
+    InterpolationMatrix[[1,2,3,7],7] = [-1//2, -1//2, 0, 1]
+    InterpolationMatrix[[1,2,3,8],8] = [0, -1//2, -1//2, 1]
+    InterpolationMatrix[[1,2,3,9],9] = [-1//2, 0, -1//2, 1]
+    InterpolationMatrix2 = zeros(Float64,9,9)
+    InterpolationMatrix2[4:6,4:6] = Matrix{Float64}(I,3,3)
+    InterpolationMatrix2[[4,5,6,7],7] = [-1//2, -1//2, 0, 1]
+    InterpolationMatrix2[[4,5,6,8],8] = [0, -1//2, -1//2, 1]
+    InterpolationMatrix2[[4,5,6,9],9] = [-1//2, 0, -1//2, 1]
+    return xref, [sparse(InterpolationMatrix), sparse(InterpolationMatrix2)]
 end    
 
 # POLYNOMIAL ORDER

@@ -19,10 +19,35 @@ function getP2BFiniteElement(grid,dim,ncomponents)
 end 
 
 function get_xref4dof(FE::H1P2BFiniteElement{T,2,1} where {T <: Real}, ::Grid.ElemType2DTriangle) 
-    return Array{Float64,2}([0 0; 1 0; 0 1; 0.5 0; 0.5 0.5; 0 0.5; 1//3 1//3])
+    xref = Array{Array{Float64,1},1}(undef,7)
+    xref[1] = Array{Float64,1}([0, 0])
+    xref[2] = Array{Float64,1}([1, 0])
+    xref[3] = Array{Float64,1}([0, 1])
+    xref[4] = Array{Float64,1}([0.5, 0])
+    xref[5] = Array{Float64,1}([0.5, 0.5])
+    xref[6] = Array{Float64,1}([0, 0.5])
+    xref[7] = Array{Float64,1}([1//3, 1//3])
+    InterpolationMatrix = Matrix{Float64}(I,7,7)
+    InterpolationMatrix[:,7] .= [1//9, 1//9, 1//9, -4//9, -4//9, -4//9, 1]
+    return xref, [sparse(InterpolationMatrix)]
 end    
-function get_xref4dof(FE::H1P2BFiniteElement{T,2,22} where {T <: Real}, ::Grid.ElemType2DTriangle) 
-    return repeat(Array{Float64,2}([0 0; 1 0; 0 1; 0.5 0; 0.5 0.5; 0 0.5; 1//3 1//3]),2)
+function get_xref4dof(FE::H1P2BFiniteElement{T,2,2} where {T <: Real}, ::Grid.ElemType2DTriangle) 
+    xref = Array{Array{Float64,1},1}(undef,14)
+    xref[1] = Array{Float64,1}([0, 0])
+    xref[2] = Array{Float64,1}([1, 0])
+    xref[3] = Array{Float64,1}([0, 1])
+    xref[4] = Array{Float64,1}([0.5, 0])
+    xref[5] = Array{Float64,1}([0.5, 0.5])
+    xref[6] = Array{Float64,1}([0, 0.5])
+    xref[7] = Array{Float64,1}([1//3, 1//3])
+    xref[[8,9,10,11,12,13,14]] = xref[[1,2,3,4,5,6,7]]
+    InterpolationMatrix = zeros(Float64,14,14)
+    InterpolationMatrix[1:7,1:7] = Matrix{Float64}(I,7,7)
+    InterpolationMatrix[1:7,7] = [1//9, 1//9, 1//9, -4//9, -4//9, -4//9, 1]
+    InterpolationMatrix2 = zeros(Float64,14,14)
+    InterpolationMatrix2[8:14,8:14] = Matrix{Float64}(I,7,7)
+    InterpolationMatrix2[8:14,14] = [1//9, 1//9, 1//9, -4//9, -4//9, -4//9, 1]
+    return xref, [sparse(InterpolationMatrix), sparse(InterpolationMatrix2)]
 end    
 
 # POLYNOMIAL ORDER

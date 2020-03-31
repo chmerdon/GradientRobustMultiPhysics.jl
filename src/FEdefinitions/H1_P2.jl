@@ -18,16 +18,40 @@ function getP2FiniteElement(grid,ncomponents)
 end 
 
 function get_xref4dof(FE::H1P2FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract1DElemType) 
-    return Array{Float64,2}([0,1,0.5]')'
+    xref = Array{Array{Float64,1},1}(undef,3)
+    xref[1] = Array{Float64,1}([0])
+    xref[2] = Array{Float64,1}([1])
+    xref[3] = Array{Float64,1}([0.5])
+    return xref, [sparse(I,3,3)]
 end    
 function get_xref4dof(FE::H1P2FiniteElement{T,2} where {T <: Real}, ::Grid.Abstract1DElemType) 
-    return repeat(Array{Float64,2}([0,1,0.5]')',2)
+    xref = Array{Array{Float64,1},1}(undef,6)
+    xref[1] = Array{Float64,1}([0])
+    xref[2] = Array{Float64,1}([1])
+    xref[3] = Array{Float64,1}([0.5])
+    xref[[4,5,6]] = xref[[1,2,3]]
+    return xref, [speyec(6,[4,5,6]), speyec(6,[1,2,3])]
 end    
 function get_xref4dof(FE::H1P2FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DTriangle) 
-    return Array{Float64,2}([0 0; 1 0; 0 1; 0.5 0; 0.5 0.5; 0 0.5])
+    xref = Array{Array{Float64,1},1}(undef,6)
+    xref[1] = Array{Float64,1}([0, 0])
+    xref[2] = Array{Float64,1}([1, 0])
+    xref[3] = Array{Float64,1}([0, 1])
+    xref[4] = Array{Float64,1}([0.5, 0])
+    xref[5] = Array{Float64,1}([0.5, 0.5])
+    xref[6] = Array{Float64,1}([0, 0.5])
+    return xref, [sparse(I,6,6)]
 end    
 function get_xref4dof(FE::H1P2FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) 
-    return repeat(Array{Float64,2}([0 0; 1 0; 0 1; 0.5 0; 0.5 0.5; 0 0.5]),2)
+    xref = Array{Array{Float64,1},1}(undef,12)
+    xref[1] = Array{Float64,1}([0, 0])
+    xref[2] = Array{Float64,1}([1, 0])
+    xref[3] = Array{Float64,1}([0, 1])
+    xref[4] = Array{Float64,1}([0.5, 0])
+    xref[5] = Array{Float64,1}([0.5, 0.5])
+    xref[6] = Array{Float64,1}([0, 0.5])
+    xref[[7,8,9,10,11,12]] = xref[[1,2,3,4,5,6]]
+    return xref, [speyec(12,[7,8,9,10,11,12]), speyec(12,[1,2,3,4,5,6])]
 end    
 
 # POLYNOMIAL ORDER
@@ -52,6 +76,12 @@ get_ncomponents(FE::H1P2FiniteElement{T,2} where {T <: Real}) = 2
 function get_dofs_on_cell!(dofs,FE::H1P2FiniteElement{T,1} where {T <: Real}, cell::Int64, ::Grid.Abstract1DElemType)
     dofs[1:2] = FE.grid.nodes4cells[cell,:]
     dofs[3] = size(FE.grid.coords4nodes,1) + cell
+end
+function get_dofs_on_cell!(dofs,FE::H1P2FiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.Abstract1DElemType)
+    dofs[1:2] = FE.grid.nodes4cells[cell,:]
+    dofs[3] = size(FE.grid.coords4nodes,1) + cell
+    dofs[4:5] = size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) .+ dofs[1:2]
+    dofs[6] = 2*size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4cells,1) + cell
 end
 function get_dofs_on_cell!(dofs,FE::H1P2FiniteElement{T,1} where {T <: Real}, cell::Int64, ::Grid.ElemType2DTriangle)
     dofs[1:3] = FE.grid.nodes4cells[cell,:]

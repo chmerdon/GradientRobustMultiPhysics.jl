@@ -14,10 +14,19 @@ end
 
 
 function get_xref4dof(FE::H1CRFiniteElement{T,2,1} where {T <: Real}, ::Grid.ElemType2DTriangle) 
-    return Array{Float64,2}([0.5 0; 0.5 0.5; 0 0.5])
+    xref = Array{Array{Float64,1},1}(undef,3)
+    xref[1] = Array{Float64,1}([0.5, 0])
+    xref[2] = Array{Float64,1}([0.5, 0.5])
+    xref[3] = Array{Float64,1}([0, 0.5])
+    return xref, [sparse(I,3,3)]
 end    
 function get_xref4dof(FE::H1CRFiniteElement{T,2,2} where {T <: Real}, ::Grid.ElemType2DTriangle) 
-    return repeat(Array{Float64,2}([0.5 0; 0.5 0.5; 0 0.5],2))
+    xref = Array{Array{Float64,1},1}(undef,6)
+    xref[1] = Array{Float64,1}([0.5, 0])
+    xref[2] = Array{Float64,1}([0.5, 0.5])
+    xref[3] = Array{Float64,1}([0, 0.5])
+    xref[[4,5,6]] = xref[[1,2,3]]
+    return xref, [speyec(6,[4,5,6]), speyec(6,[1,2,3])]
 end    
 
 # POLYNOMIAL ORDER

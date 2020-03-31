@@ -20,14 +20,18 @@ println("\nStarting tests for FESolveCommon")
 fems1D = ["P1","P2"]
 expected_orders1D = [1,2]
 for j = 1 : length(fems1D)
-    @test FESolveCommonTests.TestInterpolation1D(fems1D[j],expected_orders1D[j])
+    for d = 1 : 2
+        @test FESolveCommonTests.TestInterpolation1D(fems1D[j],expected_orders1D[j],d)
+    end    
     @test FESolveCommonTests.TestBestApproximation1D("L2",fems1D[j],expected_orders1D[j])
     @test FESolveCommonTests.TestBestApproximation1D("H1",fems1D[j],expected_orders1D[j])
 end   
-fems2D = ["P1","P2","CR"] # interpolation does not work for ["MINI","P2B"]
+fems2D = ["P1","P2","CR","MINI","P2B"]
 expected_orders2D = [1,2,1,1,2]
 for j = 1 : length(fems2D)
-    @test FESolveCommonTests.TestInterpolation2D(fems2D[j],expected_orders2D[j])
+    for d = 1 : 2
+        @test FESolveCommonTests.TestInterpolation2D(fems2D[j],expected_orders2D[j])
+    end    
     @test FESolveCommonTests.TestBestApproximation2D("L2",fems2D[j],expected_orders2D[j])
     @test FESolveCommonTests.TestBestApproximation2D("H1",fems2D[j],expected_orders2D[j])
 end    
