@@ -7,6 +7,7 @@ Learning julia by implementing finite elements
 DEMO scripts:
 - DEMO_Poisson1D.jl
 - DEMO_Poisson2D.jl
+- DEMO_MixedPoisson2D.jl
 - DEMO_HagenPoiseuille.jl
 - DEMO_HdivBA_polynomials.jl
 - DEMO_Stokes_p7vortex.jl
@@ -40,13 +41,10 @@ Features/Limitations:
 
 
 Next Goals/Ideas:
-- better plots (vtk)
 - implement rotation form of nonlinear convection term
 - implement convection stabilisation(s) for Navier-Stokes
 - implement adaptive mesh refinement (red-green-blue)
-- implement solver for mixed formulation of Poisson problem
 - multiple solves with same matrix (as in transient and compressible Stokes solver) should reuse LU decomposition of sparse matrix, add Pardiso solver (via Pardiso.jl)?
-- fix interpolation for MINI and P2B element (cell bubble values depend on nodal values)
 - implement tests for Hdiv elements and reconstruction operators 
 - implement tests for compressible Stokes problem
 - implement RT1/BDM2 reconstruction for P2B-Stokes FEM
