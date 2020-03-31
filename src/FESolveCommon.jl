@@ -147,11 +147,9 @@ function computeDirichletBoundaryData!(val4dofs,FE,boundary_data!,use_L2bestappr
 end
 
 
-function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_data!)
+function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE::FiniteElements.AbstractH1FiniteElement,Dbid,boundary_data!)
 
     # find boundary dofs
-    xdim = FiniteElements.get_ncomponents(FE);
-    ndofs::Int = FiniteElements.get_ndofs(FE);
     
     bdofs = [];
     Grid.ensure_bfaces!(FE.grid);
@@ -159,34 +157,22 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_
     T = eltype(FE.grid.coords4nodes)
     ET = FE.grid.elemtypes[1]
     ETF = Grid.get_face_elemtype(ET);
+    ncomponents::Int = FiniteElements.get_ncomponents(FE);
     ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
     ndofs4face::Int = FiniteElements.get_ndofs4elemtype(FE, ETF);
 
-    xref = FiniteElements.get_xref4dof(FE, ET)[1]
-    temp = zeros(eltype(FE.grid.coords4nodes),xdim);
-    dim = size(FE.grid.nodes4cells,2) - 1;
+    xref, InterpolationMatrix = FiniteElements.get_xref4dof(FE, ET)
+    xdim = size(FE.grid.coords4nodes,2);
     loc2glob_trafo = Grid.local2global(FE.grid, ET)
 
-    # pre-allocate memory for basis functions
-    ncomponents = FiniteElements.get_ncomponents(FE);
-    if ncomponents == 1
-        basisvals = Array{Array{T,1}}(undef,length(xref));
-    else
-        basisvals = Array{Array{T,2}}(undef,length(xref));
-    end
-    for i = 1:length(xref)
-        basisvals[i] = FiniteElements.get_basis_on_cell(FE, ET)(xref[i])
-    end    
-
     cell::Int = 0;
-    j::Int = 1;
-    A4bface = Matrix{Float64}(undef,ndofs4face,ndofs4face)
-    b4bface = Vector{Float64}(undef,ndofs4face)
     dofs4bface = zeros(Int64,ndofs4face)
     dofs4cell = zeros(Int64,ndofs4cell)
+    coefficients = zeros(Float64,ndofs4cell)
     celldof2facedof = zeros(Int,ndofs4face)
+    temp = zeros(eltype(FE.grid.coords4nodes),ncomponents);
+    x = zeros(Float64,xdim)
     for i in eachindex(FE.grid.bfaces)
-
         if (FE.grid.bregions[i] == Dbid)
 
             # find neighbouring cell
@@ -195,6 +181,7 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_
             # get dofs
             FiniteElements.get_dofs_on_face!(dofs4bface, FE, FE.grid.bfaces[i], ETF);
             FiniteElements.get_dofs_on_cell!(dofs4cell, FE, cell, ET);
+            FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET)
 
             # find position of face dofs in cell dofs
             for j=1:ndofs4cell, k = 1 : ndofs4face
@@ -209,23 +196,15 @@ function computeDirichletBoundaryDataByInterpolation!(val4dofs,FE,Dbid,boundary_
             # setup trafo
             trafo_on_cell = loc2glob_trafo(cell);
 
-            # setup local system of equations to determine piecewise interpolation of boundary data
-
-            # assemble matrix and right-hand side
             for k = 1:ndofs4face
-                for l = 1:ndofs4face
-                    A4bface[k,l] = dot(basisvals[celldof2facedof[k]][celldof2facedof[k],:],basisvals[celldof2facedof[k]][celldof2facedof[l],:]);
-                end 
-                
                 # evaluate Dirichlet data
-                boundary_data!(temp,trafo_on_cell(xref[celldof2facedof[k]]));
-                b4bface[k] = dot(temp,basisvals[celldof2facedof[k]][celldof2facedof[k],:]);
-            end
+                x[:] = trafo_on_cell(xref[celldof2facedof[k]])
+                boundary_data!(temp,x);
 
-            # solve
-            val4dofs[dofs4bface] = A4bface\b4bface;
-            if norm(A4bface*val4dofs[dofs4bface]-b4bface) > eps(1e3)
-                println("WARNING: large residual, boundary data may be inexact");
+                # add function value to dof and subtract interferences of other dofs
+                for d = 1 : FiniteElements.get_ncomponents(FE)
+                    val4dofs[dofs4bface] += (InterpolationMatrix[d][celldof2facedof[k],celldof2facedof].*coefficients[celldof2facedof,d])*temp[d];
+                end    
             end
         end    
     end    
