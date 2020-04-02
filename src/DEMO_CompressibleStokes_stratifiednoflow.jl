@@ -18,8 +18,7 @@ using FiniteElements
 using FESolveCommon
 using FESolveStokes
 using FESolveCompressibleStokes
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")

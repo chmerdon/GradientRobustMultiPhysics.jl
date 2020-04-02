@@ -61,9 +61,8 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_nonlinear_convec
         if symmetric_gradient == false
             result[1] -= 2*nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
         else
-            result[1] -= nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
-            result[1] -= nu * (DiffResults.hessian(hessian)[1])
-            result[2] -= nu * (DiffResults.hessian(hessian)[3])
+            result[1] -= 2*nu * DiffResults.hessian(hessian)[1] + nu * DiffResults.hessian(hessian)[4]
+            result[2] -= nu * DiffResults.hessian(hessian)[3]
         end
         result[1] -= lambda * DiffResults.hessian(hessian)[1]
         result[2] -= lambda * DiffResults.hessian(hessian)[3]
@@ -72,9 +71,8 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_nonlinear_convec
         if symmetric_gradient == false
             result[2] -= 2*nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
         else
-            result[2] -= nu * (DiffResults.hessian(hessian)[1] + DiffResults.hessian(hessian)[4])
-            result[1] -= nu * (DiffResults.hessian(hessian)[2])
-            result[2] -= nu * (DiffResults.hessian(hessian)[4])
+            result[2] -= 2*nu * DiffResults.hessian(hessian)[4] + nu * DiffResults.hessian(hessian)[1]
+            result[1] -= nu * DiffResults.hessian(hessian)[3]
         end
         result[1] -= lambda * DiffResults.hessian(hessian)[2]
         result[2] -= lambda * DiffResults.hessian(hessian)[4]
@@ -111,7 +109,7 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_nonlinear_convec
 
     # parameters
     PD.name = "P7 vortex compressible";
-    PD.shear_modulus = (symmetric_gradient) ? nu : 2*nu;
+    PD.shear_modulus = nu;
     PD.lambda = lambda
     PD.total_mass = total_mass
     PD.use_symmetric_gradient = symmetric_gradient

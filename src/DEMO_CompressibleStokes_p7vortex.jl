@@ -40,7 +40,7 @@ function main()
     density_power = 2 # density will be a polynomial of this degree
 
     # discretisation parameter
-    dt = (2*shear_modulus + lambda)*0.2/c # time step has to be small enough for convergence
+    dt = (2*shear_modulus + lambda)*0.4/c # time step has to be small enough for convergence
     stationarity_tolerance = 1e-10 # termination condition for time loop
     symmetric_gradient = true # use div(eps(u)) instead of Laplacian
     maxT = 1000 # termination condition for time loop
@@ -63,8 +63,8 @@ function main()
 
     #fem_velocity = "CR"; fem_densitypressure = "P0"
     #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
-    #fem_velocity = "BR"; fem_densitypressure = "P0"
-    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    fem_velocity = "BR"; fem_densitypressure = "P0"
+    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
 
 
     # load problem data

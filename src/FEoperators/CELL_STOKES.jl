@@ -66,7 +66,7 @@ function assemble_operator!(A::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_ve
 end
 
 
-function assemble_operator!(A::ExtendableSparseMatrix, B::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_velocity::FiniteElements.AbstractFiniteElement, FE_pressure::FiniteElements.AbstractFiniteElement, nu::Real = 1.0, symmetric_gradient = false)
+function assemble_operator!(A::ExtendableSparseMatrix, B::ExtendableSparseMatrix,::Type{CELL_STOKES}, FE_velocity::FiniteElements.AbstractFiniteElement, FE_pressure::FiniteElements.AbstractFiniteElement, nu::Real = 1.0)
     
     # get quadrature formula
     T = eltype(FE_velocity.grid.coords4nodes);

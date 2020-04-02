@@ -350,6 +350,31 @@ function getFEbasisgradients4qp!(gradients,FEBC::FEbasis_caller{FET,AssembleType
     end    
 end
 
+
+# symmetric gradients are saved in reduced Voigt notation
+# the following mapping tells where each entry of the full gradient lands in the reduced vector
+voigt_mapper = Array{Array{Int64,1},1}(undef,3)
+voigt_mapper[1] = [1]
+voigt_mapper[2] = [1,3,3,2]
+voigt_mapper[3] = [1,4,5,4,2,6,5,6,3]
+
+function getFEbasissymgradients4qp!(symgradients,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
+    @assert FEBC.with_standard_derivs
+    # multiply tinverted jacobian of element trafo with gradient of basis function
+    # which yields (by chain rule) the gradient in x coordinates
+    for dof_i = 1 : FEBC.ndofs4item
+        for k = 1 : size(symgradients,2)
+            symgradients[dof_i,k] = 0.0;
+        end
+        for c = 1 : FEBC.ncomponents, k = 1 : FEBC.xdim
+            for j = 1 : FEBC.xdim
+                # compute duc/dxk
+                symgradients[dof_i,voigt_mapper[FEBC.ncomponents][k + FEBC.offsets[c]]] += FEBC.A[k,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[c],j]*FEBC.coefficients[dof_i,c]
+            end    
+        end    
+    end    
+end
+
 function getFEbasiscurls4qp!(curls,FEBC::FEbasis_caller{FET,AssembleTypeCELL} where  FET <: AbstractH1FiniteElement,i)
     @assert FEBC.with_standard_derivs
     @assert FEBC.xdim == 2 # 3D curl not yet implemented
@@ -485,9 +510,8 @@ function getFEbasisdivergence4qp!(divergences,FEBC::FEbasis_caller{FET,AssembleT
         divergences[dof_i,1] = 0.0;
         for k = 1 : FEBC.xdim
             for j = 1 : FEBC.xdim
-                divergences[dof_i,1] += FEBC.A[k,j]*FEBC.refgradients[i,dof_i + FEBC.offsets2[k],j]
+                divergences[dof_i,1] += FEBC.A[k,j] * FEBC.refgradients[i,dof_i + FEBC.offsets2[k],j] * FEBC.coefficients[dof_i,k]
             end    
-            divergences[dof_i,1] *= FEBC.coefficients[dof_i,1]
         end    
     end    
 end

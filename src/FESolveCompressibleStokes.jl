@@ -12,6 +12,7 @@ using FESolveStokes
 using FESolveNavierStokes
 using Grid
 using Quadrature
+using VTKView
 
 
 # COMPRESSIBLE STOKES operators
@@ -119,10 +120,15 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     # assemble system 
     @time begin
         # compute Stokes operator
-        print("    |assembling Stokes operator...") # needs to be replaced by symmetric gradients later
+        print("    |assembling stiffness matrix and divxpressure matrix...") # needs to be replaced by symmetric gradients later
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
         B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
-        FESolveStokes.assemble_operator!(A,B,FESolveStokes.CELL_STOKES,FE_velocity,FE_densitypressure, PD.shear_modulus, PD.use_symmetric_gradient);
+        if PD.use_symmetric_gradient
+            FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_EPSUdotEPSV,FE_velocity, 2*PD.shear_modulus);
+        else
+            FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_DUdotDV,FE_velocity, 2*PD.shear_modulus);
+        end    
+        FESolveCommon.assemble_operator!(B,FESolveCommon.CELL_UdotDIVV,FE_densitypressure,FE_velocity);
         println("finished")
 
         print("    |precomputing normal fluxes of velocity basis...")
@@ -347,7 +353,7 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
         ExtendableSparse.flush!(CSS.SystemMatrixV)
 
         # add pressure gradient (of eqs'ed density) to rhs
-        CSS.rhsvectorV -= CSS.DivPressureMatrix * CSS.current_pressure
+        CSS.rhsvectorV += CSS.DivPressureMatrix * CSS.current_pressure
 
         # add nonlinear use_nonlinear_convection
         if CSS.ProblemData.use_nonlinear_convection
