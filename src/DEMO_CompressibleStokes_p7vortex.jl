@@ -135,14 +135,9 @@ function main()
         velocity[:] = CSS.current_velocity[:]
         density[:] = CSS.current_density[:]
 
-
         # compute errors
-        integral4cells = zeros(size(grid.nodes4cells,1),1);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_density!, density, FE_densitypressure), grid, order_error, 1);
-        L2error_density[level] = sqrt(abs(sum(integral4cells)));
-        integral4cells = zeros(size(grid.nodes4cells,1),2);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!, velocity, FE_velocity), grid, order_error, 2);
-        L2error_velocity[level] = sqrt(abs(sum(integral4cells[:])));
+        L2error_density[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_density!,FE_densitypressure,density; factorA = -1.0, degreeF = density_power))
+        L2error_velocity[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_velocity!,FE_velocity,velocity; factorA = -1.0, degreeF = 7))
 
     end # loop over levels
 

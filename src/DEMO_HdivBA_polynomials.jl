@@ -15,8 +15,7 @@ using Quadrature
 using FiniteElements
 using FESolveCommon
 using FESolveStokes
-ENV["MPLBACKEND"]="tkagg"
-using PyPlot
+using VTKView
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
@@ -26,15 +25,14 @@ include("PROBLEMdefinitions/STOKES_2D_polynomials.jl");
 function main()
 
     # problem modification switches
-    polynomial_order = 2
+    polynomial_order = 3
 
     # refinement termination criterions
     maxlevel = 7
     maxdofs = 60000
 
     # other switches
-    show_plots = false
-    show_convergence_history = true
+    show_plots = true
 
 
     ########################
@@ -42,16 +40,16 @@ function main()
     ########################
 
     # Hdiv-conforming FE
-    #fem = "RT0"
-    #fem = "RT1"
-    fem = "BDM1"
+    #fem = "RT0"; expectedorder = 1
+    fem = "RT1"; expectedorder = 2
+    #fem = "BDM1"; expectedorder = 2
 
     # H1-conforming FE
-    #fem = "CR"
-    #fem = "MINI"
-    #fem = "P2"
-    #fem = "P2B"
-    #fem = "BR"
+    #fem = "CR"; expectedorder = 2
+    #fem = "MINI"; expectedorder = 2
+    #fem = "P2"; expectedorder = 3
+    #fem = "P2B"; expectedorder = 3
+    #fem = "BR"; expectedorder = 2
 
     # load problem data
     PD, exact_velocity! = getProblemData(polynomial_order, 1.0, false, 1);
@@ -93,43 +91,57 @@ function main()
         computeBestApproximation!(val4dofs,"L2",exact_velocity!,exact_velocity!,FE,polynomial_order + FiniteElements.get_polynomial_order(FE))
 
         # compute error of Hdiv best-approximation
-        integral4cells = zeros(size(grid.nodes4cells,1),2);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!, val4dofs, FE), grid, 2*polynomial_order, 2);
-        L2error_velocity[level] = sqrt(abs(sum(integral4cells[:])));
+        L2error_velocity[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_velocity!,FE ,val4dofs; degreeF = polynomial_order, factorA = -1.0))
 
     end # loop over levels
 
     println("\n L2 error");
     show(L2error_velocity)
 
-    #plot
+    # plot
     if (show_plots)
-        pygui(true)
-        
-        # evaluate at grid points
+        frame=VTKView.StaticFrame()
+        clear!(frame)
+        layout!(frame,3,1)
+        size!(frame,1500,500)
+
+        # grid view
+        frametitle!(frame,"    final grid     |  discrete solution | error convergence history")
+        dataset=VTKView.DataSet()
+        VTKView.simplexgrid!(dataset,Array{Float64,2}(grid.coords4nodes'),Array{Int32,2}(grid.nodes4cells'))
+        gridview=VTKView.GridView()
+        data!(gridview,dataset)
+        addview!(frame,gridview,1)
+
+        # scalar view
+        scalarview=VTKView.ScalarView()
         velo = FESolveCommon.eval_at_nodes(val4dofs,FE);
+        speed = sqrt.(sum(velo.^2, dims = 2))
+        pointscalar!(dataset,speed[:],"|U|")
+        data!(scalarview,dataset,"|U|")
+        addview!(frame,scalarview,2)
         
-        PyPlot.figure(1)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,1),cmap=get_cmap("ocean"))
-        PyPlot.title("component 1")
-        PyPlot.figure(2)
-        PyPlot.plot_trisurf(view(grid.coords4nodes,:,1),view(grid.coords4nodes,:,2),view(velo,:,2),cmap=get_cmap("ocean"))
-        PyPlot.title("component 2")
-        show()
-    end
+        vectorview=VTKView.VectorView()
+        pointvector!(dataset,Array{Float64,2}(velo'),"U")
+        data!(vectorview,dataset,"U")
+        quiver!(vectorview,10,10)
+        addview!(frame,vectorview,2)
 
-    if (show_convergence_history)
-        PyPlot.figure()
-        PyPlot.loglog(ndofs[1:maxlevel],L2error_velocity[1:maxlevel],"-o")
-        PyPlot.loglog(ndofs,ndofs.^(-1/2),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-1),"--",color = "gray")
-        PyPlot.loglog(ndofs,ndofs.^(-3/2),"--",color = "gray")
-        PyPlot.legend(("L2 error","O(h)","O(h^2)","O(h^3)"))
-        PyPlot.title("Convergence history (fem=" * fem * ")")
-        ax = PyPlot.gca()
-        ax.grid(true)
+        # XY plot
+        plot=VTKView.XYPlot()
+        addview!(frame,plot,3)
+        clear!(plot)
+        plotlegend!(plot,"L2 error ($fem)")
+        plotcolor!(plot,1,0,0)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_velocity[1:maxlevel]))
+
+        plotlegend!(plot,"O(h^$expectedorder)")
+        plotcolor!(plot,0.67,0.67,0.67)
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorder/2))))
+        
+        # show
+        display(frame)
     end    
-
         
 end
 

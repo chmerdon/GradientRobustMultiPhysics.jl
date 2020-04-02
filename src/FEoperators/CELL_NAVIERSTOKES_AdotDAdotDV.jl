@@ -39,7 +39,7 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_AdotDAdotDV}, FEA::Abstra
 
             # compute a in quadrature point
             fill!(a4qp,0.0)
-            for k = 1 : FEbasis.xdim
+            for k = 1 : FEbasisA.xdim
                 for dof_i = 1 : FEbasisA.ndofs4item
                     a4qp[k] += dofs4aA[FEbasisA.current_dofs[dof_i]] * basisvalsA[dof_i,k];
                 end
@@ -49,8 +49,8 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_AdotDAdotDV}, FEA::Abstra
             fill!(agrada,0.0)
 
             for dof_i = 1 : FEbasisU.ndofs4item
-                for k = 1 : FEbasis.xdim
-                    for c = 1 : ncomponents
+                for k = 1 : FEbasisU.xdim
+                    for c = 1 : FEbasisA.ncomponents
                         agrada[k] += a4qp[c] * dofs4aU[FEbasisU.current_dofs[dof_i]] * gradientsU[dof_i,c+FEbasisU.offsets[k]]
                     end
                 end    
@@ -58,7 +58,7 @@ function assemble_operator!(b,::Type{CELL_NAVIERSTOKES_AdotDAdotDV}, FEA::Abstra
                 
             for dof_j = 1 : FEbasisV.ndofs4item
                 temp = 0.0;
-                for k = 1 : FEbasis.xdim
+                for k = 1 : FEbasisV.xdim
                     temp += agrada[k] * basisvalsV[dof_j,k];
                 end
                 temp *= qf.w[i] * FEU.grid.volume4cells[cell]

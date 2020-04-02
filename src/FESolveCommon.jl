@@ -31,12 +31,14 @@ include("FEoperators/CELL_FdotDUdotV.jl")
 include("FEoperators/CELL_FdotV.jl");
 include("FEoperators/CELL_FdotDIVV.jl");
 include("FEoperators/CELL_FdotDV.jl");
+include("FEoperators/CELL_L2_FplusA.jl");
 include("FEoperators/CELL_L2_FplusLA.jl");
 include("FEoperators/CELL_L2_FplusDIVA.jl");
 include("FEoperators/CELL_L2_CURLA.jl");
 
 # LINEAR FUNCTIONALS on full domain
 include("FEoperators/DOMAIN_1dotV.jl");
+include("FEoperators/DOMAIN_L2_FplusA.jl");
 
 # LINEAR FUNCTIONALS on (boundary) faces
 include("FEoperators/BFACE_FdotV.jl");
@@ -292,102 +294,6 @@ function computeFEInterpolation!(val4dofs::Array,source_function!::Function,FE::
             for d = 1 : FiniteElements.get_ncomponents(FE)
                 val4dofs[dofs] += (InterpolationMatrix[d][i,:].*coefficients[:,d])*temp[d];
             end    
-        end    
-    end
-end
-
-
-function eval_FEfunction(coeffs, FE::AbstractH1FiniteElement)
-    ncomponents = FiniteElements.get_ncomponents(FE);
-    ET = FE.grid.elemtypes[1];
-    ndofs4cell = FiniteElements.get_ndofs4elemtype(FE, ET);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
-    dofs = zeros(Int64,ndofs4cell)
-    coefficients = zeros(Float64,ndofs4cell,ncomponents)
-    function closure(result, x, xref, cell)
-        fill!(result,0.0)
-
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs,FE,cell,ET)
-
-        # get coefficients
-        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET)
-
-        for j = 1 : ndofs4cell
-            for k = 1 : ncomponents;
-                result[k] += basisvals[j,k] * coeffs[dofs[j]] * coefficients[j,k];
-            end    
-        end    
-    end
-end
-
-function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE::AbstractH1FiniteElement)
-    ncomponents = FiniteElements.get_ncomponents(FE);
-    ET = FE.grid.elemtypes[1]
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
-    coefficients = zeros(Float64,ndofs4cell,ncomponents);
-    dofs = zeros(Int64,ndofs4cell)
-    function closure(result, x, xref, cell)
-        # evaluate exact function
-        exact_function!(result, x);
-
-        # evaluate FE functions
-        basisvals = FiniteElements.get_basis_on_cell(FE, ET)(xref)
-
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cell, ET);
-
-        # get coefficients
-        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cell, ET);
-
-        for j = 1 : ndofs4cell
-            for k = 1 : ncomponents;
-                result[k] -= basisvals[j,k] * coeffs_interpolation[dofs[j]] * coefficients[j,k];
-            end    
-        end   
-        # square for L2 norm
-        for j = 1 : length(result)
-            result[j] = result[j]^2
-        end    
-    end
-end
-
-
-function eval_L2_interpolation_error!(exact_function!, coeffs_interpolation, FE::AbstractHdivFiniteElement)
-    ncomponents = FiniteElements.get_ncomponents(FE);
-    ET = FE.grid.elemtypes[1]
-    ndofs4cell::Int = FiniteElements.get_ndofs4elemtype(FE, ET);
-    basisvals = zeros(eltype(FE.grid.coords4nodes),ndofs4cell,ncomponents)
-    coefficients = zeros(Float64,ndofs4cell,ncomponents);
-    AT = zeros(Float64,2,2)
-    get_Piola_trafo_on_cell! = Grid.local2global_Piola(FE.grid, ET)
-    det = 0.0;
-    dofs = zeros(Int64,ndofs4cell)
-    function closure(result, x, xref, cellIndex)
-        # evaluate exact function
-        exact_function!(result, x);
-        
-        # subtract nodal interpolation
-        det = get_Piola_trafo_on_cell!(AT,cellIndex);
-        basisvals[:] = FiniteElements.get_basis_on_cell(FE, ET)(xref)
-
-        # get dofs
-        FiniteElements.get_dofs_on_cell!(dofs, FE, cellIndex, ET)
-
-        # get coefficients
-        FiniteElements.get_basis_coefficients_on_cell!(coefficients, FE, cellIndex, ET)
-
-        for j = 1 : ndofs4cell
-            for k = 1 : ncomponents
-                for l = 1: ncomponents
-                    result[k] -= AT[k,l] * basisvals[j,l] * coeffs_interpolation[dofs[j]] * coefficients[j,k] / det;
-                end    
-            end    
-        end   
-        # square for L2 norm
-        for j = 1 : length(result)
-            result[j] = result[j]^2
         end    
     end
 end

@@ -103,12 +103,9 @@ function main()
                 residual = solveStokesProblem!(val4dofs,PD,FE_velocity,FE_pressure, reconst_variant = use_reconstruction[r]);
 
                 # compute errors
-                integral4cells = zeros(size(grid.nodes4cells,1),1);
-                integrate!(integral4cells,eval_L2_interpolation_error!(exact_pressure!, val4dofs[ndofs_velocity+1:end], FE_pressure), grid, 2, 1);
-                L2error_pressure[level,n,r] = sqrt(abs(sum(integral4cells)));
-                integral4cells = zeros(size(grid.nodes4cells,1),2);
-                integrate!(integral4cells,eval_L2_interpolation_error!(exact_velocity!, val4dofs[1:ndofs_velocity], FE_velocity), grid, 4, 2);
-                L2error_velocity[level,n,r] = sqrt(abs(sum(integral4cells[:])));
+                L2error_pressure[level,n,r] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_pressure!,FE_pressure ,val4dofs[ndofs_velocity+1:end]; degreeF = 3, factorA = -1.0))
+                L2error_velocity[level,n,r] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_velocity!,FE_velocity ,val4dofs; degreeF = 7, factorA = -1.0))
+
 
             end # loop over reconstruction
         end # loop over levels

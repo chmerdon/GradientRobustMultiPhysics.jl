@@ -105,12 +105,9 @@ function main()
         residual = computeBestApproximation!(val4dofsBA,"L2",exact_gradient!,exact_gradient!,FE_stress, 3)
 
         # compute errors
-        integral4cells = zeros(size(grid.nodes4cells,1),2);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_gradient!, val4dofs, FE_stress), grid, 6, 2);
-        L2error[level] = sqrt(abs(sum(integral4cells)));
+        L2error[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_gradient!,FE_stress,val4dofs; degreeF = 3, factorA = -1.0))
         println("L2_error = " * string(L2error[level]));
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_gradient!, val4dofsBA, FE_stress), grid, 6, 2);
-        L2errorBA[level] = sqrt(abs(sum(integral4cells)));
+        L2errorBA[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_gradient!,FE_stress,val4dofsBA; degreeF = 3, factorA = -1.0))
         println("L2_error_BA = " * string(L2errorBA[level]));
 
         # compute L2 error estimator

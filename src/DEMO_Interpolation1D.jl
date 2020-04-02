@@ -44,11 +44,8 @@ function main()
     #polynomial_coefficients = [0, 1.0]   # linear
     #polynomial_coefficients = [1.0, 0]   # constant
     
-
-
-    # load problem data
+    # generate problem data (Poisson data is used just to get exact_solution!)
     PD, exact_solution! = getProblemData(polynomial_coefficients);
-    FESolvePoisson.show(PD);
 
     # generate grid
     grid = gridgen_unitinterval(2.0^(-reflevel))
@@ -59,14 +56,13 @@ function main()
     FiniteElements.show(FE)
     ndofs = FiniteElements.get_ndofs(FE);
 
+    # interpolate
     println("Interpolating...");    
     val4dofs = FiniteElements.createFEVector(FE);
     computeFEInterpolation!(val4dofs, exact_solution!, FE);
 
     # compute interpolation error
-    integral4cells = zeros(size(grid.nodes4cells,1),1);
-    integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE), grid, 2*length(polynomial_coefficients), 1);
-    L2error = sqrt(abs(sum(integral4cells)));
+    L2error = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_solution!,FE,val4dofs; degreeF = length(polynomial_coefficients)-1, factorA = -1.0))
     println("L2_interpolation_error = " * string(L2error));
     
     # plot
@@ -77,7 +73,6 @@ function main()
         size!(frame,1000,500)
         frametitle!(frame,"interpolation vs. exact")
         
-
         # XY solution plot
         plot=VTKView.XYPlot()
         addview!(frame,plot,1)
@@ -106,8 +101,6 @@ function main()
         # show
         display(frame)
     end    
-
-
 end
 
 

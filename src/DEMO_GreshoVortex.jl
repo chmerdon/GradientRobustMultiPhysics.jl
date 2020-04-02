@@ -13,6 +13,8 @@
 using Triangulate
 using Grid
 using Quadrature
+using LinearAlgebra
+using ExtendableSparse
 using FiniteElements
 using FESolveCommon
 using FESolveStokes
@@ -32,7 +34,6 @@ function main()
     final_time = 0.2
     nonlinear = true
     timesteps::Int64 = floor(final_time / dt)
-    energy_computation_gaps = 1
     u_order = 10
     error_order = 10
 
@@ -137,23 +138,18 @@ function main()
         display(frame)
     end    
 
-    
+    # compute mass matrix for energy calculation
+    MassMatrix = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs) # +1 due to Lagrange multiplier for integral mean    
+    FESolveCommon.assemble_operator!(MassMatrix,FESolveCommon.CELL_UdotV,FE_velocity)
+    ExtendableSparse.flush!(MassMatrix)
 
     for j = 0 : timesteps
-        if mod(j,energy_computation_gaps) == 0
-            append!(energy_times,TSS[1].current_time)
-        end
-
+        append!(energy_times,TSS[1].current_time)
+    
         for k = 1 : length(use_reconstruction)
             
-            if mod(j,energy_computation_gaps) == 0
-                println("computing errors")
-                # compute errors
-                integral4cells = zeros(size(grid.nodes4cells,1),1);
-                integral4cells = zeros(size(grid.nodes4cells,1),2);
-                integrate!(integral4cells,eval_L2_interpolation_error!(zero_data!, val4dofs[k][1:ndofs_velocity], FE_velocity), grid, error_order, 2);
-                append!(velocity_energy[k],sqrt(abs(sum(integral4cells[:]))));
-            end    
+            # compute errors
+            append!(velocity_energy[k],sqrt.(sum(val4dofs[k].*(MassMatrix.cscmatrix*val4dofs[k]), dims = 1)))
 
             if nonlinear == false
                 FESolveStokes.PerformTimeStep(TSS[k],dt)
@@ -175,13 +171,11 @@ function main()
                     data!(vectorview[k],dataset,"U" * string(use_reconstruction[k]))
                     quiver!(vectorview[k],10,10)
 
-                    if mod(j,energy_computation_gaps) == 0
-                        clear!(xyplot)
-                        for k = 1 : length(use_reconstruction)
-                            plotlegend!(xyplot,"Energy ( " * string(use_reconstruction[k]) * ")")
-                            plotcolor!(xyplot,(k == 1) ? 1 : 0,(k == 2) ? 1 : 0,(k == 3) ? 1 : 0)
-                            addplot!(xyplot,Array{Float64,1}(energy_times[:]),velocity_energy[k][:])
-                        end     
+                    clear!(xyplot)
+                    for k = 1 : length(use_reconstruction)
+                        plotlegend!(xyplot,"Energy ( " * string(use_reconstruction[k]) * ")")
+                        plotcolor!(xyplot,(k == 1) ? 1 : 0,(k == 2) ? 1 : 0,(k == 3) ? 1 : 0)
+                        addplot!(xyplot,Array{Float64,1}(energy_times[:]),velocity_energy[k][:]) 
                     end
                 end    
 

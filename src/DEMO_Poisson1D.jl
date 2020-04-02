@@ -91,12 +91,9 @@ function main()
         residual = computeBestApproximation!(val4dofsBA,"L2",exact_solution!,exact_solution!,FE,length(polynomial_coefficients) + FiniteElements.get_polynomial_order(FE))
 
         # compute errors
-        integral4cells = zeros(size(grid.nodes4cells,1),1);
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofs, FE), grid, 2*length(polynomial_coefficients), 1);
-        L2error[level] = sqrt(abs(sum(integral4cells)));
+        L2error[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_solution!,FE,val4dofs; degreeF = length(polynomial_coefficients)-1, factorA = -1.0))
         println("L2_error = " * string(L2error[level]));
-        integrate!(integral4cells,eval_L2_interpolation_error!(exact_solution!, val4dofsBA, FE), grid, 2*length(polynomial_coefficients), 1);
-        L2errorBA[level] = sqrt(abs(sum(integral4cells)));
+        L2errorBA[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_solution!,FE,val4dofsBA; degreeF = length(polynomial_coefficients)-1, factorA = -1.0))
         println("L2_error_BA = " * string(L2errorBA[level]));
 
     end
