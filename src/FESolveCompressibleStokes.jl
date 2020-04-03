@@ -61,9 +61,8 @@ mutable struct CompressibleStokesSolver
     FE_velocity::AbstractFiniteElement
     FE_densitypressure::AbstractFiniteElement
     FE_reconst::AbstractFiniteElement
-    GradGradMatrix::ExtendableSparseMatrix
+    EpsEpsMatrix::ExtendableSparseMatrix
     DivPressureMatrix::ExtendableSparseMatrix
-    DivDivMatrix::ExtendableSparseMatrix
     GravityMatrix::ExtendableSparseMatrix
     ReconstMatrix::ExtendableSparseMatrix
     ReconstMassMatrix::ExtendableSparseMatrix
@@ -124,10 +123,12 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         A = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
         B = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
         if PD.use_symmetric_gradient
-            FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_EPSUdotEPSV,FE_velocity, 2*PD.shear_modulus);
+            FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_CEPSUdotEPSV,FE_velocity, PD.shear_modulus, PD.lambda);
         else
             FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_DUdotDV,FE_velocity, 2*PD.shear_modulus);
+            FESolveCommon.assemble_operator!(A,FESolveCommon.CELL_DIVUdotDIVV,FE_velocity,PD.lambda);
         end    
+        ExtendableSparse.flush!(A)
         FESolveCommon.assemble_operator!(B,FESolveCommon.CELL_UdotDIVV,FE_densitypressure,FE_velocity);
         println("finished")
 
@@ -155,22 +156,22 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         end    
         println("finished")
         
-        if reconst_variant > 0
-            # gradient-robust version uses discrete divergence
-            # DivhDivh matrix can be computed by B' * Mp^{-1} * B
-            # (where Mp luckily is a diagonal matrixfor P0 densities)
-            print("    |assembling DivhDivh matrix...")
-            D = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
-            ExtendableSparse.flush!(B)
-            ExtendableSparse.flush!(Mp)
-            D.cscmatrix = B.cscmatrix*spdiagm(0 => 1.0./diag(Mp))*B.cscmatrix'
-            println("finished")
-        else
-            print("    |assembling DivDiv matrix...")
-            D = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
-            FESolveCommon.assemble_operator!(D,FESolveCommon.CELL_DIVUdotDIVV,FE_velocity,PD.lambda);
-            println("finished")
-        end    
+        #if reconst_variant > 0
+        #    # gradient-robust version uses discrete divergence
+        #    # DivhDivh matrix can be computed by B' * Mp^{-1} * B
+        #    # (where Mp luckily is a diagonal matrixfor P0 densities)
+        #    print("    |assembling DivhDivh matrix...")
+        #    D = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
+        #    ExtendableSparse.flush!(B)
+        #    ExtendableSparse.flush!(Mp)
+        #    D.cscmatrix = B.cscmatrix*spdiagm(0 => 1.0./diag(Mp))*B.cscmatrix'
+        #    println("finished")
+        #else
+        #    print("    |assembling DivDiv matrix...")
+        #    D = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_velocity)
+        #    
+        #    println("finished")
+        #end    
 
     end
         
@@ -250,7 +251,7 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     rhsvectorD = zeros(Float64,ndofs_densitypressure)
     SystemMatrixD = ExtendableSparseMatrix{Float64,Int64}(ndofs_densitypressure,ndofs_densitypressure)
     fluxes = zeros(Float64,nfaces)
-    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,FE_Reconstruction,A,B,D,G,T,MvR,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,velocity,density,pressure,0.0,0,-999,SystemMatrixV,SystemMatrixD,fluxes,rhsvectorV,rhsvectorD)
+    return CompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,FE_Reconstruction,A,B,G,T,MvR,Mp,bdofs,dirichlet_penalty,b,NFM,initial_velocity,initial_density,velocity,density,pressure,0.0,0,-999,SystemMatrixV,SystemMatrixD,fluxes,rhsvectorV,rhsvectorD)
 end
 
 function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
@@ -346,10 +347,7 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
         CSS.rhsvectorV += CSS.datavector
 
         # complete SystemMatrixV
-        ExtendableSparse.flush!(CSS.GradGradMatrix)
-        CSS.SystemMatrixV.cscmatrix += CSS.GradGradMatrix.cscmatrix
-        ExtendableSparse.flush!(CSS.DivDivMatrix)
-        CSS.SystemMatrixV.cscmatrix += CSS.DivDivMatrix.cscmatrix
+        CSS.SystemMatrixV.cscmatrix += CSS.EpsEpsMatrix.cscmatrix
         ExtendableSparse.flush!(CSS.SystemMatrixV)
 
         # add pressure gradient (of eqs'ed density) to rhs
