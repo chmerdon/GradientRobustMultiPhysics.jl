@@ -43,7 +43,10 @@ function main()
     ########################
 
     #fem = "CR"; expectedorder = 1
-    fem = "P1"; expectedorder = 1
+    #fem = "P1"; expectedorder = 1
+    #fem = "P2"; expectedorder = 2
+    #fem = ["CR","P1"]; expectedorder = 1 # Kouhia-Stenberg composite
+    fem = ["P1","CR"]; expectedorder = 1 # Kouhia-Stenberg composite
 
 
     # load problem data
@@ -58,7 +61,11 @@ function main()
     Grid.show(grid)
 
     # load finite element
-    FE = FiniteElements.string2FE(fem,grid,2,2)
+    if typeof(fem) == Array{String,1}
+        FE = FiniteElements.string2FE(fem,grid,2)
+    else
+        FE = FiniteElements.string2FE(fem,grid,2,2)
+    end    
     FiniteElements.show(FE)
 
     # solve elasticity problem
@@ -73,7 +80,7 @@ function main()
         size!(frame,1500,500)
 
         # grid view
-        frametitle!(frame,"    final grid   |     discrete solution     |     displacement     ")
+        frametitle!(frame,"        grid            |      discrete solution      |       grid+displacement  ")
         dataset=VTKView.DataSet()
         VTKView.simplexgrid!(dataset,Array{Float64,2}(grid.coords4nodes'),Array{Int32,2}(grid.nodes4cells'))
         gridview=VTKView.GridView()

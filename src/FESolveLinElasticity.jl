@@ -97,7 +97,6 @@ function solveLinElasticityProblem!(val4dofs::Array, PD::ElasticityProblemDescri
         println("     ...finished")
     end
 
-    
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;
        b[bdofs[i]] = val4dofs[bdofs[i]]*dirichlet_penalty;

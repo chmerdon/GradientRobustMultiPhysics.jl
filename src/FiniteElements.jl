@@ -63,6 +63,8 @@ abstract type AbstractFiniteElement end
     # TODO
 
 
+    
+
 # basis function updates on cells and faces (to multiply e.g. by normal vector or reconstruction coefficients etc.)
 function get_basis_coefficients_on_cell!(coefficients, FE::AbstractFiniteElement, cell::Int64, ::Grid.AbstractElemType)
     # default is one, replace if needed for special FE
@@ -157,6 +159,9 @@ function string2FE(fem::String, grid::Grid.Mesh, dim::Int, ncomponents::Int = 1)
         FE = FiniteElements.getBDM1FiniteElement(grid);
     end    
 end
+
+# composite Finite elements (every component is a different FE)
+include("FEdefinitions/COMPOSITE.jl");
 
 # creates a zero vector of the correct length for the FE
 function createFEVector(FE::AbstractFiniteElement)

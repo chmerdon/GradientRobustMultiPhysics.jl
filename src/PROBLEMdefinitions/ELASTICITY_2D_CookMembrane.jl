@@ -32,8 +32,10 @@ function getProblemData(shear_modulus = 1.0, lambda = 1.0)
     # top/bottom boundary (homogeneous Neumann)
     PD.boundarydata4bregion[2] = zero_data!
     PD.boundarytype4bregion[2] = 2
+    PD.quadorder4bregion[2] = -1 # can be skipped in solver
     PD.boundarydata4bregion[4] = zero_data!
     PD.boundarytype4bregion[4] = 2
+    PD.quadorder4bregion[4] = -1 # can be skipped in solver
     
     return PD
 end
