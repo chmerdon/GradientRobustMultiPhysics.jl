@@ -10,7 +10,7 @@ function string2FE(FElabels::Array{String,1}, grid::Grid.Mesh, dim::Int)
     FEs = Array{AbstractH1FiniteElement,1}(undef,length(FElabels))
     label::String = ""
     maxpolyorder::Int64 = 0
-    ndofs = zeros(Int64,length(FElabels))
+    ndofs = zeros(Int64,length(FElabels)+1)
     for j=1:length(FElabels)
         FEs[j] = string2FE(FElabels[j], grid, dim, 1)
         pos = findfirst(isequal(' '), FEs[j].name)
@@ -19,7 +19,7 @@ function string2FE(FElabels::Array{String,1}, grid::Grid.Mesh, dim::Int)
             label *= " x "
         end    
         maxpolyorder = max(maxpolyorder,get_polynomial_order(FEs[j]));
-        ndofs[j] = get_ndofs(FEs[j])
+        ndofs[j+1] = ndofs[j] + get_ndofs(FEs[j])
     end
     label *= " (H1CompositeFiniteElement, dim=$dim)"
     return H1CompositeFiniteElement(label,grid,FEs,maxpolyorder,ndofs)
@@ -33,14 +33,14 @@ function get_xref4dof(CFE::H1CompositeFiniteElement, ET::Grid.AbstractElemType)
         append!(xref,xref_add)
         append!(InterpolationMatrix,Interpolationmatrix_add)
     end    
-    return xref, [sparse(I,3,3)]
+    return xref, InterpolationMatrix
 end    
 
 # POLYNOMIAL ORDER
 get_polynomial_order(CFE::H1CompositeFiniteElement) = CFE.maxpoly_order;
 
 # TOTAL NUMBER OF DOFS
-get_ndofs(CFE::H1CompositeFiniteElement) = sum(CFE.ndofs);
+get_ndofs(CFE::H1CompositeFiniteElement) = CFE.ndofs[end];
 
 # NUMBER OF DOFS ON ELEMTYPE
 function get_ndofs4elemtype(CFE::H1CompositeFiniteElement, ET::Grid.AbstractElemType)
@@ -59,14 +59,11 @@ get_ncomponents(CFE::H1CompositeFiniteElement) = length(CFE.FEs);
 function get_dofs_on_cell!(dofs, CFE::H1CompositeFiniteElement, cell::Int64, ET::Grid.AbstractElemType)
     ndofs::Int64 = 0
     offset::Int64 = 0
-    offset2::Int64 = 0
     for j=1:length(CFE.FEs)
         ndofs = get_ndofs4elemtype(CFE.FEs[j], ET)
-        dofs_j = zeros(Int64,ndofs)
-        get_dofs_on_cell!(dofs_j,CFE.FEs[j],cell,ET)
-        dofs[offset+1:offset+ndofs] = dofs_j[:] .+ offset2
+        get_dofs_on_cell!(view(dofs,offset+1:offset+ndofs),CFE.FEs[j],cell,ET)
+        dofs[offset+1:offset+ndofs] .+= CFE.ndofs[j]
         offset += ndofs
-        offset2 += CFE.ndofs[j]
     end
 end
 
@@ -74,14 +71,11 @@ end
 function get_dofs_on_face!(dofs,CFE::H1CompositeFiniteElement, face::Int64, ET::Grid.AbstractElemType)
     ndofs::Int64 = 0
     offset::Int64 = 0
-    offset2::Int64 = 0
     for j=1:length(CFE.FEs)
         ndofs = get_ndofs4elemtype(CFE.FEs[j], ET)
-        dofs_j = zeros(Int64,ndofs)
-        get_dofs_on_face!(dofs_j,CFE.FEs[j],face,ET)
-        dofs[offset+1:offset+ndofs] = dofs_j[:].+ offset2
+        get_dofs_on_face!(view(dofs,offset+1:offset+ndofs),CFE.FEs[j],face,ET)
+        dofs[offset+1:offset+ndofs] .+= CFE.ndofs[j]
         offset += ndofs
-        offset2 += CFE.ndofs[j]
     end
 end
 
@@ -89,9 +83,10 @@ end
 function get_basis_on_cell(CFE::H1CompositeFiniteElement, ET::Grid.AbstractElemType)
     ndofs::Int64 = get_ndofs4elemtype(CFE, ET)
     basis = zeros(Real,ndofs,length(CFE.FEs))
+    offset::Int64 = 0
     function closure(xref)
         ndofs = 0
-        offset::Int64 = 0
+        offset = 0
         for j=1:length(CFE.FEs)
             ndofs = get_ndofs4elemtype(CFE.FEs[j], ET)
             basis[offset+1:offset+ndofs,j] = get_basis_on_cell(CFE.FEs[j],ET)(xref)
@@ -103,10 +98,11 @@ end
 
 function get_basis_on_face(CFE::H1CompositeFiniteElement, ET::Grid.AbstractElemType)
     ndofs::Int64 = get_ndofs4elemtype(CFE, ET)
+    offset::Int64 = 0
     basis = zeros(Real,ndofs,length(CFE.FEs))
     function closure(xref)
         ndofs = 0
-        offset::Int64 = 0
+        offset = 0
         for j=1:length(CFE.FEs)
             ndofs = get_ndofs4elemtype(CFE.FEs[j], ET)
             basis[offset+1:offset+ndofs,j] = get_basis_on_face(CFE.FEs[j],ET)(xref)

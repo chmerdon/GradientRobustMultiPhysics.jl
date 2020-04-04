@@ -5,59 +5,47 @@
 # solves Cook's membrane test problem
 #
 # demonstrates:
-#   - convergence rates of implemented finite element methods
-#   - multiple boundary conditions (Dirichlet, do-nothing, symmetry boundary)
+#   - locking of P1-element for nu=0.4999 (bends not as high as other elements)
+#   - composite finite elements (Kouhia-Stenberg P1xCR, CRxP1)
 #
 
-using Triangulate
-using Grid
-using Quadrature
-using FiniteElements
-using FESolveCommon
-using FESolveLinElasticity
-using VTKView
+using Triangulate # third-party; for mesh generation
+using Grid # for storing mesh data
+using FiniteElements # for handling finite element
+using FESolveCommon # contains basic stuff like best approximations, interpolations
+using FESolveLinElasticity # contains solver for linear elasticity
+using VTKView # third-party, for plotting
 
 # load problem data and common grid generator
 include("PROBLEMdefinitions/GRID_CookMembrane.jl")
 include("PROBLEMdefinitions/ELASTICITY_2D_CookMembrane.jl");
 
-
 function main()
 
-    # problem modification switches
-    E = 100000 # elasticity modulus
-    nu = 0.4 # Poisson number
-    lambda = (nu/(1-2*nu))*(1/(1+nu))*E
-    shear_modulus = (1/(1+nu))*E
-    factor_plotdisplacement = 5.0
-
-    # refinement termination criterions
-    reflevel = 3
-
-    # other switches
-    show_plots = true
-
+    # problem parameters
+    elasticity_modulus = 100000 # elasticity modulus
+    poisson_number = 0.4999 # Poisson number
+    shear_modulus = (1/(1+poisson_number))*elasticity_modulus
+    lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
+    reflevel = 3 # refinement level of Cook membrane
+    show_plots = true # plot grid and displacement?
+    factor_plotdisplacement = 10.0 # scaling of displacement in deformed grid plot
 
     ########################
     ### CHOOSE FEM BELOW ###
     ########################
 
-    #fem = "CR"; expectedorder = 1
     #fem = "P1"; expectedorder = 1
     #fem = "P2"; expectedorder = 2
-    #fem = ["CR","P1"]; expectedorder = 1 # Kouhia-Stenberg composite
-    fem = ["P1","CR"]; expectedorder = 1 # Kouhia-Stenberg composite
-
+    fem = ["CR","P1"]; expectedorder = 1 # Kouhia-Stenberg composite
+    #fem = ["P1","CR"]; expectedorder = 1 # Kouhia-Stenberg composite
 
     # load problem data
     PD = getProblemData(shear_modulus, lambda);
-
     FESolveLinElasticity.show(PD);
 
-    println("Solving linear elasticity problem on refinement level...", reflevel);
-    println("Generating grid by triangle...");
-    maxarea = 4.0^(-reflevel+4)
-    grid = gridgen_cookmembrane(maxarea)
+    # load grid
+    grid = gridgen_cookmembrane(4.0^(-reflevel+4))
     Grid.show(grid)
 
     # load finite element
@@ -72,6 +60,8 @@ function main()
     val4dofs = FiniteElements.createFEVector(FE)
     residual = solveLinElasticityProblem!(val4dofs,PD,FE);
     
+
+
     # plot
     if (show_plots)
         frame=VTKView.StaticFrame()
