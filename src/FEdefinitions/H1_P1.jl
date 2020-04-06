@@ -34,6 +34,14 @@ function get_xref4dof(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemT
     xref[3] = Array{Int64,1}([0, 1])
     return xref, [sparse(I,3,3)]
 end    
+function get_xref4dof(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DParallelogram) 
+    xref = Array{Array{Int64,1},1}(undef,4)
+    xref[1] = Array{Int64,1}([0, 0])
+    xref[2] = Array{Int64,1}([1, 0])
+    xref[3] = Array{Int64,1}([1, 1])
+    xref[4] = Array{Int64,1}([0, 1])
+    return xref, [sparse(I,4,4)]
+end    
 function get_xref4dof(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) 
     xref = Array{Array{Int64,1},1}(undef,6)
     xref[1] = Array{Int64,1}([0, 0])
@@ -54,27 +62,23 @@ get_ndofs(FE::H1P1FiniteElement{T,2} where {T <: Real}) = 2*size(FE.grid.coords4
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.Grid.Abstract0DElemType) = 1
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract1DElemType) = 2
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DTriangle) = 3
+get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DParallelogram) = 4
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.Grid.Abstract0DElemType) = 2
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.Abstract1DElemType) = 4
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) = 6
+get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DParallelogram) = 8
 
 # NUMBER OF COMPONENTS
 get_ncomponents(FE::H1P1FiniteElement{T,1} where {T <: Real}) = 1
 get_ncomponents(FE::H1P1FiniteElement{T,2} where {T <: Real}) = 2
 
 # LOCAL DOF TO GLOBAL DOF ON CELL
-function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, cell::Int64, ::Grid.Grid.Abstract0DElemType)
-    dofs[:] = FE.grid.nodes4cells[cell,1]
-end
-function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, cell::Int64, ::Grid.Abstract1DElemType)
+function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, cell::Int64, ::Grid.AbstractElemType)
     dofs[:] = FE.grid.nodes4cells[cell,:]
 end
 function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.Abstract1DElemType)
     dofs[1:2] = FE.grid.nodes4cells[cell,:]
     dofs[3:4] = size(FE.grid.coords4nodes,1) .+ dofs[1:2]
-end
-function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, cell::Int64, ::Grid.ElemType2DTriangle)
-    dofs[:] = FE.grid.nodes4cells[cell,:]
 end
 function get_dofs_on_cell!(dofs,FE::H1P1FiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.ElemType2DTriangle)
     dofs[1:3] = FE.grid.nodes4cells[cell,:]
@@ -84,12 +88,12 @@ end
 function get_dofs_on_face!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, face::Int64, ::Grid.Grid.Abstract0DElemType)
     dofs[1] = FE.grid.nodes4faces[face,1]
 end
+function get_dofs_on_face!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, face::Int64, ::Grid.Abstract1DElemType)
+    dofs[:] = FE.grid.nodes4faces[face,:]
+end
 function get_dofs_on_face!(dofs,FE::H1P1FiniteElement{T,2} where {T <: Real}, face::Int64, ::Grid.Grid.Abstract0DElemType)
     dofs[1] = FE.grid.nodes4faces[face,1]
     dofs[2] = size(FE.grid.coords4nodes,1) + dofs[1]
-end
-function get_dofs_on_face!(dofs,FE::H1P1FiniteElement{T,1} where {T <: Real}, face::Int64, ::Grid.Abstract1DElemType)
-    dofs[:] = FE.grid.nodes4faces[face,:]
 end
 function get_dofs_on_face!(dofs,FE::H1P1FiniteElement{T,2} where {T <: Real}, face::Int64, ::Grid.Abstract1DElemType)
     dofs[1:2] = FE.grid.nodes4faces[face,:]
@@ -125,6 +129,19 @@ function get_basis_on_cell(FE::H1P1FiniteElement{T,2} where T <: Real, ::Grid.Ab
                 xref[1] 0.0;
                 0.0 temp;
                 0.0 xref[1]]
+    end
+end
+
+function get_basis_on_cell(FE::H1P1FiniteElement{T,1} where T <: Real, ::Grid.ElemType2DParallelogram)
+    a = 0.0;
+    b = 0.0;
+    function closure(xref)
+        a = 1 - xref[1]
+        b = 1 - xref[2]
+        return [a*b,
+                xref[1]*b,
+                xref[1]*xref[2],
+                xref[2]*a]
     end
 end
 

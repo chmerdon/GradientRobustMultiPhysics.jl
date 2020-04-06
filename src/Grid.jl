@@ -41,6 +41,7 @@ end
   # subtype for elem types that require 2D integration
   abstract type Abstract2DElemType <: AbstractElemType end
     include("GRIDelemtypes/2D_triangle.jl");
+    include("GRIDelemtypes/2D_parallelogram.jl");
 
   # subtype for elem types that require 3D integration
   abstract type Abstract3DElemType <: AbstractElemType end
@@ -99,36 +100,44 @@ function ensure_length4faces!(Grid::Mesh)
 end  
 
 function ensure_volume4cells!(Grid::Mesh)
-    celldim = size(Grid.nodes4cells,2) - 1;
     ncells::Int = size(Grid.nodes4cells,1);
     if size(Grid.volume4cells,1) != size(ncells,1)
         Grid.volume4cells = zeros(eltype(Grid.coords4nodes),ncells);
-        if celldim == 1 # also allow d-dimensional points on a line!
+        if typeof(Grid.elemtypes[1]) <: ElemType1DInterval
+            Grid.volume4cells = zeros(eltype(Grid.coords4nodes),ncells);
+                Grid.volume4cells[cell] = Grid.coords4nodes[Grid.nodes4cells[cell,2],1] - Grid.coords4nodes[Grid.nodes4cells[cell,1],1]
+        elseif typeof(Grid.elemtypes[1]) <: Abstract1DElemType
             Grid.volume4cells = zeros(eltype(Grid.coords4nodes),ncells);
             xdim::Int = size(Grid.coords4nodes,2)
             for cell = 1 : ncells
                 for d = 1 : xdim
                     Grid.volume4cells[cell] += (Grid.coords4nodes[Grid.nodes4cells[cell,2],d] - Grid.coords4nodes[Grid.nodes4cells[cell,1],d]).^2
                 end
-                 Grid.volume4cells[cell] = sqrt(Grid.volume4cells[cell]);    
+                Grid.volume4cells[cell] = sqrt(Grid.volume4cells[cell]);    
             end    
-        elseif celldim == 2
+        elseif typeof(Grid.elemtypes[1]) <: ElemType2DTriangle
             for cell = 1 : ncells 
                 Grid.volume4cells[cell] = 1 // 2 * (
                Grid.coords4nodes[Grid.nodes4cells[cell,1],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,2],2] -  Grid.coords4nodes[Grid.nodes4cells[cell,3],2])
             + Grid.coords4nodes[Grid.nodes4cells[cell,2],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,3],2] - Grid.coords4nodes[Grid.nodes4cells[cell,1],2])
             + Grid.coords4nodes[Grid.nodes4cells[cell,3],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,1],2] - Grid.coords4nodes[Grid.nodes4cells[cell,2],2]));
-            end    
-            
-        elseif celldim == 3
-           A = ones(eltype(Grid.coords4nodes),4,4);
-           for cell = 1 : ncells 
-            A[1,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,1],:];
-            A[2,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,2],:];
-            A[3,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,3],:];
-            A[4,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,4],:];
-            Grid.volume4cells[cell] = 1 // 6 * abs(det(A));
-           end
+            end        
+        elseif typeof(Grid.elemtypes[1]) <: ElemType2DParallelogram
+            for cell = 1 : ncells 
+                Grid.volume4cells[cell] = (
+               Grid.coords4nodes[Grid.nodes4cells[cell,1],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,2],2] -  Grid.coords4nodes[Grid.nodes4cells[cell,3],2])
+            + Grid.coords4nodes[Grid.nodes4cells[cell,2],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,3],2] - Grid.coords4nodes[Grid.nodes4cells[cell,1],2])
+            + Grid.coords4nodes[Grid.nodes4cells[cell,3],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,1],2] - Grid.coords4nodes[Grid.nodes4cells[cell,2],2]));
+            end        
+       # elseif typeof(Grid.elemtypes[1]) <: ElemType3DTetraeder
+       #    A = ones(eltype(Grid.coords4nodes),4,4);
+       #    for cell = 1 : ncells 
+       #     A[1,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,1],:];
+       #     A[2,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,2],:];
+       #     A[3,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,3],:];
+       #     A[4,[2,3,4]] = Grid.coords4nodes[Grid.nodes4cells[cell,4],:];
+       #     Grid.volume4cells[cell] = 1 // 6 * abs(det(A));
+       #    end
         end
     end        
 end   
@@ -172,32 +181,40 @@ end
 
 # compute nodes4faces (implicating an enumeration of the faces)
 function ensure_nodes4faces!(Grid::Mesh)
-    dim::Int = size(Grid.nodes4cells,2)
+    dim::Int = 2
+    if typeof(Grid.elemtypes[1]) <: Abstract1DElemType
+        dim = 1
+    elseif typeof(Grid.elemtypes[1]) <: Abstract3DElemType
+        dim = 3
+    end        
     @assert dim <= 4
     ncells::Int = size(Grid.nodes4cells,1);
     index::Int = 0;
     temp::Int64 = 0;
     if (size(Grid.nodes4faces,1) <= 0)
-        if dim == 2
+        if dim == 1
             # in 1D nodes are faces
             nnodes::Int = size(Grid.coords4nodes,1);
             Grid.nodes4faces = zeros(Int64,nnodes,1);
             Grid.nodes4faces[:] = 1:nnodes;
-        elseif dim == 3
+        elseif dim == 2
+            nodes_per_cell = size(Grid.nodes4cells,2)
+            helperfield = zeros(Int64,nodes_per_cell,1)
+            helperfield[:] = 0:nodes_per_cell-1
+            helperfield[1] = nodes_per_cell
             # compute nodes4faces with duplicates
-            Grid.nodes4faces = zeros(Int64,3*ncells,2);
+            Grid.nodes4faces = zeros(Int64,nodes_per_cell*ncells,2);
+            index = 1
             for cell = 1 : ncells
-                Grid.nodes4faces[index+1,1] = Grid.nodes4cells[cell,1];
-                Grid.nodes4faces[index+1,2] = Grid.nodes4cells[cell,2];
-                Grid.nodes4faces[index+2,1] = Grid.nodes4cells[cell,2]; 
-                Grid.nodes4faces[index+2,2] = Grid.nodes4cells[cell,3];
-                Grid.nodes4faces[index+3,1] = Grid.nodes4cells[cell,3];
-                Grid.nodes4faces[index+3,2] = Grid.nodes4cells[cell,1];
-                index += 3;
+                for k = 1 : nodes_per_cell
+                    Grid.nodes4faces[index,1] = Grid.nodes4cells[cell,k];
+                    Grid.nodes4faces[index,2] = Grid.nodes4cells[cell,helperfield[k]];
+                    index += 1;
+                end    
             end    
     
             # sort each row ( faster than: sort!(Grid.nodes4faces, dims = 2);)
-            for j = 1 : 3*ncells
+            for j = 1 : nodes_per_cell*ncells
                 if Grid.nodes4faces[j,2] > Grid.nodes4faces[j,1]
                     temp = Grid.nodes4faces[j,1];
                     Grid.nodes4faces[j,1] = Grid.nodes4faces[j,2];
@@ -207,7 +224,7 @@ function ensure_nodes4faces!(Grid::Mesh)
         
             # find unique rows -> this fixes the enumeration of the faces!
             Grid.nodes4faces = unique(Grid.nodes4faces, dims = 1);
-        elseif dim == 4
+        elseif dim == 3 # might work for tets
             # compute nodes4faces with duplicates
             Grid.nodes4faces = zeros(Int64,4*ncells,3);
             for cell = 1 : ncells
@@ -253,13 +270,20 @@ end
 
 # compute faces4cells
 function ensure_faces4cells!(Grid::Mesh)
-    dim::Int = size(Grid.nodes4cells,2)
+    dim::Int = 2
+    if typeof(Grid.elemtypes[1]) <: Abstract1DElemType
+        dim = 1
+    elseif typeof(Grid.elemtypes[1]) <: Abstract3DElemType
+        dim = 3
+    end        
+    @assert dim <= 4
     if size(Grid.faces4cells,1) != size(Grid.nodes4cells,1)
         ensure_nodes4faces!(Grid)
-        if dim == 2
+        if dim == 1
             # in 1D nodes are faces
             Grid.faces4cells = Grid.nodes4cells;        
-        elseif dim == 3
+        elseif dim == 2
+            nodes_per_cell = size(Grid.nodes4cells,2)
             nnodes = size(Grid.coords4nodes,1);
             nfaces = size(Grid.nodes4faces,1);
             ncells = size(Grid.nodes4cells,1);
@@ -267,13 +291,16 @@ function ensure_faces4cells!(Grid::Mesh)
             face4nodes = sparse(view(Grid.nodes4faces,:,1),view(Grid.nodes4faces,:,2),1:nfaces,nnodes,nnodes);
             face4nodes = face4nodes + face4nodes';
     
-            Grid.faces4cells = zeros(Int,size(Grid.nodes4cells,1),3);
+            Grid.faces4cells = zeros(Int,size(Grid.nodes4cells,1),nodes_per_cell);
+            helperfield = zeros(Int64,nodes_per_cell,1)
+            helperfield[:] = 2:nodes_per_cell+1
+            helperfield[end] = 1
             for cell = 1 : ncells
-                Grid.faces4cells[cell,1] = face4nodes[Grid.nodes4cells[cell,1],Grid.nodes4cells[cell,2]];
-                Grid.faces4cells[cell,2] = face4nodes[Grid.nodes4cells[cell,2],Grid.nodes4cells[cell,3]];
-                Grid.faces4cells[cell,3] = face4nodes[Grid.nodes4cells[cell,3],Grid.nodes4cells[cell,1]];
+                for k = 1 : nodes_per_cell
+                    Grid.faces4cells[cell,k] = face4nodes[Grid.nodes4cells[cell,k],Grid.nodes4cells[cell,helperfield[k]]];
+                end    
             end
-        elseif dim == 4    
+        elseif dim == 3    
             # todo
             println("faces4cells for tets not yet implemented!")
             @assert dim <= 3

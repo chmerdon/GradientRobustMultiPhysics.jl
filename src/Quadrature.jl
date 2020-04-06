@@ -56,9 +56,6 @@ end
 
 
 function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.ElemType2DTriangle}
-  # xref = Array{T}(undef,2)
-  # w = Array{T}(undef, 1)
-  
   if order <= 1
       name = "midpoint rule"
       xref = Vector{Array{T,1}}(undef,1);
@@ -74,6 +71,30 @@ function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.ElemType
   else
       name = "triangle: generic Stroud rule"
       xref, w = get_generic_quadrature_Stroud(order)
+  end
+  return QuadratureFormula{T, ET}(name, xref, w)
+end
+
+
+function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.ElemType2DParallelogram}
+  if order <= 1
+      name = "midpoint rule"
+      xref = Vector{Array{T,1}}(undef,1);
+      xref[1] = ones(T,2) * 1 // 2
+      w = [1]
+  else
+      name = "rectangle: generic Gauss tensor rule"
+      xref1D, w1D = get_generic_quadrature_Gauss(order)
+      xref = Vector{Array{T,1}}(undef,length(xref1D)^2)
+      w = zeros(T,length(xref1D)^2)
+      index = 1
+      for j = 1 : length(xref1D), k = 1 : length(xref1D)
+        xref[index] = zeros(T,2)
+        xref[index][1] = xref1D[j][1]
+        xref[index][2] = xref1D[k][1]
+        w[index] = w1D[j] * w1D[k]
+        index += 1
+      end
   end
   return QuadratureFormula{T, ET}(name, xref, w)
 end
