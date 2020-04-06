@@ -47,6 +47,10 @@ end
   abstract type Abstract3DElemType <: AbstractElemType end
 
 
+get_dimension(ET::Abstract0DElemType) = 0
+get_dimension(ET::Abstract1DElemType) = 1
+get_dimension(ET::Abstract2DElemType) = 2
+get_dimension(ET::Abstract3DElemType) = 3
 
 
 # show function for Grid
@@ -104,10 +108,10 @@ function ensure_volume4cells!(Grid::Mesh)
     if size(Grid.volume4cells,1) != size(ncells,1)
         Grid.volume4cells = zeros(eltype(Grid.coords4nodes),ncells);
         if typeof(Grid.elemtypes[1]) <: ElemType1DInterval
-            Grid.volume4cells = zeros(eltype(Grid.coords4nodes),ncells);
-                Grid.volume4cells[cell] = Grid.coords4nodes[Grid.nodes4cells[cell,2],1] - Grid.coords4nodes[Grid.nodes4cells[cell,1],1]
+            for cell = 1 : ncells
+                Grid.volume4cells[cell] = abs(Grid.coords4nodes[Grid.nodes4cells[cell,2],1] - Grid.coords4nodes[Grid.nodes4cells[cell,1],1])
+            end    
         elseif typeof(Grid.elemtypes[1]) <: Abstract1DElemType
-            Grid.volume4cells = zeros(eltype(Grid.coords4nodes),ncells);
             xdim::Int = size(Grid.coords4nodes,2)
             for cell = 1 : ncells
                 for d = 1 : xdim
@@ -145,7 +149,7 @@ end
 # determine the face numbers of the boundary faces
 # (they appear only once in faces4cells)
 function ensure_bfaces!(Grid::Mesh)
-    dim::Int = size(Grid.nodes4cells,2)
+    dim = get_dimension(Grid.elemtypes[1])
     @assert dim <= 3
     if size(Grid.bfaces,1) <= 0
         ensure_faces4cells!(Grid::Mesh)
@@ -153,7 +157,7 @@ function ensure_bfaces!(Grid::Mesh)
         nfaces = size(Grid.nodes4faces,1);
         takeface = zeros(Bool,nfaces);
         for cell = 1 : ncells
-            for j = 1 : dim
+            for j = 1 : size(Grid.faces4cells,2)
                 @inbounds takeface[Grid.faces4cells[cell,j]] = .!takeface[Grid.faces4cells[cell,j]];
             end    
         end
@@ -181,13 +185,8 @@ end
 
 # compute nodes4faces (implicating an enumeration of the faces)
 function ensure_nodes4faces!(Grid::Mesh)
-    dim::Int = 2
-    if typeof(Grid.elemtypes[1]) <: Abstract1DElemType
-        dim = 1
-    elseif typeof(Grid.elemtypes[1]) <: Abstract3DElemType
-        dim = 3
-    end        
-    @assert dim <= 4
+    dim = get_dimension(Grid.elemtypes[1])
+    @assert dim <= 3
     ncells::Int = size(Grid.nodes4cells,1);
     index::Int = 0;
     temp::Int64 = 0;
@@ -270,13 +269,8 @@ end
 
 # compute faces4cells
 function ensure_faces4cells!(Grid::Mesh)
-    dim::Int = 2
-    if typeof(Grid.elemtypes[1]) <: Abstract1DElemType
-        dim = 1
-    elseif typeof(Grid.elemtypes[1]) <: Abstract3DElemType
-        dim = 3
-    end        
-    @assert dim <= 4
+    dim = get_dimension(Grid.elemtypes[1])
+    @assert dim <= 3
     if size(Grid.faces4cells,1) != size(Grid.nodes4cells,1)
         ensure_nodes4faces!(Grid)
         if dim == 1
@@ -311,14 +305,14 @@ end
 
 # compute signs4cells
 function ensure_signs4cells!(Grid::Mesh)
-    dim::Int = size(Grid.nodes4cells,2)
+    dim = get_dimension(Grid.elemtypes[1])
+    @assert dim <= 3
     if size(Grid.signs4cells,1) != size(Grid.nodes4cells,1)
-        @assert dim == 3
         ensure_faces4cells!(Grid)
         ncells::Int64 = size(Grid.nodes4cells,1)
         Grid.signs4cells = ones(ncells,dim)
         for cell = 1 : ncells
-            for f = 1 : dim
+            for f = 1 : size(Grid.face4cells,2)
                 if Grid.nodes4faces[Grid.faces4cells[cell,f],1] != Grid.nodes4cells[cell,f]
                     Grid.signs4cells[cell,f] = -1
                 end       
@@ -330,7 +324,8 @@ end
 
 # compute cells4faces
 function ensure_cells4faces!(Grid::Mesh)
-    dim::Int = size(Grid.nodes4cells,2)
+    dim = get_dimension(Grid.elemtypes[1])
+    @assert dim <= 3
     ensure_nodes4faces!(Grid)
     nfaces::Int = size(Grid.nodes4faces,1);
     ensure_faces4cells!(Grid)

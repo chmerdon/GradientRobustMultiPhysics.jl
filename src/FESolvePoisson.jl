@@ -105,7 +105,6 @@ function solvePoissonProblem!(val4dofs::Array, PD::PoissonProblemDescription, FE
         end
         println("     ...finished")
     end
-
     
     for i = 1 : length(bdofs)
        A[bdofs[i],bdofs[i]] = dirichlet_penalty;

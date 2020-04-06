@@ -24,8 +24,7 @@ include("PROBLEMdefinitions/POISSON_2D_polynomials.jl");
 function main()
 
     # refinement
-    #gridgenerator = gridgen_unitsquare;
-    gridgenerator = gridgen_unitsquare_squares;
+    gridgenerator = gridgen_unitsquare;
 
     reflevel = 4
     reflevel_exact = 6
@@ -37,7 +36,8 @@ function main()
     ### CHOOSE FEM BELOW ###
     ########################
 
-    fem = "P1"
+    #fem = "P1"
+    fem = "Q1"; gridgenerator = gridgen_unitsquare_squares;
 
     #polynomial_coefficients = [0 -3 2 -1 1; 0 2 -1 0 -0.5] # quartic
     #polynomial_coefficients = [0 0 0 -1.0; 0 1.0 0 1.0] # cubic

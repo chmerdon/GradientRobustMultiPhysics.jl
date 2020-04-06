@@ -45,6 +45,7 @@ abstract type AbstractFiniteElement end
   abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
     # lowest order
     include("FEdefinitions/H1_P1.jl");
+    include("FEdefinitions/H1_Q1.jl");
     include("FEdefinitions/H1_MINI.jl");
     include("FEdefinitions/H1_CR.jl");
     include("FEdefinitions/H1_BR.jl");
@@ -127,6 +128,9 @@ function string2FE(fem::String, grid::Grid.Mesh, dim::Int, ncomponents::Int = 1)
     if fem == "P1"
         # piecewise linear (continuous)
         FE = FiniteElements.getP1FiniteElement(grid,ncomponents);
+    elseif fem == "Q1"    
+        # piecewise linear on quads
+        FE = FiniteElements.getQ1FiniteElement(grid,ncomponents);
     elseif fem == "P0"    
         # piecewise constant
         FE = FiniteElements.getP0FiniteElement(grid,ncomponents);

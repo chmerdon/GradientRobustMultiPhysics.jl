@@ -34,14 +34,7 @@ function get_xref4dof(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemT
     xref[3] = Array{Int64,1}([0, 1])
     return xref, [sparse(I,3,3)]
 end    
-function get_xref4dof(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DParallelogram) 
-    xref = Array{Array{Int64,1},1}(undef,4)
-    xref[1] = Array{Int64,1}([0, 0])
-    xref[2] = Array{Int64,1}([1, 0])
-    xref[3] = Array{Int64,1}([1, 1])
-    xref[4] = Array{Int64,1}([0, 1])
-    return xref, [sparse(I,4,4)]
-end    
+
 function get_xref4dof(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) 
     xref = Array{Array{Int64,1},1}(undef,6)
     xref[1] = Array{Int64,1}([0, 0])
@@ -59,14 +52,12 @@ get_ndofs(FE::H1P1FiniteElement{T,1} where {T <: Real}) = size(FE.grid.coords4no
 get_ndofs(FE::H1P1FiniteElement{T,2} where {T <: Real}) = 2*size(FE.grid.coords4nodes,1);
 
 # NUMBER OF DOFS ON ELEMTYPE
-get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.Grid.Abstract0DElemType) = 1
+get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract0DElemType) = 1
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract1DElemType) = 2
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DTriangle) = 3
-get_ndofs4elemtype(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DParallelogram) = 4
-get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.Grid.Abstract0DElemType) = 2
+get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.Abstract0DElemType) = 2
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.Abstract1DElemType) = 4
 get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) = 6
-get_ndofs4elemtype(FE::H1P1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DParallelogram) = 8
 
 # NUMBER OF COMPONENTS
 get_ncomponents(FE::H1P1FiniteElement{T,1} where {T <: Real}) = 1
@@ -129,19 +120,6 @@ function get_basis_on_cell(FE::H1P1FiniteElement{T,2} where T <: Real, ::Grid.Ab
                 xref[1] 0.0;
                 0.0 temp;
                 0.0 xref[1]]
-    end
-end
-
-function get_basis_on_cell(FE::H1P1FiniteElement{T,1} where T <: Real, ::Grid.ElemType2DParallelogram)
-    a = 0.0;
-    b = 0.0;
-    function closure(xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        return [a*b,
-                xref[1]*b,
-                xref[1]*xref[2],
-                xref[2]*a]
     end
 end
 

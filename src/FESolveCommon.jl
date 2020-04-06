@@ -229,6 +229,7 @@ function computeBestApproximation!(val4dofs::Array,approx_norm::String ,volume_d
     A, b = assembleSystem(1.0,approx_norm,approx_norm,volume_data!,FE,FiniteElements.get_polynomial_order(FE) + quadrature_order);
     
     # apply boundary data
+    ensure_bfaces!(FE.grid)
     bdofs = []
     if boundary_data! != Nothing
         celldim::Int = size(FE.grid.nodes4cells,2) - 1;

@@ -38,9 +38,9 @@ function main()
 
     # choose coefficients of exact solution
 
-    polynomial_coefficients = [0, -3.0, 2.0, -1.0, 1.0] # quartic
+    #polynomial_coefficients = [0, -3.0, 2.0, -1.0, 1.0] # quartic
     #polynomial_coefficients = [0, 0, 0, -1.0]  # cubic
-    #polynomial_coefficients = [1.0, 1.0, 1.0]  # quadratic
+    polynomial_coefficients = [1.0, 1.0, 1.0]  # quadratic
     #polynomial_coefficients = [0, 1.0]   # linear
     #polynomial_coefficients = [1.0, 0]   # constant
     
