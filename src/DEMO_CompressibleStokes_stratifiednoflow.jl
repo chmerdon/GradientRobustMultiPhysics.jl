@@ -30,6 +30,7 @@ function main()
     shear_modulus = 1
     symmetric_gradient = true
     nonlinear_convection = true
+    use_square_grid = false
     lambda = 0.0
     c = 1
     total_mass = 2.0
@@ -60,7 +61,9 @@ function main()
     #fem_velocity = "CR"; fem_densitypressure = "P0"
     #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
     #fem_velocity = "BR"; fem_densitypressure = "P0"
-    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+
+    fem_velocity = "BR"; fem_densitypressure = "P0"; use_square_grid = true
 
 
 
@@ -112,8 +115,12 @@ function main()
         println("Solving compressible Stokes problem on refinement level...", level);
         println("Generating grid by triangle...");
         maxarea = 4.0^(-level-2)
-        grid = gridgen_unitsquare(maxarea, barycentric_refinement)
-        Grid.show(grid)
+        grid = gridgen_unitsquare(maxarea, barycentric_refinement)      
+        if use_square_grid == true
+            grid = gridgen_unitsquare_squares(maxarea)
+        else
+            grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+        end 
 
         # load finite element
         FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
@@ -129,8 +136,12 @@ function main()
             println("terminating (maxdofs exceeded)...");
             maxlevel = level - 1
             if (show_plots)
-                maxarea = 4.0^(-maxlevel)
-                grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+                maxarea = 4.0^(-maxlevel)      
+                if use_square_grid == true
+                    grid = gridgen_unitsquare_squares(maxarea)
+                else
+                    grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+                end 
                 FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
                 FE_densitypressure = FiniteElements.string2FE(fem_densitypressure,grid,2,1)
             end    
@@ -176,6 +187,13 @@ function main()
         layout!(frame,4,1)
         size!(frame,1500,500)
 
+        velo = FESolveCommon.eval_at_nodes(velocity,FE_velocity);
+        speed = sqrt.(sum(velo.^2, dims = 2))
+        density = FESolveCommon.eval_at_nodes(density,FE_densitypressure);
+        if use_square_grid
+            grid.nodes4cells = Grid.divide_into_triangles(Grid.ElemType2DParallelogram(),grid.nodes4cells)
+        end    
+
         # grid view
         frametitle!(frame,"    final grid     |  discrete solution (speed, density)  | error convergence history")
         dataset=VTKView.DataSet()
@@ -186,8 +204,6 @@ function main()
 
         # scalar view
         scalarview=VTKView.ScalarView()
-        velo = FESolveCommon.eval_at_nodes(velocity,FE_velocity);
-        speed = sqrt.(sum(velo.^2, dims = 2))
         pointscalar!(dataset,speed[:],"|U|")
         data!(scalarview,dataset,"|U|")
         addview!(frame,scalarview,2)
@@ -199,7 +215,6 @@ function main()
         addview!(frame,vectorview,2)
 
         scalarview2=VTKView.ScalarView()
-        density = FESolveCommon.eval_at_nodes(density,FE_densitypressure);
         pointscalar!(dataset,density[:],"rho")
         data!(scalarview2,dataset,"rho")
         addview!(frame,scalarview2,3)
