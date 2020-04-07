@@ -29,10 +29,10 @@ Dependencies on other Julia packages:
 
 
 Features/Limitations:
-- type-treed FiniteElements module into
-    H1 elements (so far P1,P2,P2B,MINI,BR,CR)
+- type-treed FiniteElements module into (mainly on triangles, but some on parallelograms)
+    H1 elements (so far P1,P2,P2B,MINI,BR,CR,Q1)
     L2 elements (so far P0, P1disc, provisorically masked as a H1 element)
-    Hdiv elements (so far RT0, RT1, BDM1)
+    Hdiv elements (so far RT0, RT1, BDM1, ABF0)
     Hcurl elements (in future)
 - arbitrary composite H1-FiniteElements (e.g. Kouhia-Stenberg P1xCR)
 - running solver for Poisson problems, L2 bestapproximation with Dirichlet boundary data, linear elasticity, (Navier-)Stokes problem, compressible Stokes problem (needs further testing)
@@ -52,5 +52,4 @@ Next Goals/Ideas:
 - implement RT1/BDM2 reconstruction for P2B-Stokes FEM
 - further improve steering by Grid.ElemTypes (Point, Line, Triangle, Tetrahedron,...)
 to objects nodes4cells of Mesh to choose correct transformation by multiple dispatch
-- implement first element on quads
 - sparse-matrices to save nodes4cells etc. to allow (in a far future) for different elements in Mesh and easier adjacency information (to build them up in 3D)
