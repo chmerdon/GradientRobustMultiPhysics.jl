@@ -33,9 +33,8 @@ get_ndofs(FE::L2P0FiniteElement{T,1} where {T <: Real}) = size(FE.grid.nodes4cel
 get_ndofs(FE::L2P0FiniteElement{T,2} where {T <: Real}) = 2*size(FE.grid.nodes4cells,1);
 
 # NUMBER OF DOFS ON ELEMTYPE
-get_ndofs4elemtype(FE::L2P0FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract1DElemType) = 0
-get_ndofs4elemtype(FE::L2P0FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DTriangle) = 1
-get_ndofs4elemtype(FE::L2P0FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) = 2
+get_ndofs4elemtype(FE::L2P0FiniteElement{T,1} where {T <: Real}, ::Grid.AbstractElemType) = 1
+get_ndofs4elemtype(FE::L2P0FiniteElement{T,2} where {T <: Real}, ::Grid.AbstractElemType) = 2
 
 # NUMBER OF COMPONENTS
 get_ncomponents(FE::L2P0FiniteElement{T,1} where {T <: Real}) = 1

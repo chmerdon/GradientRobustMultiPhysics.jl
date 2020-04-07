@@ -27,26 +27,28 @@ include("PROBLEMdefinitions/STOKES_HagenPoiseuille.jl");
 function main()
 
     # problem modification switches
-    do_nothing_inlet = true
+    do_nothing_inlet = false
     symmetry_top = true
     nu = 1
-    nonlinear = true
+    nonlinear = false
     maxIterations = 20
 
     # refinement termination criterions
-    maxlevel = 7
-    maxdofs = 60000
+    maxlevel = 5
+    maxdofs = 40000
 
     # other switches
     show_plots = true
     use_reconstruction = 0 # do not change here
     barycentric_refinement = false # do not change here
+    use_square_grid = false # do not change here
 
 
     ########################
     ### CHOOSE FEM BELOW ###
     ########################
 
+    ### elements on triangular grids
     #fem_velocity = "CR"; fem_pressure = "P0"; expectedorder = 1
     #fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = 1; expectedorder = 1
     #fem_velocity = "MINI"; fem_pressure = "P1"; expectedorder = 1
@@ -55,7 +57,11 @@ function main()
     #fem_velocity = "P2"; fem_pressure = "P0"; expectedorder = 2
     #fem_velocity = "P2B"; fem_pressure = "P1dc"; expectedorder = 2
     #fem_velocity = "BR"; fem_pressure = "P0"; expectedorder = 1
-    fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1; expectedorder = 1
+    #fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = 1; expectedorder = 1
+
+    ### elements on square grids
+    #fem_velocity = "Q1"; fem_pressure = "P0"; expectedorder = 1; use_square_grid = true
+    fem_velocity = "BR"; fem_pressure = "P0"; expectedorder = 1; use_square_grid = true
 
 
     # load problem data
@@ -88,7 +94,11 @@ function main()
         println("Solving Stokes problem on refinement level...", level);
         println("Generating grid by triangle...");
         maxarea = 4.0^(-level)
-        grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+        if use_square_grid == true
+            grid = gridgen_unitsquare_squares(maxarea)
+        else
+            grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+        end    
         Grid.show(grid)
 
         # load finite element
@@ -105,8 +115,12 @@ function main()
             println("terminating (maxdofs exceeded)...");
             maxlevel = level - 1
             if (show_plots)
-                maxarea = 4.0^(-maxlevel)
-                grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+                maxarea = 4.0^(-maxlevel)        
+                if use_square_grid == true
+                    grid = gridgen_unitsquare_squares(maxarea)
+                else
+                    grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+                end 
                 FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
                 FE_pressure = FiniteElements.string2FE(fem_pressure,grid,2,1)
             end    
@@ -140,6 +154,12 @@ function main()
         layout!(frame,4,1)
         size!(frame,1500,500)
 
+        velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
+        pres = FESolveCommon.eval_at_nodes(val4dofs[FiniteElements.get_ndofs(FE_velocity)+1:end],FE_pressure);
+        if use_square_grid
+            grid.nodes4cells = Grid.divide_into_triangles(Grid.ElemType2DParallelogram(),grid.nodes4cells)
+        end    
+
         # grid view
         frametitle!(frame,"    final grid     |  discrete solution (speed, pressure)  | error convergence history")
         dataset=VTKView.DataSet()
@@ -150,7 +170,6 @@ function main()
 
         # scalar view
         scalarview=VTKView.ScalarView()
-        velo = FESolveCommon.eval_at_nodes(val4dofs,FE_velocity);
         speed = sqrt.(sum(velo.^2, dims = 2))
         pointscalar!(dataset,speed[:],"|U|")
         data!(scalarview,dataset,"|U|")
@@ -163,7 +182,6 @@ function main()
         addview!(frame,vectorview,2)
 
         scalarview2=VTKView.ScalarView()
-        pres = FESolveCommon.eval_at_nodes(val4dofs[FiniteElements.get_ndofs(FE_velocity)+1:end],FE_pressure);
         pointscalar!(dataset,pres[:],"p")
         data!(scalarview2,dataset,"p")
         addview!(frame,scalarview2,3)

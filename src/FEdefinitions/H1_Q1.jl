@@ -75,19 +75,6 @@ function get_dofs_on_face!(dofs,FE::H1Q1FiniteElement{T,2} where {T <: Real}, fa
 end
 
 # BASIS FUNCTIONS
-function get_basis_on_cell(FE::H1Q1FiniteElement{T,1} where T <: Real, ::Grid.Abstract0DElemType)
-    function closure(xref)
-        return [1]
-    end
-end
-
-function get_basis_on_cell(FE::H1Q1FiniteElement{T,2} where T <: Real, ::Grid.Abstract0DElemType)
-    function closure(xref)
-        return [1 0.0;
-                0.0 1]
-    end
-end
-
 function get_basis_on_cell(FE::H1Q1FiniteElement{T,1} where T <: Real, ::Grid.Abstract1DElemType)
     function closure(xref)
         return [1 - xref[1],

@@ -87,7 +87,7 @@ end
 # default constructor for Float64-typed triangulations
 function Mesh(coords,nodes,nrefinements = 0)
     for j=1:nrefinements
-        coords, nodes = uniform_refinement(coords,nodes)
+        coords, nodes, = uniform_refinement(coords,nodes)
     end
     return Mesh{Float64}(coords,nodes,ElemType2DTriangle());
 end
@@ -320,9 +320,9 @@ function ensure_signs4cells!(Grid::Mesh)
     if size(Grid.signs4cells,1) != size(Grid.nodes4cells,1)
         ensure_faces4cells!(Grid)
         ncells::Int64 = size(Grid.nodes4cells,1)
-        Grid.signs4cells = ones(ncells,dim)
+        Grid.signs4cells = ones(ncells,size(Grid.faces4cells,2))
         for cell = 1 : ncells
-            for f = 1 : size(Grid.face4cells,2)
+            for f = 1 : size(Grid.faces4cells,2)
                 if Grid.nodes4faces[Grid.faces4cells[cell,f],1] != Grid.nodes4cells[cell,f]
                     Grid.signs4cells[cell,f] = -1
                 end       

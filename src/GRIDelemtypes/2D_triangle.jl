@@ -13,6 +13,9 @@ end
 
 
 # perform a barycentric refinement of 2D triangles
+# note that no faces are refined and angles are halved
+# so the shape regularity deteriorates
+# (do this only once if needed, e.g. to get an inf-sup Scott-Vogelius discretisation)
 function barycentric_refinement(::ElemType2DTriangle,coords4nodes::Array,nodes4cells::Array)
     
     nnodes = size(coords4nodes,1);
@@ -37,7 +40,7 @@ end
 
 
 # perform a uniform (red) refinement of 2D triangles
-function uniform_refinement(::ElemType2DTriangle,coords4nodes::Array,nodes4cells::Array)
+function uniform_refinement(::ElemType2DTriangle,coords4nodes::Array,nodes4cells::Array,nodes4bfaces::Array = [[] []],bregions::Array = [])
     
     nnodes = size(coords4nodes,1);
     ncells = size(nodes4cells,1);
@@ -77,7 +80,20 @@ function uniform_refinement(::ElemType2DTriangle,coords4nodes::Array,nodes4cells
             newnodes[2] newnodes[3] newnodes[1];
             newnodes[3] newnodes[2] nodes4cells[cell,3]];
     end  
-  return coords4nodes, nodes4cells_new;
+    
+    # build up new nodes4bfaces and bregions
+    nodes4bfaces_new = zeros(Int,2*size(nodes4bfaces,1),2)
+    bregions_new = zeros(Int,2*size(nodes4bfaces,1),1)
+    for face = 1 : size(nodes4bfaces,1) 
+        newfacenode = newnode4nodes[nodes4bfaces[face,1],nodes4bfaces[face,2]]
+        nodes4bfaces_new[(1:2) .+ (face-1)*2,:] = 
+            [nodes4bfaces[face,1] newfacenode;
+            newfacenode nodes4bfaces[face,2]]
+        bregions_new[2*face-1] = bregions[face]
+        bregions_new[2*face] = bregions[face]
+    end
+
+    return coords4nodes, nodes4cells_new, nodes4bfaces_new, bregions_new;
 end
 
 

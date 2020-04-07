@@ -77,6 +77,22 @@ function uniform_refinement(::ElemType2DParallelogram,coords4nodes::Array,nodes4
 end
 
 
+# perform a barycentric refinement of 2D parallelograms
+function divide_into_triangles(::ElemType2DParallelogram,nodes4cells::Array)
+
+    # build up new nodes4cells of uniform refinements
+    ncells = size(nodes4cells,1)
+    nodes4cells_new = zeros(Int,2*ncells,3);
+    for cell = 1 : ncells
+        nodes4cells_new[(1:2) .+ (cell-1)*2,:] = 
+            [nodes4cells[cell,1] nodes4cells[cell,2] nodes4cells[cell,4];
+             nodes4cells[cell,2] nodes4cells[cell,3] nodes4cells[cell,4]]
+    end  
+
+    return nodes4cells_new;
+end
+
+
 
 
 # transformation for H1 elements on a parallelogram
