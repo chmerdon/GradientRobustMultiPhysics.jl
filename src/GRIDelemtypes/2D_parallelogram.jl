@@ -14,7 +14,7 @@ end
 
 
 # perform a barycentric refinement of 2D parallelograms
-function uniform_refinement(::ElemType2DParallelogram,coords4nodes::Array,nodes4cells::Array)
+function uniform_refinement(::ElemType2DParallelogram,coords4nodes::Array,nodes4cells::Array,nodes4bfaces::Array = [[] []],bregions::Array = [])
     
     nnodes = size(coords4nodes,1);
     ncells = size(nodes4cells,1);
@@ -60,7 +60,20 @@ function uniform_refinement(::ElemType2DParallelogram,coords4nodes::Array,nodes4
              nodes4cells[cell,3] newfacenodes[3] newcenternode newfacenodes[2];
              nodes4cells[cell,4] newfacenodes[4] newcenternode newfacenodes[3]]
     end  
-  return coords4nodes, nodes4cells_new;
+
+    # build up new nodes4bfaces and bregions
+    nodes4bfaces_new = zeros(Int,2*size(nodes4bfaces,1),2)
+    bregions_new = zeros(Int,2*size(nodes4bfaces,1),1)
+    for face = 1 : size(nodes4bfaces,1) 
+        newfacenode = newnode4nodes[nodes4bfaces[face,1],nodes4bfaces[face,2]]
+        nodes4bfaces_new[(1:2) .+ (face-1)*2,:] = 
+            [nodes4bfaces[face,1] newfacenode;
+            newfacenode nodes4bfaces[face,2]]
+        bregions_new[2*face-1] = bregions[face]
+        bregions_new[2*face] = bregions[face]
+    end
+
+    return coords4nodes, nodes4cells_new, nodes4bfaces_new, bregions_new;
 end
 
 

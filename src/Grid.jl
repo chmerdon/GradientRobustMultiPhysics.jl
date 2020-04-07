@@ -74,6 +74,16 @@ function Mesh{T}(coords,nodes,ET::AbstractElemType,nrefinements) where {T<:Real}
     return Mesh{T}(coords,nodes,ET);
 end
 
+
+function Mesh{T}(coords,nodes,nodes4bfaces,bregions,ET::AbstractElemType,nrefinements) where {T<:Real}
+    for j=1:nrefinements
+        coords, nodes, nodes4bfaces, bregions = uniform_refinement(ET,coords,nodes)
+    end
+    grid = Mesh{T}(coords,nodes,ET)
+    assign_boundaryregions!(grid,nodes4bfaces,bregions);
+    return grid;
+end
+
 # default constructor for Float64-typed triangulations
 function Mesh(coords,nodes,nrefinements = 0)
     for j=1:nrefinements

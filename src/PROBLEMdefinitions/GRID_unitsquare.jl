@@ -22,7 +22,8 @@ function gridgen_unitsquare_squares(maxarea)
     nodes4cells = zeros(Int64,1,4)
     nodes4cells[1,:] = [1, 2, 3, 4];
     nrefinements = ceil(1/log(1.0/maxarea,4))
-    grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Grid.ElemType2DParallelogram(),nrefinements);
-    #Grid.assign_boundaryregions!(grid,triout.segmentlist,triout.segmentmarkerlist);
+    nodes4bfaces = [1 2;2 3;3 4;4 1]
+    bregions = [1,2,3,4]
+    grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,nodes4bfaces,bregions,Grid.ElemType2DParallelogram(),nrefinements);
     return grid
 end
