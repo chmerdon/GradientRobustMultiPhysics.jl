@@ -25,14 +25,15 @@ include("PROBLEMdefinitions/STOKES_2D_polynomials.jl");
 function main()
 
     # problem modification switches
-    polynomial_order = 3
+    polynomial_order = 2
 
     # refinement termination criterions
-    maxlevel = 7
+    maxlevel = 4
     maxdofs = 60000
 
     # other switches
     show_plots = true
+    use_square_grid = false # do not change here
 
 
     ########################
@@ -41,8 +42,11 @@ function main()
 
     # Hdiv-conforming FE
     #fem = "RT0"; expectedorder = 1
-    fem = "RT1"; expectedorder = 2
+    #fem = "RT1"; expectedorder = 2
     #fem = "BDM1"; expectedorder = 2
+
+    # Hdiv on squares
+    fem = "ABF0"; expectedorder = 1; use_square_grid = true
 
     # H1-conforming FE
     #fem = "CR"; expectedorder = 2
@@ -64,7 +68,11 @@ function main()
         println("Solving Stokes problem on refinement level...", level);
         println("Generating grid by triangle...");
         maxarea = 4.0^(-level)
-        grid = gridgen_unitsquare(maxarea)
+        if use_square_grid == true
+            grid = gridgen_unitsquare_squares(maxarea)
+        else
+            grid = gridgen_unitsquare(maxarea)
+        end    
         Grid.show(grid)
 
         
@@ -80,7 +88,11 @@ function main()
             maxlevel = level - 1
             if (show_plots)
                 maxarea = 4.0^(-maxlevel)
-                grid = gridgen_unitsquare(maxarea)
+                if use_square_grid == true
+                    grid = gridgen_unitsquare_squares(maxarea)
+                else
+                    grid = gridgen_unitsquare(maxarea)
+                end    
                 FE = FiniteElements.string2FE(fem,grid,2);
             end    
             break
@@ -93,6 +105,7 @@ function main()
         # compute error of Hdiv best-approximation
         L2error_velocity[level] = sqrt(FESolveCommon.assemble_operator!(FESolveCommon.DOMAIN_L2_FplusA,exact_velocity!,FE ,val4dofs; degreeF = polynomial_order, factorA = -1.0))
 
+
     end # loop over levels
 
     println("\n L2 error");
@@ -104,6 +117,12 @@ function main()
         clear!(frame)
         layout!(frame,3,1)
         size!(frame,1500,500)
+        
+        velo = FESolveCommon.eval_at_nodes(val4dofs,FE);
+        speed = sqrt.(sum(velo.^2, dims = 2))
+        if use_square_grid
+            grid.nodes4cells = Grid.divide_into_triangles(Grid.ElemType2DParallelogram(),grid.nodes4cells)
+        end    
 
         # grid view
         frametitle!(frame,"    final grid     |  discrete solution | error convergence history")
@@ -115,8 +134,6 @@ function main()
 
         # scalar view
         scalarview=VTKView.ScalarView()
-        velo = FESolveCommon.eval_at_nodes(val4dofs,FE);
-        speed = sqrt.(sum(velo.^2, dims = 2))
         pointscalar!(dataset,speed[:],"|U|")
         data!(scalarview,dataset,"|U|")
         addview!(frame,scalarview,2)

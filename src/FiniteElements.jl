@@ -36,6 +36,7 @@ abstract type AbstractFiniteElement end
   abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
     # lowest order
     include("FEdefinitions/HDIV_RT0.jl");
+    include("FEdefinitions/HDIV_ABF0.jl");
 
     # second order
     include("FEdefinitions/HDIV_RT1.jl");
@@ -155,6 +156,9 @@ function string2FE(fem::String, grid::Grid.Mesh, dim::Int, ncomponents::Int = 1)
     elseif fem == "RT0"
         # Raviart-Thomas 0
         FE = FiniteElements.getRT0FiniteElement(grid);
+    elseif fem == "ABF0"
+        # Arnold-Boffi-Falk 0
+        FE = FiniteElements.getABF0FiniteElement(grid);
     elseif fem == "RT1"
         # Raviart-Thomas 1
         FE = FiniteElements.getRT1FiniteElement(grid);
