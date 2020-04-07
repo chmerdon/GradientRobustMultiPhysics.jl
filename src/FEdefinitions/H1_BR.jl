@@ -36,7 +36,7 @@ function get_xref4dof(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.ElemT
 end    
 
 # POLYNOMIAL ORDER
-get_polynomial_order(FE::H1BRFiniteElement) = typeof(FE.grid.elemtypes[1]) == Grid.ElemType2DParallelogram ? 3 : 2;
+get_polynomial_order(FE::H1BRFiniteElement) = typeof(FE.grid.elemtypes[1]) <: Grid.Abstract2DQuadrilateral ? 3 : 2;
 
 # TOTAL NUMBER OF DOFS
 get_ndofs(FE::H1BRFiniteElement{T,2} where {T <: Real}) = 2*size(FE.grid.coords4nodes,1) + size(FE.grid.nodes4faces,1);
@@ -44,7 +44,7 @@ get_ndofs(FE::H1BRFiniteElement{T,2} where {T <: Real}) = 2*size(FE.grid.coords4
 # NUMBER OF DOFS ON ELEMTYPE
 get_ndofs4elemtype(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.Abstract1DElemType) = 5
 get_ndofs4elemtype(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DTriangle) = 9
-get_ndofs4elemtype(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DParallelogram) = 12
+get_ndofs4elemtype(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.Abstract2DQuadrilateral) = 12
 
 # NUMBER OF COMPONENTS
 get_ncomponents(FE::H1BRFiniteElement{T,2} where {T <: Real}) = 2
@@ -55,7 +55,7 @@ function get_dofs_on_cell!(dofs,FE::H1BRFiniteElement{T,2} where {T <: Real}, ce
     dofs[4:6] = size(FE.grid.coords4nodes,1) .+ dofs[1:3]
     dofs[7:9] = 2*size(FE.grid.coords4nodes,1) .+ FE.grid.faces4cells[cell,:]
 end
-function get_dofs_on_cell!(dofs,FE::H1BRFiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.ElemType2DParallelogram)
+function get_dofs_on_cell!(dofs,FE::H1BRFiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.Abstract2DQuadrilateral)
     dofs[1:4] = FE.grid.nodes4cells[cell,:]
     dofs[5:8] = size(FE.grid.coords4nodes,1) .+ dofs[1:4]
     dofs[9:12] = 2*size(FE.grid.coords4nodes,1) .+ FE.grid.faces4cells[cell,:]
@@ -104,7 +104,7 @@ function get_basis_on_cell(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.El
     end
 end
 
-function get_basis_on_cell(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.ElemType2DParallelogram)
+function get_basis_on_cell(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.Abstract2DQuadrilateral)
     a = 0.0;
     b = 0.0;
     fb1 = 0.0;
@@ -143,7 +143,7 @@ function get_basis_coefficients_on_cell!(coefficients, FE::H1BRFiniteElement{T,2
     coefficients[9,1] = FE.grid.normal4faces[FE.grid.faces4cells[cell,3],1];
     coefficients[9,2] = FE.grid.normal4faces[FE.grid.faces4cells[cell,3],2];
 end    
-function get_basis_coefficients_on_cell!(coefficients, FE::H1BRFiniteElement{T,2} where T <: Real, cell::Int64, ::Grid.ElemType2DParallelogram)
+function get_basis_coefficients_on_cell!(coefficients, FE::H1BRFiniteElement{T,2} where T <: Real, cell::Int64, ::Grid.Abstract2DQuadrilateral)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[9,1] = FE.grid.normal4faces[FE.grid.faces4cells[cell,1],1];

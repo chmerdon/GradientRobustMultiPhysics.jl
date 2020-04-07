@@ -35,7 +35,7 @@ function main()
     c = 1
     total_mass = 2.0
     gamma = 1 # exact_density only exact for gamma = 1 !!!
-    dt = shear_modulus*0.5/c
+    dt = shear_modulus*0.2/c
     maxT = 1000
     stationarity_tolerance = 1e-11
 
@@ -46,7 +46,7 @@ function main()
     end    
 
     # refinement termination criterions
-    maxlevel = 3
+    maxlevel = 1
     maxdofs = 40000
 
     # other switches
@@ -114,7 +114,7 @@ function main()
 
         println("Solving compressible Stokes problem on refinement level...", level);
         println("Generating grid by triangle...");
-        maxarea = 4.0^(-level-2)
+        maxarea = 4.0^(-level)
         grid = gridgen_unitsquare(maxarea, barycentric_refinement)      
         if use_square_grid == true
             grid = gridgen_unitsquare_squares(maxarea)

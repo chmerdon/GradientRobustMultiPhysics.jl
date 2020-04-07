@@ -76,7 +76,7 @@ function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.ElemType
 end
 
 
-function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.ElemType2DParallelogram}
+function QuadratureFormula{T,ET}(order::Int) where {T<:Real, ET <: Grid.Abstract2DQuadrilateral}
   if order <= 1
       name = "midpoint rule"
       xref = Vector{Array{T,1}}(undef,1);

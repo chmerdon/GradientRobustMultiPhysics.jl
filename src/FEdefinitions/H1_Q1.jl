@@ -10,7 +10,7 @@ function getQ1FiniteElement(grid,ncomponents)
     return H1Q1FiniteElement{T,ncomponents}("Q1 (H1FiniteElement, ncomponents=$ncomponents)",grid)
 end 
   
-function get_xref4dof(FE::H1Q1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DParallelogram) 
+function get_xref4dof(FE::H1Q1FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract2DQuadrilateral) 
     xref = Array{Array{Int64,1},1}(undef,4)
     xref[1] = Array{Int64,1}([0, 0])
     xref[2] = Array{Int64,1}([1, 0])
@@ -18,7 +18,7 @@ function get_xref4dof(FE::H1Q1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemT
     xref[4] = Array{Int64,1}([0, 1])
     return xref, [sparse(I,4,4)]
 end    
-function get_xref4dof(FE::H1Q1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DParallelogram) 
+function get_xref4dof(FE::H1Q1FiniteElement{T,2} where {T <: Real}, ::Grid.Abstract2DQuadrilateral) 
     xref = Array{Array{Int64,1},1}(undef,8)
     xref[1] = Array{Int64,1}([0, 0])
     xref[2] = Array{Int64,1}([1, 0])
@@ -38,10 +38,10 @@ get_ndofs(FE::H1Q1FiniteElement{T,2} where {T <: Real}) = 2*size(FE.grid.coords4
 # NUMBER OF DOFS ON ELEMTYPE
 get_ndofs4elemtype(FE::H1Q1FiniteElement{T,1} where {T <: Real}, ::Grid.Grid.Abstract0DElemType) = 1
 get_ndofs4elemtype(FE::H1Q1FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract1DElemType) = 2
-get_ndofs4elemtype(FE::H1Q1FiniteElement{T,1} where {T <: Real}, ::Grid.ElemType2DParallelogram) = 4
+get_ndofs4elemtype(FE::H1Q1FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract2DQuadrilateral) = 4
 get_ndofs4elemtype(FE::H1Q1FiniteElement{T,2} where {T <: Real}, ::Grid.Grid.Abstract0DElemType) = 2
 get_ndofs4elemtype(FE::H1Q1FiniteElement{T,2} where {T <: Real}, ::Grid.Abstract1DElemType) = 4
-get_ndofs4elemtype(FE::H1Q1FiniteElement{T,2} where {T <: Real}, ::Grid.ElemType2DParallelogram) = 8
+get_ndofs4elemtype(FE::H1Q1FiniteElement{T,2} where {T <: Real}, ::Grid.Abstract2DQuadrilateral) = 8
 
 # NUMBER OF COMPONENTS
 get_ncomponents(FE::H1Q1FiniteElement{T,1} where {T <: Real}) = 1
@@ -51,7 +51,7 @@ get_ncomponents(FE::H1Q1FiniteElement{T,2} where {T <: Real}) = 2
 function get_dofs_on_cell!(dofs,FE::H1Q1FiniteElement{T,1} where {T <: Real}, cell::Int64, ::Grid.AbstractElemType)
     dofs[:] = FE.grid.nodes4cells[cell,:]
 end
-function get_dofs_on_cell!(dofs,FE::H1Q1FiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.ElemType2DParallelogram)
+function get_dofs_on_cell!(dofs,FE::H1Q1FiniteElement{T,2} where {T <: Real}, cell::Int64, ::Grid.Abstract2DQuadrilateral)
     dofs[1:4] = FE.grid.nodes4cells[cell,:]
     dofs[5:8] = size(FE.grid.coords4nodes,1) .+ dofs[1:4]
 end
@@ -93,7 +93,7 @@ function get_basis_on_cell(FE::H1Q1FiniteElement{T,2} where T <: Real, ::Grid.Ab
     end
 end
 
-function get_basis_on_cell(FE::H1Q1FiniteElement{T,1} where T <: Real, ::Grid.ElemType2DParallelogram)
+function get_basis_on_cell(FE::H1Q1FiniteElement{T,1} where T <: Real, ::Grid.Abstract2DQuadrilateral)
     a = 0.0;
     b = 0.0;
     function closure(xref)
@@ -106,7 +106,7 @@ function get_basis_on_cell(FE::H1Q1FiniteElement{T,1} where T <: Real, ::Grid.El
     end
 end
 
-function get_basis_on_cell(FE::H1Q1FiniteElement{T,2} where T <: Real, ::Grid.ElemType2DParallelogram)
+function get_basis_on_cell(FE::H1Q1FiniteElement{T,2} where T <: Real, ::Grid.Abstract2DQuadrilateral)
     a = 0.0;
     b = 0.0;
     function closure(xref)

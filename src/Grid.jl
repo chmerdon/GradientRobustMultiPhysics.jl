@@ -41,7 +41,8 @@ end
   # subtype for elem types that require 2D integration
   abstract type Abstract2DElemType <: AbstractElemType end
     include("GRIDelemtypes/2D_triangle.jl");
-    include("GRIDelemtypes/2D_parallelogram.jl");
+    include("GRIDelemtypes/2D_quadrilateral.jl");
+    include("GRIDelemtypes/2D_parallelogram.jl"); # subtype of 2D_quadrilateral
 
   # subtype for elem types that require 3D integration
   abstract type Abstract3DElemType <: AbstractElemType end
@@ -142,6 +143,10 @@ function ensure_volume4cells!(Grid::Mesh)
                Grid.coords4nodes[Grid.nodes4cells[cell,1],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,2],2] -  Grid.coords4nodes[Grid.nodes4cells[cell,3],2])
             + Grid.coords4nodes[Grid.nodes4cells[cell,2],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,3],2] - Grid.coords4nodes[Grid.nodes4cells[cell,1],2])
             + Grid.coords4nodes[Grid.nodes4cells[cell,3],1] * (Grid.coords4nodes[Grid.nodes4cells[cell,1],2] - Grid.coords4nodes[Grid.nodes4cells[cell,2],2]));
+            end      
+        elseif typeof(Grid.elemtypes[1]) <: ElemType2DQuadrilateral
+            for cell = 1 : ncells 
+                Grid.volume4cells[cell] = 0.5 * ((Grid.coords4nodes[Grid.nodes4cells[cell,1],1] - Grid.coords4nodes[Grid.nodes4cells[cell,3],1]) * (Grid.coords4nodes[Grid.nodes4cells[cell,2],2] - Grid.coords4nodes[Grid.nodes4cells[cell,4],2]) + (Grid.coords4nodes[Grid.nodes4cells[cell,4],1] - Grid.coords4nodes[Grid.nodes4cells[cell,2],1]) * (Grid.coords4nodes[Grid.nodes4cells[cell,1],2] - Grid.coords4nodes[Grid.nodes4cells[cell,3],2]));
             end        
        # elseif typeof(Grid.elemtypes[1]) <: ElemType3DTetraeder
        #    A = ones(eltype(Grid.coords4nodes),4,4);
