@@ -46,7 +46,8 @@ function main()
     #fem = "BDM1"; expectedorder = 2
 
     # Hdiv on squares
-    fem = "ABF0"; expectedorder = 1; use_square_grid = true
+    fem = "RT0"; expectedorder = 1; use_square_grid = true
+    #fem = "ABF0"; expectedorder = 1; use_square_grid = true
 
     # H1-conforming FE
     #fem = "CR"; expectedorder = 2
@@ -54,6 +55,7 @@ function main()
     #fem = "P2"; expectedorder = 3
     #fem = "P2B"; expectedorder = 3
     #fem = "BR"; expectedorder = 2
+    #fem = "Q1"; expectedorder = 2; use_square_grid = true
 
     # load problem data
     PD, exact_velocity! = getProblemData(polynomial_order, 1.0, false, 1);

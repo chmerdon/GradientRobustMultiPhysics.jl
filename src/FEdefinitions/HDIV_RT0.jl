@@ -19,7 +19,7 @@ function get_xref4dof(FE::HdivRT0FiniteElement, ::Grid.ElemType2DTriangle)
 end    
 
 # POLYNOMIAL ORDER
-get_polynomial_order(FE::HdivRT0FiniteElement) = 1;
+get_polynomial_order(FE::HdivRT0FiniteElement) =  typeof(FE.grid.elemtypes[1]) <: Grid.Abstract2DQuadrilateral ? 2 : 1;
 
 # TOTAL NUMBER OF DOFS
 get_ndofs(FE::HdivRT0FiniteElement) = size(FE.grid.nodes4faces,1);
@@ -27,12 +27,13 @@ get_ndofs(FE::HdivRT0FiniteElement) = size(FE.grid.nodes4faces,1);
 # NUMBER OF DOFS ON ELEMTYPE
 get_ndofs4elemtype(FE::HdivRT0FiniteElement, ::Grid.Abstract1DElemType) = 1
 get_ndofs4elemtype(FE::HdivRT0FiniteElement, ::Grid.ElemType2DTriangle) = 3
+get_ndofs4elemtype(FE::HdivRT0FiniteElement, ::Grid.Abstract2DQuadrilateral) = 4
 
 # NUMBER OF COMPONENTS
 get_ncomponents(FE::HdivRT0FiniteElement) = 2
 
 # LOCAL DOF TO GLOBAL DOF ON CELL
-function get_dofs_on_cell!(dofs,FE::HdivRT0FiniteElement, cell::Int64, ::Grid.ElemType2DTriangle)
+function get_dofs_on_cell!(dofs,FE::HdivRT0FiniteElement, cell::Int64, ::Grid.Abstract2DElemType)
     dofs[:] = FE.grid.faces4cells[cell,:]
 end
 
@@ -50,6 +51,21 @@ function get_basis_on_cell(FE::HdivRT0FiniteElement, ::Grid.ElemType2DTriangle)
     end
 end
 
+# BASIS FUNCTIONS
+function get_basis_on_cell(FE::HdivRT0FiniteElement, ::Grid.Abstract2DQuadrilateral)
+    a = 0.0
+    b = 0.0
+    d = -1.0/3.0
+    function closure(xref)
+        a = xref[1] - 1.0
+        b = xref[2] - 1.0
+        return [[-3*xref[1]*a -3*b*(xref[2]+d)];
+                [-3*xref[1]*(a+d) -3*xref[2]*b];
+                [-3*xref[1]*a -3*xref[2]*(b+d)];
+                [-3*a*(xref[1]+d) -3*xref[2]*b]]
+    end
+end
+
 function get_basis_fluxes_on_face(FE::HdivRT0FiniteElement, ::Grid.Abstract1DElemType)
     function closure(xref)
         return [1.0]; # normal-flux of RT0 function on single triangle face
@@ -64,4 +80,16 @@ function get_basis_coefficients_on_cell!(coefficients, FE::HdivRT0FiniteElement,
     coefficients[2,2] = FE.grid.signs4cells[cell,2];
     coefficients[3,1] = FE.grid.signs4cells[cell,3];
     coefficients[3,2] = FE.grid.signs4cells[cell,3];
+end   
+
+function get_basis_coefficients_on_cell!(coefficients, FE::HdivRT0FiniteElement, cell::Int64,  ::Grid.Abstract2DQuadrilateral)
+    # multiply by signs to ensure continuity of normal fluxes
+    coefficients[1,1] = FE.grid.signs4cells[cell,1];
+    coefficients[1,2] = FE.grid.signs4cells[cell,1];
+    coefficients[2,1] = FE.grid.signs4cells[cell,2];
+    coefficients[2,2] = FE.grid.signs4cells[cell,2];
+    coefficients[3,1] = FE.grid.signs4cells[cell,3];
+    coefficients[3,2] = FE.grid.signs4cells[cell,3];
+    coefficients[4,1] = FE.grid.signs4cells[cell,4];
+    coefficients[4,2] = FE.grid.signs4cells[cell,4];
 end   

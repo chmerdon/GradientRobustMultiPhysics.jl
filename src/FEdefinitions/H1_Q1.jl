@@ -126,3 +126,33 @@ end
 function get_basis_on_face(FE::H1Q1FiniteElement, ET::Grid.AbstractElemType)
     return get_basis_on_cell(FE, ET)
 end
+
+
+
+# DISCRETE DIVERGENCE-PRESERVING HDIV-RECONSTRUCTION
+
+function get_Hdivreconstruction_space(FE::H1Q1FiniteElement{T,2} where T <: Real, ::Grid.Abstract2DQuadrilateral, variant::Int = 1)
+    if (variant == 1)
+        return getRT0FiniteElement(FE.grid)
+    end    
+end
+
+
+function get_Hdivreconstruction_trafo!(T,FE::H1Q1FiniteElement{T,2} where T <: Real, FE_hdiv::HdivRT0FiniteElement)
+    ensure_length4faces!(FE.grid);
+    nfaces = size(FE.grid.nodes4faces,1)
+    nnodes = size(FE.grid.coords4nodes,1)
+
+    # coefficient for facial ABF dofs
+    # = integral of normal flux
+    for face = 1 : nfaces
+        # reconstruction coefficients for quadratic Q1 basis functions
+        # (at the boundary they are linear like the triangular P1 functions)
+        for k = 1 : 2
+            node = FE.grid.nodes4faces[face,k]
+            T[node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+            T[nnodes+node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+        end
+    end
+    return T
+end

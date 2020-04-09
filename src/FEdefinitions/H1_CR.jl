@@ -108,11 +108,7 @@ end
 
 # DISCRETE DIVERGENCE-PRESERVING HDIV-RECONSTRUCTION
 
-function Hdivreconstruction_available(FE::H1CRFiniteElement{T,2,2} where T <: Real)
-    return true
-end
-
-function get_Hdivreconstruction_space(FE::H1CRFiniteElement{T,2,2} where T <: Real, variant::Int = 1)
+function get_Hdivreconstruction_space(FE::H1CRFiniteElement{T,2,2} where T <: Real, ET::Grid.AbstractElemType, variant::Int = 1)
     if (variant == 1)
         return getRT0FiniteElement(FE.grid)
     elseif (variant == 2)

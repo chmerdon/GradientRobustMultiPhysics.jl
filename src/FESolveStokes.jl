@@ -135,8 +135,8 @@ function solveStokesProblem!(val4dofs::Array,PD::StokesProblemDescription, FE_ve
         for region = 1 : length(PD.volumedata4region)
             print("    |assembling rhs in region $region...")
             if reconst_variant > 0
-                @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
+                ET = FE_velocity.grid.elemtypes[1];
+                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, ET, reconst_variant);
                 ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
                 b2 = zeros(Float64,ndofsHdiv);
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
@@ -241,8 +241,8 @@ function solveStokesProblem_iterative!(val4dofs::Array,PD::StokesProblemDescript
         for region = 1 : length(PD.volumedata4region)
             print("    |assembling rhs in region $region...")
             if reconst_variant > 0
-                @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
+                ET = FE_velocity.grid.elemtypes[1];
+                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, ET, reconst_variant);
                 ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
                 b2 = zeros(Float64,ndofsHdiv);
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
@@ -365,8 +365,8 @@ function setupTransientStokesSolver(PD::StokesProblemDescription, FE_velocity::F
         print("    |assembling mass matrix...")
         M = ExtendableSparseMatrix{Float64,Int64}(ndofs,ndofs)
         if reconst_variant > 0
-            @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
+            ET = FE_velocity.grid.elemtypes[1];
+            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, ET, reconst_variant);
             ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
             Mhdiv = ExtendableSparseMatrix{Float64,Int64}(ndofsHdiv,ndofsHdiv)
             FESolveCommon.assemble_operator!(Mhdiv,FESolveCommon.CELL_UdotV,FE_Reconstruction);

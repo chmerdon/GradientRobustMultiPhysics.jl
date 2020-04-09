@@ -143,8 +143,8 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         FESolveCommon.assemble_operator!(Mp,FESolveCommon.CELL_UdotV,FE_densitypressure);
         println("finished")
         if reconst_variant > 0
-            @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
+            ET = FE_velocity.grid.elemtypes[1];
+            FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, ET, reconst_variant);
             ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
             T = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofsHdiv)
             FiniteElements.get_Hdivreconstruction_trafo!(T,FE_velocity,FE_Reconstruction);
@@ -181,9 +181,6 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
         for region = 1 : length(PD.volumedata4region)
             print("    |assembling rhs in region $region...")
             if reconst_variant > 0
-                @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
-                ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
                 b2 = zeros(Float64,ndofsHdiv);
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
                 FESolveCommon.assemble_operator!(b2, FESolveCommon.CELL_FdotV, FE_Reconstruction, PD.volumedata4region[region], quadorder)
@@ -201,7 +198,6 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
     # add gravity
     G = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
     if PD.quadorder4gravity > -1
-        G = ExtendableSparseMatrix{Float64,Int64}(ndofs_velocity,ndofs_densitypressure)
         @time begin
             # compute gravity matrix
             print("    |assembling gravity matrix...")

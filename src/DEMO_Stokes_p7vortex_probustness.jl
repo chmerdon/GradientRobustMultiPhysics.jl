@@ -29,27 +29,32 @@ function main()
     nu = [1e1,1,1e-1,1e-2,1e-3,1e-4]
 
     # refinement termination criterions
-    maxlevel = 5
-    maxdofs = 60000
+    maxlevel = 4
+    maxdofs = 10000
 
     # other switches
     show_plots = false
     show_convergence_history = true
     use_reconstruction = [0] # do not change here
     barycentric_refinement = false # do not change here
+    use_square_grid = false # do not change here
 
 
     ########################
     ### CHOOSE FEM BELOW ###
     ########################
 
-    fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = [0,1,2]
+    #fem_velocity = "CR"; fem_pressure = "P0"; use_reconstruction = [0,1,2]
     #fem_velocity = "MINI"; fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1"
     #fem_velocity = "P2";  fem_pressure = "P1dc"; barycentric_refinement = true
     #fem_velocity = "P2"; fem_pressure = "P0"
     #fem_velocity = "P2B"; fem_pressure = "P1dc"
     #fem_velocity = "BR"; fem_pressure = "P0"; use_reconstruction = [0,1,2]
+
+    ### elements on square grids
+    #fem_velocity = "Q1"; fem_pressure = "P0"; expectedorder = 1; use_reconstruction = [0,1]; use_square_grid = true
+    fem_velocity = "BR"; fem_pressure = "P0"; expectedorder = 1; use_reconstruction = [0,1]; use_square_grid = true
 
 
     L2error_velocity = zeros(Float64,maxlevel,length(nu),length(use_reconstruction))
@@ -71,7 +76,11 @@ function main()
             println("Solving Stokes problem on refinement level...", level);
             println("Generating grid by triangle...");
             maxarea = 4.0^(-level)
-            grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+            if use_square_grid == true
+                grid = gridgen_unitsquare_squares(maxarea,0.4,0.6)
+            else
+                grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+            end 
             Grid.show(grid)
 
             # load finite element
@@ -89,7 +98,11 @@ function main()
                 maxlevel = level - 1
                 if (show_plots)
                     maxarea = 4.0^(-maxlevel)
-                    grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+                    if use_square_grid == true
+                        grid = gridgen_unitsquare_squares(maxarea,0.4,0.6)
+                    else
+                        grid = gridgen_unitsquare(maxarea, barycentric_refinement)
+                    end 
                     FE_velocity = FiniteElements.string2FE(fem_velocity,grid,2,2)
                     FE_pressure = FiniteElements.string2FE(fem_pressure,grid,2,1)
                 end    

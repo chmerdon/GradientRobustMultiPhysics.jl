@@ -27,7 +27,7 @@ include("PROBLEMdefinitions/STOKES_HagenPoiseuille.jl");
 function main()
 
     # problem modification switches
-    do_nothing_inlet = false
+    do_nothing_inlet = true
     symmetry_top = true
     nu = 1
     nonlinear = false

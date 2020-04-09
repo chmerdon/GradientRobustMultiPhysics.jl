@@ -44,7 +44,8 @@ for j = 1 : length(fems2D_squares)
     @test FESolveCommonTests.TestBestApproximation2D("L2",fems2D_squares[j],expected_orders2D[j], true)
     @test FESolveCommonTests.TestBestApproximation2D("H1",fems2D_squares[j],expected_orders2D[j], true)
 end    
- 
+# test BR interpolation on squares
+@test FESolveCommonTests.TestInterpolation2D("BR",1,2,true)
 
 using FESolvePoissonTests
 println("\nStarting tests for FESolvePoisson")

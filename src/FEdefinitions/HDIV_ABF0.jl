@@ -47,14 +47,14 @@ end
 function get_basis_on_cell(FE::HdivABF0FiniteElement, ::Grid.Abstract2DQuadrilateral)
     a = 0.0
     b = 0.0
-    d = -1.0/6.0
+    d = -1.0/3.0
     function closure(xref)
         a = xref[1] - 1.0
         b = xref[2] - 1.0
-        return [[-6*xref[1]*a -6*b*(xref[2]+d)];
-                [6*xref[1]*(a+d) 6*xref[2]*b];
-                [6*xref[1]*a 6*xref[2]*(b+d)];
-                [-6*a*(xref[1]+d) -6*xref[2]*b];
+        return [[-3*xref[1]*a -3*b*(xref[2]+d)];
+                [-3*xref[1]*(a+d) -3*xref[2]*b];
+                [-3*xref[1]*a -3*xref[2]*(b+d)];
+                [-3*a*(xref[1]+d) -3*xref[2]*b];
                 [6*xref[1]*a 0.0];
                 [0.0 6*xref[2]*b]]
     end

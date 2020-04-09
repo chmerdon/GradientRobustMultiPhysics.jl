@@ -62,8 +62,8 @@ function main()
     #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
     #fem_velocity = "BR"; fem_densitypressure = "P0"
     #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
-
-    fem_velocity = "BR"; fem_densitypressure = "P0"; use_square_grid = true
+    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_square_grid = true
+    fem_velocity = "BR"; fem_densitypressure = "P0"; use_square_grid = true; use_reconstruction = 1
 
 
 
@@ -78,7 +78,7 @@ function main()
     end 
 
     function gravity!(result,x)
-        result[1] = 0
+        result[1] = 0.0
         result[2] = -1.0
     end    
 

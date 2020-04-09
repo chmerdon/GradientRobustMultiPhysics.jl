@@ -17,7 +17,6 @@ function get_xref4dof(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.ElemT
     xref[1] = Array{Float64,1}([0, 0])
     xref[2] = Array{Float64,1}([1, 0])
     xref[3] = Array{Float64,1}([0, 1])
-    xref[1] = Array{Float64,1}([0, 0])
     xref[[4,5,6]] = xref[[1,2,3]]
     xref[7] = Array{Float64,1}([0.5, 0])
     xref[8] = Array{Float64,1}([0.5, 0.5])
@@ -34,6 +33,33 @@ function get_xref4dof(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.ElemT
     InterpolationMatrix2[[4,5,6,9],9] = [-1//2, 0, -1//2, 1]
     return xref, [sparse(InterpolationMatrix), sparse(InterpolationMatrix2)]
 end    
+
+
+function get_xref4dof(FE::H1BRFiniteElement{T,2} where {T <: Real}, ::Grid.Abstract2DQuadrilateral) 
+    xref = Array{Array{Float64,1},1}(undef,12)
+    xref[1] = Array{Float64,1}([0, 0])
+    xref[2] = Array{Float64,1}([1, 0])
+    xref[3] = Array{Float64,1}([1, 1])
+    xref[4] = Array{Float64,1}([0, 1])
+    xref[[5,6,7,8]] = xref[[1,2,3,4]]
+    xref[9] = Array{Float64,1}([0.5, 0])
+    xref[10] = Array{Float64,1}([1, 0.5])
+    xref[11] = Array{Float64,1}([0.5, 1])
+    xref[12] = Array{Float64,1}([0, 0.5])
+    InterpolationMatrix = zeros(Float64,12,12)
+    InterpolationMatrix[1:4,1:4] = Matrix{Float64}(I,4,4)
+    InterpolationMatrix[[1,2,3,4,9],9] = [-1//2, -1//2, 0, 0, 1]
+    InterpolationMatrix[[1,2,3,4,10],10] = [0, -1//2, -1//2, 0, 1]
+    InterpolationMatrix[[1,2,3,4,11],11] = [0, 0, -1//2, -1//2, 1]
+    InterpolationMatrix[[1,2,3,4,12],12] = [-1//2, 0, 0, -1//2, 1]
+    InterpolationMatrix2 = zeros(Float64,12,12)
+    InterpolationMatrix2[5:8,5:8] = Matrix{Float64}(I,4,4)
+    InterpolationMatrix2[[5,6,7,8,9],9] = [-1//2, -1//2, 0, 0, 1]
+    InterpolationMatrix2[[5,6,7,8,10],10] = [0, -1//2, -1//2, 0, 1]
+    InterpolationMatrix2[[5,6,7,8,11],11] = [0, 0, -1//2, -1//2, 1]
+    InterpolationMatrix2[[5,6,7,8,12],12] = [-1//2, 0, 0, -1//2, 1]
+    return xref, [sparse(InterpolationMatrix), sparse(InterpolationMatrix2)]
+end   
 
 # POLYNOMIAL ORDER
 get_polynomial_order(FE::H1BRFiniteElement) = typeof(FE.grid.elemtypes[1]) <: Grid.Abstract2DQuadrilateral ? 3 : 2;
@@ -114,10 +140,10 @@ function get_basis_on_cell(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.Ab
     function closure(xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
-        fb1 = xref[1]*a*b
-        fb2 = xref[1]*b*xref[2]
-        fb3 = xref[1]*xref[2]*a
-        fb4 = xref[2]*a*b
+        fb1 = 4*xref[1]*a*b
+        fb2 = 4*xref[2]*xref[1]*b
+        fb3 = 4*xref[1]*xref[2]*a
+        fb4 = 4*xref[2]*a*b
         return [a*b 0.0;
                 xref[1]*b 0.0;
                 xref[1]*xref[2] 0.0;
@@ -167,15 +193,19 @@ end
 
 # DISCRETE DIVERGENCE-PRESERVING HDIV-RECONSTRUCTION
 
-function Hdivreconstruction_available(FE::H1BRFiniteElement{T,2} where T <: Real)
-    return true
-end
-
-function get_Hdivreconstruction_space(FE::H1BRFiniteElement{T,2} where T <: Real, variant::Int = 1)
+function get_Hdivreconstruction_space(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.ElemType2DTriangle, variant::Int = 1)
     if (variant == 1)
         return getRT0FiniteElement(FE.grid)
     elseif (variant == 2)
         return getBDM1FiniteElement(FE.grid)    
+    end    
+end
+
+function get_Hdivreconstruction_space(FE::H1BRFiniteElement{T,2} where T <: Real, ::Grid.Abstract2DQuadrilateral, variant::Int = 1)
+    if (variant == 1)
+        return getRT0FiniteElement(FE.grid)
+    elseif (variant == 2)
+        return getABF0FiniteElement(FE.grid)    
     end    
 end
 
@@ -212,6 +242,80 @@ function get_Hdivreconstruction_trafo!(T,FE::H1BRFiniteElement{T,2} where T <: R
         end
         # reconstruction coefficient for quadratic face bubbles
         T[2*nnodes+face,face] = 2 // 3 * FE.grid.length4faces[face]
+    end
+    return T
+end
+
+
+# ABF0 reconstruction not working properly yet!
+# coefficients for interior ABF0 functions seem not correct
+function get_Hdivreconstruction_trafo!(T,FE::H1BRFiniteElement{T,2} where T <: Real, FE_hdiv::HdivABF0FiniteElement)
+    ensure_length4faces!(FE.grid);
+    nfaces = size(FE.grid.nodes4faces,1)
+    nnodes = size(FE.grid.coords4nodes,1)
+
+    # coefficient for facial ABF dofs
+    # = integral of normal flux
+    for face = 1 : nfaces
+        # reconstruction coefficients for quadratic Q1 basis functions
+        # (at the boundary they are linear like the triangular P1 functions)
+        for k = 1 : 2
+            node = FE.grid.nodes4faces[face,k]
+            T[node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+            T[nnodes+node,face] = 1 // 2 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+        end
+        # reconstruction coefficient for cubic face bubbles
+        # (at the boundary they are quadratic like the triangular face bubbles)
+        T[2*nnodes+face,face] = 2 // 3 * FE.grid.length4faces[face]
+    end
+
+    # coefficients for interior ABF dofs
+    # = first moments of the divergence (integral of div(v)x and div(v)y)
+    a = 0.0
+    b = 0.0
+    face = 0
+    node = 0
+    c1 = [-1//4, 1//4,1//4,-1//4]
+    c2 = [-1//6, 1//6,1//3,-1//3]
+    c3 = [-1//6,-1//3,1//3, 1//6]
+    c4 = [-1//4,-1//4,1//4, 1//4]
+    for cell = 1 : size(FE.grid.nodes4cells,1)
+        # Q1 basis functions
+        for k = 1 : 4
+            node = FE.grid.nodes4cells[cell,k]
+            T[node,nfaces+2*cell-1]          =  c1[k] .* FE.grid.volume4cells[cell]
+            T[node,nfaces+2*cell]            =  c2[k] .* FE.grid.volume4cells[cell]
+            T[nnodes + node,nfaces+2*cell-1] =  c3[k] .* FE.grid.volume4cells[cell]
+            T[nnodes + node,nfaces+2*cell]   =  c4[k] .* FE.grid.volume4cells[cell]
+            
+        end
+        # face bubble 1
+        face = FE.grid.faces4cells[cell,1]
+        a = FE.grid.normal4faces[face,1] * FE.grid.volume4cells[cell]
+        b = FE.grid.normal4faces[face,2] * FE.grid.volume4cells[cell]
+        T[2*nnodes+face,nfaces+2*cell-1] = -1 // 3 * (a + b)
+        T[2*nnodes+face,nfaces+2*cell] = - 1 // 3 * b
+        
+        # face bubble 2
+        face = FE.grid.faces4cells[cell,2]
+        a = FE.grid.normal4faces[face,1] * FE.grid.volume4cells[cell]
+        b = FE.grid.normal4faces[face,2] * FE.grid.volume4cells[cell]
+        T[2*nnodes+face,nfaces+2*cell-1] = 1 // 3 * a
+        T[2*nnodes+face,nfaces+2*cell] = 1 // 3 * (a-b)
+        
+        # face bubble 3
+        face = FE.grid.faces4cells[cell,3]
+        a = FE.grid.normal4faces[face,1] * FE.grid.volume4cells[cell]
+        b = FE.grid.normal4faces[face,2] * FE.grid.volume4cells[cell]
+        T[2*nnodes+face,nfaces+2*cell-1] = 1 // 3 * (b-a)
+        T[2*nnodes+face,nfaces+2*cell] = 1 // 3 * b
+
+        # face bubble 4
+        face = FE.grid.faces4cells[cell,4]
+        a = FE.grid.normal4faces[face,1] * FE.grid.volume4cells[cell]
+        b = FE.grid.normal4faces[face,2] * FE.grid.volume4cells[cell]
+        T[2*nnodes+face,nfaces+2*cell-1] = -1 // 3 * a
+        T[2*nnodes+face,nfaces+2*cell] = -1 // 3 * (a+b)
     end
     return T
 end

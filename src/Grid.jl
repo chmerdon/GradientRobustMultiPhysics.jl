@@ -187,7 +187,7 @@ function assign_boundaryregions!(grid,nodes4bfaces,bregions)
     nodes1 = [0, 0]
     nodes2 = [0, 0]
     for j = 1 : length(bregions)
-        nodes1[:] = sort(nodes4bfaces[j,:])
+        nodes1[:] = sort(nodes4bfaces[:,j])
         for k = 1 : length(grid.bfaces)
             nodes2[:] = sort(grid.nodes4faces[grid.bfaces[k],:])
             if (nodes1 == nodes2)

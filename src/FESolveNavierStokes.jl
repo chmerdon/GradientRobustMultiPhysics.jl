@@ -53,8 +53,8 @@ function solveNavierStokesProblem!(val4dofs::Array,PD::FESolveStokes.StokesProbl
         for region = 1 : length(PD.volumedata4region)
             print("    |assembling rhs in region $region...")
             if reconst_variant > 0
-                @assert FiniteElements.Hdivreconstruction_available(FE_velocity)
-                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, reconst_variant);
+                ET = FE_velocity.grid.elemtypes[1];
+                FE_Reconstruction = FiniteElements.get_Hdivreconstruction_space(FE_velocity, ET, reconst_variant);
                 ndofsHdiv = FiniteElements.get_ndofs(FE_Reconstruction)
                 b2 = zeros(Float64,ndofsHdiv);
                 quadorder = PD.quadorder4bregion[region] + FiniteElements.get_polynomial_order(FE_Reconstruction)
