@@ -19,7 +19,7 @@ function get_xref4dof(FE::HdivRT0FiniteElement, ::Grid.ElemType2DTriangle)
 end    
 
 # POLYNOMIAL ORDER
-get_polynomial_order(FE::HdivRT0FiniteElement) =  typeof(FE.grid.elemtypes[1]) <: Grid.Abstract2DQuadrilateral ? 2 : 1;
+get_polynomial_order(FE::HdivRT0FiniteElement) = 1
 
 # TOTAL NUMBER OF DOFS
 get_ndofs(FE::HdivRT0FiniteElement) = size(FE.grid.nodes4faces,1);
@@ -53,16 +53,11 @@ end
 
 # BASIS FUNCTIONS
 function get_basis_on_cell(FE::HdivRT0FiniteElement, ::Grid.Abstract2DQuadrilateral)
-    a = 0.0
-    b = 0.0
-    d = -1.0/3.0
     function closure(xref)
-        a = xref[1] - 1.0
-        b = xref[2] - 1.0
-        return [[-3*xref[1]*a -3*b*(xref[2]+d)];
-                [-3*xref[1]*(a+d) -3*xref[2]*b];
-                [-3*xref[1]*a -3*xref[2]*(b+d)];
-                [-3*a*(xref[1]+d) -3*xref[2]*b]]
+        return [[0.0 xref[2]-1.0];
+                [xref[1] 0.0];
+                [0.0 xref[2]];
+                [xref[1]-1.0 0.0]]        
     end
 end
 
