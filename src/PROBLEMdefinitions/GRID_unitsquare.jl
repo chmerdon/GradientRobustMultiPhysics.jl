@@ -17,6 +17,38 @@ function gridgen_unitsquare(maxarea, refine_barycentric = false)
 end
 
 
+function gridgen_unitsquare_uniform(maxarea, criss::Bool = true, cross::Bool = false)
+    nodes4bfaces = [1 2; 2 3; 3 4; 4 1]
+    bregions = [1,2,3,4]
+        
+    if criss && ~cross
+        coords4nodes = [0 0; 1 0; 1 1; 0 1]
+        nodes4cells = zeros(Int64,2,3)
+        nodes4cells[1,:] = [1, 2, 3]
+        nodes4cells[2,:] = [1, 3, 4]
+        nrefinements = ceil(1/log(0.5/maxarea,4))
+        grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Array{Int64,2}(nodes4bfaces'),bregions,Grid.ElemType2DTriangle(),nrefinements);
+    elseif cross && ~criss
+        coords4nodes = [0 0; 1 0; 1 1; 0 1]
+        nodes4cells = zeros(Int64,2,3)
+        nodes4cells[1,:] = [1, 2, 4]
+        nodes4cells[2,:] = [4, 2, 3]
+        nrefinements = ceil(1/log(0.5/maxarea,4))
+        grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Array{Int64,2}(nodes4bfaces'),bregions,Grid.ElemType2DTriangle(),nrefinements);
+    elseif criss && cross
+        coords4nodes = [0 0; 1 0; 1 1; 0 1]
+        nodes4cells = zeros(Int64,1,4)
+        nodes4cells[1,:] = [1, 2, 3, 4];
+        nrefinements = ceil(1/log(1.0/maxarea,4))
+        grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Array{Int64,2}(nodes4bfaces'),bregions,Grid.ElemType2DParallelogram(),nrefinements);
+        nodes4cells = Grid.divide_into_triangles(Grid.ElemType2DParallelogram(),grid.nodes4cells)
+        grid = Grid.Mesh{Float64}(grid.coords4nodes,nodes4cells,Grid.ElemType2DTriangle());
+    end
+    return grid
+end
+
+
+
 function gridgen_unitsquare_squares(maxarea, H = 0.4, L = 0.6)
     coords4nodes = [0 0; L 0; 1 0; 0 H; L H; 1 H;0 1; L 1; 1 1]
     nodes4cells = zeros(Int64,4,4)

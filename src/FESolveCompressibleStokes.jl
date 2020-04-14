@@ -269,10 +269,9 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
         # time derivative
         CSS.SystemMatrixD = deepcopy(CSS.MassMatrixD)
         ExtendableSparse.flush!(CSS.SystemMatrixD)
-        CSS.SystemMatrixD.cscmatrix.nzval .*= (1.0/dt)
 
         # upwinding div(rho*u) = 0
-        CSS.fluxes = CSS.NormalFluxMatrix * CSS.last_velocity
+        CSS.fluxes = dt * CSS.NormalFluxMatrix * CSS.last_velocity
         # test divergence
         #Base.show(sum(CSS.fluxes[CSS.FE_velocity.grid.faces4cells].*CSS.FE_velocity.grid.signs4cells,dims = 2))
         flux = 0.0
@@ -306,7 +305,6 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
         #print("    |updating rhs for density...")
         CSS.last_density = CSS.current_density
         CSS.rhsvectorD = CSS.MassMatrixD * CSS.last_density
-        CSS.rhsvectorD .*= (1.0/dt)
         #println("finished")
 
 
@@ -323,20 +321,23 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
 
 
         #print("    |updating velocity mass matrix...")
-        if CSS.FE_reconst != CSS.FE_velocity
-            fill!(CSS.ReconstMassMatrix.cscmatrix.nzval,0.0)
-            assemble_operator!(CSS.ReconstMassMatrix,CELL_RHOdotUdotV,CSS.FE_velocity,CSS.FE_reconst,CSS.FE_densitypressure,CSS.current_density);
-            ExtendableSparse.flush!(CSS.ReconstMassMatrix)
-            ExtendableSparse.flush!(CSS.ReconstMatrix)
-            CSS.SystemMatrixV.cscmatrix = CSS.ReconstMassMatrix.cscmatrix*CSS.ReconstMatrix.cscmatrix'
-        else
-            fill!(CSS.SystemMatrixV.cscmatrix.nzval,0.0)
-            assemble_operator!(CSS.SystemMatrixV,CELL_RHOdotUdotV,CSS.FE_velocity,CSS.FE_velocity,CSS.FE_densitypressure,CSS.current_density);
-        end    
+        fill!(CSS.SystemMatrixV.cscmatrix.nzval,0.0)
+        use_velocity_timederivative = true
+        if use_velocity_timederivative
+            if CSS.FE_reconst != CSS.FE_velocity
+                fill!(CSS.ReconstMassMatrix.cscmatrix.nzval,0.0)
+                assemble_operator!(CSS.ReconstMassMatrix,CELL_RHOdotUdotV,CSS.FE_velocity,CSS.FE_reconst,CSS.FE_densitypressure,CSS.current_density);
+                ExtendableSparse.flush!(CSS.ReconstMassMatrix)
+                ExtendableSparse.flush!(CSS.ReconstMatrix)
+                CSS.SystemMatrixV.cscmatrix = CSS.ReconstMassMatrix.cscmatrix*CSS.ReconstMatrix.cscmatrix'
+            else
+                assemble_operator!(CSS.SystemMatrixV,CELL_RHOdotUdotV,CSS.FE_velocity,CSS.FE_velocity,CSS.FE_densitypressure,CSS.current_density);
+            end 
+            ExtendableSparse.flush!(CSS.SystemMatrixV)
+            CSS.SystemMatrixV.cscmatrix.nzval .*= (1.0/dt)
+        end       
         #println("finished")
 
-        ExtendableSparse.flush!(CSS.SystemMatrixV)
-        CSS.SystemMatrixV.cscmatrix.nzval .*= (1.0/dt)
         # up to here the SystemMatrix equals the MassMatrixV
         # add time derivative of velocity to rhs
         CSS.rhsvectorV = CSS.SystemMatrixV * CSS.last_velocity

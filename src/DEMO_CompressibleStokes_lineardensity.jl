@@ -31,13 +31,13 @@ function main()
     symmetric_gradient = true
     nonlinear_convection = false
     uniform_mesh = true; criss = true; cross = false
-    lambda = 0.0
+    lambda = - 1//3 * shear_modulus
     c = 1
-    total_mass = 2.0
-    gamma = 1.0 # exact_density only exact for gamma = 1 !!!
+    total_mass = 1.0
+    gamma = 1.4
     dt = shear_modulus*0.1/c
     maxT = 1000
-    stationarity_tolerance = 1e-11
+    stationarity_tolerance = 1e-12
 
     function equation_of_state!(pressure,density)
         for j=1:length(density)
@@ -46,7 +46,7 @@ function main()
     end    
 
     # refinement termination criterions
-    maxlevel = 3
+    maxlevel = 2
     maxdofs = 40000
 
     # other switches
@@ -76,18 +76,19 @@ function main()
 
     d = log(total_mass/(c*(exp(1)^(1/c)-1.0)))
     function exact_density!(result,x) # only exact for gamma = 1
-        result[1] = exp((1-x[2])/c + d)
+        result[1] = 1.0 + (x[2] - 0.5)/c
     end 
 
     function gravity!(result,x)
+        exact_density!(result,x)
+        result[2] = result[1]^(gamma-2) * gamma
         result[1] = 0.0
-        result[2] = -1.0
     end    
 
 
     # transform into compressible getProblemData
     PD = FESolveCompressibleStokes.CompressibleStokesProblemDescription()
-    PD.name = "stratified no-flow";
+    PD.name = "linear density - no flow";
     PD.shear_modulus = shear_modulus
     PD.use_symmetric_gradient = symmetric_gradient
     PD.use_nonlinear_convection = nonlinear_convection
@@ -95,7 +96,7 @@ function main()
     PD.total_mass = total_mass
     PD.volumedata4region = [zero_data!]
     PD.gravity = gravity!
-    PD.quadorder4gravity = 0
+    PD.quadorder4gravity = 1
     PD.quadorder4region = [0]
     PD.boundarydata4bregion = [zero_data!,zero_data!,zero_data!,zero_data!]
     PD.boundarytype4bregion = [1,1,1,1]
