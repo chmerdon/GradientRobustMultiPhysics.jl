@@ -173,11 +173,15 @@ function main()
 
                     clear!(xyplot)
                     for k = 1 : length(use_reconstruction)
-                        plotlegend!(xyplot,"Energy ( " * string(use_reconstruction[k]) * ")")
+                        plotlegend!(xyplot,"Energy (reconst=" * string(use_reconstruction[k]) * ")")
                         plotcolor!(xyplot,(k == 1) ? 1 : 0,(k == 2) ? 1 : 0,(k == 3) ? 1 : 0)
                         addplot!(xyplot,Array{Float64,1}(energy_times[:]),velocity_energy[k][:]) 
                     end
                 end    
+         
+                # legend size/position
+                legendsize!(xyplot,0.3,0.15)
+                legendposition!(xyplot,0.28,0.12)
 
                 # show
                 display(frame)

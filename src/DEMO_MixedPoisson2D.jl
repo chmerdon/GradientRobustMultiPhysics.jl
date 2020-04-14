@@ -152,14 +152,14 @@ function main()
         plot=VTKView.XYPlot()
         addview!(frame,plot,3)
         clear!(plot)
-        plotlegend!(plot,"L2 error Poisson ($fem_stress)")
+        plotlegend!(plot,"||u-u_h|| ($fem_stress)")
         plotcolor!(plot,1,0,0)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error[1:maxlevel]))
-        plotlegend!(plot,"L2 error L2BestApprox ($fem_stress)")
+        plotlegend!(plot,"||u-u_best|| ($fem_stress)")
         plotcolor!(plot,0,0,1)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2errorBA[1:maxlevel]))
         if (do_estimation)
-            plotlegend!(plot,"Estimator ($fem_stress)")
+            plotlegend!(plot,"estimator ($fem_stress)")
             plotcolor!(plot,0,1,0)
             addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(Estimator[1:maxlevel]))
         end    
@@ -168,6 +168,10 @@ function main()
         plotcolor!(plot,0.5,0.5,0.5)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorder/2))))
     
+        # legend size/position
+        legendsize!(plot,0.3,0.15)
+        legendposition!(plot,0.28,0.12)
+
         # show
         display(frame)
     end    

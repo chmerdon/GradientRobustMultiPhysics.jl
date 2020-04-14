@@ -156,10 +156,10 @@ function main()
         plot=VTKView.XYPlot()
         addview!(frame,plot,4)
         clear!(plot)
-        plotlegend!(plot,"L2 error velocity ($fem_velocity)")
+        plotlegend!(plot,"||u-u_h|| ($fem_velocity)")
         plotcolor!(plot,1,0,0)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_velocity[1:maxlevel]))
-        plotlegend!(plot,"L2 error pressure ($fem_pressure)")
+        plotlegend!(plot,"||p-p_h|| ($fem_pressure)")
         plotcolor!(plot,0,0,1)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_pressure[1:maxlevel]))
 
@@ -170,6 +170,9 @@ function main()
         plotlegend!(plot,"O(h^$expectedorderL2velo)")
         plotcolor!(plot,0.33,0.33,0.33)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorderL2velo/2))))
+
+        legendsize!(plot,0.3,0.15)
+        legendposition!(plot,0.28,0.12)
 
         # show
         display(frame)

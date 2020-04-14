@@ -98,6 +98,10 @@ function main()
         plotcolor!(plot,0,0,1)
         addplot!(plot,grid_exact.coords4nodes[I],nodevals_exact[I])
 
+        # legend size/position
+        legendsize!(plot,0.3,0.15)
+        legendposition!(plot,0.6,0.2)
+        
         # show
         display(frame)
     end    

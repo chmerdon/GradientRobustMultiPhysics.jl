@@ -150,7 +150,7 @@ function main()
         plot=VTKView.XYPlot()
         addview!(frame,plot,3)
         clear!(plot)
-        plotlegend!(plot,"L2 error ($fem)")
+        plotlegend!(plot,"||u-u_h|| ($fem)")
         plotcolor!(plot,1,0,0)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_velocity[1:maxlevel]))
 
@@ -158,6 +158,10 @@ function main()
         plotcolor!(plot,0.67,0.67,0.67)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorder/2))))
         
+        # legend size/position
+        legendsize!(plot,0.3,0.15)
+        legendposition!(plot,0.28,0.12)
+
         # show
         display(frame)
     end    

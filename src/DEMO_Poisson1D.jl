@@ -126,18 +126,21 @@ function main()
         plot=VTKView.XYPlot()
         addview!(frame,plot,2)
         clear!(plot)
-        plotlegend!(plot,"L2 error Poisson ($fem)")
+        plotlegend!(plot,"||u-u_h|| ($fem)")
         plotcolor!(plot,1,0,0)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error[1:maxlevel]))
-        plotlegend!(plot,"L2 error L2BestApprox ($fem)")
+        plotlegend!(plot,"||u-u_best|| ($fem)")
         plotcolor!(plot,0,0,1)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2errorBA[1:maxlevel]))
     
-        expectedorderL2 = Float64(expectedorder + 1)
+        expectedorderL2 = expectedorder + 1
         plotlegend!(plot,"O(h^$expectedorderL2)")
         plotcolor!(plot,0.5,0.5,0.5)
-        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorderL2))))
+        addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-Float64(expectedorderL2)))))
     
+        legendsize!(plot,0.3,0.15)
+        legendposition!(plot,0.28,0.12)
+
         # show
         display(frame)
     end    
