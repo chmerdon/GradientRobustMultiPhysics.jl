@@ -43,10 +43,10 @@ function main()
     # Hdiv-conforming FE
     #fem = "RT0"; expectedorder = 1
     #fem = "RT1"; expectedorder = 2
-    #fem = "BDM1"; expectedorder = 2
+    fem = "BDM1"; expectedorder = 2
 
     # Hdiv on squares
-    fem = "RT0"; expectedorder = 1; use_square_grid = true
+    #fem = "RT0"; expectedorder = 1; use_square_grid = true
     #fem = "ABF0"; expectedorder = 1; use_square_grid = true
 
     # H1-conforming FE

@@ -207,7 +207,7 @@ function setupCompressibleStokesSolver(PD::CompressibleStokesProblemDescription,
                     println("finished")
                     print("    |Hdivreconstruction gravity matrix...")
                     ExtendableSparse.flush!(G2)
-                    G.cscmatrix = T.cscmatrix*G2.cscmatrix;
+                    G.cscmatrix = T.cscmatrix*G2.cscmatrix;           
             else
                 assemble_operator!(G, CELL_FdotRHOdotV, FE_velocity, FE_densitypressure, PD.gravity, PD.quadorder4gravity)
             end    
@@ -358,7 +358,16 @@ function PerformTimeStep(CSS::CompressibleStokesSolver, dt::Real = 1 // 10)
 
         # add gravity
         if CSS.ProblemData.quadorder4gravity > -1
+            # variant 1
             CSS.rhsvectorV += CSS.GravityMatrix * CSS.current_density
+            # variant 2 (may come in handy if gravity starts to be time-dependent)
+            #btemp = FiniteElements.createFEVector(CSS.FE_reconst)
+            #assemble_operator!(btemp, CELL_FdotRHOdotV, CSS.FE_reconst, CSS.FE_densitypressure, CSS.ProblemData.gravity, CSS.ProblemData.quadorder4gravity, CSS.current_density)
+            #Base.show(CSS.GravityMatrix * CSS.current_density)
+            #println("")
+            #Base.show(CSS.ReconstMatrix*btemp)
+            #CSS.rhsvectorV += CSS.ReconstMatrix*btemp;       
+
         end
         #println("finished")
         

@@ -28,15 +28,16 @@ function main()
 
     # problem modification switches
     shear_modulus = 1e-1
-    symmetric_gradient = true
+    symmetric_gradient = false
     nonlinear_convection = false
     uniform_mesh = true; criss = true; cross = false
+    initial_density_bestapprox = true;
     lambda = - 1//3 * shear_modulus
     c = 1
     total_mass = 1.0
     gamma = 1.4
     dt = shear_modulus*0.1/c
-    maxT = 1000
+    maxT = 1000*dt
     stationarity_tolerance = 1e-12
 
     function equation_of_state!(pressure,density)
@@ -46,7 +47,7 @@ function main()
     end    
 
     # refinement termination criterions
-    maxlevel = 2
+    maxlevel = 3
     maxdofs = 40000
 
     # other switches
@@ -61,7 +62,8 @@ function main()
     #fem_velocity = "CR"; fem_densitypressure = "P0"
     #fem_velocity = "CR"; fem_densitypressure = "P0"; use_reconstruction = 1
     #fem_velocity = "BR"; fem_densitypressure = "P0"
-    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    #fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 1
+    fem_velocity = "BR"; fem_densitypressure = "P0"; use_reconstruction = 2
 
     # on quadrilaterals
     #fem_velocity = "BR"; fem_densitypressure = "P0"; use_square_grid = true
@@ -96,7 +98,7 @@ function main()
     PD.total_mass = total_mass
     PD.volumedata4region = [zero_data!]
     PD.gravity = gravity!
-    PD.quadorder4gravity = 1
+    PD.quadorder4gravity = 10
     PD.quadorder4region = [0]
     PD.boundarydata4bregion = [zero_data!,zero_data!,zero_data!,zero_data!]
     PD.boundarytype4bregion = [1,1,1,1]
@@ -162,9 +164,17 @@ function main()
         # initial velocity is zero
         velocity = zeros(Float64,ndofs_velocity);
         
-        # initial density is constant
+        # initial density
         density = FiniteElements.createFEVector(FE_densitypressure)
-        density[:] .= total_mass
+        if initial_density_bestapprox == true
+            # initial density is best-approximation
+            computeBestApproximation!(density,"L2",exact_density!,Nothing,FE_densitypressure, 3)
+        else
+            # initial density is constant
+            density[:] .= total_mass    
+        end    
+
+
         CSS = FESolveCompressibleStokes.setupCompressibleStokesSolver(PD,FE_velocity,FE_densitypressure,velocity,density,use_reconstruction)
 
         change = 1
@@ -233,10 +243,10 @@ function main()
         plot=VTKView.XYPlot()
         addview!(frame,plot,4)
         clear!(plot)
-        plotlegend!(plot,"L2 error velocity ($fem_velocity)")
+        plotlegend!(plot,"|| u - u_h || ($fem_velocity)")
         plotcolor!(plot,1,0,0)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_velocity[1:maxlevel]))
-        plotlegend!(plot,"L2 error density ($fem_densitypressure)")
+        plotlegend!(plot,"|| rho - rho_h || ($fem_densitypressure)")
         plotcolor!(plot,0,0,1)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),log10.(L2error_density[1:maxlevel]))
 
@@ -249,7 +259,10 @@ function main()
         plotcolor!(plot,0.33,0.33,0.33)
         addplot!(plot,Array{Float64,1}(log10.(ndofs[1:maxlevel])),Array{Float64,1}(log10.(ndofs[1:maxlevel].^(-expectedorderL2velo/2))))
 
-        # show
+        # legend size/position
+        legendsize!(plot,0.3,0.15)
+        legendposition!(plot,0.28,0.12)
+        
         display(frame)
     end    
 
