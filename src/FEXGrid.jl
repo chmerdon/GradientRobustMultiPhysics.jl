@@ -13,14 +13,20 @@ abstract type CellFaces <: AbstractGridAdjacency end
 function show(xgrid::ExtendableGrid)
 
     dim = size(xgrid[Coordinates],1)
-    nnodes = size(xgrid[Coordinates],2)
-    ncells = size(xgrid[CellNodes],2)
+    nnodes = nsources(xgrid[Coordinates])
+    ncells = nsources(xgrid[CellNodes])
     
 	println("XGrid");
     println("======");
 	println("dim: $(dim)")
 	println("nnodes: $(nnodes)")
     println("ncells: $(ncells)")
+    if haskey(xgrid.components,FaceNodes)
+        nfaces = nsources(xgrid[FaceNodes])
+        println("nfaces: $(nfaces)")
+    else
+        println("nfaces: (FaceNodes not instantiated)")
+    end
     println("")
     println("Components");
     println("===========");
@@ -32,56 +38,144 @@ end
 
 function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
-        # each edge consists of dim nodes (beware: has to be replaced later if triangulation of submanifolds are included)
-        dim = size(xgrid[Coordinates],1) 
-        ncells = size(xgrid[CellNodes],2)
-        ElemTypes = xgrid[CellTypes]
+    # each edge consists of dim nodes (beware: has to be replaced later if triangulation of submanifolds are included)
+    dim = size(xgrid[Coordinates],1) 
+    xCellNodes = xgrid[CellNodes]
+    ncells = nsources(xCellNodes)
+    xCellTypes = xgrid[CellTypes]
 
-        # helper field to store all face nodes (including reversed duplicates)
-        nodes4allfaces = []
-        nfaces = 0
-        current_face = zeros(Int64,dim)
-        for cell = 1 : ncells
-            if ElemTypes[cell] == Simplex1D
-                append!(nodes4allfaces,xgrid[CellNodes][1,cell])
+    # helper field to store all face nodes (including reversed duplicates)
+    nodes4allfaces = zeros(Int32,0)
+    nfaces = 0
+    swap = 0
+    current_face = zeros(Int32,dim)
+    for cell = 1 : ncells
+        if xCellTypes[cell] == Simplex1D
+            append!(nodes4allfaces,xCellNodes[1,cell])
+            nfaces += 1
+        elseif xCellTypes[cell] == Simplex2D
+            for k = 1 : 3
+                current_face[1] = xCellNodes[k,cell]
+                current_face[2] = xCellNodes[mod(k,3)+1,cell];
+
+                # sort face numbers
+                if current_face[1] > current_face[2]
+                    swap = current_face[1]
+                    current_face[1] = current_face[2]
+                    current_face[2] = swap
+                end
+
+                append!(nodes4allfaces,current_face)
                 nfaces += 1
-            elseif ElemTypes[cell] == Simplex2D
-                for k = 1 : 3
-                    current_face[1] = xgrid[CellNodes][k,cell]
-                    current_face[2] = xgrid[CellNodes][mod(k,3)+1,cell];
-                    sort!(current_face)
-                    append!(nodes4allfaces,current_face)
-                    nfaces += 1
-                end  
-            elseif ElemTypes[cell] == Simplex3D
-                for k = 1 : 4
-                    current_face[1] = xgrid[CellNodes][k,cell]
-                    current_face[2] = xgrid[CellNodes][mod(k,4)+1,cell];
-                    current_face[3] = xgrid[CellNodes][mod(k,4)+2,cell];
-                    sort!(current_face)
-                    append!(nodes4allfaces,current_face)
-                    nfaces += 1
-                end  
-            end
-        end    
+            end  
+        elseif xCellTypes[cell] == Simplex3D
+            for k = 1 : 4
+                current_face[1] = xCellNodes[k,cell]
+                current_face[2] = xCellNodes[mod(k,4)+1,cell];
+                current_face[3] = xCellNodes[mod(k,4)+2,cell];
 
-        # remove duplicates and assign as fixed adjacency
-        nodes4allfaces = reshape(nodes4allfaces,(dim,nfaces))
-        nodes4allfaces = unique(nodes4allfaces, dims = 2);
-        nodes4allfaces
+                # sort face numbers (beware: bad idea for quads!!!)
+                if current_face[1] > current_face[2]
+                    swap = current_face[1]
+                    current_face[1] = current_face[2]
+                    current_face[2] = swap
+                end
+                if current_face[2] > current_face[3]
+                    swap = current_face[2]
+                    current_face[2] = current_face[3]
+                    current_face[3] = swap
+                end
+                if current_face[1] > current_face[2]
+                    swap = current_face[1]
+                    current_face[1] = current_face[2]
+                    current_face[2] = swap
+                end
+
+                append!(nodes4allfaces,current_face)
+                nfaces += 1
+            end  
+        end
+    end    
+
+    # remove duplicates and assign as fixed adjacency
+    nodes4allfaces = reshape(nodes4allfaces,(dim,nfaces))
+    nodes4allfaces = unique(nodes4allfaces, dims = 2);
+    nodes4allfaces
 end
 
-function CellFaces!(xgrid::ExtendableGrid, force::Bool = false)
-    if (haskey(xgrid.components,CellFaces) == false) || (force == true)
+function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
 
-        # todo
-        # idea : use A = ExtendableSparseMatrix{Int64,Int64} and fill it with
-        #        A(n1,..,nk) = j
-        # for each face from FaceNodes[:,j] = (n1,..,nk) and all its permutations
-        #
-        # then go through cell faces and check via the SparseMatrix which number it has
-        
+    # todo
+    # idea : use A = ExtendableSparseMatrix{Int64,Int64} and fill it with
+    #        A(n1,..,nk) = j
+    # for each face from FaceNodes[:,j] = (n1,..,nk) and all its permutations
+    #
+    # then go through cell faces and check via the SparseMatrix which number it has
+
+    # use a transpose to get adjacency nodes2face
+    Nodes2Faces = atranspose(xgrid[FaceNodes])
+
+    # init CellFaces
+    xCellFaces = VariableTargetAdjacency(Int32)
+
+    # get links to other stuff
+    dim = size(xgrid[Coordinates],1) 
+    xCellNodes = xgrid[CellNodes]
+    ncells = nsources(xCellNodes)
+    xCellTypes = xgrid[CellTypes]
+
+    # loop over all cells and all cell faces
+    current_face = zeros(Int64,dim)
+    faces = zeros(Int64,ntargets(xCellNodes))
+    for cell = 1 : ncells
+        if xCellTypes[cell] == Simplex1D
+            append!(xCellFaces,xCellNodes[:,cell])
+        elseif xCellTypes[cell] == Simplex2D
+            for k = 1 : 3
+                current_face[1] = xCellNodes[k,cell]
+                current_face[2] = xCellNodes[mod(k,3)+1,cell];
+
+                # sort face numbers
+                if current_face[1] > current_face[2]
+                    swap = current_face[1]
+                    current_face[1] = current_face[2]
+                    current_face[2] = swap
+                end
+
+                # find facenr
+                faces[k] = Nodes2Faces[current_face[1],current_face[2]]
+            end  
+            append!(xCellFaces,faces[1:3])
+        elseif xCellTypes[cell] == Simplex3D
+            for k = 1 : 4
+                current_face[1] = xCellNodes[k,cell]
+                current_face[2] = xCellNodes[mod(k,4)+1,cell];
+                current_face[3] = xCellNodes[mod(k,4)+2,cell];
+
+                # sort face numbers (beware: bad idea for quads!!!)
+                if current_face[1] > current_face[2]
+                    swap = current_face[1]
+                    current_face[1] = current_face[2]
+                    current_face[2] = swap
+                end
+                if current_face[2] > current_face[3]
+                    swap = current_face[2]
+                    current_face[2] = current_face[3]
+                    current_face[3] = swap
+                end
+                if current_face[1] > current_face[2]
+                    swap = current_face[1]
+                    current_face[1] = current_face[2]
+                    current_face[2] = swap
+                end
+
+                # find facenr
+                faces[k] = Nodes2Faces[current_face[1],current_face[2],current_face[3]]
+            end  
+            append!(xCellFaces,faces[1:4])
+        end
     end
+    xCellFaces
 end
 
 

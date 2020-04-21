@@ -136,11 +136,15 @@ function get_Hdivreconstruction_trafo!(T,FE::H1CRFiniteElement{T,2,2} where T <:
     nnodes = size(FE.grid.coords4nodes,1)
     ncells = size(FE.grid.nodes4cells,1)
     for face = 1 : nfaces
-        # reconstruction coefficients for CR basis functions
-        T[face,face] = 1 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
-        T[nfaces+face,face] = 1 * FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
+        # reconstruction coefficients for RT0 basis functions
+        T[face,face] = FE.grid.length4faces[face] * FE.grid.normal4faces[face,1]
+        T[nfaces+face,face] = FE.grid.length4faces[face] * FE.grid.normal4faces[face,2]
     end
 
+
+    # reconstruction coefficients for remaining BDM1 basis functions
+    # = averages of integral along four opposite edges of 0 and CR function
+    # each face in cell has two neighbouring faces with opoosite coefficients +- 1//6
     cellfaces = [0 0 0 0 0]
     neighbourfactor = [0.5 0.5 0.5 0.5 0.5]
     factor = 1 // 3
@@ -148,6 +152,8 @@ function get_Hdivreconstruction_trafo!(T,FE::H1CRFiniteElement{T,2,2} where T <:
         cellfaces[2:4] = FE.grid.faces4cells[cell,:]
         cellfaces[1] = cellfaces[4]
         cellfaces[5] = cellfaces[2]
+
+        # correct coefficients for boundary faces (there is no averaging)
         for j = 1 : 5
             if FE.grid.cells4faces[cellfaces[j],2] > 0
                 neighbourfactor[j] = 1 // 2
@@ -156,12 +162,11 @@ function get_Hdivreconstruction_trafo!(T,FE::H1CRFiniteElement{T,2,2} where T <:
             end
         end
         
-
         for j = 2 : 4
             T[cellfaces[j],nfaces + cellfaces[j-1]] = factor * neighbourfactor[j-1] * FE.grid.length4faces[cellfaces[j-1]] * FE.grid.normal4faces[cellfaces[j-1],1]
             T[nfaces + cellfaces[j],nfaces + cellfaces[j-1]] = factor * neighbourfactor[j-1] * FE.grid.length4faces[cellfaces[j-1]] * FE.grid.normal4faces[cellfaces[j-1],2]
-            T[cellfaces[j],nfaces + cellfaces[j+1]] = factor * neighbourfactor[j+1] * FE.grid.length4faces[cellfaces[j+1]] * FE.grid.normal4faces[cellfaces[j+1],1]
-            T[nfaces + cellfaces[j],nfaces + cellfaces[j+1]] = factor * neighbourfactor[j+1] * FE.grid.length4faces[cellfaces[j+1]] * FE.grid.normal4faces[cellfaces[j+1],2]
+            T[cellfaces[j],nfaces + cellfaces[j+1]] = -factor * neighbourfactor[j+1] * FE.grid.length4faces[cellfaces[j+1]] * FE.grid.normal4faces[cellfaces[j+1],1]
+            T[nfaces + cellfaces[j],nfaces + cellfaces[j+1]] = -factor * neighbourfactor[j+1] * FE.grid.length4faces[cellfaces[j+1]] * FE.grid.normal4faces[cellfaces[j+1],2]
         end    
     end
     return T
