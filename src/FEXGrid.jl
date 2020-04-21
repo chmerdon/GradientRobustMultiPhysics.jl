@@ -1,7 +1,7 @@
 module FEXGrid
 
-export FaceNodes, FaceNodes!
-export CellFaces, CellFaces!
+export FaceNodes
+export CellFaces
 
 using XGrid
 
@@ -29,8 +29,8 @@ function show(xgrid::ExtendableGrid)
     end
 end
 
-function FaceNodes!(xgrid::ExtendableGrid, force::Bool = false)
-    if (haskey(xgrid.components,FaceNodes) == false) || (force == true)
+
+function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
         # each edge consists of dim nodes (beware: has to be replaced later if triangulation of submanifolds are included)
         dim = size(xgrid[Coordinates],1) 
@@ -68,8 +68,7 @@ function FaceNodes!(xgrid::ExtendableGrid, force::Bool = false)
         # remove duplicates and assign as fixed adjacency
         nodes4allfaces = reshape(nodes4allfaces,(dim,nfaces))
         nodes4allfaces = unique(nodes4allfaces, dims = 2);
-        xgrid.components[FaceNodes] = nodes4allfaces
-    end
+        nodes4allfaces
 end
 
 function CellFaces!(xgrid::ExtendableGrid, force::Bool = false)
