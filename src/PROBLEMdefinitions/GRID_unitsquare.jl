@@ -1,4 +1,18 @@
 using Printf
+using Triangulate
+using XGrid
+
+function xgridgen_unitsqure_triangle(maxarea)
+    triin=Triangulate.TriangulateIO()
+    triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
+    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
+    triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
+    flags = "pALVa$(@sprintf("%.16f", maxarea))"
+
+    xgrid = XGrid.generate(flags, triin)
+    return xgrid
+end
+
 
 function gridgen_unitsquare(maxarea, refine_barycentric = false)
     triin=Triangulate.TriangulateIO()
