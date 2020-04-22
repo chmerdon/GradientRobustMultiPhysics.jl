@@ -2,12 +2,14 @@
 using FEXGrid
 using Grid
 
+include("PROBLEMdefinitions/GRID_unitinterval.jl")
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
 
 function main()
 
-    xgrid = xgridgen_unitsqure_triangle(0.05); grid = gridgen_unitsquare(0.05,false)
-    #xgrid = xgridgen_unitsquare_quad(0.5); grid = gridgen_unitsquare_squares(0.5);
+    #xgrid = xgridgen_unitinterval(0.1); grid = gridgen_unitinterval(0.1)
+    #xgrid = xgridgen_unitsqure_triangle(0.25); grid = gridgen_unitsquare(0.25,false)
+    xgrid = xgridgen_unitsquare_quad(0.5); grid = gridgen_unitsquare_squares(0.5);
 
     xgrid[FaceNodes] = XGrid.instantiate(xgrid,FaceNodes)
     xgrid[CellFaces] = XGrid.instantiate(xgrid,CellFaces)
@@ -20,7 +22,7 @@ function main()
     ensure_faces4cells!(grid)
     ensure_volume4cells!(grid)
     ensure_length4faces!(grid)
-    ensure_normal4faces!(grid)
+    #ensure_normal4faces!(grid)
     ensure_bfaces!(grid)
 
     println("\nxgrid - FaceNodes")

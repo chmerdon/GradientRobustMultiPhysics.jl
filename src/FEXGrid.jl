@@ -27,26 +27,26 @@ abstract type Quadrilateral2D <: AbstractElementType end
 abstract type Parallelogram2D <: Quadrilateral2D end
 
 # functions that specify the number of faces of a celltype
-nfaces_per_cell(::Type{Simplex1D}) = 2
-nfaces_per_cell(::Type{Simplex2D}) = 3
-nfaces_per_cell(::Type{Simplex3D}) = 4
-nfaces_per_cell(::Type{Quadrilateral2D}) = 4
+nfaces_per_cell(::Type{<:Simplex1D}) = 2
+nfaces_per_cell(::Type{<:Simplex2D}) = 3
+nfaces_per_cell(::Type{<:Simplex3D}) = 4
+nfaces_per_cell(::Type{<:Quadrilateral2D}) = 4
 
 # functions that specify number of nodes on the k-th cell face
 # why k?: think about ElementTypes that have faces of different nature
 # e.g. a pyramid with rectangular basis and triangular sides
 # this maybe requires a ordering rule for the nodes in the element
 # (e.g. for the pyramid first four nodes for the basis come first)
-nnodes_per_cellface(::Type{Simplex1D}, k) = 1
-nnodes_per_cellface(::Type{Simplex2D}, k) = 2
-nnodes_per_cellface(::Type{Simplex3D}, k) = 3
-nnodes_per_cellface(::Type{Quadrilateral2D}, k) = 2
+nnodes_per_cellface(::Type{<:Simplex1D}, k) = 1
+nnodes_per_cellface(::Type{<:Simplex2D}, k) = 2
+nnodes_per_cellface(::Type{<:Simplex3D}, k) = 3
+nnodes_per_cellface(::Type{<:Quadrilateral2D}, k) = 2
 
 # functions that specify the facetype of the k-th cellface
-facetype_of_cellface(::Type{Simplex1D}, k) = Point0D
-facetype_of_cellface(::Type{Simplex2D}, k) = Simplex1D_Cartesian2D
-facetype_of_cellface(::Type{Simplex3D}, k) = Simplex2D_Cartesian2D
-facetype_of_cellface(::Type{Quadrilateral2D}, k) = Simplex1D_Cartesian2D
+facetype_of_cellface(::Type{<:Simplex1D}, k) = Point0D
+facetype_of_cellface(::Type{<:Simplex2D}, k) = Simplex1D_Cartesian2D
+facetype_of_cellface(::Type{<:Simplex3D}, k) = Simplex2D_Cartesian2D
+facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Simplex1D_Cartesian2D
 
 
 
@@ -256,6 +256,11 @@ end
 
 
 # some methods to compute volume of different ElemTypes (beware: on submanifolds formulas get different)
+
+function Volume4ElemType(Coords, Nodes, item, ::Type{Point0D})
+    return 0.0
+end
+
 function Volume4ElemType(Coords, Nodes, item, ::Type{Simplex1D_Cartesian1D})
     return abs(Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]])
 end
@@ -335,7 +340,6 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     xBFaceNodes = xgrid[BFaceNodes]
     nbfaces = num_sources(xBFaceNodes)
     nfaces = num_sources(xFaceNodes)
-    #xFaceTypes = xgrid[FaceTypes]
 
     # init BFaces
     xBFaces = zeros(Int32,nbfaces)
@@ -355,6 +359,12 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     xBFaces
 end
 
+
+
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Point0D})
+    # rotate tangent
+    normal[1] = 1.0
+end
 
 function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Simplex1D_Cartesian2D})
     # rotate tangent
