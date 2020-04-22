@@ -6,8 +6,9 @@ include("PROBLEMdefinitions/GRID_unitsquare.jl")
 
 function main()
 
+    xgrid = xgridgen_unitsqure_triangle(0.05); grid = gridgen_unitsquare(0.05,false)
+    #xgrid = xgridgen_unitsquare_quad(0.5); grid = gridgen_unitsquare_squares(0.5);
 
-    xgrid = xgridgen_unitsqure_triangle(0.05)
     xgrid[FaceNodes] = XGrid.instantiate(xgrid,FaceNodes)
     xgrid[CellFaces] = XGrid.instantiate(xgrid,CellFaces)
     xgrid[CellVolumes] = XGrid.instantiate(xgrid,CellVolumes)
@@ -15,7 +16,6 @@ function main()
     xgrid[BFaces] = XGrid.instantiate(xgrid,BFaces)
     xgrid[FaceNormals] = XGrid.instantiate(xgrid,FaceNormals)
 
-    grid = gridgen_unitsquare(0.05,false)
     ensure_nodes4faces!(grid)
     ensure_faces4cells!(grid)
     ensure_volume4cells!(grid)
@@ -32,32 +32,32 @@ function main()
     println("\nxgrid - CellFaces")
     show(xgrid[CellFaces])
 
-    println("\ngrid - nodes4faces")
+    println("\ngrid - faces4cells")
     show(grid.faces4cells')
 
-    println("\nxgrid - CellVolumes")
-    show(xgrid[CellVolumes])
+    #println("\nxgrid - CellVolumes")
+    #show(xgrid[CellVolumes])
 
-    println("\ngrid - volume4cells")
-    show(grid.volume4cells')
+    #println("\ngrid - volume4cells")
+    #show(grid.volume4cells')
 
-    println("\nxgrid - FaceVolumes")
-    show(xgrid[FaceVolumes])
+    #println("\nxgrid - FaceVolumes")
+    #show(xgrid[FaceVolumes])
 
-    println("\ngrid - length4faces")
-    show(grid.length4faces')
+    #println("\ngrid - length4faces")
+    #show(grid.length4faces')
 
-    println("\nxgrid - BFaces")
-    show(xgrid[BFaces])
+    #println("\nxgrid - BFaces")
+    #show(xgrid[BFaces])
 
-    println("\ngrid - bfaces")
-    show(grid.bfaces')
+    #println("\ngrid - bfaces")
+    #show(grid.bfaces')
 
-    println("\nxgrid - FaceNormals")
-    show(xgrid[FaceNormals])
+    #println("\nxgrid - FaceNormals")
+    #show(xgrid[FaceNormals])
 
-    println("\ngrid - normal4faces")
-    show(grid.normal4faces')
+    #println("\ngrid - normal4faces")
+    #show(grid.normal4faces')
 end
 
 

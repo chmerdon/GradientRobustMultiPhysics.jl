@@ -26,10 +26,27 @@ abstract type Simplex2D_Cartesian3D <: Simplex2D end
 abstract type Quadrilateral2D <: AbstractElementType end
 abstract type Parallelogram2D <: Quadrilateral2D end
 
-faces_per_cell(::Type{Simplex1D}) = 2
-faces_per_cell(::Type{Simplex2D}) = 3
-faces_per_cell(::Type{Simplex3D}) = 4
-faces_per_cell(::Type{Quadrilateral2D}) = 4
+# functions that specify the number of faces of a celltype
+nfaces_per_cell(::Type{Simplex1D}) = 2
+nfaces_per_cell(::Type{Simplex2D}) = 3
+nfaces_per_cell(::Type{Simplex3D}) = 4
+nfaces_per_cell(::Type{Quadrilateral2D}) = 4
+
+# functions that specify number of nodes on the k-th cell face
+# why k?: think about ElementTypes that have faces of different nature
+# e.g. a pyramid with rectangular basis and triangular sides
+# this maybe requires a ordering rule for the nodes in the element
+# (e.g. for the pyramid first four nodes for the basis come first)
+nnodes_per_cellface(::Type{Simplex1D}, k) = 1
+nnodes_per_cellface(::Type{Simplex2D}, k) = 2
+nnodes_per_cellface(::Type{Simplex3D}, k) = 3
+nnodes_per_cellface(::Type{Quadrilateral2D}, k) = 2
+
+# functions that specify the facetype of the k-th cellface
+facetype_of_cellface(::Type{Simplex1D}, k) = Point0D
+facetype_of_cellface(::Type{Simplex2D}, k) = Simplex1D_Cartesian2D
+facetype_of_cellface(::Type{Simplex3D}, k) = Simplex2D_Cartesian2D
+facetype_of_cellface(::Type{Quadrilateral2D}, k) = Simplex1D_Cartesian2D
 
 
 
@@ -71,60 +88,39 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
     # helper field to store all face nodes (including reversed duplicates)
     xFaceNodesAll = VariableTargetAdjacency(Int32)
+    
     types4allfaces = []
     nfaces = 0
     swap = 0
-    current_face = zeros(Int32,dim)
+    current_face = zeros(Int32,6) # should be large enough to store largest nnodes_per_cellface
+    faces_per_cell = 0
+    nodes_per_cellface = 0
     for cell = 1 : ncells
-        if xCellTypes[cell] == Simplex1D
-            append!(xFaceNodesAll,xCellNodes[1,cell])
-            types4allfaces = [types4allfaces; Point0D]
+        faces_per_cell = nfaces_per_cell(xCellTypes[cell])
+        for k = 1 : faces_per_cell
+            nodes_per_cellface = nnodes_per_cellface(xCellTypes[cell], k)
+            
+            # get face nodes
+            for j = 1 : nodes_per_cellface
+                current_face[j] = xCellNodes[mod(k-j,faces_per_cell)+1,cell]; 
+            end
+
+            # bubble_sort face nodes
+            for j = nodes_per_cellface:-1:2
+                for j2 = 1 : j-1
+                    if current_face[j2] < current_face[j2+1]
+                        swap = current_face[j2+1]
+                        current_face[j2+1] = current_face[j2]
+                        current_face[j2] = swap
+                    end    
+                end
+            end
+
+            append!(xFaceNodesAll,current_face[1:nodes_per_cellface])
+            types4allfaces = [types4allfaces; facetype_of_cellface(xCellTypes[cell], k)]
             nfaces += 1
-        elseif xCellTypes[cell] == Simplex2D || xCellTypes[cell] == Quadrilateral2D
-            for k = 1 : faces_per_cell(xCellTypes[cell])
-                current_face[1] = xCellNodes[k,cell]
-                current_face[2] = xCellNodes[mod(k-2,3)+1,cell];
-
-                # sort face numbers
-                if current_face[2] > current_face[1]
-                    swap = current_face[1]
-                    current_face[1] = current_face[2]
-                    current_face[2] = swap
-                end
-
-                append!(xFaceNodesAll,current_face)
-                types4allfaces = [types4allfaces; Simplex1D_Cartesian2D]
-                nfaces += 1
-            end  
-        elseif xCellTypes[cell] == Simplex3D
-            for k = 1 : faces_per_cell(xCellTypes[cell])
-                current_face[1] = xCellNodes[k,cell]
-                current_face[2] = xCellNodes[mod(k-2,4)+1,cell];
-                current_face[3] = xCellNodes[mod(k-3,4)+1,cell];
-
-                # sort face numbers (beware: bad idea for quads!!!)
-                if current_face[2] > current_face[1]
-                    swap = current_face[1]
-                    current_face[1] = current_face[2]
-                    current_face[2] = swap
-                end
-                if current_face[3] > current_face[2]
-                    swap = current_face[2]
-                    current_face[2] = current_face[3]
-                    current_face[3] = swap
-                end
-                if current_face[2] > current_face[1]
-                    swap = current_face[1]
-                    current_face[1] = current_face[2]
-                    current_face[2] = swap
-                end
-
-                append!(xFaceNodesAll,current_face)
-                types4allfaces = [types4allfaces; Simplex2D_Cartesian3D]
-                nfaces += 1
-            end  
-        end
-    end    
+        end    
+    end
 
     # remove duplicates and assign FaceTypes
     xFaceNodes = VariableTargetAdjacency(Int32)
@@ -156,71 +152,47 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
     xCellTypes = xgrid[CellTypes]
 
     # loop over all cells and all cell faces
-    current_face = zeros(Int32,dim)
-    faces = zeros(Int32,num_targets(xCellNodes)) 
+    current_face = zeros(Int32,6) # should be large enough to store largest nnodes_per_cellface
+    faces = zeros(Int32,6) # should be large enough to store largest nfaces_per_cell
+    faces_per_cell = 0
+    nodes_per_cellface = 0
+    match = false
     for cell = 1 : ncells
-        if xCellTypes[cell] == Simplex1D
-            append!(xCellFaces,xCellNodes[:,cell])
-        elseif xCellTypes[cell] == Simplex2D || xCellTypes[cell] == Quadrilateral2D
-            for k = 1 : faces_per_cell(xCellTypes[cell])
-                current_face[1] = xCellNodes[k,cell]
-                current_face[2] = xCellNodes[mod(k,3)+1,cell];
+        faces_per_cell = nfaces_per_cell(xCellTypes[cell])
+        for k = 1 : faces_per_cell
+            nodes_per_cellface = nnodes_per_cellface(xCellTypes[cell], k)
+            
+            # get face nodes
+            for j = 1 : nodes_per_cellface
+                current_face[j] = xCellNodes[mod(k+j-2,faces_per_cell)+1,cell]; 
+            end
 
-                # sort face numbers
-                if current_face[2] > current_face[1]
-                    swap = current_face[1]
-                    current_face[1] = current_face[2]
-                    current_face[2] = swap
+            # bubble_sort face nodes
+            for j = nodes_per_cellface:-1:2
+                for j2 = 1 : j-1
+                    if current_face[j2] < current_face[j2+1]
+                        swap = current_face[j2+1]
+                        current_face[j2+1] = current_face[j2]
+                        current_face[j2] = swap
+                    end    
                 end
+            end
 
-                # find facenr
-                for face = 1 : nfaces
-                    if current_face[1] == xFaceNodes[1,face]
-                        if current_face[2] == xFaceNodes[2,face]
-                            faces[k] = face
-                            break;
-                        end
+            # find facenr
+            for face = 1 : nfaces
+                match = true
+                for k = 1 : nodes_per_cellface
+                    if current_face[k] != xFaceNodes[k,face]
+                        match = false
+                        break;
                     end
-                end            
-            end  
-            append!(xCellFaces,faces[1:3])
-        elseif xCellTypes[cell] == Simplex3D
-            for k = 1 : faces_per_cell(xCellTypes[cell])
-                current_face[1] = xCellNodes[k,cell]
-                current_face[2] = xCellNodes[mod(k,4)+1,cell];
-                current_face[3] = xCellNodes[mod(k+1,4)+1,cell];
-
-                # sort face numbers (beware: bad idea for quads!!!)
-                if current_face[2] > current_face[1]
-                    swap = current_face[1]
-                    current_face[1] = current_face[2]
-                    current_face[2] = swap
+                end        
+                if match == true
+                    faces[k] = face
                 end
-                if current_face[3] > current_face[2]
-                    swap = current_face[2]
-                    current_face[2] = current_face[3]
-                    current_face[3] = swap
-                end
-                if current_face[2] > current_face[1]
-                    swap = current_face[1]
-                    current_face[1] = current_face[2]
-                    current_face[2] = swap
-                end
-
-                # find facenr
-                for face = 1 : nfaces
-                    if current_face[1] == xFaceNodes[1,face]
-                        if current_face[2] == xFaceNodes[2,face]
-                            if current_face[3] == xFaceNodes[3,face]
-                                faces[k] = face
-                                break;
-                            end    
-                        end
-                    end
-                end            
-            end  
-            append!(xCellFaces,faces[1:4])
-        end
+            end            
+        end    
+        append!(xCellFaces,faces[1:faces_per_cell])    
     end
     xCellFaces
 end
