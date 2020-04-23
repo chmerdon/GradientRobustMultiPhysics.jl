@@ -1,6 +1,8 @@
 module FiniteElements
 
-using Grid
+using Grid # remove if switch to ExtendableGrid is completed
+using XGrid
+using FEXGrid
 using LinearAlgebra
 using SparseArrays
 using Quadrature
@@ -95,6 +97,15 @@ function show(FE::AbstractFiniteElement)
 	println("        ndofs : $(nd)")
 	println("    polyorder : $(po)");
 	println("  maxdofs c/f : $(mdc)/$(mdf)")
+end
+
+
+# show function for FiniteElement
+function show_new(FE::AbstractFiniteElement)
+    nd = num_targets(FE.celldofs)
+	println("FiniteElement information")
+	println("         name : " * FE.name)
+	println("        ndofs : $(nd)")
 end
 
 function show_dofmap(FE::AbstractFiniteElement)

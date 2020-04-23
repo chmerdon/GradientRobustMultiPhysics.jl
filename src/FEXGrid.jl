@@ -197,42 +197,37 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
     xCellFaces
 end
 
-# CellFaces = faces for each cell
+# CellSigns = orientation signs for each face on each cell
 function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
 
-    # init CellFaces
-    xFaceNodes = xgrid[FaceNodes]
-    xCellFaces = xgrid[CellFaces]
+    # init CellSigns
     xCellSigns = VariableTargetAdjacency(Int32) # +1/-1 would be enough
 
     # get links to other stuff
     dim = size(xgrid[Coordinates],1) 
+    xFaceNodes = xgrid[FaceNodes]
+    xCellFaces = xgrid[CellFaces]
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nfaces = num_sources(xFaceNodes)
     xCellTypes = xgrid[CellTypes]
 
     # loop over all cells and all cell faces
-    signs = zeros(Int32,num_targets(xCellNodes))
-    temp
+    signs = zeros(Int32,8)
+    faces_per_cell = 0
+    temp = 0
     for cell = 1 : ncells
-        fill!(signs,1)
+        faces_per_cell = nfaces_per_cell(xCellTypes[cell])
+        fill!(signs,-1)
         if xCellTypes[cell] == Simplex1D
-            append!(xCellFaces,signs)
+            append!(xCellFaces,[-1,1])
         elseif xCellTypes[cell] == Simplex2D || xCellTypes[cell] == Quadrilateral2D
-            for k = 1 : faces_per_cell(xCellTypes[cell])
+            for k = 1 : faces_per_cell
                 if xCellNodes[k,cell] == xFaceNodes[1,xCellFaces[k,cell]]
-                    signs[k] = -1
+                    signs[k] = 1
                 end       
             end  
-            append!(xCellFaces,signs)
-        elseif xCellTypes[cell] == Quadrilateral2D
-            for k = 1 : faces_per_cell(xCellTypes[cell])
-                if xCellNodes[k,cell] == xFaceNodes[1,xCellFaces[k,cell]]
-                    signs[k] = -1
-                end       
-            end  
-            append!(xCellFaces,signs)
+            append!(xCellSigns,signs[1:faces_per_cell])
         elseif xCellTypes[cell] == Simplex3D # no experience with 3D yet, might be wrong !!!
             for k = 1 : 4
                 # find matching node in face nodes and look if the next one matches, too
@@ -243,14 +238,14 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
                         break
                     end    
                 end
-                if xCellNodes[k,cell] == xFaceNodes[j,xCellFaces[k,cell]] && xCellNodes[mod(k,4)+1,cell] == xFaceNodes[mod(j,3)+1,xCellFaces[k,cell]]
-                    signs[k] = -1
+                if xCellNodes[k,cell] == xFaceNodes[temp,xCellFaces[k,cell]] && xCellNodes[mod(k,4)+1,cell] == xFaceNodes[mod(temp,3)+1,xCellFaces[k,cell]]
+                    signs[k] = 1
                 end       
             end  
-            append!(xCellFaces,signs)
+            append!(xCellSigns,signs[1:faces_per_cell])
         end
     end
-    xCellFaces
+    xCellSigns
 end
 
 

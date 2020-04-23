@@ -1,14 +1,53 @@
 struct H1P1FiniteElement{T,ncomponents} <: AbstractH1FiniteElement where {T <: Real, ncomponents <: Int}
     name::String;                 # full name of finite element (used in messages)
-    grid::Grid.Mesh{T};           # link to grid
+    grid::Grid.Mesh{T}            # link to grid
 end
 
-function getP1FiniteElement(grid,ncomponents)
+struct FEH1P1 <: AbstractH1FiniteElement
+    name::String;                 # full name of finite element (used in messages)
+    ncomponents::Int32;           # number of components
+    xgrid::ExtendableGrid         # link to xgrid
+    celldofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
+end
+
+function getP1FiniteElement(grid::Grid.Mesh,ncomponents)
     ensure_nodes4faces!(grid);
     ensure_volume4cells!(grid);
     T = eltype(grid.coords4nodes);
     return H1P1FiniteElement{T,ncomponents}("P1 (H1FiniteElement, ncomponents=$ncomponents)",grid)
-end 
+end
+
+function getP1FiniteElement(xgrid::ExtendableGrid,ncomponents)
+    name = "P1"
+    for n = 1 : ncomponents-1
+        name = name * "xP1"
+    end
+    name = name * " (H1)"    
+    FE = FEH1P1(name,ncomponents,xgrid,VariableTargetAdjacency(Int32))
+
+    # generate celldofs
+    dim = size(xgrid[Coordinates],1) 
+    xCellNodes = xgrid[CellNodes]
+    ncells = num_sources(xCellNodes)
+    nnodes = num_sources(xgrid[Coordinates])
+    xCellTypes = xgrid[CellTypes]
+
+    dofs = zeros(Int32,8)
+    nnodes4cell = 0
+    for cell = 1 : ncells
+        nnodes4cell = num_targets(xCellNodes,cell)
+        for k = 1 : nnodes4cell
+            dofs[k] = xCellNodes[k,cell]
+            for n = 1 : ncomponents-1
+                dofs[k+n*nnodes4cell] = n*nnodes + dofs[k]
+            end    
+        end
+        append!(FE.celldofs,dofs)
+    end
+
+    return FE
+end
+
 
 
 function get_xref4dof(FE::H1P1FiniteElement{T,1} where {T <: Real}, ::Grid.Abstract0DElemType) 
