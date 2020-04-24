@@ -13,9 +13,7 @@ abstract type FaceVolumes <: XGrid.AbstractGridFloatArray1D end
 abstract type FaceCells <: AbstractGridAdjacency end
 abstract type FaceNormals <: XGrid.AbstractGridFloatArray2D end
 abstract type FaceTypes <: AbstractElementTypes end
-
-abstract type AbstractGridIntArray1D <: AbstractGridComponent end
-abstract type BFaces <: AbstractGridIntArray1D end
+abstract type BFaces <: AbstractGridIntegerArray1D end
 
 # functions that specify the number of faces of a celltype
 nfaces_per_cell(::Type{<:Edge1D}) = 2
@@ -36,8 +34,8 @@ nnodes_per_cellface(::Type{<:Quadrilateral2D}, k) = 2
 # functions that specify the facetype of the k-th cellface
 facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D
-facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D_Cartesian2D
-facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D_Cartesian2D
+facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
+facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D
 
 
 
@@ -83,7 +81,7 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     types4allfaces = []
     nfaces = 0
     swap = 0
-    current_face = zeros(Int32,6) # should be large enough to store largest nnodes_per_cellface
+    current_face = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_cellface
     faces_per_cell = 0
     nodes_per_cellface = 0
     for cell = 1 : ncells
@@ -143,8 +141,8 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
     xCellTypes = xgrid[CellTypes]
 
     # loop over all cells and all cell faces
-    current_face = zeros(Int32,6) # should be large enough to store largest nnodes_per_cellface
-    faces = zeros(Int32,6) # should be large enough to store largest nfaces_per_cell
+    current_face = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_cellface
+    faces = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nfaces_per_cell
     faces_per_cell = 0
     nodes_per_cellface = 0
     match = false
@@ -204,7 +202,7 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
     xCellTypes = xgrid[CellTypes]
 
     # loop over all cells and all cell faces
-    signs = zeros(Int32,8)
+    signs = zeros(Int32,max_num_targets_per_source(xCellFaces))
     faces_per_cell = 0
     temp = 0
     for cell = 1 : ncells
@@ -261,11 +259,11 @@ function Volume4ElemType(Coords, Nodes, item, ::Type{Triangle2D}, ::Type{Cartesi
                   +   Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Parallelogram2D}, ::Type{Cartesian2D})
-    return ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
-           + Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
-           + Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
-end
+#function Volume4ElemType(Coords, Nodes, item, ::Type{Parallelogram2D}, ::Type{Cartesian2D})
+#    return ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
+#           + Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
+#           + Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
+#end
 
 function Volume4ElemType(Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{Cartesian2D})
     return 1//2 * (   (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]]) * (Coords[2, Nodes[2, item]] - Coords[2, Nodes[4, item]])
@@ -367,7 +365,7 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceNormals
-    xFaceNormals = zeros(Float64,2,nfaces)
+    xFaceNormals = zeros(Float64,dim,nfaces)
     normal = zeros(Float64,dim)
     for face = 1 : nfaces
         Normal4ElemType!(normal,xCoordinates,xFaceNodes,face,xFaceTypes[face],xCoordinateSystem)
