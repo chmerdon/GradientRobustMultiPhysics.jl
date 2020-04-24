@@ -9,7 +9,7 @@ function xgridgen_unitsqure_triangle(maxarea)
     triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
     flags = "pALVa$(@sprintf("%.16f", maxarea))"
 
-    xgrid = XGrid.generate(flags, triin)
+    xgrid = XGrid.simplexgrid(flags, triin)
     return xgrid
 end
 
@@ -32,9 +32,10 @@ function xgridgen_unitsquare_quad(maxarea, H = 0.4, L = 0.6)
     xgrid[CellRegions]=VectorOfConstants(1,ncells)
     xgrid[CellTypes]=VectorOfConstants(FEXGrid.Quadrilateral2D,ncells)
     xgrid[BFaceRegions]=grid.bregions
-    xgrid[BFaceTypes]=VectorOfConstants(FEXGrid.Simplex1D_Cartesian2D,ncells)
+    xgrid[BFaceTypes]=VectorOfConstants(FEXGrid.Edge1D,ncells)
     xgrid[CellNodes]=Array{Int32,2}(grid.nodes4cells')
     xgrid[BFaceNodes]=Array{Int32,2}(grid.nodes4faces[grid.bfaces,:]')
+    xgrid[CoordinateSystem]=Cartesian2D
 
     return xgrid
 end

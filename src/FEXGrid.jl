@@ -17,19 +17,10 @@ abstract type FaceTypes <: AbstractElementTypes end
 abstract type AbstractGridIntArray1D <: AbstractGridComponent end
 abstract type BFaces <: AbstractGridIntArray1D end
 
-# additional XGrid ElementTypes
-abstract type Point0D <: AbstractElementType end
-abstract type Simplex1D_Cartesian1D <: Simplex1D end
-abstract type Simplex1D_Cartesian2D <: Simplex1D end
-abstract type Simplex2D_Cartesian2D <: Simplex2D end
-abstract type Simplex2D_Cartesian3D <: Simplex2D end
-abstract type Quadrilateral2D <: AbstractElementType end
-abstract type Parallelogram2D <: Quadrilateral2D end
-
 # functions that specify the number of faces of a celltype
-nfaces_per_cell(::Type{<:Simplex1D}) = 2
-nfaces_per_cell(::Type{<:Simplex2D}) = 3
-nfaces_per_cell(::Type{<:Simplex3D}) = 4
+nfaces_per_cell(::Type{<:Edge1D}) = 2
+nfaces_per_cell(::Type{<:Triangle2D}) = 3
+nfaces_per_cell(::Type{<:Tetrahedron3D}) = 4
 nfaces_per_cell(::Type{<:Quadrilateral2D}) = 4
 
 # functions that specify number of nodes on the k-th cell face
@@ -37,16 +28,16 @@ nfaces_per_cell(::Type{<:Quadrilateral2D}) = 4
 # e.g. a pyramid with rectangular basis and triangular sides
 # this maybe requires a ordering rule for the nodes in the element
 # (e.g. for the pyramid first four nodes for the basis come first)
-nnodes_per_cellface(::Type{<:Simplex1D}, k) = 1
-nnodes_per_cellface(::Type{<:Simplex2D}, k) = 2
-nnodes_per_cellface(::Type{<:Simplex3D}, k) = 3
+nnodes_per_cellface(::Type{<:Edge1D}, k) = 1
+nnodes_per_cellface(::Type{<:Triangle2D}, k) = 2
+nnodes_per_cellface(::Type{<:Tetrahedron3D}, k) = 3
 nnodes_per_cellface(::Type{<:Quadrilateral2D}, k) = 2
 
 # functions that specify the facetype of the k-th cellface
-facetype_of_cellface(::Type{<:Simplex1D}, k) = Point0D
-facetype_of_cellface(::Type{<:Simplex2D}, k) = Simplex1D_Cartesian2D
-facetype_of_cellface(::Type{<:Simplex3D}, k) = Simplex2D_Cartesian2D
-facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Simplex1D_Cartesian2D
+facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
+facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D
+facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D_Cartesian2D
+facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D_Cartesian2D
 
 
 
@@ -219,16 +210,16 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
     for cell = 1 : ncells
         faces_per_cell = nfaces_per_cell(xCellTypes[cell])
         fill!(signs,-1)
-        if xCellTypes[cell] == Simplex1D
+        if xCellTypes[cell] == Edge1D
             append!(xCellFaces,[-1,1])
-        elseif xCellTypes[cell] == Simplex2D || xCellTypes[cell] == Quadrilateral2D
+        elseif xCellTypes[cell] == Triangle2D || xCellTypes[cell] == Quadrilateral2D
             for k = 1 : faces_per_cell
                 if xCellNodes[k,cell] == xFaceNodes[1,xCellFaces[k,cell]]
                     signs[k] = 1
                 end       
             end  
             append!(xCellSigns,signs[1:faces_per_cell])
-        elseif xCellTypes[cell] == Simplex3D # no experience with 3D yet, might be wrong !!!
+        elseif xCellTypes[cell] == Tetrahedron3D # no experience with 3D yet, might be wrong !!!
             for k = 1 : 4
                 # find matching node in face nodes and look if the next one matches, too
                 temp = 1
@@ -252,37 +243,31 @@ end
 
 # some methods to compute volume of different ElemTypes (beware: on submanifolds formulas get different)
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Point0D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{Vertex0D}, ::Type{XGrid.AbstractCoordinateSystem})
     return 0.0
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Simplex1D_Cartesian1D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{Edge1D}, ::Type{Cartesian1D})
     return abs(Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]])
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Simplex1D_Cartesian2D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{Edge1D}, ::Type{Cartesian2D})
     return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2)
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Simplex2D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{Triangle2D}, ::Type{Cartesian2D})
     return 1 // 2 * ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
                   +   Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
                   +   Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Simplex2D})
-    return 1 // 2 * ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
-                    + Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
-                    + Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
-end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{Parallelogram2D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{Parallelogram2D}, ::Type{Cartesian2D})
     return ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
            + Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
            + Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Quadrilateral2D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{Cartesian2D})
     return 1//2 * (   (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]]) * (Coords[2, Nodes[2, item]] - Coords[2, Nodes[4, item]])
                     + (Coords[1, Nodes[4, item]] - Coords[1, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[3, item]]) );
 end
@@ -296,12 +281,13 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellVolumes})
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     xCellTypes = xgrid[CellTypes]
+    xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init CellVolumes
     xCellVolumes = zeros(Float64,ncells)
 
     for cell = 1 : ncells
-        xCellVolumes[cell] = Volume4ElemType(xCoordinates,xCellNodes,cell,xCellTypes[cell])
+        xCellVolumes[cell] = Volume4ElemType(xCoordinates,xCellNodes,cell,xCellTypes[cell],xCoordinateSystem)
     end
 
     xCellVolumes
@@ -315,12 +301,13 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceVolumes})
     xFaceNodes = xgrid[FaceNodes]
     nfaces = num_sources(xFaceNodes)
     xFaceTypes = xgrid[FaceTypes]
+    xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceVolumes
     xFaceVolumes = zeros(Float64,nfaces)
 
     for face = 1 : nfaces
-        xFaceVolumes[face] = Volume4ElemType(xCoordinates,xFaceNodes,face,xFaceTypes[face])
+        xFaceVolumes[face] = Volume4ElemType(xCoordinates,xFaceNodes,face,xFaceTypes[face],xCoordinateSystem)
     end
 
     xFaceVolumes
@@ -356,12 +343,12 @@ end
 
 
 
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Point0D})
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Vertex0D}, ::Type{Cartesian1D})
     # rotate tangent
     normal[1] = 1.0
 end
 
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Simplex1D_Cartesian2D})
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Edge1D}, ::Type{Cartesian2D})
     # rotate tangent
     normal[1] = Coords[2, Nodes[2,item]] - Coords[2,Nodes[1,item]]
     normal[2] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
@@ -377,12 +364,13 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     xFaceNodes = xgrid[FaceNodes]
     nfaces = num_sources(xFaceNodes)
     xFaceTypes = xgrid[FaceTypes]
+    xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceNormals
     xFaceNormals = zeros(Float64,2,nfaces)
     normal = zeros(Float64,dim)
     for face = 1 : nfaces
-        Normal4ElemType!(normal,xCoordinates,xFaceNodes,face,xFaceTypes[face])
+        Normal4ElemType!(normal,xCoordinates,xFaceNodes,face,xFaceTypes[face],xCoordinateSystem)
         for k = 1 : dim
             xFaceNormals[k, face] = normal[k]
         end    
