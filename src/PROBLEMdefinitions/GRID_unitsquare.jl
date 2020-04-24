@@ -14,7 +14,7 @@ function xgridgen_unitsqure_triangle(maxarea)
 end
 
 
-function xgridgen_unitsquare_quad(maxarea, H = 0.4, L = 0.6)
+function xgridgen_unitsquare_quad(maxarea, H = 4 // 10, L = 6 // 10; NumberType = Float64)
     coords4nodes = [0 0; L 0; 1 0; 0 H; L H; 1 H;0 1; L 1; 1 1]
     nodes4cells = zeros(Int64,4,4)
     nodes4cells[1,:] = [1, 2, 5, 4];
@@ -24,13 +24,13 @@ function xgridgen_unitsquare_quad(maxarea, H = 0.4, L = 0.6)
     nrefinements = ceil(1/log(1.0/maxarea,4))
     nodes4bfaces = [1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1];
     bregions = [1,1,2,2,3,3,4,4]
-    grid = Grid.Mesh{Float64}(coords4nodes,nodes4cells,Array{Int64,2}(nodes4bfaces'),bregions,Grid.ElemType2DParallelogram(),nrefinements);
+    grid = Grid.Mesh{NumberType}(coords4nodes,nodes4cells,Array{Int32,2}(nodes4bfaces'),bregions,Grid.ElemType2DParallelogram(),nrefinements);
 
     ncells = size(grid.nodes4cells,2)
-    xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}(grid.coords4nodes')
+    xgrid=ExtendableGrid{NumberType,Int32}()
+    xgrid[Coordinates]=Array{NumberType,2}(grid.coords4nodes')
     xgrid[CellRegions]=VectorOfConstants(1,ncells)
-    xgrid[CellTypes]=VectorOfConstants(FEXGrid.Quadrilateral2D,ncells)
+    xgrid[CellTypes]=VectorOfConstants(FEXGrid.Parallelogram2D,ncells)
     xgrid[BFaceRegions]=grid.bregions
     xgrid[BFaceTypes]=VectorOfConstants(FEXGrid.Edge1D,ncells)
     xgrid[CellNodes]=Array{Int32,2}(grid.nodes4cells')

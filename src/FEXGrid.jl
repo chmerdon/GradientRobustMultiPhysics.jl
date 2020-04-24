@@ -1,6 +1,7 @@
 module FEXGrid
 
 export FaceNodes, FaceTypes, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces
+export L2GTransformer, set_cell!, eval!
 
 using XGrid
 
@@ -36,6 +37,47 @@ facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D
 facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
 facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D
+
+
+
+mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
+    current_cell::Int
+    Coordinates
+    CellNodes
+    A::Matrix{T}
+    b::Vector{T}
+end    
+
+function L2GTransformer{T,EG,CS}(grid::ExtendableGrid)  where {T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
+    A = zeros(T,2,2)
+    b = zeros(T,2)
+    return L2GTransformer{T,EG,CS}(0,grid[Coordinates],grid[CellNodes],A,b)
+end
+
+function set_cell!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, cell::Int)
+    T.current_cell = cell
+    T.b[1] = T.Coordinates[1,T.CellNodes[1,cell]]
+    T.b[2] = T.Coordinates[2,T.CellNodes[1,cell]]
+    T.A[1,1] = T.Coordinates[1,T.CellNodes[2,cell]] - T.b[1]
+    T.A[1,2] = T.Coordinates[1,T.CellNodes[3,cell]] - T.b[1]
+    T.A[2,1] = T.Coordinates[2,T.CellNodes[2,cell]] - T.b[2]
+    T.A[2,2] = T.Coordinates[2,T.CellNodes[3,cell]] - T.b[2]
+end
+
+function set_cell!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, cell::Int)
+    T.current_cell = cell
+    T.b[1] = T.Coordinates[1,T.CellNodes[1,cell]]
+    T.b[2] = T.Coordinates[2,T.CellNodes[1,cell]]
+    T.A[1,1] = T.Coordinates[1,T.CellNodes[2,cell]] - T.b[1]
+    T.A[1,2] = T.Coordinates[1,T.CellNodes[4,cell]] - T.b[1]
+    T.A[2,1] = T.Coordinates[2,T.CellNodes[2,cell]] - T.b[2]
+    T.A[2,2] = T.Coordinates[2,T.CellNodes[4,cell]] - T.b[2]
+end
+
+function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Triangle2D, Parallelogram2D},Cartesian2D}, xref)
+    x[1] = T.A[1,1]*xref[1] + T.A[1,2]*xref[2] + T.b[1]
+    x[2] = T.A[2,1]*xref[1] + T.A[2,2]*xref[2] + T.b[2]
+end
 
 
 
@@ -282,7 +324,7 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{CellVolumes})
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init CellVolumes
-    xCellVolumes = zeros(Float64,ncells)
+    xCellVolumes = zeros(Real,ncells)
 
     for cell = 1 : ncells
         xCellVolumes[cell] = Volume4ElemType(xCoordinates,xCellNodes,cell,xCellTypes[cell],xCoordinateSystem)
@@ -302,7 +344,7 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceVolumes})
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceVolumes
-    xFaceVolumes = zeros(Float64,nfaces)
+    xFaceVolumes = zeros(Real,nfaces)
 
     for face = 1 : nfaces
         xFaceVolumes[face] = Volume4ElemType(xCoordinates,xFaceNodes,face,xFaceTypes[face],xCoordinateSystem)
@@ -365,8 +407,8 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceNormals
-    xFaceNormals = zeros(Float64,dim,nfaces)
-    normal = zeros(Float64,dim)
+    xFaceNormals = zeros(Real,dim,nfaces)
+    normal = zeros(Real,dim)
     for face = 1 : nfaces
         Normal4ElemType!(normal,xCoordinates,xFaceNodes,face,xFaceTypes[face],xCoordinateSystem)
         for k = 1 : dim
