@@ -5,9 +5,11 @@ end
 
 struct FEH1P1 <: AbstractH1FiniteElement
     name::String;                 # full name of finite element (used in messages)
-    ncomponents::Int32;           # number of components
     xgrid::ExtendableGrid         # link to xgrid
     celldofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
+    facedofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
+    ncomponents::Int32;           # number of components
+    ndofs::Int32
 end
 
 function getP1FiniteElement(grid::Grid.Mesh,ncomponents)
@@ -17,35 +19,49 @@ function getP1FiniteElement(grid::Grid.Mesh,ncomponents)
     return H1P1FiniteElement{T,ncomponents}("P1 (H1FiniteElement, ncomponents=$ncomponents)",grid)
 end
 
-function getP1FiniteElement(xgrid::ExtendableGrid,ncomponents)
+function registerP1FiniteElement(xgrid::ExtendableGrid,ncomponents::Int)
     name = "P1"
     for n = 1 : ncomponents-1
         name = name * "xP1"
     end
     name = name * " (H1)"    
-    FE = FEH1P1(name,ncomponents,xgrid,VariableTargetAdjacency(Int32))
 
     # generate celldofs
     dim = size(xgrid[Coordinates],1) 
     xCellNodes = xgrid[CellNodes]
-    ncells = num_sources(xCellNodes)
-    nnodes = num_sources(xgrid[Coordinates])
+    xFaceNodes = xgrid[FaceNodes]
     xCellTypes = xgrid[CellTypes]
+    ncells = num_sources(xCellNodes)
+    nfaces = num_sources(xFaceNodes)
+    nnodes = num_sources(xgrid[Coordinates])
 
-    dofs = zeros(Int32,8)
-    nnodes4cell = 0
+    # generate dofmaps
+    xCellDofs = VariableTargetAdjacency(Int32)
+    xFaceDofs = VariableTargetAdjacency(Int32)
+    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xCellNodes))
+    nnodes4item = 0
     for cell = 1 : ncells
-        nnodes4cell = num_targets(xCellNodes,cell)
-        for k = 1 : nnodes4cell
-            dofs[k] = xCellNodes[k,cell]
+        nnodes4item = num_targets(xCellNodes,cell)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xCellNodes[k,cell]
             for n = 1 : ncomponents-1
-                dofs[k+n*nnodes4cell] = n*nnodes + dofs[k]
+                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
             end    
         end
-        append!(FE.celldofs,dofs)
+        append!(xCellDofs,dofs4item[1:nnodes4item])
+    end
+    for face = 1 : nfaces
+        nnodes4item = num_targets(xFaceNodes,face)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xFaceNodes[k,face]
+            for n = 1 : ncomponents-1
+                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
+            end    
+        end
+        append!(xFaceDofs,dofs4item[1:nnodes4item])
     end
 
-    return FE
+    return FEH1P1(name,xgrid,xCellDofs,xFaceDofs,ncomponents,nnodes * ncomponents)
 end
 
 

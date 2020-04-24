@@ -8,30 +8,8 @@ using SparseArrays
 using Quadrature
 using ForwardDiff
 
-export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHdivRTFiniteElement, AbstractHdivBDMFiniteElement, AbstractHcurlFiniteElement
+export AstractFiniteElement, FEFunction
 
- #######################################################################################################
- #######################################################################################################
- ### FFFFF II NN    N II TTTTTT EEEEEE     EEEEEE LL     EEEEEE M     M EEEEEE NN    N TTTTTT SSSSSS ###
- ### FF    II N N   N II   TT   EE         EE     LL     EE     MM   MM EE     N N   N   TT   SS     ###
- ### FFFF  II N  N  N II   TT   EEEEE      EEEEE  LL     EEEEE  M M M M EEEEE  N  N  N   TT    SSSS  ###
- ### FF    II N   N N II   TT   EE         EE     LL     EE     M  M  M EE     N   N N   TT       SS ###
- ### FF    II N    NN II   TT   EEEEEE     EEEEEE LLLLLL EEEEEE M     M EEEEEE N    NN   TT   SSSSSS ###
- #######################################################################################################
- #######################################################################################################
-
-# generate sparse identity matrices where some diagonal entries are set to zero
-function speyec(n::Int,zd::Vector)
-    Ic = SparseMatrixCSC(I,n,n)
-    for j=1 : length(zd)
-        Ic[zd[j],zd[j]] = 0.0
-    end
-    return Ic
-end
-
-
-# top level abstract types
-abstract type AbstractFEOperator end
 abstract type AbstractFiniteElement end
 
   # subtype for Hdiv-conforming elements
@@ -66,6 +44,44 @@ abstract type AbstractFiniteElement end
   abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
     # TODO
 
+struct FEFunction{T} <: AbstractVector{T}
+    name::String
+    FEType::AbstractFiniteElement
+    coefficients::Vector{T}
+end
+
+function FEFunction{T}(name::String, FEType::AbstractFiniteElement) where T <: Real
+    coefficients = zeros(T,FEType.ndofs)
+end
+
+Base.getindex(FEF::FEFunction,i)=FEFunction.Coefficients[i]
+
+#### OLD STUFF
+
+export AbstractFiniteElement, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHdivRTFiniteElement, AbstractHdivBDMFiniteElement, AbstractHcurlFiniteElement
+
+ #######################################################################################################
+ #######################################################################################################
+ ### FFFFF II NN    N II TTTTTT EEEEEE     EEEEEE LL     EEEEEE M     M EEEEEE NN    N TTTTTT SSSSSS ###
+ ### FF    II N N   N II   TT   EE         EE     LL     EE     MM   MM EE     N N   N   TT   SS     ###
+ ### FFFF  II N  N  N II   TT   EEEEE      EEEEE  LL     EEEEE  M M M M EEEEE  N  N  N   TT    SSSS  ###
+ ### FF    II N   N N II   TT   EE         EE     LL     EE     M  M  M EE     N   N N   TT       SS ###
+ ### FF    II N    NN II   TT   EEEEEE     EEEEEE LLLLLL EEEEEE M     M EEEEEE N    NN   TT   SSSSSS ###
+ #######################################################################################################
+ #######################################################################################################
+
+# generate sparse identity matrices where some diagonal entries are set to zero
+function speyec(n::Int,zd::Vector)
+    Ic = SparseMatrixCSC(I,n,n)
+    for j=1 : length(zd)
+        Ic[zd[j],zd[j]] = 0.0
+    end
+    return Ic
+end
+
+
+# top level abstract types
+abstract type AbstractFEOperator end
 
     
 

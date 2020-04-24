@@ -2,6 +2,7 @@ module FEXGrid
 
 export FaceNodes, FaceTypes, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces
 export L2GTransformer, set_cell!, eval!
+export split_grid_into
 
 using XGrid
 
@@ -37,6 +38,55 @@ facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D
 facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
 facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D
+
+
+# functions that tell how to split one ElementGeometry into another
+split_rule(::Type{Triangle2D}, ::Type{Triangle2D}) = reshape([1,2,3],1,3)
+split_rule(::Type{<:Quadrilateral2D}, ::Type{Triangle2D}) = [1 2 3;1 3 4]
+
+# function that generates a new simplexgrid from a mixed grid
+function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{Triangle2D}) where {T,K}
+    xgrid=ExtendableGrid{T,K}()
+    xgrid[Coordinates]=source_grid[Coordinates]
+    oldCellTypes = source_grid[CellTypes]
+    EG = []
+    try
+        EG = unique(oldCellTypes)
+    catch
+        EG = [source_grid[CellTypes][1]]
+    end 
+    split_rules = Array{Array{Int,2},1}(undef,length(EG))
+    for j = 1 : length(EG)
+        split_rules[j] = split_rule(EG[j],targetgeometry)
+    end
+    xCellNodes=[]
+    oldCellNodes=source_grid[CellNodes]
+    nnodes4cell = 0
+    ncells = 0
+    cellET = Triangle2D
+    iEG = 1
+    for cell = 1 : num_sources(oldCellNodes)
+        nnodes4cell = num_targets(oldCellNodes,cell)
+        cellET = oldCellTypes[cell]
+        iEG = 1
+        while cellET != EG[iEG]
+            iEG += 1
+        end 
+        for j = 1 : size(split_rules[iEG],1), k = 1 : size(split_rules[iEG],2)
+            append!(xCellNodes,oldCellNodes[split_rules[iEG][j,k],cell])
+        end    
+        ncells += size(split_rules[iEG],1)
+    end
+    xCellNodes = reshape(xCellNodes,3,ncells)
+    xgrid[CellNodes] = Array{Int32,2}(xCellNodes)
+    xgrid[CellTypes] = VectorOfConstants(Triangle2D,8)
+    xgrid[CellRegions]=ones(Int32,ncells)
+    xgrid[BFaceNodes]=source_grid[BFaceNodes]
+    xgrid[BFaceRegions]=source_grid[BFaceRegions]
+    xgrid[BFaceTypes]=VectorOfConstants(Edge1D,num_sources(source_grid[BFaceNodes]))
+    xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
+    return xgrid
+end
 
 
 

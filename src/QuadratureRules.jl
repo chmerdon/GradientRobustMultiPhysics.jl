@@ -17,12 +17,10 @@ Base.eltype(::QuadratureRule{T,ET}) where{T <: Real, ET <: AbstractElementGeomet
 # show function for Quadrature
 function show(Q::QuadratureRule{T,ET} where{T <: Real, ET <: AbstractElementGeometry})
     npoints = length(Q.xref);
-    dim = length(Q.xref[1]) - 1;
     println("QuadratureRule information");
     println("    shape ; $(eltype(Q)[2])")
 	println("     name : $(Q.name)");
-	println("      dim : $(dim)")
-	println("  npoints : $(npoints) / $(eltype(Q)[1])")
+	println("  npoints : $(npoints) ($(eltype(Q)[1]))")
 end
 
 function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry1D}
@@ -159,7 +157,7 @@ end
 
 
 # integrates and writes cell-wise integrals into integral4cells
-function integrate!(integral4cells::Array, integrand::Function, grid::ExtendableGrid, order::Int, resultdim = 1; NumberType = Float64, talkative::Bool = false)
+function integrate!(integral4cells::Array, grid::ExtendableGrid, integrand::Function, order::Int, resultdim::Int = 1; NumberType::Type{<:Number} = Float64, talkative::Bool = false)
 
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
@@ -195,11 +193,11 @@ function integrate!(integral4cells::Array, integrand::Function, grid::Extendable
     fill!(integral4cells, 0)
     x = zeros(NumberType, dim)
     result = zeros(NumberType, resultdim)
-    cellET = grid[CellTypes][1]
+    cellET = xCellTypes[1]
     iEG = 1
     for cell = 1 : ncells
         # find index for CellType
-        cellET = grid[CellTypes][cell]
+        cellET = xCellTypes[cell]
         iEG = 1
         while cellET != EG[iEG]
             iEG += 1
