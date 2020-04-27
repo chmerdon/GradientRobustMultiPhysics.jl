@@ -178,6 +178,7 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
     if talkative
         println("INTEGRATE")
         println("=========")
+        println("nitems = $nitems")
         for j = 1 : length(EG)
             println("QuadratureRule [$j] for $(EG[j]):")
             show(qf[j])

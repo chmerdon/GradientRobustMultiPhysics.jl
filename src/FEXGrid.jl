@@ -18,6 +18,7 @@ abstract type FaceCells <: AbstractGridAdjacency end
 abstract type FaceNormals <: XGrid.AbstractGridFloatArray2D end
 abstract type FaceTypes <: AbstractElementTypes end
 abstract type BFaces <: AbstractGridIntegerArray1D end
+abstract type BFaceVolumes <: XGrid.AbstractGridFloatArray1D end
 
 # additional XGrid adjacency types for finite elements
 abstract type CellDofs <: AbstractGridAdjacency end
@@ -100,13 +101,15 @@ GridComponentNodes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceNodes
 GridComponentNodes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceNodes
 GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellVolumes
 GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceVolumes
+GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceVolumes
 GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellTypes
 GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceTypes
+GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceTypes
 
 mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
     current_item::Int
     Coords::Array{T,2}
-    Nodes::VariableTargetAdjacency{Int32}
+    Nodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}}
     A::Matrix{T}
     b::Vector{T}
 end    
@@ -429,6 +432,11 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceVolumes})
     end
 
     xFaceVolumes
+end
+
+
+function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{BFaceVolumes})
+    xgrid[FaceVolumes][xgrid[BFaces]]
 end
 
 

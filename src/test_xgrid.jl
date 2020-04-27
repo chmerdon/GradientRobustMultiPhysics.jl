@@ -45,8 +45,10 @@ function main()
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants(1,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
-    xgrid[BFaceTypes]=VectorOfConstants(FEXGrid.Edge1D,ncells)
-    xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
+    xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
+    xgrid[BFaceNodes]=xBFaceNodes
+    nbfaces = num_sources(xBFaceNodes)
+    xgrid[BFaceTypes]=VectorOfConstants(Edge1D,nbfaces)
     xgrid[CoordinateSystem]=Cartesian2D
 
     function f(result,x)
@@ -61,9 +63,12 @@ function main()
     # integral of f over faces
     facevalues = zeros(Real,num_sources(xgrid[FaceNodes]),1)
     @time integrate!(facevalues, xgrid, AbstractAssemblyTypeFACE, f, 1, 1, NumberType; talkative = true)
-    
-    # integral of f over boundary faces
     show(sum(facevalues[xgrid[BFaces]], dims = 1))
+
+    # integral of f over bfaces
+    bfacevalues = zeros(Real,num_sources(xgrid[BFaceNodes]),1)
+    @time integrate!(facevalues, xgrid, AbstractAssemblyTypeBFACE, f, 1, 1, NumberType; talkative = true)
+    show(sum(bfacevalues, dims = 1))
 
 
 
