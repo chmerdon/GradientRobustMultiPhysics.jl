@@ -60,7 +60,6 @@ function assemble!(b::Array{<:Real}, ::Type{LinearForm}, AT::Type{<:AbstractAsse
     # find proper quadrature rules
     EG = unique(xItemTypes)
     qf = Array{QuadratureRule,1}(undef,length(EG))
-    local2global = Array{L2GTransformer,1}(undef,length(EG))
     basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
     quadorder = 0
     for j = 1 : length(EG)
@@ -123,7 +122,6 @@ function assemble!(A::AbstractSparseMatrix, ::Type{SymmetricBilinearForm}, AT::T
     # find proper quadrature rules
     EG = unique(xItemTypes)
     qf = Array{QuadratureRule,1}(undef,length(EG))
-    local2global = Array{L2GTransformer,1}(undef,length(EG))
     basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
     quadorder = 0
     for j = 1 : length(EG)
