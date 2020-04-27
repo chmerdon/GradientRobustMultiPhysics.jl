@@ -1,12 +1,19 @@
 module FEXGrid
 
+using XGrid
+
 export FaceNodes, FaceTypes, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces
+
+include("XGridAssemblyJunctions.jl");
 export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE
 export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType
+
+include("L2GTransformer.jl");
 export L2GTransformer, update!, eval!
+
+
 export split_grid_into
 
-using XGrid
 
 # additional XGrid adjacency types 
 abstract type FaceNodes <: AbstractGridAdjacency end
@@ -106,7 +113,7 @@ GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellTypes
 GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceTypes
 GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceTypes
 
-mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
+mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: AbstractCoordinateSystem}
     current_item::Int
     Coords::Array{T,2}
     Nodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}}

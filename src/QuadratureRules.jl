@@ -66,7 +66,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
       xref[3] = [1//2,0//1,1//2];
       w = [1//3; 1//3; 1//3]     
   else
-      name = "generic Stroud rule"
+      name = "generic Stroud rule of order $order"
       xref, w = get_generic_quadrature_Stroud(order)
   end
   return QuadratureRule{T, ET}(name, xref, w)
@@ -80,7 +80,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelogram2D}
       xref[1] = ones(T,2) * 1 // 2
       w = [1]
   else
-      name = "generic Gauss tensor rule"
+      name = "generic Gauss tensor rule of order $order"
       xref1D, w1D = get_generic_quadrature_Gauss(order)
       xref = Vector{Array{T,1}}(undef,length(xref1D)^2)
       w = zeros(T,length(xref1D)^2)
@@ -185,7 +185,7 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
         end
     end
 
-    # loop over cells
+    # loop over items
     fill!(integral4items, 0)
     x = zeros(NumberType, dim)
     result = zeros(NumberType, resultdim)

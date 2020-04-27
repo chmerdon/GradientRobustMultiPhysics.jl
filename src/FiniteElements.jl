@@ -118,10 +118,9 @@ end
 
 # show function for FiniteElement
 function show_new(FE::AbstractFiniteElement)
-    nd = num_targets(FE.celldofs)
 	println("FiniteElement information")
 	println("         name : " * FE.name)
-	println("        ndofs : $(nd)")
+	println("        ndofs : $(FE.ndofs)")
 end
 
 function show_dofmap(FE::AbstractFiniteElement)

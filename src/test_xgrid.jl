@@ -2,10 +2,12 @@
 using FEXGrid
 using Grid
 using FiniteElements
+using FEOperator
 using QuadratureRules
 using VTKView
 using PyPlot
 using BenchmarkTools
+using ExtendableSparse
 
 include("PROBLEMdefinitions/GRID_unitinterval.jl")
 include("PROBLEMdefinitions/GRID_unitsquare.jl")
@@ -71,10 +73,28 @@ function main()
     show(sum(bfacevalues, dims = 1))
 
 
-
     println("")
-    FE = FiniteElements.registerP1FiniteElement(xgrid,2)
+    FE = FiniteElements.getH1P1FiniteElement(xgrid,2)
+    ndofs = FE.ndofs
     FiniteElements.show_new(FE)
+
+    b = zeros(NumberType,FE.ndofs,2)
+    FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE; talkative = true)
+    Base.show(b)
+
+
+    b2 = zeros(NumberType,FE.ndofs,2)
+    FEOperator.assemble!(b2, LinearForm, AbstractAssemblyTypeBFACE, Identity, FE; talkative = true)
+    Base.show(b2)
+
+
+    A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
+    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Identity, FE; talkative = true)
+    
+    A2 = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
+    @time FEOperator.assemble!(A2, SymmetricBilinearForm, AbstractAssemblyTypeBFACE, Identity, FE; talkative = true)
+    
+    #show(A)
 
     Velocity = FEFunction{NumberType}("velocity",FE)
     Velocity[3] = 1
