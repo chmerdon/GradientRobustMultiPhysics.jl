@@ -3,12 +3,11 @@ struct H1P1FiniteElement{T,ncomponents} <: AbstractH1FiniteElement where {T <: R
     grid::Grid.Mesh{T}            # link to grid
 end
 
-struct FEH1P1 <: AbstractH1FiniteElement
+struct FEH1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
     name::String;                 # full name of finite element (used in messages)
     xgrid::ExtendableGrid         # link to xgrid
     celldofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
     facedofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
-    ncomponents::Int32;           # number of components
     ndofs::Int32
 end
 
@@ -19,7 +18,7 @@ function getP1FiniteElement(grid::Grid.Mesh,ncomponents)
     return H1P1FiniteElement{T,ncomponents}("P1 (H1FiniteElement, ncomponents=$ncomponents)",grid)
 end
 
-function registerP1FiniteElement(xgrid::ExtendableGrid,ncomponents::Int)
+function registerP1FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
     name = "P1"
     for n = 1 : ncomponents-1
         name = name * "xP1"
@@ -61,7 +60,7 @@ function registerP1FiniteElement(xgrid::ExtendableGrid,ncomponents::Int)
         append!(xFaceDofs,dofs4item[1:nnodes4item])
     end
 
-    return FEH1P1(name,xgrid,xCellDofs,xFaceDofs,ncomponents,nnodes * ncomponents)
+    return FEH1P1{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,nnodes * ncomponents)
 end
 
 

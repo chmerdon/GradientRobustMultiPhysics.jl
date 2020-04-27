@@ -1,7 +1,9 @@
 module FEXGrid
 
 export FaceNodes, FaceTypes, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces
-export L2GTransformer, set_cell!, eval!
+export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE
+export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType
+export L2GTransformer, update!, eval!
 export split_grid_into
 
 using XGrid
@@ -16,6 +18,11 @@ abstract type FaceCells <: AbstractGridAdjacency end
 abstract type FaceNormals <: XGrid.AbstractGridFloatArray2D end
 abstract type FaceTypes <: AbstractElementTypes end
 abstract type BFaces <: AbstractGridIntegerArray1D end
+
+# additional XGrid adjacency types for finite elements
+abstract type CellDofs <: AbstractGridAdjacency end
+abstract type FaceDofs <: AbstractGridAdjacency end
+abstract type Coefficients <: AbstractGridComponent end
 
 # functions that specify the number of faces of a celltype
 nfaces_per_cell(::Type{<:Edge1D}) = 2
@@ -49,12 +56,8 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     xgrid=ExtendableGrid{T,K}()
     xgrid[Coordinates]=source_grid[Coordinates]
     oldCellTypes = source_grid[CellTypes]
-    EG = []
-    try
-        EG = unique(oldCellTypes)
-    catch
-        EG = [source_grid[CellTypes][1]]
-    end 
+    EG = unique(oldCellTypes)
+    
     split_rules = Array{Array{Int,2},1}(undef,length(EG))
     for j = 1 : length(EG)
         split_rules[j] = split_rule(EG[j],targetgeometry)
@@ -68,10 +71,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     for cell = 1 : num_sources(oldCellNodes)
         nnodes4cell = num_targets(oldCellNodes,cell)
         cellET = oldCellTypes[cell]
-        iEG = 1
-        while cellET != EG[iEG]
-            iEG += 1
-        end 
+        iEG = findfirst(isequal(cellET), EG)
         for j = 1 : size(split_rules[iEG],1), k = 1 : size(split_rules[iEG],2)
             append!(xCellNodes,oldCellNodes[split_rules[iEG][j,k],cell])
         end    
@@ -89,44 +89,72 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
 end
 
 
+abstract type AbstractAssemblyType end
+abstract type AbstractAssemblyTypeCELL <: AbstractAssemblyType end
+abstract type AbstractAssemblyTypeFACE <: AbstractAssemblyType end
+abstract type AbstractAssemblyTypeBFACE <: AbstractAssemblyTypeFACE end # only boundary faces
+#abstract type AbstractAssemblyTypeEDGE end
+
+GridComponentNodes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellNodes
+GridComponentNodes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceNodes
+GridComponentNodes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceNodes
+GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellVolumes
+GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceVolumes
+GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellTypes
+GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceTypes
 
 mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
-    current_cell::Int
-    Coordinates
-    CellNodes
+    current_item::Int
+    Coords::Array{T,2}
+    Nodes::VariableTargetAdjacency{Int32}
     A::Matrix{T}
     b::Vector{T}
 end    
 
-function L2GTransformer{T,EG,CS}(grid::ExtendableGrid)  where {T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
+function L2GTransformer{T,EG,CS}(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType})  where {T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
     A = zeros(T,2,2)
     b = zeros(T,2)
-    return L2GTransformer{T,EG,CS}(0,grid[Coordinates],grid[CellNodes],A,b)
+    return L2GTransformer{T,EG,CS}(0,grid[Coordinates],grid[GridComponentNodes4AssemblyType(AT)],A,b)
 end
 
-function set_cell!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, cell::Int)
-    T.current_cell = cell
-    T.b[1] = T.Coordinates[1,T.CellNodes[1,cell]]
-    T.b[2] = T.Coordinates[2,T.CellNodes[1,cell]]
-    T.A[1,1] = T.Coordinates[1,T.CellNodes[2,cell]] - T.b[1]
-    T.A[1,2] = T.Coordinates[1,T.CellNodes[3,cell]] - T.b[1]
-    T.A[2,1] = T.Coordinates[2,T.CellNodes[2,cell]] - T.b[2]
-    T.A[2,2] = T.Coordinates[2,T.CellNodes[3,cell]] - T.b[2]
+
+function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int)
+    T.current_item = item
+    T.b[1] = T.Coords[1,T.Nodes[1,item]]
+    T.b[2] = T.Coords[2,T.Nodes[1,item]]
+    T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
+    T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
 end
 
-function set_cell!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, cell::Int)
-    T.current_cell = cell
-    T.b[1] = T.Coordinates[1,T.CellNodes[1,cell]]
-    T.b[2] = T.Coordinates[2,T.CellNodes[1,cell]]
-    T.A[1,1] = T.Coordinates[1,T.CellNodes[2,cell]] - T.b[1]
-    T.A[1,2] = T.Coordinates[1,T.CellNodes[4,cell]] - T.b[1]
-    T.A[2,1] = T.Coordinates[2,T.CellNodes[2,cell]] - T.b[2]
-    T.A[2,2] = T.Coordinates[2,T.CellNodes[4,cell]] - T.b[2]
+function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int)
+    T.current_item = item
+    T.b[1] = T.Coords[1,T.Nodes[1,item]]
+    T.b[2] = T.Coords[2,T.Nodes[1,item]]
+    T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
+    T.A[1,2] = T.Coords[1,T.Nodes[3,item]] - T.b[1]
+    T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
+    T.A[2,2] = T.Coords[2,T.Nodes[3,item]] - T.b[2]
+end
+
+function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::Int)
+    T.current_item = item
+    T.b[1] = T.Coords[1,T.Nodes[1,item]]
+    T.b[2] = T.Coords[2,T.Nodes[1,item]]
+    T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
+    T.A[1,2] = T.Coords[1,T.Nodes[4,item]] - T.b[1]
+    T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
+    T.A[2,2] = T.Coords[2,T.Nodes[4,item]] - T.b[2]
 end
 
 function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Triangle2D, Parallelogram2D},Cartesian2D}, xref)
     x[1] = T.A[1,1]*xref[1] + T.A[1,2]*xref[2] + T.b[1]
     x[2] = T.A[2,1]*xref[1] + T.A[2,2]*xref[2] + T.b[2]
+end
+
+
+function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Edge1D},Cartesian2D}, xref)
+    x[1] = T.A[1,1]*xref[1] + T.b[1]
+    x[2] = T.A[2,1]*xref[1] + T.b[2]
 end
 
 

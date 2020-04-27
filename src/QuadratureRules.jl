@@ -43,7 +43,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementG
     return QuadratureRule{T, ET}(name, xref, w)
 end
 
-function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry1D}
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry0D}
     name = "point evaluation"
     xref = Vector{Array{T,1}}(undef,1);
     xref[1] = ones(T,1)
@@ -156,28 +156,24 @@ function get_generic_quadrature_Stroud(order::Int)
 end
 
 
-# integrates and writes cell-wise integrals into integral4cells
-function integrate!(integral4cells::Array, grid::ExtendableGrid, integrand::Function, order::Int, resultdim::Int = 1; NumberType::Type{<:Number} = Float64, talkative::Bool = false)
-
+# integrates and writes item-wise integrals into integral4cells
+# AT can be AbstractAssemblyTypeCELL or AbstractAssemblyTypeFACE to integrate over cells/faces
+# integrand has to have the form function integrand!(result,x)
+function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; talkative::Bool = false)
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
-    xCellNodes = grid[CellNodes]
-    xCellVolumes = grid[CellVolumes]
-    xCellTypes = grid[CellTypes]
-    ncells = num_sources(xCellNodes)
+    xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
+    xItemTypes = grid[GridComponentTypes4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
     
     # find proper quadrature rules
-    EG = []
-    try
-        EG = unique(xCellTypes)
-    catch
-        EG = [grid[CellTypes][1]]
-    end    
+    EG = unique(xItemTypes)
     qf = Array{QuadratureRule,1}(undef,length(EG))
     local2global = Array{L2GTransformer,1}(undef,length(EG))
     for j = 1 : length(EG)
         qf[j] = QuadratureRule{NumberType,EG[j]}(order);
-        local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid)
+        local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid,AT)
     end    
     if talkative
         println("INTEGRATE")
@@ -188,32 +184,27 @@ function integrate!(integral4cells::Array, grid::ExtendableGrid, integrand::Func
         end
     end
 
-
     # loop over cells
-    fill!(integral4cells, 0)
+    fill!(integral4items, 0)
     x = zeros(NumberType, dim)
     result = zeros(NumberType, resultdim)
-    cellET = xCellTypes[1]
+    itemET = xItemTypes[1]
     iEG = 1
-    for cell = 1 : ncells
+    for item = 1 : nitems
         # find index for CellType
-        cellET = xCellTypes[cell]
-        iEG = 1
-        while cellET != EG[iEG]
-            iEG += 1
-        end 
+        itemET = xItemTypes[item]
+        iEG = findfirst(isequal(itemET), EG)
 
-        set_cell!(local2global[iEG],cell)
+        update!(local2global[iEG],item)
 
         for i in eachindex(qf[iEG].w)
             eval!(x, local2global[iEG], qf[iEG].xref[i])
-            result = integrand(x)
+            integrand!(result,x)
             for j = 1 : resultdim
-                integral4cells[cell, j] += result[j] * qf[iEG].w[i] * xCellVolumes[cell];
+                integral4items[item, j] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
             end
         end  
     end
 end
-
 
 end
