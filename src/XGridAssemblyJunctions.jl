@@ -15,10 +15,10 @@ GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceVolume
 GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceVolumes
 GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeBFACECELLDOFS}) = BFaceVolumes
 
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellTypes
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceTypes
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceTypes
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACECELLDOFS}) = BFaceTypes
+GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellGeometries
+GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceGeometries
+GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceGeometries
+GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACECELLDOFS}) = BFaceGeometries
 
 
 # in situations where we integrate of faces but want to evaluate cell dofs we need

@@ -30,7 +30,7 @@ function getH1P1FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
     dim = size(xgrid[Coordinates],1) 
     xCellNodes = xgrid[CellNodes]
     xFaceNodes = xgrid[FaceNodes]
-    xCellTypes = xgrid[CellTypes]
+    xCellTypes = xgrid[CellGeometries]
     xBFaceNodes = xgrid[BFaceNodes]
     xBFaces = xgrid[BFaces]
     ncells = num_sources(xCellNodes)

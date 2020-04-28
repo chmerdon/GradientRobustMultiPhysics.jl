@@ -1,7 +1,7 @@
 module QuadratureRules
 
 using LinearAlgebra
-using XGrid
+using ExtendableGrids
 using FEXGrid
 
 export QuadratureRule, integrate!

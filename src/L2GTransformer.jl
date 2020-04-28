@@ -1,5 +1,5 @@
 
-mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
+mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: AbstractCoordinateSystem}
     citem::Int
     nonlinear::Bool
     Coords::Array{T,2}
@@ -9,7 +9,7 @@ mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XG
     b::Vector{T}
 end    
 
-function L2GTransformer{T,EG,CS}(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType})  where {T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
+function L2GTransformer{T,EG,CS}(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType})  where {T <: Real, EG <: AbstractElementGeometry, CS <: AbstractCoordinateSystem}
     A = zeros(T,size(grid[Coordinates],1),dim_element(EG))
     b = zeros(T,size(grid[Coordinates],1))
     return L2GTransformer{T,EG,CS}(0,false,grid[Coordinates],grid[GridComponentNodes4AssemblyType(AT)],grid[GridComponentVolumes4AssemblyType(AT)],A,b)

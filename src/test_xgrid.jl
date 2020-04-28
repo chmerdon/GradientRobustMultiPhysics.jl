@@ -1,16 +1,14 @@
 
 using FEXGrid
-using Grid
+using ExtendableGrids
+using ExtendableSparse
 using FiniteElements
 using FEOperator
 using QuadratureRules
 using VTKView
 using PyPlot
 using BenchmarkTools
-using ExtendableSparse
 
-include("PROBLEMdefinitions/GRID_unitinterval.jl")
-include("PROBLEMdefinitions/GRID_unitsquare.jl")
 
 function main()
 
@@ -43,14 +41,14 @@ function main()
     append!(xCellNodes,[8,6,9])
 
     xgrid[CellNodes] = xCellNodes
-    xgrid[CellTypes] = xCellTypes
+    xgrid[CellGeometries] = xCellTypes
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants(1,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
-    xgrid[BFaceTypes]=VectorOfConstants(Edge1D,nbfaces)
+    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,nbfaces)
     xgrid[CoordinateSystem]=Cartesian2D
 
     function f(result,x)
@@ -105,7 +103,7 @@ function main()
     Velocity[3] = 1
 
     #xgrid = split_grid_into(xgrid,Triangle2D)
-    #XGrid.plot(xgrid; Plotter = VTKView)
+    #ExtendableGrids.plot(xgrid; Plotter = VTKView)
 
 end
 

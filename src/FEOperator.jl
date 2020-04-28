@@ -1,7 +1,7 @@
 module FEOperator
 
 using FiniteElements
-using XGrid
+using ExtendableGrids
 using FEXGrid
 using QuadratureRules
 using ExtendableSparse
@@ -137,6 +137,9 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
     nitems = num_sources(xItemNodes)
     
     # find proper quadrature rules
+    # for BFACECELLDOFS, EG needs to be Edge1D for Quadrature and cellEG for basiseval
+    # each combination needs a unique
+    # we need something like CellGeometries[FaceCells[BFaces]]
     EG = unique(xItemTypes)
     qf = Array{QuadratureRule,1}(undef,length(EG))
     basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))

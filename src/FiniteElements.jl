@@ -1,7 +1,7 @@
 module FiniteElements
 
 using Grid # remove if switch to ExtendableGrid is completed
-using XGrid
+using ExtendableGrids
 using FEXGrid
 using LinearAlgebra
 using SparseArrays

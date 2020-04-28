@@ -1,6 +1,6 @@
 using Printf
 using Triangulate
-using XGrid
+using ExtendableGrids
 
 function xgridgen_unitsqure_triangle(maxarea)
     triin=Triangulate.TriangulateIO()
@@ -9,7 +9,7 @@ function xgridgen_unitsqure_triangle(maxarea)
     triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
     flags = "pALVa$(@sprintf("%.16f", maxarea))"
 
-    xgrid = XGrid.simplexgrid(flags, triin)
+    xgrid = ExtendableGrids.simplexgrid(flags, triin)
     return xgrid
 end
 
@@ -30,9 +30,9 @@ function xgridgen_unitsquare_quad(maxarea, H = 4 // 10, L = 6 // 10; NumberType 
     xgrid=ExtendableGrid{NumberType,Int32}()
     xgrid[Coordinates]=Array{NumberType,2}(grid.coords4nodes')
     xgrid[CellRegions]=VectorOfConstants(1,ncells)
-    xgrid[CellTypes]=VectorOfConstants(FEXGrid.Parallelogram2D,ncells)
+    xgrid[CellGeometries]=VectorOfConstants(FEXGrid.Parallelogram2D,ncells)
     xgrid[BFaceRegions]=grid.bregions
-    xgrid[BFaceTypes]=VectorOfConstants(FEXGrid.Edge1D,ncells)
+    xgrid[BFaceGeometries]=VectorOfConstants(FEXGrid.Edge1D,ncells)
     xgrid[CellNodes]=Array{Int32,2}(grid.nodes4cells')
     xgrid[BFaceNodes]=Array{Int32,2}(grid.nodes4faces[grid.bfaces,:]')
     xgrid[CoordinateSystem]=Cartesian2D

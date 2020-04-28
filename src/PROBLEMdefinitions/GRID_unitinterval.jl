@@ -12,9 +12,9 @@ function xgridgen_unitinterval(maxarea)
     xgrid=ExtendableGrid{Float64,Int32}()
     xgrid[Coordinates]=Array{Float64,2}(grid.coords4nodes')
     xgrid[CellRegions]=VectorOfConstants(1,ncells)
-    xgrid[CellTypes]=VectorOfConstants(FEXGrid.Edge1D,ncells)
+    xgrid[CellGeometries]=VectorOfConstants(FEXGrid.Edge1D,ncells)
     xgrid[BFaceRegions]=grid.bregions
-    xgrid[BFaceTypes]=VectorOfConstants(FEXGrid.Vertex0D,ncells)
+    xgrid[BFaceGeometries]=VectorOfConstants(FEXGrid.Vertex0D,ncells)
     xgrid[CellNodes]=Array{Int32,2}(grid.nodes4cells')
     xgrid[BFaceNodes]=Array{Int32,2}(grid.nodes4faces[grid.bfaces,:]')
     xgrid[CoordinateSystem]=Cartesian1D
