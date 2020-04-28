@@ -3,9 +3,10 @@ module FEXGrid
 using ExtendableGrids
 
 export FaceNodes, FaceGeometries, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces, BFaceCellPos
+export nfaces_per_cell, facetype_of_cellface
 
 include("XGridAssemblyJunctions.jl");
-export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELLDOFS
+export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELL
 export xrefFACE2xrefCELL
 export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType
 

@@ -17,7 +17,7 @@ using ForwardDiff
 FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
 FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
 FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACECELLDOFS}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
 
 
 abstract type AbstractFEFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
@@ -64,6 +64,72 @@ export AbstractFEForm,LinearForm,SymmetricBilinearForm,ASymmetricBilinearForm
 export assemble!
 
 
+
+function prepareOperatorAssembly(AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, NumberType::Type{<:Real}, bonus_quadorder::Int, talkative::Bool)
+    # find proper quadrature QuadratureRules
+    xItemTypes = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
+    EG = unique(xItemTypes)
+    qf = Array{QuadratureRule,1}(undef,length(EG))
+    basisevaler = Array{Array{FEBasisEvaluator,1},1}(undef,length(EG))
+    quadorder = 0
+    for j = 1 : length(EG)
+        basisevaler[j] = Array{FEBasisEvaluator,1}(undef,1)
+        quadorder = bonus_quadorder + 2*FiniteElements.get_polynomialorder(typeof(FE), EG[j])
+        qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
+        basisevaler[j][1] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
+    end        
+    if talkative
+        println("ASSEMBLY PREPARATION")
+        println("=====================")
+        println("  operator = $operator")
+        for j = 1 : length(EG)
+            println("QuadratureRule [$j] for $(EG[j]):")
+            QuadratureRules.show(qf[j])
+        end
+    end
+    return EG, qf, basisevaler, (item) -> xItemTypes[item], (item) -> item, (item) -> 1
+end
+
+function prepareOperatorAssembly(AT::Type{<:AbstractAssemblyTypeBFACECELL}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, NumberType::Type{<:Real}, bonus_quadorder::Int, talkative::Bool)
+    # find proper quadrature QuadratureRules
+    xItemTypes = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
+    xCellTypes = FE.xgrid[CellGeometries]
+    EG = unique(xCellTypes)
+    qf = Array{QuadratureRule,1}(undef,length(EG))
+    basisevaler = Array{Array{FEBasisEvaluator,1},1}(undef,length(EG))
+    quadorder = 0
+    nfaces4cell = 0
+    for j = 1 : length(EG)
+        itemEG = facetype_of_cellface(EG[j],1)
+        nfaces4cell = nfaces_per_cell(EG[j])
+        basisevaler[j] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
+        quadorder = bonus_quadorder + 2*FiniteElements.get_polynomialorder(typeof(FE), itemEG)
+        qf[j] = QuadratureRule{NumberType,itemEG}(quadorder);
+        qfxref = qf[j].xref
+        xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
+        for k = 1 : nfaces4cell
+            for i = 1 : length(qfxref)
+                qf[j].xref[i] = xrefFACE2CELL[k](qfxref[i])
+            end
+            basisevaler[j][k] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
+        end    
+        for i = 1 : length(qfxref)
+            qf[j].xref[i] = qfxref[i]
+        end
+    end        
+    if talkative
+        println("ASSEMBLY PREPARATION")
+        println("=====================")
+        println("  operator = $operator")
+        for j = 1 : length(EG)
+            println("QuadratureRule [$j] for $(EG[j]):")
+            QuadratureRules.show(qf[j])
+        end
+    end
+    return EG, qf, basisevaler, (item) -> xCellTypes[FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]]] ,(item) -> FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]], (item) -> FE.xgrid[BFaceCellPos][item]
+end
+
+
 function assemble!(b::Array{<:Real}, form::Type{LinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false)
 
     NumberType = eltype(b)
@@ -75,49 +141,35 @@ function assemble!(b::Array{<:Real}, form::Type{LinearForm}, AT::Type{<:Abstract
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     nitems = num_sources(xItemNodes)
     
-    # find proper quadrature rules
-    EG = unique(xItemTypes)
-    qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
-    quadorder = 0
-    for j = 1 : length(EG)
-        quadorder = bonus_quadorder + FiniteElements.get_polynomialorder(typeof(FE), EG[j])
-        qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
-        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
-    end    
-    if talkative
-        println("ASSEMBLE_OPERATOR")
-        println("=================")
-        println("  type     = $form")
-        println("  operator = $operator")
-        println("  nitems   = $nitems ($AT)")
-        for j = 1 : length(EG)
-            println("QuadratureRule [$j] for $(EG[j]):")
-            QuadratureRules.show(qf[j])
-        end
-    end
+    EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(AT, operator, FE, NumberType, bonus_quadorder, talkative)
 
     # loop over items
     itemET = xItemTypes[1]
     iEG = 1
     ndofs4item = 0
     dof = 0
+    evalnr = 0
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
-    cvals_resultdim = size(basisevaler[1].cvals[1],2)
-    for item = 1 : nitems
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
+    dofitem = 0
+    for item::Int32 = 1 : nitems
+
+        dofitem = dofitem4item(item)
+
         # find index for CellType
-        itemET = xItemTypes[item]
+        itemET = EG4item(item)
         iEG = findfirst(isequal(itemET), EG)
-        ndofs4item = num_targets(xItemDofs,item)
+        ndofs4item = num_targets(xItemDofs,dofitem)
 
         # update FEbasisevaler
-        update!(basisevaler[iEG],item)
+        evalnr = evaler4item(item)
+        update!(basisevaler[iEG][evalnr],dofitem)
 
         for i in eachindex(qf[iEG].w)
 
             for dof_i = 1 : ndofs4item
                 for j = 1 : cvals_resultdim
-                    b[xItemDofs[dof_i,item],j] += coefficient * basisevaler[iEG].cvals[i][dof_i,j] * qf[iEG].w[i] * xItemVolumes[item]
+                    b[xItemDofs[dof_i,dofitem],j] += coefficient * basisevaler[iEG][evalnr].cvals[i][dof_i,j] * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end  
@@ -136,30 +188,7 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     nitems = num_sources(xItemNodes)
     
-    # find proper quadrature rules
-    # for BFACECELLDOFS, EG needs to be Edge1D for Quadrature and cellEG for basiseval
-    # each combination needs a unique
-    # we need something like CellGeometries[FaceCells[BFaces]]
-    EG = unique(xItemTypes)
-    qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
-    quadorder = 0
-    for j = 1 : length(EG)
-        quadorder = bonus_quadorder + 2*FiniteElements.get_polynomialorder(typeof(FE), EG[j])
-        qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
-        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
-    end    
-    if talkative
-        println("ASSEMBLE_OPERATOR")
-        println("=================")
-        println("  type     = $form")
-        println("  operator = $operator")
-        println("  nitems   = $nitems ($AT)")
-        for j = 1 : length(EG)
-            println("QuadratureRule [$j] for $(EG[j]):")
-            QuadratureRules.show(qf[j])
-        end
-    end
+    EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(AT, operator, FE, NumberType, bonus_quadorder, talkative)
 
     # loop over items
     itemET = xItemTypes[1]
@@ -168,25 +197,30 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
     dof = 0
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
     temp = 0
-    cvals_resultdim = size(basisevaler[1].cvals[1],2)
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
+    evalnr = 0
+    dofitem = 0
+    for item::Int32 = 1 : nitems
 
-    for item = 1 : nitems
+        dofitem = dofitem4item(item)
+
         # find index for CellType
-        itemET = xItemTypes[item]
+        itemET = EG4item(item)
         iEG = findfirst(isequal(itemET), EG)
-        ndofs4item = num_targets(xItemDofs,item)
+        ndofs4item = num_targets(xItemDofs,dofitem)
 
         # update FEbasisevaler
-        update!(basisevaler[iEG],item)
+        evalnr = evaler4item(item)
+        update!(basisevaler[iEG][evalnr],dofitem)
 
         for i in eachindex(qf[iEG].w)
 
             for dof_i = 1 : ndofs4item, dof_j = 1 : ndofs4item
                 temp = 0
                 for k = 1 : cvals_resultdim
-                    temp += basisevaler[iEG].cvals[i][dof_i,k]*basisevaler[iEG].cvals[i][dof_j,k]
+                    temp += basisevaler[iEG][evalnr].cvals[i][dof_i,k]*basisevaler[iEG][evalnr].cvals[i][dof_j,k]
                 end
-                A[xItemDofs[dof_i,item],xItemDofs[dof_j,item]] += coefficient * temp * qf[iEG].w[i] * xItemVolumes[item]
+                A[xItemDofs[dof_i,dofitem],xItemDofs[dof_j,dofitem]] += coefficient * temp * qf[iEG].w[i] * xItemVolumes[item]
             end 
         end  
     end

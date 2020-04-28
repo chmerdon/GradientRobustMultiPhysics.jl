@@ -86,9 +86,9 @@ function main()
     Base.show(b2)
 
 
-    #b3 = zeros(NumberType,FE.ndofs,2)
-    #FEOperator.assemble!(b2, LinearForm, AbstractAssemblyTypeBFACECELLDOFS, Gradient, FE; talkative = true)
-    #Base.show(b3)
+    b3 = zeros(NumberType,FE.ndofs,4)
+    FEOperator.assemble!(b3, LinearForm, AbstractAssemblyTypeBFACECELL, Gradient, FE; talkative = true)
+    Base.show(b3)
 
 
     #operator = Identity

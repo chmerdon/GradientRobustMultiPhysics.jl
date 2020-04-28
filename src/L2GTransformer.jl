@@ -17,7 +17,7 @@ end
 
 
 
-function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int)
+function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int32)
     T.citem = item
     T.b[1] = T.Coords[1,T.Nodes[1,item]]
     T.b[2] = T.Coords[2,T.Nodes[1,item]]
@@ -25,7 +25,7 @@ function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int)
     T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
 end
 
-function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int)
+function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int32)
     T.citem = item
     T.b[1] = T.Coords[1,T.Nodes[1,item]]
     T.b[2] = T.Coords[2,T.Nodes[1,item]]
@@ -35,7 +35,7 @@ function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int)
     T.A[2,2] = T.Coords[2,T.Nodes[3,item]] - T.b[2]
 end
 
-function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::Int)
+function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::Int32)
     T.citem = item
     T.b[1] = T.Coords[1,T.Nodes[1,item]]
     T.b[2] = T.Coords[2,T.Nodes[1,item]]
