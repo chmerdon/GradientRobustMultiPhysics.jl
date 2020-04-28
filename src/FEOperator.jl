@@ -17,6 +17,7 @@ using ForwardDiff
 FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
 FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
 FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
+FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACECELLDOFS}) = FE.CellDofs
 
 
 abstract type AbstractFEFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
@@ -82,7 +83,7 @@ function assemble!(b::Array{<:Real}, form::Type{LinearForm}, AT::Type{<:Abstract
     for j = 1 : length(EG)
         quadorder = bonus_quadorder + FiniteElements.get_polynomialorder(typeof(FE), EG[j])
         qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
-        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator}(FE, qf[j], AT)
+        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
     end    
     if talkative
         println("ASSEMBLE_OPERATOR")
@@ -143,7 +144,7 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
     for j = 1 : length(EG)
         quadorder = bonus_quadorder + 2*FiniteElements.get_polynomialorder(typeof(FE), EG[j])
         qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
-        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator}(FE, qf[j], AT)
+        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
     end    
     if talkative
         println("ASSEMBLE_OPERATOR")

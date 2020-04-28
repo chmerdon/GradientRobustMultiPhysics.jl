@@ -2,14 +2,15 @@ module FEXGrid
 
 using XGrid
 
-export FaceNodes, FaceTypes, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces
+export FaceNodes, FaceTypes, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces, BFaceCellPos
 
 include("XGridAssemblyJunctions.jl");
-export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE
+export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELLDOFS
+export xrefFACE2xrefCELL
 export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType
 
 include("L2GTransformer.jl");
-export L2GTransformer, update!, eval!, tinvert!
+export L2GTransformer, update!, eval!, mapderiv!
 
 
 export split_grid_into
@@ -25,6 +26,7 @@ abstract type FaceCells <: AbstractGridAdjacency end
 abstract type FaceNormals <: AbstractGridFloatArray2D end
 abstract type FaceTypes <: AbstractElementTypes end
 abstract type BFaces <: AbstractGridIntegerArray1D end
+abstract type BFaceCellPos <: AbstractGridIntegerArray1D end # position of bface in adjacent cell
 abstract type BFaceVolumes <: AbstractGridFloatArray1D end
 
 # additional XGrid adjacency types for finite elements
@@ -398,6 +400,66 @@ function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     end
 
     xBFaces
+end
+
+
+function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{FaceCells})
+    # get links to other stuff
+    xCoordinates = xgrid[Coordinates]
+    xCellFaces = xgrid[CellFaces]
+    xFaceNodes = xgrid[FaceNodes]
+    ncells = num_sources(xCellFaces)
+    nfaces = num_sources(xFaceNodes)
+
+    # init BFaces
+    xFaceCells = zeros(Int32,2,nfaces)
+
+    nfaces4cell = 0
+    facenr = 0
+    for cell = 1 : ncells
+        nfaces4cell = num_targets(xCellFaces,cell)
+        for f = 1 : nfaces4cell
+            face = xCellFaces[f,cell]
+            if xFaceCells[1,face] == 0
+                xFaceCells[1,face] = cell
+            else
+                xFaceCells[2,face] = cell
+            end    
+        end
+    end
+
+    return xFaceCells
+end
+
+
+function XGrid.instantiate(xgrid::ExtendableGrid, ::Type{BFaceCellPos})
+
+    # get links to other stuff
+    xCoordinates = xgrid[Coordinates]
+    xCellFaces = xgrid[CellFaces]
+    xFaceCells = xgrid[FaceCells]
+    xBFaces = xgrid[BFaces]
+    nbfaces = length(xBFaces)
+
+    # init BFaces
+    xBFaceCellPos = zeros(Int32,nbfaces)
+
+    cface = 0
+    cell = 0
+    nfaces4cell = 0
+    for bface = 1 : nbfaces
+        cface = xBFaces[bface]
+        cell = xFaceCells[1,cface]
+        nfaces4cell = num_targets(xCellFaces,cell)
+        for face = 1 : nfaces4cell
+            if cface == xCellFaces[face,cell]
+                xBFaceCellPos[bface] = face
+                break
+            end
+        end
+    end
+
+    xBFaceCellPos
 end
 
 
