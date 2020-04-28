@@ -6,6 +6,7 @@ using FEXGrid
 using QuadratureRules
 using ExtendableSparse
 using SparseArrays
+using ForwardDiff
 
 # would be usefull, but not working like this at the moment
 #GridComponentDofs4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellDofs
@@ -19,34 +20,50 @@ FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTyp
 
 
 abstract type AbstractFEFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
-abstract type Identity <: AbstractFEFunctionOperator end
-abstract type Gradient <: AbstractFEFunctionOperator end
-abstract type Curl <: AbstractFEFunctionOperator end
-abstract type Divergence <: AbstractFEFunctionOperator end
-abstract type SymmetricGradient <: AbstractFEFunctionOperator end
-abstract type Trace <: AbstractFEFunctionOperator end
-abstract type Jump <: AbstractFEFunctionOperator end
-abstract type NormalJump <: AbstractFEFunctionOperator end
-abstract type TangentJump <: AbstractFEFunctionOperator end
+abstract type Identity <: AbstractFEFunctionOperator end # 1*v_h
+abstract type Gradient <: AbstractFEFunctionOperator end # D_geom(v_h)
+abstract type SymmetricGradient <: AbstractFEFunctionOperator end # eps_geom(v_h)
+abstract type Laplacian <: AbstractFEFunctionOperator end # L_geom(v_h)
+abstract type Hessian <: AbstractFEFunctionOperator end # D^2(v_h)
+abstract type Curl <: AbstractFEFunctionOperator end # only 2D: Curl(v_h) = D(v_h)^\perp
+abstract type Rotation <: AbstractFEFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
+abstract type Divergence <: AbstractFEFunctionOperator end # div(v_h)
+abstract type Trace <: AbstractFEFunctionOperator end # tr(v_h)
+abstract type Deviator <: AbstractFEFunctionOperator end # dev(v_h)
 
-export AbstractFEFunctionOperator, Identity, Gradient, Curl, Divergence, SymmetricGradient, Trace, Jump, NormalJump, TangentialJump
 
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl}) = 1
+NeededDerivative4Operator(::Type{<:AbstractHcurlFiniteElement},::Type{Curl}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Rotation}) = 1
+NeededDerivative4Operator(::Type{<:AbstractHcurlFiniteElement},::Type{Rotation}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = 1
+NeededDerivative4Operator(::Type{<:AbstractHdivFiniteElement},::Type{Divergence}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
+
+export AbstractFEFunctionOperator
+export Identity, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
+export NeededDerivatives4Operator
 
 include("FEBasisEvaluator.jl")
-export FEBasisEvaluator, eval!, update!
+export FEBasisEvaluator, update!
 
 
-abstract type AbstractFEOperator end
-abstract type LinearForm <: AbstractFEOperator end
-abstract type SymmetricBilinearForm <: AbstractFEOperator end
-abstract type ASymmetricBilinearForm <: AbstractFEOperator end
+abstract type AbstractFEForm end
+abstract type LinearForm <: AbstractFEForm end
+abstract type SymmetricBilinearForm <: AbstractFEForm end
+abstract type ASymmetricBilinearForm <: AbstractFEForm end
 
-export AbstractFEOperator,LinearForm,SymmetricBilinearForm,ASymmetricBilinearForm
+export AbstractFEForm,LinearForm,SymmetricBilinearForm,ASymmetricBilinearForm
 export assemble!
 
 
-
-function assemble!(b::Array{<:Real}, ::Type{LinearForm}, AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false)
+function assemble!(b::Array{<:Real}, form::Type{LinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false)
 
     NumberType = eltype(b)
     xCoords = FE.xgrid[Coordinates]
@@ -65,13 +82,14 @@ function assemble!(b::Array{<:Real}, ::Type{LinearForm}, AT::Type{<:AbstractAsse
     for j = 1 : length(EG)
         quadorder = bonus_quadorder + FiniteElements.get_polynomialorder(typeof(FE), EG[j])
         qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
-        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],Identity}(FE, qf[j], AT)
+        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator}(FE, qf[j], AT)
     end    
     if talkative
         println("ASSEMBLE_OPERATOR")
         println("=================")
-        println("  type = LinearForm")
-        println("nitems = $nitems")
+        println("  type     = $form")
+        println("  operator = $operator")
+        println("  nitems   = $nitems ($AT)")
         for j = 1 : length(EG)
             println("QuadratureRule [$j] for $(EG[j]):")
             QuadratureRules.show(qf[j])
@@ -84,6 +102,7 @@ function assemble!(b::Array{<:Real}, ::Type{LinearForm}, AT::Type{<:AbstractAsse
     ndofs4item = 0
     dof = 0
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
+    cvals_resultdim = size(basisevaler[1].cvals[1],2)
     for item = 1 : nitems
         # find index for CellType
         itemET = xItemTypes[item]
@@ -95,12 +114,9 @@ function assemble!(b::Array{<:Real}, ::Type{LinearForm}, AT::Type{<:AbstractAsse
 
         for i in eachindex(qf[iEG].w)
 
-            # evaluate FEbasis at quadrature point
-            eval!(basisevaler[iEG], i)
-
             for dof_i = 1 : ndofs4item
-                for j = 1 : ncomponents
-                    b[xItemDofs[dof_i,item],j] += coefficient * basisevaler[iEG].cvals[dof_i,j] * qf[iEG].w[i] * xItemVolumes[item]
+                for j = 1 : cvals_resultdim
+                    b[xItemDofs[dof_i,item],j] += coefficient * basisevaler[iEG].cvals[i][dof_i,j] * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end  
@@ -108,7 +124,7 @@ function assemble!(b::Array{<:Real}, ::Type{LinearForm}, AT::Type{<:AbstractAsse
 end
 
 
-function assemble!(A::AbstractSparseMatrix, ::Type{SymmetricBilinearForm}, AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false)
+function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false)
 
     NumberType = eltype(A)
     xCoords = FE.xgrid[Coordinates]
@@ -127,13 +143,14 @@ function assemble!(A::AbstractSparseMatrix, ::Type{SymmetricBilinearForm}, AT::T
     for j = 1 : length(EG)
         quadorder = bonus_quadorder + 2*FiniteElements.get_polynomialorder(typeof(FE), EG[j])
         qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
-        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],Identity}(FE, qf[j], AT)
+        basisevaler[j] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator}(FE, qf[j], AT)
     end    
     if talkative
         println("ASSEMBLE_OPERATOR")
         println("=================")
-        println("  type = SymmetricBilinearForm")
-        println("nitems = $nitems")
+        println("  type     = $form")
+        println("  operator = $operator")
+        println("  nitems   = $nitems ($AT)")
         for j = 1 : length(EG)
             println("QuadratureRule [$j] for $(EG[j]):")
             QuadratureRules.show(qf[j])
@@ -147,7 +164,8 @@ function assemble!(A::AbstractSparseMatrix, ::Type{SymmetricBilinearForm}, AT::T
     dof = 0
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
     temp = 0
-    Base.show(xItemDofs)
+    cvals_resultdim = size(basisevaler[1].cvals[1],2)
+
     for item = 1 : nitems
         # find index for CellType
         itemET = xItemTypes[item]
@@ -159,13 +177,10 @@ function assemble!(A::AbstractSparseMatrix, ::Type{SymmetricBilinearForm}, AT::T
 
         for i in eachindex(qf[iEG].w)
 
-            # evaluate FEbasis at quadrature point
-            eval!(basisevaler[iEG], i)
-
             for dof_i = 1 : ndofs4item, dof_j = 1 : ndofs4item
                 temp = 0
-                for k = 1 : ncomponents
-                    temp += basisevaler[iEG].cvals[dof_i,k]*basisevaler[iEG].cvals[dof_j,k]
+                for k = 1 : cvals_resultdim
+                    temp += basisevaler[iEG].cvals[i][dof_i,k]*basisevaler[iEG].cvals[i][dof_j,k]
                 end
                 A[xItemDofs[dof_i,item],xItemDofs[dof_j,item]] += coefficient * temp * qf[iEG].w[i] * xItemVolumes[item]
             end 

@@ -5,10 +5,10 @@ end
 
 struct FEH1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
     name::String                         # full name of finite element (used in messages)
-    xgrid::ExtendableGrid                # place to save cell dofs (filled by constructor)
+    xgrid::ExtendableGrid                # link to xgrid 
     CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
-    FaceDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
-    BFaceDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
+    FaceDofs::VariableTargetAdjacency    # place to save face dofs (filled by constructor)
+    BFaceDofs::VariableTargetAdjacency   # place to save bface dofs (filled by constructor)
     ndofs::Int32
 end
 
@@ -20,7 +20,6 @@ function getP1FiniteElement(grid::Grid.Mesh,ncomponents)
 end
 
 function getH1P1FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
-    
     name = "P1"
     for n = 1 : ncomponents-1
         name = name * "xP1"

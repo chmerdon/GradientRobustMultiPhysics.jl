@@ -88,13 +88,14 @@ function main()
     Base.show(b2)
 
 
+    #operator = Identity
+    operator = Gradient
     A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
-    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Identity, FE; talkative = true)
+    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE; talkative = true)
     
-    A2 = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
-    @time FEOperator.assemble!(A2, SymmetricBilinearForm, AbstractAssemblyTypeBFACE, Identity, FE; talkative = true)
-    
-    #show(A)
+    #A2 = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
+    #@time FEOperator.assemble!(A2, SymmetricBilinearForm, AbstractAssemblyTypeBFACE, operator, FE; talkative = true)
+
 
     Velocity = FEFunction{NumberType}("velocity",FE)
     Velocity[3] = 1

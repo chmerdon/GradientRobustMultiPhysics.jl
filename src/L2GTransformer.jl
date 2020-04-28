@@ -1,6 +1,7 @@
 
 mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
     current_item::Int
+    nonlinear::Bool
     Coords::Array{T,2}
     Nodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}}
     A::Matrix{T}
@@ -8,10 +9,11 @@ mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: XG
 end    
 
 function L2GTransformer{T,EG,CS}(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType})  where {T <: Real, EG <: AbstractElementGeometry, CS <: XGrid.AbstractCoordinateSystem}
-    A = zeros(T,2,2)
-    b = zeros(T,2)
-    return L2GTransformer{T,EG,CS}(0,grid[Coordinates],grid[GridComponentNodes4AssemblyType(AT)],A,b)
+    A = zeros(T,size(grid[Coordinates],1),dim_element(EG))
+    b = zeros(T,size(grid[Coordinates],1))
+    return L2GTransformer{T,EG,CS}(0,false,grid[Coordinates],grid[GridComponentNodes4AssemblyType(AT)],A,b)
 end
+
 
 
 function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int)
@@ -48,7 +50,25 @@ function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Triangle2D, Parallelo
 end
 
 
-function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Edge1D},Cartesian2D}, xref)
+function eval!(x::Vector, T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, xref)
     x[1] = T.A[1,1]*xref[1] + T.b[1]
     x[2] = T.A[2,1]*xref[1] + T.b[2]
+end
+
+# matrix for derivative calculation
+function tinvert!(M::Matrix, T::L2GTransformer{<:Real,<:Union{Triangle2D,Parallelogram2D},Cartesian2D}, xref)
+    # transposed inverse of A
+    M[2,2] = T.A[1,1]
+    M[2,1] = -T.A[1,2]
+    M[1,2] = -T.A[2,1]
+    M[1,1] = T.A[2,2]
+    
+    # divide by  determinant
+    det = M[1,1]*M[2,2] - M[1,2]*M[2,1]
+
+    M[1] = M[1]/det
+    M[2] = M[2]/det
+    M[3] = M[3]/det
+    M[4] = M[4]/det
+    return det
 end

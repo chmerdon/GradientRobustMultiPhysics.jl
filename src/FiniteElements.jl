@@ -8,7 +8,8 @@ using SparseArrays
 using Quadrature
 using ForwardDiff
 
-export AstractFiniteElement, FEFunction
+export AstractFiniteElement, AbstractH1FiniteElementWithCoefficients, AbstractH1FiniteElement, AbstractHdivFiniteElement
+export FEFunction
 
 abstract type AbstractFiniteElement end
 
@@ -29,11 +30,13 @@ abstract type AbstractFiniteElement end
     include("FEdefinitions/H1_Q1.jl");
     include("FEdefinitions/H1_MINI.jl");
     include("FEdefinitions/H1_CR.jl");
-    include("FEdefinitions/H1_BR.jl");
-
     # second order
     include("FEdefinitions/H1_P2.jl");
     include("FEdefinitions/H1_P2B.jl");
+
+    abstract type AbstractH1FiniteElementWithCoefficients <: AbstractH1FiniteElement end
+       include("FEdefinitions/H1_BR.jl");
+
  
   # subtype for L2 conforming elements
   abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
