@@ -78,32 +78,32 @@ function main()
     ndofs = FE.ndofs
     FiniteElements.show_new(FE)
 
-    
+    # stiffness matrix
+    coefficient = MatrixCoefficient([2.0 0.0;0.0 2.0])
+    A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
+    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE, coefficient; talkative = true)
+
+
     # righ hand side
     b = zeros(NumberType,FE.ndofs,1)
-    #coefficient = ConstantCoefficient(1.0,1)
     function coefficient_function(result,x)
         result[1] = 1.0
     end    
-    coefficient = FunctionCoefficient(coefficient_function,2,1)
+    coefficient = ScalarCoefficient(1.0)
+    #coefficient = FunctionCoefficient(coefficient_function,2,1)
     @time FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE, coefficient; talkative = true)
     
-    # stiffness matrix
-    A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
-    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE; talkative = true)
-
-    # boundary data
+    # homogeneous boundary data
     bdofs = []
     xBFaces = xgrid[BFaces]
     nbfaces = length(xBFaces)
     xFaceDofs = FE.FaceDofs
-
     for bface = 1 : nbfaces
         append!(bdofs,xFaceDofs[:,xBFaces[bface]])
     end
-    
     bdofs = unique(bdofs)
     
+    # fix boundary dofs
     for j = 1 : length(bdofs)
         b[bdofs[j]] = 0.0
         A[bdofs[j],bdofs[j]] = 1e60
@@ -113,8 +113,8 @@ function main()
 
     Base.show(x)
 
-    xgrid = split_grid_into(xgrid,Triangle2D)
-    ExtendableGrids.plot(xgrid; Plotter = VTKView)
+    #xgrid = split_grid_into(xgrid,Triangle2D)
+    #ExtendableGrids.plot(xgrid; Plotter = VTKView)
 
 end
 

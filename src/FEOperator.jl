@@ -54,50 +54,14 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian})
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
 
-abstract type AbstractCoefficient end
-
-struct ConstantCoefficient{T <: Real} <: AbstractCoefficient
-    value::Array{T,1}
-    resultdim::Int
-end
-struct FunctionCoefficient{T <: Real} <: AbstractCoefficient
-    f::Function
-    resultdim::Int
-    x::Array{T,1}
-end
-
-export ConstantCoefficient
-export FunctionCoefficient
-
-function ConstantCoefficient(value::Array{<:Real,1}, resultdim::Int)
-    return ConstantCoefficient{eltype(value)}(value,resultdim)
-end
-
-function ConstantCoefficient(value::Real, resultdim::Int = 1)
-    return ConstantCoefficient{typeof(value)}(ones(typeof(value),resultdim)*value,resultdim)
-end
-
-function eval!(result, xref, C::ConstantCoefficient, L2G::L2GTransformer)
-    for j = 1:C.resultdim
-        result[j] = C.value[j];
-    end    
-end
-
-
-function FunctionCoefficient(f::Function, xdim::Int, resultdim::Int, NumberType::Type{<:Real} = Float64)
-    return FunctionCoefficient{NumberType}(f,resultdim,zeros(NumberType,xdim))
-end
-
-function eval!(result, xref, C::FunctionCoefficient, L2G::L2GTransformer)
-    FEXGrid.eval!(C.x, L2G, xref)
-    C.f(result,C.x);
-end
-
-
-
 export AbstractFEFunctionOperator
 export Identity, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
 export NeededDerivatives4Operator
+
+include("AbstractCoefficient.jl")
+export ConstantCoefficient
+export RegionWiseConstantCoefficient
+export FunctionCoefficient
 
 include("FEBasisEvaluator.jl")
 export FEBasisEvaluator, update!
@@ -244,7 +208,8 @@ function assemble!(
     evalnr = 0 # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
     temp = 0 # some temporary variable
-    coeff = zeros(NumberType,coefficient.resultdim) # 
+    coeff_input = zeros(NumberType,cvals_resultdim) # heap for coefficient input
+    coeff_result = zeros(NumberType,coefficient.resultdim) # heap for coefficient output
     for item::Int32 = 1 : nitems
     # check if item region is in regions
     if indexin(xItemRegions[item], regions) != Nothing
@@ -261,13 +226,19 @@ function assemble!(
         evalnr = evaler4item(item)
         update!(basisevaler[iEG][evalnr],dofitem)
 
+        # update coefficient
+        update!(coefficient, item)
+
         for i in eachindex(qf[iEG].w)
-
-            eval!(coeff, basisevaler[iEG][evalnr].xref[i], coefficient, basisevaler[iEG][evalnr].L2G)
-
             for dof_i = 1 : ndofs4item
+                # apply coefficient
+                for k = 1 : cvals_resultdim
+                    coeff_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                end    
+                apply_coefficient!(coeff_result, coeff_input, coefficient)
+
                 for j = 1 : cvals_resultdim
-                    b[xItemDofs[dof_i,dofitem],j] += coeff[j] * basisevaler[iEG][evalnr].cvals[i][dof_i,j] * qf[iEG].w[i] * xItemVolumes[item]
+                    b[xItemDofs[dof_i,dofitem],j] += coeff_result[j] * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end  
@@ -275,7 +246,7 @@ function assemble!(
     end # for loop
 end
 
-function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false, regions::Array{Int} = [1])
+function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::AbstractCoefficient; bonus_quadorder::Int = 0, talkative::Bool = false, regions::Array{Int} = [1])
 
     # collect grid information
     NumberType = eltype(A)
@@ -299,6 +270,8 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
     evalnr = 0 # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
     temp = 0 # some temporary variable
+    coeff_input = zeros(NumberType,cvals_resultdim) # heap for coefficient input
+    coeff_result = zeros(NumberType,coefficient.resultdim) # heap for coefficient output
     for item::Int32 = 1 : nitems
     # check if item region is in regions
     if indexin(xItemRegions[item], regions) != Nothing
@@ -314,13 +287,26 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
         evalnr = evaler4item(item)
         update!(basisevaler[iEG][evalnr],dofitem)
 
+        # update coefficient
+        update!(coefficient, item)
+
         for i in eachindex(qf[iEG].w)
-            for dof_i = 1 : ndofs4item, dof_j = 1 : ndofs4item
-                temp = 0
+           
+            for dof_i = 1 : ndofs4item
+
+                # apply coefficient to first argument
                 for k = 1 : cvals_resultdim
-                    temp += basisevaler[iEG][evalnr].cvals[i][dof_i,k]*basisevaler[iEG][evalnr].cvals[i][dof_j,k]
+                    coeff_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                end    
+                apply_coefficient!(coeff_result, coeff_input, coefficient)
+
+                for dof_j = 1 : ndofs4item
+                    temp = 0
+                    for k = 1 : coefficient.resultdim
+                        temp += coeff_result[k]*basisevaler[iEG][evalnr].cvals[i][dof_j,k]
+                    end
+                    A[xItemDofs[dof_i,dofitem],xItemDofs[dof_j,dofitem]] += temp * qf[iEG].w[i] * xItemVolumes[item]
                 end
-                A[xItemDofs[dof_i,dofitem],xItemDofs[dof_j,dofitem]] += coefficient * temp * qf[iEG].w[i] * xItemVolumes[item]
             end 
         end 
     end # if in region    
