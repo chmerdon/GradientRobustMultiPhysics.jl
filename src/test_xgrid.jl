@@ -79,7 +79,7 @@ function main()
     FiniteElements.show_new(FE)
 
     # stiffness matrix
-    coefficient = MatrixCoefficient([2.0 0.0;0.0 2.0])
+    coefficient = MultiplyMatrixAction([2.0 0.0;0.0 2.0])
     A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
     @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE, coefficient; talkative = true)
 
@@ -87,10 +87,10 @@ function main()
     # righ hand side
     b = zeros(NumberType,FE.ndofs,1)
     function coefficient_function(result,input,x)
-        result[1] = input[1]
+        result[1] = input[1] # identity coefficient written as a function
     end    
-    #coefficient = ScalarCoefficient(1.0)
-    coefficient = FunctionCoefficient(coefficient_function,1,2)
+    #coefficient = MultiplyScalarAction(1.0)
+    coefficient = FunctionAction(coefficient_function,1,2)
     @time FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE, coefficient; talkative = true)
     
     # homogeneous boundary data

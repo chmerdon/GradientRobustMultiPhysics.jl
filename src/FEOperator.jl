@@ -61,10 +61,10 @@ export NeededDerivatives4Operator
 include("FEBasisEvaluator.jl")
 export FEBasisEvaluator, update!
 
-include("AbstractCoefficient.jl")
+include("AbstractAction.jl")
 export ConstantCoefficient
 export RegionWiseConstantCoefficient
-export FunctionCoefficient
+export FunctionAction
 
 
 
@@ -182,7 +182,7 @@ function assemble!(
     AT::Type{<:AbstractAssemblyType},
     operator::Type{<:AbstractFEFunctionOperator},
     FE::AbstractFiniteElement,
-    coefficient::AbstractCoefficient;
+    action::AbstractAction;
     bonus_quadorder::Int = 0,
     talkative::Bool = false,
     regions::Array{Int} = [1])
@@ -209,8 +209,8 @@ function assemble!(
     evalnr = 0 # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
     temp = 0 # some temporary variable
-    coeff_input = zeros(NumberType,cvals_resultdim) # heap for coefficient input
-    coeff_result = zeros(NumberType,coefficient.resultdim) # heap for coefficient output
+    action_input = zeros(NumberType,cvals_resultdim) # heap for action input
+    action_result = zeros(NumberType,action.resultdim) # heap for action output
     for item::Int32 = 1 : nitems
     # check if item region is in regions
     if indexin(xItemRegions[item], regions) != Nothing
@@ -227,19 +227,19 @@ function assemble!(
         evalnr = evaler4item(item)
         update!(basisevaler[iEG][evalnr],dofitem)
 
-        # update coefficient
-        update!(coefficient, basisevaler[iEG][evalnr], item)
+        # update action
+        update!(action, basisevaler[iEG][evalnr], item)
 
         for i in eachindex(qf[iEG].w)
             for dof_i = 1 : ndofs4item
-                # apply coefficient
+                # apply action
                 for k = 1 : cvals_resultdim
-                    coeff_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                    action_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
                 end    
-                apply_coefficient!(coeff_result, coeff_input, coefficient, i)
+                apply_coefficient!(action_result, action_input, action, i)
 
                 for j = 1 : cvals_resultdim
-                    b[xItemDofs[dof_i,dofitem],j] += coeff_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                    b[xItemDofs[dof_i,dofitem],j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end  
@@ -247,7 +247,16 @@ function assemble!(
     end # for loop
 end
 
-function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::AbstractCoefficient; bonus_quadorder::Int = 0, talkative::Bool = false, regions::Array{Int} = [1])
+function assemble!(
+    A::AbstractSparseMatrix,
+    form::Type{SymmetricBilinearForm},
+    AT::Type{<:AbstractAssemblyType},
+    operator::Type{<:AbstractFEFunctionOperator},
+    FE::AbstractFiniteElement,
+    action::AbstractAction;
+    bonus_quadorder::Int = 0,
+    talkative::Bool = false,
+    regions::Array{Int} = [1])
 
     # collect grid information
     NumberType = eltype(A)
@@ -271,8 +280,8 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
     evalnr = 0 # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
     temp = 0 # some temporary variable
-    coeff_input = zeros(NumberType,cvals_resultdim) # heap for coefficient input
-    coeff_result = zeros(NumberType,coefficient.resultdim) # heap for coefficient output
+    action_input = zeros(NumberType,cvals_resultdim) # heap for action input
+    action_result = zeros(NumberType,action.resultdim) # heap for action output
     for item::Int32 = 1 : nitems
     # check if item region is in regions
     if indexin(xItemRegions[item], regions) != Nothing
@@ -288,23 +297,23 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
         evalnr = evaler4item(item)
         update!(basisevaler[iEG][evalnr],dofitem)
 
-        # update coefficient
-        update!(coefficient, basisevaler[iEG][evalnr], item)
+        # update action
+        update!(action, basisevaler[iEG][evalnr], item)
 
         for i in eachindex(qf[iEG].w)
            
             for dof_i = 1 : ndofs4item
 
-                # apply coefficient to first argument
+                # apply action to first argument
                 for k = 1 : cvals_resultdim
-                    coeff_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                    action_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
                 end    
-                apply_coefficient!(coeff_result, coeff_input, coefficient, i)
+                apply_coefficient!(action_result, action_input, action, i)
 
                 for dof_j = 1 : ndofs4item
                     temp = 0
-                    for k = 1 : coefficient.resultdim
-                        temp += coeff_result[k]*basisevaler[iEG][evalnr].cvals[i][dof_j,k]
+                    for k = 1 : action.resultdim
+                        temp += action_result[k]*basisevaler[iEG][evalnr].cvals[i][dof_j,k]
                     end
                     A[xItemDofs[dof_i,dofitem],xItemDofs[dof_j,dofitem]] += temp * qf[iEG].w[i] * xItemVolumes[item]
                 end
