@@ -164,11 +164,11 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
     dim = size(xCoords,1)
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
-    xItemTypes = grid[GridComponentTypes4AssemblyType(AT)]
+    xItemGeometries = grid[GridComponentTypes4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
     # find proper quadrature rules
-    EG = unique(xItemTypes)
+    EG = unique(xItemGeometries)
     qf = Array{QuadratureRule,1}(undef,length(EG))
     local2global = Array{L2GTransformer,1}(undef,length(EG))
     for j = 1 : length(EG)
@@ -189,11 +189,11 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
     fill!(integral4items, 0)
     x = zeros(NumberType, dim)
     result = zeros(NumberType, resultdim)
-    itemET = xItemTypes[1]
+    itemET = xItemGeometries[1]
     iEG = 1
     for item::Int32 = 1 : nitems
         # find index for CellType
-        itemET = xItemTypes[item]
+        itemET = xItemGeometries[item]
         iEG = findfirst(isequal(itemET), EG)
 
         update!(local2global[iEG],item)

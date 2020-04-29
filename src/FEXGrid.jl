@@ -2,13 +2,13 @@ module FEXGrid
 
 using ExtendableGrids
 
-export FaceNodes, FaceGeometries, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceCells, FaceNormals, BFaces, BFaceCellPos
+export FaceNodes, FaceGeometries, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceRegions, FaceCells, FaceNormals, BFaces, BFaceCellPos
 export nfaces_per_cell, facetype_of_cellface
 
 include("XGridAssemblyJunctions.jl");
 export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELL
 export xrefFACE2xrefCELL
-export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType
+export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType, GridComponentRegions4AssemblyType
 
 include("L2GTransformer.jl");
 export L2GTransformer, update!, eval!, mapderiv!
@@ -26,6 +26,7 @@ abstract type FaceVolumes <: AbstractGridFloatArray1D end
 abstract type FaceCells <: AbstractGridAdjacency end
 abstract type FaceNormals <: AbstractGridFloatArray2D end
 abstract type FaceGeometries <: AbstractElementGeometries end
+abstract type FaceRegions <: AbstractElementRegions end
 abstract type BFaces <: AbstractGridIntegerArray1D end
 abstract type BFaceCellPos <: AbstractGridIntegerArray1D end # position of bface in adjacent cell
 abstract type BFaceVolumes <: AbstractGridFloatArray1D end
@@ -40,6 +41,11 @@ nfaces_per_cell(::Type{<:Edge1D}) = 2
 nfaces_per_cell(::Type{<:Triangle2D}) = 3
 nfaces_per_cell(::Type{<:Tetrahedron3D}) = 4
 nfaces_per_cell(::Type{<:Quadrilateral2D}) = 4
+
+# functions that specify the local enumeration of faces
+face_enum_rule(::Type{<:Edge1D}) = [1; 2]
+face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
+face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
 
 # functions that specify number of nodes on the k-th cell face
 # why k?: think about ElementTypes that have faces of different nature
@@ -132,7 +138,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     dim = size(xgrid[Coordinates],1) 
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
-    xCellTypes = xgrid[CellGeometries]
+    xCellGeometries = xgrid[CellGeometries]
 
     # helper field to store all face nodes (including reversed duplicates)
     xFaceNodesAll = VariableTargetAdjacency(Int32)
@@ -143,14 +149,18 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     current_face = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_cellface
     faces_per_cell = 0
     nodes_per_cellface = 0
+    cellEG = Triangle2D
     for cell = 1 : ncells
-        faces_per_cell = nfaces_per_cell(xCellTypes[cell])
+        cellEG = xCellGeometries[cell]
+        faces_per_cell = nfaces_per_cell(cellEG)
+        face_rule = face_enum_rule(cellEG)
+
         for k = 1 : faces_per_cell
-            nodes_per_cellface = nnodes_per_cellface(xCellTypes[cell], k)
+            nodes_per_cellface = nnodes_per_cellface(cellEG, k)
             
             # get face nodes
             for j = 1 : nodes_per_cellface
-                current_face[j] = xCellNodes[mod(k-j,faces_per_cell)+1,cell]; 
+                current_face[j] = xCellNodes[face_rule[k,j],cell]; 
             end
 
             # bubble_sort face nodes
@@ -165,23 +175,23 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
             end
 
             append!(xFaceNodesAll,current_face[1:nodes_per_cellface])
-            types4allfaces = [types4allfaces; facetype_of_cellface(xCellTypes[cell], k)]
+            types4allfaces = [types4allfaces; facetype_of_cellface(xCellGeometries[cell], k)]
             nfaces += 1
         end    
     end
 
     # remove duplicates and assign FaceGeometries
     xFaceNodes = VariableTargetAdjacency(Int32)
-    xFaceTypes = []
+    xFaceGeometries = []
     idx = 0
     for face=1:nfaces
         idx = findfirst(j->all(i->xFaceNodesAll[i,face] == xFaceNodesAll[i,j],1:dim),1:nfaces)
         if idx == face
             append!(xFaceNodes,xFaceNodesAll[:,idx])
-            xFaceTypes = [xFaceTypes; types4allfaces[idx]]
+            xFaceGeometries = [xFaceGeometries; types4allfaces[idx]]
         end
     end
-    xgrid[FaceGeometries] = Array{DataType,1}(xFaceTypes)
+    xgrid[FaceGeometries] = Array{DataType,1}(xFaceGeometries)
     xFaceNodes
 end
 
@@ -197,7 +207,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nfaces = num_sources(xFaceNodes)
-    xCellTypes = xgrid[CellGeometries]
+    xCellGeometries = xgrid[CellGeometries]
 
     # loop over all cells and all cell faces
     current_face = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_cellface
@@ -205,14 +215,18 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
     faces_per_cell = 0
     nodes_per_cellface = 0
     match = false
+    cellEG = Triangle2D
     for cell = 1 : ncells
-        faces_per_cell = nfaces_per_cell(xCellTypes[cell])
+        cellEG = xCellGeometries[cell]
+        faces_per_cell = nfaces_per_cell(cellEG)
+        face_rule = face_enum_rule(cellEG)
+
         for k = 1 : faces_per_cell
-            nodes_per_cellface = nnodes_per_cellface(xCellTypes[cell], k)
+            nodes_per_cellface = nnodes_per_cellface(cellEG, k)
             
             # get face nodes
             for j = 1 : nodes_per_cellface
-                current_face[j] = xCellNodes[mod(k+j-2,faces_per_cell)+1,cell]; 
+                current_face[j] = xCellNodes[face_rule[k,j],cell]; 
             end
 
             # bubble_sort face nodes
@@ -258,25 +272,25 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nfaces = num_sources(xFaceNodes)
-    xCellTypes = xgrid[CellGeometries]
+    xCellGeometries = xgrid[CellGeometries]
 
     # loop over all cells and all cell faces
     signs = zeros(Int32,max_num_targets_per_source(xCellFaces))
     faces_per_cell = 0
     temp = 0
     for cell = 1 : ncells
-        faces_per_cell = nfaces_per_cell(xCellTypes[cell])
+        faces_per_cell = nfaces_per_cell(xCellGeometries[cell])
         fill!(signs,-1)
-        if xCellTypes[cell] == Edge1D
+        if xCellGeometries[cell] == Edge1D
             append!(xCellFaces,[-1,1])
-        elseif xCellTypes[cell] == Triangle2D || xCellTypes[cell] == Quadrilateral2D
+        elseif xCellGeometries[cell] == Triangle2D || xCellGeometries[cell] == Quadrilateral2D
             for k = 1 : faces_per_cell
                 if xCellNodes[k,cell] == xFaceNodes[1,xCellFaces[k,cell]]
                     signs[k] = 1
                 end       
             end  
             append!(xCellSigns,signs[1:faces_per_cell])
-        elseif xCellTypes[cell] == Tetrahedron3D # no experience with 3D yet, might be wrong !!!
+        elseif xCellGeometries[cell] == Tetrahedron3D # no experience with 3D yet, might be wrong !!!
             for k = 1 : 4
                 # find matching node in face nodes and look if the next one matches, too
                 temp = 1
@@ -337,14 +351,14 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellVolumes})
     xCoordinates = xgrid[Coordinates]
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
-    xCellTypes = xgrid[CellGeometries]
+    xCellGeometries = xgrid[CellGeometries]
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init CellVolumes
     xCellVolumes = zeros(Real,ncells)
 
     for cell = 1 : ncells
-        xCellVolumes[cell] = Volume4ElemType(xCoordinates,xCellNodes,cell,xCellTypes[cell],xCoordinateSystem)
+        xCellVolumes[cell] = Volume4ElemType(xCoordinates,xCellNodes,cell,xCellGeometries[cell],xCoordinateSystem)
     end
 
     xCellVolumes
@@ -357,14 +371,14 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceVolumes})
     xCoordinates = xgrid[Coordinates]
     xFaceNodes = xgrid[FaceNodes]
     nfaces = num_sources(xFaceNodes)
-    xFaceTypes = xgrid[FaceGeometries]
+    xFaceGeometries = xgrid[FaceGeometries]
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceVolumes
     xFaceVolumes = zeros(Real,nfaces)
 
     for face = 1 : nfaces
-        xFaceVolumes[face] = Volume4ElemType(xCoordinates,xFaceNodes,face,xFaceTypes[face],xCoordinateSystem)
+        xFaceVolumes[face] = Volume4ElemType(xCoordinates,xFaceNodes,face,xFaceGeometries[face],xCoordinateSystem)
     end
 
     xFaceVolumes
@@ -432,6 +446,13 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceCells})
     return xFaceCells
 end
 
+# This assigns Regions to faces by looking at neighbouring cells
+# don't know yet if this is a good idea
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceRegions})
+    return VectorOfConstants(Int32(0),num_sources(xgrid[FaceNodes]))
+end
+
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceCellPos})
 
@@ -485,14 +506,14 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     xCoordinates = xgrid[Coordinates]
     xFaceNodes = xgrid[FaceNodes]
     nfaces = num_sources(xFaceNodes)
-    xFaceTypes = xgrid[FaceGeometries]
+    xFaceGeometries = xgrid[FaceGeometries]
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceNormals
     xFaceNormals = zeros(Real,dim,nfaces)
     normal = zeros(Real,dim)
     for face = 1 : nfaces
-        Normal4ElemType!(normal,xCoordinates,xFaceNodes,face,xFaceTypes[face],xCoordinateSystem)
+        Normal4ElemType!(normal,xCoordinates,xFaceNodes,face,xFaceGeometries[face],xCoordinateSystem)
         for k = 1 : dim
             xFaceNormals[k, face] = normal[k]
         end    

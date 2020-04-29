@@ -20,6 +20,11 @@ GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceGeometri
 GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceGeometries
 GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACECELL}) = BFaceGeometries
 
+GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellRegions
+GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceRegions
+GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceRegions
+GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeBFACECELL}) = BFaceRegions
+
 
 # in situations where we integrate of faces but want to evaluate cell dofs we need
 # to transform the xref on the face (xrefFACE) to xref on the CELL;

@@ -33,7 +33,7 @@ function main()
     maxdofs = 10000
 
     # other switches
-    show_plots = false
+    show_plots = true
     show_convergence_history = true
     uniform_mesh = true
     use_reconstruction = [0] # do not change here

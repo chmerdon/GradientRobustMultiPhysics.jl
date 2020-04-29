@@ -6,7 +6,8 @@ using FiniteElements
 using FEOperator
 using QuadratureRules
 using VTKView
-using PyPlot
+#ENV["MPLBACKEND"]="qt5agg"
+#using PyPlot
 using BenchmarkTools
 
 
@@ -19,9 +20,9 @@ function main()
     xgrid[Coordinates]=Array{NumberType,2}([0 0; 4//10 0; 1 0; 0 6//10; 4//10 6//10; 1 6//10;0 1; 4//10 1; 1 1]')
     xCellNodes=VariableTargetAdjacency(Int32)
     if mixed_geometries
-        xCellTypes=[Triangle2D, Triangle2D, Parallelogram2D, Parallelogram2D, Triangle2D, Triangle2D];
+        xCellGeometries=[Triangle2D, Triangle2D, Parallelogram2D, Parallelogram2D, Triangle2D, Triangle2D];
     else
-        xCellTypes=VectorOfConstants(Triangle2D,8)
+        xCellGeometries=VectorOfConstants(Triangle2D,8)
     end    
 
     append!(xCellNodes,[1,5,4])
@@ -41,9 +42,9 @@ function main()
     append!(xCellNodes,[8,6,9])
 
     xgrid[CellNodes] = xCellNodes
-    xgrid[CellGeometries] = xCellTypes
+    xgrid[CellGeometries] = xCellGeometries
     ncells = num_sources(xCellNodes)
-    xgrid[CellRegions]=VectorOfConstants(1,ncells)
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
     xgrid[BFaceNodes]=xBFaceNodes
@@ -80,7 +81,12 @@ function main()
     
     # righ hand side
     b = zeros(NumberType,FE.ndofs,1)
-    @time FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE; talkative = true)
+    #coefficient = ConstantCoefficient(1.0,1)
+    function coefficient_function(result,x)
+        result[1] = 1.0
+    end    
+    coefficient = FunctionCoefficient(coefficient_function,2,1)
+    @time FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE, coefficient; talkative = true)
     
     # stiffness matrix
     A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
@@ -93,7 +99,7 @@ function main()
     xFaceDofs = FE.FaceDofs
 
     for bface = 1 : nbfaces
-        append!(bdofs,xFaceDofs[:,bface])
+        append!(bdofs,xFaceDofs[:,xBFaces[bface]])
     end
     
     bdofs = unique(bdofs)
@@ -106,8 +112,6 @@ function main()
     x = A\b
 
     Base.show(x)
-
-
 
     xgrid = split_grid_into(xgrid,Triangle2D)
     ExtendableGrids.plot(xgrid; Plotter = VTKView)

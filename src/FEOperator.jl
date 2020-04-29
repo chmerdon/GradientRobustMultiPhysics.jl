@@ -47,6 +47,54 @@ NeededDerivative4Operator(::Type{<:AbstractHdivFiniteElement},::Type{Divergence}
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
+
+
+abstract type AbstractCoefficient end
+
+struct ConstantCoefficient{T <: Real} <: AbstractCoefficient
+    value::Array{T,1}
+    resultdim::Int
+end
+struct FunctionCoefficient{T <: Real} <: AbstractCoefficient
+    f::Function
+    resultdim::Int
+    x::Array{T,1}
+end
+
+export ConstantCoefficient
+export FunctionCoefficient
+
+function ConstantCoefficient(value::Array{<:Real,1}, resultdim::Int)
+    return ConstantCoefficient{eltype(value)}(value,resultdim)
+end
+
+function ConstantCoefficient(value::Real, resultdim::Int = 1)
+    return ConstantCoefficient{typeof(value)}(ones(typeof(value),resultdim)*value,resultdim)
+end
+
+function eval!(result, xref, C::ConstantCoefficient, L2G::L2GTransformer)
+    for j = 1:C.resultdim
+        result[j] = C.value[j];
+    end    
+end
+
+
+function FunctionCoefficient(f::Function, xdim::Int, resultdim::Int, NumberType::Type{<:Real} = Float64)
+    return FunctionCoefficient{NumberType}(f,resultdim,zeros(NumberType,xdim))
+end
+
+function eval!(result, xref, C::FunctionCoefficient, L2G::L2GTransformer)
+    FEXGrid.eval!(C.x, L2G, xref)
+    C.f(result,C.x);
+end
+
+
+
 export AbstractFEFunctionOperator
 export Identity, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
 export NeededDerivatives4Operator
@@ -64,37 +112,67 @@ export AbstractFEForm,LinearForm,SymmetricBilinearForm,ASymmetricBilinearForm
 export assemble!
 
 
+# unique functions that only selects uniques in specified regions
+function unique(xItemGeometries, xItemRegions, regions)
+    nitems = 0
+    try
+        nitems = num_sources(xItemGeometries)
+    catch
+        nitems = length(xItemGeometries)
+    end      
+    #EG = unique(xItemGeometries)
+    EG = []
+    for item = 1 : nitems
+        if indexin(xItemRegions[item], regions) != Nothing
+            if findfirst(isequal(xItemGeometries[item]), EG) == nothing
+                append!(EG, [xItemGeometries[item]])
+            end    
+        end
+    end    
+    return EG
+end
 
-function prepareOperatorAssembly(AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, NumberType::Type{<:Real}, bonus_quadorder::Int, talkative::Bool)
+function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, talkative::Bool)
+    xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
+    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+
+    # find unique ElementGeometries
+    EG = unique(xItemGeometries, xItemRegions, regions)
+
     # find proper quadrature QuadratureRules
-    xItemTypes = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
-    EG = unique(xItemTypes)
+    # and construct matching FEBasisEvaluators
     qf = Array{QuadratureRule,1}(undef,length(EG))
     basisevaler = Array{Array{FEBasisEvaluator,1},1}(undef,length(EG))
     quadorder = 0
     for j = 1 : length(EG)
         basisevaler[j] = Array{FEBasisEvaluator,1}(undef,1)
-        quadorder = bonus_quadorder + 2*FiniteElements.get_polynomialorder(typeof(FE), EG[j])
+        quadorder = bonus_quadorder + nrfactors*FiniteElements.get_polynomialorder(typeof(FE), EG[j])
         qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
         basisevaler[j][1] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
     end        
     if talkative
-        println("ASSEMBLY PREPARATION")
+        println("\nASSEMBLY PREPARATION")
         println("=====================")
+        println("      form = $form")
         println("  operator = $operator")
+        println("   regions = $regions")
+        println("  uniqueEG = $EG")
         for j = 1 : length(EG)
-            println("QuadratureRule [$j] for $(EG[j]):")
+            println("\nQuadratureRule [$j] for $(EG[j]):")
             QuadratureRules.show(qf[j])
         end
     end
-    return EG, qf, basisevaler, (item) -> xItemTypes[item], (item) -> item, (item) -> 1
+    return EG, qf, basisevaler, (item) -> xItemGeometries[item], (item) -> item, (item) -> 1
 end
 
-function prepareOperatorAssembly(AT::Type{<:AbstractAssemblyTypeBFACECELL}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, NumberType::Type{<:Real}, bonus_quadorder::Int, talkative::Bool)
+function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AbstractAssemblyTypeBFACECELL}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, talkative::Bool)
     # find proper quadrature QuadratureRules
-    xItemTypes = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
-    xCellTypes = FE.xgrid[CellGeometries]
-    EG = unique(xCellTypes)
+    xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
+    xCellGeometries = FE.xgrid[CellGeometries]
+
+    # find unique ElementGeometries
+    # todo: we need unique CellGeometriy/BFaceGeometrie pairs in BFace regions
+
     qf = Array{QuadratureRule,1}(undef,length(EG))
     basisevaler = Array{Array{FEBasisEvaluator,1},1}(undef,length(EG))
     quadorder = 0
@@ -103,7 +181,7 @@ function prepareOperatorAssembly(AT::Type{<:AbstractAssemblyTypeBFACECELL}, oper
         itemEG = facetype_of_cellface(EG[j],1)
         nfaces4cell = nfaces_per_cell(EG[j])
         basisevaler[j] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
-        quadorder = bonus_quadorder + 2*FiniteElements.get_polynomialorder(typeof(FE), itemEG)
+        quadorder = bonus_quadorder + nrfactors*FiniteElements.get_polynomialorder(typeof(FE), itemEG)
         qf[j] = QuadratureRule{NumberType,itemEG}(quadorder);
         qfxref = qf[j].xref
         xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
@@ -118,42 +196,60 @@ function prepareOperatorAssembly(AT::Type{<:AbstractAssemblyTypeBFACECELL}, oper
         end
     end        
     if talkative
-        println("ASSEMBLY PREPARATION")
+        println("\nASSEMBLY PREPARATION")
         println("=====================")
+        println("      form = $form")
         println("  operator = $operator")
+        println("   regions = $regions")
+        println("  uniqueEG = $EG")
         for j = 1 : length(EG)
-            println("QuadratureRule [$j] for $(EG[j]):")
+            println("\nQuadratureRule [$j] for $(EG[j]):")
             QuadratureRules.show(qf[j])
         end
     end
-    return EG, qf, basisevaler, (item) -> xCellTypes[FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]]] ,(item) -> FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]], (item) -> FE.xgrid[BFaceCellPos][item]
+    return EG, qf, basisevaler, (item) -> xCellGeometries[FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]]] ,(item) -> FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]], (item) -> FE.xgrid[BFaceCellPos][item]
 end
 
 
-function assemble!(b::Array{<:Real}, form::Type{LinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false)
+function assemble!(
+    b::Array{<:Real},
+    form::Type{LinearForm},
+    AT::Type{<:AbstractAssemblyType},
+    operator::Type{<:AbstractFEFunctionOperator},
+    FE::AbstractFiniteElement,
+    coefficient::AbstractCoefficient;
+    bonus_quadorder::Int = 0,
+    talkative::Bool = false,
+    regions::Array{Int} = [1])
 
     NumberType = eltype(b)
-    xCoords = FE.xgrid[Coordinates]
-    dim = size(xCoords,1)
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemTypes = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
+    xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
-    EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(AT, operator, FE, NumberType, bonus_quadorder, talkative)
+    EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(form, AT, operator, FE, regions, NumberType, 1, bonus_quadorder, talkative)
 
-    # loop over items
-    itemET = xItemTypes[1]
-    iEG = 1
-    ndofs4item = 0
-    dof = 0
-    evalnr = 0
+    # collect FE and FEBasisEvaluator information
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
     cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
-    dofitem = 0
-    for item::Int32 = 1 : nitems
+    @assert size(b,2) == cvals_resultdim
 
+    # loop over items
+    itemET = xItemGeometries[1] # type of the current item
+    iEG = 1 # index to the correct unique geometry
+    ndofs4item = 0 # number of dofs for item
+    evalnr = 0 # evaler number that has to be used for current item
+    dofitem = 0 # itemnr where the dof numbers can be found
+    temp = 0 # some temporary variable
+    coeff = zeros(NumberType,coefficient.resultdim) # 
+    for item::Int32 = 1 : nitems
+    # check if item region is in regions
+    if indexin(xItemRegions[item], regions) != Nothing
+
+        # item number for dof provider
         dofitem = dofitem4item(item)
 
         # find index for CellType
@@ -166,41 +262,46 @@ function assemble!(b::Array{<:Real}, form::Type{LinearForm}, AT::Type{<:Abstract
         update!(basisevaler[iEG][evalnr],dofitem)
 
         for i in eachindex(qf[iEG].w)
+
+            eval!(coeff, basisevaler[iEG][evalnr].xref[i], coefficient, basisevaler[iEG][evalnr].L2G)
 
             for dof_i = 1 : ndofs4item
                 for j = 1 : cvals_resultdim
-                    b[xItemDofs[dof_i,dofitem],j] += coefficient * basisevaler[iEG][evalnr].cvals[i][dof_i,j] * qf[iEG].w[i] * xItemVolumes[item]
+                    b[xItemDofs[dof_i,dofitem],j] += coeff[j] * basisevaler[iEG][evalnr].cvals[i][dof_i,j] * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end  
-    end
+    end # if in region    
+    end # for loop
 end
 
+function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false, regions::Array{Int} = [1])
 
-function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, coefficient::Real = 1.0; bonus_quadorder::Int = 0, talkative::Bool = false)
-
+    # collect grid information
     NumberType = eltype(A)
-    xCoords = FE.xgrid[Coordinates]
-    dim = size(xCoords,1)
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemTypes = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
+    xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
-    EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(AT, operator, FE, NumberType, bonus_quadorder, talkative)
+    EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(form, AT, operator, FE, regions, NumberType, 2, bonus_quadorder, talkative)
+
+    # collect FE and FEBasisEvaluator information
+    ncomponents = FiniteElements.get_ncomponents(typeof(FE))
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
 
     # loop over items
-    itemET = xItemTypes[1]
-    iEG = 1
-    ndofs4item = 0
-    dof = 0
-    ncomponents = FiniteElements.get_ncomponents(typeof(FE))
-    temp = 0
-    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
-    evalnr = 0
-    dofitem = 0
+    itemET = xItemGeometries[1] # type of the current item
+    iEG = 1 # index to the correct unique geometry
+    ndofs4item = 0 # number of dofs for item
+    evalnr = 0 # evaler number that has to be used for current item
+    dofitem = 0 # itemnr where the dof numbers can be found
+    temp = 0 # some temporary variable
     for item::Int32 = 1 : nitems
+    # check if item region is in regions
+    if indexin(xItemRegions[item], regions) != Nothing
 
         dofitem = dofitem4item(item)
 
@@ -214,7 +315,6 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
         update!(basisevaler[iEG][evalnr],dofitem)
 
         for i in eachindex(qf[iEG].w)
-
             for dof_i = 1 : ndofs4item, dof_j = 1 : ndofs4item
                 temp = 0
                 for k = 1 : cvals_resultdim
@@ -222,8 +322,9 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
                 end
                 A[xItemDofs[dof_i,dofitem],xItemDofs[dof_j,dofitem]] += coefficient * temp * qf[iEG].w[i] * xItemVolumes[item]
             end 
-        end  
-    end
+        end 
+    end # if in region    
+    end # for loop
 end
 
 end
