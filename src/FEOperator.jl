@@ -58,13 +58,14 @@ export AbstractFEFunctionOperator
 export Identity, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
 export NeededDerivatives4Operator
 
+include("FEBasisEvaluator.jl")
+export FEBasisEvaluator, update!
+
 include("AbstractCoefficient.jl")
 export ConstantCoefficient
 export RegionWiseConstantCoefficient
 export FunctionCoefficient
 
-include("FEBasisEvaluator.jl")
-export FEBasisEvaluator, update!
 
 
 abstract type AbstractFEForm end
@@ -227,7 +228,7 @@ function assemble!(
         update!(basisevaler[iEG][evalnr],dofitem)
 
         # update coefficient
-        update!(coefficient, item)
+        update!(coefficient, basisevaler[iEG][evalnr], item)
 
         for i in eachindex(qf[iEG].w)
             for dof_i = 1 : ndofs4item
@@ -235,7 +236,7 @@ function assemble!(
                 for k = 1 : cvals_resultdim
                     coeff_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
                 end    
-                apply_coefficient!(coeff_result, coeff_input, coefficient)
+                apply_coefficient!(coeff_result, coeff_input, coefficient, i)
 
                 for j = 1 : cvals_resultdim
                     b[xItemDofs[dof_i,dofitem],j] += coeff_result[j] * qf[iEG].w[i] * xItemVolumes[item]
@@ -288,7 +289,7 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
         update!(basisevaler[iEG][evalnr],dofitem)
 
         # update coefficient
-        update!(coefficient, item)
+        update!(coefficient, basisevaler[iEG][evalnr], item)
 
         for i in eachindex(qf[iEG].w)
            
@@ -298,7 +299,7 @@ function assemble!(A::AbstractSparseMatrix, form::Type{SymmetricBilinearForm}, A
                 for k = 1 : cvals_resultdim
                     coeff_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
                 end    
-                apply_coefficient!(coeff_result, coeff_input, coefficient)
+                apply_coefficient!(coeff_result, coeff_input, coefficient, i)
 
                 for dof_j = 1 : ndofs4item
                     temp = 0

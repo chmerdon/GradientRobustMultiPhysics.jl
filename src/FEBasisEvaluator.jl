@@ -72,7 +72,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         current_eval = deepcopy(refbasisvals)   
     end      
     
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(ItemDofs,L2G,L2GM,force_updateL2G,qf.xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval)
+    xref = copy(qf.xref)
+
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(ItemDofs,L2G,L2GM,force_updateL2G,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval)
 end    
 
 

@@ -28,11 +28,11 @@ struct RegionWiseVectorCoefficient{T <: Real} <: AbstractCoefficient
     cregion::Int32
     resultdim::Int
 end
-#struct FunctionCoefficient{T <: Real} <: AbstractCoefficient
-#    f::Function # of the interface f!(result,x)
-#    resultdim::Int
-#    x::Array{T,1}
-#end
+struct FunctionCoefficient{T <: Real} <: AbstractCoefficient
+    f::Function # of the interface f!(result,input,x)
+    resultdim::Int
+    x::Array{Array{T,1},1}
+end
 
 export ScalarCoefficient
 export VectorCoefficient
@@ -60,33 +60,60 @@ function RegionWiseScalarCoefficient(value::Array{<:Real,1}, ItemRegions::Abstra
     return RegionWiseScalarCoefficient{eltype(value)}(value, ItemRegions, 1, resultdim)
 end
 
-function update!(C::AbstractCoefficient, item::Int32)
+function FunctionCoefficient(f::Function, resultdim::Int = 1, xdim::Int = 2)
+    return FunctionCoefficient{Float64}(f, resultdim, [zeros(Float64,xdim)])
+end
+
+###
+# updates are called on each change of item 
+###
+
+function update!(C::AbstractCoefficient, FEBE::FEBasisEvaluator, item::Int32)
     # do nothing
+end
+
+function update!(C::FunctionCoefficient, FEBE::FEBasisEvaluator, item::Int32)
+    # compute global coordinates for function evaluation
+    if FEBE.L2G.citem != item 
+        FEXGrid.update!(FEBE.L2G, item)
+    end
+    for i = 1 : length(FEBE.xref)
+        # we don't know at contruction time how many quadrature points are needed
+        # so we expand the array here if needed
+        if length(C.x) < length(FEBE.xref)
+            push!(C.x,FEBE.xref[i])
+        end    
+        FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
+    end    
 end
 
 function update!(C::Union{RegionWiseVectorCoefficient,RegionWiseScalarCoefficient}, item::Int32)
     C.cregion = C.ItemRegions[item]
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ScalarCoefficient)
+###
+# apply_coefficient is called for each dof and i-th quadrature point
+###
+
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ScalarCoefficient, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value;    
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseScalarCoefficient)
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseScalarCoefficient, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value[C.cregion];    
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::VectorCoefficient)
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::VectorCoefficient, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value[j];
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MatrixCoefficient)
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MatrixCoefficient, i::Int = 0)
     for j = 1:length(result)
         result[j] = 0
         for k = 1:length(input)
@@ -95,13 +122,12 @@ function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, C::RegionWiseVectorCoefficient)
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseVectorCoefficient, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value[C.cregion][j];
     end    
 end
 
-#function eval!(result, xref, C::FunctionCoefficient, L2G::L2GTransformer, item::Int32 = Int32(0), region::Int32 = Int32(0))
-#    FEXGrid.eval!(C.x, L2G, xref)
-#    C.f(result,C.x);
-#end
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::FunctionCoefficient, i::Int)
+    C.f(result, input, C.x[i]);
+end

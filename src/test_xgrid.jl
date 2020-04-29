@@ -86,11 +86,11 @@ function main()
 
     # righ hand side
     b = zeros(NumberType,FE.ndofs,1)
-    function coefficient_function(result,x)
-        result[1] = 1.0
+    function coefficient_function(result,input,x)
+        result[1] = input[1]
     end    
-    coefficient = ScalarCoefficient(1.0)
-    #coefficient = FunctionCoefficient(coefficient_function,2,1)
+    #coefficient = ScalarCoefficient(1.0)
+    coefficient = FunctionCoefficient(coefficient_function,1,2)
     @time FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE, coefficient; talkative = true)
     
     # homogeneous boundary data
