@@ -1,9 +1,5 @@
 abstract type AbstractAction end
 
-# more ideas for constants
-# ItemWiseConstant (like CellDiameters)
-# FEFunction (but possibly needs its own FEBasisEvaluators)
-
 struct MultiplyScalarAction{T <: Real} <: AbstractAction
     value::Real
     resultdim::Int
@@ -29,6 +25,10 @@ struct RegionWiseMultiplyVectorAction{T <: Real} <: AbstractAction
     resultdim::Int
 end
 struct FunctionAction{T <: Real} <: AbstractAction
+    f::Function # of the interface f!(result,input)
+    resultdim::Int
+end
+struct XFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x)
     resultdim::Int
     x::Array{Array{T,1},1}
@@ -60,8 +60,12 @@ function RegionWiseMultiplyScalarAction(value::Array{<:Real,1}, ItemRegions::Abs
     return RegionWiseMultiplyScalarAction{eltype(value)}(value, ItemRegions, 1, resultdim)
 end
 
-function FunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2)
-    return FunctionAction{Float64}(f, resultdim, [zeros(Float64,xdim)])
+function FunctionAction(f::Function, resultdim::Int = 1)
+    return FunctionAction{Float64}(f, resultdim)
+end
+
+function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2)
+    return XFunctionAction{Float64}(f, resultdim, [zeros(Float64,xdim)])
 end
 
 ###
@@ -72,7 +76,7 @@ function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int32)
     # do nothing
 end
 
-function update!(C::FunctionAction, FEBE::FEBasisEvaluator, item::Int32)
+function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int32)
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
         FEXGrid.update!(FEBE.L2G, item)
@@ -128,6 +132,6 @@ function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::FunctionAction, i::Int)
-    C.f(result, input, C.x[i]);
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::Union{FunctionAction,XFunctionAction}, i::Int)
+    C.f(result, input);
 end
