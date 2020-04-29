@@ -226,6 +226,14 @@ end
 
 
 
+function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Edge1D})
+    function closure(xref)
+        return [1 - xref[1];
+                xref[1]]
+    end
+end
+
+
 function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Edge1D})
     function closure(xref)
         temp = 1 - xref[1];
@@ -236,15 +244,22 @@ function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Edge1D})
     end
 end
 
-function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Triangle2D})
     function closure(xref)
-        temp = 1 - xref[1] - xref[2];
-        return [temp 0.0;
-                xref[1] 0.0;
-                xref[2] 0.0;
-                0.0 temp;
-                0.0 xref[1];
-                0.0 xref[2]]
+        return [1-xref[1]-xref[2];
+                xref[1];
+                xref[2]]
+    end
+end
+
+function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Quadrilateral2D})
+    function closure(xref)
+        a = 1 - xref[1]
+        b = 1 - xref[2]
+        return [a*b;
+                xref[1]*b;
+                xref[1]*xref[2];
+                xref[2]*a]
     end
 end
 

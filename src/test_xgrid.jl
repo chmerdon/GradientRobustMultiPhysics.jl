@@ -71,39 +71,46 @@ function main()
     show(sum(bfacevalues, dims = 1))
 
 
+    # solve Poisson problem
     println("")
-    FE = FiniteElements.getH1P1FiniteElement(xgrid,2)
+    FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
     ndofs = FE.ndofs
     FiniteElements.show_new(FE)
 
-    b = zeros(NumberType,FE.ndofs,2)
-    FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE; talkative = true)
-    Base.show(b)
-
-
-    b2 = zeros(NumberType,FE.ndofs,2)
-    FEOperator.assemble!(b2, LinearForm, AbstractAssemblyTypeBFACE, Identity, FE; talkative = true)
-    Base.show(b2)
-
-
-    b3 = zeros(NumberType,FE.ndofs,4)
-    FEOperator.assemble!(b3, LinearForm, AbstractAssemblyTypeBFACECELL, Gradient, FE; talkative = true)
-    Base.show(b3)
-
-
-    #operator = Identity
-    operator = Gradient
-    A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
-    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE; talkative = true)
     
-    A2 = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
-    @time FEOperator.assemble!(A2, SymmetricBilinearForm, AbstractAssemblyTypeBFACE, operator, FE; talkative = true)
+    # righ hand side
+    b = zeros(NumberType,FE.ndofs,1)
+    @time FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE; talkative = true)
+    
+    # stiffness matrix
+    A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
+    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE; talkative = true)
 
-    Velocity = FEFunction{NumberType}("velocity",FE)
-    Velocity[3] = 1
+    # boundary data
+    bdofs = []
+    xBFaces = xgrid[BFaces]
+    nbfaces = length(xBFaces)
+    xFaceDofs = FE.FaceDofs
 
-    #xgrid = split_grid_into(xgrid,Triangle2D)
-    #ExtendableGrids.plot(xgrid; Plotter = VTKView)
+    for bface = 1 : nbfaces
+        append!(bdofs,xFaceDofs[:,bface])
+    end
+    
+    bdofs = unique(bdofs)
+    
+    for j = 1 : length(bdofs)
+        b[bdofs[j]] = 0.0
+        A[bdofs[j],bdofs[j]] = 1e60
+    end
+    
+    x = A\b
+
+    Base.show(x)
+
+
+
+    xgrid = split_grid_into(xgrid,Triangle2D)
+    ExtendableGrids.plot(xgrid; Plotter = VTKView)
 
 end
 
