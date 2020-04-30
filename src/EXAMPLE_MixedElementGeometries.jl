@@ -68,7 +68,8 @@ function main()
         FiniteElements.show_new(FE)
 
         # compute stiffness matrix
-        action = MultiplyMatrixAction([1.0 0.0;0.0 1.0])
+        #action = MultiplyMatrixAction([1.0 0.0;0.0 1.0])
+        action = MultiplyScalarAction(1.0,2)
         A = StiffnessMatrix!(FE, action; talkative = true)
 
         # compute right hand side

@@ -34,12 +34,12 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
         if ncomponents == 1
-            refbasisvals[i] = reshape(refbasis(qf.xref[i]),:,1)
+            refbasisvals[i] = reshape(refbasis(qf.xref[i]),1,:)
         else
-            refbasisvals[i] = refbasis(qf.xref[i])
+            refbasisvals[i] = refbasis(qf.xref[i]')
         end    
     end    
-    ndofs4item = size(refbasisvals[1],1)
+    ndofs4item = size(refbasisvals[1],2)
 
     derivorder = NeededDerivative4Operator(FEType,FEOP)
     edim = dim_element(EG)
@@ -50,7 +50,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
             refoperatorvals[i] = ForwardDiff.jacobian(refbasis,qf.xref[i]);
-            current_eval[i] = zeros(T,ndofs4item,ncomponents*edim)
+            current_eval[i] = zeros(T,ncomponents*edim,ndofs4item)
         end 
     end
     if derivorder > 1
@@ -59,7 +59,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
             refoperatorvals[i] = vector_hessian(refbasis,qf.xref[i])
-            current_eval = zeros(T,ndofs4item,ncomponents*edim*edim);
+            current_eval = zeros(T,ncomponents*edim*edim,ndofs4item);
         end   
     end
     if derivorder == 0
@@ -120,15 +120,14 @@ function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int32) where {T <: 
         end
         for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
             for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
-                FEBE.cvals[i][dof_i,k + FEBE.offsets[c]] = 0.0;
+                FEBE.cvals[i][k + FEBE.offsets[c],dof_i] = 0.0;
                 for j = 1 : FEBE.offsets[2] # xdim
                     # compute duc/dxk
-                    FEBE.cvals[i][dof_i,k + FEBE.offsets[c]] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[c],j]
+                    FEBE.cvals[i][k + FEBE.offsets[c],dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[c],j]
                 end    
                 #cvals[i][dof_i,k + FEBE.offsets[c]] *= FEBC.coefficients[dof_i,c]
             end    
         end    
     end  
-
 end
 

@@ -235,7 +235,7 @@ function assemble!(
 
     # collect FE and FEBasisEvaluator information
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
-    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],1)
     @assert size(b,2) == cvals_resultdim
 
     # loop over items
@@ -247,6 +247,8 @@ function assemble!(
     dof = 0 # current dof nr
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action.resultdim) # heap for action output
+    cvali::Array{NumberType,2} = [[] []] # pointer to FEoperatorvalue at quadrature point i
+
     for item::Int32 = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
@@ -268,12 +270,13 @@ function assemble!(
         update!(action, basisevaler[iEG][evalnr], item)
 
         for i in eachindex(qf[iEG].w)
+            cvali = basisevaler[iEG][evalnr].cvals[i]
             # apply action to FEFunction
             fill!(action_input,0)
             for dof_i = 1 : ndofs4item
                 dof = xItemDofs[dof_i,dofitem]
                 for k = 1 : cvals_resultdim
-                    action_input[k] += FEF.coefficients[dof] * basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                    action_input[k] += FEF.coefficients[dof] * cvali[k,dof_i]
                 end    
             end 
             apply_action!(action_result, action_input, action, i)
@@ -311,7 +314,7 @@ function assemble!(
 
     # collect FE and FEBasisEvaluator information
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
-    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],1)
     @assert size(b,2) == cvals_resultdim
 
     # loop over items
@@ -323,6 +326,7 @@ function assemble!(
     temp = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action.resultdim) # heap for action output
+    cvali::Array{NumberType,2} = [[] []] # pointer to FEoperatorvalue at quadrature point i
     for item::Int32 = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
@@ -344,10 +348,12 @@ function assemble!(
         update!(action, basisevaler[iEG][evalnr], item)
 
         for i in eachindex(qf[iEG].w)
+            cvali = basisevaler[iEG][evalnr].cvals[i]
+
             for dof_i = 1 : ndofs4item
                 # apply action
                 for k = 1 : cvals_resultdim
-                    action_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                    action_input[k] = cvali[k,dof_i]
                 end    
                 apply_action!(action_result, action_input, action, i)
 
@@ -386,7 +392,7 @@ function assemble!(
 
     # collect FE and FEBasisEvaluator information
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
-    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],1)
 
     # loop over items
     itemET = xItemGeometries[1] # type of the current item
@@ -394,12 +400,12 @@ function assemble!(
     ndofs4item = 0 # number of dofs for item
     evalnr = 0 # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    dof1 = 0
-    dof2 = 0
+    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
     temp = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action.resultdim) # heap for action output
-    for item::Int32 = 1 : nitems
+    cvali::Array{NumberType,2} = [[] []] # pointer to FEoperatorvalue at quadrature point i
+    @time for item::Int32 = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
@@ -418,23 +424,25 @@ function assemble!(
         # update action
         update!(action, basisevaler[iEG][evalnr], item)
 
+        # update dofs
+        dofs[1:ndofs4item] = xItemDofs[:,dofitem]
+
         for i in eachindex(qf[iEG].w)
+            cvali = basisevaler[iEG][evalnr].cvals[i]
            
             for dof_i = 1 : ndofs4item
-                dof1 = xItemDofs[dof_i,dofitem]
                 # apply action to first argument
                 for k = 1 : cvals_resultdim
-                    action_input[k] = basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                    action_input[k] = cvali[k,dof_i]
                 end    
                 apply_action!(action_result, action_input, action, i)
 
                 for dof_j = 1 : ndofs4item
-                    dof2 = xItemDofs[dof_j,dofitem]
                     temp = 0
                     for k = 1 : action.resultdim
-                        temp += action_result[k]*basisevaler[iEG][evalnr].cvals[i][dof_j,k]
+                        temp += action_result[k]*cvali[k,dof_j]
                     end
-                    A[dof1,dof2] += temp * qf[iEG].w[i] * xItemVolumes[item]
+                    A[dofs[dof_i],dofs[dof_j]] += temp * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end 
