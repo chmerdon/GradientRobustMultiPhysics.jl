@@ -34,12 +34,6 @@ struct XFunctionAction{T <: Real} <: AbstractAction
     x::Array{Array{T,1},1}
 end
 
-export MultiplyScalarAction
-export MultiplyVectorAction
-export MultiplyMatrixAction
-export RegionWiseMultiplyScalarAction
-export RegionWiseMultiplyVectorAction
-
 function MultiplyScalarAction(value::Real, resultdim::Int = 1)
     return MultiplyScalarAction{eltype(value)}(value, resultdim)
 end
@@ -132,6 +126,10 @@ function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::Union{FunctionAction,XFunctionAction}, i::Int)
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::FunctionAction, i::Int)
     C.f(result, input);
+end
+
+function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XFunctionAction, i::Int)
+    C.f(result, input,C.x[i]);
 end

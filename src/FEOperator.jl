@@ -62,19 +62,31 @@ include("FEBasisEvaluator.jl")
 export FEBasisEvaluator, update!
 
 include("AbstractAction.jl")
-export ConstantCoefficient
-export RegionWiseConstantCoefficient
+export DoNothingAction
+export MultiplyScalarAction
+export MultiplyVectorAction
+export MultiplyMatrixAction
+export RegionWiseMultiplyScalarAction
+export RegionWiseMultiplyVectorAction
 export FunctionAction
-
+export XFunctionAction
 
 
 abstract type AbstractFEForm end
-abstract type LinearForm <: AbstractFEForm end
-abstract type SymmetricBilinearForm <: AbstractFEForm end
-abstract type ASymmetricBilinearForm <: AbstractFEForm end
+# for each item: I(item) = Int_item action(FEfunction) dx
+abstract type ItemIntegrals <: AbstractFEForm end 
+# for each v_h: F(v_h) = Int_omega action(v_h) dx
+abstract type LinearForm <: AbstractFEForm end   
+# for each v_h,u_h from same FE: A(v_h,u_h) = sum_item Int_item action(u_h) dot v_h dx
+abstract type SymmetricBilinearForm <: AbstractFEForm end 
+# todo: for each v_h,u_h: B(v_h,u_h) = sum_item Int_item action(u_h) dot action(v_h) dx
+abstract type MixedBilinearForm <: AbstractFEForm end 
 
-export AbstractFEForm,LinearForm,SymmetricBilinearForm,ASymmetricBilinearForm
+export AbstractFEForm,ItemIntegrals,LinearForm,SymmetricBilinearForm,ASymmetricBilinearForm
 export assemble!
+
+# some shortcuts for assemble! defined at the bottom
+export StiffnessMatrix!
 
 
 # unique functions that only selects uniques in specified regions
@@ -173,6 +185,79 @@ function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:Abstra
         end
     end
     return EG, qf, basisevaler, (item) -> xCellGeometries[FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]]] ,(item) -> FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]], (item) -> FE.xgrid[BFaceCellPos][item]
+end
+
+
+function assemble!(
+    b::Array{<:Real},
+    form::Type{ItemIntegrals},
+    AT::Type{<:AbstractAssemblyType},
+    operator::Type{<:AbstractFEFunctionOperator},
+    FEF::FEFunction,
+    action::AbstractAction;
+    bonus_quadorder::Int = 0,
+    talkative::Bool = false,
+    regions::Array{Int} = [1])
+
+    NumberType = eltype(b)
+    FE = FEF.FEType
+    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
+    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
+
+
+    EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(form, AT, operator, FE, regions, NumberType, 1, bonus_quadorder, talkative)
+
+    # collect FE and FEBasisEvaluator information
+    ncomponents = FiniteElements.get_ncomponents(typeof(FE))
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],2)
+    @assert size(b,2) == cvals_resultdim
+
+    # loop over items
+    itemET = xItemGeometries[1] # type of the current item
+    iEG = 1 # index to the correct unique geometry
+    ndofs4item = 0 # number of dofs for item
+    evalnr = 0 # evaler number that has to be used for current item
+    dofitem = 0 # itemnr where the dof numbers can be found
+    temp = 0 # some temporary variable
+    action_input = zeros(NumberType,cvals_resultdim) # heap for action input
+    action_result = zeros(NumberType,action.resultdim) # heap for action output
+    for item::Int32 = 1 : nitems
+    # check if item region is in regions
+    if indexin(xItemRegions[item], regions) != Nothing
+
+        # item number for dof provider
+        dofitem = dofitem4item(item)
+
+        # find index for CellType
+        itemET = EG4item(item)
+        iEG = findfirst(isequal(itemET), EG)
+        ndofs4item = num_targets(xItemDofs,dofitem)
+
+        # update FEbasisevaler
+        evalnr = evaler4item(item)
+        update!(basisevaler[iEG][evalnr],dofitem)
+
+        # update action
+        update!(action, basisevaler[iEG][evalnr], item)
+
+        for i in eachindex(qf[iEG].w)
+            # apply action to FEFunction
+            for dof_i = 1 : ndofs4item
+                for k = 1 : cvals_resultdim
+                    action_input[k] += FEF.coefficients[xItemDofs[dof_i,dofitem]] * basisevaler[iEG][evalnr].cvals[i][dof_i,k]
+                end    
+            end 
+            apply_coefficient!(action_result, action_input, action, i)
+            for j = 1 : action.resultdim
+                b[item,j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+            end
+        end  
+    end # if in region    
+    end # for loop
 end
 
 
@@ -322,5 +407,9 @@ function assemble!(
     end # if in region    
     end # for loop
 end
+
+# We can also define these shortcuts
+StiffnessMatrix!(A,FE,action) = FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE, action)
+    
 
 end

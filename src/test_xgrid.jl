@@ -73,25 +73,33 @@ function main()
 
 
     # solve Poisson problem
+    function exact_solution!(result,x)
+        result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1)
+    end    
+    function exact_solution_laplacian!(result,x)
+        result[1] = 2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1)
+    end    
+
+
     println("")
     FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
     ndofs = FE.ndofs
     FiniteElements.show_new(FE)
 
     # stiffness matrix
-    coefficient = MultiplyMatrixAction([2.0 0.0;0.0 2.0])
+    action = MultiplyMatrixAction([1.0 0.0;0.0 1.0])
     A = ExtendableSparseMatrix{NumberType,Int32}(ndofs,ndofs)
-    @time FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE, coefficient; talkative = true)
+    @time StiffnessMatrix!(A,FE,action)
 
 
     # righ hand side
     b = zeros(NumberType,FE.ndofs,1)
-    function coefficient_function(result,input)
-        result[1] = input[1] # identity coefficient written as a function
+    function rhs_function(result,input,x)
+        exact_solution_laplacian!(result,x)
+        result[1] = -result[1]*input[1] 
     end    
-    #coefficient = MultiplyScalarAction(1.0)
-    coefficient = FunctionAction(coefficient_function,1)
-    @time FEOperator.assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE, coefficient; talkative = true)
+    action = XFunctionAction(rhs_function,1)
+    @time assemble!(b, LinearForm, AbstractAssemblyTypeCELL, Identity, FE, action; talkative = true)
     
     # homogeneous boundary data
     bdofs = []
@@ -108,10 +116,20 @@ function main()
         b[bdofs[j]] = 0.0
         A[bdofs[j],bdofs[j]] = 1e60
     end
-    
     x = A\b
 
-    Base.show(x)
+    Solution = FEFunction{Float64}("solution",FE,x[:])
+
+    # compute L2 error
+    function L2error(result,input,x)
+        exact_solution!(result,x)
+        result[1] = (result[1] - input[1])^2
+    end    
+    L2error_action = XFunctionAction(L2error,1)
+    error4cell = zeros(Float64,ncells)
+    @time assemble!(error4cell, ItemIntegrals, AbstractAssemblyTypeCELL, Identity, Solution, L2error_action; talkative = true, bonus_quadorder = 4)
+    
+    show(sum(error4cell[:]))
 
     #xgrid = split_grid_into(xgrid,Triangle2D)
     #ExtendableGrids.plot(xgrid; Plotter = VTKView)
