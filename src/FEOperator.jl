@@ -409,7 +409,7 @@ function assemble!(
 end
 
 # We can also define these shortcuts
-StiffnessMatrix!(A,FE,action) = FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE, action)
+StiffnessMatrix!(A,FE,action; talkative::Bool = false) = FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE, action; talkative = talkative)
     
 
 end
