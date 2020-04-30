@@ -63,7 +63,7 @@ function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2)
 end
 
 ###
-# updates are called on each change of item 
+# update! is called on each change of item 
 ###
 
 function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int32)
@@ -75,14 +75,15 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int32)
     if FEBE.L2G.citem != item 
         FEXGrid.update!(FEBE.L2G, item)
     end
-    for i = 1 : length(FEBE.xref)
-        # we don't know at contruction time how many quadrature points are needed
-        # so we expand the array here if needed
-        if length(C.x) < length(FEBE.xref)
-            push!(C.x,FEBE.xref[i])
-        end    
+    # we don't know at contruction time how many quadrature points are needed
+    # so we expand the array here if needed
+    while length(C.x) < length(FEBE.xref)
+        push!(C.x,deepcopy(FEBE.xref[1]))
+    end  
+    for i = 1 : length(FEBE.xref) 
         FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
+
 end
 
 function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, item::Int32)
@@ -90,7 +91,7 @@ function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScala
 end
 
 ###
-# apply_coefficient is called for each dof and i-th quadrature point
+# apply_action! is called for each dof and i-th quadrature point
 ###
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyScalarAction, i::Int = 0)
@@ -131,5 +132,5 @@ function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::Funct
 end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XFunctionAction, i::Int)
-    C.f(result, input,C.x[i]);
+    C.f(result, input, C.x[i]);
 end

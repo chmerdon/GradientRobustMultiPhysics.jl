@@ -244,7 +244,7 @@ function assemble!(
     ndofs4item = 0 # number of dofs for item
     evalnr = 0 # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    dof = 0 # current dof nr
+    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action.resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEoperatorvalue at quadrature point i
@@ -269,14 +269,16 @@ function assemble!(
         # update action
         update!(action, basisevaler[iEG][evalnr], item)
 
+        # update dofs
+        dofs[1:ndofs4item] = xItemDofs[:,dofitem]
+
         for i in eachindex(qf[iEG].w)
             cvali = basisevaler[iEG][evalnr].cvals[i]
             # apply action to FEFunction
             fill!(action_input,0)
             for dof_i = 1 : ndofs4item
-                dof = xItemDofs[dof_i,dofitem]
                 for k = 1 : cvals_resultdim
-                    action_input[k] += FEF.coefficients[dof] * cvali[k,dof_i]
+                    action_input[k] += FEF.coefficients[dofs[dof_i]] * cvali[k,dof_i]
                 end    
             end 
             apply_action!(action_result, action_input, action, i)
@@ -323,6 +325,7 @@ function assemble!(
     ndofs4item = 0 # number of dofs for item
     evalnr = 0 # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
+    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
     temp = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action.resultdim) # heap for action output
@@ -347,6 +350,9 @@ function assemble!(
         # update action
         update!(action, basisevaler[iEG][evalnr], item)
 
+        # update dofs
+        dofs[1:ndofs4item] = xItemDofs[:,dofitem]
+
         for i in eachindex(qf[iEG].w)
             cvali = basisevaler[iEG][evalnr].cvals[i]
 
@@ -358,7 +364,7 @@ function assemble!(
                 apply_action!(action_result, action_input, action, i)
 
                 for j = 1 : cvals_resultdim
-                   b[xItemDofs[dof_i,dofitem],j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                   b[dofs[dof_i],j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end  

@@ -306,13 +306,22 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     end
 
     # remove duplicates and assign FaceGeometries
+    # VERY VERY SLOW AT THE MOMENT!!!
     xFaceNodes = VariableTargetAdjacency(Int32)
     xFaceGeometries = []
     idx = 0
-    for face=1:nfaces
+    nfacenodes = 0
+    @time for face=1:nfaces
+
+        nfacenodes = num_targets(xFaceNodesAll,face)
+        # get face nodes
+        for j = 1 : nfacenodes
+            current_face[j] = xFaceNodesAll[j,face]; 
+        end
+
         idx = 0
-        for j = 1 : nfaces
-            if all(i->xFaceNodesAll[i,face] == xFaceNodesAll[i,j],1:dim)
+        for j = 1 : face
+            if all(i->current_face[i] == xFaceNodesAll[i,j],1:nfacenodes)
                 idx = j
                 break;
             end

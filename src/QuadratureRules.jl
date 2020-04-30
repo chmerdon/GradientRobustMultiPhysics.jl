@@ -56,14 +56,14 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
   if order <= 1
       name = "midpoint rule"
       xref = Vector{Array{T,1}}(undef,1);
-      xref[1] = ones(T,3) * 1 // 3
+      xref[1] = ones(T,2) * 1 // 3
       w = [1]
   elseif order == 2 # face midpoint rule  
       name = "face midpoints rule"
       xref = Vector{Array{T,1}}(undef,3);
-      xref[1] = [1//2,1//2,0//1];
-      xref[2] = [0//1,1//2,1//2];
-      xref[3] = [1//2,0//1,1//2];
+      xref[1] = [1//2,1//2];
+      xref[2] = [0//1,1//2];
+      xref[3] = [1//2,0//1];
       w = [1//3; 1//3; 1//3]     
   else
       name = "generic Stroud rule of order $order"
@@ -148,7 +148,7 @@ function get_generic_quadrature_Stroud(order::Int)
     r = repeat(r,ngpts,1);
     xref = Array{Array{Float64,1}}(undef,length(s))
     for j = 1 : length(s)
-        xref[j] = s[j].*[1,0,-1] - r[j]*(s[j]-1).*[0,1,-1] + [0,0,1];
+        xref[j] = s[j].*[1,0] - r[j]*(s[j]-1).*[0,1];
     end
     w = a'*b;
     
