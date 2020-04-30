@@ -93,25 +93,25 @@ end
 # apply_coefficient is called for each dof and i-th quadrature point
 ###
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyScalarAction, i::Int = 0)
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyScalarAction, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value;    
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseMultiplyScalarAction, i::Int = 0)
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseMultiplyScalarAction, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value[C.cregion];    
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyVectorAction, i::Int = 0)
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyVectorAction, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value[j];
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyMatrixAction, i::Int = 0)
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyMatrixAction, i::Int = 0)
     for j = 1:length(result)
         result[j] = 0
         for k = 1:length(input)
@@ -120,16 +120,16 @@ function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseMultiplyVectorAction, i::Int = 0)
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseMultiplyVectorAction, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value[C.cregion][j];
     end    
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::FunctionAction, i::Int)
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::FunctionAction, i::Int)
     C.f(result, input);
 end
 
-function apply_coefficient!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XFunctionAction, i::Int)
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XFunctionAction, i::Int)
     C.f(result, input,C.x[i]);
 end
