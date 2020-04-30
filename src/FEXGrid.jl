@@ -300,7 +300,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
             end
 
             append!(xFaceNodesAll,current_face[1:nodes_per_cellface])
-            types4allfaces = [types4allfaces; facetype_of_cellface(xCellGeometries[cell], k)]
+            push!(types4allfaces,facetype_of_cellface(xCellGeometries[cell], k))
             nfaces += 1
         end    
     end
@@ -310,10 +310,16 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     xFaceGeometries = []
     idx = 0
     for face=1:nfaces
-        idx = findfirst(j->all(i->xFaceNodesAll[i,face] == xFaceNodesAll[i,j],1:dim),1:nfaces)
+        idx = 0
+        for j = 1 : nfaces
+            if all(i->xFaceNodesAll[i,face] == xFaceNodesAll[i,j],1:dim)
+                idx = j
+                break;
+            end
+        end    
         if idx == face
             append!(xFaceNodes,xFaceNodesAll[:,idx])
-            xFaceGeometries = [xFaceGeometries; types4allfaces[idx]]
+            push!(xFaceGeometries,types4allfaces[idx])
         end
     end
     xgrid[FaceGeometries] = Array{DataType,1}(xFaceGeometries)
@@ -527,12 +533,37 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     # init BFaces
     xBFaces = zeros(Int32,nbfaces)
 
+    current_bface = zeros(Int32,max_num_targets_per_source(xFaceNodes))
+    nodes_per_bface::Int32 = 0
+    swap::Int32 = 0
+    match::Bool = false
     for bface = 1 : nbfaces
-        # lazy sorting, can be improved later
-        current_bface = sort(xBFaceNodes[:,bface]);
-        current_bface = current_bface[end:-1:1]
+        nodes_per_bface = num_targets(xBFaceNodes,bface)
+        for j = 1 : nodes_per_bface
+            current_bface[j] = xBFaceNodes[j,bface]
+        end    
+
+        # bubble_sort face nodes
+        for j = nodes_per_bface:-1:2
+            for j2 = 1 : j-1
+                if current_bface[j2] < current_bface[j2+1]
+                    swap = current_bface[j2+1]
+                    current_bface[j2+1] = current_bface[j2]
+                    current_bface[j2] = swap
+                end    
+            end
+        end
+        
+        # find matching face
         for face = 1 : nfaces
-            if current_bface == xFaceNodes[:,face]
+            match = true
+            for k = 1 : nodes_per_bface
+                if current_bface[k] != xFaceNodes[k,face]
+                    match = false
+                    break
+                end
+            end        
+            if match == true
                 xBFaces[bface] = face
                 break
             end
