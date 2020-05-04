@@ -4,6 +4,7 @@ using ExtendableGrids
 using ExtendableSparse
 using FiniteElements
 using FEOperator
+using FESolvePoisson
 using QuadratureRules
 using VTKView
 #ENV["MPLBACKEND"]="qt5agg"
@@ -29,7 +30,7 @@ function gridgen_mixedEG()
     xgrid[CellGeometries] = xCellGeometries
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
+    xgrid[BFaceRegions]=Array{Int32,1}([1,1,1,1,1,1,1,1])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
@@ -74,7 +75,14 @@ end
 
 function main()
 
-    nlevels = 6
+
+    # initial grid
+    xgrid = gridgen_mixedEG()
+    #xgrid = gridgen_triangles()
+    nlevels = 6 # nrefinement levels
+    diffusion = 1.0
+    talkative = true
+
 
     function exact_solution!(result,x)
         result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1)
@@ -84,72 +92,43 @@ function main()
         result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
     end    
     function exact_solution_laplacian!(result,x)
-        result[1] = 2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1)
+        result[1] = -diffusion*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
     end    
 
-    xgrid = gridgen_mixedEG()
-    #xgrid = gridgen_triangles()
+    # problem description 
+    PD = PoissonProblemDescription()
+    PD.name = "Test problem"
+    PD.diffusion = diffusion
+    PD.quadorder4diffusion = 0
+    PD.volumedata4region = [exact_solution_laplacian!]
+    PD.quadorder4region = [2]
+    PD.boundarytype4bregion = [1]
+    PD.boundarydata4bregion = [exact_solution!]
+    PD.quadorder4bregion = [4]
 
     L2error = []
     H1error = []
     for level = 1 : nlevels
-        @time xgrid = uniform_refine(xgrid)
+
+        # uniform mesh refinement
+        if (level > 1) 
+            xgrid = uniform_refine(xgrid)
+        end
 
         # generate FE
         FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
         FiniteElements.show_new(FE)
 
-        # compute stiffness matrix
-        #action = MultiplyMatrixAction([1.0 0.0;0.0 1.0])
-        action = MultiplyScalarAction(1.0,2)
-        A = StiffnessMatrix!(FE, action; talkative = true)
-
-        # compute right hand side
-        function rhs_function(result,input,x)
-            exact_solution_laplacian!(result,x)
-            result[1] = -result[1]*input[1] 
-        end    
-        action = XFunctionAction(rhs_function,1)
-        b = RightHandSide!(FE, action; talkative = true, bonus_quadorder = 2)[:]
-        
-        # apply homogeneous boundary data
-        bdofs = []
-        xBFaces = xgrid[BFaces]
-        nbfaces = length(xBFaces)
-        xFaceDofs = FE.FaceDofs
-        for bface = 1 : nbfaces
-            append!(bdofs,xFaceDofs[:,xBFaces[bface]])
-        end
-        bdofs = unique(bdofs)
-        for j = 1 : length(bdofs)
-            b[bdofs[j]] = 0.0
-            A[bdofs[j],bdofs[j]] = 1e60
-        end
-
-        # solve
-        Solution = FEFunction{Float64}("solution",FE,A\b)
+        # solve Poisson problem
+        Solution = FEFunction{Float64}("solution",FE)
+        solve!(Solution,PD; talkative = talkative)
 
         # compute L2 and H1 error
-        function L2error_function(result,input,x)
-            exact_solution!(result,x)
-            result[1] = (result[1] - input[1])^2
-        end    
-        L2error_action = XFunctionAction(L2error_function,1,2)
-        error4cell = zeros(Float64,num_sources(xgrid[CellNodes]),1)
-        assemble!(error4cell, ItemIntegrals, AbstractAssemblyTypeCELL, Identity, Solution, L2error_action; talkative = true, bonus_quadorder = 5)
-        Base.show(sum(error4cell))
-        append!(L2error, sqrt(sum(error4cell[:])))
-            
-        function H1error_function(result,input,x)
-            exact_solution_gradient!(result,x)
-            result[1] = (result[1] - input[1])^2 + (result[2] - input[2])^2
-            result[2] = 0 
-        end    
-        H1error_action = XFunctionAction(H1error_function,2,2)
-        error4cell = zeros(Float64,num_sources(xgrid[CellNodes]),2)
-        assemble!(error4cell, ItemIntegrals, AbstractAssemblyTypeCELL, Gradient, Solution, H1error_action; talkative = true, bonus_quadorder = 3)
-        append!(H1error, sqrt(sum(error4cell[:])))
+        append!(L2error,L2Error(Solution, exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
+        append!(H1error,L2Error(Solution, exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
+       
     end    
+
 
     println("\nL2error")
     Base.show(L2error)

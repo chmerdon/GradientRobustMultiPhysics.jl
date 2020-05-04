@@ -15,13 +15,13 @@ end
 struct RegionWiseMultiplyScalarAction{T <: Real} <: AbstractAction
     value::Array{Real,1} # one array for each region
     ItemRegions::AbstractElementRegions
-    cregion::Int32
+    cregion::Int
     resultdim::Int
 end
 struct RegionWiseMultiplyVectorAction{T <: Real} <: AbstractAction
     value::Array{Array{T,1},1} # one array for each region
     ItemRegions::AbstractElementRegions
-    cregion::Int32
+    cregion::Int
     resultdim::Int
 end
 struct FunctionAction{T <: Real} <: AbstractAction
@@ -30,6 +30,13 @@ struct FunctionAction{T <: Real} <: AbstractAction
 end
 struct XFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x)
+    resultdim::Int
+    x::Array{Array{T,1},1}
+end
+mutable struct RegionWiseXFunctionAction{T <: Real} <: AbstractAction
+    f::Function # of the interface f!(result,input,x,region)
+    ItemRegions::Union{Array{Int32,1},AbstractElementRegions,VectorOfConstants{Int32}}
+    cregion::Int
     resultdim::Int
     x::Array{Array{T,1},1}
 end
@@ -59,7 +66,11 @@ function FunctionAction(f::Function, resultdim::Int = 1)
 end
 
 function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2)
-    return XFunctionAction{Float64}(f, resultdim, [zeros(Float64,xdim)])
+    return XFunctionAction{Float64}(f, resultdim, [])
+end
+
+function RegionWiseXFunctionAction(f::Function, ItemRegions::Union{Array{Int32,1},AbstractElementRegions,VectorOfConstants{Int32}}, resultdim::Int = 1, xdim::Int = 2)
+    return RegionWiseXFunctionAction{Float64}(f, ItemRegions, 1, resultdim, [])
 end
 
 ###
@@ -68,6 +79,24 @@ end
 
 function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int32)
     # do nothing
+end
+
+function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int32)
+    C.cregion = C.ItemRegions[item]
+
+    # compute global coordinates for function evaluation
+    if FEBE.L2G.citem != item 
+        FEXGrid.update!(FEBE.L2G, item)
+    end
+    # we don't know at contruction time how many quadrature points are needed
+    # so we expand the array here if needed
+    while length(C.x) < length(FEBE.xref)
+        push!(C.x,deepcopy(FEBE.xref[1]))
+    end  
+    for i = 1 : length(FEBE.xref) 
+        FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
+    end    
+
 end
 
 function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int32)
@@ -133,4 +162,8 @@ end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XFunctionAction, i::Int)
     C.f(result, input, C.x[i]);
+end
+
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseXFunctionAction, i::Int)
+    C.f(result, input, C.x[i], C.cregion);
 end

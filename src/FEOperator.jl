@@ -47,6 +47,14 @@ NeededDerivative4Operator(::Type{<:AbstractHdivFiniteElement},::Type{Divergence}
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
+Length4Operator(::Type{Identity}, xdim::Int) = 1
+Length4Operator(::Type{Divergence}, xdim::Int) = 1
+Length4Operator(::Type{Trace}, xdim::Int) = 1
+Length4Operator(::Type{Curl}, xdim::Int) = (xdim == 2) ? 1 : xdim
+Length4Operator(::Type{Gradient}, xdim::Int) = xdim
+Length4Operator(::Type{SymmetricGradient}, xdim::Int) = (xdim == 2) ? 3 : 6
+Length4Operator(::Type{Hessian}, xdim::Int) = xdim*xdim
+
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
@@ -70,6 +78,7 @@ export RegionWiseMultiplyScalarAction
 export RegionWiseMultiplyVectorAction
 export FunctionAction
 export XFunctionAction
+export RegionWiseXFunctionAction
 
 
 abstract type AbstractFEForm end
@@ -86,7 +95,7 @@ export AbstractFEForm,ItemIntegrals,LinearForm,SymmetricBilinearForm,ASymmetricB
 export assemble!
 
 # some shortcuts for assemble! defined at the bottom
-export StiffnessMatrix!, RightHandSide!
+export StiffnessMatrix, MassMatrix, RightHandSide, L2Error
 
 
 # unique functions that only selects uniques in specified regions
@@ -460,17 +469,47 @@ end
 
 # We can also define some shortcuts
 
-function RightHandSide!(FE,action; operator::Type{<:AbstractFEFunctionOperator} = Identity, talkative::Bool = false, bonus_quadorder::Int = 0)
+function RightHandSide(FE,action, AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL; operator::Type{<:AbstractFEFunctionOperator} = Identity, talkative::Bool = false, bonus_quadorder::Int = 0)
     b = zeros(Float64,FE.ndofs,1)
-    assemble!(b, LinearForm, AbstractAssemblyTypeCELL, operator, FE, action; talkative = talkative, bonus_quadorder = bonus_quadorder)
+    assemble!(b, LinearForm, AT, operator, FE, action; talkative = talkative, bonus_quadorder = bonus_quadorder)
     return b
 end    
 
-function StiffnessMatrix!(FE,action; operator::Type{<:AbstractFEFunctionOperator} = Gradient, talkative::Bool = false, bonus_quadorder::Int = 0)
+function MassMatrix(FE,action, AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL; operator::Type{<:AbstractFEFunctionOperator} = Identity, talkative::Bool = false, bonus_quadorder::Int = 0)
+    ndofs = FE.ndofs
+    A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
+    FEOperator.assemble!(A, SymmetricBilinearForm, AT, operator, FE, action; talkative = talkative, bonus_quadorder = bonus_quadorder)
+    return A
+end
+
+function StiffnessMatrix(FE,action; operator::Type{<:AbstractFEFunctionOperator} = Gradient, talkative::Bool = false, bonus_quadorder::Int = 0)
     ndofs = FE.ndofs
     A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
     FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE, action; talkative = talkative, bonus_quadorder = bonus_quadorder)
     return A
+end
+
+function L2Error(discrete_function::FEFunction, exact_function::Function, operator::Type{<:AbstractFEFunctionOperator}; talkative::Bool = false, bonus_quadorder::Int = 0)
+    function L2error_function(result,input,x)
+        exact_function(result,x)
+        result[1] = (result[1] - input[1])^2
+        for j=2:length(input)
+            result[1] += (result[j] - input[j])^2
+        end    
+        for j=2:length(result)
+            result[2] = 0.0
+        end    
+    end    
+    dim = size(discrete_function.FEType.xgrid[Coordinates],1)
+    L2error_action = XFunctionAction(L2error_function,Length4Operator(operator,dim)*get_ncomponents(typeof(discrete_function.FEType)),dim)
+    error4cell = zeros(Float64,num_sources(discrete_function.FEType.xgrid[CellNodes]),L2error_action.resultdim)
+    assemble!(error4cell, ItemIntegrals, AbstractAssemblyTypeCELL, operator, discrete_function, L2error_action; talkative = talkative, bonus_quadorder = bonus_quadorder)
+
+    error = 0.0;
+    for j=1 : size(error4cell,1)
+        error += error4cell[j,1]
+    end
+    return sqrt(error)
 end
 
     

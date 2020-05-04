@@ -10,6 +10,7 @@ using ForwardDiff
 
 export AstractFiniteElement, AbstractH1FiniteElementWithCoefficients, AbstractH1FiniteElement, AbstractHdivFiniteElement
 export FEFunction
+export get_ncomponents
 
 abstract type AbstractFiniteElement end
 
@@ -54,7 +55,7 @@ struct FEFunction{T} <: AbstractVector{T}
 end
 
 function FEFunction{T}(name::String, FEType::AbstractFiniteElement) where T <: Real
-    coefficients = zeros(T,FEType.ndofs)
+    return FEFunction{T}(name, FEType, zeros(T,FEType.ndofs))
 end
 
 Base.getindex(FEF::FEFunction,i)=FEFunction.Coefficients[i]
