@@ -256,6 +256,7 @@ function show(xgrid::ExtendableGrid)
     end
 end
 
+
 # FaceNodes = nodes for each face (implicitly defines the enumerations of faces)
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
@@ -263,191 +264,152 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     dim = size(xgrid[Coordinates],1) 
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
+    nnodes = num_sources(xgrid[Coordinates])
     xCellGeometries = xgrid[CellGeometries]
 
-    # helper field to store all face nodes (including reversed duplicates)
-    xFaceNodesAll = VariableTargetAdjacency(Int32)
-    
-    types4allfaces = []
-    nfaces = 0
-    swap = 0
+    #transpose CellNodes to get NodeCells
+    xNodeCells = atranspose(xCellNodes)
+    max_ncell4node = max_num_targets_per_source(xNodeCells)
+
+    xFaceNodes = VariableTargetAdjacency(Int32)
+    xCellFaces = VariableTargetAdjacency(Int32)
+    xCellSigns = VariableTargetAdjacency(Int32)
+    xFaceGeometries::Array{DataType,1} = []
+    xBFaces::Array{Int32,1} = []
+
     current_face = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_cellface
-    faces_per_cell = 0
-    nodes_per_cellface = 0
+    flag4face = zeros(Bool,nnodes)
     cellEG = Triangle2D
+    cell2EG = Triangle2D
+    node = 0
+    node_cells = zeros(Int32,max_ncell4node) # should be large enough to store largest nnodes_per_cellface
+    face = 0
+    cell2 = 0
+    nneighbours = 0
+    faces_per_cell = 0
+    faces_per_cell2 = 0
+    nodes_per_cellface = 0
+    nodes_per_cellface2 = 0
+    common_nodes = 0
+    # pre-allocate xCellFaces
+    for cell = 1 : ncells
+        cellEG = xCellGeometries[cell]
+        append!(xCellFaces,zeros(Int32,nfaces_per_cell(cellEG)))
+        append!(xCellSigns,zeros(Int32,nfaces_per_cell(cellEG)))
+    end   
+
+    # loop over cells
     for cell = 1 : ncells
         cellEG = xCellGeometries[cell]
         faces_per_cell = nfaces_per_cell(cellEG)
         face_rule = face_enum_rule(cellEG)
 
+        # loop over cell faces
         for k = 1 : faces_per_cell
+
+            # check if face is already known to cell
+            if xCellFaces[k,cell] > 0
+                continue;
+            end    
+
             nodes_per_cellface = nnodes_per_cellface(cellEG, k)
-            
-            # get face nodes
+
+            # flag face nodes and commons4cells
             for j = 1 : nodes_per_cellface
-                current_face[j] = xCellNodes[face_rule[k,j],cell]; 
+                node = xCellNodes[face_rule[k,j],cell]
+                current_face[j] = node
+                flag4face[node] = true; 
             end
 
-            # bubble_sort face nodes
-            for j = nodes_per_cellface:-1:2
-                for j2 = 1 : j-1
-                    if current_face[j2] < current_face[j2+1]
-                        swap = current_face[j2+1]
-                        current_face[j2+1] = current_face[j2]
-                        current_face[j2] = swap
+            # get first node and its neighbours
+            node = xCellNodes[face_rule[k,1],cell]
+            nneighbours = num_targets(xNodeCells,node)
+            node_cells[1:nneighbours] = xNodeCells[:,node]
+
+            # loop over neighbours
+            no_neighbours_found = true
+            for n = 1 : nneighbours
+                cell2 = node_cells[n]
+
+                # skip if cell2 is the same as cell
+                if (cell == cell2) 
+                    continue; 
+                end
+
+                # loop over faces of cell2
+                cell2EG = xCellGeometries[cell2]
+                faces_per_cell2 = nfaces_per_cell(cell2EG)
+                face_rule2 = face_enum_rule(cell2EG)
+                for f2 = 1 : faces_per_cell2
+                    # check if face is already known to cell2
+                    if xCellFaces[f2,cell2] > 0
+                        continue;
                     end    
+
+                    #otherwise compare nodes of face and face2
+                    nodes_per_cellface2 = nnodes_per_cellface(cell2EG, f2)
+                    common_nodes = 0
+                    if nodes_per_cellface == nodes_per_cellface2
+                        for j = 1 : nodes_per_cellface2
+                            if flag4face[xCellNodes[face_rule2[f2,j],cell2]]
+                                common_nodes += 1
+                            else
+                                continue;    
+                            end    
+                        end
+                    end
+
+                    # if all nodes are the same, register face
+                    if (common_nodes == nodes_per_cellface2)
+                        no_neighbours_found = false
+                        face += 1
+                        # set index for adjacencies missing
+                        #xCellFaces[k,cell] = face
+                        #xCellFaces[f2,cell2] = face
+                        xCellFaces.colentries[xCellFaces.colstart[cell]+k-1] = face
+                        xCellFaces.colentries[xCellFaces.colstart[cell2]+f2-1] = face
+                        xCellSigns.colentries[xCellSigns.colstart[cell]+k-1] = 1
+                        xCellSigns.colentries[xCellSigns.colstart[cell2]+f2-1] = -1
+                        append!(xFaceNodes,current_face[1:nodes_per_cellface])
+                        push!(xFaceGeometries,facetype_of_cellface(cellEG,k))
+                        break;
+                    end
+
                 end
             end
 
-            append!(xFaceNodesAll,current_face[1:nodes_per_cellface])
-            push!(types4allfaces,facetype_of_cellface(xCellGeometries[cell], k))
-            nfaces += 1
-        end    
-    end
-
-    # remove duplicates and assign FaceGeometries
-    # VERY VERY SLOW AT THE MOMENT!!!
-    xFaceNodes = VariableTargetAdjacency(Int32)
-    xFaceGeometries = []
-    idx = 0
-    nfacenodes = 0
-    @time for face=1:nfaces
-
-        nfacenodes = num_targets(xFaceNodesAll,face)
-        # get face nodes
-        for j = 1 : nfacenodes
-            current_face[j] = xFaceNodesAll[j,face]; 
-        end
-
-        idx = 0
-        for j = 1 : face
-            if all(i->current_face[i] == xFaceNodesAll[i,j],1:nfacenodes)
-                idx = j
-                break;
+            # if no common neighbour cell is found, register face (boundary faces)
+            if no_neighbours_found == true
+                face += 1
+                # set index for adjacencies missing
+                #xCellFaces[k,cell] = face
+                xCellFaces.colentries[xCellFaces.colstart[cell]+k-1] = face
+                xCellSigns.colentries[xCellSigns.colstart[cell]+k-1] = 1
+                append!(xFaceNodes,current_face[1:nodes_per_cellface])
+                push!(xFaceGeometries,facetype_of_cellface(cellEG,k))
             end
+
+            #reset flag4face
+            for j = 1 : nnodes
+                flag4face[j] = 0
+            end    
         end    
-        if idx == face
-            append!(xFaceNodes,xFaceNodesAll[:,idx])
-            push!(xFaceGeometries,types4allfaces[idx])
-        end
     end
-    xgrid[FaceGeometries] = Array{DataType,1}(xFaceGeometries)
+
+    xgrid[FaceGeometries] = xFaceGeometries
+    xgrid[CellFaces] = xCellFaces
+    xgrid[CellSigns] = xCellSigns
     xFaceNodes
 end
 
 # CellFaces = faces for each cell
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
-
-    # init CellFaces
-    xFaceNodes = xgrid[FaceNodes]
-    xCellFaces = VariableTargetAdjacency(Int32)
-
-    # get links to other stuff
-    dim = size(xgrid[Coordinates],1) 
-    xCellNodes = xgrid[CellNodes]
-    ncells = num_sources(xCellNodes)
-    nfaces = num_sources(xFaceNodes)
-    xCellGeometries = xgrid[CellGeometries]
-
-    # loop over all cells and all cell faces
-    current_face = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_cellface
-    faces = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nfaces_per_cell
-    faces_per_cell = 0
-    nodes_per_cellface = 0
-    match = false
-    cellEG = Triangle2D
-    for cell = 1 : ncells
-        cellEG = xCellGeometries[cell]
-        faces_per_cell = nfaces_per_cell(cellEG)
-        face_rule = face_enum_rule(cellEG)
-
-        for k = 1 : faces_per_cell
-            nodes_per_cellface = nnodes_per_cellface(cellEG, k)
-            
-            # get face nodes
-            for j = 1 : nodes_per_cellface
-                current_face[j] = xCellNodes[face_rule[k,j],cell]; 
-            end
-
-            # bubble_sort face nodes
-            for j = nodes_per_cellface:-1:2
-                for j2 = 1 : j-1
-                    if current_face[j2] < current_face[j2+1]
-                        swap = current_face[j2+1]
-                        current_face[j2+1] = current_face[j2]
-                        current_face[j2] = swap
-                    end    
-                end
-            end
-
-            # find facenr
-            for face = 1 : nfaces
-                match = true
-                for k = 1 : nodes_per_cellface
-                    if current_face[k] != xFaceNodes[k,face]
-                        match = false
-                        break;
-                    end
-                end        
-                if match == true
-                    faces[k] = face
-                end
-            end            
-        end    
-        append!(xCellFaces,faces[1:faces_per_cell])    
-    end
-    xCellFaces
+    ExtandableGrids.instantiate(xgrid, FaceNodes)
 end
 
 # CellSigns = orientation signs for each face on each cell
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
-
-    # init CellSigns
-    xCellSigns = VariableTargetAdjacency(Int32) # +1/-1 would be enough
-
-    # get links to other stuff
-    dim = size(xgrid[Coordinates],1) 
-    xFaceNodes = xgrid[FaceNodes]
-    xCellFaces = xgrid[CellFaces]
-    xCellNodes = xgrid[CellNodes]
-    ncells = num_sources(xCellNodes)
-    nfaces = num_sources(xFaceNodes)
-    xCellGeometries = xgrid[CellGeometries]
-
-    # loop over all cells and all cell faces
-    signs = zeros(Int32,max_num_targets_per_source(xCellFaces))
-    faces_per_cell = 0
-    temp = 0
-    for cell = 1 : ncells
-        faces_per_cell = nfaces_per_cell(xCellGeometries[cell])
-        fill!(signs,-1)
-        if xCellGeometries[cell] == Edge1D
-            append!(xCellFaces,[-1,1])
-        elseif xCellGeometries[cell] == Triangle2D || xCellGeometries[cell] == Quadrilateral2D
-            for k = 1 : faces_per_cell
-                if xCellNodes[k,cell] == xFaceNodes[1,xCellFaces[k,cell]]
-                    signs[k] = 1
-                end       
-            end  
-            append!(xCellSigns,signs[1:faces_per_cell])
-        elseif xCellGeometries[cell] == Tetrahedron3D # no experience with 3D yet, might be wrong !!!
-            for k = 1 : 4
-                # find matching node in face nodes and look if the next one matches, too
-                temp = 1
-                for j = 1 : 3
-                    if xCellNodes[k,cell] == xFaceNodes[j,xCellFaces[k,cell]]    
-                        temp = j
-                        break
-                    end    
-                end
-                if xCellNodes[k,cell] == xFaceNodes[temp,xCellFaces[k,cell]] && xCellNodes[mod(k,4)+1,cell] == xFaceNodes[mod(temp,3)+1,xCellFaces[k,cell]]
-                    signs[k] = 1
-                end       
-            end  
-            append!(xCellSigns,signs[1:faces_per_cell])
-        end
-    end
-    xCellSigns
+    ExtandableGrids.instantiate(xgrid, FaceNodes)
 end
 
 
@@ -531,7 +493,6 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
-
     # get links to other stuff
     xCoordinates = xgrid[Coordinates]
     xFaceNodes = xgrid[FaceNodes]
@@ -551,17 +512,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
         for j = 1 : nodes_per_bface
             current_bface[j] = xBFaceNodes[j,bface]
         end    
-
-        # bubble_sort face nodes
-        for j = nodes_per_bface:-1:2
-            for j2 = 1 : j-1
-                if current_bface[j2] < current_bface[j2+1]
-                    swap = current_bface[j2+1]
-                    current_bface[j2+1] = current_bface[j2]
-                    current_bface[j2] = swap
-                end    
-            end
-        end
         
         # find matching face
         for face = 1 : nfaces

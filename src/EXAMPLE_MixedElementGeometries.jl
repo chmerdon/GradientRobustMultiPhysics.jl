@@ -22,8 +22,8 @@ function gridgen_mixedEG()
     append!(xCellNodes,[1,2,5])
     append!(xCellNodes,[2,3,6,5])
     append!(xCellNodes,[4,5,8,7]) 
-    append!(xCellNodes,[5,6,8])
-    append!(xCellNodes,[8,6,9])
+    append!(xCellNodes,[5,6,9])
+    append!(xCellNodes,[8,5,9])
 
     xgrid[CellNodes] = xCellNodes
     xgrid[CellGeometries] = xCellGeometries
@@ -74,7 +74,7 @@ end
 
 function main()
 
-    nlevels = 4
+    nlevels = 6
 
     function exact_solution!(result,x)
         result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1)
