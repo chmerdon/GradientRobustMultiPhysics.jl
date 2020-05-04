@@ -132,7 +132,7 @@ function unique(xItemGeometries, xItemRegions, xItemDofs, regions)
     return EG, ndofs4EG
 end
 
-function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, talkative::Bool)
+function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AbstractAssemblyType}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int32,1}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, talkative::Bool)
     xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
@@ -170,7 +170,7 @@ function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:Abstra
     return EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, FEevaler4item
 end
 
-function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AbstractAssemblyTypeBFACECELL}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, talkative::Bool)
+function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AbstractAssemblyTypeBFACECELL}, operator::Type{<:AbstractFEFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int32,1}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, talkative::Bool)
     # find proper quadrature QuadratureRules
     xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
     xCellGeometries = FE.xgrid[CellGeometries]
@@ -229,7 +229,7 @@ function assemble!(
     action::AbstractAction;
     bonus_quadorder::Int = 0,
     talkative::Bool = false,
-    regions::Array{Int} = [1])
+    regions::Array{Int,1} = [0])
 
     NumberType = eltype(b)
     FE = FEF.FEType
@@ -240,6 +240,15 @@ function assemble!(
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
 
+    if regions == [0]
+        try
+            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end        
+    else
+        regions = Array{Int32,1}(regions)    
+    end
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(form, AT, operator, FE, regions, NumberType, 1, bonus_quadorder, talkative)
 
     # collect FE and FEBasisEvaluator information
@@ -311,7 +320,7 @@ function assemble!(
     action::AbstractAction;
     bonus_quadorder::Int = 0,
     talkative::Bool = false,
-    regions::Array{Int} = [1])
+    regions::Array{Int,1} = [0])
 
     NumberType = eltype(b)
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
@@ -321,6 +330,15 @@ function assemble!(
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
+    if regions == [0]
+        try
+            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end        
+    else
+        regions = Array{Int32,1}(regions)    
+    end
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(form, AT, operator, FE, regions, NumberType, 1, bonus_quadorder, talkative)
 
     # collect FE and FEBasisEvaluator information
@@ -392,7 +410,7 @@ function assemble!(
     action::AbstractAction;
     bonus_quadorder::Int = 0,
     talkative::Bool = false,
-    regions::Array{Int} = [1])
+    regions::Array{Int,1} = [0])
 
     # collect grid information
     NumberType = eltype(A)
@@ -403,6 +421,15 @@ function assemble!(
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
+    if regions == [0]
+        try
+            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end        
+    else
+        regions = Array{Int32,1}(regions)    
+    end
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(form, AT, operator, FE, regions, NumberType, 2, bonus_quadorder, talkative)
 
     # collect FE and FEBasisEvaluator information
@@ -469,23 +496,37 @@ end
 
 # We can also define some shortcuts
 
-function RightHandSide(FE,action, AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL; operator::Type{<:AbstractFEFunctionOperator} = Identity, talkative::Bool = false, bonus_quadorder::Int = 0)
+function RightHandSide(FE,action,
+    AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
+    regions::Array{Int,1} = [0],
+    operator::Type{<:AbstractFEFunctionOperator} = Identity,
+    talkative::Bool = false,
+    bonus_quadorder::Int = 0)
     b = zeros(Float64,FE.ndofs,1)
-    assemble!(b, LinearForm, AT, operator, FE, action; talkative = talkative, bonus_quadorder = bonus_quadorder)
+    assemble!(b, LinearForm, AT, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
     return b
 end    
 
-function MassMatrix(FE,action, AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL; operator::Type{<:AbstractFEFunctionOperator} = Identity, talkative::Bool = false, bonus_quadorder::Int = 0)
+function MassMatrix(FE,action,
+    AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
+    regions::Array{Int,1} = [0],
+    operator::Type{<:AbstractFEFunctionOperator} = Identity,
+    talkative::Bool = false,
+    bonus_quadorder::Int = 0)
     ndofs = FE.ndofs
     A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
-    FEOperator.assemble!(A, SymmetricBilinearForm, AT, operator, FE, action; talkative = talkative, bonus_quadorder = bonus_quadorder)
+    FEOperator.assemble!(A, SymmetricBilinearForm, AT, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
     return A
 end
 
-function StiffnessMatrix(FE,action; operator::Type{<:AbstractFEFunctionOperator} = Gradient, talkative::Bool = false, bonus_quadorder::Int = 0)
+function StiffnessMatrix(FE,action;
+    regions::Array{Int,1} = [0],
+    operator::Type{<:AbstractFEFunctionOperator} = Gradient,
+    talkative::Bool = false,
+    bonus_quadorder::Int = 0)
     ndofs = FE.ndofs
     A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
-    FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE, action; talkative = talkative, bonus_quadorder = bonus_quadorder)
+    FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
     return A
 end
 

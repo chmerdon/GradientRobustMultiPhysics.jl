@@ -42,35 +42,46 @@ function show(PD::PoissonProblemDescription)
 
 end
 
-function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription)
+function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; talkative::Bool = false)
     FE = Solution.FEType
-
-    function bnd_rhs_function(result,input,x,region)
-        PD.boundarydata4bregion[region](result,x)
-        result[1] = result[1]*input[1] 
-    end    
     xdim = size(Solution.FEType.xgrid[Coordinates],1) 
-    action = RegionWiseXFunctionAction(bnd_rhs_function,FE.xgrid[BFaceRegions],1,xdim)
-    bonus_quadorder = maximum(PD.quadorder4bregion)
-    b = RightHandSide(FE, action, AbstractAssemblyTypeBFACE; bonus_quadorder = bonus_quadorder)[:]
 
-    # compute mass matrix
-    action = MultiplyScalarAction(1.0,1)
-    A = MassMatrix(FE, action, AbstractAssemblyTypeBFACE)
+    # Dirichlet boundary
+    fixed_bdofs = []
+    DirichletBoundaryRegions = findall(x->x == 1, PD.boundarytype4bregion)
+    if length(DirichletBoundaryRegions) > 0
 
-    # apply homogeneous boundary data
-    bdofs = []
-    xBFaces = FE.xgrid[BFaces]
-    nbfaces = length(xBFaces)
-    xFaceDofs = FE.FaceDofs
-    for bface = 1 : nbfaces
-        append!(bdofs,xFaceDofs[:,xBFaces[bface]])
-    end
-    bdofs = unique(bdofs)
+        # find Dirichlet dofs
+        xBFaces = FE.xgrid[BFaces]
+        nbfaces = length(xBFaces)
+        xFaceDofs = FE.FaceDofs
+        for bface = 1 : nbfaces
+            append!(fixed_bdofs,xFaceDofs[:,xBFaces[bface]])
+        end
+        fixed_bdofs = unique(fixed_bdofs)
 
-    Solution.coefficients[bdofs] = A[bdofs,bdofs]\b[bdofs]
+        if talkative == true
+            println("  DbRegions = $DirichletBoundaryRegions (Db ndofs = $(length(fixed_bdofs)))")
+        end    
+        # rhs action for region-wise boundarydata best approximation
+        function bnd_rhs_function(result,input,x,region)
+            PD.boundarydata4bregion[region](result,x)
+            result[1] = result[1]*input[1] 
+        end    
+        action = RegionWiseXFunctionAction(bnd_rhs_function,FE.xgrid[BFaceRegions],1,xdim)
+        bonus_quadorder = maximum(PD.quadorder4bregion)
+        b = RightHandSide(FE, action, AbstractAssemblyTypeBFACE; regions = DirichletBoundaryRegions, bonus_quadorder = bonus_quadorder)[:]
 
-    return bdofs
+        # compute mass matrix
+        action = MultiplyScalarAction(1.0,1)
+        A = MassMatrix(FE, action, AbstractAssemblyTypeBFACE)
+   
+
+        # solve best approximation problem on boundary and write into Solution
+        Solution.coefficients[fixed_bdofs] = A[fixed_bdofs,fixed_bdofs]\b[fixed_bdofs]
+    end    
+
+    return fixed_bdofs
 end
 
 
@@ -82,8 +93,11 @@ function solve!(Solution::FEFunction, PD::PoissonProblemDescription; dirichlet_p
         if (talkative == true)
             println("\nSOLVING POISSON PROBLEM")
             println("=======================")
-            println("        FE = $(FE.name), ndofs = $(FE.ndofs)")
+            println("         FE = $(FE.name), ndofs = $(FE.ndofs)")
         end
+
+        # boundarydata
+        fixed_bdofs = boundarydata!(Solution, PD; talkative = talkative)
     
         # compute stiffness matrix
         xdim = size(Solution.FEType.xgrid[Coordinates],1) 
@@ -98,10 +112,9 @@ function solve!(Solution::FEFunction, PD::PoissonProblemDescription; dirichlet_p
         action = RegionWiseXFunctionAction(rhs_function, FE.xgrid[CellRegions],1,xdim)
         b = RightHandSide(FE, action; talkative = talkative, bonus_quadorder = 2)[:]
 
-        # boundarydata
-        fixed_bdofs = boundarydata!(Solution, PD)
+
         for j = 1 : length(fixed_bdofs)
-            b[fixed_bdofs[j]] = 0.0
+            b[fixed_bdofs[j]] = dirichlet_penalty * Solution.coefficients[fixed_bdofs[j]]
             A[fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
         end
 

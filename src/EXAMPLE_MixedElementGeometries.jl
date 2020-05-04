@@ -85,7 +85,7 @@ function main()
 
 
     function exact_solution!(result,x)
-        result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1)
+        result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1)+1
     end    
     function exact_solution_gradient!(result,x)
         result[1] = x[2]*(2*x[1]-1)*(x[2]-1)
