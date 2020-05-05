@@ -50,15 +50,29 @@ abstract type AbstractFiniteElement end
 
 struct FEFunction{T} <: AbstractVector{T}
     name::String
-    FEType::AbstractFiniteElement
+    FETypes::Array{AbstractFiniteElement,1}
+    offsets::Vector{Int32}
     coefficients::Vector{T}
 end
 
 function FEFunction{T}(name::String, FEType::AbstractFiniteElement) where T <: Real
-    return FEFunction{T}(name, FEType, zeros(T,FEType.ndofs))
+    return FEFunction{T}(name, [FEType], [0, FEType.ndofs], zeros(T,FEType.ndofs))
 end
 
-Base.getindex(FEF::FEFunction,i)=FEFunction.Coefficients[i]
+function FEFunction{T}(name::String, FETypes::Array{AbstractFiniteElement,1}) where T <: Real
+    offsets = zeros(Int32,length(FETypes)+1)
+    for j = 2 : length(FETypes)+1
+        offsets[j] = offsets[j-1] + FETypes[j-1].ndofs
+    end    
+    return FEFunction{T}(name, FETypes, offsets, zeros(T,offsets[end]))
+end
+
+Base.getindex(FEF::FEFunction,i)=FEFunction.coefficients[i]
+Base.getindex(FEF::FEFunction,::Colon)=FEFunction.coefficients[:]
+Base.getindex(FEF::FEFunction,i,j)=FEFunction.coefficients[offsets[i]+j]
+Base.getindex(FEF::FEFunction,i,::Colon)=FEFunction.coefficients[offsets[i]+1:offsets[i+1]]
+Base.size(FEF::FEFunction)=[length(FEF.FETypes),FEF.offsets[end]]
+
 
 #### OLD STUFF
 

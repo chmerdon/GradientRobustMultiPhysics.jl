@@ -10,6 +10,7 @@ using FiniteElements
 using FEOperator
 using FEXGrid
 using ExtendableGrids
+using ExtendableSparse
 
 abstract type AbstractBoundaryType end
 abstract type DirichletBoundary <: AbstractBoundaryType end
@@ -47,9 +48,48 @@ function show(PD::PoissonProblemDescription)
     end
 end
 
-function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; talkative::Bool = false)
-    FE = Solution.FEType
-    xdim = size(Solution.FEType.xgrid[Coordinates],1) 
+
+# right hand side for Poisson problem
+function RightHandSide(FE,action,
+    AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
+    regions::Array{Int,1} = [0],
+    operator::Type{<:AbstractFEFunctionOperator} = Identity,
+    talkative::Bool = false,
+    bonus_quadorder::Int = 0)
+    b = zeros(Float64,FE.ndofs,1)
+    assemble!(b, LinearForm, AT, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
+    return b
+end    
+
+# matrix for best approximation of boundary data
+function MassMatrix(FE,action,
+    AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
+    regions::Array{Int,1} = [0],
+    operator::Type{<:AbstractFEFunctionOperator} = Identity,
+    talkative::Bool = false,
+    bonus_quadorder::Int = 0)
+    ndofs = FE.ndofs
+    A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
+    FEOperator.assemble!(A, SymmetricBilinearForm, AT, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
+    return A
+end
+
+# system matrix for Poisson problem
+function StiffnessMatrix(FE,action;
+    regions::Array{Int,1} = [0],
+    operator::Type{<:AbstractFEFunctionOperator} = Gradient,
+    talkative::Bool = false,
+    bonus_quadorder::Int = 0)
+    ndofs = FE.ndofs
+    A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
+    FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
+    return A
+end
+
+# boundary data treatment
+function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; FEblock::Int = 1, talkative::Bool = false)
+    FE = Solution.FETypes[FEblock]
+    xdim = size(Solution.FETypes[1].xgrid[Coordinates],1) 
     xBFaces = FE.xgrid[BFaces]
     nbfaces = length(xBFaces)
     xBFaceRegions = FE.xgrid[BFaceRegions]
@@ -118,22 +158,22 @@ function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; talk
 end
 
 
-# computes solution of Poisson problem
-function solve!(Solution::FEFunction, PD::PoissonProblemDescription; dirichlet_penalty::Float64 = 1e60, talkative::Bool = false)
+# solver for Poisson problems
+function solve!(Solution::FEFunction, PD::PoissonProblemDescription; FEblock::Int = 1, dirichlet_penalty::Float64 = 1e60, talkative::Bool = false)
 
-        FE = Solution.FEType
+        FE = Solution.FETypes[FEblock]
 
         if (talkative == true)
             println("\nSOLVING POISSON PROBLEM")
             println("=======================")
-            println("         FE = $(FE.name), ndofs = $(FE.ndofs)")
+            println("         FE = $(FE.name) (FEblock = $FEblock), ndofs = $(FE.ndofs)")
         end
 
         # boundarydata
-        fixed_bdofs = boundarydata!(Solution, PD; talkative = talkative)
+        fixed_bdofs = boundarydata!(Solution, PD; FEblock = FEblock, talkative = talkative)
     
         # compute stiffness matrix
-        xdim = size(Solution.FEType.xgrid[Coordinates],1) 
+        xdim = size(FE.xgrid[Coordinates],1) 
         diffusion_action = MultiplyScalarAction(PD.diffusion,xdim)
         A = StiffnessMatrix(FE, diffusion_action; talkative = talkative)
         
@@ -152,7 +192,7 @@ function solve!(Solution::FEFunction, PD::PoissonProblemDescription; dirichlet_p
         end
 
         # solve
-        Solution.coefficients[:] = A\b
+        Solution.coefficients[Solution.offsets[FEblock]+1:Solution.offsets[FEblock+1]] = A\b
 
 end
 

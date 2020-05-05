@@ -93,9 +93,7 @@ abstract type MixedBilinearForm <: AbstractFEForm end
 
 export AbstractFEForm,ItemIntegrals,LinearForm,SymmetricBilinearForm,ASymmetricBilinearForm
 export assemble!
-
-# some shortcuts for assemble! defined at the bottom
-export StiffnessMatrix, MassMatrix, RightHandSide, L2Error
+export L2Error
 
 
 # unique functions that only selects uniques in specified regions
@@ -229,10 +227,11 @@ function assemble!(
     action::AbstractAction;
     bonus_quadorder::Int = 0,
     talkative::Bool = false,
+    FEblock::Int = 1,
     regions::Array{Int,1} = [0])
 
     NumberType = eltype(b)
-    FE = FEF.FEType
+    FE = FEF.FETypes[FEblock]
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentTypes4AssemblyType(AT)]
@@ -496,39 +495,6 @@ end
 
 # We can also define some shortcuts
 
-function RightHandSide(FE,action,
-    AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
-    regions::Array{Int,1} = [0],
-    operator::Type{<:AbstractFEFunctionOperator} = Identity,
-    talkative::Bool = false,
-    bonus_quadorder::Int = 0)
-    b = zeros(Float64,FE.ndofs,1)
-    assemble!(b, LinearForm, AT, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
-    return b
-end    
-
-function MassMatrix(FE,action,
-    AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
-    regions::Array{Int,1} = [0],
-    operator::Type{<:AbstractFEFunctionOperator} = Identity,
-    talkative::Bool = false,
-    bonus_quadorder::Int = 0)
-    ndofs = FE.ndofs
-    A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
-    FEOperator.assemble!(A, SymmetricBilinearForm, AT, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
-    return A
-end
-
-function StiffnessMatrix(FE,action;
-    regions::Array{Int,1} = [0],
-    operator::Type{<:AbstractFEFunctionOperator} = Gradient,
-    talkative::Bool = false,
-    bonus_quadorder::Int = 0)
-    ndofs = FE.ndofs
-    A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
-    FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
-    return A
-end
 
 function L2Error(discrete_function::FEFunction, exact_function::Function, operator::Type{<:AbstractFEFunctionOperator}; talkative::Bool = false, bonus_quadorder::Int = 0)
     function L2error_function(result,input,x)
@@ -541,9 +507,9 @@ function L2Error(discrete_function::FEFunction, exact_function::Function, operat
             result[2] = 0.0
         end    
     end    
-    dim = size(discrete_function.FEType.xgrid[Coordinates],1)
-    L2error_action = XFunctionAction(L2error_function,Length4Operator(operator,dim)*get_ncomponents(typeof(discrete_function.FEType)),dim)
-    error4cell = zeros(Float64,num_sources(discrete_function.FEType.xgrid[CellNodes]),L2error_action.resultdim)
+    dim = size(discrete_function.FETypes[1].xgrid[Coordinates],1)
+    L2error_action = XFunctionAction(L2error_function,Length4Operator(operator,dim)*get_ncomponents(typeof(discrete_function.FETypes[1])),dim)
+    error4cell = zeros(Float64,num_sources(discrete_function.FETypes[1].xgrid[CellNodes]),L2error_action.resultdim)
     assemble!(error4cell, ItemIntegrals, AbstractAssemblyTypeCELL, operator, discrete_function, L2error_action; talkative = talkative, bonus_quadorder = bonus_quadorder)
 
     error = 0.0;
