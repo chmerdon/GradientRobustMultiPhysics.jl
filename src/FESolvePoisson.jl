@@ -192,8 +192,7 @@ function solve!(Solution::FEFunction, PD::PoissonProblemDescription; FEblock::In
         end
 
         # solve
-        Solution.coefficients[Solution.offsets[FEblock]+1:Solution.offsets[FEblock+1]] = A\b
-
+        Solution[FEblock, :] = A\b
 end
 
 

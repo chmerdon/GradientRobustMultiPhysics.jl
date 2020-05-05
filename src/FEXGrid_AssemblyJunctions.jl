@@ -26,8 +26,8 @@ GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceRegi
 GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeBFACECELL}) = BFaceRegions
 
 
-# in situations where we integrate of faces but want to evaluate cell dofs we need
-# to transform the xref on the face (xrefFACE) to xref on the CELL;
+# in situations where we integrate on faces but want to evaluate cell dofs we need
+# to transform the xref on ech cellface (xrefFACE) to xref on the CELL;
 # this transformation depends on the geometry and is specified below
 
 xrefFACE2xrefCELL(::Type{<:Edge1D}) = [ (xref4FACE) -> [1],

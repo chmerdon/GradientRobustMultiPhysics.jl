@@ -66,10 +66,10 @@ export AbstractFEFunctionOperator
 export Identity, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
 export NeededDerivatives4Operator
 
-include("FEBasisEvaluator.jl")
+include("FEOperator_FEBasisEvaluator.jl")
 export FEBasisEvaluator, update!
 
-include("AbstractAction.jl")
+include("FEOperator_AbstractAction.jl")
 export DoNothingAction
 export MultiplyScalarAction
 export MultiplyVectorAction
@@ -150,9 +150,8 @@ function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:Abstra
         basisevaler[j][1] = FEBasisEvaluator{NumberType,typeof(FE),EG[j],operator,AT}(FE, qf[j])
     end        
     if talkative
-        println("\nASSEMBLY PREPARATION")
-        println("=====================")
-        println("      form = $form")
+        println("\nASSEMBLY PREPARATION $form")
+        println("====================================")
         println("        FE = $(FE.name), ndofs = $(FE.ndofs)")
         println("  operator = $operator")
         println("   regions = $regions")
@@ -199,9 +198,8 @@ function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:Abstra
         end
     end        
     if talkative
-        println("\nASSEMBLY PREPARATION")
-        println("=====================")
-        println("      form = $form")
+        println("\nASSEMBLY PREPARATION $form")
+        println("====================================")
         println("        FE = $(FE.name), ndofs = $(FE.ndofs)")
         println("  operator = $operator")
         println("   regions = $regions")

@@ -47,7 +47,7 @@ function main()
     # initial grid
     xgrid = gridgen_mixedEG()
     #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 7 # nrefinement levels
+    nlevels = 5 # nrefinement levels
     diffusion = 1.0
     talkative = true
 
@@ -97,6 +97,7 @@ function main()
 
         # solve Poisson problem
         Solution = FEFunction{Float64}("solution",FE)
+
         solve!(Solution,PD; talkative = talkative)
 
         # compute L2 and H1 error
@@ -114,7 +115,7 @@ function main()
 
             # plot solution
             PyPlot.figure(2)
-            ExtendableGrids.plot(xgrid, Solution.coefficients; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, Solution[1,:]; Plotter = PyPlot)
         end    
     end    
 

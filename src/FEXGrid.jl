@@ -5,12 +5,12 @@ using ExtendableGrids
 export FaceNodes, FaceGeometries, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceRegions, FaceCells, FaceNormals, BFaces, BFaceCellPos
 export nfaces_per_cell, facetype_of_cellface
 
-include("XGridAssemblyJunctions.jl");
+include("FEXGrid_AssemblyJunctions.jl");
 export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELL
 export xrefFACE2xrefCELL
 export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType, GridComponentRegions4AssemblyType
 
-include("L2GTransformer.jl");
+include("FEXGrid_L2GTransformer.jl");
 export L2GTransformer, update!, eval!, mapderiv!
 
 
