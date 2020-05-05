@@ -6,9 +6,9 @@ using FiniteElements
 using FEOperator
 using FESolvePoisson
 using QuadratureRules
-using VTKView
-#ENV["MPLBACKEND"]="qt5agg"
-#using PyPlot
+#using VTKView
+ENV["MPLBACKEND"]="qt5agg"
+using PyPlot
 using BenchmarkTools
 
 function gridgen_mixedEG()
@@ -30,39 +30,7 @@ function gridgen_mixedEG()
     xgrid[CellGeometries] = xCellGeometries
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,1,1,1,1,1,1])
-    xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
-    xgrid[BFaceNodes]=xBFaceNodes
-    nbfaces = num_sources(xBFaceNodes)
-    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,nbfaces)
-    xgrid[CoordinateSystem]=Cartesian2D
-
-    return xgrid
-end
-
-
-function gridgen_triangles()
-
-    NumberType = Float64
-    xgrid=ExtendableGrid{NumberType,Int32}()
-    xgrid[Coordinates]=Array{NumberType,2}([0 0; 4//10 0; 1 0; 0 6//10; 4//10 6//10; 1 6//10;0 1; 4//10 1; 1 1]')
-    xCellNodes=VariableTargetAdjacency(Int32)
-    xCellGeometries=VectorOfConstants(Triangle2D, 8);
-    
-    append!(xCellNodes,[1,5,4])
-    append!(xCellNodes,[1,2,5])
-    append!(xCellNodes,[4,5,8])
-    append!(xCellNodes,[4,8,7])
-    append!(xCellNodes,[2,3,5])
-    append!(xCellNodes,[5,3,6])
-    append!(xCellNodes,[5,6,8])
-    append!(xCellNodes,[8,6,9])
-
-    xgrid[CellNodes] = xCellNodes
-    xgrid[CellGeometries] = xCellGeometries
-    ncells = num_sources(xCellNodes)
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
+    xgrid[BFaceRegions]=Array{Int32,1}([1,1,1,1,1,1,2,2])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
@@ -78,17 +46,23 @@ function main()
 
     # initial grid
     xgrid = gridgen_mixedEG()
-    #xgrid = gridgen_triangles()
-    nlevels = 6 # nrefinement levels
+    #xgrid = split_grid_into(xgrid,Triangle2D)
+    nlevels = 7 # nrefinement levels
     diffusion = 1.0
     talkative = true
 
 
     function exact_solution!(result,x)
-        result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1)+1
+        result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
+    end    
+    function bnd_data_left!(result,x)
+        result[1] = 0.0
+    end    
+    function bnd_data_rest!(result,x)
+        result[1] = x[1]
     end    
     function exact_solution_gradient!(result,x)
-        result[1] = x[2]*(2*x[1]-1)*(x[2]-1)
+        result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1.0
         result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
     end    
     function exact_solution_laplacian!(result,x)
@@ -102,9 +76,11 @@ function main()
     PD.quadorder4diffusion = 0
     PD.volumedata4region = [exact_solution_laplacian!]
     PD.quadorder4region = [2]
-    PD.boundarytype4bregion = [1]
-    PD.boundarydata4bregion = [exact_solution!]
-    PD.quadorder4bregion = [4]
+    PD.boundarytype4bregion = [BestapproxDirichletBoundary, HomogeneousDirichletBoundary]
+    PD.boundarydata4bregion = [bnd_data_rest!, bnd_data_left!]
+    PD.quadorder4bregion = [1,0]
+
+    FESolvePoisson.show(PD)
 
     L2error = []
     H1error = []
@@ -117,7 +93,7 @@ function main()
 
         # generate FE
         FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
-        FiniteElements.show_new(FE)
+        FiniteElements.show(FE)
 
         # solve Poisson problem
         Solution = FEFunction{Float64}("solution",FE)
@@ -127,6 +103,19 @@ function main()
         append!(L2error,L2Error(Solution, exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
         append!(H1error,L2Error(Solution, exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
        
+        # plot final solution
+        if (level == nlevels)
+            # split grid into triangles for plotter
+            xgrid = split_grid_into(xgrid,Triangle2D)
+
+            # plot triangulation
+            PyPlot.figure(1)
+            ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+
+            # plot solution
+            PyPlot.figure(2)
+            ExtendableGrids.plot(xgrid, Solution.coefficients; Plotter = PyPlot)
+        end    
     end    
 
 
@@ -135,6 +124,7 @@ function main()
 
     println("\nH1error")
     Base.show(H1error)
+
 
 end
 

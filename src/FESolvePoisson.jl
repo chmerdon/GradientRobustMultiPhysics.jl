@@ -1,6 +1,8 @@
 module FESolvePoisson
 
-export PoissonProblemDescription,solve!
+export show,PoissonProblemDescription
+export AbstractBoundaryType, HomogeneousDirichletBoundary, BestapproxDirichletBoundary, NeumannBoundary
+export solve!
 
 using LinearAlgebra
 using BenchmarkTools
@@ -8,6 +10,14 @@ using FiniteElements
 using FEOperator
 using FEXGrid
 using ExtendableGrids
+
+abstract type AbstractBoundaryType end
+abstract type DirichletBoundary <: AbstractBoundaryType end
+abstract type BestapproxDirichletBoundary <: DirichletBoundary end
+abstract type InterpolateDirichletBoundary <: DirichletBoundary end
+abstract type HomogeneousDirichletBoundary <: DirichletBoundary end
+abstract type NeumannBoundary <: AbstractBoundaryType end
+abstract type DoNothingBoundary <: NeumannBoundary end
 
 
 mutable struct PoissonProblemDescription
@@ -20,48 +30,70 @@ mutable struct PoissonProblemDescription
     volumedata4region:: Vector{Function}
     quadorder4region:: Vector{Int64}
     boundarydata4bregion:: Vector{Function}
-    boundarytype4bregion:: Vector{Int64}
+    boundarytype4bregion:: Array{DataType,1}
     quadorder4bregion:: Vector{Int64}
     PoissonProblemDescription() = new("undefined Poisson problem", false,1.0,0,Nothing,-1)
 end
 
 function show(PD::PoissonProblemDescription)
-
-	println("PoissonProblem description");
+    println("\nPoissonProblemDescription");
+    println("=========================")
 	println("         name : " * PD.name);
-	println("    time-dep. : " * string(PD.time_dependent_data));
-    print("rhs is defined: ");
-    if length(PD.volumedata4region) > 0
-        println("true")
-    else
-        println("false")    
-    end    
-    print("boundary_types: ");
-    Base.show(PD.boundarytype4bregion)
-    println("");
-
+    println("    time-dep. : " * string(PD.time_dependent_data));
+    
+    println("BoundaryData")
+    for j = 1 : length(PD.boundarydata4bregion)
+        println("  [$j] $(PD.boundarytype4bregion[j])");
+    end
 end
 
 function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; talkative::Bool = false)
     FE = Solution.FEType
     xdim = size(Solution.FEType.xgrid[Coordinates],1) 
+    xBFaces = FE.xgrid[BFaces]
+    nbfaces = length(xBFaces)
+    xBFaceRegions = FE.xgrid[BFaceRegions]
 
     # Dirichlet boundary
     fixed_bdofs = []
-    DirichletBoundaryRegions = findall(x->x == 1, PD.boundarytype4bregion)
-    if length(DirichletBoundaryRegions) > 0
+    HomDirichletBoundaryRegions = findall(x->x == HomogeneousDirichletBoundary, PD.boundarytype4bregion)
+    if length(HomDirichletBoundaryRegions) > 0
 
         # find Dirichlet dofs
-        xBFaces = FE.xgrid[BFaces]
-        nbfaces = length(xBFaces)
         xFaceDofs = FE.FaceDofs
         for bface = 1 : nbfaces
-            append!(fixed_bdofs,xFaceDofs[:,xBFaces[bface]])
+            for r = 1 : length(HomDirichletBoundaryRegions)
+                if xBFaceRegions[bface] == HomDirichletBoundaryRegions[r]
+                    append!(fixed_bdofs,xFaceDofs[:,xBFaces[bface]])
+                    break
+                end    
+            end    
+        end
+
+        if talkative == true
+            println("   Hom-DBnd = $HomDirichletBoundaryRegions")
+        end    
+        
+    end
+    BADirichletBoundaryRegions = findall(x->x == BestapproxDirichletBoundary, PD.boundarytype4bregion)
+    if length(BADirichletBoundaryRegions) > 0
+
+        # find Dirichlet dofs
+        xFaceDofs = FE.FaceDofs
+        for bface = 1 : nbfaces
+            for r = 1 : length(BADirichletBoundaryRegions)
+                if xBFaceRegions[bface] == BADirichletBoundaryRegions[r]
+                    append!(fixed_bdofs,xFaceDofs[:,xBFaces[bface]])
+                    break
+                end    
+            end    
         end
         fixed_bdofs = unique(fixed_bdofs)
 
         if talkative == true
-            println("  DbRegions = $DirichletBoundaryRegions (Db ndofs = $(length(fixed_bdofs)))")
+            println("    BA-DBnd = $BADirichletBoundaryRegions")
+            println("  DBnd ndof = $(length(fixed_bdofs))")
+                
         end    
         # rhs action for region-wise boundarydata best approximation
         function bnd_rhs_function(result,input,x,region)
@@ -70,16 +102,17 @@ function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; talk
         end    
         action = RegionWiseXFunctionAction(bnd_rhs_function,FE.xgrid[BFaceRegions],1,xdim)
         bonus_quadorder = maximum(PD.quadorder4bregion)
-        b = RightHandSide(FE, action, AbstractAssemblyTypeBFACE; regions = DirichletBoundaryRegions, bonus_quadorder = bonus_quadorder)[:]
+        b = RightHandSide(FE, action, AbstractAssemblyTypeBFACE; regions = BADirichletBoundaryRegions, bonus_quadorder = bonus_quadorder)[:]
 
         # compute mass matrix
         action = MultiplyScalarAction(1.0,1)
-        A = MassMatrix(FE, action, AbstractAssemblyTypeBFACE)
+        A = MassMatrix(FE, action, AbstractAssemblyTypeBFACE; regions = Array{Int64,1}([BADirichletBoundaryRegions; HomDirichletBoundaryRegions]))
    
 
         # solve best approximation problem on boundary and write into Solution
         Solution.coefficients[fixed_bdofs] = A[fixed_bdofs,fixed_bdofs]\b[fixed_bdofs]
     end    
+
 
     return fixed_bdofs
 end

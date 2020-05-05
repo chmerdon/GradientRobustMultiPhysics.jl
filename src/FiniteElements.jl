@@ -103,28 +103,12 @@ function Hdivreconstruction_available(FE::AbstractFiniteElement)
     return false
 end
 
-
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)
-    nd = get_ndofs(FE);
-    ET = FE.grid.elemtypes[1];
-	mdc = get_ndofs4elemtype(FE,ET);
-	mdf = get_ndofs4elemtype(FE,Grid.get_face_elemtype(ET));
-	po = get_polynomial_order(FE);
-
-	println("FiniteElement information");
-	println("         name : " * FE.name);
-	println("        ndofs : $(nd)")
-	println("    polyorder : $(po)");
-	println("  maxdofs c/f : $(mdc)/$(mdf)")
-end
-
-
-# show function for FiniteElement
-function show_new(FE::AbstractFiniteElement)
-	println("FiniteElement information")
-	println("         name : " * FE.name)
-	println("        ndofs : $(FE.ndofs)")
+	println("\nFiniteElement information")
+	println("=========================")
+	println("   name = " * FE.name)
+	println("  ndofs = $(FE.ndofs)")
 end
 
 function show_dofmap(FE::AbstractFiniteElement)
