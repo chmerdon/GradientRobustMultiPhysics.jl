@@ -1,6 +1,7 @@
 module FiniteElements
 
 using ExtendableGrids
+using ExtendableSparse
 using FEXGrid
 
 
@@ -63,7 +64,7 @@ function show(FE::AbstractFiniteElement)
 end
 
 
-include("FEFunction.jl");
-export FEFunction
+include("FEBlockArrays.jl");
+export FEVectorBlock, FEVector
 
 end #module

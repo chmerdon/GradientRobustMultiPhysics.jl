@@ -53,7 +53,7 @@ end
 function RightHandSide(FE,action,
     AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
     regions::Array{Int,1} = [0],
-    operator::Type{<:AbstractFEFunctionOperator} = Identity,
+    operator::Type{<:AbstractFEVectorOperator} = Identity,
     talkative::Bool = false,
     bonus_quadorder::Int = 0)
     b = zeros(Float64,FE.ndofs,1)
@@ -65,7 +65,7 @@ end
 function MassMatrix(FE,action,
     AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL;
     regions::Array{Int,1} = [0],
-    operator::Type{<:AbstractFEFunctionOperator} = Identity,
+    operator::Type{<:AbstractFEVectorOperator} = Identity,
     talkative::Bool = false,
     bonus_quadorder::Int = 0)
     ndofs = FE.ndofs
@@ -77,7 +77,7 @@ end
 # system matrix for Poisson problem
 function StiffnessMatrix(FE,action;
     regions::Array{Int,1} = [0],
-    operator::Type{<:AbstractFEFunctionOperator} = Gradient,
+    operator::Type{<:AbstractFEVectorOperator} = Gradient,
     talkative::Bool = false,
     bonus_quadorder::Int = 0)
     ndofs = FE.ndofs
@@ -87,9 +87,9 @@ function StiffnessMatrix(FE,action;
 end
 
 # boundary data treatment
-function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; FEblock::Int = 1, talkative::Bool = false)
-    FE = Solution.FETypes[FEblock]
-    xdim = size(Solution.FETypes[1].xgrid[Coordinates],1) 
+function boundarydata!(Solution::FEVectorBlock{<:Real}, PD::PoissonProblemDescription; talkative::Bool = false)
+    FE = Solution.FEType
+    xdim = size(FE.xgrid[Coordinates],1) 
     xBFaces = FE.xgrid[BFaces]
     nbfaces = length(xBFaces)
     xBFaceRegions = FE.xgrid[BFaceRegions]
@@ -142,7 +142,9 @@ function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; FEbl
         end    
         action = RegionWiseXFunctionAction(bnd_rhs_function,FE.xgrid[BFaceRegions],1,xdim)
         bonus_quadorder = maximum(PD.quadorder4bregion)
-        b = RightHandSide(FE, action, AbstractAssemblyTypeBFACE; regions = BADirichletBoundaryRegions, bonus_quadorder = bonus_quadorder)[:]
+        RHS_bnd = LinearForm(AbstractAssemblyTypeBFACE, FE, Identity, action; regions = BADirichletBoundaryRegions, bonus_quadorder = bonus_quadorder)
+        b = zeros(Float64,FE.ndofs,1)
+        assemble!(b, RHS_bnd)
 
         # compute mass matrix
         action = MultiplyScalarAction(1.0,1)
@@ -150,7 +152,7 @@ function boundarydata!(Solution::FEFunction, PD::PoissonProblemDescription; FEbl
    
 
         # solve best approximation problem on boundary and write into Solution
-        Solution.coefficients[fixed_bdofs] = A[fixed_bdofs,fixed_bdofs]\b[fixed_bdofs]
+        Solution[fixed_bdofs] = A[fixed_bdofs,fixed_bdofs]\b[fixed_bdofs,1]
     end    
 
 
@@ -159,18 +161,19 @@ end
 
 
 # solver for Poisson problems
-function solve!(Solution::FEFunction, PD::PoissonProblemDescription; FEblock::Int = 1, dirichlet_penalty::Float64 = 1e60, talkative::Bool = false)
+function solve!(Solution::FEVectorBlock{<:Real}, PD::PoissonProblemDescription; dirichlet_penalty::Float64 = 1e60, talkative::Bool = false)
 
-        FE = Solution.FETypes[FEblock]
+        FE = Solution.FEType
 
         if (talkative == true)
             println("\nSOLVING POISSON PROBLEM")
             println("=======================")
-            println("         FE = $(FE.name) (FEblock = $FEblock), ndofs = $(FE.ndofs)")
+            println("     target = $(Solution.name)")
+            println("         FE = $(FE.name) (ndofs = $(FE.ndofs)")
         end
 
         # boundarydata
-        fixed_bdofs = boundarydata!(Solution, PD; FEblock = FEblock, talkative = talkative)
+        fixed_bdofs = boundarydata!(Solution, PD; talkative = talkative)
     
         # compute stiffness matrix
         xdim = size(FE.xgrid[Coordinates],1) 
@@ -183,16 +186,18 @@ function solve!(Solution::FEFunction, PD::PoissonProblemDescription; FEblock::In
             result[1] = result[1]*input[1] 
         end    
         action = RegionWiseXFunctionAction(rhs_function, FE.xgrid[CellRegions],1,xdim)
-        b = RightHandSide(FE, action; talkative = talkative, bonus_quadorder = 2)[:]
-
+        bonus_quadorder = maximum(PD.quadorder4region)
+        RHS = LinearForm(AbstractAssemblyTypeCELL, FE, Identity, action; bonus_quadorder = bonus_quadorder)
+        b = zeros(Float64,FE.ndofs,1)
+        assemble!(b, RHS)
 
         for j = 1 : length(fixed_bdofs)
-            b[fixed_bdofs[j]] = dirichlet_penalty * Solution.coefficients[fixed_bdofs[j]]
+            b[fixed_bdofs[j],1] = dirichlet_penalty * Solution[fixed_bdofs[j]]
             A[fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
         end
 
         # solve
-        Solution[FEblock, :] = A\b
+        Solution[:] = A\b[:,1]
 end
 
 

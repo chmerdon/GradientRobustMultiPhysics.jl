@@ -118,7 +118,7 @@ function main()
     end
     x = A\b
 
-    Solution = FEFunction{Float64}("solution",FE,x[:])
+    Solution = FEVector{Float64}("solution",FE,x[:])
 
     # compute L2 error
     function L2error(result,input,x)

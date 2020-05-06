@@ -1,4 +1,4 @@
-mutable struct FEBasisEvaluator{T <: Real, FE <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFEFunctionOperator, AT <: AbstractAssemblyType}
+mutable struct FEBasisEvaluator{T <: Real, FE <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFEVectorOperator, AT <: AbstractAssemblyType}
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
@@ -18,7 +18,7 @@ function vector_hessian(f, x)
     return ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
 end
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; force_updateL2G = false) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFEFunctionOperator, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; force_updateL2G = false) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFEVectorOperator, AT <: AbstractAssemblyType}
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)

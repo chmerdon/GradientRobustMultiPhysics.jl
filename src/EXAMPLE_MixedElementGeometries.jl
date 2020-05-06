@@ -96,13 +96,14 @@ function main()
         FiniteElements.show(FE)
 
         # solve Poisson problem
-        Solution = FEFunction{Float64}("solution",FE)
+        Solution = FEVector{Float64}("solution",FE)
+        FiniteElements.show(Solution)
 
-        solve!(Solution,PD; talkative = talkative)
+        solve!(Solution[1],PD; talkative = talkative)
 
         # compute L2 and H1 error
-        append!(L2error,L2Error(Solution, exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
-        append!(H1error,L2Error(Solution, exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
+        append!(L2error,L2Error(Solution[1], exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
+        append!(H1error,L2Error(Solution[1], exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
        
         # plot final solution
         if (level == nlevels)
@@ -115,7 +116,7 @@ function main()
 
             # plot solution
             PyPlot.figure(2)
-            ExtendableGrids.plot(xgrid, Solution[1,:]; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, Solution[1][:]; Plotter = PyPlot)
         end    
     end    
 
