@@ -451,7 +451,7 @@ end
 
 
 function assemble!(
-    A::AbstractSparseMatrix,
+    A::AbstractArray{<:Real,2},
     form::Type{SymmetricBilinearForm},
     AT::Type{<:AbstractAssemblyType},
     operator::Type{<:AbstractFEVectorOperator},

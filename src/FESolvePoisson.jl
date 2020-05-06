@@ -75,14 +75,12 @@ function MassMatrix(FE,action,
 end
 
 # system matrix for Poisson problem
-function StiffnessMatrix(FE,action;
-    regions::Array{Int,1} = [0],
-    operator::Type{<:AbstractFEVectorOperator} = Gradient,
-    talkative::Bool = false,
-    bonus_quadorder::Int = 0)
+function SystemMatrix(FE::AbstractFiniteElement,PD::PoissonProblemDescription; talkative::Bool = false)
+    xdim = size(FE.xgrid[Coordinates],1) 
     ndofs = FE.ndofs
-    A = ExtendableSparseMatrix{Float64,Int32}(ndofs,ndofs)
-    FEOperator.assemble!(A, SymmetricBilinearForm, AbstractAssemblyTypeCELL, operator, FE, action; regions = regions, talkative = talkative, bonus_quadorder = bonus_quadorder)
+    action = MultiplyScalarAction(PD.diffusion,xdim)
+    A = FEMatrix{Float64}("StiffnessMatrix", FE)
+    FEOperator.assemble!(A[1], SymmetricBilinearForm, AbstractAssemblyTypeCELL, Gradient, FE, action; regions = [0], talkative = talkative)
     return A
 end
 
@@ -176,11 +174,10 @@ function solve!(Solution::FEVectorBlock{<:Real}, PD::PoissonProblemDescription; 
         fixed_bdofs = boundarydata!(Solution, PD; talkative = talkative)
     
         # compute stiffness matrix
-        xdim = size(FE.xgrid[Coordinates],1) 
-        diffusion_action = MultiplyScalarAction(PD.diffusion,xdim)
-        A = StiffnessMatrix(FE, diffusion_action; talkative = talkative)
+        A = SystemMatrix(FE, PD; talkative = talkative)
         
         # compute right hand side
+        xdim = size(FE.xgrid[Coordinates],1) 
         function rhs_function(result,input,x,region)
             PD.volumedata4region[region](result,x)
             result[1] = result[1]*input[1] 
@@ -193,11 +190,14 @@ function solve!(Solution::FEVectorBlock{<:Real}, PD::PoissonProblemDescription; 
 
         for j = 1 : length(fixed_bdofs)
             b[fixed_bdofs[j],1] = dirichlet_penalty * Solution[fixed_bdofs[j]]
-            A[fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
+            A[1][fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
         end
 
         # solve
-        Solution[:] = A\b[:,1]
+        # here would like to write
+        #Solution[:] = A[1]\b[:,1]
+        # bu that does not work at the moment, so we use
+        Solution[:] = A.entries\b[:,1]
 end
 
 

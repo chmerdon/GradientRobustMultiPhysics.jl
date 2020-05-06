@@ -65,6 +65,6 @@ end
 
 
 include("FEBlockArrays.jl");
-export FEVectorBlock, FEVector
+export FEVectorBlock, FEVector, FEMatrix
 
 end #module
