@@ -46,7 +46,7 @@ Base.length(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
 
 function Base.append!(FEF::FEVector{T},name::String,FEType::AbstractFiniteElement) where T <: Real
     append!(FEF.entries,zeros(T,FEType.ndofs))
-    newBlock = FEVectorBlock{T}(name, FEType, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FEType.ndofs, entries)
+    newBlock = FEVectorBlock{T}(name, FEType, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FEType.ndofs, FEF.entries)
     push!(FEF.FEVectorBlocks,newBlock)
 end
 

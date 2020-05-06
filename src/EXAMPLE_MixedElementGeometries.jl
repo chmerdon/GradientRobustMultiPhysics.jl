@@ -84,6 +84,8 @@ function main()
 
     L2error = []
     H1error = []
+    L2errorInterpolation = []
+    H1errorInterpolation = []
     for level = 1 : nlevels
 
         # uniform mesh refinement
@@ -98,12 +100,16 @@ function main()
         # solve Poisson problem
         Solution = FEVector{Float64}("solution",FE)
         FiniteElements.show(Solution)
+        append!(Solution, "interpolation", FE)
 
         solve!(Solution[1],PD; talkative = talkative)
+        interpolate!(Solution[2], exact_solution!)
 
         # compute L2 and H1 error
         append!(L2error,L2Error(Solution[1], exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
         append!(H1error,L2Error(Solution[1], exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
+        append!(L2errorInterpolation,L2Error(Solution[2], exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
+        append!(H1errorInterpolation,L2Error(Solution[2], exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
        
         # plot final solution
         if (level == nlevels)
@@ -123,9 +129,13 @@ function main()
 
     println("\nL2error")
     Base.show(L2error)
+    println("\nL2errorInterpolation")
+    Base.show(L2errorInterpolation)
 
     println("\nH1error")
     Base.show(H1error)
+    println("\nH1errorInterpolation")
+    Base.show(H1errorInterpolation)
 
 
 end

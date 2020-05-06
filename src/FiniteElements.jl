@@ -54,6 +54,7 @@ abstract type AbstractFiniteElement end
 
 export AbstractFiniteElement, AbstractH1FiniteElementWithCoefficients, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHcurlFiniteElement
 export get_ncomponents
+export interpolate!
 
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)
@@ -66,5 +67,10 @@ end
 
 include("FEBlockArrays.jl");
 export FEVectorBlock, FEVector, FEMatrix
+
+function interpolate!(Target::FEVectorBlock, exact_function!::Function)
+    interpolate!(Target, Target.FEType, exact_function!)
+end
+
 
 end #module
