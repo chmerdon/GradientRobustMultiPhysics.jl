@@ -122,7 +122,7 @@ end
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP,AT}, item::Int32) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP,AT}, item::Int) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
     FEBE.citem = item
     
     if FEBE.force_updateL2G
@@ -133,7 +133,7 @@ end
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS (no transformation needed, just multiply coefficients)
-function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int32) where {T <: Real, FE <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Real, FE <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
     FEBE.citem = item
 
     # only update if enforced by "user" (e.g. when a function is evaluated in operator)
@@ -150,7 +150,7 @@ end
 #
 # Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
 #       i.e. the surface derivative in general
-function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int32) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Gradient, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Gradient, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
 

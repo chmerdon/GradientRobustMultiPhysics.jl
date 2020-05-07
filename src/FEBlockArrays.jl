@@ -58,10 +58,10 @@ struct FEMatrixBlock{T} <: AbstractArray{T,2}
     name::String
     FETypeX::AbstractFiniteElement
     FETypeY::AbstractFiniteElement
-    offsetX::Int
-    offsetY::Int
-    last_indexX::Int
-    last_indexY::Int
+    offsetX::Int32
+    offsetY::Int32
+    last_indexX::Int32
+    last_indexY::Int32
     entries::AbstractMatrix # shares with parent object
 end
 

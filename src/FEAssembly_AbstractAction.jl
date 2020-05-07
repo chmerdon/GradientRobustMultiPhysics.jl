@@ -77,11 +77,11 @@ end
 # update! is called on each change of item 
 ###
 
-function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int32)
+function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int)
     # do nothing
 end
 
-function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int32)
+function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int)
     C.cregion = C.ItemRegions[item]
 
     # compute global coordinates for function evaluation
@@ -99,7 +99,7 @@ function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int
 
 end
 
-function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int32)
+function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int)
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
         FEXGrid.update!(FEBE.L2G, item)
@@ -115,7 +115,7 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int32)
 
 end
 
-function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, item::Int32)
+function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, item::Int)
     C.cregion = C.ItemRegions[item]
 end
 

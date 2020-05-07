@@ -17,7 +17,7 @@ end
 
 
 
-function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int32)
+function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int)
     if T.citem != item
         T.citem = item
         T.b[1] = T.Coords[1,T.Nodes[1,item]]
@@ -27,7 +27,7 @@ function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int32)
     end    
 end
 
-function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int32)
+function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int)
     if T.citem != item
         T.citem = item
         T.b[1] = T.Coords[1,T.Nodes[1,item]]
@@ -39,7 +39,7 @@ function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int32
     end    
 end
 
-function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::Int32)
+function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::Int)
     if T.citem != item
         T.citem = item
         T.b[1] = T.Coords[1,T.Nodes[1,item]]

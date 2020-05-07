@@ -295,7 +295,7 @@ function evaluate!(
     action_result = zeros(NumberType,action.resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
 
-    for item::Int32 = 1 : nitems
+    for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
@@ -383,7 +383,7 @@ function evaluate(
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
 
     result = 0.0
-    for item::Int32 = 1 : nitems
+    for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
@@ -469,7 +469,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action.resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
-    for item::Int32 = 1 : nitems
+    for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
@@ -532,7 +532,7 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE[1],AT)
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = num_sources(xItemNodes)
+    nitems = Int64(num_sources(xItemNodes))
     
     if regions == [0]
         try
@@ -547,22 +547,24 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
 
     # collect FE and FEBasisEvaluator information
     ncomponents = FiniteElements.get_ncomponents(typeof(FE[1]))
-    cvals_resultdim = size(basisevaler[1][1].cvals[1],1)
+    cvals_resultdim::Int = size(basisevaler[1][1].cvals[1],1)
+    action_resultdim::Int = action.resultdim
 
     # loop over items
     itemET = xItemGeometries[1] # type of the current item
     iEG = 1 # index to the correct unique geometry
-    ndofs4item = 0 # number of dofs for item
+    ndofs4item = ndofs4EG[1] # number of dofs for item
     evalnr = [0,0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
-    dofs2 = zeros(Int32,max_num_targets_per_source(xItemDofs))
-    temp = 0 # some temporary variable
+    dofs = zeros(Int,max_num_targets_per_source(xItemDofs))
+    dofs2 = zeros(Int,max_num_targets_per_source(xItemDofs))
+    temp::NumberType = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
-    action_result = zeros(NumberType,action.resultdim) # heap for action output
+    action_result = zeros(NumberType,action_resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
     cvali2::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
-    for item::Int32 = 1 : nitems
+    weights::Array{NumberType,1} = [] # pointer to quadrature weights
+    for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
@@ -586,7 +588,8 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
         dofs2[1:ndofs4item] = xItemDofs[:,dofitem]
 
-        for i in eachindex(qf[iEG].w)
+        weights = qf[iEG].w
+        for i in eachindex(weights)
             cvali = basisevaler[iEG][evalnr[1]].cvals[i]
             cvali2 = basisevaler[iEG][evalnr[2]].cvals[i]
            
@@ -599,10 +602,14 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
 
                 for dof_j = 1 : ndofs4item
                     temp = 0
-                    for k = 1 : action.resultdim
+                    for k = 1 : action_resultdim
                         temp += action_result[k]*cvali2[k,dof_j]
                     end
-                    A[dofs2[dof_j],dofs[dof_i]] += temp * qf[iEG].w[i] * xItemVolumes[item]
+                    temp *= weights[i]
+                    # next two lines are most expensive
+                    # can we improve them somehow?
+                    temp *= xItemVolumes[item]
+                    A[dofs2[dof_j],dofs[dof_i]] += temp
                 end
             end 
         end 

@@ -95,18 +95,20 @@ function SystemMatrix(FE::AbstractFiniteElement,PD::PoissonProblemDescription; v
     # CONVECTION #
     ##############
     if PD.convection != Nothing
-        function convection_function(result,input,x) # dot(convection!, input=Gradient)
-            convection_vector = deepcopy(input)
-            PD.convection(convection_vector,x)
-            result[1] = 0.0
-            for j = 1 : length(input)
-                result[1] += convection_vector[j]*input[j]
-            end
+        function convection_function() # dot(convection!, input=Gradient)
+            convection_vector = zeros(Float64,xdim)
+            function closure(result, input, x)
+                PD.convection(convection_vector,x)
+                result[1] = 0.0
+                for j = 1 : length(input)
+                    result[1] += convection_vector[j]*input[j]
+                end
+            end    
         end    
-        convection_action = XFunctionAction(convection_function, 1, xdim)
+        convection_action = XFunctionAction(convection_function(), 1, xdim)
         ConvectionForm = BilinearForm(AbstractAssemblyTypeCELL, FE, FE, Gradient, Identity, convection_action; bonus_quadorder = PD.quadorder4convection)    
         if verbosity > 0
-            println("      convection = $(typeof(action))")
+            println("      convection = $(typeof(convection_action))")
             @time assemble!(A[1], ConvectionForm; verbosity = verbosity - 1)
         else 
             assemble!(A[1], ConvectionForm; verbosity = verbosity - 1)
@@ -263,7 +265,12 @@ function solve!(Solution::FEVectorBlock{<:Real}, PD::PoissonProblemDescription; 
         # here would like to write
         #Solution[:] = A[1]\b[:,1]
         # bu that does not work at the moment, so we use
-        Solution[:] = A.entries\b[:,1]
+        if verbosity > 0
+            println("\n  Solving...")
+            @time Solution[:] = A.entries\b[:,1]
+        else
+            Solution[:] = A.entries\b[:,1]
+        end    
 end
 
 

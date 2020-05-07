@@ -191,7 +191,7 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
     result = zeros(NumberType, resultdim)
     itemET = xItemGeometries[1]
     iEG = 1
-    for item::Int32 = 1 : nitems
+    for item = 1 : nitems
         # find index for CellType
         itemET = xItemGeometries[item]
         iEG = findfirst(isequal(itemET), EG)
