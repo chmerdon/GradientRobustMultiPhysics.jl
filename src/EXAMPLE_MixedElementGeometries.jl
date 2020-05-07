@@ -30,7 +30,7 @@ function gridgen_mixedEG()
     xgrid[CellGeometries] = xCellGeometries
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,1,1,1,1,2,2])
+    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,1,1,3,3])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
@@ -47,8 +47,8 @@ function main()
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
     nlevels = 5 # number of refinement levels
-    FEorder = 2 # optimal convergence order of finite element
-    verbosity = 2 # deepness of messaging (the larger, the more)
+    FEorder = 1 # optimal convergence order of finite element
+    verbosity = 3 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data
     diffusion = 1.0
@@ -58,6 +58,9 @@ function main()
     function bnd_data_left!(result,x)
         result[1] = 0.0
     end    
+    function bnd_data_right!(result,x)
+        result[1] = 1.0
+    end    
     function bnd_data_rest!(result,x)
         result[1] = x[1]
     end    
@@ -65,19 +68,28 @@ function main()
         result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1.0
         result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
     end    
-    function exact_solution_laplacian!(result,x)
+    function exact_solution_rhs!(result,x)
+        # diffusion part
         result[1] = -diffusion*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
+        # convection part
+        result[1] += x[2]*(2*x[1]-1)*(x[2]-1) + 1.0
     end    
+    function convection!(result,x)
+        result[1] = 1.0
+        result[2] = 0.0
+    end
 
     # fill problem description 
     PD = PoissonProblemDescription()
     PD.name = "Test problem"
     PD.diffusion = diffusion
     PD.quadorder4diffusion = 0
-    PD.volumedata4region = [exact_solution_laplacian!]
+    PD.convection = convection!
+    PD.quadorder4convection = 0
+    PD.volumedata4region = [exact_solution_rhs!]
     PD.quadorder4region = [2]
-    PD.boundarytype4bregion = [BestapproxDirichletBoundary, HomogeneousDirichletBoundary]
-    PD.boundarydata4bregion = [bnd_data_rest!, bnd_data_left!]
+    PD.boundarytype4bregion = [BestapproxDirichletBoundary, InterpolateDirichletBoundary, HomogeneousDirichletBoundary]
+    PD.boundarydata4bregion = [bnd_data_rest!, bnd_data_right!, bnd_data_left!]
     PD.quadorder4bregion = [1,0]
     if verbosity > 0
         FESolvePoisson.show(PD)

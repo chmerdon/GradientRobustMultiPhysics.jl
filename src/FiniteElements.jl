@@ -68,14 +68,14 @@ end
 include("FEBlockArrays.jl");
 export FEVectorBlock, FEVector, FEMatrix
 
-function interpolate!(Target::FEVectorBlock, exact_function!::Function; verbosity::Int = 0)
+function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [], verbosity::Int = 0)
     if verbosity > 0
         println("\nINTERPOLATING")
         println("=============")
         println("     target = $(Target.name)")
         println("         FE = $(Target.FEType.name) (ndofs = $(Target.FEType.ndofs))")
     end
-    interpolate!(Target, Target.FEType, exact_function!)
+    interpolate!(Target, Target.FEType, exact_function!; dofs = dofs)
 end
 
 

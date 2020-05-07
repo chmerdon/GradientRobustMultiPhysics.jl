@@ -165,11 +165,15 @@ function prepareOperatorAssembly(
     quadorder = 0
     for j = 1 : length(EG)
         basisevaler[j] = Array{FEBasisEvaluator,1}(undef,length(FE))
+        quadorder = 0
+        # choose quadrature order for all finite elements
+        for k = 1 : length(FE)
+            quadorder = max(quadorder,bonus_quadorder + nrfactors*(FiniteElements.get_polynomialorder(typeof(FE[k]), EG[j]) + QuadratureOrderShift4Operator(typeof(FE[k]),operator[k])))
+        end
         for k = 1 : length(FE)
             if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
                 basisevaler[j][k] = basisevaler[j][1] # e.g. for symmetric bilinerforms
             else    
-                quadorder = bonus_quadorder + nrfactors*(FiniteElements.get_polynomialorder(typeof(FE[k]), EG[j]) + QuadratureOrderShift4Operator(typeof(FE[k]),operator[k]))
                 qf[j] = QuadratureRule{NumberType,EG[j]}(quadorder);
                 basisevaler[j][k] = FEBasisEvaluator{NumberType,typeof(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
             end    
@@ -178,7 +182,7 @@ function prepareOperatorAssembly(
     if verbosity > 0
         println("\nASSEMBLY PREPARATION $(typeof(form))")
         println("====================================")
-        for k = 1 length(FE)
+        for k = 1 : length(FE)
             println("      FE[$k] = $(FE[k].name), ndofs = $(FE[k].ndofs)")
             println("operator[$k] = $(operator[k])")
         end    
@@ -191,7 +195,7 @@ function prepareOperatorAssembly(
     end
     dofitem4item(item) = item
     EG4item(item) = xItemGeometries[item]
-    FEevaler4item(item) = 1
+    FEevaler4item(item) = 1:length(FE)
     return EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, FEevaler4item
 end
 
@@ -394,16 +398,16 @@ function evaluate(
 
         # update FEbasisevaler
         evalnr = evaler4item(item)
-        update!(basisevaler[iEG][evalnr],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr], item)
+        update!(action, basisevaler[iEG][evalnr[1]], item)
 
         # update dofs
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
 
         for i in eachindex(qf[iEG].w)
-            cvali = basisevaler[iEG][evalnr].cvals[i]
+            cvali = basisevaler[iEG][evalnr[1]].cvals[i]
             # apply action to FEVector
             fill!(action_input,0)
             for dof_i = 1 : ndofs4item
@@ -458,7 +462,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
     itemET = xItemGeometries[1] # type of the current item
     iEG = 1 # index to the correct unique geometry
     ndofs4item = 0 # number of dofs for item
-    evalnr = 0 # evaler number that has to be used for current item
+    evalnr = [0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
     dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
     temp = 0 # some temporary variable
@@ -480,16 +484,16 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
 
         # update FEbasisevaler
         evalnr = evaler4item(item)
-        update!(basisevaler[iEG][evalnr],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr], item)
+        update!(action, basisevaler[iEG][evalnr[1]], item)
 
         # update dofs
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
 
         for i in eachindex(qf[iEG].w)
-            cvali = basisevaler[iEG][evalnr].cvals[i]
+            cvali = basisevaler[iEG][evalnr[1]].cvals[i]
 
             for dof_i = 1 : ndofs4item
                 # apply action
@@ -549,13 +553,15 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
     itemET = xItemGeometries[1] # type of the current item
     iEG = 1 # index to the correct unique geometry
     ndofs4item = 0 # number of dofs for item
-    evalnr = 0 # evaler number that has to be used for current item
+    evalnr = [0,0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
     dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
+    dofs2 = zeros(Int32,max_num_targets_per_source(xItemDofs))
     temp = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action.resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
+    cvali2::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
     for item::Int32 = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
@@ -570,16 +576,19 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
 
         # update FEbasisevaler
         evalnr = evaler4item(item)
-        update!(basisevaler[iEG][evalnr],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[2]],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr], item)
+        update!(action, basisevaler[iEG][evalnr[1]], item)
 
         # update dofs
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
+        dofs2[1:ndofs4item] = xItemDofs[:,dofitem]
 
         for i in eachindex(qf[iEG].w)
-            cvali = basisevaler[iEG][evalnr].cvals[i]
+            cvali = basisevaler[iEG][evalnr[1]].cvals[i]
+            cvali2 = basisevaler[iEG][evalnr[2]].cvals[i]
            
             for dof_i = 1 : ndofs4item
                 # apply action to first argument
@@ -591,9 +600,9 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
                 for dof_j = 1 : ndofs4item
                     temp = 0
                     for k = 1 : action.resultdim
-                        temp += action_result[k]*cvali[k,dof_j]
+                        temp += action_result[k]*cvali2[k,dof_j]
                     end
-                    A[dofs[dof_i],dofs[dof_j]] += temp * qf[iEG].w[i] * xItemVolumes[item]
+                    A[dofs2[dof_j],dofs[dof_i]] += temp * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
         end 

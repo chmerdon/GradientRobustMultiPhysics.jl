@@ -75,18 +75,28 @@ get_polynomialorder(::Type{<:FEH1P1}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:FEH1P1}, ::Type{<:Quadrilateral2D}) = 2;
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1{1}, exact_function!::Function)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1{1}, exact_function!::Function; dofs = [])
     xCoords = FE.xgrid[Coordinates]
     result = zeros(Float64,1)
     xdim = size(xCoords,1)
     x = zeros(Float64,xdim)
-    for j = 1 : num_sources(xCoords)
-        for k=1:xdim
-            x[k] = xCoords[k,j]
+    if length(dofs) == 0 # interpolate at all dofs
+        for j = 1 : num_sources(xCoords)
+            for k=1:xdim
+                x[k] = xCoords[k,j]
+            end    
+            exact_function!(result,x)
+            Target[j] = result[1]
+        end
+    else
+        for j in dofs
+            for k=1:xdim
+                x[k] = xCoords[k,j]
+            end    
+            exact_function!(result,x)
+            Target[j] = result[1]
         end    
-        exact_function!(result,x)
-        Target[j] = result[1]
-    end
+    end    
 end
 
 function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Edge1D})

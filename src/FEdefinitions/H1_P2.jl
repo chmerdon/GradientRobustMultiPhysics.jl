@@ -119,7 +119,7 @@ get_polynomialorder(::Type{<:FEH1P2}, ::Type{<:Triangle2D}) = 2;
 get_polynomialorder(::Type{<:FEH1P2}, ::Type{<:Quadrilateral2D}) = 3;
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P2{1}, exact_function!::Function)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P2{1}, exact_function!::Function; dofs = [])
     xCoords = FE.xgrid[Coordinates]
     xFaceNodes = FE.xgrid[FaceNodes]
 
