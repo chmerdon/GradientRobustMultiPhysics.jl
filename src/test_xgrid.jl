@@ -3,7 +3,7 @@ using FEXGrid
 using ExtendableGrids
 using ExtendableSparse
 using FiniteElements
-using FEOperator
+using FEAssembly
 using QuadratureRules
 using VTKView
 #ENV["MPLBACKEND"]="qt5agg"

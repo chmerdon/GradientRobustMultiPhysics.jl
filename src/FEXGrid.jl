@@ -2,13 +2,18 @@ module FEXGrid
 
 using ExtendableGrids
 
-export FaceNodes, FaceGeometries, CellFaces, CellSigns, CellVolumes, FaceVolumes, FaceRegions, FaceCells, FaceNormals, BFaces, BFaceCellPos
+export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
+export CellFaces, CellSigns, CellVolumes
+export BFaces, BFaceCellPos, BFaceVolumes
 export nfaces_per_cell, facetype_of_cellface
 
 include("FEXGrid_AssemblyJunctions.jl");
-export AbstractAssemblyType, AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELL
-export xrefFACE2xrefCELL
-export GridComponentNodes4AssemblyType, GridComponentTypes4AssemblyType, GridComponentVolumes4AssemblyType, GridComponentRegions4AssemblyType
+export AbstractAssemblyType
+export AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELL
+export GridComponentNodes4AssemblyType
+export GridComponentVolumes4AssemblyType
+export GridComponentGeometries4AssemblyType
+export GridComponentRegions4AssemblyType
 
 include("FEXGrid_L2GTransformer.jl");
 export L2GTransformer, update!, eval!, mapderiv!

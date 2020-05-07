@@ -15,10 +15,10 @@ GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceVolume
 GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceVolumes
 GridComponentVolumes4AssemblyType(::Type{AbstractAssemblyTypeBFACECELL}) = BFaceVolumes
 
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellGeometries
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceGeometries
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceGeometries
-GridComponentTypes4AssemblyType(::Type{AbstractAssemblyTypeBFACECELL}) = BFaceGeometries
+GridComponentGeometries4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellGeometries
+GridComponentGeometries4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceGeometries
+GridComponentGeometries4AssemblyType(::Type{AbstractAssemblyTypeBFACE}) = BFaceGeometries
+GridComponentGeometries4AssemblyType(::Type{AbstractAssemblyTypeBFACECELL}) = BFaceGeometries
 
 GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeCELL}) = CellRegions
 GridComponentRegions4AssemblyType(::Type{AbstractAssemblyTypeFACE}) = FaceRegions

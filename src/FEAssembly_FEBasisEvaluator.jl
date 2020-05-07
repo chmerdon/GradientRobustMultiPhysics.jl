@@ -1,4 +1,46 @@
-mutable struct FEBasisEvaluator{T <: Real, FE <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFEVectorOperator, AT <: AbstractAssemblyType}
+
+abstract type AbstractFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
+abstract type Identity <: AbstractFunctionOperator end # 1*v_h
+abstract type Gradient <: AbstractFunctionOperator end # D_geom(v_h)
+abstract type SymmetricGradient <: AbstractFunctionOperator end # eps_geom(v_h)
+abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
+abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
+abstract type Curl <: AbstractFunctionOperator end # only 2D: Curl(v_h) = D(v_h)^\perp
+abstract type Rotation <: AbstractFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
+abstract type Divergence <: AbstractFunctionOperator end # div(v_h)
+abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
+abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
+
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl}) = 1
+NeededDerivative4Operator(::Type{<:AbstractHcurlFiniteElement},::Type{Curl}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Rotation}) = 1
+NeededDerivative4Operator(::Type{<:AbstractHcurlFiniteElement},::Type{Rotation}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = 1
+NeededDerivative4Operator(::Type{<:AbstractHdivFiniteElement},::Type{Divergence}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
+
+Length4Operator(::Type{Identity}, xdim::Int) = 1
+Length4Operator(::Type{Divergence}, xdim::Int) = 1
+Length4Operator(::Type{Trace}, xdim::Int) = 1
+Length4Operator(::Type{Curl}, xdim::Int) = (xdim == 2) ? 1 : xdim
+Length4Operator(::Type{Gradient}, xdim::Int) = xdim
+Length4Operator(::Type{SymmetricGradient}, xdim::Int) = (xdim == 2) ? 3 : 6
+Length4Operator(::Type{Hessian}, xdim::Int) = xdim*xdim
+
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
+
+
+mutable struct FEBasisEvaluator{T <: Real, FE <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
@@ -18,7 +60,7 @@ function vector_hessian(f, x)
     return ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
 end
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; force_updateL2G = false) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFEVectorOperator, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; force_updateL2G = false) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
@@ -109,25 +151,27 @@ end
 # Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
 #       i.e. the surface derivative in general
 function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int32) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Gradient, AT <:AbstractAssemblyType}
-    FEBE.citem = item
+    if FEBE.citem != item
+        FEBE.citem = item
 
-    # update L2G (we need the matrix)
-    FEXGrid.update!(FEBE.L2G, item)
+        # update L2G (we need the matrix)
+        FEXGrid.update!(FEBE.L2G, item)
 
-    for i = 1 : length(FEBE.cvals)
-        if FEBE.L2G.nonlinear || i == 1
-            mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-        end
-        for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-            for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
-                FEBE.cvals[i][k + FEBE.offsets[c],dof_i] = 0.0;
-                for j = 1 : FEBE.offsets[2] # xdim
-                    # compute duc/dxk
-                    FEBE.cvals[i][k + FEBE.offsets[c],dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[c],j]
+        for i = 1 : length(FEBE.cvals)
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
+                    FEBE.cvals[i][k + FEBE.offsets[c],dof_i] = 0.0;
+                    for j = 1 : FEBE.offsets[2] # xdim
+                        # compute duc/dxk
+                        FEBE.cvals[i][k + FEBE.offsets[c],dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[c],j]
+                    end    
+                    #cvals[i][dof_i,k + FEBE.offsets[c]] *= FEBC.coefficients[dof_i,c]
                 end    
-                #cvals[i][dof_i,k + FEBE.offsets[c]] *= FEBC.coefficients[dof_i,c]
             end    
-        end    
-    end  
+        end  
+    end    
 end
 

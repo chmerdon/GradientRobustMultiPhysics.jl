@@ -159,12 +159,12 @@ end
 # integrates and writes item-wise integrals into integral4cells
 # AT can be AbstractAssemblyTypeCELL or AbstractAssemblyTypeFACE to integrate over cells/faces
 # integrand has to have the form function integrand!(result,x)
-function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; talkative::Bool = false)
+function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; verbosity::Int = 0)
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = grid[GridComponentTypes4AssemblyType(AT)]
+    xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
     # find proper quadrature rules

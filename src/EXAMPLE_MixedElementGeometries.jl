@@ -3,7 +3,7 @@ using FEXGrid
 using ExtendableGrids
 using ExtendableSparse
 using FiniteElements
-using FEOperator
+using FEAssembly
 using FESolvePoisson
 using QuadratureRules
 #using VTKView
@@ -47,11 +47,11 @@ function main()
     # initial grid
     xgrid = gridgen_mixedEG()
     #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 5 # nrefinement levels
+    nlevels = 5 # number of refinement levels
+    verbosity = 2 # deepness of messaging (the larger, the more)
+
+    # define expected solution, boundary data and volume data
     diffusion = 1.0
-    talkative = true
-
-
     function exact_solution!(result,x)
         result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
     end    
@@ -69,7 +69,7 @@ function main()
         result[1] = -diffusion*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
     end    
 
-    # problem description 
+    # fill problem description 
     PD = PoissonProblemDescription()
     PD.name = "Test problem"
     PD.diffusion = diffusion
@@ -79,13 +79,19 @@ function main()
     PD.boundarytype4bregion = [BestapproxDirichletBoundary, HomogeneousDirichletBoundary]
     PD.boundarydata4bregion = [bnd_data_rest!, bnd_data_left!]
     PD.quadorder4bregion = [1,0]
+    if verbosity > 0
+        FESolvePoisson.show(PD)
+    end    
 
-    FESolvePoisson.show(PD)
-
+    # define ItemIntegrators for L2/H1 error computation
+    L2ErrorEvaluator = L2ErrorIntegrator(exact_solution!, Identity, 2; bonus_quadorder = 4)
+    H1ErrorEvaluator = L2ErrorIntegrator(exact_solution_gradient!, Gradient, 2; bonus_quadorder = 3)
     L2error = []
     H1error = []
     L2errorInterpolation = []
     H1errorInterpolation = []
+
+    # loop over levels
     for level = 1 : nlevels
 
         # uniform mesh refinement
@@ -95,22 +101,26 @@ function main()
 
         # generate FE
         FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
-        FiniteElements.show(FE)
+        if verbosity > 2
+            FiniteElements.show(FE)
+        end    
 
         # solve Poisson problem
         Solution = FEVector{Float64}("solution",FE)
-        FiniteElements.show(Solution)
+        if verbosity > 2
+            FiniteElements.show(Solution)
+        end    
         append!(Solution, "interpolation", FE)
 
-        solve!(Solution[1],PD; talkative = talkative)
-        interpolate!(Solution[2], exact_solution!)
+        solve!(Solution[1],PD; verbosity = verbosity - 1)
+        interpolate!(Solution[2], exact_solution!; verbosity = verbosity - 1)
 
         # compute L2 and H1 error
-        append!(L2error,L2Error(Solution[1], exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
-        append!(H1error,L2Error(Solution[1], exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
-        append!(L2errorInterpolation,L2Error(Solution[2], exact_solution!, Identity; talkative = talkative, bonus_quadorder = 4))
-        append!(H1errorInterpolation,L2Error(Solution[2], exact_solution_gradient!, Gradient; talkative = talkative, bonus_quadorder = 4))
-       
+        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
+        append!(L2errorInterpolation,sqrt(evaluate(L2ErrorEvaluator,Solution[2])))
+        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+        append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Solution[2])))
+        
         # plot final solution
         if (level == nlevels)
             # split grid into triangles for plotter
@@ -122,7 +132,7 @@ function main()
 
             # plot solution
             PyPlot.figure(2)
-            ExtendableGrids.plot(xgrid, Solution[1][:]; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, Solution[2][:]; Plotter = PyPlot)
         end    
     end    
 
