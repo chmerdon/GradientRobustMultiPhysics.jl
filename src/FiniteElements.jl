@@ -36,7 +36,7 @@ abstract type AbstractFiniteElement end
     #include("FEdefinitions/H1_MINI.jl");
     #include("FEdefinitions/H1_CR.jl");
     # second order
-    #include("FEdefinitions/H1_P2.jl");
+    include("FEdefinitions/H1_P2.jl");
     #include("FEdefinitions/H1_P2B.jl");
 
     abstract type AbstractH1FiniteElementWithCoefficients <: AbstractH1FiniteElement end
@@ -53,7 +53,7 @@ abstract type AbstractFiniteElement end
     # TODO
 
 export AbstractFiniteElement, AbstractH1FiniteElementWithCoefficients, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHcurlFiniteElement
-export get_ncomponents
+export get_ncomponents, getH1P1FiniteElement, getH1P2FiniteElement
 export interpolate!
 
 # show function for FiniteElement

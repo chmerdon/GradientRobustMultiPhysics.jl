@@ -400,7 +400,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
             end    
         end    
     end
-
     xgrid[FaceGeometries] = xFaceGeometries
     xgrid[CellFaces] = xCellFaces
     xgrid[CellSigns] = xCellSigns
@@ -409,12 +408,14 @@ end
 
 # CellFaces = faces for each cell
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
-    ExtandableGrids.instantiate(xgrid, FaceNodes)
+    ExtendableGrids.instantiate(xgrid, FaceNodes)
+    xgrid[CellFaces]
 end
 
 # CellSigns = orientation signs for each face on each cell
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
-    ExtandableGrids.instantiate(xgrid, FaceNodes)
+    ExtendableGrids.instantiate(xgrid, FaceNodes)
+    xgrid[CellSigns]
 end
 
 

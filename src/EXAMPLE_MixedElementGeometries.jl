@@ -45,9 +45,9 @@ function main()
 
 
     # initial grid
-    xgrid = gridgen_mixedEG()
-    #xgrid = split_grid_into(xgrid,Triangle2D)
+    xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
     nlevels = 5 # number of refinement levels
+    FEorder = 2 # optimal convergence order of finite element
     verbosity = 2 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data
@@ -100,7 +100,11 @@ function main()
         end
 
         # generate FE
-        FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
+        if FEorder == 1
+            FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
+        elseif FEorder == 2
+            FE = FiniteElements.getH1P2FiniteElement(xgrid,1)
+        end        
         if verbosity > 2
             FiniteElements.show(FE)
         end    
@@ -123,6 +127,16 @@ function main()
         
         # plot final solution
         if (level == nlevels)
+            println("\nL2error")
+            Base.show(L2error)
+            println("\nL2errorInterpolation")
+            Base.show(L2errorInterpolation)
+        
+            println("\nH1error")
+            Base.show(H1error)
+            println("\nH1errorInterpolation")
+            Base.show(H1errorInterpolation)
+
             # split grid into triangles for plotter
             xgrid = split_grid_into(xgrid,Triangle2D)
 
@@ -132,20 +146,10 @@ function main()
 
             # plot solution
             PyPlot.figure(2)
-            ExtendableGrids.plot(xgrid, Solution[2][:]; Plotter = PyPlot)
+            nnodes = size(xgrid[Coordinates],2)
+            ExtendableGrids.plot(xgrid, Solution[2][1:nnodes]; Plotter = PyPlot)
         end    
     end    
-
-
-    println("\nL2error")
-    Base.show(L2error)
-    println("\nL2errorInterpolation")
-    Base.show(L2errorInterpolation)
-
-    println("\nH1error")
-    Base.show(H1error)
-    println("\nH1errorInterpolation")
-    Base.show(H1errorInterpolation)
 
 
 end
