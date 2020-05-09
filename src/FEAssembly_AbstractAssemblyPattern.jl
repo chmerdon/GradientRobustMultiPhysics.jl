@@ -258,7 +258,7 @@ function evaluate!(
     NumberType = eltype(b)
     FE = FEB.FEType
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
@@ -346,7 +346,7 @@ function evaluate(
     NumberType = Float64
     FE = FEB.FEType
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
@@ -436,7 +436,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
 
     NumberType = eltype(b)
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
@@ -528,7 +528,7 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
     # collect grid information
     NumberType = eltype(A)
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = FEPropertyDofs4AssemblyType(FE[1],AT)
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
