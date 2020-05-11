@@ -16,7 +16,7 @@ include("FEAssembly_FEBasisEvaluator.jl")
 export FEBasisEvaluator, update!
 
 include("FEAssembly_AbstractAction.jl")
-export DoNothingAction
+export DoNotChangeAction
 export MultiplyScalarAction
 export MultiplyVectorAction
 export MultiplyMatrixAction

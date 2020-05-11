@@ -78,7 +78,11 @@ function SystemMatrix(FE::AbstractFiniteElement,PD::PoissonProblemDescription; v
     xdim = size(FE.xgrid[Coordinates],1) 
     ndofs = FE.ndofs
     if typeof(PD.diffusion) <: Real 
-        action = MultiplyScalarAction(PD.diffusion,xdim)
+        if PD.diffusion == 1
+            action = DoNotChangeAction(xdim)
+        else
+            action = MultiplyScalarAction(PD.diffusion,xdim)
+        end    
     else
         # TODO
     end

@@ -1,4 +1,7 @@
 abstract type AbstractAction end
+struct DoNotChangeAction <: AbstractAction
+    resultdim::Int
+end
 
 struct MultiplyScalarAction{T <: Real} <: AbstractAction
     value::Real
@@ -122,6 +125,13 @@ end
 ###
 # apply_action! is called for each dof and i-th quadrature point
 ###
+
+
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::DoNotChangeAction, i::Int = 0)
+    for j = 1:length(result)
+        result[j] = input[j];    
+    end    
+end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyScalarAction, i::Int = 0)
     for j = 1:length(result)
