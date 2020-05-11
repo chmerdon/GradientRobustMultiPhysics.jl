@@ -89,12 +89,15 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1{1}, exact_func
             Target[j] = result[1]
         end
     else
-        for j in dofs
+        item = 0
+        for j in dofs 
+            item = mod(j,nnodes)
+            c = ceil(j/nnodes)
             for k=1:xdim
-                x[k] = xCoords[k,j]
+                x[k] = xCoords[k,item]
             end    
             exact_function!(result,x)
-            Target[j] = result[1]
+            Target[j] = result[c]
         end    
     end    
 end

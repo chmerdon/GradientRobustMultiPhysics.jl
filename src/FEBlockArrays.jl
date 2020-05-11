@@ -92,6 +92,31 @@ function FEMatrix{T}(name::String, FETypeX::AbstractFiniteElement, FETypeY::Abst
     return FEMatrix{T}([Block], entries)
 end
 
+function FEMatrix{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) where T <: Real
+    ndofs = 0
+    for j=1:length(FETypes)
+        ndofs += FETypes[j].ndofs
+    end
+    entries = ExtendableSparseMatrix{T,Int32}(ndofs,ndofs)
+
+    Blocks = Array{FEMatrixBlock{T},1}(undef,length(FETypes)^2)
+    offsetX = 0
+    offsetY = 0
+    for j=1:length(FETypes)
+        offsetY = 0
+        for k=1:length(FETypes)
+            println("blcok $j/$k offsets = $offsetX/$offsetY")
+            Blocks[(j-1)*length(FETypes)+k] = FEMatrixBlock{T}(name * " [$j,$k]", FETypes[j], FETypes[k], offsetX , offsetY, offsetX+FETypes[j].ndofs, offsetY+FETypes[k].ndofs, entries)
+            offsetY += FETypes[k].ndofs
+        end    
+        offsetX += FETypes[j].ndofs
+    end    
+    
+    return FEMatrix{T}(Blocks, entries)
+end
+
+
+
 
 
 Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]

@@ -26,6 +26,7 @@ function getH1P2FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
     nfaces = num_sources(xFaceNodes)
     nbfaces = num_sources(xBFaceNodes)
     nnodes = num_sources(xgrid[Coordinates])
+    ndofs4component = nnodes + nfaces
 
     # generate dofmaps
     xCellDofs = VariableTargetAdjacency(Int32)
@@ -54,9 +55,10 @@ function getH1P2FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
             # TODO
         end
         ndofs4item = nnodes4item + nextra4item
-        for n = 2 : ncomponents-1, k = 1:ndofs4item
-            dofs4item[k+n*ndofs4item] = n*ndofs4item + dofs4item[k]
+        for n = 1 : ncomponents-1, k = 1:ndofs4item
+            dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
         end    
+        ndofs4item *= ncomponents
         append!(xCellDofs,dofs4item[1:ndofs4item])
     end
     for face = 1 : nfaces
@@ -73,9 +75,10 @@ function getH1P2FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
             # TODO
         end
         ndofs4item = nnodes4item + nextra4item
-        for n = 2 : ncomponents-1, k = 1:ndofs4item
-            dofs4item[k+n*ndofs4item] = n*ndofs4item + dofs4item[k]
+        for n = 1 : ncomponents-1, k = 1:ndofs4item
+            dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
         end    
+        ndofs4item *= ncomponents
         append!(xFaceDofs,dofs4item[1:ndofs4item])
     end
     for bface = 1: nbfaces
@@ -92,9 +95,10 @@ function getH1P2FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
             # TODO
         end
         ndofs4item = nnodes4item + nextra4item
-        for n = 2 : ncomponents-1, k = 1:ndofs4item
-            dofs4item[k+n*ndofs4item] = n*ndofs4item + dofs4item[k]
+        for n = 1 : ncomponents-1, k = 1:ndofs4item
+            dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
         end    
+        ndofs4item *= ncomponents
         append!(xBFaceDofs,dofs4item[1:ndofs4item])
     end
 
@@ -119,39 +123,72 @@ get_polynomialorder(::Type{<:FEH1P2}, ::Type{<:Triangle2D}) = 2;
 get_polynomialorder(::Type{<:FEH1P2}, ::Type{<:Quadrilateral2D}) = 3;
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P2{1}, exact_function!::Function; dofs = [])
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P2, exact_function!::Function; dofs = [])
     xCoords = FE.xgrid[Coordinates]
     xFaceNodes = FE.xgrid[FaceNodes]
+    nnodes = num_sources(xCoords)
+    nfaces = num_sources(xFaceNodes)
+    ncomponents = get_ncomponents(typeof(FE))
 
-    result = zeros(Float64,1)
+    result = zeros(Float64,ncomponents)
     xdim = size(xCoords,1)
     x = zeros(Float64,xdim)
 
-    # interpolate at nodes
-    nnodes = num_sources(xCoords)
-    for j = 1 : nnodes
-        for k=1:xdim
-            x[k] = xCoords[k,j]
-        end    
-        exact_function!(result,x)
-        Target[j] = result[1]
-    end
-
-    # interpolate at face midpoints
     nnodes4item = 0
-    for face = 1 : num_sources(xFaceNodes)
-        nnodes4item = num_targets(xFaceNodes,face)
-        for k=1:xdim
-            x[k] = 0
-            for n=1:nnodes4item
-                x[k] += xCoords[k,xFaceNodes[n,face]]
+    offset4component = [0, nnodes+nfaces]
+    face = 0
+    if length(dofs) == 0 # interpolate at all dofs
+        # interpolate at nodes
+        for j = 1 : nnodes
+            for k=1:xdim
+                x[k] = xCoords[k,j]
+            end    
+            exact_function!(result,x)
+            for k = 1 : ncomponents
+                Target[j+offset4component[k]] = result[k]
+            end    
+        end
+        # interpolate at face midpoints
+        for face = 1 : nfaces
+            nnodes4item = num_targets(xFaceNodes,face)
+            for k=1:xdim
+                x[k] = 0
+                for n=1:nnodes4item
+                    x[k] += xCoords[k,xFaceNodes[n,face]]
+                end
+                x[k] /= nnodes4item    
+            end    
+            exact_function!(result,x)
+            for k = 1 : ncomponents
+                Target[nnodes+face+offset4component[k]] = result[k]
+            end    
+        end
+    else
+        item = 0
+        for j in dofs 
+            item = mod(j-1,nnodes+nfaces)+1
+            c = Int(ceil(j/(nnodes+nfaces)))
+            if item <= nnodes
+                for k=1:xdim
+                    x[k] = xCoords[k,item]
+                end    
+                exact_function!(result,x)
+                Target[j] = result[c]
+            elseif item > nnodes && item <= nnodes+nfaces
+                item = j - nnodes
+                nnodes4item = num_targets(xFaceNodes,item)
+                for k=1:xdim
+                    x[k] = 0
+                    for n=1:nnodes4item
+                        x[k] += xCoords[k,xFaceNodes[n,item]]
+                    end
+                    x[k] /= nnodes4item    
+                end 
+                exact_function!(result,x)
+                Target[j] = result[c]
             end
-            x[k] /= nnodes4item    
-        end    
-        exact_function!(result,x)
-        Target[nnodes+face] = result[1]
+        end
     end
-
 end
 
 function get_basis_on_cell(::Type{FEH1P2{1}}, ::Type{<:Edge1D})
@@ -235,14 +272,30 @@ function get_basis_on_cell(::Type{FEH1P2{2}}, ::Type{<:Quadrilateral2D})
     function closure(xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
-        return [a*b 0.0;
-                xref[1]*b 0.0;
-                xref[1]*xref[2] 0.0;
-                xref[2]*a 0.0
-                0.0 a*b;
-                0.0 xref[1]*b;
-                0.0 xref[1]*xref[2];
-                0.0 xref[2]*a]
+        c = 2*xref[1]*xref[2]*(xref[1]+xref[2]-3//2);
+        d = -2*xref[2]*a*(xref[1]-xref[2]+1//2);
+        e = 4*xref[1]*a*b
+        f = 4*xref[2]*xref[1]*b
+        g = 4*xref[1]*xref[2]*a
+        h = 4*xref[2]*a*b
+        a = -2*a*b*(xref[1]+xref[2]-1//2);
+        b = -2*xref[1]*b*(xref[2]-xref[1]+1//2);
+        return [a 0.0;    
+                b 0.0;
+                c 0.0;
+                d 0.0;
+                e 0.0;
+                f 0.0;
+                g 0.0;
+                h 0.0;
+                0.0 a;
+                0.0 b;
+                0.0 c;
+                0.0 d;
+                0.0 e;
+                0.0 f;
+                0.0 g;
+                0.0 h]
     end
 end
 

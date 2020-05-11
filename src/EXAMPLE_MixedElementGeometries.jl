@@ -46,7 +46,7 @@ function main()
 
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 5 # number of refinement levels
+    nlevels = 6 # number of refinement levels
     FEorder = 2 # optimal convergence order of finite element
     verbosity = 3 # deepness of messaging (the larger, the more)
 
@@ -123,10 +123,10 @@ function main()
 
         # solve Poisson problem
         Solution = FEVector{Float64}("solution",FE)
+        append!(Solution, "interpolation", FE)
         if verbosity > 2
             FiniteElements.show(Solution)
         end    
-        append!(Solution, "interpolation", FE)
 
         solve!(Solution[1],PD; verbosity = verbosity - 1)
         interpolate!(Solution[2], exact_solution!; verbosity = verbosity - 1)
@@ -159,7 +159,7 @@ function main()
             # plot solution
             PyPlot.figure(2)
             nnodes = size(xgrid[Coordinates],2)
-            ExtendableGrids.plot(xgrid, Solution[2][1:nnodes]; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, Solution[1][1:nnodes]; Plotter = PyPlot)
         end    
     end    
 

@@ -35,6 +35,7 @@ Length4Operator(::Type{Hessian}, xdim::Int) = xdim*xdim
 
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
@@ -78,7 +79,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         if ncomponents == 1
             refbasisvals[i] = reshape(refbasis(qf.xref[i]),1,:)
         else
-            refbasisvals[i] = refbasis(qf.xref[i]')
+            refbasisvals[i] = refbasis(qf.xref[i]')'
         end    
     end    
     ndofs4item = size(refbasisvals[1],2)
@@ -91,6 +92,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         current_eval = Array{Array{T,2},1}(undef,length(qf.w));
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
+            # = list of vectors [du_k/dx_1; du_k,dx_2]
             refoperatorvals[i] = ForwardDiff.jacobian(refbasis,qf.xref[i]);
             current_eval[i] = zeros(T,ncomponents*edim,ndofs4item)
         end 
@@ -169,6 +171,34 @@ function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Re
                         FEBE.cvals[i][k + FEBE.offsets[c],dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[c],j]
                     end    
                     #cvals[i][dof_i,k + FEBE.offsets[c]] *= FEBC.coefficients[dof_i,c]
+                end    
+            end    
+        end  
+    end    
+end
+
+# DIVERGENCE OPERATOR
+# H1 ELEMENTS
+# multiply tinverted jacobian of element trafo with gradient of basis function
+# which yields (by chain rule) the gradient in x coordinates
+function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # update L2G (we need the matrix)
+        FEXGrid.update!(FEBE.L2G, item)
+
+        for i = 1 : length(FEBE.cvals)
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[i][1,dof_i] = 0.0;
+                for k = 1 : FEBE.offsets[2] # xdim
+                    for j = 1 : FEBE.offsets[2] # xdim
+                        # compute duk/dxk
+                        FEBE.cvals[i][1,dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[k],j]
+                    end    
                 end    
             end    
         end  

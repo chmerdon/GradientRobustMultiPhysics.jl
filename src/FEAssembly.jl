@@ -32,18 +32,18 @@ export AbstractAssemblyPattern,ItemIntegrator,LinearForm,BilinearForm,SymmetricB
 export assemble!, evaluate!, evaluate
 export L2ErrorIntegrator
 
-function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFunctionOperator}, xdim::Int; AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL, bonus_quadorder::Int = 0)
-    function L2error_function(result,input,x)
-        exact_function(result,x)
-        result[1] = (result[1] - input[1])^2
-        for j=2:length(input)
-            result[1] += (result[j] - input[j])^2
-        end    
-        for j=2:length(result)
-            result[2] = 0.0
-        end    
+function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL, bonus_quadorder::Int = 0)
+    function L2error_function()
+        temp = zeros(Float64,ncomponents*Length4Operator(operator,xdim))
+        function closure(result,input,x)
+            exact_function(temp,x)
+            result[1] = 0.0
+            for j=1:length(temp)
+                result[1] += (temp[j] - input[j])^2
+            end    
+        end
     end    
-    L2error_action = XFunctionAction(L2error_function,Length4Operator(operator,xdim),xdim)
+    L2error_action = XFunctionAction(L2error_function(),1,xdim)
     return ItemIntegrator(AT, operator, L2error_action; bonus_quadorder = bonus_quadorder)
 end
 end

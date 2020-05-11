@@ -116,7 +116,10 @@ function unique(xItemGeometries, xItemRegions, xItemDofs, regions)
         nitems = length(xItemGeometries)
     end      
     EG::Array{DataType,1} = []
-    ndofs4EG::Array{Int32,1} = []
+    ndofs4EG = Array{Array{Int32,1},1}(undef,length(xItemDofs))
+    for e = 1 : length(xItemDofs)
+        ndofs4EG[e] = []
+    end
     iEG = 0
     cellEG = Triangle2D
     for item = 1 : nitems
@@ -132,7 +135,9 @@ function unique(xItemGeometries, xItemRegions, xItemDofs, regions)
                 end
                 if iEG == 0
                     append!(EG, [xItemGeometries[item]])
-                    append!(ndofs4EG, num_targets(xItemDofs,item))
+                    for e = 1 : length(xItemDofs)
+                        append!(ndofs4EG[e], num_targets(xItemDofs[e],item))
+                    end
                 end  
                 break; # rest of for loop can be skipped
             end    
@@ -154,7 +159,10 @@ function prepareOperatorAssembly(
 
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE[1],AT)
+    xItemDofs = Array{VariableTargetAdjacency,1}(undef,length(FE))
+    for j=1:length(FE)
+        xItemDofs[j] = FEPropertyDofs4AssemblyType(FE[j],AT)
+    end    
 
     # find unique ElementGeometries
     EG, ndofs4EG = unique(xItemGeometries, xItemRegions, xItemDofs, regions)
@@ -253,7 +261,7 @@ end
 function evaluate!(
     b::AbstractArray{<:Real,1},
     form::ItemIntegrator{AT},
-    FEB::FEVectorBlock,
+    FEB::FEVectorBlock;
     verbosity::Int = 0) where AT <: AbstractAssemblyType
 
     NumberType = eltype(b)
@@ -307,7 +315,7 @@ function evaluate!(
         # find index for CellType
         itemET = EG4item(item)
         iEG = findfirst(isequal(itemET), EG)
-        ndofs4item = ndofs4EG[iEG]
+        ndofs4item = ndofs4EG[1][iEG]
 
         # update FEbasisevaler
         evalnr = evaler4item(item)
@@ -341,7 +349,7 @@ end
 
 function evaluate(
     form::ItemIntegrator{AT},
-    FEB::FEVectorBlock,
+    FEB::FEVectorBlock;
     verbosity::Int = 0) where AT <: AbstractAssemblyType
 
     NumberType = Float64
@@ -395,7 +403,7 @@ function evaluate(
         # find index for CellType
         itemET = EG4item(item)
         iEG = findfirst(isequal(itemET), EG)
-        ndofs4item = ndofs4EG[iEG]
+        ndofs4item = ndofs4EG[1][iEG]
 
         # update FEbasisevaler
         evalnr = evaler4item(item)
@@ -457,7 +465,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
     # collect FE and FEBasisEvaluator information
     ncomponents = FiniteElements.get_ncomponents(typeof(FE))
     cvals_resultdim = size(basisevaler[1][1].cvals[1],1)
-    @assert size(b,2) == cvals_resultdim
+    action_resultdim = action.resultdim
 
     # loop over items
     itemET = xItemGeometries[1] # type of the current item
@@ -468,7 +476,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
     dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
     temp = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
-    action_result = zeros(NumberType,action.resultdim) # heap for action output
+    action_result = zeros(NumberType,action_resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
     for item = 1 : nitems
     for r = 1 : length(regions)
@@ -481,7 +489,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
         # find index for CellType
         itemET = EG4item(item)
         iEG = findfirst(isequal(itemET), EG)
-        ndofs4item = ndofs4EG[iEG]
+        ndofs4item = ndofs4EG[1][iEG]
 
         # update FEbasisevaler
         evalnr = evaler4item(item)
@@ -503,7 +511,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
                 end    
                 apply_action!(action_result, action_input, action, i)
 
-                for j = 1 : cvals_resultdim
+                for j = 1 : action_resultdim
                    b[dofs[dof_i],j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
                 end
             end 
@@ -517,7 +525,7 @@ end
 
 
 
-function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity::Int = 0) where AT <: AbstractAssemblyType
+function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity::Int = 0, transpose_copy = Nothing) where AT <: AbstractAssemblyType
 
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
@@ -531,7 +539,8 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE[1],AT)
+    xItemDofs1 = FEPropertyDofs4AssemblyType(FE[1],AT)
+    xItemDofs2 = FEPropertyDofs4AssemblyType(FE[2],AT)
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     
@@ -554,11 +563,12 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
     # loop over items
     itemET = xItemGeometries[1] # type of the current item
     iEG = 1 # index to the correct unique geometry
-    ndofs4item = ndofs4EG[1] # number of dofs for item
+    ndofs4item1 = ndofs4EG[1] # number of dofs for item
+    ndofs4item2 = ndofs4EG[1] # number of dofs for item
     evalnr = [0,0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    maxdofs1 = max_num_targets_per_source(xItemDofs)
-    maxdofs2 = max_num_targets_per_source(xItemDofs)
+    maxdofs1 = max_num_targets_per_source(xItemDofs1)
+    maxdofs2 = max_num_targets_per_source(xItemDofs2)
     dofs = zeros(Int,maxdofs1)
     dofs2 = zeros(Int,maxdofs2)
     temp::NumberType = 0 # some temporary variable
@@ -578,7 +588,8 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
         # find index for CellType
         itemET = EG4item(item)
         iEG = findfirst(isequal(itemET), EG)
-        ndofs4item = ndofs4EG[iEG]
+        ndofs4item1 = ndofs4EG[1][iEG]
+        ndofs4item2 = ndofs4EG[2][iEG]
 
         # update FEbasisevaler
         evalnr = evaler4item(item)
@@ -589,15 +600,15 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
         update!(action, basisevaler[iEG][evalnr[1]], item)
 
         # update dofs
-        dofs[1:ndofs4item] = xItemDofs[:,dofitem]
-        dofs2[1:ndofs4item] = xItemDofs[:,dofitem]
+        dofs[1:ndofs4item1] = xItemDofs1[:,dofitem]
+        dofs2[1:ndofs4item2] = xItemDofs2[:,dofitem]
 
         weights = qf[iEG].w
         for i in eachindex(weights)
             cvali = basisevaler[iEG][evalnr[1]].cvals[i]
             cvali2 = basisevaler[iEG][evalnr[2]].cvals[i]
            
-            for dof_i = 1 : ndofs4item
+            for dof_i = 1 : ndofs4item1
                 # apply action to first argument
                 for k = 1 : cvals_resultdim
                     action_input[k] = cvali[k,dof_i]
@@ -605,7 +616,7 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
                 apply_action!(action_result, action_input, action, i)
 
                 if BLF.symmetric == false
-                    for dof_j = 1 : ndofs4item
+                    for dof_j = 1 : ndofs4item2
                         temp = 0
                         for k = 1 : action_resultdim
                             temp += action_result[k]*cvali2[k,dof_j]
@@ -613,7 +624,7 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
                         localmatrix[dof_i,dof_j] += temp * weights[i]
                     end
                 else # symmetric case
-                    for dof_j = dof_i : ndofs4item
+                    for dof_j = dof_i : ndofs4item2
                         temp = 0
                         for k = 1 : action_resultdim
                             temp += action_result[k]*cvali2[k,dof_j]
@@ -626,18 +637,21 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
 
         # copy localmatrix into global matrix
         if BLF.symmetric == false
-            for dof_i = 1 : ndofs4item, dof_j = 1 : ndofs4item
-                A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]
+            for dof_i = 1 : ndofs4item1, dof_j = 1 : ndofs4item2
+                A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
+                if transpose_copy != Nothing
+                    transpose_copy[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                end
                 localmatrix[dof_i,dof_j] = 0.0
-            end    
+            end
         else # symmetric case
-            for dof_i = 1 : ndofs4item, dof_j = dof_i+1 : ndofs4item
+            for dof_i = 1 : ndofs4item1, dof_j = dof_i+1 : ndofs4item2
                 temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
                 A[dofs2[dof_j],dofs[dof_i]] += temp
                 A[dofs2[dof_i],dofs[dof_j]] += temp
                 localmatrix[dof_i,dof_j] = 0.0
             end    
-            for dof_i = 1 : ndofs4item
+            for dof_i = 1 : ndofs4item1
                 A[dofs2[dof_i],dofs[dof_i]] += localmatrix[dof_i,dof_i] * xItemVolumes[item]
                 localmatrix[dof_i,dof_i] = 0.0
             end    
