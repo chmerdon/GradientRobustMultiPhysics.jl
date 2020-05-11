@@ -46,8 +46,8 @@ function main()
 
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 3 # number of refinement levels
-    FEorder = 2 # optimal convergence order of velocity finite element
+    nlevels = 4 # number of refinement levels
+    FEorder = 1 # optimal convergence order of velocity finite element
     verbosity = 5 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data
@@ -105,7 +105,10 @@ function main()
         end
 
         # generate FE
-        if FEorder == 2 # Taylor--Hood/Q2xP1
+        if FEorder == 1 # Bernardi--Raugel
+            FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid,2)
+            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
+        elseif FEorder == 2 # Taylor--Hood/Q2xP1
             FE_velocity = FiniteElements.getH1P2FiniteElement(xgrid,2)
             FE_pressure = FiniteElements.getH1P1FiniteElement(xgrid,1)
         end        
@@ -123,8 +126,8 @@ function main()
             FiniteElements.show(Solution)
         end    
 
-        interpolate!(Solution[3], exact_velocity!; verbosity = verbosity - 1)
-        interpolate!(Solution[4], exact_pressure!; verbosity = verbosity - 1)
+        interpolate!(Solution[3], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
+        interpolate!(Solution[4], exact_pressure!; verbosity = verbosity - 1, bonus_quadorder = 1)
         solve!(Solution[1],Solution[2], PD; verbosity = verbosity - 1)
 
         # compute L2 and H1 error

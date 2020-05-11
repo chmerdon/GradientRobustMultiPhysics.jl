@@ -41,7 +41,8 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian})
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
 
-mutable struct FEBasisEvaluator{T <: Real, FE <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+    FE::AbstractFiniteElement            # linke to full FE (e.g. for coefficients)
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
@@ -54,6 +55,7 @@ mutable struct FEBasisEvaluator{T <: Real, FE <: AbstractFiniteElement, EGEG <: 
     offsets2::Array{Int32,1}             # offsets for dof entries of each gradient (on ref)
     citem::Int                           # current item
     cvals::Array{Array{T,2},1}           # current operator vals on item
+    coefficients::Array{T,2}             # coefficients
 end
 
 function vector_hessian(f, x)
@@ -66,9 +68,10 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
 
-    refbasis = FiniteElements.get_basis_on_cell(FEType, EG)
     if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
         refbasis = FiniteElements.get_basis_on_face(FEType, EG)
+    else
+        refbasis = FiniteElements.get_basis_on_cell(FEType, EG)
     end    
     
     # pre-allocate memory for basis functions
@@ -117,14 +120,19 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     end      
     
     xref = copy(qf.xref)
+    if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
+        coefficients = zeros(T,ncomponents,ndofs4item)
+    else
+        coefficients = zeros(T,0,0)
+    end    
 
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(ItemDofs,L2G,L2GM,force_updateL2G,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,ItemDofs,L2G,L2GM,force_updateL2G,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients)
 end    
 
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP,AT}, item::Int) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
     FEBE.citem = item
     
     if FEBE.force_updateL2G
@@ -134,10 +142,26 @@ end
 
 
 # IDENTITY OPERATOR
-# H1 ELEMENTS WITH COEFFICIENTS (no transformation needed, just multiply coefficients)
-function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Real, FE <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+# H1 ELEMENTS WITH COEFFICIENTS
+# (no transformation needed, just multiply coefficients)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
     FEBE.citem = item
 
+    if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+        FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+    else
+        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+    end    
+
+
+    for i = 1 : length(FEBE.cvals)
+        for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+            for k = 1 : FEBE.offsets[2] # ncomponents
+                FEBE.cvals[i][k,dof_i] = FEBE.refbasisvals[i][k,dof_i] * FEBE.coefficients[k,dof_i];
+            end    
+        end
+    end
+    
     # only update if enforced by "user" (e.g. when a function is evaluated in operator)
     if FEBE.force_updateL2G
         FEXGrid.update!(FEBE.L2G, item)
@@ -152,7 +176,7 @@ end
 #
 # Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
 #       i.e. the surface derivative in general
-function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Gradient, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Gradient, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
 
@@ -177,11 +201,50 @@ function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Re
     end    
 end
 
+# GRADIENT OPERATOR
+# H1 ELEMENTS WITH COEFFICIENTS
+# multiply tinverted jacobian of element trafo with gradient of basis function
+# which yields (by chain rule) the gradient in x coordinates
+#
+# Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
+#       i.e. the surface derivative in general
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Gradient, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # update L2G (we need the matrix)
+        FEXGrid.update!(FEBE.L2G, item)
+
+        # get coefficients
+        if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+            FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+        else
+            FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        end    
+
+        for i = 1 : length(FEBE.cvals)
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
+                    FEBE.cvals[i][k + FEBE.offsets[c],dof_i] = 0.0;
+                    for j = 1 : FEBE.offsets[2] # xdim
+                        # compute duc/dxk
+                        FEBE.cvals[i][k + FEBE.offsets[c],dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[c],j]
+                    end    
+                    FEBE.cvals[i][k + FEBE.offsets[c], dof_i] *= FEBE.coefficients[c, dof_i]
+                end    
+            end    
+        end  
+    end    
+end
+
 # DIVERGENCE OPERATOR
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Real, FE <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
 
@@ -198,6 +261,41 @@ function update!(FEBE::FEBasisEvaluator{T,FE,EG,FEOP}, item::Int) where {T <: Re
                     for j = 1 : FEBE.offsets[2] # xdim
                         # compute duk/dxk
                         FEBE.cvals[i][1,dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[k],j]
+                    end    
+                end    
+            end    
+        end  
+    end    
+end
+
+# DIVERGENCE OPERATOR
+# H1 ELEMENTS WITH COEFFICIENTS
+# multiply tinverted jacobian of element trafo with gradient of basis function
+# which yields (by chain rule) the gradient in x coordinates
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # update L2G (we need the matrix)
+        FEXGrid.update!(FEBE.L2G, item)
+
+        # get coefficients
+        if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+            FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+        else
+            FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        end    
+
+        for i = 1 : length(FEBE.cvals)
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[i][1,dof_i] = 0.0;
+                for k = 1 : FEBE.offsets[2] # xdim
+                    for j = 1 : FEBE.offsets[2] # xdim
+                        # compute duk/dxk
+                        FEBE.cvals[i][1,dof_i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[i][dof_i + FEBE.offsets2[k],j] * FEBE.coefficients[k, dof_i]
                     end    
                 end    
             end    

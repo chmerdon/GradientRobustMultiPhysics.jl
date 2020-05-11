@@ -3,6 +3,7 @@ module FiniteElements
 using ExtendableGrids
 using ExtendableSparse
 using FEXGrid
+using QuadratureRules
 
 
  #######################################################################################################
@@ -40,12 +41,12 @@ abstract type AbstractFiniteElement end
     #include("FEdefinitions/H1_P2B.jl");
 
     abstract type AbstractH1FiniteElementWithCoefficients <: AbstractH1FiniteElement end
-    #   include("FEdefinitions/H1_BR.jl");
+      include("FEdefinitions/H1v_BR.jl");
 
  
   # subtype for L2 conforming elements
   abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
-    #include("FEdefinitions/L2_P0.jl");
+    include("FEdefinitions/L2_P0.jl"); # currently masked as H1 element
     #include("FEdefinitions/L2_P1.jl");
  
   # subtype for Hcurl-conforming elements
@@ -53,7 +54,7 @@ abstract type AbstractFiniteElement end
     # TODO
 
 export AbstractFiniteElement, AbstractH1FiniteElementWithCoefficients, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHcurlFiniteElement
-export get_ncomponents, getH1P1FiniteElement, getH1P2FiniteElement
+export get_ncomponents, getH1P1FiniteElement, getH1BRFiniteElement, getH1P2FiniteElement
 export interpolate!
 
 # show function for FiniteElement
@@ -68,14 +69,14 @@ end
 include("FEBlockArrays.jl");
 export FEVectorBlock, FEVector, FEMatrix
 
-function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [], verbosity::Int = 0)
+function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [], verbosity::Int = 0, bonus_quadorder::Int = 0)
     if verbosity > 0
         println("\nINTERPOLATING")
         println("=============")
         println("     target = $(Target.name)")
         println("         FE = $(Target.FEType.name) (ndofs = $(Target.FEType.ndofs))")
     end
-    interpolate!(Target, Target.FEType, exact_function!; dofs = dofs)
+    interpolate!(Target, Target.FEType, exact_function!; dofs = dofs, bonus_quadorder = bonus_quadorder)
 end
 
 

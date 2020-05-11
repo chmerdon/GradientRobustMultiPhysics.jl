@@ -75,7 +75,7 @@ get_polynomialorder(::Type{<:FEH1P1}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:FEH1P1}, ::Type{<:Quadrilateral2D}) = 2;
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1{1}, exact_function!::Function; dofs = [])
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1{1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]
     result = zeros(Float64,1)
     xdim = size(xCoords,1)
@@ -91,8 +91,8 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1{1}, exact_func
     else
         item = 0
         for j in dofs 
-            item = mod(j,nnodes)
-            c = ceil(j/nnodes)
+            item = mod(j-1,nnodes)+1
+            c = Int(ceil(j/nnodes))
             for k=1:xdim
                 x[k] = xCoords[k,item]
             end    

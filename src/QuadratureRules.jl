@@ -175,7 +175,7 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
         qf[j] = QuadratureRule{NumberType,EG[j]}(order);
         local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid,AT)
     end    
-    if talkative
+    if verbosity > 0
         println("INTEGRATE")
         println("=========")
         println("nitems = $nitems")
