@@ -59,6 +59,7 @@ struct BilinearForm{AT} <: AbstractAssemblyPattern{AT}
     action::AbstractAction # is only applied to FE1/operator1
     bonus_quadorder::Int
     regions::Array{Int,1}
+    symmetric::Bool
 end   
 function BilinearForm(AT::Type{<:AbstractAssemblyType},
     FE1::AbstractFiniteElement,
@@ -68,7 +69,7 @@ function BilinearForm(AT::Type{<:AbstractAssemblyType},
     action::AbstractAction; # is only applied to FE1/operator1
     bonus_quadorder::Int = 0,
     regions::Array{Int,1} = [0])
-    return BilinearForm{AT}(FE1,FE2,operator1,operator2,action,bonus_quadorder,regions)
+    return BilinearForm{AT}(FE1,FE2,operator1,operator2,action,bonus_quadorder,regions,false)
 end
 function SymmetricBilinearForm(AT::Type{<:AbstractAssemblyType},
     FE1::AbstractFiniteElement,
@@ -76,7 +77,7 @@ function SymmetricBilinearForm(AT::Type{<:AbstractAssemblyType},
     action::AbstractAction; # is only applied to FE1/operator1
     bonus_quadorder::Int = 0,
     regions::Array{Int,1} = [0])
-    return BilinearForm{AT}(FE1,FE1,operator1,operator1,action,bonus_quadorder,regions)
+    return BilinearForm{AT}(FE1,FE1,operator1,operator1,action,bonus_quadorder,regions,true)
 end
 
 
@@ -556,14 +557,17 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
     ndofs4item = ndofs4EG[1] # number of dofs for item
     evalnr = [0,0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    dofs = zeros(Int,max_num_targets_per_source(xItemDofs))
-    dofs2 = zeros(Int,max_num_targets_per_source(xItemDofs))
+    maxdofs1 = max_num_targets_per_source(xItemDofs)
+    maxdofs2 = max_num_targets_per_source(xItemDofs)
+    dofs = zeros(Int,maxdofs1)
+    dofs2 = zeros(Int,maxdofs2)
     temp::NumberType = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action_resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
     cvali2::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
     weights::Array{NumberType,1} = [] # pointer to quadrature weights
+    localmatrix = zeros(NumberType,maxdofs1,maxdofs2)
     for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
@@ -600,19 +604,45 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
                 end    
                 apply_action!(action_result, action_input, action, i)
 
-                for dof_j = 1 : ndofs4item
-                    temp = 0
-                    for k = 1 : action_resultdim
-                        temp += action_result[k]*cvali2[k,dof_j]
+                if BLF.symmetric == false
+                    for dof_j = 1 : ndofs4item
+                        temp = 0
+                        for k = 1 : action_resultdim
+                            temp += action_result[k]*cvali2[k,dof_j]
+                        end
+                        localmatrix[dof_i,dof_j] += temp * weights[i]
                     end
-                    temp *= weights[i]
-                    # next two lines are most expensive
-                    # can we improve them somehow?
-                    temp *= xItemVolumes[item]
-                    A[dofs2[dof_j],dofs[dof_i]] += temp
+                else # symmetric case
+                    for dof_j = dof_i : ndofs4item
+                        temp = 0
+                        for k = 1 : action_resultdim
+                            temp += action_result[k]*cvali2[k,dof_j]
+                        end
+                        localmatrix[dof_i,dof_j] += temp * weights[i]
+                    end
                 end
             end 
         end 
+
+        # copy localmatrix into global matrix
+        if BLF.symmetric == false
+            for dof_i = 1 : ndofs4item, dof_j = 1 : ndofs4item
+                A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                localmatrix[dof_i,dof_j] = 0.0
+            end    
+        else # symmetric case
+            for dof_i = 1 : ndofs4item, dof_j = dof_i+1 : ndofs4item
+                temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                A[dofs2[dof_j],dofs[dof_i]] += temp
+                A[dofs2[dof_i],dofs[dof_j]] += temp
+                localmatrix[dof_i,dof_j] = 0.0
+            end    
+            for dof_i = 1 : ndofs4item
+                A[dofs2[dof_i],dofs[dof_i]] += localmatrix[dof_i,dof_i] * xItemVolumes[item]
+                localmatrix[dof_i,dof_i] = 0.0
+            end    
+        end    
+
         break; # region for loop
     end # if in region    
     end # region for loop
