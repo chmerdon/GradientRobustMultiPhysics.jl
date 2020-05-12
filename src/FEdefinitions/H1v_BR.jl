@@ -151,7 +151,7 @@ end
 function get_basis_on_face(::Type{FEH1BR{2}}, ::Type{<:Edge1D})
     function closure(xref)
         temp = 1 - xref[1];
-        bf = xref[1] * temp;
+        bf = 4 * xref[1] * temp;
         return [temp 0.0;
                 xref[1] 0.0;
                 0.0 temp;
@@ -163,9 +163,9 @@ end
 function get_basis_on_cell(::Type{FEH1BR{2}}, ::Type{<:Triangle2D})
     function closure(xref)
         temp = 1 - xref[1] - xref[2];
-        bf1 = xref[1] * temp;
-        bf2 = xref[2] * xref[1];
-        bf3 = temp * xref[2];
+        bf1 = 4 * xref[1] * temp;
+        bf2 = 4 * xref[2] * xref[1];
+        bf3 = 4 * temp * xref[2];
         return [temp 0.0;
                 xref[1] 0.0;
                 xref[2] 0.0;
