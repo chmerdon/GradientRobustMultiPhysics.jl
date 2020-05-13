@@ -82,6 +82,7 @@ end
 
 struct FEMatrix{T} <: AbstractArray{T,1}
     FEMatrixBlocks::Array{FEMatrixBlock{T},1}
+    nFE::Int
     entries::AbstractMatrix
 end
 
@@ -98,13 +99,13 @@ end
 function FEMatrix{T}(name::String, FEType::AbstractFiniteElement) where T <: Real
     entries = ExtendableSparseMatrix{T,Int32}(FEType.ndofs,FEType.ndofs)
     Block = FEMatrixBlock{T}(name, FEType, FEType, 0 , 0, FEType.ndofs, FEType.ndofs, entries)
-    return FEMatrix{T}([Block], entries)
+    return FEMatrix{T}([Block], 1, entries)
 end
 
 function FEMatrix{T}(name::String, FETypeX::AbstractFiniteElement, FETypeY::AbstractFiniteElement) where T <: Real
     entries = ExtendableSparseMatrix{T,Int32}(FETypeX.ndofs,FETypeY.ndofs)
     Block = FEMatrixBlock{T}(name, FETypeX, FETypeY, 0 , 0, FETypeX.ndofs, FETypeY.ndofs, entries)
-    return FEMatrix{T}([Block], entries)
+    return FEMatrix{T}([Block], 2, entries)
 end
 
 function FEMatrix{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) where T <: Real
@@ -126,7 +127,7 @@ function FEMatrix{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) wh
         offsetX += FETypes[j].ndofs
     end    
     
-    return FEMatrix{T}(Blocks, entries)
+    return FEMatrix{T}(Blocks, length(FETypes), entries)
 end
 
 
@@ -134,7 +135,7 @@ end
 
 
 Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
-Base.getindex(FEF::FEMatrix,i,j) = FEF.FEMatrixBlocks[(i-1)*length(FEF.FEMatrixBlocks)+j]
+Base.getindex(FEF::FEMatrix,i,j) = FEF.FEMatrixBlocks[(i-1)*FEF.nFE+j]
 Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
 Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
 Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = (FEB.entries[FEB.offsetX+i,FEB.offsetY+j] = v)

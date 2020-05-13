@@ -14,6 +14,15 @@ function assemble!(A::FEMatrixBlock, O::ConvectionOperator; verbosity::Int = 0)
     FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
 end
 
+function assemble!(A::FEMatrixBlock, O::LagrangeMultiplier; verbosity::Int = 0, At::FEMatrixBlock)
+    FE1 = A.FETypeX
+    FE2 = A.FETypeY
+    @assert At.FETypeX == FE2
+    @assert At.FETypeY == FE1
+    DivPressure = BilinearForm(AbstractAssemblyTypeCELL, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
+    FEAssembly.assemble!(At, DivPressure; verbosity = verbosity, transpose_copy = A)
+end
+
 function assemble!(b::FEVectorBlock, O::RhsOperator; verbosity::Int = 0)
     FE = b.FEType
     RHS = LinearForm(AbstractAssemblyTypeCELL, FE, O.operator, O.action)
@@ -24,11 +33,20 @@ function assemble!(PDE::PDEDescription, FE::Array{<:AbstractFiniteElement,1}; ve
 
     A = FEMatrix{Float64}("SystemMatrix", FE)
     for j = 1 : length(FE), k = 1 : length(FE), o = 1 : length(PDE.LHSOperators[j,k])
+        PDEoperator = PDE.LHSOperators[j,k][o]
         if verbosity > 0
-            println("\n  Assembling into matrix block[$j,$k]: $(typeof(PDE.LHSOperators[j,k][o]))")
-            @time assemble!(A[j,k], PDE.LHSOperators[j,k][o]; verbosity = verbosity)    
+            println("\n  Assembling into matrix block[$j,$k]: $(typeof(PDEoperator))")
+            if typeof(PDEoperator) == LagrangeMultiplier
+                @time assemble!(A[j,k], PDEoperator; verbosity = verbosity, At = A[k,j])
+            else
+                @time assemble!(A[j,k], PDEoperator; verbosity = verbosity)
+            end    
         else
-            assemble!(A[j,k], PDE.LHSOperators[j,k][o]; verbosity = verbosity)    
+            if typeof(PDEoperator) == LagrangeMultiplier
+                assemble!(A[j,k], PDEoperator; verbosity = verbosity, At = A[k,j])
+            else
+                assemble!(A[j,k], PDEoperator; verbosity = verbosity)
+            end    
         end    
     end
 
@@ -202,7 +220,7 @@ function solve!(
 
     # ASSEMBLE BOUNDARY DATA
     fixed_bdofs = []
-    for j=1 : length(Target.FEVectorBlocks)
+    for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 0
             println("\n  Assembling boundary data...")
             @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
@@ -211,7 +229,6 @@ function solve!(
             new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
             append!(fixed_bdofs, new_fixed_dofs)
         end    
-        
     end    
 
     # penalize fixed dofs

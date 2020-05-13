@@ -14,7 +14,7 @@ struct LaplaceOperator <: AbstractPDEOperator
 end
 
 struct LagrangeMultiplier <: AbstractPDEOperator
-    operator :: AbstractFunctionOperator # e.g. Divergence, automatically aligns with transposed block
+    operator :: Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
 end
 
 struct ConvectionOperator <: AbstractPDEOperator

@@ -5,7 +5,6 @@ using ExtendableSparse
 using FiniteElements
 using FEAssembly
 using PDETools
-using FESolveStokes
 using QuadratureRules
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
@@ -72,20 +71,22 @@ function main()
         result[1] = 0.0
     end    
 
-    # fill problem description 
-    PD = StokesProblemDescription()
-    PD.name = "Hagen-Poiseuille flow"
-    PD.viscosity = viscosity
-    PD.quadorder4diffusion = 0
-    PD.quadorder4convection = 0
-    PD.volumedata4region = [exact_solution_rhs!]
-    PD.quadorder4region = [0]
-    PD.boundarytype4bregion = [HomogeneousDirichletBoundary, BestapproxDirichletBoundary, BestapproxDirichletBoundary]
-    PD.boundarydata4bregion = [bnd_data_rest!, exact_velocity!, exact_velocity!]
-    PD.quadorder4bregion = [0,2,2]
-    if verbosity > 0
-        FESolveStokes.show(PD)
-    end    
+    # PDE description
+    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
+    MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(viscosity,4))]
+    MyLHS[1,2] = [LagrangeMultiplier(Divergence)] # automatically fills transposed block
+    MyLHS[2,1] = []
+    MyLHS[2,2] = []
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
+    MyRHS[1] = [RhsOperator(Identity, [exact_solution_rhs!], 2, 2; bonus_quadorder = 3)]
+    MyRHS[2] = []
+    MyBoundary = BoundaryOperator(2,2)
+    append!(MyBoundary, 1, HomogeneousDirichletBoundary; data = bnd_data_rest!)
+    append!(MyBoundary, 2, BestapproxDirichletBoundary; data = exact_velocity!)
+    append!(MyBoundary, 3, BestapproxDirichletBoundary; data = exact_velocity!)
+    MyBoundaryPressure = BoundaryOperator(2,1) # empty, no pressure boundary conditions
+    StokesProblem = PDEDescription("StokesProblem",MyLHS,MyRHS,[MyBoundary,MyBoundaryPressure])
+
 
     # define ItemIntegrators for L2/H1 error computation
     L2DivergenceErrorEvaluator = L2ErrorIntegrator(exact_divergence!, Divergence, 2, 1; bonus_quadorder = 0)
@@ -118,26 +119,33 @@ function main()
             FiniteElements.show(FE_pressure)
         end    
 
-        # solve Poisson problem
-        Solution = FEVector{Float64}("velocity solution",FE_velocity)
-        append!(Solution,"pressure solution",FE_pressure)
-        append!(Solution, "velocity interpolation", FE_velocity)
-        append!(Solution, "pressure interpolation", FE_pressure)
-        if verbosity > 2
-            FiniteElements.show(Solution)
+        # solve Stokes problem
+        Solution = FEVector{Float64}("Stokes velocity",FE_velocity)
+        append!(Solution,"Stokes pressure",FE_pressure)
+        solve!(Solution, StokesProblem; verbosity = verbosity - 1)
+
+        # move integral mean
+        pmeanIntegrator = ItemIntegrator(AbstractAssemblyTypeCELL, Identity, DoNotChangeAction(1))
+        pressure_mean =  evaluate(pmeanIntegrator,Solution[2]; verbosity = verbosity - 1)
+        total_area = sum(FE_velocity.xgrid[CellVolumes], dims=1)[1]
+        pressure_mean /= total_area
+        for j=1:FE_pressure.ndofs
+            Solution[2][j] -= pressure_mean
         end    
 
-        interpolate!(Solution[3], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
-        interpolate!(Solution[4], exact_pressure!; verbosity = verbosity - 1, bonus_quadorder = 1)
-        FESolveStokes.solve!(Solution[1],Solution[2], PD; verbosity = verbosity - 1)
+        # interpolate
+        Interpolation = FEVector{Float64}("Interpolation velocity",FE_velocity)
+        append!(Interpolation,"Interpolation pressure",FE_pressure)
+        interpolate!(Interpolation[1], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
+        interpolate!(Interpolation[2], exact_pressure!; verbosity = verbosity - 1, bonus_quadorder = 1)
 
         # compute L2 and H1 error
         println("divergence = $(evaluate(L2DivergenceErrorEvaluator,Solution[1]))")
-        println("divergenceI = $(evaluate(L2DivergenceErrorEvaluator,Solution[3]))")
+        println("divergenceI = $(evaluate(L2DivergenceErrorEvaluator,Interpolation[1]))")
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
-        append!(L2errorInterpolation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[3])))
+        append!(L2errorInterpolation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Interpolation[1])))
         append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
-        append!(L2errorInterpolation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[4])))
+        append!(L2errorInterpolation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Interpolation[2])))
         
         # plot final solution
         if (level == nlevels)
