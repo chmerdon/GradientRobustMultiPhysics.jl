@@ -4,6 +4,7 @@ using ExtendableGrids
 using ExtendableSparse
 using FiniteElements
 using FEAssembly
+using PDETools
 using FESolveStokes
 using QuadratureRules
 #using VTKView
@@ -46,9 +47,9 @@ function main()
 
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 4 # number of refinement levels
+    nlevels = 6 # number of refinement levels
     FEorder = 1 # optimal convergence order of velocity finite element
-    verbosity = 5 # deepness of messaging (the larger, the more)
+    verbosity = 3 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data
     viscosity = 1.0
@@ -128,7 +129,7 @@ function main()
 
         interpolate!(Solution[3], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
         interpolate!(Solution[4], exact_pressure!; verbosity = verbosity - 1, bonus_quadorder = 1)
-        solve!(Solution[1],Solution[2], PD; verbosity = verbosity - 1)
+        FESolveStokes.solve!(Solution[1],Solution[2], PD; verbosity = verbosity - 1)
 
         # compute L2 and H1 error
         println("divergence = $(evaluate(L2DivergenceErrorEvaluator,Solution[1]))")
@@ -160,7 +161,7 @@ function main()
             # plot solution
             PyPlot.figure(2)
             nnodes = size(xgrid[Coordinates],2)
-            ExtendableGrids.plot(xgrid, Solution[3][1:nnodes]; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, Solution[1][1:nnodes]; Plotter = PyPlot)
             PyPlot.figure(3)
             nnodes = size(xgrid[Coordinates],2)
             ExtendableGrids.plot(xgrid, Solution[2][1:nnodes]; Plotter = PyPlot)

@@ -67,7 +67,7 @@ end
 
 
 include("FEBlockArrays.jl");
-export FEVectorBlock, FEVector, FEMatrix
+export FEVectorBlock, FEVector, FEMatrix, FEMatrixBlock
 
 function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [], verbosity::Int = 0, bonus_quadorder::Int = 0)
     if verbosity > 0

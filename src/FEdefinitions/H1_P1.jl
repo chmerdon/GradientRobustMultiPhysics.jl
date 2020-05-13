@@ -80,6 +80,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1{1}, exact_func
     result = zeros(Float64,1)
     xdim = size(xCoords,1)
     x = zeros(Float64,xdim)
+    nnodes = num_sources(xCoords)
     if length(dofs) == 0 # interpolate at all dofs
         for j = 1 : num_sources(xCoords)
             for k=1:xdim

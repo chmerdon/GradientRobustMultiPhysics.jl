@@ -4,7 +4,7 @@ using ExtendableGrids
 using ExtendableSparse
 using FiniteElements
 using FEAssembly
-using FESolvePoisson
+using PDETools
 using QuadratureRules
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
@@ -30,7 +30,7 @@ function gridgen_mixedEG()
     xgrid[CellGeometries] = xCellGeometries
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,1,1,3,3])
+    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
@@ -47,16 +47,13 @@ function main()
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
     nlevels = 6 # number of refinement levels
-    FEorder = 2 # optimal convergence order of finite element
+    FEorder = 1 # optimal convergence order of finite element
     verbosity = 3 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data
     diffusion = 1.0
     function exact_solution!(result,x)
         result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
-    end    
-    function bnd_data_left!(result,x)
-        result[1] = 0.0
     end    
     function bnd_data_right!(result,x)
         result[1] = 1.0
@@ -79,21 +76,19 @@ function main()
         result[2] = 0.0
     end
 
-    # fill problem description 
-    PD = PoissonProblemDescription()
-    PD.name = "Test problem"
-    PD.diffusion = diffusion
-    PD.quadorder4diffusion = 0
-    PD.convection = convection!
-    PD.quadorder4convection = 0
-    PD.volumedata4region = [exact_solution_rhs!]
-    PD.quadorder4region = [2]
-    PD.boundarytype4bregion = [BestapproxDirichletBoundary, InterpolateDirichletBoundary, HomogeneousDirichletBoundary]
-    PD.boundarydata4bregion = [bnd_data_rest!, bnd_data_right!, bnd_data_left!]
-    PD.quadorder4bregion = [1,0]
-    if verbosity > 0
-        FESolvePoisson.show(PD)
-    end    
+
+    # PDE description
+    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
+    MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(diffusion,2)),
+                  ConvectionOperator(convection!,2)]
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
+    MyRHS[1] = [RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3)]
+    MyBoundary = BoundaryOperator(2,1)
+    append!(MyBoundary, 1, BestapproxDirichletBoundary; data = bnd_data_rest!)
+    append!(MyBoundary, 2, InterpolateDirichletBoundary; data = bnd_data_right!)
+    append!(MyBoundary, 3, BestapproxDirichletBoundary; data = bnd_data_rest!)
+    append!(MyBoundary, 4, HomogeneousDirichletBoundary)
+    ConvectionDiffusionProblem = PDEDescription("ConvectionDiffusionProblem",MyLHS,MyRHS,[MyBoundary])
 
     # define ItemIntegrators for L2/H1 error computation
     L2ErrorEvaluator = L2ErrorIntegrator(exact_solution!, Identity, 2; bonus_quadorder = 4)
@@ -122,20 +117,18 @@ function main()
         end    
 
         # solve Poisson problem
-        Solution = FEVector{Float64}("solution",FE)
-        append!(Solution, "interpolation", FE)
-        if verbosity > 2
-            FiniteElements.show(Solution)
-        end    
+        Solution = FEVector{Float64}("Poisson solution",FE)
+        solve!(Solution, ConvectionDiffusionProblem; verbosity = verbosity - 1)
 
-        solve!(Solution[1],PD; verbosity = verbosity - 1)
-        interpolate!(Solution[2], exact_solution!; verbosity = verbosity - 1)
+        # interpolate
+        Interpolation = FEVector{Float64}("Interpolation",FE)
+        interpolate!(Interpolation[1], exact_solution!; verbosity = verbosity - 1)
 
         # compute L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
-        append!(L2errorInterpolation,sqrt(evaluate(L2ErrorEvaluator,Solution[2])))
+        append!(L2errorInterpolation,sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
-        append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Solution[2])))
+        append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Interpolation[1])))
         
         # plot final solution
         if (level == nlevels)

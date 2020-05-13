@@ -1,91 +1,101 @@
 abstract type AbstractAction end
 struct DoNotChangeAction <: AbstractAction
     resultdim::Int
+    bonus_quadorder::Int
 end
 
 struct MultiplyScalarAction{T <: Real} <: AbstractAction
     value::Real
     resultdim::Int
+    bonus_quadorder::Int
 end
 struct MultiplyVectorAction{T <: Real} <: AbstractAction
     value::Array{T,1}
     resultdim::Int
+    bonus_quadorder::Int
 end
 struct MultiplyMatrixAction{T <: Real} <: AbstractAction
     value::Array{T,2}
     resultdim::Int
+    bonus_quadorder::Int
 end
 struct RegionWiseMultiplyScalarAction{T <: Real} <: AbstractAction
     value::Array{Real,1} # one array for each region
-    ItemRegions::AbstractElementRegions
     cregion::Int
     resultdim::Int
+    bonus_quadorder::Int
 end
 struct RegionWiseMultiplyVectorAction{T <: Real} <: AbstractAction
     value::Array{Array{T,1},1} # one array for each region
-    ItemRegions::AbstractElementRegions
     cregion::Int
     resultdim::Int
+    bonus_quadorder::Int
 end
 struct FunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input)
     resultdim::Int
+    bonus_quadorder::Int
 end
 struct XFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x)
     resultdim::Int
     x::Array{Array{T,1},1}
+    bonus_quadorder::Int
 end
 mutable struct RegionWiseXFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x,region)
-    ItemRegions::Union{Array{Int32,1},AbstractElementRegions,VectorOfConstants{Int32}}
     cregion::Int
     resultdim::Int
     x::Array{Array{T,1},1}
+    bonus_quadorder::Int
+end
+
+function DoNotChangeAction(resultdim::Int)
+    return DoNotChangeAction(resultdim,0)
 end
 
 function MultiplyScalarAction(value::Real, resultdim::Int = 1)
-    return MultiplyScalarAction{eltype(value)}(value, resultdim)
+    return MultiplyScalarAction{eltype(value)}(value, resultdim,0)
 end
 
 function MultiplyVectorAction(value::Array{<:Real,1})
-    return MultiplyVectorAction{eltype(value)}(value, length(value))
+    return MultiplyVectorAction{eltype(value)}(value, length(value),0)
 end
 
 function MultiplyMatrixAction(value::Array{<:Real,2})
-    return MultiplyMatrixAction{eltype(value)}(value, size(value,1))
+    return MultiplyMatrixAction{eltype(value)}(value, size(value,1),0)
 end
 
-function RegionWiseMultiplyVectorAction(value::Array{Array{<:Real,1},1}, ItemRegions::AbstractElementRegions, resultdim::Int)
-    return RegionWiseMultiplyVectorAction{eltype(value[1])}(value, ItemRegions, 1, length(value[1]))
+function RegionWiseMultiplyVectorAction(value::Array{Array{<:Real,1},1}, resultdim::Int)
+    return RegionWiseMultiplyVectorAction{eltype(value[1])}(value, 1, length(value[1]),0)
 end
 
-function RegionWiseMultiplyScalarAction(value::Array{<:Real,1}, ItemRegions::AbstractElementRegions, resultdim::Int = 1)
-    return RegionWiseMultiplyScalarAction{eltype(value)}(value, ItemRegions, 1, resultdim)
+function RegionWiseMultiplyScalarAction(value::Array{<:Real,1}, resultdim::Int = 1)
+    return RegionWiseMultiplyScalarAction{eltype(value)}(value, 1, resultdim,0)
 end
 
-function FunctionAction(f::Function, resultdim::Int = 1)
-    return FunctionAction{Float64}(f, resultdim)
+function FunctionAction(f::Function, resultdim::Int = 1; bonus_quadorder::Int = 0)
+    return FunctionAction{Float64}(f, resultdim, bonus_quadorder)
 end
 
-function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2)
-    return XFunctionAction{Float64}(f, resultdim, [])
+function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+    return XFunctionAction{Float64}(f, resultdim, [], bonus_quadorder)
 end
 
-function RegionWiseXFunctionAction(f::Function, ItemRegions::Union{Array{Int32,1},AbstractElementRegions,VectorOfConstants{Int32}}, resultdim::Int = 1, xdim::Int = 2)
-    return RegionWiseXFunctionAction{Float64}(f, ItemRegions, 1, resultdim, [])
+function RegionWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+    return RegionWiseXFunctionAction{Float64}(f, 1, resultdim, [], bonus_quadorder)
 end
 
 ###
 # update! is called on each change of item 
 ###
 
-function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int)
+function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int, region::Int32)
     # do nothing
 end
 
-function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int)
-    C.cregion = C.ItemRegions[item]
+function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, region::Int32)
+    C.cregion = region
 
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
@@ -102,7 +112,7 @@ function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int
 
 end
 
-function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int)
+function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region::Int32)
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
         FEXGrid.update!(FEBE.L2G, item)
@@ -118,8 +128,8 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int)
 
 end
 
-function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, item::Int)
-    C.cregion = C.ItemRegions[item]
+function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, item::Int, region)
+    C.cregion = region
 end
 
 ###

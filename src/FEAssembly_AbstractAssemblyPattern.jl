@@ -38,7 +38,6 @@ struct LinearForm{AT} <: AbstractAssemblyPattern{AT}
     FE::AbstractFiniteElement
     operator::Type{<:AbstractFunctionOperator}
     action::AbstractAction
-    bonus_quadorder::Int
     regions::Array{Int,1}
 end   
 
@@ -46,9 +45,8 @@ function LinearForm(AT::Type{<:AbstractAssemblyType},
     FE::AbstractFiniteElement,
     operator::Type{<:AbstractFunctionOperator},
     action::AbstractAction;
-    bonus_quadorder::Int = 0,
     regions::Array{Int,1} = [0])
-    return LinearForm{AT}(FE,operator,action,bonus_quadorder,regions)
+    return LinearForm{AT}(FE,operator,action,regions)
 end
 
 struct BilinearForm{AT} <: AbstractAssemblyPattern{AT}
@@ -57,7 +55,6 @@ struct BilinearForm{AT} <: AbstractAssemblyPattern{AT}
     operator1::Type{<:AbstractFunctionOperator}
     operator2::Type{<:AbstractFunctionOperator}
     action::AbstractAction # is only applied to FE1/operator1
-    bonus_quadorder::Int
     regions::Array{Int,1}
     symmetric::Bool
 end   
@@ -67,32 +64,28 @@ function BilinearForm(AT::Type{<:AbstractAssemblyType},
     operator1::Type{<:AbstractFunctionOperator},
     operator2::Type{<:AbstractFunctionOperator},
     action::AbstractAction; # is only applied to FE1/operator1
-    bonus_quadorder::Int = 0,
     regions::Array{Int,1} = [0])
-    return BilinearForm{AT}(FE1,FE2,operator1,operator2,action,bonus_quadorder,regions,false)
+    return BilinearForm{AT}(FE1,FE2,operator1,operator2,action,regions,false)
 end
 function SymmetricBilinearForm(AT::Type{<:AbstractAssemblyType},
     FE1::AbstractFiniteElement,
     operator1::Type{<:AbstractFunctionOperator},
     action::AbstractAction; # is only applied to FE1/operator1
-    bonus_quadorder::Int = 0,
     regions::Array{Int,1} = [0])
-    return BilinearForm{AT}(FE1,FE1,operator1,operator1,action,bonus_quadorder,regions,true)
+    return BilinearForm{AT}(FE1,FE1,operator1,operator1,action,regions,true)
 end
 
 
 struct ItemIntegrator{AT} <: AbstractAssemblyPattern{AT}
     operator::Type{<:AbstractFunctionOperator}
     action::AbstractAction
-    bonus_quadorder::Int
     regions::Array{Int,1}
 end
 function ItemIntegrator(AT::Type{<:AbstractAssemblyType},
     operator::Type{<:AbstractFunctionOperator},
     action::AbstractAction; # is only applied to FE1/operator1
-    bonus_quadorder::Int = 0,
     regions::Array{Int,1} = [0])
-    return ItemIntegrator{AT}(operator,action,bonus_quadorder,regions)
+    return ItemIntegrator{AT}(operator,action,regions)
 end   
 
 export AbstractAssemblyPattern,ItemIntegrator,LinearForm,BilinearForm,SymmetricBilinearForm
@@ -275,8 +268,8 @@ function evaluate!(
 
     operator = form.operator
     regions = form.regions
-    bonus_quadorder = form.bonus_quadorder
     action = form.action
+    bonus_quadorder = action.bonus_quadorder
     if regions == [0]
         try
             regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
@@ -322,7 +315,7 @@ function evaluate!(
         update!(basisevaler[iEG][evalnr],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr], item)
+        update!(action, basisevaler[iEG][evalnr], item, regions[r])
 
         # update dofs
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
@@ -363,8 +356,8 @@ function evaluate(
 
     operator = form.operator
     regions = form.regions
-    bonus_quadorder = form.bonus_quadorder
     action = form.action
+    bonus_quadorder = action.bonus_quadorder
     if regions == [0]
         try
             regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
@@ -410,7 +403,7 @@ function evaluate(
         update!(basisevaler[iEG][evalnr[1]],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item)
+        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
 
         # update dofs
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
@@ -436,11 +429,13 @@ function evaluate(
     return result
 end
 
-function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::Int = 0) where AT <: AbstractAssemblyType
+function assemble!(
+    b::AbstractArray{<:Real,2},
+    LF::LinearForm{AT};
+    verbosity::Int = 0) where AT <: AbstractAssemblyType
     FE = LF.FE
     operator = LF.operator
     action = LF.action
-    bonus_quadorder = LF.bonus_quadorder
     regions = LF.regions
 
     NumberType = eltype(b)
@@ -460,6 +455,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
     else
         regions = Array{Int32,1}(regions)    
     end
+    bonus_quadorder = action.bonus_quadorder
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(LF, [operator], [FE], regions, NumberType, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
@@ -496,7 +492,7 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
         update!(basisevaler[iEG][evalnr[1]],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item)
+        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
 
         # update dofs
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
@@ -523,14 +519,109 @@ function assemble!(b::AbstractArray{<:Real,2}, LF::LinearForm{AT}; verbosity::In
 end
 
 
+function assemble!( # LF has to have resultdim == 1
+    b::FEVectorBlock,
+    LF::LinearForm{AT};
+    verbosity::Int = 0) where AT <: AbstractAssemblyType
+    FE = LF.FE
+    operator = LF.operator
+    action = LF.action
+    regions = LF.regions
+
+    NumberType = eltype(b)
+    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
+    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
+    
+    if regions == [0]
+        try
+            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end        
+    else
+        regions = Array{Int32,1}(regions)    
+    end
+    bonus_quadorder = action.bonus_quadorder
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item = prepareOperatorAssembly(LF, [operator], [FE], regions, NumberType, 1, bonus_quadorder, verbosity - 1)
+
+    # collect FE and FEBasisEvaluator information
+    ncomponents = FiniteElements.get_ncomponents(typeof(FE))
+    cvals_resultdim = size(basisevaler[1][1].cvals[1],1)
+    action_resultdim = action.resultdim
+    @assert action_resultdim == 1
+
+    # loop over items
+    itemET = xItemGeometries[1] # type of the current item
+    iEG = 1 # index to the correct unique geometry
+    ndofs4item = 0 # number of dofs for item
+    evalnr = [0] # evaler number that has to be used for current item
+    dofitem = 0 # itemnr where the dof numbers can be found
+    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
+    temp = 0 # some temporary variable
+    action_input = zeros(NumberType,cvals_resultdim) # heap for action input
+    action_result = zeros(NumberType,action_resultdim) # heap for action output
+    cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
+    for item = 1 : nitems
+    for r = 1 : length(regions)
+    # check if item region is in regions
+    if xItemRegions[item] == regions[r]
+
+        # item number for dof provider
+        dofitem = dofitem4item(item)
+
+        # find index for CellType
+        itemET = EG4item(item)
+        iEG = findfirst(isequal(itemET), EG)
+        ndofs4item = ndofs4EG[1][iEG]
+
+        # update FEbasisevaler
+        evalnr = evaler4item(item)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
+
+        # update action
+        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
+
+        # update dofs
+        dofs[1:ndofs4item] = xItemDofs[:,dofitem]
+
+        for i in eachindex(qf[iEG].w)
+            cvali = basisevaler[iEG][evalnr[1]].cvals[i]
+
+            for dof_i = 1 : ndofs4item
+                # apply action
+                for k = 1 : cvals_resultdim
+                    action_input[k] = cvali[k,dof_i]
+                end    
+                apply_action!(action_result, action_input, action, i)
+
+                for j = 1 : action_resultdim
+                   b[dofs[dof_i]] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                end
+            end 
+        end  
+        break; # region for loop
+    end # if in region    
+    end # region for loop
+    end # item for loop
+end
 
 
-function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity::Int = 0, transpose_copy = Nothing) where AT <: AbstractAssemblyType
+
+
+function assemble!(
+    A::AbstractArray{<:Real,2},
+    BLF::BilinearForm{AT};
+    verbosity::Int = 0,
+    transpose_copy = Nothing) where AT <: AbstractAssemblyType
 
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
     action = BLF.action
-    bonus_quadorder = BLF.bonus_quadorder
+    bonus_quadorder = BLF.action.bonus_quadorder
     regions = BLF.regions
 
     
@@ -597,7 +688,7 @@ function assemble!(A::AbstractArray{<:Real,2}, BLF::BilinearForm{AT}; verbosity:
         update!(basisevaler[iEG][evalnr[2]],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item)
+        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
 
         # update dofs
         dofs[1:ndofs4item1] = xItemDofs1[:,dofitem]

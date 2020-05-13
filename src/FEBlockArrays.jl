@@ -32,6 +32,21 @@ function FEVector{T}(name::String, FEType::AbstractFiniteElement) where T <: Rea
     return FEVector{T}([Block], entries)
 end
 
+function FEVector{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) where T <: Real
+    ndofs = 0
+    for j = 1:length(FETypes)
+        ndofs += FETypes[j].ndofs
+    end    
+    entries = zeros(T,ndofs)
+    Blocks = Array{FEVectorBlock,1}(undef,length(FETypes))
+    offset = 0
+    for j = 1:length(FETypes)
+        Blocks[j] = FEVectorBlock{T}(name, FETypes[j], offset , offset+FETypes[j].ndofs, entries)
+        offset += FETypes[j].ndofs
+    end    
+    return FEVector{T}(Blocks, entries)
+end
+
 
 Base.getindex(FEF::FEVector,i) = FEF.FEVectorBlocks[i]
 Base.getindex(FEB::FEVectorBlock,i::Int)=FEB.entries[FEB.offset+i]
@@ -105,7 +120,6 @@ function FEMatrix{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) wh
     for j=1:length(FETypes)
         offsetY = 0
         for k=1:length(FETypes)
-            println("blcok $j/$k offsets = $offsetX/$offsetY")
             Blocks[(j-1)*length(FETypes)+k] = FEMatrixBlock{T}(name * " [$j,$k]", FETypes[j], FETypes[k], offsetX , offsetY, offsetX+FETypes[j].ndofs, offsetY+FETypes[k].ndofs, entries)
             offsetY += FETypes[k].ndofs
         end    
@@ -120,6 +134,7 @@ end
 
 
 Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
+Base.getindex(FEF::FEMatrix,i,j) = FEF.FEMatrixBlocks[(i-1)*length(FEF.FEMatrixBlocks)+j]
 Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
 Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
 Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = (FEB.entries[FEB.offsetX+i,FEB.offsetY+j] = v)
