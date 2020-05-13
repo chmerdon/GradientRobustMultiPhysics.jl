@@ -91,8 +91,8 @@ function main()
     ConvectionDiffusionProblem = PDEDescription("ConvectionDiffusionProblem",MyLHS,MyRHS,[MyBoundary])
 
     # define ItemIntegrators for L2/H1 error computation
-    L2ErrorEvaluator = L2ErrorIntegrator(exact_solution!, Identity, 2; bonus_quadorder = 4)
-    H1ErrorEvaluator = L2ErrorIntegrator(exact_solution_gradient!, Gradient, 2; bonus_quadorder = 3)
+    L2ErrorEvaluator = L2ErrorIntegrator(exact_solution!, Identity, 2, 1; bonus_quadorder = 4)
+    H1ErrorEvaluator = L2ErrorIntegrator(exact_solution_gradient!, Gradient, 2, 2; bonus_quadorder = 3)
     L2error = []
     H1error = []
     L2errorInterpolation = []

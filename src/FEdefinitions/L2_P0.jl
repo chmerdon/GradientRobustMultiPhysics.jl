@@ -63,6 +63,29 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P0{1}, exact_func
     end    
 end
 
+
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FEH1P0)
+    xCoords = FE.xgrid[Coordinates]
+    xCellNodes = FE.xgrid[CellNodes]
+    xNodeCells = atranspose(xCellNodes)
+    ncells = num_sources(xCellNodes)
+    ncomponents = get_ncomponents(typeof(FE))
+    value = 0.0
+    nneighbours = 0
+    offset4component = 0:ncells:ncomponents*ncells
+    for node = 1 : num_sources(xCoords)
+        for c = 1 : ncomponents
+            value = 0.0
+            nneighbours = num_targets(xNodeCells,node)
+            for n = 1 : nneighbours
+                value += Source[offset4component[c]+xNodeCells[n,node]]
+            end
+            value /= nneighbours
+            Target[node,c] = value
+        end
+    end    
+end
+
 function get_basis_on_cell(::Type{FEH1P0{1}}, ::Type{<:AbstractElementGeometry})
     function closure(xref)
         return [1.0]

@@ -55,7 +55,7 @@ abstract type AbstractFiniteElement end
 
 export AbstractFiniteElement, AbstractH1FiniteElementWithCoefficients, AbstractH1FiniteElement, AbstractHdivFiniteElement, AbstractHcurlFiniteElement
 export get_ncomponents, getH1P1FiniteElement, getH1BRFiniteElement, getH1P2FiniteElement
-export interpolate!
+export interpolate!, nodevalues!
 
 # show function for FiniteElement
 function show(FE::AbstractFiniteElement)

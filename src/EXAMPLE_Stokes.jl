@@ -9,7 +9,8 @@ using QuadratureRules
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
-using BenchmarkTools
+using Printf
+
 
 function gridgen_mixedEG()
 
@@ -46,7 +47,7 @@ function main()
 
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 6 # number of refinement levels
+    nlevels = 4 # number of refinement levels
     FEorder = 1 # optimal convergence order of velocity finite element
     verbosity = 3 # deepness of messaging (the larger, the more)
 
@@ -58,6 +59,12 @@ function main()
     function exact_velocity!(result,x)
         result[1] = x[2]*(1.0-x[2]);
         result[2] = 0.0;
+    end
+    function exact_velocity_gradient!(result,x)
+        result[1] = 0.0
+        result[2] = (1.0-2.0*x[2]);
+        result[3] = 0.0;
+        result[4] = 0.0;
     end
     function bnd_data_rest!(result,x)
         result[1] = 0.0
@@ -80,24 +87,31 @@ function main()
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
     MyRHS[1] = [RhsOperator(Identity, [exact_solution_rhs!], 2, 2; bonus_quadorder = 3)]
     MyRHS[2] = []
-    MyBoundary = BoundaryOperator(2,2)
-    append!(MyBoundary, 1, HomogeneousDirichletBoundary; data = bnd_data_rest!)
-    append!(MyBoundary, 2, BestapproxDirichletBoundary; data = exact_velocity!)
-    append!(MyBoundary, 3, BestapproxDirichletBoundary; data = exact_velocity!)
+    MyBoundaryVelocity = BoundaryOperator(2,2)
+    append!(MyBoundaryVelocity, 1, HomogeneousDirichletBoundary; data = bnd_data_rest!)
+    append!(MyBoundaryVelocity, 2, BestapproxDirichletBoundary; data = exact_velocity!)
+    append!(MyBoundaryVelocity, 3, BestapproxDirichletBoundary; data = exact_velocity!)
     MyBoundaryPressure = BoundaryOperator(2,1) # empty, no pressure boundary conditions
-    StokesProblem = PDEDescription("StokesProblem",MyLHS,MyRHS,[MyBoundary,MyBoundaryPressure])
-
+    MyGlobalConstraints = Array{Array{AbstractGlobalConstraint,1},1}(undef,2)
+    MyGlobalConstraints[1] = Array{AbstractGlobalConstraint,1}(undef,0)
+    MyGlobalConstraints[2] = [FixedIntegralMean(0.0)]
+    StokesProblem = PDEDescription("StokesProblem",MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
 
     # define ItemIntegrators for L2/H1 error computation
     L2DivergenceErrorEvaluator = L2ErrorIntegrator(exact_divergence!, Divergence, 2, 1; bonus_quadorder = 0)
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 7)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 1)
-    #H1ErrorEvaluator = L2ErrorIntegrator(exact_solution_gradient!, Gradient, 2; bonus_quadorder = 3)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 4)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 2)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 2)
     L2error_velocity = []
     L2error_pressure = []
     L2errorInterpolation_velocity = []
     L2errorInterpolation_pressure = []
-
+    L2errorBestApproximation_velocity = []
+    L2errorBestApproximation_pressure = []
+    H1error_velocity = []
+    H1errorInterpolation_velocity = []
+    H1errorBestApproximation_velocity = []
+    
     # loop over levels
     for level = 1 : nlevels
 
@@ -124,41 +138,62 @@ function main()
         append!(Solution,"Stokes pressure",FE_pressure)
         solve!(Solution, StokesProblem; verbosity = verbosity - 1)
 
-        # move integral mean
-        pmeanIntegrator = ItemIntegrator(AbstractAssemblyTypeCELL, Identity, DoNotChangeAction(1))
-        pressure_mean =  evaluate(pmeanIntegrator,Solution[2]; verbosity = verbosity - 1)
-        total_area = sum(FE_velocity.xgrid[CellVolumes], dims=1)[1]
-        pressure_mean /= total_area
-        for j=1:FE_pressure.ndofs
-            Solution[2][j] -= pressure_mean
-        end    
-
         # interpolate
         Interpolation = FEVector{Float64}("Interpolation velocity",FE_velocity)
         append!(Interpolation,"Interpolation pressure",FE_pressure)
         interpolate!(Interpolation[1], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
         interpolate!(Interpolation[2], exact_pressure!; verbosity = verbosity - 1, bonus_quadorder = 1)
 
+        # L2 bestapproximation
+        L2Bestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FE_velocity)
+        append!(L2Bestapproximation,"L2-Bestapproximation pressure",FE_pressure)
+        L2bestapproximate!(L2Bestapproximation[1], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
+        L2bestapproximate!(L2Bestapproximation[2], exact_pressure!; verbosity = verbosity - 1, bonus_quadorder = 1)
+
+        # H1 bestapproximation (not working properly yet)
+        H1Bestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
+        H1bestapproximate!(H1Bestapproximation[1], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
+        
+
         # compute L2 and H1 error
-        println("divergence = $(evaluate(L2DivergenceErrorEvaluator,Solution[1]))")
-        println("divergenceI = $(evaluate(L2DivergenceErrorEvaluator,Interpolation[1]))")
+        #println("\nL2divergence = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
+        #println("L2divergenceI = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Interpolation[1])))")
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
         append!(L2errorInterpolation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Interpolation[1])))
+        append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2Bestapproximation[1])))
         append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
         append!(L2errorInterpolation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Interpolation[2])))
+        append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2Bestapproximation[2])))
+        append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
+        append!(H1errorInterpolation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Interpolation[1])))
+        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,L2Bestapproximation[1])))
         
         # plot final solution
         if (level == nlevels)
-            println("\nL2error_velocity")
-            Base.show(L2error_velocity)
-            println("\nL2errorInterpolation_velocity")
-            Base.show(L2errorInterpolation_velocity)
-        
-            println("\nL2error_pressure")
-            Base.show(L2error_pressure)
-            println("\nL2errorInterpolation_pressure")
-            Base.show(L2errorInterpolation_pressure)
-
+            println("\n REF  |   L2ERROR   |   L2ERROR   |   L2ERROR")
+            println("LEVEL | VELO-STOKES | VELO-INTERP | VELO-L2BEST");
+            for j=1:nlevels
+                @printf(" %2d   |",j);
+                @printf(" %.5e |",L2error_velocity[j])
+                @printf(" %.5e |",L2errorInterpolation_velocity[j])
+                @printf(" %.5e\n",L2errorBestApproximation_velocity[j])
+            end
+            println("\n REF  |   H1ERROR   |   H1ERROR   |   H1ERROR")
+            println("LEVEL | VELO-STOKES | VELO-INTERP | VELO-H1BEST");
+            for j=1:nlevels
+                @printf(" %2d   |",j);
+                @printf(" %.5e |",H1error_velocity[j])
+                @printf(" %.5e |",H1errorInterpolation_velocity[j])
+                @printf(" %.5e\n",H1errorBestApproximation_velocity[j])
+            end
+            println("\n REF  |   L2ERROR   |   L2ERROR   |   L2ERROR")
+            println("LEVEL | PRES-STOKES | PRES-INTERP | PRES-L2BEST");
+            for j=1:nlevels
+                @printf(" %2d   |",j);
+                @printf(" %.5e |",L2error_pressure[j])
+                @printf(" %.5e |",L2errorInterpolation_pressure[j])
+                @printf(" %.5e\n",L2errorBestApproximation_pressure[j])
+            end
             # split grid into triangles for plotter
             xgrid = split_grid_into(xgrid,Triangle2D)
 
@@ -167,12 +202,14 @@ function main()
             ExtendableGrids.plot(xgrid, Plotter = PyPlot)
 
             # plot solution
+            nnodes = size(xgrid[Coordinates],2)
+            nodevals = zeros(Float64,nnodes,2)
+            nodevalues!(nodevals,Solution[1],FE_velocity)
             PyPlot.figure(2)
-            nnodes = size(xgrid[Coordinates],2)
-            ExtendableGrids.plot(xgrid, Solution[1][1:nnodes]; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, nodevals[:,1][1:nnodes]; Plotter = PyPlot)
             PyPlot.figure(3)
-            nnodes = size(xgrid[Coordinates],2)
-            ExtendableGrids.plot(xgrid, Solution[2][1:nnodes]; Plotter = PyPlot)
+            nodevalues!(nodevals,Solution[2],FE_pressure)
+            ExtendableGrids.plot(xgrid, nodevals[:,1]; Plotter = PyPlot)
         end    
     end    
 

@@ -1,4 +1,12 @@
 
+function assemble!(A::FEMatrixBlock, O::ReactionOperator; verbosity::Int = 0)
+    FE1 = A.FETypeX
+    FE2 = A.FETypeY
+    @assert FE1 == FE2
+    L2Product = SymmetricBilinearForm(AbstractAssemblyTypeCELL, FE1, Identity, O.action)    
+    FEAssembly.assemble!(A, L2Product; verbosity = verbosity)
+end
+
 function assemble!(A::FEMatrixBlock, O::LaplaceOperator; verbosity::Int = 0)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
@@ -237,8 +245,37 @@ function solve!(
         A[1][fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
     end
 
+    # prepare further global constraints
+    for j= 1 : length(FEs), k = 1 : length(PDE.GlobalConstraints[j])
+        if typeof(PDE.GlobalConstraints[j][k]) == FixedIntegralMean
+            if verbosity > 0
+                println("\n  Ensuring fixed integral mean for component $j...")
+            end
+            b[j][1] = 0.0
+            A[j,j][1,1] = dirichlet_penalty
+        end
+    end
+
     # solve
     Target.entries[:] = A.entries\b.entries
+
+    # realize global constraints
+
+    for j= 1 : length(FEs), k = 1 : length(PDE.GlobalConstraints[j])
+        if typeof(PDE.GlobalConstraints[j][k]) == FixedIntegralMean
+            if verbosity > 0
+                println("\n  Moving integral mean for component $j to value $(PDE.GlobalConstraints[j][k].value)")
+            end
+            # move integral mean
+            pmeanIntegrator = ItemIntegrator(AbstractAssemblyTypeCELL, Identity, DoNotChangeAction(1))
+            meanvalue =  evaluate(pmeanIntegrator,Target[j]; verbosity = verbosity - 1)
+            total_area = sum(FEs[j].xgrid[CellVolumes], dims=1)[1]
+            meanvalue /= total_area
+            for dof=1:FEs[j].ndofs
+                Target[j][dof] -= meanvalue + PDE.GlobalConstraints[j][k].value
+            end    
+        end
+    end
 end
 
 

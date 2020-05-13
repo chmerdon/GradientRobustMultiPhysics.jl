@@ -10,7 +10,7 @@ abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 
 struct LaplaceOperator <: AbstractPDEOperator
     action :: AbstractAction             #      --ACTION--     
-                                        # e.g. (K grad u) : grad v
+                                         # e.g. (K grad u) : grad v
 end
 
 struct LagrangeMultiplier <: AbstractPDEOperator
@@ -19,7 +19,12 @@ end
 
 struct ConvectionOperator <: AbstractPDEOperator
     action :: AbstractAction             #      ----ACTION----
-                                        # e.g. (beta * gradu) * v
+                                         # e.g. (beta * gradu) * v
+end
+
+struct ReactionOperator <: AbstractPDEOperator
+    action :: AbstractAction             #      --ACTION--
+                                        # e.g.  (gamma * u) * v
 end
 
 function ConvectionOperator(beta::Function, xdim::Int; bonus_quadorder::Int = 0)
@@ -37,11 +42,6 @@ function ConvectionOperator(beta::Function, xdim::Int; bonus_quadorder::Int = 0)
     return ConvectionOperator(convection_action)
 end
 
-struct ReactionOperator <: AbstractPDEOperator
-    action :: AbstractAction             #      --ACTION--                  
-                                        # e.g. (gamma * u) * v 
-end
-
 struct RhsOperator <: AbstractPDEOperator
     operator :: Type{<:AbstractFunctionOperator}
     action :: AbstractAction              #       -----ACTION----
@@ -55,7 +55,7 @@ function RhsOperator(operator::Type{<:AbstractFunctionOperator}, f4region, xdim:
             f4region[region](temp,x)
             result[1] = 0
             for j = 1 : ncomponents
-                result[1] = temp[j]*input[j] 
+                result[1] += temp[j]*input[j] 
             end
         end
     end    
@@ -102,25 +102,31 @@ function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBou
     O.data4bregion[region] = data
 end
 
+
+abstract type AbstractGlobalConstraint end
+struct FixedIntegralMean <: AbstractGlobalConstraint
+    value::Real
+end      # triggers that solution component has fixed integral mean
+
 # A PDE is described by an nxn matrix and vector of PDEOperator
 # the indices of matrix relate to FEBlocks given to solver
 # all Operators of [i,k] - matrixblock are assembled into system matrix block [i*n+k]
 # all Operators of [i] - rhs-block are assembled into rhs block [i]
-# 
-#
-# EXAMPLE 1 : PoissonProblem with convection term
-#   LHSOperators = [[LaplaceOperator(1.0), ConvectionOperator(beta)]]
-#   RHSOperators = [[RhsOperator(Identity,...)]]
-#
-# EXAMPLE 2 : StokesProblem
-#   LHSOperators = [[LaplaceOperator(nu)] [LagrangeMultiplier(operator)];
-#                                []          [NoConnection]]
-#   RHSOperators = [[RhsOperator(Identity, XFunctionAction)]]
 
 struct PDEDescription
     name::String
     LHSOperators::Array{Array{AbstractPDEOperator,1},2}
     RHSOperators::Array{Array{AbstractPDEOperator,1},1}
     BoundaryOperators::Array{BoundaryOperator,1}
+    GlobalConstraints::Array{Array{AbstractGlobalConstraint,1}}
+end
+
+function PDEDescription(name, LHS, RHS, BoundaryOperators)
+    nFEs = length(RHS)
+    NoConstraints = Array{Array{AbstractGlobalConstraint,1},1}(undef,nFEs)
+    for j = 1 : nFEs
+        NoConstraints[j] = Array{AbstractGlobalConstraint,1}(undef,0)
+    end
+    return PDEDescription(name, LHS, RHS, BoundaryOperators, NoConstraints)
 end
 
