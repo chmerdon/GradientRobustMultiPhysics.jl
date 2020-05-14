@@ -10,6 +10,7 @@ using QuadratureRules
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using BenchmarkTools
+using Printf
 
 function gridgen_mixedEG()
 
