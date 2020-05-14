@@ -47,7 +47,7 @@ function main()
 
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 4 # number of refinement levels
+    nlevels = 6 # number of refinement levels
     FEorder = 1 # optimal convergence order of velocity finite element
     verbosity = 3 # deepness of messaging (the larger, the more)
 
@@ -80,6 +80,7 @@ function main()
 
     # PDE description
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
+    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
     MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(viscosity,4))]
     MyLHS[1,2] = [LagrangeMultiplier(Divergence)] # automatically fills transposed block
     MyLHS[2,1] = []
@@ -111,6 +112,7 @@ function main()
     H1error_velocity = []
     H1errorInterpolation_velocity = []
     H1errorBestApproximation_velocity = []
+    NDofs = []
     
     # loop over levels
     for level = 1 : nlevels
@@ -137,6 +139,7 @@ function main()
         Solution = FEVector{Float64}("Stokes velocity",FE_velocity)
         append!(Solution,"Stokes pressure",FE_pressure)
         solve!(Solution, StokesProblem; verbosity = verbosity - 1)
+        push!(NDofs,length(Solution.entries))
 
         # interpolate
         Interpolation = FEVector{Float64}("Interpolation velocity",FE_velocity)
@@ -147,12 +150,12 @@ function main()
         # L2 bestapproximation
         L2Bestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FE_velocity)
         append!(L2Bestapproximation,"L2-Bestapproximation pressure",FE_pressure)
-        L2bestapproximate!(L2Bestapproximation[1], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
-        L2bestapproximate!(L2Bestapproximation[2], exact_pressure!; verbosity = verbosity - 1, bonus_quadorder = 1)
+        L2bestapproximate!(L2Bestapproximation[1], exact_velocity!; boundary_regions = [0], verbosity = verbosity - 1, bonus_quadorder = 2)
+        L2bestapproximate!(L2Bestapproximation[2], exact_pressure!; boundary_regions = [], verbosity = verbosity - 1, bonus_quadorder = 1)
 
         # H1 bestapproximation (not working properly yet)
         H1Bestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
-        H1bestapproximate!(H1Bestapproximation[1], exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
+        H1bestapproximate!(H1Bestapproximation[1], exact_velocity_gradient!, exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
         
 
         # compute L2 and H1 error
@@ -170,30 +173,38 @@ function main()
         
         # plot final solution
         if (level == nlevels)
-            println("\n REF  |   L2ERROR   |   L2ERROR   |   L2ERROR")
-            println("LEVEL | VELO-STOKES | VELO-INTERP | VELO-L2BEST");
+            println("\n         |   L2ERROR   |   L2ERROR   |   L2ERROR")
+            println("   NDOF  | VELO-STOKES | VELO-INTERP | VELO-L2BEST");
             for j=1:nlevels
-                @printf(" %2d   |",j);
+                @printf("  %6d |",NDofs[j]);
                 @printf(" %.5e |",L2error_velocity[j])
                 @printf(" %.5e |",L2errorInterpolation_velocity[j])
                 @printf(" %.5e\n",L2errorBestApproximation_velocity[j])
             end
-            println("\n REF  |   H1ERROR   |   H1ERROR   |   H1ERROR")
-            println("LEVEL | VELO-STOKES | VELO-INTERP | VELO-H1BEST");
+            println("\n         |   H1ERROR   |   H1ERROR   |   H1ERROR")
+            println("   NDOF  | VELO-STOKES | VELO-INTERP | VELO-H1BEST");
             for j=1:nlevels
-                @printf(" %2d   |",j);
+                @printf("  %6d |",NDofs[j]);
                 @printf(" %.5e |",H1error_velocity[j])
                 @printf(" %.5e |",H1errorInterpolation_velocity[j])
                 @printf(" %.5e\n",H1errorBestApproximation_velocity[j])
             end
-            println("\n REF  |   L2ERROR   |   L2ERROR   |   L2ERROR")
-            println("LEVEL | PRES-STOKES | PRES-INTERP | PRES-L2BEST");
+            println("\n         |   L2ERROR   |   L2ERROR   |   L2ERROR")
+            println("   NDOF  | PRES-STOKES | PRES-INTERP | PRES-L2BEST");
             for j=1:nlevels
-                @printf(" %2d   |",j);
+                @printf("  %6d |",NDofs[j]);
                 @printf(" %.5e |",L2error_pressure[j])
                 @printf(" %.5e |",L2errorInterpolation_pressure[j])
                 @printf(" %.5e\n",L2errorBestApproximation_pressure[j])
             end
+            println("\nLEGEND\n======")
+            println("VELO-STOKES : discrete Stokes velocity solution ($(FE_velocity.name))")
+            println("VELO-INTERP : interpolation of exact velocity")
+            println("VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)")
+            println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)")
+            println("PRES-STOKES : discrete Stokes pressure solution ($(FE_pressure.name))")
+            println("PRES-INTERP : interpolation of exact pressure")
+            println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
             # split grid into triangles for plotter
             xgrid = split_grid_into(xgrid,Triangle2D)
 

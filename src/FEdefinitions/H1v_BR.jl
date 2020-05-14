@@ -10,7 +10,7 @@ struct FEH1BR{ncomponents} <: AbstractH1FiniteElementWithCoefficients where {nco
 end
 
 function getH1BRFiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
-    name = "BR ($ncomponents,H1)"    
+    name = "BR (H1)"    
 
     # generate celldofs
     dim = size(xgrid[Coordinates],1) 

@@ -97,6 +97,7 @@ function main()
     H1error = []
     L2errorInterpolation = []
     H1errorInterpolation = []
+    NDofs = []
 
     # loop over levels
     for level = 1 : nlevels
@@ -119,6 +120,7 @@ function main()
         # solve Poisson problem
         Solution = FEVector{Float64}("Poisson solution",FE)
         solve!(Solution, ConvectionDiffusionProblem; verbosity = verbosity - 1)
+        push!(NDofs,length(Solution.entries))
 
         # interpolate
         Interpolation = FEVector{Float64}("Interpolation",FE)
@@ -132,15 +134,20 @@ function main()
         
         # plot final solution
         if (level == nlevels)
-            println("\nL2error")
-            Base.show(L2error)
-            println("\nL2errorInterpolation")
-            Base.show(L2errorInterpolation)
-        
-            println("\nH1error")
-            Base.show(H1error)
-            println("\nH1errorInterpolation")
-            Base.show(H1errorInterpolation)
+            println("\n         |   L2ERROR   |   L2ERROR")
+            println("   NDOF  |   SOLUTION  |   INTERPOL");
+            for j=1:nlevels
+                @printf("  %6d |",NDofs[j]);
+                @printf(" %.5e |",L2error[j])
+                @printf(" %.5e\n",L2errorInterpolation[j])
+            end
+            println("\n         |   H1ERROR   |   H1ERROR")
+            println("   NDOF  |   SOLUTION  |   INTERPOL");
+            for j=1:nlevels
+                @printf("  %6d |",NDofs[j]);
+                @printf(" %.5e |",H1error[j])
+                @printf(" %.5e\n",H1errorInterpolation[j])
+            end
 
             # split grid into triangles for plotter
             xgrid = split_grid_into(xgrid,Triangle2D)

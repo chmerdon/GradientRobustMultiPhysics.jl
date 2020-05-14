@@ -469,11 +469,13 @@ function assemble!(
     ndofs4item = 0 # number of dofs for item
     evalnr = [0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
+    maxdofs = max_num_targets_per_source(xItemDofs)
+    dofs = zeros(Int32,maxdofs)
     temp = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action_resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
+    localb = zeros(NumberType,maxdofs,action_resultdim)
     for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
@@ -508,10 +510,15 @@ function assemble!(
                 apply_action!(action_result, action_input, action, i)
 
                 for j = 1 : action_resultdim
-                   b[dofs[dof_i],j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                   localb[dof_i,j] += action_result[j] * qf[iEG].w[i]
                 end
             end 
         end  
+
+        for dof_i = 1 : ndofs4item, j = 1 : action_resultdim
+            b[dofs[dof_i],j] += localb[dof_i,j] * xItemVolumes[item]
+        end
+        fill!(localb, 0.0)
         break; # region for loop
     end # if in region    
     end # region for loop
@@ -560,11 +567,14 @@ function assemble!( # LF has to have resultdim == 1
     ndofs4item = 0 # number of dofs for item
     evalnr = [0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
+    maxdofs = max_num_targets_per_source(xItemDofs)
+    dofs = zeros(Int32,maxdofs)
     temp = 0 # some temporary variable
     action_input = zeros(NumberType,cvals_resultdim) # heap for action input
     action_result = zeros(NumberType,action_resultdim) # heap for action output
     cvali::Array{NumberType,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
+    weights::Array{NumberType,1} = [] # pointer to quadrature weights
+    localb = zeros(NumberType,maxdofs)
     for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
@@ -588,7 +598,8 @@ function assemble!( # LF has to have resultdim == 1
         # update dofs
         dofs[1:ndofs4item] = xItemDofs[:,dofitem]
 
-        for i in eachindex(qf[iEG].w)
+        weights = qf[iEG].w
+        for i in eachindex(weights)
             cvali = basisevaler[iEG][evalnr[1]].cvals[i]
 
             for dof_i = 1 : ndofs4item
@@ -599,10 +610,15 @@ function assemble!( # LF has to have resultdim == 1
                 apply_action!(action_result, action_input, action, i)
 
                 for j = 1 : action_resultdim
-                   b[dofs[dof_i]] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                    localb[dof_i] += action_result[j] * weights[i]
                 end
             end 
         end  
+
+        for dof_i = 1 : ndofs4item
+            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item]
+        end
+        fill!(localb, 0.0)
         break; # region for loop
     end # if in region    
     end # region for loop

@@ -230,7 +230,7 @@ function solve!(
     fixed_bdofs = []
     for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 0
-            println("\n  Assembling boundary data...")
+            println("\n  Assembling boundary data for block [$j]...")
             @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
             append!(fixed_bdofs, new_fixed_dofs)
         else
@@ -257,7 +257,12 @@ function solve!(
     end
 
     # solve
-    Target.entries[:] = A.entries\b.entries
+    if verbosity > 0
+        println("\n  Solving")
+        @time Target.entries[:] = A.entries\b.entries
+    else
+        Target.entries[:] = A.entries\b.entries
+    end
 
     # realize global constraints
 

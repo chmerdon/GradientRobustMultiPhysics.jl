@@ -5,7 +5,7 @@ struct DoNotChangeAction <: AbstractAction
 end
 
 struct MultiplyScalarAction{T <: Real} <: AbstractAction
-    value::Real
+    value::T
     resultdim::Int
     bonus_quadorder::Int
 end
@@ -20,7 +20,7 @@ struct MultiplyMatrixAction{T <: Real} <: AbstractAction
     bonus_quadorder::Int
 end
 struct RegionWiseMultiplyScalarAction{T <: Real} <: AbstractAction
-    value::Array{Real,1} # one array for each region
+    value::Array{T,1} # one array for each region
     cregion::Int
     resultdim::Int
     bonus_quadorder::Int
@@ -145,7 +145,7 @@ end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::MultiplyScalarAction, i::Int = 0)
     for j = 1:length(result)
-        result[j] = input[j] * C.value;    
+        result[j] = input[j] * C.value
     end    
 end
 
