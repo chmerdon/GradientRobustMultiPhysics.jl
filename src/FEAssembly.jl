@@ -125,7 +125,12 @@ function L2bestapproximate!(
     # matrix
     L2Product = SymmetricBilinearForm(AbstractAssemblyTypeCELL, FE, Identity, DoNotChangeAction(ncomponents))    
     A = FEMatrix{Float64}("Matrix",FE)
-    assemble!(A[1], L2Product; verbosity = verbosity - 1)
+    if verbosity > 0
+        println("\n  Assembling L2Product...")
+        @time assemble!(A[1], L2Product; verbosity = verbosity - 1)
+    else
+        assemble!(A[1], L2Product; verbosity = verbosity - 1)
+    end
 
     # rhs
     function rhs_function()
@@ -141,7 +146,12 @@ function L2bestapproximate!(
     action = XFunctionAction(rhs_function(),1; bonus_quadorder = bonus_quadorder)
     b = FEVector{Float64}("rhs",FE)
     RHS = LinearForm(AbstractAssemblyTypeCELL, FE, Identity, action)
-    assemble!(b[1], RHS; verbosity = verbosity - 1)
+    if verbosity > 0
+        println("\n  Assembling right-hand side...")
+        @time assemble!(b[1], RHS; verbosity = verbosity - 1)
+    else
+        assemble!(b[1], RHS; verbosity = verbosity - 1)
+    end
 
     fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
 
@@ -151,7 +161,12 @@ function L2bestapproximate!(
         A.entries[fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
     end
 
-    Target[:] = A.entries\b.entries
+    if verbosity > 0
+        println("\n  Solving...")
+        @time Target[:] = A.entries\b.entries
+    else
+        Target[:] = A.entries\b.entries
+    end
 end
 
 function H1bestapproximate!(
@@ -162,7 +177,7 @@ function H1bestapproximate!(
     verbosity::Int = 0,
     bonus_quadorder::Int = 0,
     dirichlet_penalty::Float64 = 1e60)
-    
+
     FE = Target.FEType
     xdim = size(FE.xgrid[Coordinates],1)
     ncomponents = get_ncomponents(typeof(FE))
@@ -177,7 +192,12 @@ function H1bestapproximate!(
     # matrix
     H1Product = SymmetricBilinearForm(AbstractAssemblyTypeCELL, FE, Gradient, DoNotChangeAction(ncomponents*xdim))    
     A = FEMatrix{Float64}("Matrix",FE)
-    assemble!(A[1], H1Product; verbosity = verbosity - 1)
+    if verbosity > 0
+        println("\n  Assembling H1Product...")
+        @time assemble!(A[1], H1Product; verbosity = verbosity - 1)
+    else
+        assemble!(A[1], H1Product; verbosity = verbosity - 1)    
+    end    
 
     # rhs
     function rhs_function()
@@ -193,7 +213,12 @@ function H1bestapproximate!(
     action = XFunctionAction(rhs_function(),1; bonus_quadorder = bonus_quadorder - 1)
     b = FEVector{Float64}("rhs",FE)
     RHS = LinearForm(AbstractAssemblyTypeCELL, FE, Identity, action)
-    assemble!(b[1], RHS; verbosity = verbosity - 1)
+    if verbosity > 0
+        println("\n  Assembling right-hand side...")
+        @time assemble!(b[1], RHS; verbosity = verbosity - 1)
+    else
+        assemble!(b[1], RHS; verbosity = verbosity - 1)
+    end    
 
     fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
 
@@ -203,7 +228,12 @@ function H1bestapproximate!(
         A.entries[fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
     end
 
-    Target[:] = A.entries\b.entries
+    if verbosity > 0
+        println("\n  Solving...")
+        @time Target[:] = A.entries\b.entries
+    else
+        Target[:] = A.entries\b.entries
+    end
 end
 
 end
