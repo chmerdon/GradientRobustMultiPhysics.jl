@@ -1,3 +1,20 @@
+##################
+# AbstractAction #
+##################
+#
+# allows modification of assembly patterns and are applied to the the first
+# argument of the AssemblyPattern
+#
+# have the interface
+#   function action(output,input;x,region)
+#
+# use cases:
+# - multiplication of (region-dependent) parameters (e.g. diffusion parameters)
+# - multiplication of (region-dependent) functions (e.g. right-hand side, boundary data)
+# - application of tensors (e.g. Cauchy stress tensor)
+#
+
+
 abstract type AbstractAction end
 struct DoNotChangeAction <: AbstractAction
     resultdim::Int
@@ -90,11 +107,11 @@ end
 # update! is called on each change of item 
 ###
 
-function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int, region::Int32)
+function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int, region)
     # do nothing
 end
 
-function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, region::Int32)
+function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
     C.cregion = region
 
     # compute global coordinates for function evaluation
@@ -112,7 +129,7 @@ function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int
 
 end
 
-function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region::Int32)
+function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
         FEXGrid.update!(FEBE.L2G, item)

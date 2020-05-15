@@ -1,3 +1,16 @@
+####################
+# FEBasisEvaluator #
+####################
+#
+# steers the evaluation of finite element basis functions within an assembly pattern
+#
+# during construction it gets assigned a
+#   AbstractFunctionOperator: what is evaluted (e.g. Identity, Gradietn, Divergence...)
+#   AbstractAssemblyType : cells, faces, bfaces? (to decide which dof field to use) 
+#   ElementGeometry : triangles, quads? 
+#   QuadratureRule : where to evaluate
+
+
 
 abstract type AbstractFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
 abstract type Identity <: AbstractFunctionOperator end # 1*v_h
@@ -51,8 +64,8 @@ mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG
     refbasisvals::Array{Array{T,2},1}    # basis evaluation on EG reference cell 
     refoperatorvals::Array{Array{T,2},1} # additional values to evaluate operator
     ncomponents::Int                     # number of FE components
-    offsets::Array{Int32,1}              # offsets for gradient entries of each dof
-    offsets2::Array{Int32,1}             # offsets for dof entries of each gradient (on ref)
+    offsets::Array{Int,1}              # offsets for gradient entries of each dof
+    offsets2::Array{Int,1}             # offsets for dof entries of each gradient (on ref)
     citem::Int                           # current item
     cvals::Array{Array{T,2},1}           # current operator vals on item
     coefficients::Array{T,2}             # coefficients
