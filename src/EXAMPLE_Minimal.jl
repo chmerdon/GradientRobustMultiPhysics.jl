@@ -2,6 +2,7 @@ using FEXGrid
 using ExtendableGrids
 using FiniteElements
 using FEAssembly
+using PDETools
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 
@@ -11,20 +12,37 @@ function main()
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
     for j=1:5
         xgrid = uniform_refine(xgrid)
-    end    
+    end
+    
+    # create Finite Element and FEVectors
+    FE = FiniteElements.getH1P2FiniteElement(xgrid,1)    
+    Solution1 = FEVector{Float64}("L2-Bestapproximation direct",FE)
+    Solution2 = FEVector{Float64}("L2-Bestapproximation via PDEDescription",FE)
 
-    # solve something
+    # define function to be L2-bestapproximated
     function exact_function!(result,x)
         result[1] = x[1]^2+x[2]^2
     end
-    FE = FiniteElements.getH1P2FiniteElement(xgrid,1)
-    Solution = FEVector{Float64}("L2-Bestapproximation",FE)
-    L2bestapproximate!(Solution[1], exact_function!; bonus_quadorder = 4, boundary_regions = [], verbosity = 3)
+
+    # FIRST WAY: directly via a shortcut
+    L2bestapproximate!(Solution1[1], exact_function!; bonus_quadorder = 4, boundary_regions = [], verbosity = 3)
         
+    # SECOND WAY: via PDE description mechanic
+    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
+    MyLHS[1,1] = [ReactionOperator(DoNotChangeAction(1))]
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
+    MyRHS[1] = [RhsOperator(Identity, [exact_function!], 2, 1; bonus_quadorder = 4)]
+    MyBoundary = BoundaryOperator(2,1) # empty, no boundary conditions
+    L2BAP = PDEDescription("L2-Bestapproximation problem",MyLHS,MyRHS,[MyBoundary])
+    solve!(Solution2,L2BAP; verbosity = 2)
+
+    # uncomment next line to check that both are identical
+    # println("difference = $(sum((Solution1.entries - Solution2.entries).^2))");
+
     # plot
     PyPlot.figure(1)
     xgrid = split_grid_into(xgrid,Triangle2D) #ensures that CellNodes is Array and not Variable
-    ExtendableGrids.plot(xgrid, Solution[1][1:size(xgrid[Coordinates],2)]; Plotter = PyPlot)
+    ExtendableGrids.plot(xgrid, Solution2[1][1:size(xgrid[Coordinates],2)]; Plotter = PyPlot)
 end
 
 main()
