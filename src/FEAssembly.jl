@@ -6,14 +6,7 @@ using FEXGrid
 using QuadratureRules
 using ExtendableSparse
 using SparseArrays
-using ForwardDiff # for FEBasisEvaluator
 
-export AbstractFunctionOperator
-export Identity, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
-export NeededDerivatives4Operator
-
-include("FEAssembly_FEBasisEvaluator.jl")
-export FEBasisEvaluator, update!
 
 include("FEAssembly_AbstractAction.jl")
 export AbstractAction

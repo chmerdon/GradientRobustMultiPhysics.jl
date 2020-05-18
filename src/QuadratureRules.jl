@@ -4,7 +4,7 @@ using LinearAlgebra
 using ExtendableGrids
 using FEXGrid
 
-export QuadratureRule, integrate!
+export QuadratureRule, VertexRule, integrate!
 
 struct QuadratureRule{T <: Real, ET <: AbstractElementGeometry}
     name::String
@@ -22,6 +22,25 @@ function show(Q::QuadratureRule{T,ET} where{T <: Real, ET <: AbstractElementGeom
 	println("     name : $(Q.name)");
 	println("  npoints : $(npoints) ($(eltype(Q)[1]))")
 end
+
+# sets up a quadrature rule that evuates at vertices of element geometry
+# not optimal from quadrature point of view, but helpful when defining nodal interpolations
+function VertexRule(ET::Type{Edge1D})
+    xref = [[0],[1]]
+    w = [1//2, 1//2]
+    return QuadratureRule{Float64, ET}("vertex rule edge", xref, w)
+end
+function VertexRule(ET::Type{Triangle2D})
+    xref = [[0, 0], [1,0], [0,1]]
+    w = [1//3, 1//3, 1//3]
+    return QuadratureRule{Float64, ET}("vertex rule triangle", xref, w)
+end
+function VertexRule(ET::Type{Parallelogram2D})
+    xref = [[0, 0], [1,0], [1,1], [0,1]]
+    w = [1//4, 1//4, 1//4, 1//4]
+    return QuadratureRule{Float64, ET}("vertex rule parallelogram", xref, w)
+end
+
 
 function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry1D}
     if order <= 1

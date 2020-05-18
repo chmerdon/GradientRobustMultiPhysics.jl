@@ -16,10 +16,10 @@ export GridComponentGeometries4AssemblyType
 export GridComponentRegions4AssemblyType
 
 include("FEXGrid_L2GTransformer.jl");
-export L2GTransformer, update!, eval!, mapderiv!
+export L2GTransformer, update!, eval!, mapderiv!, piola!
 
 
-export split_grid_into, uniform_refine
+export uniqueEG,split_grid_into, uniform_refine
 
 
 # additional ExtendableGrids adjacency types 
@@ -40,6 +40,47 @@ abstract type BFaceVolumes <: AbstractGridFloatArray1D end
 abstract type CellDofs <: AbstractGridAdjacency end
 abstract type FaceDofs <: AbstractGridAdjacency end
 abstract type Coefficients <: AbstractGridComponent end
+
+
+# unique functions that only selects uniques in specified regions
+function uniqueEG(xItemGeometries, xItemRegions, xItemDofs, regions)
+    nitems = 0
+    try
+        nitems = num_sources(xItemGeometries)
+    catch
+        nitems = length(xItemGeometries)
+    end      
+    EG::Array{DataType,1} = []
+    ndofs4EG = Array{Array{Int,1},1}(undef,length(xItemDofs))
+    for e = 1 : length(xItemDofs)
+        ndofs4EG[e] = []
+    end
+    iEG = 0
+    cellEG = Triangle2D
+    for item = 1 : nitems
+        for j = 1 : length(regions)
+            if xItemRegions[item] == regions[j]
+                cellEG = xItemGeometries[item]
+                iEG = 0
+                for k = 1 : length(EG)
+                    if cellEG == EG[k]
+                        iEG = k
+                        break;
+                    end
+                end
+                if iEG == 0
+                    append!(EG, [xItemGeometries[item]])
+                    for e = 1 : length(xItemDofs)
+                        append!(ndofs4EG[e], num_targets(xItemDofs[e],item))
+                    end
+                end  
+                break; # rest of for loop can be skipped
+            end    
+        end
+    end    
+    return EG, ndofs4EG
+end
+
 
 # functions that specify the number of faces of a celltype
 nfaces_per_cell(::Type{<:Edge1D}) = 2
@@ -72,7 +113,6 @@ facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D
 # functions that tell how to split one ElementGeometry into another
 split_rule(::Type{Triangle2D}, ::Type{Triangle2D}) = reshape([1,2,3],1,3)
 split_rule(::Type{<:Quadrilateral2D}, ::Type{Triangle2D}) = [1 2 3;1 3 4]
-
 
 # function that generates a new simplexgrid from a mixed grid
 function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{Triangle2D}) where {T,K}

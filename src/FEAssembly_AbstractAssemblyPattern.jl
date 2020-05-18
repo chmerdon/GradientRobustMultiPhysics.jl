@@ -320,7 +320,7 @@ function evaluate!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr],dofitem)
 
         # update action
         update!(action, basisevaler[iEG][evalnr], item, regions[r])
@@ -414,7 +414,7 @@ function evaluate(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
 
         # update action
         update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
@@ -510,7 +510,7 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
 
         # update action
         update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
@@ -615,7 +615,7 @@ function assemble!( # LF has to have resultdim == 1
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
@@ -729,8 +729,8 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-        update!(basisevaler[iEG][evalnr[2]],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr[2]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
         basisvals2 = basisevaler[iEG][evalnr[2]].cvals
 

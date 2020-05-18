@@ -214,13 +214,13 @@ function main()
 
             # plot solution
             nnodes = size(xgrid[Coordinates],2)
-            nodevals = zeros(Float64,nnodes,2)
+            nodevals = zeros(Float64,2,nnodes)
             nodevalues!(nodevals,Solution[1],FE_velocity)
             PyPlot.figure(2)
-            ExtendableGrids.plot(xgrid, nodevals[:,1][1:nnodes]; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, nodevals[1,:][1:nnodes]; Plotter = PyPlot)
             PyPlot.figure(3)
             nodevalues!(nodevals,Solution[2],FE_pressure)
-            ExtendableGrids.plot(xgrid, nodevals[:,1]; Plotter = PyPlot)
+            ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
         end    
     end    
 

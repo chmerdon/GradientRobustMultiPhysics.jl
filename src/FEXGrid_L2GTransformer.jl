@@ -85,11 +85,21 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesi
     return det
 end
 
-
-# EDGE1/CARTESIAN2D mapderiv
-# s(xref) = xref*|E|
-# dxref/ds = 1/|E|
-function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Union{Edge1D},Cartesian2D}, xref)
-    M[1,1] = 1/T.ItemVolumes[T.citem]
+# TRIANGLE2D/CARTESIAN2D Piola map
+# x = A*xref + b
+# returns A
+function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, xref)
+    M[1,1] = T.A[1,1]
+    M[1,2] = T.A[1,2]
+    M[2,1] = T.A[2,1]
+    M[2,2] = T.A[2,2]
+    return 2*T.ItemVolumes[T.citem]
+end
+# similar for parallelogram
+function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, xref)
+    M[1,1] = T.A[1,1]
+    M[1,2] = T.A[1,2]
+    M[2,1] = T.A[2,1]
+    M[2,2] = T.A[2,2]
     return T.ItemVolumes[T.citem]
 end

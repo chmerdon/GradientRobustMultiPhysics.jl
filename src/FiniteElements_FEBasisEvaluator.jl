@@ -53,12 +53,18 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGr
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
+# junctions for dof fields
+FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
+FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
+FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
 
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     FE::AbstractFiniteElement            # linke to full FE (e.g. for coefficients)
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
+    det::T                               # current determinant (for Hdiv)
     force_updateL2G::Bool                # update L2G on cell also if not needed?
     xref::Array{Array{T,1},1}            # xref of quadrature formula
     refbasisvals::Array{T,3}    # basis evaluation on EG reference cell 
@@ -143,7 +149,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         coefficients = zeros(T,0,0)
     end    
 
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,ItemDofs,L2G,L2GM,force_updateL2G,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,ItemDofs,L2G,L2GM,0.0,force_updateL2G,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients)
 end    
 
 
@@ -155,6 +161,34 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
     if FEBE.force_updateL2G
         FEXGrid.update!(FEBE.L2G, item)
     end    
+end
+
+
+# IDENTITY OPERATOR
+# Hdiv ELEMENTS (Piola trafo)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+    FEBE.citem = item
+    
+    # cell update transformation
+    FEXGrid.update!(FEBE.L2G, item)
+    FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+
+    # use Piola transformation on basisvals
+    for i = 1 : length(FEBE.xref)
+        # evaluate Piola matrix at quadrature point
+        if FEBE.L2G.nonlinear || i == 1
+            FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+        end
+        for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+            for k = 1 : FEBE.offsets[2] # ncomponents
+                FEBE.cvals[k,dof_i,i] = 0.0;
+                for l = 1 : FEBE.offsets[2] # ncomponents
+                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                end    
+                FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.det
+            end
+        end
+    end
 end
 
 

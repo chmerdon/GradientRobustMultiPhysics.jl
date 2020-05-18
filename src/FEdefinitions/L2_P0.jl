@@ -81,7 +81,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
                 value += Source[offset4component[c]+xNodeCells[n,node]]
             end
             value /= nneighbours
-            Target[node,c] = value
+            Target[c,node] = value
         end
     end    
 end
