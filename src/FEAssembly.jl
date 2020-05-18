@@ -18,6 +18,7 @@ export RegionWiseMultiplyScalarAction
 export RegionWiseMultiplyVectorAction
 export FunctionAction
 export XFunctionAction
+export ItemWiseXFunctionAction
 export RegionWiseXFunctionAction
 
 
@@ -41,7 +42,6 @@ function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFu
     L2error_action = XFunctionAction(L2error_function(),1,xdim; bonus_quadorder = bonus_quadorder)
     return ItemIntegrator{Float64,AT}(operator, L2error_action, [0])
 end
-
 
 function boundarydata!(Target::FEVectorBlock, exact_function::Function; regions = [0], verbosity::Int = 0, bonus_quadorder::Int = 0)
     FE = Target.FEType
@@ -70,26 +70,53 @@ function boundarydata!(Target::FEVectorBlock, exact_function::Function; regions 
     end
     fixed_bdofs = Base.unique(fixed_bdofs)
 
-    # rhs action for region-wise boundarydata best approximation
-    function bnd_rhs_function()
-        temp = zeros(Float64,ncomponents)
-        function closure(result, input, x)
-            exact_function(temp,x)
-            result[1] = 0.0
-            for j = 1 : ncomponents
-                result[1] += temp[j]*input[j] 
-            end 
-        end   
-    end   
-    
-    action = XFunctionAction(bnd_rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
-    RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, action; regions = regions)
-    b_bnd = FEVector{Float64}("RhsBnd", FE)
-    FEAssembly.assemble!(b_bnd[1], RHS_bnd; verbosity = verbosity - 1)
+    # operator for Dirichlet data 
+    Dboperator = DefaultDirichletBoundaryOperator4FE(typeof(FE))
 
-    A_bnd = FEMatrix{Float64}("MassMatrixBnd", FE)
-    L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, DoNotChangeAction(ncomponents); regions = regions)    
-    FEAssembly.assemble!(A_bnd[1],L2ProductBnd; verbosity = verbosity - 1)
+    # rhs action for region-wise boundarydata best approximation
+    if Dboperator == Identity
+        function bnd_rhs_function_h1()
+            temp = zeros(Float64,ncomponents)
+            function closure(result, input, x)
+                exact_function(temp,x)
+                result[1] = 0.0
+                for j = 1 : ncomponents
+                    result[1] += temp[j]*input[j] 
+                end 
+            end   
+        end   
+        action = XFunctionAction(bnd_rhs_functio_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
+        RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = regions)
+        b_bnd = FEVector{Float64}("RhsBnd", FE)
+        FEAssembly.assemble!(b_bnd[1], RHS_bnd; verbosity = verbosity - 1)
+    
+        A_bnd = FEMatrix{Float64}("MassMatrixBnd", FE)
+        L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(ncomponents); regions = regions)    
+        FEAssembly.assemble!(A_bnd[1],L2ProductBnd; verbosity = verbosity - 1)
+    elseif Dboperator == NormalFlux
+        xFaceNormals = FE.xgrid[FaceNormals]
+        xBFaces = FE.xgrid[BFaces]
+        function bnd_rhs_function_hdiv()
+            temp = zeros(Float64,ncomponents)
+            function closure(result, input, x, bface)
+                exact_function(temp,x)
+                result[1] = 0.0
+                for j = 1 : ncomponents
+                    result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]
+                end 
+                result[1] *= input[1] 
+            end   
+        end   
+        action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,1; bonus_quadorder = bonus_quadorder)
+        RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = regions)
+        b_bnd = FEVector{Float64}("RhsBnd", FE)
+        FEAssembly.assemble!(b_bnd[1], RHS_bnd; verbosity = verbosity - 1)
+    
+        A_bnd = FEMatrix{Float64}("MassMatrixBnd", FE)
+        L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = regions)    
+        FEAssembly.assemble!(A_bnd[1],L2ProductBnd; verbosity = verbosity - 1)
+    end    
+    
 
     # solve best approximation problem on boundary and write into Target
     Target[fixed_bdofs] = A_bnd.entries[fixed_bdofs,fixed_bdofs]\b_bnd.entries[fixed_bdofs,1]

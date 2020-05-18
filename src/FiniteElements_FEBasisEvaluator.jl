@@ -14,6 +14,8 @@
 
 abstract type AbstractFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
 abstract type Identity <: AbstractFunctionOperator end # 1*v_h
+abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
+abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for Hcurl on Edges
 abstract type Gradient <: AbstractFunctionOperator end # D_geom(v_h)
 abstract type SymmetricGradient <: AbstractFunctionOperator end # eps_geom(v_h)
 abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
@@ -24,7 +26,14 @@ abstract type Divergence <: AbstractFunctionOperator end # div(v_h)
 abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 
+# operator to be used for Dirichlet boundary data
+DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractH1FiniteElement}) = Identity
+DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHdivFiniteElement}) = NormalFlux
+DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHcurlFiniteElement}) = TangentFlux
+
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
@@ -38,15 +47,20 @@ NeededDerivative4Operator(::Type{<:AbstractHdivFiniteElement},::Type{Divergence}
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
-Length4Operator(::Type{Identity}, xdim::Int) = 1
-Length4Operator(::Type{Divergence}, xdim::Int) = 1
-Length4Operator(::Type{Trace}, xdim::Int) = 1
-Length4Operator(::Type{Curl}, xdim::Int) = (xdim == 2) ? 1 : xdim
-Length4Operator(::Type{Gradient}, xdim::Int) = xdim
-Length4Operator(::Type{SymmetricGradient}, xdim::Int) = (xdim == 2) ? 3 : 6
-Length4Operator(::Type{Hessian}, xdim::Int) = xdim*xdim
+# length for operator result (> 0 to be multiplied with ncomponents, = 0 fixed size)
+Length4Operator(::Type{Identity}, xdim::Int, ncomponents::Int) = ncomponents
+Length4Operator(::Type{NormalFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
+Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/(xdim-1))
+Length4Operator(::Type{Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
+Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
+Length4Operator(::Type{Curl}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
+Length4Operator(::Type{Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
+Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
+Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
@@ -87,14 +101,19 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
 
+    # pre-allocate memory for basis functions
+    ncomponents = FiniteElements.get_ncomponents(FEType)
     if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
-        refbasis = FiniteElements.get_basis_on_face(FEType, EG)
+        if FEType <: AbstractHdivFiniteElement
+            refbasis = FiniteElements.get_basis_normalflux_on_face(FEType, EG)
+            ncomponents = 1
+        else
+            refbasis = FiniteElements.get_basis_on_face(FEType, EG)
+        end
     else
         refbasis = FiniteElements.get_basis_on_cell(FEType, EG)
     end    
     
-    # pre-allocate memory for basis functions
-    ncomponents = FiniteElements.get_ncomponents(FEType)
     # probe for ndofs4item
     ndofs4item::Int = 0
     try
@@ -134,13 +153,10 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     end
     if derivorder == 0
         refoperatorvals = zeros(T,0,0,0)
+        current_eval = deepcopy(refbasisvals)  
     end
     offsets = 0:edim:(ncomponents*edim);
     offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
-
-    if FEOP == Identity
-        current_eval = deepcopy(refbasisvals)   
-    end      
     
     xref = copy(qf.xref)
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
@@ -156,6 +172,17 @@ end
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+    FEBE.citem = item
+    
+    if FEBE.force_updateL2G
+        FEXGrid.update!(FEBE.L2G, item)
+    end    
+end
+
+
+# NORMALFLUX OPERATOR
+# Hdiv ELEMENTS (nothing has to be done)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: NormalFlux, AT <:AbstractAssemblyType}
     FEBE.citem = item
     
     if FEBE.force_updateL2G

@@ -75,8 +75,9 @@ export FEVectorBlock, FEVector, FEMatrix, FEMatrixBlock
 include("FiniteElements_FEBasisEvaluator.jl")
 export FEBasisEvaluator, update!
 export AbstractFunctionOperator
-export Identity, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
+export Identity, NormalFlux, TangentFlux, Gradient, SymmetricGradient, Laplacian, Hessian, Curl, Rotation, Divergence, Trace, Deviator
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator, FEPropertyDofs4AssemblyType
+export DefaultDirichletBoundaryOperator4FE
 
 
 

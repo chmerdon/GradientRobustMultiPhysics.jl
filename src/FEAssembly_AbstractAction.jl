@@ -59,6 +59,13 @@ struct XFunctionAction{T <: Real} <: AbstractAction
     x::Array{Array{T,1},1}
     bonus_quadorder::Int
 end
+mutable struct ItemWiseXFunctionAction{T <: Real} <: AbstractAction
+    f::Function # of the interface f!(result,input,x,item)
+    citem::Int
+    resultdim::Int
+    x::Array{Array{T,1},1}
+    bonus_quadorder::Int
+end
 mutable struct RegionWiseXFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x,region)
     cregion::Int
@@ -99,6 +106,10 @@ function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_q
     return XFunctionAction{Float64}(f, resultdim, [], bonus_quadorder)
 end
 
+function ItemWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+    return ItemWiseXFunctionAction{Float64}(f, 0, resultdim, [], bonus_quadorder)
+end
+
 function RegionWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
     return RegionWiseXFunctionAction{Float64}(f, 1, resultdim, [], bonus_quadorder)
 end
@@ -114,6 +125,24 @@ end
 function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
     C.cregion = region
 
+    # compute global coordinates for function evaluation
+    if FEBE.L2G.citem != item 
+        FEXGrid.update!(FEBE.L2G, item)
+    end
+    # we don't know at contruction time how many quadrature points are needed
+    # so we expand the array here if needed
+    while length(C.x) < length(FEBE.xref)
+        push!(C.x,deepcopy(FEBE.xref[1]))
+    end  
+    for i = 1 : length(FEBE.xref) 
+        FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
+    end    
+
+end
+
+
+function update!(C::ItemWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
+    C.citem = item
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
         FEXGrid.update!(FEBE.L2G, item)
@@ -203,4 +232,8 @@ end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseXFunctionAction, i::Int)
     C.f(result, input, C.x[i], C.cregion);
+end
+
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ItemWiseXFunctionAction, i::Int)
+    C.f(result, input, C.x[i], C.citem);
 end
