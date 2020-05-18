@@ -29,7 +29,7 @@ export RegionWiseXFunctionAction
 
 
 include("FEAssembly_AbstractAssemblyPattern.jl")
-export AbstractAssemblyPattern,ItemIntegrator,LinearForm,BilinearForm,SymmetricBilinearForm
+export AbstractAssemblyPattern,ItemIntegrator,LinearForm,BilinearForm
 export assemble!, evaluate!, evaluate
 export L2ErrorIntegrator, L2bestapproximate!, H1bestapproximate!
 
@@ -46,7 +46,7 @@ function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFu
         end
     end    
     L2error_action = XFunctionAction(L2error_function(),1,xdim; bonus_quadorder = bonus_quadorder)
-    return ItemIntegrator(AT, operator, L2error_action)
+    return ItemIntegrator{Float64,AT}(operator, L2error_action, [0])
 end
 
 
@@ -90,12 +90,12 @@ function boundarydata!(Target::FEVectorBlock, exact_function::Function; regions 
     end   
     
     action = XFunctionAction(bnd_rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
-    RHS_bnd = LinearForm(AbstractAssemblyTypeBFACE, FE, Identity, action; regions = regions)
+    RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, action; regions = regions)
     b_bnd = FEVector{Float64}("RhsBnd", FE)
     FEAssembly.assemble!(b_bnd[1], RHS_bnd; verbosity = verbosity - 1)
 
     A_bnd = FEMatrix{Float64}("MassMatrixBnd", FE)
-    L2ProductBnd = SymmetricBilinearForm(AbstractAssemblyTypeBFACE, FE, Identity, DoNotChangeAction(ncomponents); regions = regions)    
+    L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, DoNotChangeAction(ncomponents); regions = regions)    
     FEAssembly.assemble!(A_bnd[1],L2ProductBnd; verbosity = verbosity - 1)
 
     # solve best approximation problem on boundary and write into Target
@@ -123,7 +123,7 @@ function L2bestapproximate!(
     end
 
     # matrix
-    L2Product = SymmetricBilinearForm(AbstractAssemblyTypeCELL, FE, Identity, DoNotChangeAction(ncomponents))    
+    L2Product = SymmetricBilinearForm(Float64,AbstractAssemblyTypeCELL, FE, Identity, DoNotChangeAction(ncomponents))    
     A = FEMatrix{Float64}("Matrix",FE)
     if verbosity > 0
         println("\n  Assembling L2Product...")
@@ -145,7 +145,7 @@ function L2bestapproximate!(
     end    
     action = XFunctionAction(rhs_function(),1; bonus_quadorder = bonus_quadorder)
     b = FEVector{Float64}("rhs",FE)
-    RHS = LinearForm(AbstractAssemblyTypeCELL, FE, Identity, action)
+    RHS = LinearForm(Float64, AbstractAssemblyTypeCELL, FE, Identity, action)
     if verbosity > 0
         println("\n  Assembling right-hand side...")
         @time assemble!(b[1], RHS; verbosity = verbosity - 1)
@@ -190,7 +190,7 @@ function H1bestapproximate!(
     end
 
     # matrix
-    H1Product = SymmetricBilinearForm(AbstractAssemblyTypeCELL, FE, Gradient, DoNotChangeAction(ncomponents*xdim))    
+    H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE, Gradient, DoNotChangeAction(ncomponents*xdim))    
     A = FEMatrix{Float64}("Matrix",FE)
     if verbosity > 0
         println("\n  Assembling H1Product...")
@@ -212,7 +212,7 @@ function H1bestapproximate!(
     end    
     action = XFunctionAction(rhs_function(),1; bonus_quadorder = bonus_quadorder - 1)
     b = FEVector{Float64}("rhs",FE)
-    RHS = LinearForm(AbstractAssemblyTypeCELL, FE, Identity, action)
+    RHS = LinearForm(Float64, AbstractAssemblyTypeCELL, FE, Identity, action)
     if verbosity > 0
         println("\n  Assembling right-hand side...")
         @time assemble!(b[1], RHS; verbosity = verbosity - 1)

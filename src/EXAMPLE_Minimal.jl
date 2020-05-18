@@ -10,12 +10,12 @@ function main()
 
     # load mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
-    for j=1:5
+    for j=1:7
         xgrid = uniform_refine(xgrid)
     end
     
     # create Finite Element and FEVectors
-    FE = FiniteElements.getH1P2FiniteElement(xgrid,1)    
+    FE = FiniteElements.getH1P1FiniteElement(xgrid,1) # possibly call it FiniteElementSpace 
     Solution1 = FEVector{Float64}("L2-Bestapproximation direct",FE)
     Solution2 = FEVector{Float64}("L2-Bestapproximation via PDEDescription",FE)
 

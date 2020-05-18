@@ -49,7 +49,7 @@ struct RhsOperator <: AbstractPDEOperator
 end
 
 function RhsOperator(operator::Type{<:AbstractFunctionOperator}, f4region, xdim::Int, ncomponents::Int = 1; bonus_quadorder::Int = 0)
-    function rhs_function()
+    function rhs_function() # result = F(v) = f*operator(v) = f*input
         temp = zeros(Float64,ncomponents)
         function closure(result,input,x,region)
             f4region[region](temp,x)

@@ -48,7 +48,7 @@ function main()
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
     nlevels = 6 # number of refinement levels
-    FEorder = 1 # optimal convergence order of finite element
+    FEorder = 2 # optimal convergence order of finite element
     verbosity = 3 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data

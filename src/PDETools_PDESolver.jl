@@ -3,7 +3,7 @@ function assemble!(A::FEMatrixBlock, O::ReactionOperator; verbosity::Int = 0)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert FE1 == FE2
-    L2Product = SymmetricBilinearForm(AbstractAssemblyTypeCELL, FE1, Identity, O.action)    
+    L2Product = SymmetricBilinearForm(Float64,AbstractAssemblyTypeCELL, FE1, Identity, O.action)    
     FEAssembly.assemble!(A, L2Product; verbosity = verbosity)
 end
 
@@ -11,14 +11,14 @@ function assemble!(A::FEMatrixBlock, O::LaplaceOperator; verbosity::Int = 0)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert FE1 == FE2
-    H1Product = SymmetricBilinearForm(AbstractAssemblyTypeCELL, FE1, Gradient, O.action)    
+    H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, Gradient, O.action)    
     FEAssembly.assemble!(A, H1Product; verbosity = verbosity)
 end
 
 function assemble!(A::FEMatrixBlock, O::ConvectionOperator; verbosity::Int = 0)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
-    ConvectionForm = BilinearForm(AbstractAssemblyTypeCELL, FE1, FE2, Gradient, Identity, O.action)  
+    ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, Identity, O.action)  
     FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
 end
 
@@ -27,13 +27,13 @@ function assemble!(A::FEMatrixBlock, O::LagrangeMultiplier; verbosity::Int = 0, 
     FE2 = A.FETypeY
     @assert At.FETypeX == FE2
     @assert At.FETypeY == FE1
-    DivPressure = BilinearForm(AbstractAssemblyTypeCELL, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
+    DivPressure = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
     FEAssembly.assemble!(At, DivPressure; verbosity = verbosity, transpose_copy = A)
 end
 
 function assemble!(b::FEVectorBlock, O::RhsOperator; verbosity::Int = 0)
     FE = b.FEType
-    RHS = LinearForm(AbstractAssemblyTypeCELL, FE, O.operator, O.action)
+    RHS = LinearForm(Float64,AbstractAssemblyTypeCELL, FE, O.operator, O.action)
     FEAssembly.assemble!(b, RHS; verbosity = verbosity)
 end
 
@@ -177,14 +177,14 @@ function boundarydata!(
         end   
         bonus_quadorder = 1 #maximum(quadorder4bregion)
         action = RegionWiseXFunctionAction(bnd_rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
-        RHS_bnd = LinearForm(AbstractAssemblyTypeBFACE, FE, Identity, action; regions = BADirichletBoundaryRegions)
+        RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, action; regions = BADirichletBoundaryRegions)
         b = zeros(Float64,FE.ndofs,1)
         FEAssembly.assemble!(b, RHS_bnd)
 
         # compute mass matrix
         action = MultiplyScalarAction(1.0,ncomponents)
         A = FEMatrix{Float64}("MassMatrixBnd", FE)
-        L2ProductBnd = SymmetricBilinearForm(AbstractAssemblyTypeBFACE, FE, Identity, action; regions = Array{Int64,1}([BADirichletBoundaryRegions; HomDirichletBoundaryRegions; InterDirichletBoundaryRegions]))    
+        L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, action; regions = Array{Int64,1}([BADirichletBoundaryRegions; HomDirichletBoundaryRegions; InterDirichletBoundaryRegions]))    
         FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
 
         # fix already set dofs by other boundary conditions
@@ -272,7 +272,7 @@ function solve!(
                 println("\n  Moving integral mean for component $j to value $(PDE.GlobalConstraints[j][k].value)")
             end
             # move integral mean
-            pmeanIntegrator = ItemIntegrator(AbstractAssemblyTypeCELL, Identity, DoNotChangeAction(1))
+            pmeanIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
             meanvalue =  evaluate(pmeanIntegrator,Target[j]; verbosity = verbosity - 1)
             total_area = sum(FEs[j].xgrid[CellVolumes], dims=1)[1]
             meanvalue /= total_area
