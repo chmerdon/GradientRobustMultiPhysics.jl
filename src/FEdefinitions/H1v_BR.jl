@@ -4,25 +4,13 @@ struct FEH1BR{ncomponents} <: AbstractH1FiniteElementWithCoefficients where {nco
     CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
     FaceDofs::VariableTargetAdjacency    # place to save face dofs (filled by constructor)
     BFaceDofs::VariableTargetAdjacency   # place to save bface dofs (filled by constructor)
-    xFaceNormals::Array{Float64,2}       # link to coefficient values
-    xCellFaces::VariableTargetAdjacency  # link to coefficient indices
+    xFaceNormals::Array{Float64,2}        # link to coefficient values
+    xFaceVolumes::Array{Float64,1}        # link to coefficient values
+    xCellFaces::VariableTargetAdjacency    # link to coefficient indices
     ndofs::Int32
 end
 
-struct FEH1BRreconst{ncomponents} <: AbstractH1FiniteElementWithCoefficients where {ncomponents<:Int}
-    name::String                         # full name of finite element (used in messages)
-    xgrid::ExtendableGrid                # link to xgrid 
-    CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
-    FaceDofs::VariableTargetAdjacency    # place to save face dofs (filled by constructor)
-    BFaceDofs::VariableTargetAdjacency   # place to save bface dofs (filled by constructor)
-    xFaceNormals::Array{Float64,2}       # link to coefficient values
-    xCellFaces::VariableTargetAdjacency  # link to coefficient indices
-    ndofs::Int32
-    FEReconst::AbstractFiniteElement     # link to reconstruction element
-    THdiv::ExtendableSparseMatrix        # link to reconstruction matrix
-end
-
-function getH1BRFiniteElement(xgrid::ExtendableGrid; with_reconstruction::Bool = false)
+function getH1BRFiniteElement(xgrid::ExtendableGrid)
     name = "BR (H1)"    
 
     # generate celldofs
@@ -33,6 +21,7 @@ function getH1BRFiniteElement(xgrid::ExtendableGrid; with_reconstruction::Bool =
     xFaceNodes = xgrid[FaceNodes]
     xCellFaces = xgrid[CellFaces]
     xFaceNormals = xgrid[FaceNormals]
+    xFaceVolumes = xgrid[FaceVolumes]
     xCellGeometries = xgrid[CellGeometries]
     xBFaceNodes = xgrid[BFaceNodes]
     xBFaces = xgrid[BFaces]
@@ -81,39 +70,19 @@ function getH1BRFiniteElement(xgrid::ExtendableGrid; with_reconstruction::Bool =
         append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item+1])
     end
     ndofs = nnodes * ncomponents + nfaces
-    if (with_reconstruction)    
-        # initialise Hdiv reconstruction
-        FEReconst = FiniteElements.getHdivRT0FiniteElement(xgrid)
-        T = ExtendableSparseMatrix{Float64,Int32}(ndofs,nfaces)
-        xFaceVolumes = xgrid[FaceVolumes]
-        for face = 1 : nfaces
-            # reconstruction coefficients for P1 basis functions
-            nnodes4item = num_targets(xFaceNodes,face)
-            for k = 1 : nnodes4item, d = 1 : ncomponents
-                node = xFaceNodes[k,face]
-                T[(d-1)*nnodes+node,face] = 1 // nnodes4item * xFaceVolumes[face] * xFaceNormals[d,face]
-            end
-            # reconstruction coefficient for quadratic face bubbles
-            for d = 1 : ncomponents
-                T[ncomponents*nnodes+face,face] = 2 // 3 * xFaceVolumes[face] # todo: calculate factor for 3D !!!
-            end
-        end
-        return FEH1BRreconst{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xFaceNormals,xCellFaces,ndofs,FEReconst,T) 
-    else
-        return FEH1BR{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xFaceNormals,xCellFaces,ndofs)    
-    end
+    return FEH1BR{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xFaceNormals,xFaceVolumes,xCellFaces,ndofs)
 end
 
 
-get_ncomponents(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}) = 2
-get_ncomponents(::Union{Type{FEH1BR{3}},Type{FEH1BRreconst{3}}}) = 3
+get_ncomponents(::Type{<:FEH1BR{2}}) = 2
+get_ncomponents(::Type{<:FEH1BR{3}}) = 3
 
-get_polynomialorder(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Edge1D}) = 2;
-get_polynomialorder(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Triangle2D}) = 2;
-get_polynomialorder(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Quadrilateral2D}) = 3;
+get_polynomialorder(::Type{<:FEH1BR{2}}, ::Type{<:Edge1D}) = 2;
+get_polynomialorder(::Type{<:FEH1BR{2}}, ::Type{<:Triangle2D}) = 2;
+get_polynomialorder(::Type{<:FEH1BR{2}}, ::Type{<:Quadrilateral2D}) = 3;
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::Union{FEH1BR,FEH1BRreconst}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1BR{2}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]
     xFaceNodes = FE.xgrid[FaceNodes]
     xFaceNormals = FE.xgrid[FaceNormals]
@@ -180,19 +149,20 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::Union{FEH1BR,FEH1BRre
     end    
 end
 
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::Union{FEH1BR,FEH1BRreconst})
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FEH1BR)
     nnodes = num_sources(FE.xgrid[Coordinates])
     nfaces = num_sources(FE.xgrid[FaceNodes])
     ncomponents = get_ncomponents(typeof(FE))
     offset4component = 0:nnodes:ncomponents*nnodes
     for node = 1 : nnodes
         for c = 1 : ncomponents
-            Target[c,node] = Source[offset4component[c]+node]
+            Target[node,c] = Source[offset4component[c]+node]
         end    
     end    
 end
 
-function get_basis_on_face(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Edge1D})
+
+function get_basis_on_face(::Type{FEH1BR{2}}, ::Type{<:Edge1D})
     function closure(xref)
         temp = 1 - xref[1];
         bf = 4 * xref[1] * temp;
@@ -204,7 +174,7 @@ function get_basis_on_face(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Ty
     end
 end
 
-function get_basis_on_cell(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(::Type{FEH1BR{2}}, ::Type{<:Triangle2D})
     function closure(xref)
         temp = 1 - xref[1] - xref[2];
         bf1 = 4 * xref[1] * temp;
@@ -223,7 +193,7 @@ function get_basis_on_cell(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Ty
 end
 
 
-function get_basis_on_cell(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Quadrilateral2D})
+function get_basis_on_cell(::Type{FEH1BR{2}}, ::Type{<:Quadrilateral2D})
     function closure(xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
@@ -247,7 +217,7 @@ function get_basis_on_cell(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Ty
 end
 
 
-function get_coefficients_on_cell!(coefficients, FE::Union{FEH1BR{2},FEH1BRreconst{2}}, ::Type{<:Triangle2D}, cell::Int)
+function get_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, ::Type{<:Triangle2D}, cell::Int)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[1,7] = FE.xFaceNormals[1, FE.xCellFaces[1,cell]];
@@ -257,7 +227,7 @@ function get_coefficients_on_cell!(coefficients, FE::Union{FEH1BR{2},FEH1BRrecon
     coefficients[1,9] = FE.xFaceNormals[1, FE.xCellFaces[3,cell]];
     coefficients[2,9] = FE.xFaceNormals[2, FE.xCellFaces[3,cell]];
 end    
-function get_coefficients_on_cell!(coefficients, FE::Union{FEH1BR{2},FEH1BRreconst{2}}, ::Type{<:Quadrilateral2D}, cell::Int,)
+function get_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, ::Type{<:Quadrilateral2D}, cell::Int,)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[1,9] = FE.xFaceNormals[1, FE.xCellFaces[1,cell]];
@@ -271,9 +241,56 @@ function get_coefficients_on_cell!(coefficients, FE::Union{FEH1BR{2},FEH1BRrecon
 end    
 
 
-function get_coefficients_on_face!(coefficients, FE::Union{FEH1BR{2},FEH1BRreconst{2}}, ::Type{<:Edge1D}, face::Int)
+function get_coefficients_on_face!(coefficients, FE::FEH1BR{2}, ::Type{<:Edge1D}, face::Int)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[1,5] = FE.xFaceNormals[1, face];
     coefficients[2,5] = FE.xFaceNormals[2, face];
 end    
+
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, FEreconst::FEHdivRT0, ::Type{<:Triangle2D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
+    coefficients[1,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[1,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[4,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[4,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[5,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[5,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[6,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[6,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[7,1] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]]
+    coefficients[8,2] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]]
+    coefficients[9,3] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
+end
+
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, FEreconst::FEHdivRT0, ::Type{<:Parallelogram2D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
+    coefficients[1,4] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
+    coefficients[1,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[4,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[4,4] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
+    coefficients[5,4] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
+    coefficients[5,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[6,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[6,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[7,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[7,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[8,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[8,4] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
+    coefficients[9,1] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]]
+    coefficients[10,2] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]]
+    coefficients[11,3] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
+    coefficients[12,4] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[4,cell]]
+end

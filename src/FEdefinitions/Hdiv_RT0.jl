@@ -8,7 +8,7 @@ struct FEHdivRT0{spacedim} <: AbstractHdivFiniteElement where {spacedim<:Int}
     ndofs::Int32
 end
 
-function getHdivRT0FiniteElement(xgrid::ExtendableGrid)
+function getHdivRT0FiniteElement(xgrid::ExtendableGrid; dofmap_needed = true)
     dim = size(xgrid[Coordinates],1) 
     name = "RT0 (H1, $(dim)d)"    
 
@@ -24,22 +24,28 @@ function getHdivRT0FiniteElement(xgrid::ExtendableGrid)
     xCellDofs = VariableTargetAdjacency(Int32)
     xFaceDofs = VariableTargetAdjacency(Int32)
     xBFaceDofs = VariableTargetAdjacency(Int32)
-    dofs4item = zeros(Int32,max_num_targets_per_source(xCellFaces))
-    nnodes4item = 0
-    for cell = 1 : ncells
-        nnodes4item = num_targets(xCellFaces,cell)
-        for k = 1 : nnodes4item
-            dofs4item[k] = xCellFaces[k,cell]
+    if dofmap_needed == true # local reconstruction operators do not need global dofmap
+        dofs4item = zeros(Int32,max_num_targets_per_source(xCellFaces))
+        nnodes4item = 0
+        for cell = 1 : ncells
+            nnodes4item = num_targets(xCellFaces,cell)
+            for k = 1 : nnodes4item
+                dofs4item[k] = xCellFaces[k,cell]
+            end
+            append!(xCellDofs,dofs4item[1:nnodes4item])
         end
-        append!(xCellDofs,dofs4item[1:nnodes4item])
-    end
-    for face = 1 : nfaces
-        append!(xFaceDofs,[face])
-    end
-    for bface = 1: nbfaces
-        append!(xBFaceDofs,[xBFaces[bface]])
+        for face = 1 : nfaces
+            append!(xFaceDofs,[face])
+        end
+        for bface = 1: nbfaces
+            append!(xBFaceDofs,[xBFaces[bface]])
+        end
     end
     return FEHdivRT0{dim}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xCellSigns,nfaces)
+end
+
+function FEHdivRT0(xgrid::ExtendableGrid; dofmap_needed = true)
+    return getHdivRT0FiniteElement(xgrid; dofmap_needed = dofmap_needed)
 end
 
 

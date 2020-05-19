@@ -5,7 +5,7 @@
 # steers the evaluation of finite element basis functions within an assembly pattern
 #
 # during construction it gets assigned a
-#   AbstractFunctionOperator: what is evaluted (e.g. Identity, Gradietn, Divergence...)
+#   AbstractFunctionOperator: what is evaluted (e.g. Identity, Gradient, Divergence...)
 #   AbstractAssemblyType : cells, faces, bfaces? (to decide which dof field to use) 
 #   ElementGeometry : triangles, quads? 
 #   QuadratureRule : where to evaluate
@@ -14,7 +14,7 @@
 
 abstract type AbstractFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
 abstract type Identity <: AbstractFunctionOperator end # 1*v_h
-abstract type ReconstructionIdentity <: Identity end # 1*R(v_h)
+abstract type ReconstructionIdentity{FEreconst<:AbstractFiniteElement} <: Identity end # 1*R(v_h)
 abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
 abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for Hcurl on Edges
 abstract type Gradient <: AbstractFunctionOperator end # D_geom(v_h)
@@ -75,9 +75,9 @@ FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTyp
 FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
 
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
-    FE::AbstractFiniteElement            # linke to full FE (e.g. for coefficients)
+    FE::AbstractFiniteElement            # link to full FE (e.g. for coefficients)
+    FE2::AbstractFiniteElement           # link to reconstruction FE
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
-    ItemDofs2::VariableTargetAdjacency   # link to ItemDofs for some auxiliary space (e.g. reconstruction operator)
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     det::T                               # current determinant (for Hdiv)
@@ -90,12 +90,15 @@ mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG
     citem::Int                           # current item
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients
+    coefficients2::Array{T,2}            # coefficients for reconstruction
 end
 
 function vector_hessian(f, x)
     n = length(x)
     return ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
 end
+
+
 
 function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
@@ -123,20 +126,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     catch
     end
 
-    # reset basis if reconstruction is evaluated
-    ItemDofs2 = VariableTargetAdjacency(Int32)
-    ndofs4item2::Int = ndofs4item
-    if FEOP == ReconstructionIdentity
-        ItemDofs2 = FE.FEReconst.CellDofs
-        refbasis = FiniteElements.get_basis_on_cell(typeof(FE.FEReconst), EG)
-        try
-            test = refbasis(qf.xref[1]')'
-            ndofs4item2 = ceil(length(test[:])/ncomponents)
-        catch
-        end
-    end
-
-    refbasisvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
+    refbasisvals = zeros(T,ncomponents,ndofs4item,length(qf.w));
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
         if ncomponents == 1
@@ -166,25 +156,77 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
             refoperatorvals[:,:,i] = vector_hessian(refbasis,qf.xref[i])
         end   
     end
-    if derivorder == 0
-        refoperatorvals = zeros(T,0,0,0)
-        if FEOP == Identity
-            current_eval = deepcopy(refbasisvals)  
-        else
-            current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w))  
-        end
-    end
-    offsets = 0:edim:(ncomponents*edim);
-    offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
-    
+
     xref = copy(qf.xref)
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
     else
         coefficients = zeros(T,0,0)
     end    
+    coefficients2 = zeros(T,0,0)
+    if derivorder == 0
+        refoperatorvals = zeros(T,0,0,0);
+        current_eval = deepcopy(refbasisvals) 
+    end
+    offsets = 0:edim:(ncomponents*edim);
+    offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
+    
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,0.0,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2)
+end    
 
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,ItemDofs,ItemDofs2,L2G,L2GM,0.0,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients)
+# constructor for ReconstructionIdentity
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: ReconstructionIdentity{FETypeReconst}, AT <: AbstractAssemblyType}
+    # generate reconstruction space
+    # avoid computation of full dofmap
+    # we will just use local basis functions
+
+    FE2 = FETypeReconst(FE.xgrid; dofmap_needed = false)
+    FEType2 = typeof(FE2)
+    println("Hallo")
+    
+    ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
+    L2GM = copy(L2G.A)
+
+    # pre-allocate memory for reconstruction basis functions
+    ncomponents = FiniteElements.get_ncomponents(FEType)
+    refbasis = FiniteElements.get_basis_on_cell(FEType, EG)
+    refbasis_reconst = FiniteElements.get_basis_on_cell(FEType2, EG)
+    
+    # probe for ndofs4item
+    ndofs4item::Int = 0
+    ndofs4item2::Int = 0
+    try
+        test = refbasis(qf.xref[1]')'
+        ndofs4item = ceil(length(test[:])/ncomponents)
+        test = refbasis_reconst(qf.xref[1]')'
+        ndofs4item2 = ceil(length(test[:])/ncomponents)
+    catch
+    end
+
+    refbasisvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
+    for i in eachindex(qf.w)
+        # evaluate basis functions at quadrature point
+        if ncomponents == 1
+            refbasisvals[:,:,i] = reshape(refbasis_reconst(qf.xref[i]),1,:)
+        else
+            refbasisvals[:,:,i] = refbasis_reconst(qf.xref[i]')'
+        end    
+    end    
+
+    derivorder = NeededDerivative4Operator(FEType,FEOP)
+    edim = dim_element(EG)
+    xdim = size(FE.xgrid[Coordinates],1)
+
+    xref = copy(qf.xref)
+    coefficients = zeros(T,ncomponents,ndofs4item2)
+    coefficients2 = zeros(T,ndofs4item,ndofs4item2)
+    refoperatorvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
+    current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
+    offsets = 0:edim:(ncomponents*edim);
+    offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
+    
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,0.0,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2)
 end    
 
 
@@ -199,34 +241,42 @@ end
 # H1 ELEMENTS
 # HDIV RECONSTRUCTION
 # Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,ReconstructionIdentity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType, FETypeReconst <: AbstractFiniteElement, FEOP <: ReconstructionIdentity{FETypeReconst}}
     FEBE.citem = item
 
     # cell update transformation
     FEXGrid.update!(FEBE.L2G, item)
-    FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE.FEReconst, EG, item)
+    FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
 
-    fill!(FEBE.cvals,0.0)
+    # use Piola transformation on Hdiv basis
+    # and save it in operatorvals
     for i = 1 : length(FEBE.xref)
         # evaluate Piola matrix at quadrature point
         if FEBE.L2G.nonlinear || i == 1
             FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
         end
-        dof_h1::Int = 0
-        dof_hdiv::Int = 0
-        reconst_coeff = 0.0        
+        for dof_i = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
+            for k = 1 : FEBE.offsets[2] # ncomponents
+                FEBE.refoperatorvals[k,dof_i,i] = 0.0;
+                for l = 1 : FEBE.offsets[2] # ncomponents
+                    FEBE.refoperatorvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                end    
+                FEBE.refoperatorvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.det
+            end
+        end
+    end
+
+    # get local reconstruction coefficients
+    # and accumulate
+    FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
+
+    fill!(FEBE.cvals,0.0)
+    for i = 1 : length(FEBE.xref)
         for dof_i = 1 : FEBE.offsets2[2] # ndofs4item (H1 element)
-            dof_h1 = FEBE.ItemDofs[dof_i,item]
-            for dof_j = 1 : num_targets(FEBE.ItemDofs2,item) # ndofs4item (Hdiv element)
-                dof_hdiv = FEBE.ItemDofs2[dof_j,item]
-                reconst_coeff = FEBE.FE.THdiv[dof_h1,dof_hdiv]
-                if reconst_coeff != 0
-                    # find nonzero entries in dofs[dof_i]-th row of FEBE.FE.ReconstMatrix and accumulate
-                    dof_hdiv = 1
+            for dof_j = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
+                if FEBE.coefficients2[dof_i,dof_j] != 0
                     for k = 1 : FEBE.offsets[2] # ncomponents
-                        for l = 1 : FEBE.offsets[2] # ncomponents
-                            FEBE.cvals[k,dof_i,i] += reconst_coeff * FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_j,i] * FEBE.coefficients[k,dof_j] / FEBE.det;
-                        end    
+                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refoperatorvals[k,dof_j,i]; 
                     end
                 end
             end

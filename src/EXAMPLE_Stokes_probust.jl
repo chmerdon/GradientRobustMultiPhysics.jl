@@ -114,7 +114,7 @@ function main()
         end
 
         # generate Bernardi--Raugel
-        FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid; with_reconstruction = true)
+        FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
         FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
         if verbosity > 2
             FiniteElements.show(FE_velocity)
@@ -129,7 +129,7 @@ function main()
         push!(NDofs,length(Solution.entries))
 
         # solve Stokes problem with pressure-robust right-hand side
-        StokesProblem.RHSOperators[1][1] = RhsOperator(ReconstructionIdentity, [rhs!], 2, 2; bonus_quadorder = 2)
+        StokesProblem.RHSOperators[1][1] = RhsOperator(ReconstructionIdentity{FiniteElements.FEHdivRT0}, [rhs!], 2, 2; bonus_quadorder = 2)
         Solution2 = FEVector{Float64}("Stokes velocity p-robust",FE_velocity)
         append!(Solution2,"Stokes pressure (p-robust)",FE_pressure)
         solve!(Solution2, StokesProblem; verbosity = verbosity - 1)
