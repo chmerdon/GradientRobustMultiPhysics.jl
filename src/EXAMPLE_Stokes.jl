@@ -124,7 +124,7 @@ function main()
 
         # generate FE
         if FEorder == 1 # Bernardi--Raugel
-            FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid,2)
+            FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
             FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
         elseif FEorder == 2 # Taylor--Hood/Q2xP1
             FE_velocity = FiniteElements.getH1P2FiniteElement(xgrid,2)
@@ -153,7 +153,7 @@ function main()
         L2bestapproximate!(L2Bestapproximation[1], exact_velocity!; boundary_regions = [0], verbosity = verbosity - 1, bonus_quadorder = 2)
         L2bestapproximate!(L2Bestapproximation[2], exact_pressure!; boundary_regions = [], verbosity = verbosity - 1, bonus_quadorder = 1)
 
-        # H1 bestapproximation (not working properly yet)
+        # H1 bestapproximation
         H1Bestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
         H1bestapproximate!(H1Bestapproximation[1], exact_velocity_gradient!, exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
         

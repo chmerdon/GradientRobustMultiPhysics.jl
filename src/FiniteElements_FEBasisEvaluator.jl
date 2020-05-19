@@ -14,6 +14,7 @@
 
 abstract type AbstractFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
 abstract type Identity <: AbstractFunctionOperator end # 1*v_h
+abstract type ReconstructionIdentity <: Identity end # 1*R(v_h)
 abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
 abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for Hcurl on Edges
 abstract type Gradient <: AbstractFunctionOperator end # D_geom(v_h)
@@ -31,7 +32,7 @@ DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractH1FiniteElement}) = Identit
 DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHdivFiniteElement}) = NormalFlux
 DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHcurlFiniteElement}) = TangentFlux
 
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = 1
@@ -48,7 +49,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
 # length for operator result (> 0 to be multiplied with ncomponents, = 0 fixed size)
-Length4Operator(::Type{Identity}, xdim::Int, ncomponents::Int) = ncomponents
+Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents
 Length4Operator(::Type{NormalFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/(xdim-1))
 Length4Operator(::Type{Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
@@ -58,7 +59,7 @@ Length4Operator(::Type{Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponent
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Identity}) = 0
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
@@ -76,18 +77,18 @@ FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTyp
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     FE::AbstractFiniteElement            # linke to full FE (e.g. for coefficients)
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
+    ItemDofs2::VariableTargetAdjacency   # link to ItemDofs for some auxiliary space (e.g. reconstruction operator)
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     det::T                               # current determinant (for Hdiv)
-    force_updateL2G::Bool                # update L2G on cell also if not needed?
     xref::Array{Array{T,1},1}            # xref of quadrature formula
-    refbasisvals::Array{T,3}    # basis evaluation on EG reference cell 
-    refoperatorvals::Array{T,3} # additional values to evaluate operator
+    refbasisvals::Array{T,3}             # basis evaluation on EG reference cell 
+    refoperatorvals::Array{T,3}          # additional values to evaluate operator
     ncomponents::Int                     # number of FE components
-    offsets::Array{Int,1}              # offsets for gradient entries of each dof
-    offsets2::Array{Int,1}             # offsets for dof entries of each gradient (on ref)
+    offsets::Array{Int,1}                # offsets for gradient entries of each dof
+    offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
     citem::Int                           # current item
-    cvals::Array{T,3}           # current operator vals on item
+    cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients
 end
 
@@ -96,7 +97,7 @@ function vector_hessian(f, x)
     return ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
 end
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; force_updateL2G = false) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
@@ -121,7 +122,21 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         ndofs4item = ceil(length(test[:])/ncomponents)
     catch
     end
-    refbasisvals = zeros(T,ncomponents,ndofs4item,length(qf.w));
+
+    # reset basis if reconstruction is evaluated
+    ItemDofs2 = VariableTargetAdjacency(Int32)
+    ndofs4item2::Int = ndofs4item
+    if FEOP == ReconstructionIdentity
+        ItemDofs2 = FE.FEReconst.CellDofs
+        refbasis = FiniteElements.get_basis_on_cell(typeof(FE.FEReconst), EG)
+        try
+            test = refbasis(qf.xref[1]')'
+            ndofs4item2 = ceil(length(test[:])/ncomponents)
+        catch
+        end
+    end
+
+    refbasisvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
         if ncomponents == 1
@@ -153,7 +168,11 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     end
     if derivorder == 0
         refoperatorvals = zeros(T,0,0,0)
-        current_eval = deepcopy(refbasisvals)  
+        if FEOP == Identity
+            current_eval = deepcopy(refbasisvals)  
+        else
+            current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w))  
+        end
     end
     offsets = 0:edim:(ncomponents*edim);
     offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
@@ -165,34 +184,52 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         coefficients = zeros(T,0,0)
     end    
 
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,ItemDofs,L2G,L2GM,0.0,force_updateL2G,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,ItemDofs,ItemDofs2,L2G,L2GM,0.0,xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients)
 end    
 
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
-    
-    if FEBE.force_updateL2G
-        FEXGrid.update!(FEBE.L2G, item)
-    end    
 end
 
 
-# NORMALFLUX OPERATOR
-# Hdiv ELEMENTS (just divide by face volume)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: NormalFlux, AT <:AbstractAssemblyType}
+# RECONSTRUCTION IDENTITY OPERATOR
+# H1 ELEMENTS
+# HDIV RECONSTRUCTION
+# Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,ReconstructionIdentity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
-    
-    if FEBE.force_updateL2G
-        FEXGrid.update!(FEBE.L2G, item)
-    end    
-    
-    # use Piola transformation on basisvals
+
+    # cell update transformation
+    FEXGrid.update!(FEBE.L2G, item)
+    FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE.FEReconst, EG, item)
+
+    fill!(FEBE.cvals,0.0)
     for i = 1 : length(FEBE.xref)
-        for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.offsets[2] # ncomponents
-            FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+        # evaluate Piola matrix at quadrature point
+        if FEBE.L2G.nonlinear || i == 1
+            FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+        end
+        dof_h1::Int = 0
+        dof_hdiv::Int = 0
+        reconst_coeff = 0.0        
+        for dof_i = 1 : FEBE.offsets2[2] # ndofs4item (H1 element)
+            dof_h1 = FEBE.ItemDofs[dof_i,item]
+            for dof_j = 1 : num_targets(FEBE.ItemDofs2,item) # ndofs4item (Hdiv element)
+                dof_hdiv = FEBE.ItemDofs2[dof_j,item]
+                reconst_coeff = FEBE.FE.THdiv[dof_h1,dof_hdiv]
+                if reconst_coeff != 0
+                    # find nonzero entries in dofs[dof_i]-th row of FEBE.FE.ReconstMatrix and accumulate
+                    dof_hdiv = 1
+                    for k = 1 : FEBE.offsets[2] # ncomponents
+                        for l = 1 : FEBE.offsets[2] # ncomponents
+                            FEBE.cvals[k,dof_i,i] += reconst_coeff * FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_j,i] * FEBE.coefficients[k,dof_j] / FEBE.det;
+                        end    
+                    end
+                end
+            end
         end
     end
 end
@@ -200,7 +237,7 @@ end
 
 # IDENTITY OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
     
     # cell update transformation
@@ -229,7 +266,7 @@ end
 # IDENTITY OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Identity, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
 
     if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
@@ -246,11 +283,20 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
             end    
         end
     end
+end
+
+
+# NORMALFLUX OPERATOR
+# Hdiv ELEMENTS (just divide by face volume)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: NormalFlux, AT <:AbstractAssemblyType}
+    FEBE.citem = item
     
-    # only update if enforced by "user" (e.g. when a function is evaluated in operator)
-    if FEBE.force_updateL2G
-        FEXGrid.update!(FEBE.L2G, item)
-    end    
+    # use Piola transformation on basisvals
+    for i = 1 : length(FEBE.xref)
+        for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.offsets[2] # ncomponents
+            FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+        end
+    end
 end
 
 

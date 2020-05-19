@@ -115,8 +115,6 @@ function boundarydata!(Target::FEVectorBlock, exact_function::Function; regions 
         A_bnd = FEMatrix{Float64}("MassMatrixBnd", FE)
         L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = regions)    
         FEAssembly.assemble!(A_bnd[1],L2ProductBnd; verbosity = verbosity - 1)
-        Base.show(b_bnd.entries[fixed_bdofs])
-        Base.show(A_bnd.entries[fixed_bdofs,fixed_bdofs])
     end    
 
     # solve best approximation problem on boundary and write into Target

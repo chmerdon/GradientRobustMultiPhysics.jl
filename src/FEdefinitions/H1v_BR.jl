@@ -4,17 +4,30 @@ struct FEH1BR{ncomponents} <: AbstractH1FiniteElementWithCoefficients where {nco
     CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
     FaceDofs::VariableTargetAdjacency    # place to save face dofs (filled by constructor)
     BFaceDofs::VariableTargetAdjacency   # place to save bface dofs (filled by constructor)
-    xFaceNormals::Array{Float64,2}        # link to coefficient values
-    xCellFaces::VariableTargetAdjacency    # link to coefficient indices
+    xFaceNormals::Array{Float64,2}       # link to coefficient values
+    xCellFaces::VariableTargetAdjacency  # link to coefficient indices
     ndofs::Int32
 end
 
-function getH1BRFiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
+struct FEH1BRreconst{ncomponents} <: AbstractH1FiniteElementWithCoefficients where {ncomponents<:Int}
+    name::String                         # full name of finite element (used in messages)
+    xgrid::ExtendableGrid                # link to xgrid 
+    CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
+    FaceDofs::VariableTargetAdjacency    # place to save face dofs (filled by constructor)
+    BFaceDofs::VariableTargetAdjacency   # place to save bface dofs (filled by constructor)
+    xFaceNormals::Array{Float64,2}       # link to coefficient values
+    xCellFaces::VariableTargetAdjacency  # link to coefficient indices
+    ndofs::Int32
+    FEReconst::AbstractFiniteElement     # link to reconstruction element
+    THdiv::ExtendableSparseMatrix        # link to reconstruction matrix
+end
+
+function getH1BRFiniteElement(xgrid::ExtendableGrid; with_reconstruction::Bool = false)
     name = "BR (H1)"    
 
     # generate celldofs
     dim = size(xgrid[Coordinates],1) 
-    @assert dim == ncomponents
+    ncomponents = dim
 
     xCellNodes = xgrid[CellNodes]
     xFaceNodes = xgrid[FaceNodes]
@@ -68,19 +81,39 @@ function getH1BRFiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
         append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item+1])
     end
     ndofs = nnodes * ncomponents + nfaces
-    return FEH1BR{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xFaceNormals,xCellFaces,ndofs)
+    if (with_reconstruction)    
+        # initialise Hdiv reconstruction
+        FEReconst = FiniteElements.getHdivRT0FiniteElement(xgrid)
+        T = ExtendableSparseMatrix{Float64,Int32}(ndofs,nfaces)
+        xFaceVolumes = xgrid[FaceVolumes]
+        for face = 1 : nfaces
+            # reconstruction coefficients for P1 basis functions
+            nnodes4item = num_targets(xFaceNodes,face)
+            for k = 1 : nnodes4item, d = 1 : ncomponents
+                node = xFaceNodes[k,face]
+                T[(d-1)*nnodes+node,face] = 1 // nnodes4item * xFaceVolumes[face] * xFaceNormals[d,face]
+            end
+            # reconstruction coefficient for quadratic face bubbles
+            for d = 1 : ncomponents
+                T[ncomponents*nnodes+face,face] = 2 // 3 * xFaceVolumes[face] # todo: calculate factor for 3D !!!
+            end
+        end
+        return FEH1BRreconst{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xFaceNormals,xCellFaces,ndofs,FEReconst,T) 
+    else
+        return FEH1BR{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xFaceNormals,xCellFaces,ndofs)    
+    end
 end
 
 
-get_ncomponents(::Type{<:FEH1BR{2}}) = 2
-get_ncomponents(::Type{<:FEH1BR{3}}) = 3
+get_ncomponents(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}) = 2
+get_ncomponents(::Union{Type{FEH1BR{3}},Type{FEH1BRreconst{3}}}) = 3
 
-get_polynomialorder(::Type{<:FEH1BR{2}}, ::Type{<:Edge1D}) = 2;
-get_polynomialorder(::Type{<:FEH1BR{2}}, ::Type{<:Triangle2D}) = 2;
-get_polynomialorder(::Type{<:FEH1BR{2}}, ::Type{<:Quadrilateral2D}) = 3;
+get_polynomialorder(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Edge1D}) = 2;
+get_polynomialorder(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Triangle2D}) = 2;
+get_polynomialorder(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Quadrilateral2D}) = 3;
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1BR{2}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::Union{FEH1BR,FEH1BRreconst}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]
     xFaceNodes = FE.xgrid[FaceNodes]
     xFaceNormals = FE.xgrid[FaceNormals]
@@ -147,7 +180,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1BR{2}, exact_func
     end    
 end
 
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FEH1BR)
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::Union{FEH1BR,FEH1BRreconst})
     nnodes = num_sources(FE.xgrid[Coordinates])
     nfaces = num_sources(FE.xgrid[FaceNodes])
     ncomponents = get_ncomponents(typeof(FE))
@@ -159,8 +192,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-
-function get_basis_on_face(::Type{FEH1BR{2}}, ::Type{<:Edge1D})
+function get_basis_on_face(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Edge1D})
     function closure(xref)
         temp = 1 - xref[1];
         bf = 4 * xref[1] * temp;
@@ -172,7 +204,7 @@ function get_basis_on_face(::Type{FEH1BR{2}}, ::Type{<:Edge1D})
     end
 end
 
-function get_basis_on_cell(::Type{FEH1BR{2}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Triangle2D})
     function closure(xref)
         temp = 1 - xref[1] - xref[2];
         bf1 = 4 * xref[1] * temp;
@@ -191,7 +223,7 @@ function get_basis_on_cell(::Type{FEH1BR{2}}, ::Type{<:Triangle2D})
 end
 
 
-function get_basis_on_cell(::Type{FEH1BR{2}}, ::Type{<:Quadrilateral2D})
+function get_basis_on_cell(::Union{Type{FEH1BR{2}},Type{FEH1BRreconst{2}}}, ::Type{<:Quadrilateral2D})
     function closure(xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
@@ -215,7 +247,7 @@ function get_basis_on_cell(::Type{FEH1BR{2}}, ::Type{<:Quadrilateral2D})
 end
 
 
-function get_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, ::Type{<:Triangle2D}, cell::Int)
+function get_coefficients_on_cell!(coefficients, FE::Union{FEH1BR{2},FEH1BRreconst{2}}, ::Type{<:Triangle2D}, cell::Int)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[1,7] = FE.xFaceNormals[1, FE.xCellFaces[1,cell]];
@@ -225,7 +257,7 @@ function get_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, ::Type{<:Triangl
     coefficients[1,9] = FE.xFaceNormals[1, FE.xCellFaces[3,cell]];
     coefficients[2,9] = FE.xFaceNormals[2, FE.xCellFaces[3,cell]];
 end    
-function get_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, ::Type{<:Quadrilateral2D}, cell::Int,)
+function get_coefficients_on_cell!(coefficients, FE::Union{FEH1BR{2},FEH1BRreconst{2}}, ::Type{<:Quadrilateral2D}, cell::Int,)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[1,9] = FE.xFaceNormals[1, FE.xCellFaces[1,cell]];
@@ -239,7 +271,7 @@ function get_coefficients_on_cell!(coefficients, FE::FEH1BR{2}, ::Type{<:Quadril
 end    
 
 
-function get_coefficients_on_face!(coefficients, FE::FEH1BR{2}, ::Type{<:Edge1D}, face::Int)
+function get_coefficients_on_face!(coefficients, FE::Union{FEH1BR{2},FEH1BRreconst{2}}, ::Type{<:Edge1D}, face::Int)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
     coefficients[1,5] = FE.xFaceNormals[1, face];
