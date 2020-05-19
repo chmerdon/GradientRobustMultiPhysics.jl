@@ -176,11 +176,11 @@ function prepareOperatorAssembly(
                 basisevaler[j][k] = basisevaler[j][1] # e.g. for symmetric bilinerforms
             else    
                 qf[j] = QuadratureRule{T,EG[j]}(quadorder);
-                basisevaler[j][k] = FEBasisEvaluator{T,typeof(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
+                basisevaler[j][k] = FEBasisEvaluator{T,typeof(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
             end    
         end    
     end        
-    if verbosity > 0
+    if verbosity > 1
         println("\nASSEMBLY PREPARATION $(typeof(form))")
         println("====================================")
         for k = 1 : length(FE)

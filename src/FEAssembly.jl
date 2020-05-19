@@ -172,7 +172,12 @@ function L2bestapproximate!(
         assemble!(b[1], RHS; verbosity = verbosity - 1)
     end
 
-    fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
+    if verbosity > 0
+        println("\n  Assembling boundary data...")
+        @time fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
+    else
+        fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
+    end
 
     # fix in global matrix
     for j = 1 : length(fixed_bdofs)
@@ -224,14 +229,14 @@ function H1bestapproximate!(
         function closure(result,input,x)
             exact_function_gradient(temp,x)
             result[1] = 0
-            for j = 1 : ncomponents
+            for j = 1 : ncomponents*xdim
                 result[1] += temp[j]*input[j] 
             end
         end
     end    
     action = XFunctionAction(rhs_function(),1; bonus_quadorder = bonus_quadorder - 1)
     b = FEVector{Float64}("rhs",FE)
-    RHS = LinearForm(Float64, AbstractAssemblyTypeCELL, FE, Identity, action)
+    RHS = LinearForm(Float64, AbstractAssemblyTypeCELL, FE, Gradient, action)
     if verbosity > 0
         println("\n  Assembling right-hand side...")
         @time assemble!(b[1], RHS; verbosity = verbosity - 1)
@@ -239,8 +244,13 @@ function H1bestapproximate!(
         assemble!(b[1], RHS; verbosity = verbosity - 1)
     end    
 
-    fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
-
+    if verbosity > 0
+        println("\n  Assembling boundary data...")
+        @time fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
+    else
+        fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
+    end
+    
     # fix in global matrix
     for j = 1 : length(fixed_bdofs)
         b.entries[fixed_bdofs[j]] = dirichlet_penalty * Target.entries[fixed_bdofs[j]]

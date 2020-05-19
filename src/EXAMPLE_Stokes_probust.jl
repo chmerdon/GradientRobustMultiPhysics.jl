@@ -125,14 +125,14 @@ function main()
         StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = 2)
         Solution = FEVector{Float64}("Stokes velocity classical",FE_velocity)
         append!(Solution,"Stokes pressure (classical)",FE_pressure)
-        solve!(Solution, StokesProblem; verbosity = verbosity - 1)
+        @time solve!(Solution, StokesProblem; verbosity = verbosity - 1)
         push!(NDofs,length(Solution.entries))
 
         # solve Stokes problem with pressure-robust right-hand side
         StokesProblem.RHSOperators[1][1] = RhsOperator(ReconstructionIdentity{FiniteElements.FEHdivRT0}, [rhs!], 2, 2; bonus_quadorder = 2)
         Solution2 = FEVector{Float64}("Stokes velocity p-robust",FE_velocity)
         append!(Solution2,"Stokes pressure (p-robust)",FE_pressure)
-        solve!(Solution2, StokesProblem; verbosity = verbosity - 1)
+        @time solve!(Solution2, StokesProblem; verbosity = verbosity - 1)
 
         # L2 bestapproximation
         L2Bestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FE_velocity)

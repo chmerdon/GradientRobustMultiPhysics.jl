@@ -100,10 +100,14 @@ end
 
 
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
+
+    if verbosity > 0
+        println("  ...constructing FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP")
+    end
 
     # pre-allocate memory for basis functions
     ncomponents = FiniteElements.get_ncomponents(FEType)
@@ -175,14 +179,17 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
 end    
 
 # constructor for ReconstructionIdentity
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: ReconstructionIdentity{FETypeReconst}, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: ReconstructionIdentity{FETypeReconst}, AT <: AbstractAssemblyType}
     # generate reconstruction space
     # avoid computation of full dofmap
     # we will just use local basis functions
 
+    if verbosity > 0
+        println("  ...constructing FEBasisEvaluator for $FEOP operator of $FEType on $EG")
+    end
+
     FE2 = FETypeReconst(FE.xgrid; dofmap_needed = false)
     FEType2 = typeof(FE2)
-    println("Hallo")
     
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)

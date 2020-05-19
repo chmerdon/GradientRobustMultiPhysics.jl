@@ -156,7 +156,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     offset4component = 0:nnodes:ncomponents*nnodes
     for node = 1 : nnodes
         for c = 1 : ncomponents
-            Target[node,c] = Source[offset4component[c]+node]
+            Target[c,node] = Source[offset4component[c]+node]
         end    
     end    
 end
