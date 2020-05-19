@@ -48,7 +48,9 @@ function main()
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
     nlevels = 6 # number of refinement levels
-    FEorder = 1 # optimal convergence order of velocity finite element
+    #fem = "BR" # Bernardi--Raugel
+    fem = "MINI" # MINI element
+    #fem = "TH" # Taylor--Hood
     verbosity = 3 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data
@@ -123,10 +125,13 @@ function main()
         end
 
         # generate FE
-        if FEorder == 1 # Bernardi--Raugel
+        if fem == "BR" # Bernardi--Raugel
             FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
             FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
-        elseif FEorder == 2 # Taylor--Hood/Q2xP1
+        elseif fem == "MINI" # Bernardi--Raugel
+            FE_velocity = FiniteElements.getH1MINIFiniteElement(xgrid,2)
+            FE_pressure = FiniteElements.getH1P1FiniteElement(xgrid,1)
+        elseif fem == "TH" # Taylor--Hood/Q2xP1
             FE_velocity = FiniteElements.getH1P2FiniteElement(xgrid,2)
             FE_pressure = FiniteElements.getH1P1FiniteElement(xgrid,1)
         end        
@@ -155,7 +160,7 @@ function main()
 
         # H1 bestapproximation
         H1Bestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
-        H1bestapproximate!(H1Bestapproximation[1], exact_velocity_gradient!, exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 2)
+        H1bestapproximate!(H1Bestapproximation[1], exact_velocity_gradient!, exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 1, bonus_quadorder_boundary = 2)
         
 
         # compute L2 and H1 error
@@ -169,7 +174,7 @@ function main()
         append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2Bestapproximation[2])))
         append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
         append!(H1errorInterpolation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Interpolation[1])))
-        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,L2Bestapproximation[1])))
+        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1Bestapproximation[1])))
         
         # plot final solution
         if (level == nlevels)

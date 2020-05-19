@@ -11,8 +11,7 @@
   abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
     # lowest order
     include("FEdefinitions/H1_P1.jl");
-    #include("FEdefinitions/H1_Q1.jl");
-    #include("FEdefinitions/H1_MINI.jl");
+    include("FEdefinitions/H1_MINI.jl");
     #include("FEdefinitions/H1_CR.jl");
     # second order
     include("FEdefinitions/H1_P2.jl");

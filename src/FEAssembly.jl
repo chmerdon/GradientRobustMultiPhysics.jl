@@ -200,6 +200,7 @@ function H1bestapproximate!(
     boundary_regions = [0],
     verbosity::Int = 0,
     bonus_quadorder::Int = 0,
+    bonus_quadorder_boundary::Int = 0,
     dirichlet_penalty::Float64 = 1e60)
 
     FE = Target.FEType
@@ -246,9 +247,9 @@ function H1bestapproximate!(
 
     if verbosity > 0
         println("\n  Assembling boundary data...")
-        @time fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
+        @time fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder_boundary)
     else
-        fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
+        fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder_boundary)
     end
     
     # fix in global matrix

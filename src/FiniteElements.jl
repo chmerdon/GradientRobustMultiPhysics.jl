@@ -27,7 +27,7 @@ using ForwardDiff # for FEBasisEvaluator
 include("FiniteElements_FESpaces.jl")
 
 export AbstractH1FiniteElement
-export getH1P1FiniteElement, getH1P2FiniteElement
+export getH1P1FiniteElement, getH1MINIFiniteElement, getH1P2FiniteElement
 
 export AbstractH1FiniteElementWithCoefficients
 export getH1BRFiniteElement
