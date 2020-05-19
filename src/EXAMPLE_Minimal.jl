@@ -25,6 +25,9 @@ function main()
         result[1] = x[1]^2+x[2]^2
         result[2] = -x[1]^2 + 1.0
     end
+    function exact_divergence!(result,x)
+        result[1] = 2*x[1]
+    end
 
     # FIRST WAY: directly via a shortcut
     L2bestapproximate!(Solution1[1], exact_function!; bonus_quadorder = 2, boundary_regions = [0], verbosity = 3)
@@ -45,6 +48,12 @@ function main()
     # uncomment next line to check that both are identical
     println("difference = $(sum((Solution1.entries - Solution2.entries).^2))");
 
+    # calculate some errors
+    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2; bonus_quadorder = 2)
+    L2DivergenceErrorEvaluator = L2ErrorIntegrator(exact_divergence!, Divergence, 2, 1; bonus_quadorder = 1)
+    println("L2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution1[1])))")
+    println("L2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution1[1])))")
+        
     # plot
     PyPlot.figure(1)
     nnodes = size(xgrid[Coordinates],2)

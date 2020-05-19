@@ -264,7 +264,7 @@ function evaluate!(
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemDofs::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE,AT)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
 
@@ -297,7 +297,8 @@ function evaluate!(
     dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
-    cvali::Array{T,2} = [[] []] # pointer to FEAssemblyvalue at quadrature point i
+    weights::Array{T,1} = [] # pointer to quadrature weights
+    basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
 
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -321,6 +322,7 @@ function evaluate!(
         # update FEbasisevaler
         evaler4item!(evalnr,item)
         FiniteElements.update!(basisevaler[iEG][evalnr],dofitem)
+        basisvals = basisevaler[iEG][evalnr].cvals
 
         # update action
         update!(action, basisevaler[iEG][evalnr], item, regions[r])
@@ -330,18 +332,18 @@ function evaluate!(
             dofs[j] = xItemDofs[j,dofitem]
         end
 
-        for i in eachindex(qf[iEG].w)
-            cvali = basisevaler[iEG][evalnr].cvals[i]
+        weights = qf[iEG].w
+        for i in eachindex(weights)
             # apply action to FEVector
             fill!(action_input,0)
             for dof_i = 1 : ndofs4item
                 for k = 1 : cvals_resultdim
-                    action_input[k] += FEB[dofs[dof_i]] * cvali[k,dof_i]
+                    action_input[k] += FEB[dofs[dof_i]] * basisvals[k,dof_i,i]
                 end    
             end 
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
-                b[item,j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                b[item,j] += action_result[j] * weights[i] * xItemVolumes[item]
             end
         end  
         break; # region for loop
@@ -359,7 +361,7 @@ function evaluate(
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemDofs::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE,AT)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
 
@@ -388,9 +390,11 @@ function evaluate(
     ndofs4item::Int = 0 # number of dofs for item
     evalnr = [0] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
-    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
+    dofs = zeros(Int,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
+    weights::Array{T,1} = [] # pointer to quadrature weights
+    basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
 
     result = 0.0
     nregions::Int = length(regions)
@@ -415,6 +419,7 @@ function evaluate(
         # update FEbasisevaler
         evaler4item!(evalnr,item)
         FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
         update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
@@ -424,17 +429,18 @@ function evaluate(
             dofs[j] = xItemDofs[j,dofitem]
         end
 
-        for i in eachindex(qf[iEG].w)
+        weights = qf[iEG].w
+        for i = 1 : length(weights)
             # apply action to FEVector
             fill!(action_input,0)
             for dof_i = 1 : ndofs4item
                 for k = 1 : cvals_resultdim
-                    action_input[k] += FEB[dofs[dof_i]] * basisevaler[iEG][evalnr[1]].cvals[k,dof_i,i]
+                    action_input[k] += FEB[dofs[dof_i]] * basisvals[k,dof_i,i]
                 end    
             end 
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
-                result += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                result += action_result[j] * weights[i] * xItemVolumes[item]
             end
         end  
         break; # region for loop
@@ -456,7 +462,7 @@ function assemble!(
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemDofs::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE,AT)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
@@ -488,6 +494,8 @@ function assemble!(
     temp::T = 0 # some temporary variable
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
+    weights::Array{T,1} = [] # pointer to quadrature weights
+    basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
     localb = zeros(T,maxdofs,action_resultdim)
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -511,6 +519,7 @@ function assemble!(
         # update FEbasisevaler
         evaler4item!(evalnr,item)
         FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
         update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
@@ -520,17 +529,18 @@ function assemble!(
             dofs[j] = xItemDofs[j,dofitem]
         end
 
-        for i in eachindex(qf[iEG].w)
+        weights = qf[iEG].w
+        for i in eachindex(weights)
 
             for dof_i = 1 : ndofs4item
                 # apply action
                 for k = 1 : cvals_resultdim
-                    action_input[k] = basisevaler[iEG][evalnr[1]].cvals[k,dof_i,i]
+                    action_input[k] = basisvals[k,dof_i,i]
                 end    
                 apply_action!(action_result, action_input, action, i)
 
                 for j = 1 : action_resultdim
-                   localb[dof_i,j] += action_result[j] * qf[iEG].w[i]
+                   localb[dof_i,j] += action_result[j] * weights[i]
                 end
             end 
         end  
@@ -558,7 +568,7 @@ function assemble!( # LF has to have resultdim == 1
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemDofs::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE,AT)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
@@ -669,8 +679,8 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = FEPropertyDofs4AssemblyType(FE[1],AT)
-    xItemDofs2 = FEPropertyDofs4AssemblyType(FE[2],AT)
+    xItemDofs1::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE[1],AT)
+    xItemDofs2::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE[2],AT)
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     

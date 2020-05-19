@@ -40,11 +40,8 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradie
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl}) = 1
-NeededDerivative4Operator(::Type{<:AbstractHcurlFiniteElement},::Type{Curl}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Rotation}) = 1
-NeededDerivative4Operator(::Type{<:AbstractHcurlFiniteElement},::Type{Rotation}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = 1
-NeededDerivative4Operator(::Type{<:AbstractHdivFiniteElement},::Type{Divergence}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
@@ -249,38 +246,38 @@ end
 # HDIV RECONSTRUCTION
 # Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType, FETypeReconst <: AbstractFiniteElement, FEOP <: ReconstructionIdentity{FETypeReconst}}
-    FEBE.citem = item
+    if FEBE.citem != item
+        FEBE.citem = item
+    
+        # cell update transformation
+        FEXGrid.update!(FEBE.L2G, item)
+        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
 
-    # cell update transformation
-    FEXGrid.update!(FEBE.L2G, item)
-    FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
-
-    # use Piola transformation on Hdiv basis
-    # and save it in operatorvals
-    for i = 1 : length(FEBE.xref)
-        # evaluate Piola matrix at quadrature point
-        if FEBE.L2G.nonlinear || i == 1
-            FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-        end
-        for dof_i = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
-            for k = 1 : FEBE.offsets[2] # ncomponents
-                FEBE.refoperatorvals[k,dof_i,i] = 0.0;
-                for l = 1 : FEBE.offsets[2] # ncomponents
-                    FEBE.refoperatorvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
-                end    
-                FEBE.refoperatorvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.det
+        # use Piola transformation on Hdiv basis
+        # and save it in operatorvals
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
+                for k = 1 : FEBE.offsets[2] # ncomponents
+                    FEBE.refoperatorvals[k,dof_i,i] = 0.0;
+                    for l = 1 : FEBE.offsets[2] # ncomponents
+                        FEBE.refoperatorvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                    end    
+                    FEBE.refoperatorvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.det
+                end
             end
         end
-    end
 
-    # get local reconstruction coefficients
-    # and accumulate
-    FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
+        # get local reconstruction coefficients
+        # and accumulate
+        FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
 
-    fill!(FEBE.cvals,0.0)
-    for i = 1 : length(FEBE.xref)
-        for dof_i = 1 : FEBE.offsets2[2] # ndofs4item (H1 element)
-            for dof_j = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
+        fill!(FEBE.cvals,0.0)
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : FEBE.offsets2[2], dof_j = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
                 if FEBE.coefficients2[dof_i,dof_j] != 0
                     for k = 1 : FEBE.offsets[2] # ncomponents
                         FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refoperatorvals[k,dof_j,i]; 
@@ -295,25 +292,27 @@ end
 # IDENTITY OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
-    FEBE.citem = item
+    if FEBE.citem != item
+        FEBE.citem = item
     
-    # cell update transformation
-    FEXGrid.update!(FEBE.L2G, item)
-    FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        # cell update transformation
+        FEXGrid.update!(FEBE.L2G, item)
+        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
 
-    # use Piola transformation on basisvals
-    for i = 1 : length(FEBE.xref)
-        # evaluate Piola matrix at quadrature point
-        if FEBE.L2G.nonlinear || i == 1
-            FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-        end
-        for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-            for k = 1 : FEBE.offsets[2] # ncomponents
-                FEBE.cvals[k,dof_i,i] = 0.0;
-                for l = 1 : FEBE.offsets[2] # ncomponents
-                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
-                end    
-                FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.det
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                for k = 1 : FEBE.offsets[2] # ncomponents
+                    FEBE.cvals[k,dof_i,i] = 0.0;
+                    for l = 1 : FEBE.offsets[2] # ncomponents
+                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                    end    
+                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.det
+                end
             end
         end
     end
@@ -324,20 +323,23 @@ end
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
-    FEBE.citem = item
+    if FEBE.citem != item
+        FEBE.citem = item
+        
+        # get coefficients
+        if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+            FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+        else
+            FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        end    
 
-    if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
-        FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
-    else
-        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
-    end    
 
-
-    for i = 1 : length(FEBE.xref)
-        for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-            for k = 1 : FEBE.offsets[2] # ncomponents
-                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] * FEBE.coefficients[k,dof_i];
-            end    
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                for k = 1 : FEBE.offsets[2] # ncomponents
+                    FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] * FEBE.coefficients[k,dof_i];
+                end    
+            end
         end
     end
 end
@@ -346,12 +348,14 @@ end
 # NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: NormalFlux, AT <:AbstractAssemblyType}
-    FEBE.citem = item
+    if FEBE.citem != item
+        FEBE.citem = item
     
-    # use Piola transformation on basisvals
-    for i = 1 : length(FEBE.xref)
-        for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.offsets[2] # ncomponents
-            FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.offsets[2] # ncomponents
+                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+            end
         end
     end
 end
@@ -490,3 +494,31 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
     end    
 end
 
+
+# DIVERGENCE OPERATOR
+# HDIV ELEMENTS
+# Piola transformation preserves divergence (up to a factor 1/det(A))
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+        
+        # cell update transformation
+        FEXGrid.update!(FEBE.L2G, item)
+        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                FEBE.det = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = 0.0;
+                for j = 1 : FEBE.offsets[2] # xdim
+                    FEBE.cvals[1,dof_i,i] += FEBE.refoperatorvals[dof_i + FEBE.offsets2[j],j,i]
+                end  
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.det;
+            end
+        end    
+    end  
+end
