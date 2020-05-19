@@ -85,7 +85,7 @@ function boundarydata!(Target::FEVectorBlock, exact_function::Function; regions 
                 end 
             end   
         end   
-        action = XFunctionAction(bnd_rhs_functio_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
+        action = XFunctionAction(bnd_rhs_function_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
         RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = regions)
         b_bnd = FEVector{Float64}("RhsBnd", FE)
         FEAssembly.assemble!(b_bnd[1], RHS_bnd; verbosity = verbosity - 1)
@@ -115,8 +115,9 @@ function boundarydata!(Target::FEVectorBlock, exact_function::Function; regions 
         A_bnd = FEMatrix{Float64}("MassMatrixBnd", FE)
         L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = regions)    
         FEAssembly.assemble!(A_bnd[1],L2ProductBnd; verbosity = verbosity - 1)
+        Base.show(b_bnd.entries[fixed_bdofs])
+        Base.show(A_bnd.entries[fixed_bdofs,fixed_bdofs])
     end    
-    
 
     # solve best approximation problem on boundary and write into Target
     Target[fixed_bdofs] = A_bnd.entries[fixed_bdofs,fixed_bdofs]\b_bnd.entries[fixed_bdofs,1]

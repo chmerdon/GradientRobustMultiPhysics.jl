@@ -76,29 +76,37 @@ abstract type DoNothingBoundary <: NeumannBoundary end
 struct BoundaryOperator <: AbstractPDEOperator
     regions4boundarytype :: Dict{Type{<:AbstractBoundaryType},Array{Int,1}}
     data4bregion :: Array{Any,1}
+    quadorder4bregion :: Array{Int,1}
     xdim :: Int
     ncomponents :: Int
 end
 
 function BoundaryOperator(xdim::Int, ncomponents::Int = 1)
     regions4boundarytype = Dict{Type{<:AbstractBoundaryType},Array{Int,1}}()
-    return BoundaryOperator(regions4boundarytype, [], xdim, ncomponents)
+    quadorder4bregion = zeros(Int,0)
+    return BoundaryOperator(regions4boundarytype, [], quadorder4bregion, xdim, ncomponents)
 end
 
 function BoundaryOperator(boundarytype4bregion::Array{DataType,1}, data4region, xdim::Int, ncomponents::Int = 1; bonus_quadorder::Int = 0)
     regions4boundarytype = Dict{Type{<:AbstractBoundaryType},Array{Int,1}}()
+    quadorder4bregion = ones(Int,length(boundarytype4bregion))*bonus_quadorder
     for j = 1 : length(boundarytype4bregion)
         btype = boundarytype4bregion[j]
         regions4boundarytype[btype]=push!(get(regions4boundarytype, btype, []),j)
+        
     end
-    return BoundaryOperator(regions4boundarytype, data4region, xdim, ncomponents)
+    return BoundaryOperator(regions4boundarytype, data4region, quadorder4bregion, xdim, ncomponents)
 end
 
-function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; data = Nothing)
+function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
     O.regions4boundarytype[btype]=push!(get(O.regions4boundarytype, btype, []),region)
     while length(O.data4bregion) < region
         push!(O.data4bregion, Nothing)
     end
+    while length(O.quadorder4bregion) < region
+        push!(O.quadorder4bregion, 0)
+    end
+    O.quadorder4bregion[region] = bonus_quadorder
     O.data4bregion[region] = data
 end
 

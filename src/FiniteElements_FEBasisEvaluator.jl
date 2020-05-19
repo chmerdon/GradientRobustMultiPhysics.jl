@@ -181,13 +181,20 @@ end
 
 
 # NORMALFLUX OPERATOR
-# Hdiv ELEMENTS (nothing has to be done)
+# Hdiv ELEMENTS (just divide by face volume)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: NormalFlux, AT <:AbstractAssemblyType}
     FEBE.citem = item
     
     if FEBE.force_updateL2G
         FEXGrid.update!(FEBE.L2G, item)
     end    
+    
+    # use Piola transformation on basisvals
+    for i = 1 : length(FEBE.xref)
+        for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.offsets[2] # ncomponents
+            FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+        end
+    end
 end
 
 

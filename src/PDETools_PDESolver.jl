@@ -164,28 +164,49 @@ function boundarydata!(
             println("    BA-DBnd = $BADirichletBoundaryRegions (ndofs = $(length(BAdofs)))")
                 
         end    
-        # rhs action for region-wise boundarydata best approximation
-        function bnd_rhs_function()
-            temp = zeros(Float64,ncomponents)
-            function closure(result, input, x, region)
-                O.data4bregion[region](temp,x)
-                result[1] = 0.0
-                for j = 1 : ncomponents
-                    result[1] += temp[j]*input[j] 
-                end 
-            end   
-        end   
-        bonus_quadorder = 1 #maximum(quadorder4bregion)
-        action = RegionWiseXFunctionAction(bnd_rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
-        RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, action; regions = BADirichletBoundaryRegions)
-        b = zeros(Float64,FE.ndofs,1)
-        FEAssembly.assemble!(b, RHS_bnd)
 
-        # compute mass matrix
-        action = MultiplyScalarAction(1.0,ncomponents)
+
+        bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
+        Dboperator = DefaultDirichletBoundaryOperator4FE(typeof(FE))
+        b = zeros(Float64,FE.ndofs,1)
         A = FEMatrix{Float64}("MassMatrixBnd", FE)
-        L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Identity, action; regions = Array{Int64,1}([BADirichletBoundaryRegions; HomDirichletBoundaryRegions; InterDirichletBoundaryRegions]))    
-        FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+
+        if Dboperator == Identity
+            function bnd_rhs_function_h1()
+                temp = zeros(Float64,ncomponents)
+                function closure(result, input, x, region)
+                    O.data4bregion[region](temp,x)
+                    result[1] = 0.0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end 
+                end   
+            end   
+            action = RegionWiseXFunctionAction(bnd_rhs_function_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            FEAssembly.assemble!(b, RHS_bnd; verbosity = verbosity - 1)
+            L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
+            FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+        elseif Dboperator == NormalFlux
+            xFaceNormals = FE.xgrid[FaceNormals]
+            xBFaces = FE.xgrid[BFaces]
+            function bnd_rhs_function_hdiv()
+                temp = zeros(Float64,ncomponents)
+                function closure(result, input, x, bface)
+                    O.data4bregion[xBFaceRegions[bface]](temp,x)
+                    result[1] = 0.0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]
+                    end 
+                    result[1] *= input[1] 
+                end   
+            end   
+            action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,1; bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            FEAssembly.assemble!(b, RHS_bnd; verbosity = verbosity - 1)
+            L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
+            FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+        end    
 
         # fix already set dofs by other boundary conditions
         for j in fixed_bdofs
@@ -201,8 +222,6 @@ function boundarydata!(
     
     return fixed_bdofs
 end    
-
-
 
 
 
