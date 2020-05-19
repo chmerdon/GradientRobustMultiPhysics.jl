@@ -788,16 +788,20 @@ function assemble!(
         # copy localmatrix into global matrix
         if BLF.symmetric == false
             for dof_i = 1 : ndofs4item1, dof_j = 1 : ndofs4item2
-                A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
-                if transpose_copy != Nothing
-                    transpose_copy[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                if localmatrix[dof_i,dof_j] != 0
+                    A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
+                    if transpose_copy != Nothing
+                        transpose_copy[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                    end
                 end
             end
         else # symmetric case
             for dof_i = 1 : ndofs4item1, dof_j = dof_i+1 : ndofs4item2
-                temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
-                A[dofs2[dof_j],dofs[dof_i]] += temp
-                A[dofs2[dof_i],dofs[dof_j]] += temp
+                if localmatrix[dof_i,dof_j] != 0 
+                    temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                    A[dofs2[dof_j],dofs[dof_i]] += temp
+                    A[dofs2[dof_i],dofs[dof_j]] += temp
+                end
             end    
             for dof_i = 1 : ndofs4item1
                 A[dofs2[dof_i],dofs[dof_i]] += localmatrix[dof_i,dof_i] * xItemVolumes[item]
