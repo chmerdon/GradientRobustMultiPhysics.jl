@@ -5,8 +5,9 @@ FiniteElements for Julia
 Learning julia by implementing finite elements
 
 EXAMPLE scripts
-EXAMPLE_MixedElementGeometries.jl
-EXAMPLE_Stokes.jl
+- EXAMPLE_Minimal.jl
+- EXAMPLE_MixedElementGeometries.jl
+- EXAMPLE_Stokes.jl
 
 Dependencies on other Julia packages:
 - ExtendableSparse

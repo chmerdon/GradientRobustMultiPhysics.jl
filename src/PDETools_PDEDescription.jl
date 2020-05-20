@@ -111,6 +111,13 @@ function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBou
 end
 
 
+function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
+    for j = 1 : length(regions)
+        append!(O,regions[j], btype; data = data, bonus_quadorder = bonus_quadorder)
+    end
+end
+
+
 abstract type AbstractGlobalConstraint end
 struct FixedIntegralMean <: AbstractGlobalConstraint
     value::Real

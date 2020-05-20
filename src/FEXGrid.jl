@@ -276,7 +276,12 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     end    
 
     xgrid[Coordinates] = xCoordinates
-    xgrid[CellNodes] = xCellNodes
+    if typeof(oldCellNodes) == Array{Int32,2}
+        nnodes4cell = size(oldCellNodes,1)
+        xgrid[CellNodes] = reshape(xCellNodes.colentries,nnodes4cell,num_sources(xCellNodes))
+    else
+        xgrid[CellNodes] = xCellNodes
+    end
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[CellGeometries] = Array{DataType,1}(xCellGeometries)
     xgrid[BFaceNodes]=xBFaceNodes

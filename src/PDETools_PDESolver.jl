@@ -239,6 +239,10 @@ function solve!(
         println("\nSOLVING PDE")
         println("===========")
         println("  name = $(PDE.name)")
+        print("   FEs = ")
+        for j = 1 : length(Target)
+            println("$(Target[j].FEType.name) (ndofs = $(length(Target.entries)))\n         ");
+        end
     end
 
     # ASSEMBLE SYSTEM
@@ -266,7 +270,7 @@ function solve!(
     # prepare further global constraints
     for j= 1 : length(FEs), k = 1 : length(PDE.GlobalConstraints[j])
         if typeof(PDE.GlobalConstraints[j][k]) == FixedIntegralMean
-            if verbosity > 0
+            if verbosity > 1
                 println("\n  Ensuring fixed integral mean for component $j...")
             end
             b[j][1] = 0.0
@@ -275,7 +279,7 @@ function solve!(
     end
 
     # solve
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Solving")
         @time Target.entries[:] = A.entries\b.entries
     else

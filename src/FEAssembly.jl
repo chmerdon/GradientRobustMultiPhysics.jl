@@ -144,7 +144,7 @@ function L2bestapproximate!(
     # matrix
     L2Product = SymmetricBilinearForm(Float64,AbstractAssemblyTypeCELL, FE, Identity, DoNotChangeAction(ncomponents))    
     A = FEMatrix{Float64}("Matrix",FE)
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Assembling L2Product...")
         @time assemble!(A[1], L2Product; verbosity = verbosity - 1)
     else
@@ -165,14 +165,14 @@ function L2bestapproximate!(
     action = XFunctionAction(rhs_function(),1; bonus_quadorder = bonus_quadorder)
     b = FEVector{Float64}("rhs",FE)
     RHS = LinearForm(Float64, AbstractAssemblyTypeCELL, FE, Identity, action)
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Assembling right-hand side...")
         @time assemble!(b[1], RHS; verbosity = verbosity - 1)
     else
         assemble!(b[1], RHS; verbosity = verbosity - 1)
     end
 
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Assembling boundary data...")
         @time fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder)
     else
@@ -185,7 +185,7 @@ function L2bestapproximate!(
         A.entries[fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
     end
 
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Solving...")
         @time Target[:] = A.entries\b.entries
     else
@@ -217,7 +217,7 @@ function H1bestapproximate!(
     # matrix
     H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE, Gradient, DoNotChangeAction(ncomponents*xdim))    
     A = FEMatrix{Float64}("Matrix",FE)
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Assembling H1Product...")
         @time assemble!(A[1], H1Product; verbosity = verbosity - 1)
     else
@@ -238,14 +238,14 @@ function H1bestapproximate!(
     action = XFunctionAction(rhs_function(),1; bonus_quadorder = bonus_quadorder - 1)
     b = FEVector{Float64}("rhs",FE)
     RHS = LinearForm(Float64, AbstractAssemblyTypeCELL, FE, Gradient, action)
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Assembling right-hand side...")
         @time assemble!(b[1], RHS; verbosity = verbosity - 1)
     else
         assemble!(b[1], RHS; verbosity = verbosity - 1)
     end    
 
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Assembling boundary data...")
         @time fixed_bdofs = boundarydata!(Target, exact_function; regions = boundary_regions, verbosity = verbosity, bonus_quadorder = bonus_quadorder_boundary)
     else
@@ -258,7 +258,7 @@ function H1bestapproximate!(
         A.entries[fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
     end
 
-    if verbosity > 0
+    if verbosity > 1
         println("\n  Solving...")
         @time Target[:] = A.entries\b.entries
     else
