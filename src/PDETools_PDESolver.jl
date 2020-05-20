@@ -241,7 +241,7 @@ function solve!(
         println("  name = $(PDE.name)")
         print("   FEs = ")
         for j = 1 : length(Target)
-            println("$(Target[j].FEType.name) (ndofs = $(length(Target.entries)))\n         ");
+            print("$(Target[j].FEType.name) (ndofs = $(Target[j].FEType.ndofs))\n         ");
         end
     end
 
@@ -290,7 +290,7 @@ function solve!(
 
     for j= 1 : length(FEs), k = 1 : length(PDE.GlobalConstraints[j])
         if typeof(PDE.GlobalConstraints[j][k]) == FixedIntegralMean
-            if verbosity > 0
+            if verbosity > 1
                 println("\n  Moving integral mean for component $j to value $(PDE.GlobalConstraints[j][k].value)")
             end
             # move integral mean

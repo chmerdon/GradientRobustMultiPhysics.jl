@@ -12,83 +12,44 @@ using PyPlot
 using Printf
 
 
-function gridgen_mixedEG()
+include("testgrids.jl")
 
-    NumberType = Float64
-    xgrid=ExtendableGrid{NumberType,Int32}()
-    xgrid[Coordinates]=Array{NumberType,2}([0 0; 4//10 0; 1 0; 0 6//10; 4//10 6//10; 1 6//10;0 1; 4//10 1; 1 1]')
-    xCellNodes=VariableTargetAdjacency(Int32)
-    xCellGeometries=[Triangle2D, Triangle2D, Parallelogram2D, Parallelogram2D, Triangle2D, Triangle2D];
-    
-    append!(xCellNodes,[1,5,4])
-    append!(xCellNodes,[1,2,5])
-    append!(xCellNodes,[2,3,6,5])
-    append!(xCellNodes,[4,5,8,7]) 
-    append!(xCellNodes,[5,6,9])
-    append!(xCellNodes,[8,5,9])
-
-    xgrid[CellNodes] = xCellNodes
-    xgrid[CellGeometries] = xCellGeometries
-    ncells = num_sources(xCellNodes)
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,1,1,1,1,1,1])
-    xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
-    xgrid[BFaceNodes]=xBFaceNodes
-    nbfaces = num_sources(xBFaceNodes)
-    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,nbfaces)
-    xgrid[CoordinateSystem]=Cartesian2D
-
-    return xgrid
+ # problem data
+function exact_pressure!(result,x)
+    result[1] = x[1]^3 + x[2]^3 - 1//2
+end
+function exact_velocity!(result,x)
+    result[1] = 0.0;
+    result[2] = 0.0;
+end
+function exact_velocity_gradient!(result,x)
+    result[1] = 0.0
+    result[2] = 0.0;
+    result[3] = 0.0;
+    result[4] = 0.0;
+end
+function rhs!(result,x)
+    result[1] = 3*x[1]^2
+    result[2] = 3*x[2]^2
 end
 
 
 function main()
 
-
-    # initial grid
-    xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
+    xgrid = testgrid_mixedEG(); # initial grid
+    #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
     nlevels = 5 # number of refinement levels
     verbosity = 3 # deepness of messaging (the larger, the more)
-    fem = "BR"
-    fem = "CR"
+    viscosity = 1e-2
 
-    # define expected solution, boundary data and volume data
-    viscosity = 1.0
-    function exact_pressure!(result,x)
-        result[1] = x[1]^3 + x[2]^3 - 1//2
-    end
-    function exact_velocity!(result,x)
-        result[1] = 0.0;
-        result[2] = 0.0;
-    end
-    function exact_velocity_gradient!(result,x)
-        result[1] = 0.0
-        result[2] = 0.0;
-        result[3] = 0.0;
-        result[4] = 0.0;
-    end
-    function rhs!(result,x)
-        result[1] = 3*x[1]^2
-        result[2] = 3*x[2]^2
-    end
+    # choose a finite element method
+    #fem = "BR" # Bernardi--Raugel
+    fem = "CR" # Crouzeix--Raviart
 
-    # PDE description
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
-    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
-    MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(viscosity,4))]
-    MyLHS[1,2] = [LagrangeMultiplier(Divergence)] # automatically fills transposed block
-    MyLHS[2,1] = []
-    MyLHS[2,2] = []
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
-    MyRHS[1] = [RhsOperator(ReconstructionIdentity, [rhs!], 2, 2; bonus_quadorder = 2)]
-    MyRHS[2] = []
-    MyBoundaryVelocity = BoundaryOperator(2,2)
-    append!(MyBoundaryVelocity, 1, HomogeneousDirichletBoundary)
-    MyBoundaryPressure = BoundaryOperator(2,1) # empty, no pressure boundary conditions
-    MyGlobalConstraints = Array{Array{AbstractGlobalConstraint,1},1}(undef,2)
-    MyGlobalConstraints[1] = Array{AbstractGlobalConstraint,1}(undef,0)
-    MyGlobalConstraints[2] = [FixedIntegralMean(0.0)]
-    StokesProblem = PDEDescription("StokesProblem",MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
+    # load Stokes problem prototype and assign data
+    StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity)
+    append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], HomogeneousDirichletBoundary)
+    push!(StokesProblem.RHSOperators[1],RhsOperator(ReconstructionIdentity, [rhs!], 2, 2; bonus_quadorder = 2))
 
     # define ItemIntegrators for L2/H1 error computation
     L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 0)
@@ -147,7 +108,7 @@ function main()
         L2bestapproximate!(L2Bestapproximation[1], exact_velocity!; boundary_regions = [0], verbosity = verbosity - 1, bonus_quadorder = 0)
         L2bestapproximate!(L2Bestapproximation[2], exact_pressure!; boundary_regions = [], verbosity = verbosity - 1, bonus_quadorder = 3)
 
-        # H1 bestapproximation (not working properly yet)
+        # H1 bestapproximation
         H1Bestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
         H1bestapproximate!(H1Bestapproximation[1], exact_velocity_gradient!, exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 0)
         

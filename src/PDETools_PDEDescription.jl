@@ -128,7 +128,7 @@ end      # triggers that solution component has fixed integral mean
 # all Operators of [i,k] - matrixblock are assembled into system matrix block [i*n+k]
 # all Operators of [i] - rhs-block are assembled into rhs block [i]
 
-struct PDEDescription
+mutable struct PDEDescription
     name::String
     LHSOperators::Array{Array{AbstractPDEOperator,1},2}
     RHSOperators::Array{Array{AbstractPDEOperator,1},1}
