@@ -1,4 +1,4 @@
-struct FEH1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
+struct FEH1MINI{ncomponents,spacedim} <: AbstractH1FiniteElement where {ncomponents<:Int,spacedim<:Int}
     name::String                         # full name of finite element (used in messages)
     xgrid::ExtendableGrid                # link to xgrid 
     CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
@@ -7,12 +7,8 @@ struct FEH1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
     ndofs::Int32
 end
 
-function getH1P1FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
-    name = "P1"
-    for n = 1 : ncomponents-1
-        name = name * "xP1"
-    end
-    name = name * " (H1)"    
+function getH1MINIFiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
+    name = "MINI (H1, $(ncomponents)d)"    
 
     # generate celldofs
     dim = size(xgrid[Coordinates],1) 
@@ -30,7 +26,7 @@ function getH1P1FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
     xCellDofs = VariableTargetAdjacency(Int32)
     xFaceDofs = VariableTargetAdjacency(Int32)
     xBFaceDofs = VariableTargetAdjacency(Int32)
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xCellNodes))
+    dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+1))
     nnodes4item = 0
     for cell = 1 : ncells
         nnodes4item = num_targets(xCellNodes,cell)
@@ -40,7 +36,10 @@ function getH1P1FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
                 dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
             end    
         end
-        append!(xCellDofs,dofs4item[1:ncomponents*nnodes4item])
+        for k = 1 : ncomponents
+            dofs4item[ncomponents*nnodes4item+k] = ncomponents*nnodes + (k-1)*ncells + cell
+        end
+        append!(xCellDofs,dofs4item[1:ncomponents*(nnodes4item+1)])
     end
     for face = 1 : nfaces
         nnodes4item = num_targets(xFaceNodes,face)
@@ -63,19 +62,19 @@ function getH1P1FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
         append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item])
     end
 
-    return FEH1P1{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,nnodes * ncomponents)
+    return FEH1MINI{ncomponents,dim}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,(nnodes + ncells) * ncomponents)
 end
 
 
-get_ncomponents(::Type{FEH1P1{1}}) = 1
-get_ncomponents(::Type{FEH1P1{2}}) = 2
+get_ncomponents(::Type{FEH1MINI{1,2}}) = 1
+get_ncomponents(::Type{FEH1MINI{2,2}}) = 2
 
-get_polynomialorder(::Type{<:FEH1P1}, ::Type{<:Edge1D}) = 1;
-get_polynomialorder(::Type{<:FEH1P1}, ::Type{<:Triangle2D}) = 1;
-get_polynomialorder(::Type{<:FEH1P1}, ::Type{<:Quadrilateral2D}) = 2;
+get_polynomialorder(::Type{<:FEH1MINI{2,2}}, ::Type{<:Edge1D}) = 1
+get_polynomialorder(::Type{<:FEH1MINI{2,2}}, ::Type{<:Triangle2D}) = 3;
+get_polynomialorder(::Type{<:FEH1MINI{2,2}}, ::Type{<:Quadrilateral2D}) = 4;
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1MINI, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]
     xdim = size(xCoords,1)
     x = zeros(Float64,xdim)
@@ -85,6 +84,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1, exact_functio
     nnodes4item::Int = 0
     ncomponents::Int = get_ncomponents(typeof(FE))
     result = zeros(Float64,ncomponents)
+    linpart = 0.0
     if length(dofs) == 0 # interpolate at all dofs
         for j = 1 : num_sources(xCoords)
             for k=1:xdim
@@ -95,21 +95,60 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P1, exact_functio
                 Target[j+(c-1)*nnodes] = result[c]
             end
         end
+
+        for cell=1:ncells
+            nnodes4item = num_targets(xCellNodes,cell)
+            fill!(x,0.0)
+            for j=1:xdim
+                for k=1:nnodes4item
+                    x[j] += xCoords[j,xCellNodes[k,cell]]
+                end
+                x[j] /= nnodes4item
+            end
+            exact_function!(result,x)
+            for c = 1 : ncomponents
+                linpart = 0.0
+                for k=1:nnodes4item
+                    linpart += Target[xCellNodes[k,cell]+(c-1)*nnodes]
+                end
+                Target[(c-1)*ncells+ncomponents*nnodes+cell] = result[c] - linpart / nnodes4item
+            end
+        end
     else
         item = 0
         for j in dofs 
-            item = mod(j-1,nnodes)+1
-            c = Int(ceil(j/nnodes))
-            for k=1:xdim
-                x[k] = xCoords[k,item]
+            if j <= ncomponents*nnodes
+                item = mod(j-1,nnodes)+1
+                c = Int(ceil(j/nnodes))
+                for k=1:xdim
+                    x[k] = xCoords[k,item]
+                end    
+                exact_function!(result,x)
+                Target[j] = result[c]
+            else # cell bubble
+                j = j - ncomponents*nnodes
+                cell = mod(j-1,ncells)+1
+                c = Int(ceil(j/ncells))
+                nnodes4item = num_targets(xCellNodes,cell)
+                fill!(x,0.0)
+                for j=1:xdim
+                    for k=1:nnodes4item
+                        x[j] += xCoords[j,xCellNodes[k,cell]]
+                    end
+                    x[j] /= nnodes4item
+                end
+                exact_function!(result,x)
+                linpart = 0.0
+                for k=1:nnodes4item
+                    linpart += Target[xCellNodes[k,cell]+(c-1)*nnodes]
+                end
+                Target[(c-1)*ncells+ncomponents*nnodes+cell] = result[c] - linpart / nnodes4item    
             end    
-            exact_function!(result,x)
-            Target[j] = result[c]
         end    
     end    
 end
 
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FEH1P1)
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FEH1MINI)
     nnodes = num_sources(FE.xgrid[Coordinates])
     ncomponents = get_ncomponents(typeof(FE))
     offset4component = 0:nnodes:ncomponents*nnodes
@@ -121,7 +160,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
 end
 
 
-function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Edge1D})
+function get_basis_on_face(::Type{FEH1MINI{1,2}}, ::Type{<:Edge1D})
     function closure(xref)
         return [1 - xref[1];
                 xref[1]]
@@ -129,7 +168,7 @@ function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Edge1D})
 end
 
 
-function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Edge1D})
+function get_basis_on_face(::Type{FEH1MINI{2,2}}, ::Type{<:Edge1D})
     function closure(xref)
         temp = 1 - xref[1];
         return [temp 0.0;
@@ -139,26 +178,32 @@ function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Edge1D})
     end
 end
 
-function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(::Type{FEH1MINI{1,2}}, ::Type{<:Triangle2D})
     function closure(xref)
-        return [1-xref[1]-xref[2];
+        temp = 1-xref[1]-xref[2]
+        return [temp;
                 xref[1];
-                xref[2]]
+                xref[2];
+                9*temp*xref[1]*xref[2]]
     end
 end
 
-function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(::Type{FEH1MINI{2,2}}, ::Type{<:Triangle2D})
     function closure(xref)
-        return [1-xref[1]-xref[2] 0.0;
+        temp = 1-xref[1]-xref[2]
+        cb = 9*temp*xref[1]*xref[2]
+        return [temp 0.0;
                 xref[1] 0.0;
                 xref[2] 0.0;
-                0.0 1-xref[1]-xref[2];
+                0.0 temp;
                 0.0 xref[1];
-                0.0 xref[2]]
+                0.0 xref[2];
+                cb 0.0;
+                0.0 cb]
     end
 end
 
-function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Quadrilateral2D})
+function get_basis_on_cell(::Type{FEH1MINI{1,2}}, ::Type{<:Quadrilateral2D})
     function closure(xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
@@ -166,14 +211,15 @@ function get_basis_on_cell(::Type{FEH1P1{1}}, ::Type{<:Quadrilateral2D})
                 xref[1]*b;
                 xref[1]*xref[2];
                 xref[2]*a;
-                ]
+                16*a*b*xref[1]*xref[2]]
     end
 end
 
-function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Quadrilateral2D})
+function get_basis_on_cell(::Type{FEH1MINI{2,2}}, ::Type{<:Quadrilateral2D})
     function closure(xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
+        cb = 16*a*b*xref[1]*xref[2]
         return [a*b 0.0;
                 xref[1]*b 0.0;
                 xref[1]*xref[2] 0.0;
@@ -181,12 +227,9 @@ function get_basis_on_cell(::Type{FEH1P1{2}}, ::Type{<:Quadrilateral2D})
                 0.0 a*b;
                 0.0 xref[1]*b;
                 0.0 xref[1]*xref[2];
-                0.0 xref[2]*a]
+                0.0 xref[2]*a;
+                cb 0.0;
+                0.0 cb]
     end
 end
 
-function get_basis_on_face(FE::Type{<:FEH1P1}, EG::Type{<:AbstractElementGeometry})
-    function closure(xref)
-        return get_basis_on_cell(FE, EG)(xref[1:end-1])
-    end    
-end

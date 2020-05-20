@@ -49,7 +49,8 @@ function main()
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
     nlevels = 6 # number of refinement levels
     #fem = "BR" # Bernardi--Raugel
-    fem = "MINI" # MINI element
+    #fem = "MINI" # MINI element
+    fem = "CR" # MINI element
     #fem = "TH" # Taylor--Hood
     verbosity = 3 # deepness of messaging (the larger, the more)
 
@@ -92,8 +93,8 @@ function main()
     MyRHS[2] = []
     MyBoundaryVelocity = BoundaryOperator(2,2)
     append!(MyBoundaryVelocity, 1, HomogeneousDirichletBoundary; data = bnd_data_rest!)
-    append!(MyBoundaryVelocity, 2, BestapproxDirichletBoundary; data = exact_velocity!)
-    append!(MyBoundaryVelocity, 3, BestapproxDirichletBoundary; data = exact_velocity!)
+    append!(MyBoundaryVelocity, 2, BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
+    append!(MyBoundaryVelocity, 3, BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
     MyBoundaryPressure = BoundaryOperator(2,1) # empty, no pressure boundary conditions
     MyGlobalConstraints = Array{Array{AbstractGlobalConstraint,1},1}(undef,2)
     MyGlobalConstraints[1] = Array{AbstractGlobalConstraint,1}(undef,0)
@@ -128,9 +129,12 @@ function main()
         if fem == "BR" # Bernardi--Raugel
             FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
             FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
-        elseif fem == "MINI" # Bernardi--Raugel
+        elseif fem == "MINI" # MINI element
             FE_velocity = FiniteElements.getH1MINIFiniteElement(xgrid,2)
             FE_pressure = FiniteElements.getH1P1FiniteElement(xgrid,1)
+        elseif fem == "CR" # Crouzeix--Raviart
+            FE_velocity = FiniteElements.getH1CRFiniteElement(xgrid,2)
+            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
         elseif fem == "TH" # Taylor--Hood/Q2xP1
             FE_velocity = FiniteElements.getH1P2FiniteElement(xgrid,2)
             FE_pressure = FiniteElements.getH1P1FiniteElement(xgrid,1)

@@ -47,8 +47,10 @@ function main()
 
     # initial grid
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
-    nlevels = 6 # number of refinement levels
-    FEorder = 2 # optimal convergence order of finite element
+    nlevels = 7 # number of refinement levels
+    #fem = "P1"
+    fem = "CR"
+    #fem = "P2"
     verbosity = 3 # deepness of messaging (the larger, the more)
 
     # define expected solution, boundary data and volume data
@@ -85,9 +87,9 @@ function main()
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
     MyRHS[1] = [RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3)]
     MyBoundary = BoundaryOperator(2,1)
-    append!(MyBoundary, 1, BestapproxDirichletBoundary; data = bnd_data_rest!)
+    append!(MyBoundary, 1, BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
     append!(MyBoundary, 2, InterpolateDirichletBoundary; data = bnd_data_right!)
-    append!(MyBoundary, 3, BestapproxDirichletBoundary; data = bnd_data_rest!)
+    append!(MyBoundary, 3, BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
     append!(MyBoundary, 4, HomogeneousDirichletBoundary)
     ConvectionDiffusionProblem = PDEDescription("ConvectionDiffusionProblem",MyLHS,MyRHS,[MyBoundary])
 
@@ -109,9 +111,11 @@ function main()
         end
 
         # generate FE
-        if FEorder == 1
+        if fem == "P1"
             FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
-        elseif FEorder == 2
+        elseif fem == "CR"
+            FE = FiniteElements.getH1CRFiniteElement(xgrid,1)
+        elseif fem == "P2"
             FE = FiniteElements.getH1P2FiniteElement(xgrid,1)
         end        
         if verbosity > 2
@@ -160,7 +164,9 @@ function main()
             # plot solution
             PyPlot.figure(2)
             nnodes = size(xgrid[Coordinates],2)
-            ExtendableGrids.plot(xgrid, Solution[1][1:nnodes]; Plotter = PyPlot)
+            nodevals = zeros(Float64,2,nnodes)
+            nodevalues!(nodevals,Solution[1],FE)
+            ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
         end    
     end    
 

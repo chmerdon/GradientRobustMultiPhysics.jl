@@ -10,7 +10,6 @@ end
 
 
 # abstract nodevalue function that works for any element and can be overwritten for special ones
-# (e.g. P1/P2 etc. just have to return their dofs, see H1_P1.jl)
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::AbstractFiniteElement; regions::Array{Int,1} = [0])
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]

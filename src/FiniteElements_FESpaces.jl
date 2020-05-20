@@ -12,7 +12,7 @@
     # lowest order
     include("FEdefinitions/H1_P1.jl");
     include("FEdefinitions/H1_MINI.jl");
-    #include("FEdefinitions/H1_CR.jl");
+    include("FEdefinitions/H1nc_CR.jl");
     # second order
     include("FEdefinitions/H1_P2.jl");
     #include("FEdefinitions/H1_P2B.jl");

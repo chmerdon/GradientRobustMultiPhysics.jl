@@ -82,8 +82,10 @@ function boundarydata!(
     xdim = size(FE.xgrid[Coordinates],1) 
     ncomponents = get_ncomponents(typeof(FE))
     xBFaces = FE.xgrid[BFaces]
+    xBFaceDofs = FE.BFaceDofs
     nbfaces = length(xBFaces)
     xBFaceRegions = FE.xgrid[BFaceRegions]
+
 
     ######################
     # Dirichlet boundary #
@@ -95,12 +97,11 @@ function boundarydata!(
     if length(InterDirichletBoundaryRegions) > 0
 
         # find Dirichlet dofs
-        xFaceDofs = FE.FaceDofs
         for r = 1 : length(InterDirichletBoundaryRegions)
             bregiondofs = []
             for bface = 1 : nbfaces
                 if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
-                    append!(bregiondofs,xFaceDofs[:,xBFaces[bface]])
+                    append!(bregiondofs,xBFaceDofs[:,bface])
                 end
             end    
             bregiondofs = Base.unique(bregiondofs)
@@ -121,12 +122,11 @@ function boundarydata!(
     if length(HomDirichletBoundaryRegions) > 0
 
         # find Dirichlet dofs
-        xFaceDofs = FE.FaceDofs
         hom_dofs = []
         for r = 1 : length(HomDirichletBoundaryRegions)
             for bface = 1 : nbfaces
                 if xBFaceRegions[bface] == HomDirichletBoundaryRegions[r]
-                    append!(hom_dofs,xFaceDofs[:,xBFaces[bface]])
+                    append!(hom_dofs,xBFaceDofs[:,bface])
                 end    
             end    
         end
@@ -148,12 +148,11 @@ function boundarydata!(
     if length(BADirichletBoundaryRegions) > 0
 
         # find Dirichlet dofs
-        xFaceDofs = FE.FaceDofs
         BAdofs = []
         for bface = 1 : nbfaces
             for r = 1 : length(BADirichletBoundaryRegions)
                 if xBFaceRegions[bface] == BADirichletBoundaryRegions[r]
-                    append!(BAdofs,xFaceDofs[:,xBFaces[bface]])
+                    append!(BAdofs,xBFaceDofs[:,bface])
                     break
                 end    
             end    

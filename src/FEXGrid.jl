@@ -21,6 +21,15 @@ export L2GTransformer, update!, eval!, mapderiv!, piola!
 
 export uniqueEG,split_grid_into, uniform_refine
 
+# additional ElementGeometryTypes with parent information
+abstract type Edge1DWithParent{Parent <: AbstractElementGeometry} <: Edge1D end
+abstract type Edge1DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Edge1D end
+export Edge1DWithParent, Edge1DWithParents
+
+function AddParent(FEG::Type{<:Edge1D}, CEG::Type{<:AbstractElementGeometry})
+    return Edge1DWithParent{CEG}
+end
+
 
 # additional ExtendableGrids adjacency types 
 abstract type FaceNodes <: AbstractGridAdjacency end
@@ -105,9 +114,11 @@ nnodes_per_cellface(::Type{<:Quadrilateral2D}, k) = 2
 
 # functions that specify the facetype of the k-th cellface
 facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
-facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D
+facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1DWithParent{Triangle2D}
+facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1DWithParent{Quadrilateral2D}
 facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
-facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D
+
+facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1DWithParents{P1,P2}
 
 
 # functions that tell how to split one ElementGeometry into another
@@ -272,6 +283,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid[BFaceRegions]=xBFaceRegions
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,2*nbfaces)
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
+    Base.show()
     return xgrid
 end
 
@@ -318,6 +330,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
     xFaceNodes = VariableTargetAdjacency(Int32)
     xCellFaces = VariableTargetAdjacency(Int32)
+    xFaceCells = zeros(Int32,0) # cells are appended and at the end rewritten into 2,nfaces array
     xCellSigns = VariableTargetAdjacency(Int32)
     xFaceGeometries::Array{DataType,1} = []
     xBFaces::Array{Int32,1} = []
@@ -411,12 +424,14 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                         # set index for adjacencies missing
                         #xCellFaces[k,cell] = face
                         #xCellFaces[f2,cell2] = face
+                        push!(xFaceCells,cell)
+                        push!(xFaceCells,cell2)
                         xCellFaces.colentries[xCellFaces.colstart[cell]+k-1] = face
                         xCellFaces.colentries[xCellFaces.colstart[cell2]+f2-1] = face
                         xCellSigns.colentries[xCellSigns.colstart[cell]+k-1] = 1
                         xCellSigns.colentries[xCellSigns.colstart[cell2]+f2-1] = -1
                         append!(xFaceNodes,current_face[1:nodes_per_cellface])
-                        push!(xFaceGeometries,facetype_of_cellface(cellEG,k))
+                        push!(xFaceGeometries,facetype_of_cellface(cellEG,cell2EG,k))
                         break;
                     end
 
@@ -428,6 +443,8 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                 face += 1
                 # set index for adjacencies missing
                 #xCellFaces[k,cell] = face
+                push!(xFaceCells,cell)
+                push!(xFaceCells,0)
                 xCellFaces.colentries[xCellFaces.colstart[cell]+k-1] = face
                 xCellSigns.colentries[xCellSigns.colstart[cell]+k-1] = 1
                 append!(xFaceNodes,current_face[1:nodes_per_cellface])
@@ -443,6 +460,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     xgrid[FaceGeometries] = xFaceGeometries
     xgrid[CellFaces] = xCellFaces
     xgrid[CellSigns] = xCellSigns
+    xgrid[FaceCells] = reshape(xFaceCells,2,face)
     xFaceNodes
 end
 
@@ -462,19 +480,19 @@ end
 
 # some methods to compute volume of different ElemTypes (beware: on submanifolds formulas get different)
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Vertex0D}, ::Type{ExtendableGrids.AbstractCoordinateSystem})
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{ExtendableGrids.AbstractCoordinateSystem})
     return 0.0
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Edge1D}, ::Type{Cartesian1D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian1D})
     return abs(Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]])
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Edge1D}, ::Type{Cartesian2D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
     return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2)
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{Triangle2D}, ::Type{Cartesian2D})
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian2D})
     return 1 // 2 * ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
                   +   Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
                   +   Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
@@ -543,11 +561,21 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     xCoordinates = xgrid[Coordinates]
     xFaceNodes = xgrid[FaceNodes]
     xBFaceNodes = xgrid[BFaceNodes]
+    xFaceCells = xgrid[FaceCells]
+    xCellGeometries = xgrid[CellGeometries]
     nbfaces = num_sources(xBFaceNodes)
     nfaces = num_sources(xFaceNodes)
 
     # init BFaces
     xBFaces = zeros(Int32,nbfaces)
+    xBFaceGeometries = xgrid[BFaceGeometries]
+    if typeof(xBFaceGeometries) == VectorOfConstants{DataType}
+        EG = xBFaceGeometries[1]
+        xBFaceGeometries = Array{DataType,1}(undef,nbfaces)
+        for j = 1 : nbfaces
+            xBFaceGeometries[j] = EG
+        end
+    end
 
     current_bface = zeros(Int32,max_num_targets_per_source(xFaceNodes))
     nodes_per_bface::Int32 = 0
@@ -570,41 +598,20 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
             end        
             if match == true
                 xBFaces[bface] = face
+                xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
                 break
             end
         end
     end
 
+    xgrid[BFaceGeometries] = xBFaceGeometries
     xBFaces
 end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceCells})
-    # get links to other stuff
-    xCoordinates = xgrid[Coordinates]
-    xCellFaces = xgrid[CellFaces]
-    xFaceNodes = xgrid[FaceNodes]
-    ncells = num_sources(xCellFaces)
-    nfaces = num_sources(xFaceNodes)
-
-    # init BFaces
-    xFaceCells = zeros(Int32,2,nfaces)
-
-    nfaces4cell = 0
-    facenr = 0
-    for cell = 1 : ncells
-        nfaces4cell = num_targets(xCellFaces,cell)
-        for f = 1 : nfaces4cell
-            face = xCellFaces[f,cell]
-            if xFaceCells[1,face] == 0
-                xFaceCells[1,face] = cell
-            else
-                xFaceCells[2,face] = cell
-            end    
-        end
-    end
-
-    return xFaceCells
+    ExtendableGrids.instantiate(xgrid, FaceNodes)
+    xgrid[FaceCells]
 end
 
 # This assigns Regions to faces by looking at neighbouring cells
@@ -647,12 +654,12 @@ end
 
 
 
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Vertex0D}, ::Type{Cartesian1D})
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{Cartesian1D})
     # rotate tangent
     normal[1] = 1.0
 end
 
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{Edge1D}, ::Type{Cartesian2D})
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
     # rotate tangent
     normal[1] = Coords[2, Nodes[2,item]] - Coords[2,Nodes[1,item]]
     normal[2] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
