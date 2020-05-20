@@ -61,7 +61,7 @@ function assemble!(PDE::PDEDescription, FE::Array{<:AbstractFiniteElement,1}; ve
     b = FEVector{Float64}("SystemRhs", FE)
     for j = 1 : length(FE), o = 1 : length(PDE.RHSOperators[j])
         if verbosity > 0
-            println("\n  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[j][o]))")
+            println("\n  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[j][o])) ($(PDE.RHSOperators[j][o].operator))")
             @time assemble!(b[j], PDE.RHSOperators[j][o]; verbosity = verbosity)
         else
             assemble!(b[j], PDE.RHSOperators[j][o]; verbosity = verbosity)

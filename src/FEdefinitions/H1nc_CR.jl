@@ -4,6 +4,9 @@ struct FEH1CR{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
     CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
     FaceDofs::VariableTargetAdjacency    # place to save face dofs (filled by constructor)
     BFaceDofs::VariableTargetAdjacency   # place to save bface dofs (filled by constructor)
+    xFaceNormals::Array{Float64,2}        # link to coefficient indices
+    xFaceVolumes::Array{Float64,1}        # link to coefficient indices
+    xCellFaces::VariableTargetAdjacency    # link to coefficient indices
     ndofs::Int32
 end
 
@@ -49,7 +52,7 @@ function getH1CRFiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
         append!(xBFaceDofs,dofs4item[1:ncomponents])
     end
 
-    return FEH1CR{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,nfaces * ncomponents)
+    return FEH1CR{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,xgrid[FaceNormals],xgrid[FaceVolumes],xgrid[CellFaces],nfaces * ncomponents)
 end
 
 
@@ -182,5 +185,32 @@ function get_basis_on_cell(::Type{FEH1CR{2}}, ::Type{<:Quadrilateral2D})
                 0.0 temp3;
                 0.0 temp4]
     end
+end
+
+
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FEH1CR{2}, FEreconst::FEHdivRT0, ::Type{<:Triangle2D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
+    coefficients[1,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[4,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[5,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[6,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+end
+
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FEH1CR{2}, FEreconst::FEHdivRT0, ::Type{<:Parallelogram2D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
+    coefficients[1,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[4,4] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
+    coefficients[5,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[6,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[7,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[8,4] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
 end
 

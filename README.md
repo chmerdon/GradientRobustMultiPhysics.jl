@@ -24,5 +24,5 @@ Features/Limitations:
     Hdiv elements (so far RT0)
     Hcurl elements (in future)
 - handling of mixed element geometries via ExtendableGrids and flexible operator assembly
-- reconstruction operators for gradient-robust Stokes discretisation (so far BR>RT0)
+- reconstruction operators for gradient-robust Stokes discretisation (so far BR>RT0 and CR>RT0)
 - generic quadrature rules

@@ -49,6 +49,8 @@ function main()
     xgrid = gridgen_mixedEG(); #xgrid = split_grid_into(xgrid,Triangle2D)
     nlevels = 5 # number of refinement levels
     verbosity = 3 # deepness of messaging (the larger, the more)
+    fem = "BR"
+    fem = "CR"
 
     # define expected solution, boundary data and volume data
     viscosity = 1.0
@@ -114,8 +116,13 @@ function main()
         end
 
         # generate Bernardi--Raugel
-        FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
-        FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
+        if fem == "BR" # Bernardi--Raugel
+            FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
+            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
+        elseif fem == "CR" # Crouzeix--Raviart
+            FE_velocity = FiniteElements.getH1CRFiniteElement(xgrid,2)
+            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
+        end    
         if verbosity > 2
             FiniteElements.show(FE_velocity)
             FiniteElements.show(FE_pressure)
