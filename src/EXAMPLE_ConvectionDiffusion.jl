@@ -58,7 +58,7 @@ function main()
     # PDE description
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
     MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(diffusion,2)),
-                  ConvectionOperator(convection!,2)]
+                  ConvectionOperator(convection!,2,1)]
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
     MyRHS[1] = [RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3)]
     MyBoundary = BoundaryOperator(2,1)

@@ -23,9 +23,9 @@ export RegionWiseXFunctionAction
 
 
 include("FEAssembly_AbstractAssemblyPattern.jl")
-export AbstractAssemblyPattern,ItemIntegrator,LinearForm,BilinearForm
+export AbstractAssemblyPattern,ItemIntegrator,LinearForm,BilinearForm,SymmetricBilinearForm,TrilinearForm
 export assemble!, evaluate!, evaluate
-export L2ErrorIntegrator, L2bestapproximate!, H1bestapproximate!
+export L2ErrorIntegrator
 
 
 function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL, bonus_quadorder::Int = 0)

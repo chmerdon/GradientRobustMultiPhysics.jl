@@ -42,19 +42,24 @@ end
 function main()
     xgrid = testgrid_mixedEG(); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
-    nlevels = 6 # number of refinement levels
+    nlevels = 5 # number of refinement levels
+
+    nonlinear = true
+    maxIterations = 10  # termination criterion 1 for nonlinear mode
+    maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
+
     verbosity = 1 # deepness of messaging (the larger, the more)
 
     # choose a finite element method
-    #fem = "BR" # Bernardi--Raugel
+    fem = "BR" # Bernardi--Raugel
     #fem = "CR" # Crouzeix--Raviart
     #fem = "MINI" # MINI element
-    fem = "TH" # Taylor--Hood
+    #fem = "TH" # Taylor--Hood
 
     # -------------------------------------------------------------------------------
 
     # load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity)
+    StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     append!(StokesProblem.BoundaryOperators[1], [1,3], HomogeneousDirichletBoundary)
     append!(StokesProblem.BoundaryOperators[1], [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
 
@@ -108,7 +113,7 @@ function main()
         # solve Stokes problem
         Solution = FEVector{Float64}("Stokes velocity",FE_velocity)
         append!(Solution,"Stokes pressure",FE_pressure)
-        solve!(Solution, StokesProblem; verbosity = verbosity)
+        solve!(Solution, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
         push!(NDofs,length(Solution.entries))
 
         # interpolate

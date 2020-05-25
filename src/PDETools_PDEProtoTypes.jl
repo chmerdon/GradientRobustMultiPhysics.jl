@@ -1,6 +1,6 @@
 
 # Prototype for incompressible StokesProblem
-function IncompressibleStokesProblem(dimension::Int = 2; viscosity = 1.0, stationary::Bool = true, no_pressure_constraint::Bool = false)
+function IncompressibleStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, stationary::Bool = true, no_pressure_constraint::Bool = false)
 
     # LEFT-HAND-SIDE: STOKES OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
@@ -9,6 +9,10 @@ function IncompressibleStokesProblem(dimension::Int = 2; viscosity = 1.0, statio
     MyLHS[1,2] = [LagrangeMultiplier(Divergence)] # automatically fills transposed block
     MyLHS[2,1] = []
     MyLHS[2,2] = []
+
+    if nonlinear
+        push!(MyLHS[1,1], ConvectionOperator(1, dimension, dimension))
+    end
 
     # RIGHT-HAND SIDE: empty, user can fill in data later
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
@@ -28,7 +32,11 @@ function IncompressibleStokesProblem(dimension::Int = 2; viscosity = 1.0, statio
         MyGlobalConstraints[2] = [FixedIntegralMean(0.0)]
     end
 
-    name = "incompressible StokesProblem"
+    if nonlinear == true
+        name = "incompressible Navier-Stokes-Problem"
+    else
+        name = "incompressible Stokes-Problem"
+    end
 
     return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
 end

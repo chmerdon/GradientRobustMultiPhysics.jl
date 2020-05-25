@@ -23,13 +23,14 @@
 #   - constructor for symmetric bilinearforms where FEType of u_h and v_h are the same
 #     is also available (and everything should be written such that double evaluations are avoided)
 #
-#   - maybe in future: fixing on component with given FE function to define a LinearForm
-#                      automatically
+#   - maybe in future: fixing one component with given FE function to define a LinearForm
+#                      automatically, also handle skew-symmetry (symmetry might be come a type or value from -1,0,1)
 
-# maybe in future: TrilinearForm
+# TrilinearForm
 #   - functional that depend on three FE function, i.e.
-#     for each a_h,u_h,v_h: C(a_h,u_h,v_h) = Int_regions action(op1(a_h))*op2(u_h)*op3(v_h) dx
+#     for each a_h,u_h,v_h: C(a_h,u_h,v_h) = Int_regions op1(a_h)*op2(u_h)*op3(v_h) dx
 #   - assembly! where a_h (or also u_h) is fixed with given FEBlock
+#   - action has to be dependent on a_h and u_h (idea: put everything together into input of action)
 
 
 abstract type AbstractAssemblyPattern{T <: Real, AT<:AbstractAssemblyType} end
@@ -82,15 +83,36 @@ function SymmetricBilinearForm(
 end
 
 
+struct TrilinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
+    FE1::AbstractFiniteElement # < --- FE position that has to be fixed by an FEVectorBlock during assembly
+    FE2::AbstractFiniteElement
+    FE3::AbstractFiniteElement
+    operator1::Type{<:AbstractFunctionOperator}
+    operator2::Type{<:AbstractFunctionOperator}
+    operator3::Type{<:AbstractFunctionOperator}
+    action::AbstractAction # is only applied to FE2/operator2
+    regions::Array{Int,1}
+end   
+function TrilinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE1::AbstractFiniteElement,
+    FE2::AbstractFiniteElement,
+    FE3::AbstractFiniteElement,
+    operator1::Type{<:AbstractFunctionOperator},
+    operator2::Type{<:AbstractFunctionOperator},
+    operator3::Type{<:AbstractFunctionOperator},
+    action::AbstractAction; # is only applied to FE1/operator1 + FE2/operator2
+    regions::Array{Int,1} = [0])
+    return TrilinearForm{T,AT}(FE1,FE2,FE3,operator1,operator2,operator3,action,regions)
+end
+
 struct ItemIntegrator{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
     operator::Type{<:AbstractFunctionOperator}
     action::AbstractAction
     regions::Array{Int,1}
 end
 
-export AbstractAssemblyPattern,ItemIntegrator,LinearForm,BilinearForm,SymmetricBilinearForm
-export assemble!, evaluate!, evaluate
-export L2ErrorIntegrator
 
 
 # junctions for dof fields
@@ -807,6 +829,157 @@ function assemble!(
                 A[dofs2[dof_i],dofs[dof_i]] += localmatrix[dof_i,dof_i] * xItemVolumes[item]
             end    
         end    
+        fill!(localmatrix,0.0)
+
+        break; # region for loop
+    end # if in region    
+    end # region for loop
+    end # item for loop
+end
+
+
+# assembly matrix block from Trilinearform where FE1 is fixed by FEVectorBlock
+function assemble!(
+    A::AbstractArray{<:Real,2},
+    TLF::TrilinearForm{T, AT},
+    FE1::FEVectorBlock;
+    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
+
+    FE = [TLF.FE1, TLF.FE2, TLF.FE3]
+    operator = [TLF.operator1, TLF.operator2, TLF.operator3]
+    action = TLF.action
+    bonus_quadorder = TLF.action.bonus_quadorder
+    regions = TLF.regions
+
+    
+    # collect grid information
+    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
+    xItemDofs1::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE[1],AT)
+    xItemDofs2::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE[2],AT)
+    xItemDofs3::VariableTargetAdjacency{Int32} = FEPropertyDofs4AssemblyType(FE[3],AT)
+    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = Int64(num_sources(xItemNodes))
+    
+    if regions == [0]
+        try
+            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end        
+    else
+        regions = Array{Int32,1}(regions)    
+    end
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
+
+    # collect FE and FEBasisEvaluator information
+    ncomponents::Int = FiniteElements.get_ncomponents(typeof(FE[1]))
+    cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
+    cvals_resultdim2::Int = size(basisevaler[1][2].cvals,1)
+    action_resultdim::Int = action.resultdim
+
+    # loop over items
+    itemET = xItemGeometries[1] # type of the current item
+    iEG::Int = 1 # index to the correct unique geometry
+    ndofs4item1::Int = 0 # number of dofs for item
+    ndofs4item2::Int = 0 # number of dofs for item
+    ndofs4item3::Int = 0 # number of dofs for item
+    evalnr = [0,0,0] # evaler number that has to be used for current item
+    dofitem::Int = 0 # itemnr where the dof numbers can be found
+    maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
+    maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
+    maxdofs3::Int = max_num_targets_per_source(xItemDofs3)
+    dofs = zeros(Int,maxdofs1)
+    dofs2 = zeros(Int,maxdofs2)
+    dofs3 = zeros(Int,maxdofs3)
+    temp::T = 0 # some temporary variable
+    evalFE1 = zeros(T,cvals_resultdim) # heap for action input
+    action_input = zeros(T,cvals_resultdim+cvals_resultdim2) # heap for action input
+    action_result = zeros(T,action_resultdim) # heap for action output
+    weights::Array{T,1} = [] # pointer to quadrature weights
+    localmatrix = zeros(T,maxdofs1,maxdofs2)
+    basisvals::Array{T,3} = basisevaler[1][1].cvals
+    basisvals2::Array{T,3} = basisevaler[1][2].cvals
+    basisvals3::Array{T,3} = basisevaler[1][3].cvals
+    nregions::Int = length(regions)
+
+    for item = 1 : nitems
+    for r = 1 : nregions
+    # check if item region is in regions
+    if xItemRegions[item] == regions[r]
+
+        dofitem = dofitem4item(item)
+
+        # find index for CellType
+        itemET = EG4item(item)
+        for j=1:length(EG)
+            if itemET == EG[j]
+                iEG = j
+                break;
+            end
+        end
+        ndofs4item1 = ndofs4EG[1][iEG]
+        ndofs4item2 = ndofs4EG[2][iEG]
+        ndofs4item3 = ndofs4EG[3][iEG]
+
+        # update FEbasisevaler
+        evaler4item!(evalnr,item)
+        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr[2]],dofitem)
+        FiniteElements.update!(basisevaler[iEG][evalnr[3]],dofitem)
+        basisvals = basisevaler[iEG][evalnr[1]].cvals
+        basisvals2 = basisevaler[iEG][evalnr[2]].cvals
+        basisvals3 = basisevaler[iEG][evalnr[3]].cvals
+
+        # update action
+        update!(action, basisevaler[iEG][evalnr[2]], item, regions[r])
+
+        # update dofs
+        for j=1:ndofs4item1
+            dofs[j] = xItemDofs1[j,dofitem]
+        end
+        for j=1:ndofs4item2
+            dofs2[j] = xItemDofs2[j,dofitem]
+        end
+        for j=1:ndofs4item3
+            dofs3[j] = xItemDofs3[j,dofitem]
+        end
+
+        weights = qf[iEG].w
+        for i in eachindex(weights)
+
+            # evaluate first component
+            for k = 1 : cvals_resultdim
+                action_input[k] = 0
+                for dof_i = 1 : ndofs4item1
+                    action_input[k] += basisvals[k,dof_i,i] * FE1[dofs[dof_i]]
+                end
+            end
+           
+            for dof_i = 1 : ndofs4item2
+                # apply action to FE1 eval and second argument
+                for k = 1 : cvals_resultdim2
+                    action_input[cvals_resultdim+k] = basisvals2[k,dof_i,i]
+                end    
+                apply_action!(action_result, action_input, action, i)
+
+                for dof_j = 1 : ndofs4item2
+                    temp = 0
+                    for k = 1 : action_resultdim
+                         temp += action_result[k]*basisvals3[k,dof_j,i]
+                    end
+                    localmatrix[dof_i,dof_j] += temp * weights[i]
+                end
+            end 
+        end 
+
+        # copy localmatrix into global matrix
+        for dof_i = 1 : ndofs4item2, dof_j = 1 : ndofs4item3
+             if localmatrix[dof_i,dof_j] != 0
+                 A[dofs3[dof_j],dofs2[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
+            end
+        end
         fill!(localmatrix,0.0)
 
         break; # region for loop

@@ -1,5 +1,127 @@
 
-function assemble!(A::FEMatrixBlock, O::ReactionOperator; verbosity::Int = 0)
+
+
+# type to steer when a PDE block is (re)assembled
+abstract type AbstractAssemblyTrigger end
+abstract type AssemblyInitial <: AbstractAssemblyTrigger end        # is only assembled in initial assembly
+abstract type AssemblyEachTimeStep <: AssemblyInitial end   # is (re)assembled in each timestep
+abstract type AssemblyAlways <: AssemblyEachTimeStep end    # is always (re)assembled
+
+mutable struct SolverConfig
+    is_nonlinear::Bool      # PDE is nonlinear
+    is_timedependent::Bool  # PDE is time_dependent
+    LHS_AssemblyTriggers::Array{DataType,2} # assembly triggers for blocks in LHS
+    RHS_AssemblyTriggers::Array{DataType,1} # assembly triggers for blocks in RHS
+    maxIterations::Int          # maximum number of iterations
+    maxResidual::Real           # tolerance for residual
+    current_time::Real          # current time in a time-dependent setting
+    dirichlet_penalty::Real     # penalty for Dirichlet data
+end
+
+
+# check if PDE is nonlinear or time-dependent and which blocks require recalculation
+# and devise some initial solver strategy
+function generate_solver(PDE::PDEDescription)
+    nonlinear::Bool = false
+    timedependent::Bool = false
+    block_nonlinear::Bool = false
+    block_timedependent::Bool = false
+    op_nonlinear::Bool = false
+    op_timedependent::Bool = false
+    LHS_ATs = Array{DataType,2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
+    for j = 1 : size(PDE.LHSOperators,1), k = 1 : size(PDE.LHSOperators,2)
+        block_nonlinear = false
+        block_timedependent = false
+        for o = 1 : length(PDE.LHSOperators[j,k])
+            op_nonlinear, op_timedependent = check_PDEoperator(PDE.LHSOperators[j,k][o])
+            if op_nonlinear == true
+                block_nonlinear = true
+            end
+            if op_timedependent == true
+                block_timedependent = true
+            end
+        end
+        LHS_ATs[j,k] = AssemblyInitial
+        if block_timedependent== true
+            timedependent = true
+            LHS_ATs[j,k] = AssemblyEachTimeStep
+        end
+        if block_nonlinear == true
+            nonlinear = true
+            LHS_ATs[j,k] = AssemblyAlways
+        end
+    end
+    RHS_ATs = Array{DataType,1}(undef,size(PDE.RHSOperators,1))
+    for j = 1 : size(PDE.RHSOperators,1)
+        block_nonlinear = false
+        block_timedependent = false
+        for o = 1 : length(PDE.RHSOperators[j])
+            op_nonlinear, op_timedependent = check_PDEoperator(PDE.RHSOperators[j][o])
+            if op_nonlinear == true
+                block_nonlinear = true
+            end
+            if op_timedependent== true
+                block_timedependent = true
+            end
+        end
+        RHS_ATs[j] = AssemblyInitial
+        if block_timedependent== true
+            timedependent = true
+            RHS_ATs[j] = AssemblyEachTimeStep
+        end
+        if block_nonlinear == true
+            nonlinear = true
+            RHS_ATs[j] = AssemblyAlways
+        end
+    end
+    return SolverConfig(nonlinear, timedependent, LHS_ATs, RHS_ATs, 10, 1e-10, 0.0, 1e60)
+end
+
+function Base.show(SC::SolverConfig)
+
+    println("\nSOLVER-CONFIGURATION")
+    println("======================")
+    println("         nonlinear = $(SC.is_nonlinear)")
+    println("     timedependent = $(SC.is_timedependent)")
+
+    println("  AssemblyTriggers = ")
+    for j = 1 : size(SC.LHS_AssemblyTriggers,1)
+        print("         LHS_AT[$j] : ")
+        for k = 1 : size(SC.LHS_AssemblyTriggers,2)
+            if SC.LHS_AssemblyTriggers[j,k] == AssemblyInitial
+                print(" I ")
+            elseif SC.LHS_AssemblyTriggers[j,k] == AssemblyAlways
+                print(" A ")
+            elseif SC.LHS_AssemblyTriggers[j,k] == AssemblyEachTimeStep
+                print(" T ")
+            end
+        end
+        println("")
+    end
+
+    for j = 1 : size(SC.RHS_AssemblyTriggers,1)
+        print("         RHS_AT[$j] : ")
+        if SC.RHS_AssemblyTriggers[j] == AssemblyInitial
+            print(" I ")
+        elseif SC.RHS_AssemblyTriggers[j] == AssemblyAlways
+            print(" A ")
+        elseif SC.RHS_AssemblyTriggers[j] == AssemblyEachTimeStep
+            print(" T ")
+        end
+        println("")
+    end
+
+end
+
+
+
+
+
+
+
+
+
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ReactionOperator; verbosity::Int = 0)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert FE1 == FE2
@@ -7,7 +129,7 @@ function assemble!(A::FEMatrixBlock, O::ReactionOperator; verbosity::Int = 0)
     FEAssembly.assemble!(A, L2Product; verbosity = verbosity)
 end
 
-function assemble!(A::FEMatrixBlock, O::LaplaceOperator; verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LaplaceOperator; verbosity::Int = 0)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert FE1 == FE2
@@ -15,14 +137,21 @@ function assemble!(A::FEMatrixBlock, O::LaplaceOperator; verbosity::Int = 0)
     FEAssembly.assemble!(A, H1Product; verbosity = verbosity)
 end
 
-function assemble!(A::FEMatrixBlock, O::ConvectionOperator; verbosity::Int = 0)
-    FE1 = A.FETypeX
-    FE2 = A.FETypeY
-    ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, Identity, O.action)  
-    FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; verbosity::Int = 0)
+    if O.beta_from == 0
+        FE1 = A.FETypeX
+        FE2 = A.FETypeY
+        ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, Identity, O.action)  
+        FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
+    else
+        FE1 = A.FETypeX
+        FE2 = A.FETypeY
+        ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, Identity, Gradient, Identity, O.action)  
+        FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity)
+    end
 end
 
-function assemble!(A::FEMatrixBlock, O::LagrangeMultiplier; verbosity::Int = 0, At::FEMatrixBlock)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; verbosity::Int = 0, At::FEMatrixBlock)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert At.FETypeX == FE2
@@ -31,44 +160,60 @@ function assemble!(A::FEMatrixBlock, O::LagrangeMultiplier; verbosity::Int = 0, 
     FEAssembly.assemble!(At, DivPressure; verbosity = verbosity, transpose_copy = A)
 end
 
-function assemble!(b::FEVectorBlock, O::RhsOperator; verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator; verbosity::Int = 0)
     FE = b.FEType
     RHS = LinearForm(Float64,AbstractAssemblyTypeCELL, FE, O.operator, O.action)
     FEAssembly.assemble!(b, RHS; verbosity = verbosity)
 end
 
-function assemble!(PDE::PDEDescription, FE::Array{<:AbstractFiniteElement,1}; verbosity::Int = 0)
+function assemble!(
+    A::FEMatrix,
+    b::FEVector,
+    PDE::PDEDescription,
+    SC::SolverConfig,
+    CurrentSolution::FEVector;
+    equations::Array{Int,1} = [],
+    min_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyAlways,
+    verbosity::Int = 0)
 
-    A = FEMatrix{Float64}("SystemMatrix", FE)
-    for j = 1 : length(FE), k = 1 : length(FE), o = 1 : length(PDE.LHSOperators[j,k])
-        PDEoperator = PDE.LHSOperators[j,k][o]
-        if verbosity > 0
-            println("\n  Assembling into matrix block[$j,$k]: $(typeof(PDEoperator))")
-            if typeof(PDEoperator) == LagrangeMultiplier
-                @time assemble!(A[j,k], PDEoperator; verbosity = verbosity, At = A[k,j])
-            else
-                @time assemble!(A[j,k], PDEoperator; verbosity = verbosity)
-            end    
-        else
-            if typeof(PDEoperator) == LagrangeMultiplier
-                assemble!(A[j,k], PDEoperator; verbosity = verbosity, At = A[k,j])
-            else
-                assemble!(A[j,k], PDEoperator; verbosity = verbosity)
-            end    
-        end    
+    if length(equations) == 0
+        equations = 1:size(PDE.LHSOperators,1)
     end
 
-    b = FEVector{Float64}("SystemRhs", FE)
-    for j = 1 : length(FE), o = 1 : length(PDE.RHSOperators[j])
-        if verbosity > 0
-            println("\n  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[j][o])) ($(PDE.RHSOperators[j][o].operator))")
-            @time assemble!(b[j], PDE.RHSOperators[j][o]; verbosity = verbosity)
-        else
-            assemble!(b[j], PDE.RHSOperators[j][o]; verbosity = verbosity)
-        end    
+    for j in equations, k = 1 : size(PDE.LHSOperators,2)
+        if SC.LHS_AssemblyTriggers[j,k] <: min_trigger
+            for o = 1 : length(PDE.LHSOperators[j,k])
+                PDEoperator = PDE.LHSOperators[j,k][o]
+                if verbosity > 0
+                    println("\n  Assembling into matrix block[$j,$k]: $(typeof(PDEoperator))")
+                    if typeof(PDEoperator) == LagrangeMultiplier
+                        @time assemble!(A[j,k], CurrentSolution, PDEoperator; verbosity = verbosity, At = A[k,j])
+                    else
+                        @time assemble!(A[j,k], CurrentSolution, PDEoperator; verbosity = verbosity)
+                    end    
+                else
+                    if typeof(PDEoperator) == LagrangeMultiplier
+                        assemble!(A[j,k], CurrentSolution, PDEoperator; verbosity = verbosity, At = A[k,j])
+                    else
+                        assemble!(A[j,k], CurrentSolution, PDEoperator; verbosity = verbosity)
+                    end    
+                end  
+            end  
+        end
     end
 
-    return A, b
+    for j in equations
+        if SC.RHS_AssemblyTriggers[j] <: min_trigger
+            for o = 1 : length(PDE.RHSOperators[j])
+                if verbosity > 0
+                    println("\n  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[j][o])) ($(PDE.RHSOperators[j][o].operator))")
+                    @time assemble!(b[j], CurrentSolution, PDE.RHSOperators[j][o]; verbosity = verbosity)
+                else
+                    assemble!(b[j], CurrentSolution, PDE.RHSOperators[j][o]; verbosity = verbosity)
+                end    
+            end
+        end
+    end
 end
 
 
@@ -90,7 +235,7 @@ function boundarydata!(
     ######################
     # Dirichlet boundary #
     ######################
-    fixed_bdofs = []
+    fixed_dofs = []
 
     # INTERPOLATION DIRICHLET BOUNDARY
     InterDirichletBoundaryRegions = get(O.regions4boundarytype,InterpolateDirichletBoundary,[])
@@ -106,12 +251,12 @@ function boundarydata!(
             end    
             bregiondofs = Base.unique(bregiondofs)
             interpolate!(Target, O.data4bregion[InterDirichletBoundaryRegions[r]]; dofs = bregiondofs)
-            append!(fixed_bdofs,bregiondofs)
+            append!(fixed_dofs,bregiondofs)
             bregiondofs = []
         end   
 
         if verbosity > 0
-            println("   Int-DBnd = $InterDirichletBoundaryRegions (ndofs = $(length(fixed_bdofs)))")
+            println("   Int-DBnd = $InterDirichletBoundaryRegions (ndofs = $(length(fixed_dofs)))")
         end    
 
         
@@ -131,8 +276,8 @@ function boundarydata!(
             end    
         end
         hom_dofs = Base.unique(hom_dofs)
-        append!(fixed_bdofs,hom_dofs)
-        fixed_bdofs = Base.unique(fixed_bdofs)
+        append!(fixed_dofs,hom_dofs)
+        fixed_dofs = Base.unique(fixed_dofs)
         for j in hom_dofs
             Target[j] = 0
         end    
@@ -208,63 +353,62 @@ function boundarydata!(
         end    
 
         # fix already set dofs by other boundary conditions
-        for j in fixed_bdofs
+        for j in fixed_dofs
             A[1][j,j] = dirichlet_penalty
             b[j] = Target[j]*dirichlet_penalty
         end
-        append!(fixed_bdofs,BAdofs)
-        fixed_bdofs = Base.unique(fixed_bdofs)
+        append!(fixed_dofs,BAdofs)
+        fixed_dofs = Base.unique(fixed_dofs)
 
         # solve best approximation problem on boundary and write into Target
-        Target[fixed_bdofs] = A.entries[fixed_bdofs,fixed_bdofs]\b[fixed_bdofs,1]
+        Target[fixed_dofs] = A.entries[fixed_dofs,fixed_dofs]\b[fixed_dofs,1]
     end
     
-    return fixed_bdofs
+    return fixed_dofs
 end    
 
 
+# check if operator causes nonlinearity or time-dependence
+function check_PDEoperator(O::AbstractPDEOperator)
+    return false, false
+end
+function check_PDEoperator(O::ConvectionOperator)
+    return O.beta_from != 0, false
+end
 
-function solve!(
-    Target::FEVector,
-    PDE::PDEDescription;
-    dirichlet_penalty = 1e60,
-    verbosity::Int = 0)
+
+# for linear, stationary PDEs that can be solved in one step
+function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; verbosity::Int = 0)
+
     FEs = Array{AbstractFiniteElement,1}([])
     for j=1 : length(Target.FEVectorBlocks)
         push!(FEs,Target.FEVectorBlocks[j].FEType)
     end    
 
-
-    if verbosity > 0
-        println("\nSOLVING PDE")
-        println("===========")
-        println("  name = $(PDE.name)")
-        print("   FEs = ")
-        for j = 1 : length(Target)
-            print("$(Target[j].FEType.name) (ndofs = $(Target[j].FEType.ndofs))\n         ");
-        end
+    # ASSEMBLE SYSTEM
+    A = FEMatrix{Float64}("SystemMatrix", FEs)
+    b = FEVector{Float64}("SystemRhs", FEs)
+    for j = 1:size(PDE.RHSOperators,1)
+        assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyInitial, verbosity = verbosity - 1)
     end
 
-    # ASSEMBLE SYSTEM
-    A,b = assemble!(PDE,FEs; verbosity = verbosity - 1)
-
     # ASSEMBLE BOUNDARY DATA
-    fixed_bdofs = []
+    fixed_dofs = []
     for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
             @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
-            append!(fixed_bdofs, new_fixed_dofs)
+            append!(fixed_dofs, new_fixed_dofs)
         else
             new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
-            append!(fixed_bdofs, new_fixed_dofs)
+            append!(fixed_dofs, new_fixed_dofs)
         end    
     end    
 
     # penalize fixed dofs
-    for j = 1 : length(fixed_bdofs)
-        b.entries[fixed_bdofs[j]] = dirichlet_penalty * Target.entries[fixed_bdofs[j]]
-        A[1][fixed_bdofs[j],fixed_bdofs[j]] = dirichlet_penalty
+    for j = 1 : length(fixed_dofs)
+        b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
+        A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
     end
 
     # prepare further global constraints
@@ -274,7 +418,7 @@ function solve!(
                 println("\n  Ensuring fixed integral mean for component $j...")
             end
             b[j][1] = 0.0
-            A[j,j][1,1] = dirichlet_penalty
+            A[j,j][1,1] = SC.dirichlet_penalty
         end
     end
 
@@ -285,6 +429,14 @@ function solve!(
     else
         Target.entries[:] = A.entries\b.entries
     end
+
+    if verbosity > 0
+        # check residual of current solution
+        residual = (A.entries*Target.entries - b.entries).^2
+        residual[fixed_dofs] .= 0
+        println("\n  residual = $(sqrt(sum(residual, dims = 1)[1]))")
+    end
+
 
     # realize global constraints
 
@@ -303,6 +455,167 @@ function solve!(
             end    
         end
     end
+end
+
+
+
+
+# for nonlinear, stationary PDEs that can be solved by fixpoint iteration
+function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; verbosity::Int = 0)
+
+    FEs = Array{AbstractFiniteElement,1}([])
+    for j=1 : length(Target.FEVectorBlocks)
+        push!(FEs,Target.FEVectorBlocks[j].FEType)
+    end    
+
+    # ASSEMBLE SYSTEM init
+    A = FEMatrix{Float64}("SystemMatrix", FEs)
+    b = FEVector{Float64}("SystemRhs", FEs)
+    for j = 1:size(PDE.RHSOperators,1)
+        assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
+    end
+
+    # ASSEMBLE BOUNDARY DATA
+    fixed_dofs = []
+    for j= 1 : length(Target.FEVectorBlocks)
+        if verbosity > 1
+            println("\n  Assembling boundary data for block [$j]...")
+            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            append!(fixed_dofs, new_fixed_dofs)
+        else
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            append!(fixed_dofs, new_fixed_dofs)
+        end    
+    end    
+
+    residual = zeros(Float64,length(b.entries))
+    resnorm::Float64 = 0.0
+
+    if verbosity > 0
+        println("\n  starting fixpoint iterations")
+    end
+    for j = 1 : SC.maxIterations
+
+        # penalize fixed dofs
+        for j = 1 : length(fixed_dofs)
+            b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
+            A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
+        end
+
+        # prepare further global constraints
+        for j= 1 : length(FEs), k = 1 : length(PDE.GlobalConstraints[j])
+            if typeof(PDE.GlobalConstraints[j][k]) == FixedIntegralMean
+                if verbosity > 1 
+                    println("\n  Ensuring fixed integral mean for component $j...")
+                end
+                b[j][1] = 0.0
+                A[j,j][1,1] = SC.dirichlet_penalty
+                push!(fixed_dofs,A[j,j].offsetX + 1);
+            end
+        end
+
+        # solve
+        if verbosity > 1
+            println("\n  Solving")
+            @time Target.entries[:] = A.entries\b.entries
+        else
+            Target.entries[:] = A.entries\b.entries
+        end
+
+        # reassemble nonlinear parts of PDE
+        fill!(A.entries.cscmatrix.nzval,0.0)
+        for j = 1:size(PDE.RHSOperators,1)
+            assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
+        end
+
+        # check residual of current solution
+        residual = (A.entries*Target.entries - b.entries).^2
+        residual[fixed_dofs] .= 0
+        resnorm = (sqrt(sum(residual, dims = 1)[1]))
+        if verbosity > 0
+            println("  iteration = $j | residual = $resnorm")
+        end
+
+        if resnorm < SC.maxResidual
+            if verbosity > 0
+                println("  converged (maxResidual reached)")
+            end
+            break;
+        end
+        if j == SC.maxIterations
+            if verbosity > 0
+                println("  terminated (maxIterations reached)")
+                break
+            end
+        end
+
+    end
+
+
+    # finally realize global constraints
+    
+    for j= 1 : length(FEs), k = 1 : length(PDE.GlobalConstraints[j])
+        if typeof(PDE.GlobalConstraints[j][k]) == FixedIntegralMean
+            if verbosity > 1
+                println("\n  Moving integral mean for component $j to value $(PDE.GlobalConstraints[j][k].value)")
+            end
+            # move integral mean
+            pmeanIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
+            meanvalue =  evaluate(pmeanIntegrator,Target[j]; verbosity = verbosity - 1)
+            total_area = sum(FEs[j].xgrid[CellVolumes], dims=1)[1]
+            meanvalue /= total_area
+            for dof=1:FEs[j].ndofs
+                Target[j][dof] -= meanvalue + PDE.GlobalConstraints[j][k].value
+            end    
+        end
+    end
+end
+
+
+
+function solve!(
+    Target::FEVector,
+    PDE::PDEDescription;
+    dirichlet_penalty::Real = 1e60,
+    maxResidual::Real = 1e-12,
+    maxIterations::Int = 10,
+    verbosity::Int = 0)
+
+    SolverConfig = generate_solver(PDE)
+    SolverConfig.dirichlet_penalty = dirichlet_penalty
+
+    if verbosity > 0
+        println("\nSOLVING PDE")
+        println("===========")
+        println("  name = $(PDE.name)")
+
+        FEs = Array{AbstractFiniteElement,1}([])
+        for j=1 : length(Target.FEVectorBlocks)
+            push!(FEs,Target.FEVectorBlocks[j].FEType)
+        end    
+        if verbosity > 0
+            print("   FEs = ")
+            for j = 1 : length(Target)
+                print("$(Target[j].FEType.name) (ndofs = $(Target[j].FEType.ndofs))\n         ");
+            end
+        end
+
+        if verbosity > 1
+            Base.show(SolverConfig)
+        end
+    end
+
+    # check if PDE can be solved directly
+    if SolverConfig.is_nonlinear == false
+        solve_direct!(Target, PDE, SolverConfig; verbosity = verbosity)
+    else
+        SolverConfig.maxResidual = maxResidual
+        SolverConfig.maxIterations = maxIterations
+        solve_fixpoint!(Target, PDE, SolverConfig; verbosity = verbosity)
+    end
+
+   # blah[:] = 1
+
 end
 
 

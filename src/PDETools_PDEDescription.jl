@@ -18,28 +18,54 @@ struct LagrangeMultiplier <: AbstractPDEOperator
 end
 
 struct ConvectionOperator <: AbstractPDEOperator
-    action :: AbstractAction             #      ----ACTION----
-                                         # e.g. (beta * gradu) * v
+    action :: AbstractAction             #      ----ACTION-----
+                                         # e.g. (beta * grad) u * v
+    beta_from :: Int                     # = 0 if beta is encoded in action
+                                         # = k if beta is from k-th PDE unknown (=> fixpoint iteration)
 end
+
+
 
 struct ReactionOperator <: AbstractPDEOperator
     action :: AbstractAction             #      --ACTION--
                                         # e.g.  (gamma * u) * v
 end
 
-function ConvectionOperator(beta::Function, xdim::Int; bonus_quadorder::Int = 0)
-    function convection_function() # dot(convection!, input=Gradient)
+function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_quadorder::Int = 0)
+    function convection_function_func() # dot(convection!, input=Gradient)
         convection_vector = zeros(Float64,xdim)
         function closure(result, input, x)
+            # evaluate beta
             beta(convection_vector,x)
-            result[1] = 0.0
-            for j = 1 : length(input)
-                result[1] += convection_vector[j]*input[j]
+            # compute (beta*grad)u
+            for j = 1 : ncomponents
+                result[j] = 0.0
+                for k = 1 : xdim
+                    result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                end
             end
         end    
     end    
-    convection_action = XFunctionAction(convection_function(), 1, xdim; bonus_quadorder = bonus_quadorder)
-    return ConvectionOperator(convection_action)
+    convection_action = XFunctionAction(convection_function_func(), ncomponents, xdim; bonus_quadorder = bonus_quadorder)
+    return ConvectionOperator(convection_action,0)
+end
+
+function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int)
+    # action input consists of two inputs
+    # input[1:ncomponents] = operator1(beta)
+    # input[ncomponents+1:length(input)] = u
+    function convection_function_fe()
+        function closure(result, input)
+            for j = 1 : ncomponents
+                result[j] = 0.0
+                for k = 1 : xdim
+                    result[j] += input[k]*input[ncomponents+(j-1)*xdim+k]
+                end
+            end
+        end    
+    end    
+    convection_action = FunctionAction(convection_function_fe(), ncomponents)
+    return ConvectionOperator(convection_action,beta)
 end
 
 struct RhsOperator <: AbstractPDEOperator
