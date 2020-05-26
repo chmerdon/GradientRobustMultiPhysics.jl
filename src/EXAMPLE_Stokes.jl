@@ -59,7 +59,7 @@ function main()
     #fem = "TH" # Taylor--Hood
     maxIterations = 10  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
-    verbosity = 3 # deepness of messaging (the larger, the more)
+    verbosity = 1 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
     #####################################################################################

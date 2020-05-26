@@ -44,16 +44,25 @@ end
 
 function main()
 
+    #####################################################################################
+    #####################################################################################
+
+    # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
     nlevels = 7 # number of refinement levels
-    verbosity = 3 # deepness of messaging (the larger, the more)
 
-    # choose finite element method
+    # problem parameters
+    diffusion = 1
+
+    # fem/solver parameters
     #fem = "P1" # P1-Courant
     fem = "CR" # Crouzeix--Raviart
     #fem = "P2" # P2 element
+    verbosity = 1 # deepness of messaging (the larger, the more)
 
+    #####################################################################################    
+    #####################################################################################
 
     # PDE description
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)

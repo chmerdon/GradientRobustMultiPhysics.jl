@@ -1,5 +1,6 @@
 
 
+    using SparseArrays
 
 # type to steer when a PDE block is (re)assembled
 abstract type AbstractAssemblyTrigger end
@@ -182,6 +183,7 @@ function assemble!(
 
     for j in equations, k = 1 : size(PDE.LHSOperators,2)
         if SC.LHS_AssemblyTriggers[j,k] <: min_trigger
+            fill!(A[j,k],0.0)
             for o = 1 : length(PDE.LHSOperators[j,k])
                 PDEoperator = PDE.LHSOperators[j,k][o]
                 if verbosity > 0
@@ -206,7 +208,7 @@ function assemble!(
         if SC.RHS_AssemblyTriggers[j] <: min_trigger
             for o = 1 : length(PDE.RHSOperators[j])
                 if verbosity > 0
-                    println("\n  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[j][o])) ($(PDE.RHSOperators[j][o].operator))")
+                    println("\n  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[j][o])) ($(PDE.RHSOperators[j][o].testfunction_operator))")
                     @time assemble!(b[j], CurrentSolution, PDE.RHSOperators[j][o]; verbosity = verbosity)
                 else
                     assemble!(b[j], CurrentSolution, PDE.RHSOperators[j][o]; verbosity = verbosity)
@@ -523,9 +525,8 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
         end
 
         # reassemble nonlinear parts of PDE
-        fill!(A.entries.cscmatrix.nzval,0.0)
         for j = 1:size(PDE.RHSOperators,1)
-            assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
+            assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyAlways, verbosity = verbosity - 2)
         end
 
         # check residual of current solution
@@ -569,6 +570,8 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
             end    
         end
     end
+
+    #blah[:] = 1
 end
 
 
@@ -613,9 +616,6 @@ function solve!(
         SolverConfig.maxIterations = maxIterations
         solve_fixpoint!(Target, PDE, SolverConfig; verbosity = verbosity)
     end
-
-   # blah[:] = 1
-
 end
 
 

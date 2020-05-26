@@ -2,6 +2,7 @@ module FiniteElements
 
 using ExtendableGrids
 using ExtendableSparse
+using SparseArrays
 using FEXGrid
 using QuadratureRules
 using ForwardDiff # for FEBasisEvaluator
@@ -22,7 +23,7 @@ using ForwardDiff # for FEBasisEvaluator
 
  include("FiniteElements_FEBlockArrays.jl");
  export FEVectorBlock, FEVector
- export FEMatrixBlock, FEMatrix
+ export FEMatrixBlock, FEMatrix, fill!
 
 include("FiniteElements_FESpaces.jl")
 

@@ -130,6 +130,17 @@ function FEMatrix{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) wh
     return FEMatrix{T}(Blocks, length(FETypes), entries)
 end
 
+function Base.fill!(B::FEMatrixBlock, value::Real)
+    row = 0
+    for col = B.offsetY+1:B.last_indexY
+        for r in nzrange(B.entries.cscmatrix, col)
+            row = rowvals(B.entries.cscmatrix)[r]
+            if row >= B.offsetX && row <= B.last_indexX
+                B.entries.cscmatrix.nzval[r] = value
+            end
+        end
+    end
+end
 
 
 
