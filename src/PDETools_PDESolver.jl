@@ -141,12 +141,12 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOpe
     if O.beta_from == 0
         FE1 = A.FETypeX
         FE2 = A.FETypeY
-        ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, Identity, O.action)  
+        ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action)  
         FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
     else
         FE1 = A.FETypeX
         FE2 = A.FETypeY
-        ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, Identity, Gradient, Identity, O.action)  
+        ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action)  
         FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity)
     end
 end
@@ -162,7 +162,7 @@ end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator; verbosity::Int = 0)
     FE = b.FEType
-    RHS = LinearForm(Float64,AbstractAssemblyTypeCELL, FE, O.operator, O.action)
+    RHS = LinearForm(Float64,AbstractAssemblyTypeCELL, FE, O.testfunction_operator, O.action)
     FEAssembly.assemble!(b, RHS; verbosity = verbosity)
 end
 

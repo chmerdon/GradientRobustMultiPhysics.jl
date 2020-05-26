@@ -14,43 +14,91 @@ using Printf
 
 include("testgrids.jl")
 
- # problem data
-function exact_pressure!(result,x)
-    result[1] = x[1]^3 + x[2]^3 - 1//2
+# problem data
+function HydrostaticTestProblem()
+    # Stokes problem with f = grad(p)
+    # u = 0
+    # p = x^3+y^3 - 1//2
+    function P1_pressure!(result,x)
+        result[1] = x[1]^3 + x[2]^3 - 1//2
+    end
+    function P1_velo!(result,x)
+        result[1] = 0.0;
+        result[2] = 0.0;
+    end
+    function P1_velogradient!(result,x)
+        result[1] = 0.0
+        result[2] = 0.0;
+        result[3] = 0.0;
+        result[4] = 0.0;
+    end
+    function P1_rhs!(result,x)
+        result[1] = 3*x[1]^2
+        result[2] = 3*x[2]^2
+    end
+    return P1_pressure!, P1_velo!, P1_velogradient!, P1_rhs!, false
 end
-function exact_velocity!(result,x)
-    result[1] = 0.0;
-    result[2] = 0.0;
-end
-function exact_velocity_gradient!(result,x)
-    result[1] = 0.0
-    result[2] = 0.0;
-    result[3] = 0.0;
-    result[4] = 0.0;
-end
-function rhs!(result,x)
-    result[1] = 3*x[1]^2
-    result[2] = 3*x[2]^2
+
+function PotentialFlowTestProblem()
+    # NavierStokes with f = 0
+    # u = grad(h) with h = x^3 - 3xy^2
+    # p = - |grad(h)|^2 + 14//5
+    function P2_pressure!(result,x)
+        result[1] = - 1//2 * (9*(x[1]^4 + x[2]^4) + 18*x[1]^2*x[2]^2) + 14//5
+    end
+    function P2_velo!(result,x)
+        result[1] = 3*x[1]^2 - 3*x[2]^2;
+        result[2] = -6*x[1]*x[2];
+    end
+    function P2_velogradient!(result,x)
+        result[1] = 6*x[1]
+        result[2] = -6*x[2];
+        result[3] = -6*x[2];
+        result[4] = -6*x[1];
+    end
+    function P2_rhs!(result,x)
+        result[1] = 0
+        result[2] = 0
+    end
+    return P2_pressure!, P2_velo!, P2_velogradient!, P2_rhs!, true
 end
 
 
 function main()
+    #####################################################################################
+    #####################################################################################
 
-    xgrid = testgrid_mixedEG(); # initial grid
+    # meshing parameters
+    xgrid = uniform_refine(uniform_refine(testgrid_mixedEG())); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
-    nlevels = 5 # number of refinement levels
-    verbosity = 3 # deepness of messaging (the larger, the more)
-    viscosity = 1e-2
+    nlevels = 3 # number of refinement levels
 
-    # choose a finite element method
-    #fem = "BR" # Bernardi--Raugel
-    fem = "CR" # Crouzeix--Raviart
+    # problem parameters
+    viscosity = 1e-2
+    #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
+    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
+
+    # fem/solver parameters
+    fem = "BR" # Bernardi--Raugel
+    #fem = "CR" # Crouzeix--Raviart
+    maxIterations = 20  # termination criterion 1 for nonlinear mode
+    maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
+    verbosity = 1 # deepness of messaging (the larger, the more)
+    TestFunctionReconstruction = ReconstructionIdentity{FiniteElements.FEHdivRT0} # do not change
+
+    #####################################################################################    
+    #####################################################################################
 
     # load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity)
-    append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], HomogeneousDirichletBoundary)
+    StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
+    append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
     push!(StokesProblem.RHSOperators[1],RhsOperator(ReconstructionIdentity, [rhs!], 2, 2; bonus_quadorder = 2))
 
+    # define bestapproximation problems
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 1)
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 1, bonus_quadorder_boundary = 2)
+ 
     # define ItemIntegrators for L2/H1 error computation
     L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 0)
     L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 3)
@@ -89,39 +137,44 @@ function main()
             FiniteElements.show(FE_pressure)
         end    
 
-        # solve Stokes problem with classical right-hand side
+        # solve Stokes problem with classical right-hand side/convection term
         StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = 2)
+        if nonlinear
+            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = Identity)
+        end
         Solution = FEVector{Float64}("Stokes velocity classical",FE_velocity)
         append!(Solution,"Stokes pressure (classical)",FE_pressure)
-        @time solve!(Solution, StokesProblem; verbosity = verbosity - 1)
+        @time solve!(Solution, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
         push!(NDofs,length(Solution.entries))
 
-        # solve Stokes problem with pressure-robust right-hand side
-        StokesProblem.RHSOperators[1][1] = RhsOperator(ReconstructionIdentity{FiniteElements.FEHdivRT0}, [rhs!], 2, 2; bonus_quadorder = 2)
+        # solve Stokes problem with pressure-robust right-hand side/convection term
+        StokesProblem.RHSOperators[1][1] = RhsOperator(TestFunctionReconstruction, [rhs!], 2, 2; bonus_quadorder = 2)
+        if nonlinear
+            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = TestFunctionReconstruction)
+        end
         Solution2 = FEVector{Float64}("Stokes velocity p-robust",FE_velocity)
         append!(Solution2,"Stokes pressure (p-robust)",FE_pressure)
-        @time solve!(Solution2, StokesProblem; verbosity = verbosity - 1)
+        @time solve!(Solution2, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
 
-        # L2 bestapproximation
-        L2Bestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FE_velocity)
-        append!(L2Bestapproximation,"L2-Bestapproximation pressure",FE_pressure)
-        L2bestapproximate!(L2Bestapproximation[1], exact_velocity!; boundary_regions = [0], verbosity = verbosity - 1, bonus_quadorder = 0)
-        L2bestapproximate!(L2Bestapproximation[2], exact_pressure!; boundary_regions = [], verbosity = verbosity - 1, bonus_quadorder = 3)
-
-        # H1 bestapproximation
-        H1Bestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
-        H1bestapproximate!(H1Bestapproximation[1], exact_velocity_gradient!, exact_velocity!; verbosity = verbosity - 1, bonus_quadorder = 0)
         
+        # solve bestapproximation problems
+        L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FE_velocity)
+        L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FE_pressure)
+        H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; verbosity = verbosity)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem; verbosity = verbosity)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; verbosity = verbosity)
+
         # compute L2 and H1 error
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
         append!(L2error_velocity2,sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1])))
-        append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2Bestapproximation[1])))
+        append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1])))
         append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
         append!(L2error_pressure2,sqrt(evaluate(L2PressureErrorEvaluator,Solution2[2])))
-        append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2Bestapproximation[2])))
+        append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1])))
         append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
         append!(H1error_velocity2,sqrt(evaluate(H1VelocityErrorEvaluator,Solution2[1])))
-        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,L2Bestapproximation[1])))
+        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1])))
         
         # plot final solution
         if (level == nlevels)

@@ -40,23 +40,29 @@ end
 
 
 function main()
+    #####################################################################################
+    #####################################################################################
+
+    # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
     nlevels = 5 # number of refinement levels
 
+    # problem parameters
+    viscosity = 1e-2
     nonlinear = true
-    maxIterations = 10  # termination criterion 1 for nonlinear mode
-    maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
 
-    verbosity = 1 # deepness of messaging (the larger, the more)
-
-    # choose a finite element method
+    # fem/solver parameters
     fem = "BR" # Bernardi--Raugel
     #fem = "CR" # Crouzeix--Raviart
     #fem = "MINI" # MINI element
     #fem = "TH" # Taylor--Hood
+    maxIterations = 10  # termination criterion 1 for nonlinear mode
+    maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
+    verbosity = 3 # deepness of messaging (the larger, the more)
 
-    # -------------------------------------------------------------------------------
+    #####################################################################################    
+    #####################################################################################
 
     # load Stokes problem prototype and assign data
     StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
