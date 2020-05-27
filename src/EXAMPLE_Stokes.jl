@@ -65,7 +65,7 @@ function main()
     #####################################################################################
 
     # load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
+    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     append!(StokesProblem.BoundaryOperators[1], [1,3], HomogeneousDirichletBoundary)
     append!(StokesProblem.BoundaryOperators[1], [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
 

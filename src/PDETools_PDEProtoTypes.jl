@@ -1,6 +1,6 @@
 
 # Prototype for incompressible StokesProblem
-function IncompressibleStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, stationary::Bool = true, no_pressure_constraint::Bool = false)
+function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, stationary::Bool = true, no_pressure_constraint::Bool = false)
 
     # LEFT-HAND-SIDE: STOKES OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
@@ -39,6 +39,26 @@ function IncompressibleStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlin
     end
 
     return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
+end
+
+# Prototype for linear elasticity
+function LinearElasticityProblem(dimension::Int = 2; shearmodulus = 1.0, lambda = 1.0)
+
+    # LEFT-HAND-SIDE: LINEAR ELASTICITY TENSOR
+    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
+    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
+    MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(shearmodulus,dimension^2))]
+
+    # RIGHT-HAND SIDE: empty, user can fill in data later
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
+    MyRHS[1] = []
+
+    # BOUNDARY OPERATOR: empty, user can fill in data later
+    MyBoundary = BoundaryOperator(dimension,dimension)
+
+    name = "linear elasticity problem"
+
+    return PDEDescription(name,MyLHS,MyRHS,[MyBoundary])
 end
 
 

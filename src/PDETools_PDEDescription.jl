@@ -9,29 +9,38 @@ abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 
 struct LaplaceOperator <: AbstractPDEOperator
-    action :: AbstractAction             #      --ACTION--     
-                                         # e.g. (K grad u) : grad v
+    action::AbstractAction             #      --ACTION--     
+                                       # e.g. (K grad u) : grad v
+    regions::Array{Int,1}
+end
+function LaplaceOperator(action::AbstractAction; regions::Array{Int,1} = [0])
+    return LaplaceOperator(action, regions)
 end
 
 struct LagrangeMultiplier <: AbstractPDEOperator
     operator :: Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
 end
 
+
+struct ReactionOperator <: AbstractPDEOperator
+    action::AbstractAction             #      --ACTION--
+                                        # e.g.  (gamma * u) * v
+    regions::Array{Int,1}
+end
+function ReactionOperator(action::AbstractAction; regions::Array{Int,1} = [0])
+    return ReactionOperator(action, regions)
+end
+
+
 struct ConvectionOperator <: AbstractPDEOperator
     action::AbstractAction                                      #      ----ACTION-----
     beta_from::Int                                              # e.g. (beta * grad) u * testfunction_operator(v)
     testfunction_operator::Type{<:AbstractFunctionOperator}     # beta_from = 0 if beta is encoded in action
                                                                 # =beta_from  k if beta is from k-th PDE unknown (=> fixpoint iteration)
+    regions::Array{Int,1}
 end
 
-
-
-struct ReactionOperator <: AbstractPDEOperator
-    action :: AbstractAction             #      --ACTION--
-                                        # e.g.  (gamma * u) * v
-end
-
-function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_quadorder::Int = 0, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity)
+function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_quadorder::Int = 0, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     function convection_function_func() # dot(convection!, input=Gradient)
         convection_vector = zeros(Float64,xdim)
         function closure(result, input, x)
@@ -47,10 +56,10 @@ function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_q
         end    
     end    
     convection_action = XFunctionAction(convection_function_func(), ncomponents, xdim; bonus_quadorder = bonus_quadorder)
-    return ConvectionOperator(convection_action,0,testfunction_operator)
+    return ConvectionOperator(convection_action,0,testfunction_operator, regions)
 end
 
-function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity)
+function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
     # input[1:ncomponents] = operator1(beta)
     # input[ncomponents+1:length(input)] = u
@@ -65,19 +74,28 @@ function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction
         end    
     end    
     convection_action = FunctionAction(convection_function_fe(), ncomponents)
-    return ConvectionOperator(convection_action,beta,testfunction_operator)
+    return ConvectionOperator(convection_action,beta,testfunction_operator, regions)
 end
 
-struct RhsOperator <: AbstractPDEOperator
+struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperator
     action::AbstractAction                                  #       -----ACTION----
     testfunction_operator::Type{<:AbstractFunctionOperator} # e.g.  f * testfunction_operator(v)
+    regions::Array{Int,1}
 end
 
-function RhsOperator(operator::Type{<:AbstractFunctionOperator}, f4region, xdim::Int, ncomponents::Int = 1; bonus_quadorder::Int = 0)
+function RhsOperator(
+    operator::Type{<:AbstractFunctionOperator},
+    data4region::Array{Function,1},
+    xdim::Int,
+    ncomponents::Int = 1;
+    bonus_quadorder::Int = 0,
+    regions::Array{Int,1} = [0],
+    on_boundary::Bool = false)
+
     function rhs_function() # result = F(v) = f*operator(v) = f*input
         temp = zeros(Float64,ncomponents)
         function closure(result,input,x,region)
-            f4region[region](temp,x)
+            data4region[region](temp,x)
             result[1] = 0
             for j = 1 : ncomponents
                 result[1] += temp[j]*input[j] 
@@ -85,7 +103,39 @@ function RhsOperator(operator::Type{<:AbstractFunctionOperator}, f4region, xdim:
         end
     end    
     action = RegionWiseXFunctionAction(rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
-    return RhsOperator(action, operator)
+    if on_boundary == true
+        return RhsOperator{AbstractAssemblyTypeBFACE}(action, operator, regions)
+    else
+        return RhsOperator{AbstractAssemblyTypeCELL}(action, operator, regions)
+    end
+end
+
+
+function RhsOperator(
+    operator::Type{<:AbstractFunctionOperator},
+    data4allregions::Function,
+    xdim::Int,
+    ncomponents::Int = 1;
+    bonus_quadorder::Int = 0,
+    regions::Array{Int,1} = [0],
+    on_boundary::Bool = false)
+
+    function rhs_function() # result = F(v) = f*operator(v) = f*input
+        temp = zeros(Float64,ncomponents)
+        function closure(result,input,x)
+            data4allregions(temp,x)
+            result[1] = 0
+            for j = 1 : ncomponents
+                result[1] += temp[j]*input[j] 
+            end
+        end
+    end    
+    action = XFunctionAction(rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
+    if on_boundary == true
+        return RhsOperator{AbstractAssemblyTypeBFACE}(action, operator, regions)
+    else
+        return RhsOperator{AbstractAssemblyTypeCELL}(action, operator, regions)
+    end
 end
 
 
@@ -94,8 +144,8 @@ abstract type DirichletBoundary <: AbstractBoundaryType end
 abstract type BestapproxDirichletBoundary <: DirichletBoundary end
 abstract type InterpolateDirichletBoundary <: DirichletBoundary end
 abstract type HomogeneousDirichletBoundary <: DirichletBoundary end
-abstract type NeumannBoundary <: AbstractBoundaryType end
-abstract type DoNothingBoundary <: NeumannBoundary end
+#abstract type NeumannBoundary <: AbstractBoundaryType end
+#abstract type DoNothingBoundary <: NeumannBoundary end
 
 
 struct BoundaryOperator <: AbstractPDEOperator
@@ -143,10 +193,22 @@ function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:A
 end
 
 
+# type to steer when a PDE block is (re)assembled
+abstract type AbstractAssemblyTrigger end
+abstract type AssemblyInitial <: AbstractAssemblyTrigger end    # is only assembled in initial assembly
+abstract type AssemblyEachTimeStep <: AssemblyInitial end       # is (re)assembled in each timestep
+abstract type AssemblyAlways <: AssemblyEachTimeStep end        # is always (re)assembled
+abstract type AssemblyFinal <: AbstractAssemblyTrigger end       # is only assembled after solving
+
 abstract type AbstractGlobalConstraint end
 struct FixedIntegralMean <: AbstractGlobalConstraint
     value::Real
-end      # triggers that solution component has fixed integral mean
+    when_assemble::Type{<:AbstractAssemblyTrigger}
+end 
+function FixedIntegralMean(value::Real)
+    return FixedIntegralMean(value, AssemblyFinal)
+end
+
 
 # A PDE is described by an nxn matrix and vector of PDEOperator
 # the indices of matrix relate to FEBlocks given to solver

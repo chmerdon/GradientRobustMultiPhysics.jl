@@ -1,3 +1,5 @@
+using Triangulate
+
 function testgrid_mixedEG()
 
     xgrid=ExtendableGrid{Float64,Int32}()
@@ -22,6 +24,24 @@ function testgrid_mixedEG()
     nbfaces = num_sources(xBFaceNodes)
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,nbfaces)
     xgrid[CoordinateSystem]=Cartesian2D
+
+    return xgrid
+end
+
+
+function testgrid_cookmembrane()
+    triin=Triangulate.TriangulateIO()
+    triin.pointlist=Matrix{Cdouble}([0 0; 0 -44; 48 0; 48 16]');
+    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
+    triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
+
+    xgrid = simplexgrid("pALVa1000.0", triin)
+    
+    # why do I have to do these things below ?
+    xgrid[CellRegions] = VectorOfConstants(Int32(1),num_sources(xgrid[CellNodes]))
+    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
+    xgrid[BFaceGeometries] = VectorOfConstants(Edge1D,num_sources(xgrid[BFaceNodes]))
+    xgrid[BFaceNodes] = xgrid[BFaceNodes][[2,1],:]
 
     return xgrid
 end

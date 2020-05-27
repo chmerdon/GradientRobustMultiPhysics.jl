@@ -1,13 +1,4 @@
 
-
-    using SparseArrays
-
-# type to steer when a PDE block is (re)assembled
-abstract type AbstractAssemblyTrigger end
-abstract type AssemblyInitial <: AbstractAssemblyTrigger end        # is only assembled in initial assembly
-abstract type AssemblyEachTimeStep <: AssemblyInitial end   # is (re)assembled in each timestep
-abstract type AssemblyAlways <: AssemblyEachTimeStep end    # is always (re)assembled
-
 mutable struct SolverConfig
     is_nonlinear::Bool      # PDE is nonlinear
     is_timedependent::Bool  # PDE is time_dependent
@@ -126,7 +117,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ReactionOpera
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert FE1 == FE2
-    L2Product = SymmetricBilinearForm(Float64,AbstractAssemblyTypeCELL, FE1, Identity, O.action)    
+    L2Product = SymmetricBilinearForm(Float64,AbstractAssemblyTypeCELL, FE1, Identity, O.action; regions = O.regions)    
     FEAssembly.assemble!(A, L2Product; verbosity = verbosity)
 end
 
@@ -134,7 +125,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LaplaceOperat
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert FE1 == FE2
-    H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, Gradient, O.action)    
+    H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, Gradient, O.action; regions = O.regions)    
     FEAssembly.assemble!(A, H1Product; verbosity = verbosity)
 end
 
@@ -142,12 +133,12 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOpe
     if O.beta_from == 0
         FE1 = A.FETypeX
         FE2 = A.FETypeY
-        ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action)  
+        ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
         FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
     else
         FE1 = A.FETypeX
         FE2 = A.FETypeY
-        ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action)  
+        ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
         FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity)
     end
 end
@@ -161,9 +152,9 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
     FEAssembly.assemble!(At, DivPressure; verbosity = verbosity, transpose_copy = A)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator; verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     FE = b.FEType
-    RHS = LinearForm(Float64,AbstractAssemblyTypeCELL, FE, O.testfunction_operator, O.action)
+    RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, O.action; regions = O.regions)
     FEAssembly.assemble!(b, RHS; verbosity = verbosity)
 end
 
@@ -219,6 +210,10 @@ function assemble!(
 end
 
 
+# this function assembles all boundary data at once
+# first all interpolation Dirichlet boundaries are assembled
+# then all hoomogeneous Dirichlet boundaries are set to zero
+# then all DirichletBestapprox boundaries are handled (previous data is fixed)
 function boundarydata!(
     Target::FEVectorBlock,
     O::BoundaryOperator;

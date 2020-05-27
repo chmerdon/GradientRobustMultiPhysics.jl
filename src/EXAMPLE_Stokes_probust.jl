@@ -90,13 +90,13 @@ function main()
     #####################################################################################
 
     # load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
+    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
     push!(StokesProblem.RHSOperators[1],RhsOperator(ReconstructionIdentity, [rhs!], 2, 2; bonus_quadorder = 2))
 
     # define bestapproximation problems
     L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 1)
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 4)
     H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 1, bonus_quadorder_boundary = 2)
  
     # define ItemIntegrators for L2/H1 error computation

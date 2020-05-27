@@ -17,7 +17,8 @@ include("PDETools_PDESolver.jl")
 export assemble!, solve!
 
 include("PDETools_PDEProtoTypes.jl")
-export IncompressibleStokesProblem
+export IncompressibleNavierStokesProblem
+export LinearElasticityProblem
 export L2BestapproximationProblem
 export H1BestapproximationProblem
 
