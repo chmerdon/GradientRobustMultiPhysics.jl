@@ -46,7 +46,7 @@ function main()
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
-    nlevels = 5 # number of refinement levels
+    nlevels = 1 # number of refinement levels
 
     # problem parameters
     nonlinear = true
@@ -69,6 +69,7 @@ function main()
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     append!(StokesProblem.BoundaryOperators[1], [1,3], HomogeneousDirichletBoundary)
     append!(StokesProblem.BoundaryOperators[1], [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
+    Base.show(StokesProblem)
 
     # define bestapproximation problems
     L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)

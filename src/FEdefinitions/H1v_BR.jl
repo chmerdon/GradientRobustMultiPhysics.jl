@@ -10,7 +10,7 @@ get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Quadrilateral2D}) = 3;
 
 function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1BR}
     ncomponents = get_ncomponents(FEType)
-    name = "BR (H1, $(ncomponents)d)"
+    FES.name = "BR (H1, $(ncomponents)d)"
 
     # count number of dofs
     nnodes = num_sources(FES.xgrid[Coordinates])

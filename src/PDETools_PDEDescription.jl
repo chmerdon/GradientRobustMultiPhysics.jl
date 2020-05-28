@@ -1,9 +1,13 @@
-# top-level layer to define PDE operators between
-# trial and testfunctions in weak form of PDE
+######################
+# AbstactPDEOperator #
+######################
+#
+# to describe operators in the (weak form of the) PDE
+#
+# some intermediate layer that knows nothing of the FE discretisatons
+# but triggers certain AssemblyPatterns/AbstractActions when called for assembly!
+#
 
-# IDEAS for future
-# depending on the chosen FETypes different assemblys of an operator might be triggered
-# e.g. Laplacian for Hdiv might be with additional tangential jump stabilisation term
 
 abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
@@ -228,10 +232,17 @@ function FixedIntegralMean(value::Real)
 end
 
 
+##################
+# PDEDescription #
+##################
+#
 # A PDE is described by an nxn matrix and vector of PDEOperator
 # the indices of matrix relate to FEBlocks given to solver
 # all Operators of [i,k] - matrixblock are assembled into system matrix block [i*n+k]
 # all Operators of [i] - rhs-block are assembled into rhs block [i]
+#
+# additionally BoundayOperators and GlobalConstraints are assigned to handle
+# boundary data and global side constraints (like a fixed global integral mean)
 
 mutable struct PDEDescription
     name::String
@@ -250,3 +261,54 @@ function PDEDescription(name, LHS, RHS, BoundaryOperators)
     return PDEDescription(name, LHS, RHS, BoundaryOperators, NoConstraints)
 end
 
+
+
+function Base.show(io::IO, PDE::PDEDescription)
+    println("\nPDE-DESCRIPTION")
+    println("===============")
+    println("  name = $(PDE.name)\n")
+
+    println("  LHS block | PDEOperator(s)")
+    for j=1:size(PDE.LHSOperators,1), k=1:size(PDE.LHSOperators,2)
+        if length(PDE.LHSOperators[j,k]) > 0
+            print("    [$j,$k]   | ")
+            for o = 1 : length(PDE.LHSOperators[j,k])
+                print("$(typeof(PDE.LHSOperators[j,k][o]))")
+                if o == length(PDE.LHSOperators[j,k])
+                    println("")
+                else
+                    print("\n            | ")
+                end
+            end
+        else    
+            println("    [$j,$k]   | none")
+        end
+    end
+
+    println("\n  RHS block | PDEOperator(s)")
+    for j=1:size(PDE.RHSOperators,1)
+        if length(PDE.RHSOperators[j]) > 0
+            print("     [$j]    | ")
+            for o = 1 : length(PDE.RHSOperators[j])
+                print("$(typeof(PDE.RHSOperators[j][o]))")
+                if o == length(PDE.RHSOperators[j])
+                    println("")
+                else
+                    print("\n            | ")
+                end
+            end
+        else    
+            println("     [$j]    | none")
+        end
+    end
+
+    println("")
+    for j=1:length(PDE.BoundaryOperators)
+        println("   BoundaryOperator[$j] : $(PDE.BoundaryOperators[j].regions4boundarytype)")
+    end
+
+    println("")
+    for j=1:length(PDE.GlobalConstraints)
+        println("  GlobalConstraints[$j] : $(PDE.GlobalConstraints[j])")
+    end
+end

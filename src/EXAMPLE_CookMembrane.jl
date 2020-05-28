@@ -53,12 +53,10 @@ function main()
     LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
     append!(LinElastProblem.BoundaryOperators[1], [1], HomogeneousDirichletBoundary)
     push!(LinElastProblem.RHSOperators[1], RhsOperator(Identity, neumann_force_right!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    Base.show(LinElastProblem)
 
     # generate FESpace
     FESpace = FiniteElements.FESpace{FEType}(xgrid)
-    if verbosity > 2
-        FiniteElements.show(FESpace)
-    end    
 
     # solve PDE
     Solution = FEVector{Float64}("Displacement",FESpace)

@@ -10,7 +10,7 @@ get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:Quadrilateral2D}) = 2;
 
 function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIVRT0}
     ncomponents = get_ncomponents(FEType)
-    name = "RT0 (H1, $(ncomponents)d)"
+    FES.name = "RT0 (H1, $(ncomponents)d)"
 
     # count number of dofs
     nfaces = num_sources(FES.xgrid[FaceNodes])

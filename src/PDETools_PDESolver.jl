@@ -69,7 +69,7 @@ function generate_solver(PDE::PDEDescription)
     return SolverConfig(nonlinear, timedependent, LHS_ATs, RHS_ATs, 10, 1e-10, 0.0, 1e60)
 end
 
-function Base.show(SC::SolverConfig)
+function Base.show(io::IO, SC::SolverConfig)
 
     println("\nSOLVER-CONFIGURATION")
     println("======================")
@@ -102,6 +102,7 @@ function Base.show(SC::SolverConfig)
         end
         println("")
     end
+    println("            LEGEND :  I = Once, T = EachTimeStep, A = Always")
 
 end
 

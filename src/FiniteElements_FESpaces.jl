@@ -23,38 +23,55 @@ abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 # (links have to be stored here to avoid search in xgrid dicts)
 #
 mutable struct FESpace{FEType<:AbstractFiniteElement}
-  name::String                          # full name of finite element space (used in messages)
-  ndofs::Int                            # total number of dofs
-  xgrid::ExtendableGrid                 # link to xgrid 
-  CellDofs::VariableTargetAdjacency     # place to save cell dofs (filled by constructor)
-  FaceDofs::VariableTargetAdjacency     # place to save face dofs (filled by constructor)
-  BFaceDofs::VariableTargetAdjacency    # place to save bface dofs (filled by constructor)
-  xFaceNormals::Array{Float64,2}        # link to coefficient values
-  xFaceVolumes::Array{Float64,1}        # link to coefficient values
-  xCellFaces::VariableTargetAdjacency   # link to coefficient indices
-  xCellSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
+    name::String                          # full name of finite element space (used in messages)
+    ndofs::Int                            # total number of dofs
+    xgrid::ExtendableGrid                 # link to xgrid 
+    CellDofs::VariableTargetAdjacency     # place to save cell dofs (filled by constructor)
+    FaceDofs::VariableTargetAdjacency     # place to save face dofs (filled by constructor)
+    BFaceDofs::VariableTargetAdjacency    # place to save bface dofs (filled by constructor)
+    xFaceNormals::Array{Float64,2}        # link to coefficient values
+    xFaceVolumes::Array{Float64,1}        # link to coefficient values
+    xCellFaces::VariableTargetAdjacency   # link to coefficient indices
+    xCellSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
 end
 
 # constructor
 function FESpace{FEType}(xgrid::ExtendableGrid; dofmap_needed = true) where {FEType <:AbstractFiniteElement}
-  # first generate some empty FESpace
-  dummyVTA = VariableTargetAdjacency(Int32)
-  FES = FESpace{FEType}("",0,xgrid,dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
+    # first generate some empty FESpace
+    dummyVTA = VariableTargetAdjacency(Int32)
+    FES = FESpace{FEType}("",0,xgrid,dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
 
-  # then update data according to init specifications in FEdefinition files
-  init!(FES; dofmap_needed = dofmap_needed)
+    # then update data according to init specifications in FEdefinition files
+    init!(FES; dofmap_needed = dofmap_needed)
 
-  return FES
+    return FES
 end
 
 Base.eltype(::Type{FESpace{FEType}}) where {FEType} = FEType
 
 # show function for FiniteElementSpace
-function show(FES::FESpace)
-	println("\nFESpace information")
-	println("=====================")
-	println("   name = " * FES.name)
-	println("  ndofs = $(FES.ndofs)")
+function Base.show(io::IO, FES::FESpace{FEType}) where {FEType}
+	  println("\nFESpace information")
+    println("===================")
+    println("     name = $(FES.name)")
+    println("   FEType = $FEType")
+    println("  FEClass = $(supertype(FEType))")
+    println("    ndofs = $(FES.ndofs)\n")
+    if num_sources(FES.CellDofs) > 0
+        println("dofmap for CELL available (nitems=$(num_sources(FES.CellDofs)), maxdofs4item=$(max_num_targets_per_source(FES.CellDofs)))")
+    else
+        println("dofmap for CELL not available")
+    end
+    if num_sources(FES.FaceDofs) > 0
+        println("dofmap for FACE available (nitems=$(num_sources(FES.FaceDofs)), maxdofs4item=$(max_num_targets_per_source(FES.FaceDofs)))")
+    else
+        println("dofmap for FACE not available")
+    end
+    if num_sources(FES.BFaceDofs) > 0
+        println("dofmap for BFACE available (nitems=$(num_sources(FES.BFaceDofs)), maxdofs4item=$(max_num_targets_per_source(FES.BFaceDofs)))")
+    else
+        println("dofmap for BFACE not available")
+    end
 end
 
 ###########################

@@ -6,19 +6,22 @@ using PDETools
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 
+
+
+# define some (vector-valued) function (to be L2-bestapproximated in this example)
+function exact_function!(result,x)
+    result[1] = x[1]^2+x[2]^2
+    result[2] = -x[1]^2 + 1.0
+end
+# define its divergence (used in error calculation)
+function exact_divergence!(result,x)
+    result[1] = 2*x[1]
+end
+
+
 function main()
 
-    verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
-
-    # define some (vector-valued) function (to be L2-bestapproximated in this example)
-    function exact_function!(result,x)
-        result[1] = x[1]^2+x[2]^2
-        result[2] = -x[1]^2 + 1.0
-    end
-    # define its divergence (used in error calculation)
-    function exact_divergence!(result,x)
-        result[1] = 2*x[1]
-    end
+    verbosity = 2 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # load mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
@@ -29,10 +32,13 @@ function main()
     # Define Bestapproximation problem via PDETooles_PDEProtoTypes
     Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
 
-    # choose some finite element space and solve the problem
+    # choose some finite element space
     FEType = FiniteElements.HDIVRT0{2}
     #FEType = FiniteElements.H1P2{2}
     FESpace = FiniteElements.FESpace{FEType}(xgrid)
+    Base.show(FESpace)
+
+    # solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FESpace)
     solve!(Solution, Problem; verbosity = verbosity)
     

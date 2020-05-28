@@ -39,16 +39,18 @@ function FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
     return FEVector{T}(Blocks, entries)
 end
 
-# show function for FEVector
-function show(FEF::FEVector)
+function Base.show(io::IO, FEF::FEVector) where {T}
 	println("\nFEVector information")
-    println("=========================")
-    println("   nblocks = $(length(FEF))")
-    for j=1:length(FEF.FEVectorBlocks)
-        println("  block[$j] = $(FEF[j].name) (FEtype = $(FEF[j].FES.name), ndof = $(FEF[j].FES.ndofs))");
+    println("====================")
+    println("   block  |  ndofs  | name (FEType) ")
+    for j=1:length(FEF)
+        @printf(" [%5d]  | ",j);
+        @printf(" %6d |",FEF[j].FES.ndofs);
+        @printf(" %s (%s)\n",FEF[j].name,FEF[j].FES.name);
     end    
 end
 
+# overload stuff for AbstractArray{T,1} behaviour
 Base.getindex(FEF::FEVector,i) = FEF.FEVectorBlocks[i]
 Base.getindex(FEB::FEVectorBlock,i::Int)=FEB.entries[FEB.offset+i]
 Base.getindex(FEB::FEVectorBlock,i::AbstractArray)=FEB.entries[FEB.offset.+i]
@@ -56,6 +58,8 @@ Base.getindex(FEB::FEVectorBlock,::Colon)=FEB.entries[FEB.offset+1:FEB.last_inde
 Base.setindex!(FEB::FEVectorBlock, v, i::Int) = (FEB.entries[FEB.offset+i] = v)
 Base.setindex!(FEB::FEVectorBlock, v, ::Colon) = (FEB.entries[FEB.offset+1:FEB.last_index] = v)
 Base.setindex!(FEB::FEVectorBlock, v, i::AbstractArray) = (FEB.entries[FEB.offset.+i] = v)
+Base.size(FEF::FEVector)=size(FEF.FEVectorBlocks)
+Base.size(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
 Base.length(FEF::FEVector)=length(FEF.FEVectorBlocks)
 Base.length(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
 
@@ -92,12 +96,17 @@ struct FEMatrix{T} <: AbstractArray{T,1}
 end
 
 # show function for FEMatrix
-function show(FEM::FEMatrix)
+function Base.show(io::IO, FEM::FEMatrix) where {T}
 	println("\nFEMatrix information")
-    println("=========================")
-    println("   nblocks = $(length(FEM))")
-    for j=1:length(FEF.FEVectorBlocks)
-        println("  block[$j] = $(FEM[j].name) (FEtypeX/Y = $(FEM[j].FESX.name)/$(FEM[j].FESY.name), size = $(FEM[j].FESX.ndofs)x$(FEM[j].FESY.ndofs))");
+    println("====================")
+    println("  block |  ndofsX |  ndofsY | name (FETypeX, FETypeY) ")
+    for j=1:length(FEM)
+        n = mod(j-1,FEM.nFE)+1
+        m = Int(floor(j/FEM.nFE))
+        @printf("  [%d,%d] |",m,n);
+        @printf("  %6d |",FEM[j].FESX.ndofs);
+        @printf("  %6d |",FEM[j].FESY.ndofs);
+        @printf(" %s (%s,%s)\n",FEM[j].name,FEM[j].FESX.name,FEM[j].FESY.name);
     end    
 end
 
