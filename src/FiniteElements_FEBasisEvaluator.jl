@@ -66,14 +66,14 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian})
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
 # junctions for dof fields
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
 
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
-    FE::AbstractFiniteElement            # link to full FE (e.g. for coefficients)
-    FE2::AbstractFiniteElement           # link to reconstruction FE
+    FE::FESpace                          # link to full FE (e.g. for coefficients)
+    FE2::FESpace                         # link to reconstruction FE
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
@@ -97,7 +97,7 @@ end
 
 
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
@@ -176,7 +176,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
 end    
 
 # constructor for ReconstructionIdentity
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: ReconstructionIdentity{FETypeReconst}, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: ReconstructionIdentity{FETypeReconst}, AT <: AbstractAssemblyType}
     # generate reconstruction space
     # avoid computation of full dofmap
     # we will just use local basis functions
@@ -185,8 +185,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
         println("  ...constructing FEBasisEvaluator for $FEOP operator of $FEType on $EG")
     end
 
-    FE2 = FETypeReconst(FE.xgrid; dofmap_needed = false)
-    FEType2 = typeof(FE2)
+    FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmap_needed = false)
     
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
@@ -195,7 +194,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::AbstractFiniteElement, qf::Qu
     # pre-allocate memory for reconstruction basis functions
     ncomponents = FiniteElements.get_ncomponents(FEType)
     refbasis = FiniteElements.get_basis_on_cell(FEType, EG)
-    refbasis_reconst = FiniteElements.get_basis_on_cell(FEType2, EG)
+    refbasis_reconst = FiniteElements.get_basis_on_cell(FETypeReconst, EG)
     
     # probe for ndofs4item
     ndofs4item::Int = 0
@@ -273,7 +272,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         # get local reconstruction coefficients
         # and accumulate
-        FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
+        FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)

@@ -35,13 +35,12 @@ function main()
     poisson_number = 0.4999 # Poisson number
     shear_modulus = (1/(1+poisson_number))*elasticity_modulus
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
+    factor_plotdisplacement = 4
 
     # fem/solver parameters
-    #fem = "P1" # P1-Courant
-    #fem = "CR" # Crouzeix--Raviart
-    fem = "P2" # P2 element
-    verbosity = 10 # deepness of messaging (the larger, the more)
-    factor_plotdisplacement = 4
+    #FEType = FiniteElements.H1P1{2} # P1-Courant
+    FEType = FiniteElements.H1P2{2} # P2
+    verbosity = 1 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
     #####################################################################################
@@ -63,21 +62,15 @@ function main()
             xgrid = uniform_refine(xgrid)
         end
 
-        # generate FE
-        if fem == "P1"
-            FE = FiniteElements.getH1P1FiniteElement(xgrid,2)
-        elseif fem == "CR"
-            FE = FiniteElements.getH1CRFiniteElement(xgrid,2)
-        elseif fem == "P2"
-            FE = FiniteElements.getH1P2FiniteElement(xgrid,2)
-        end        
+        # generate FESpace
+        FESpace = FiniteElements.FESpace{FEType}(xgrid)
         if verbosity > 2
-            FiniteElements.show(FE)
+            FiniteElements.show(FESpace)
         end    
 
-        # solve elasticity problem
-        Solution = FEVector{Float64}("Displacement",FE)
-        solve!(Solution, LinElastProblem; verbosity = verbosity - 1)
+        # solve PDE
+        Solution = FEVector{Float64}("Displacement",FESpace)
+        solve!(Solution, LinElastProblem; verbosity = verbosity)
         push!(NDofs,length(Solution.entries))
         
         # plot final solution
@@ -92,7 +85,7 @@ function main()
             PyPlot.figure(2)
             nnodes = size(xgrid[Coordinates],2)
             nodevals = zeros(Float64,3,nnodes)
-            nodevalues!(nodevals,Solution[1],FE)
+            nodevalues!(nodevals,Solution[1],FESpace)
             nodevals[3,:] = sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2)
             ExtendableGrids.plot(xgrid, nodevals[3,:]; Plotter = PyPlot)
 

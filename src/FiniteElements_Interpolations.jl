@@ -3,20 +3,20 @@ function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [
         println("\nINTERPOLATING")
         println("=============")
         println("     target = $(Target.name)")
-        println("         FE = $(Target.FEType.name) (ndofs = $(Target.FEType.ndofs))")
+        println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
     end
-    interpolate!(Target, Target.FEType, exact_function!; dofs = dofs, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, Target.FES, exact_function!; dofs = dofs, bonus_quadorder = bonus_quadorder)
 end
 
 
 # abstract nodevalue function that works for any element and can be overwritten for special ones
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::AbstractFiniteElement; regions::Array{Int,1} = [0])
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace; regions::Array{Int,1} = [0])
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]
   xItemDofs = FE.CellDofs
   xItemNodes = FE.xgrid[CellNodes]
 
-  T = eltype(Target)
+  T = Base.eltype(Target)
   if regions == [0]
       try
           regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
@@ -30,9 +30,10 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   EG, ndofs4EG = uniqueEG(xItemGeometries, xItemRegions, [xItemDofs], regions)
   qf = Array{QuadratureRule,1}(undef,length(EG))
   basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
+  FEType = Base.eltype(typeof(FE))
   for j = 1 : length(EG)
       qf[j] = VertexRule(EG[j])
-      basisevaler[j] = FEBasisEvaluator{T,typeof(FE),EG[j],Identity,AbstractAssemblyTypeCELL}(FE, qf[j])
+      basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],Identity,AbstractAssemblyTypeCELL}(FE, qf[j])
   end    
 
   nitems::Int = num_sources(xItemDofs)
@@ -42,7 +43,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   basisvals::Array{T,3} = basisevaler[1].cvals # pointer to operator results
   item::Int = 0
   nregions::Int = length(regions)
-  ncomponents::Int = get_ncomponents(typeof(FE))
+  ncomponents::Int = get_ncomponents(FEType)
   iEG::Int = 0
   for item = 1 : nitems
     for r = 1 : nregions

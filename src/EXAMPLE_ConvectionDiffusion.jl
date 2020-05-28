@@ -56,9 +56,9 @@ function main()
     diffusion = 1
 
     # fem/solver parameters
-    #fem = "P1" # P1-Courant
-    fem = "CR" # Crouzeix--Raviart
-    #fem = "P2" # P2 element
+    #FEType = FiniteElements.H1P1{1} # P1-Courant
+    #FEType = FiniteElements.H1P2{1} # P2
+    FEType = FiniteElements.H1CR{1} # Crouzeix-Raviart
     verbosity = 1 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
@@ -94,25 +94,19 @@ function main()
             xgrid = uniform_refine(xgrid)
         end
 
-        # generate FE
-        if fem == "P1"
-            FE = FiniteElements.getH1P1FiniteElement(xgrid,1)
-        elseif fem == "CR"
-            FE = FiniteElements.getH1CRFiniteElement(xgrid,1)
-        elseif fem == "P2"
-            FE = FiniteElements.getH1P2FiniteElement(xgrid,1)
-        end        
+        # generate FESpace
+        FESpace = FiniteElements.FESpace{FEType}(xgrid)
         if verbosity > 2
-            FiniteElements.show(FE)
+            FiniteElements.show(FESpace)
         end    
 
-        # solve Poisson problem
-        Solution = FEVector{Float64}("Poisson solution",FE)
-        solve!(Solution, ConvectionDiffusionProblem; verbosity = verbosity - 1)
+        # solve PDE
+        Solution = FEVector{Float64}("Problem solution",FESpace)
+        solve!(Solution, ConvectionDiffusionProblem; verbosity = verbosity)
         push!(NDofs,length(Solution.entries))
 
         # interpolate
-        Interpolation = FEVector{Float64}("Interpolation",FE)
+        Interpolation = FEVector{Float64}("Interpolation",FESpace)
         interpolate!(Interpolation[1], exact_solution!; verbosity = verbosity - 1)
 
         # compute L2 and H1 error
@@ -149,7 +143,7 @@ function main()
             PyPlot.figure(2)
             nnodes = size(xgrid[Coordinates],2)
             nodevals = zeros(Float64,2,nnodes)
-            nodevalues!(nodevals,Solution[1],FE)
+            nodevalues!(nodevals,Solution[1],FESpace)
             ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
         end    
     end    

@@ -30,9 +30,10 @@ function main()
     Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
 
     # choose some finite element space and solve the problem
-    FE = FiniteElements.getHdivRT0FiniteElement(xgrid) # lowest order Raviart-Thomas
-    #FE = FiniteElements.getH1P1FiniteElement(xgrid,2) # two-dimensional P1-Courant
-    Solution = FEVector{Float64}("L2-Bestapproximation",FE)
+    FEType = FiniteElements.HDIVRT0{2}
+    #FEType = FiniteElements.H1P2{2}
+    FESpace = FiniteElements.FESpace{FEType}(xgrid)
+    Solution = FEVector{Float64}("L2-Bestapproximation",FESpace)
     solve!(Solution, Problem; verbosity = verbosity)
     
     # calculate L2 error and L2 divergence error
@@ -44,7 +45,7 @@ function main()
     # evaluate/interpolate function at nodes and plot
     PyPlot.figure(1)
     nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
-    nodevalues!(nodevals,Solution[1],FE)
+    nodevalues!(nodevals,Solution[1],FESpace)
     ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
 end
 

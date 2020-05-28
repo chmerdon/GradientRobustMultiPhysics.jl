@@ -1,56 +1,47 @@
-struct FEH1P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
-    name::String                         # full name of finite element (used in messages)
-    xgrid::ExtendableGrid                # link to xgrid 
-    CellDofs::VariableTargetAdjacency    # place to save cell dofs (filled by constructor)
-    FaceDofs::VariableTargetAdjacency    # place to save face dofs (filled by constructor)
-    BFaceDofs::VariableTargetAdjacency   # place to save bface dofs (filled by constructor)
-    ndofs::Int32
-end
+abstract type L2P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
-function getP0FiniteElement(xgrid::ExtendableGrid, ncomponents::Int)
+
+get_ncomponents(::Type{L2P0{1}}) = 1
+get_ncomponents(::Type{L2P0{2}}) = 2
+
+get_polynomialorder(::Type{<:L2P0}, ::Type{<:AbstractElementGeometry}) = 0;
+
+
+function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: L2P0}
+    ncomponents = get_ncomponents(FEType)
     name = "P0"
     for n = 1 : ncomponents-1
         name = name * "xP0"
     end
-    name = name * " (L2)"    
+    FES.name = name * " (L2)"   
 
-    # generate celldofs
-    dim = size(xgrid[Coordinates],1) 
-    xCellNodes = xgrid[CellNodes]
-    xFaceNodes = xgrid[FaceNodes]
-    xCellGeometries = xgrid[CellGeometries]
-    xBFaceNodes = xgrid[BFaceNodes]
-    xBFaces = xgrid[BFaces]
-    ncells = num_sources(xCellNodes)
-    nfaces = num_sources(xFaceNodes)
-    nbfaces = num_sources(xBFaceNodes)
-    nnodes = num_sources(xgrid[Coordinates])
+    # count number of dofs
+    xCellNodes = FES.xgrid[CellNodes]
+    ncells = num_sources(xCellNodes) 
+    FES.ndofs = ncells * ncomponents
 
     # generate dofmaps
-    xCellDofs = VariableTargetAdjacency(Int32)
-    xFaceDofs = VariableTargetAdjacency(Int32)
-    xBFaceDofs = VariableTargetAdjacency(Int32)
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xCellNodes))
-    nnodes4item = 0
-    for cell = 1 : ncells
-        append!(xCellDofs,cell*ones(Int32,ncomponents))
+    if dofmap_needed
+        xCellDofs = VariableTargetAdjacency(Int32)
+        dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xCellNodes))
+        nnodes4item = 0
+        for cell = 1 : ncells
+            append!(xCellDofs,cell*ones(Int32,ncomponents))
+        end
+
+        # save dofmaps
+        FES.CellDofs = xCellDofs
     end
 
-    return FEH1P0{ncomponents}(name,xgrid,xCellDofs,xFaceDofs,xBFaceDofs,ncells * ncomponents)
 end
 
 
-get_ncomponents(::Type{FEH1P0{1}}) = 1
-get_ncomponents(::Type{FEH1P0{2}}) = 2
-
-get_polynomialorder(::Type{<:FEH1P0}, ::Type{<:AbstractElementGeometry}) = 0;
-
-
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P0{1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
-    ncomponents = get_ncomponents(typeof(FE))
+    FEType = eltype(typeof(FE))
+    ncomponents = get_ncomponents(FEType)
     xdim = size(xCoords,1)
     if length(dofs) == 0 # interpolate at all dofs
         integrals4cell = zeros(Float64,ncells,ncomponents)
@@ -64,12 +55,13 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FEH1P0{1}, exact_func
 end
 
 
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FEH1P0)
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0})
     xCoords = FE.xgrid[Coordinates]
     xCellNodes = FE.xgrid[CellNodes]
     xNodeCells = atranspose(xCellNodes)
     ncells = num_sources(xCellNodes)
-    ncomponents = get_ncomponents(typeof(FE))
+    FEType = eltype(typeof(FE))
+    ncomponents = get_ncomponents(FEType)
     value = 0.0
     nneighbours = 0
     offset4component = 0:ncells:ncomponents*ncells
@@ -86,21 +78,21 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis_on_cell(::Type{FEH1P0{1}}, ::Type{<:AbstractElementGeometry})
+function get_basis_on_cell(::Type{L2P0{1}}, ::Type{<:AbstractElementGeometry})
     function closure(xref)
         return [1.0]
     end
 end
 
 
-function get_basis_on_cell(::Type{FEH1P0{2}}, ::Type{<:AbstractElementGeometry})
+function get_basis_on_cell(::Type{L2P0{2}}, ::Type{<:AbstractElementGeometry})
     function closure(xref)
         return [1.0 0.0;
                 0.0 1.0]
     end
 end
 
-function get_basis_on_face(FE::Type{<:FEH1P0}, EG::Type{<:AbstractElementGeometry})
+function get_basis_on_face(FE::Type{<:L2P0}, EG::Type{<:AbstractElementGeometry})
     function closure(xref)
         return get_basis_on_cell(FE, EG)(xref[1:end-1])
     end    

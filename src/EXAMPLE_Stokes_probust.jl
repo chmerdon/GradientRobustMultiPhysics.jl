@@ -75,16 +75,16 @@ function main()
 
     # problem parameters
     viscosity = 1e-2
-    #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
-    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
+    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
+    #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
 
     # fem/solver parameters
-    fem = "BR" # Bernardi--Raugel
-    #fem = "CR" # Crouzeix--Raviart
+    FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
+    #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
     maxIterations = 20  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
     verbosity = 1 # deepness of messaging (the larger, the more)
-    TestFunctionReconstruction = ReconstructionIdentity{FiniteElements.FEHdivRT0} # do not change
+    TestFunctionReconstruction = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # do not change
 
     #####################################################################################    
     #####################################################################################
@@ -124,26 +124,17 @@ function main()
             xgrid = uniform_refine(xgrid)
         end
 
-        # generate Bernardi--Raugel
-        if fem == "BR" # Bernardi--Raugel
-            FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
-            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
-        elseif fem == "CR" # Crouzeix--Raviart
-            FE_velocity = FiniteElements.getH1CRFiniteElement(xgrid,2)
-            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
-        end    
-        if verbosity > 2
-            FiniteElements.show(FE_velocity)
-            FiniteElements.show(FE_pressure)
-        end    
+        # generate FESpaces
+        FESpaceVelocity = FiniteElements.FESpace{FETypes[1]}(xgrid)
+        FESpacePressure = FiniteElements.FESpace{FETypes[2]}(xgrid)
 
         # solve Stokes problem with classical right-hand side/convection term
         StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = 2)
         if nonlinear
             StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = Identity)
         end
-        Solution = FEVector{Float64}("Stokes velocity classical",FE_velocity)
-        append!(Solution,"Stokes pressure (classical)",FE_pressure)
+        Solution = FEVector{Float64}("Stokes velocity classical",FESpaceVelocity)
+        append!(Solution,"Stokes pressure (classical)",FESpacePressure)
         @time solve!(Solution, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
         push!(NDofs,length(Solution.entries))
 
@@ -152,15 +143,15 @@ function main()
         if nonlinear
             StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = TestFunctionReconstruction)
         end
-        Solution2 = FEVector{Float64}("Stokes velocity p-robust",FE_velocity)
-        append!(Solution2,"Stokes pressure (p-robust)",FE_pressure)
+        Solution2 = FEVector{Float64}("Stokes velocity p-robust",FESpaceVelocity)
+        append!(Solution2,"Stokes pressure (p-robust)",FESpacePressure)
         @time solve!(Solution2, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
 
         
         # solve bestapproximation problems
-        L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FE_velocity)
-        L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FE_pressure)
-        H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
+        L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)
+        L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FESpacePressure)
+        H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FESpaceVelocity)
         solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; verbosity = verbosity)
         solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem; verbosity = verbosity)
         solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; verbosity = verbosity)
@@ -203,12 +194,12 @@ function main()
                 @printf(" %.6e\n",L2errorBestApproximation_pressure[j])
             end
             println("\nLEGEND\n======")
-            println("VELO-CLASSIC : discrete Stokes velocity solution ($(FE_velocity.name)) with classic right-hand side")
-            println("VELO-PROBUST : discrete Stokes velocity solution ($(FE_velocity.name)) with p-robust right-hand side")
+            println("VELO-CLASSIC : discrete Stokes velocity solution ($(FESpaceVelocity.name)) with classic right-hand side")
+            println("VELO-PROBUST : discrete Stokes velocity solution ($(FESpaceVelocity.name)) with p-robust right-hand side")
             println("VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)")
             println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)")
-            println("PRES-CLASSIC : discrete Stokes pressure solution ($(FE_pressure.name)) with classic right-hand sid")
-            println("PRES-PROBUST : discrete Stokes pressure solution ($(FE_velocity.name)) with p-robust right-hand side")
+            println("PRES-CLASSIC : discrete Stokes pressure solution ($(FESpacePressure.name)) with classic right-hand sid")
+            println("PRES-PROBUST : discrete Stokes pressure solution ($(FESpaceVelocity.name)) with p-robust right-hand side")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
         end    
     end    

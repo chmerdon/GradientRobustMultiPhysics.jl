@@ -5,7 +5,7 @@
 
 struct FEVectorBlock{T} <: AbstractArray{T,1}
     name::String
-    FEType::AbstractFiniteElement
+    FES::FESpace
     offset::Int
     last_index::Int
     entries::Array{T,1} # shares with parent object
@@ -16,37 +16,36 @@ struct FEVector{T} <: AbstractArray{T,1}
     entries::Array{T,1}
 end
 
+function FEVector{T}(name::String, FES::FESpace) where T <: Real
+    entries = zeros(T,FES.ndofs)
+    Block = FEVectorBlock{T}(name, FES, 0 , size(entries,1), entries)
+    return FEVector{T}([Block], entries)
+end
+
+function FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
+    ndofs = 0
+    for j = 1:length(FES)
+        ndofs += FES[j].ndofs
+    end    
+    entries = zeros(T,ndofs)
+    Blocks = Array{FEVectorBlock,1}(undef,length(FES))
+    offset = 0
+    for j = 1:length(FES)
+        Blocks[j] = FEVectorBlock{T}(name, FES[j], offset , offset+FES[j].ndofs, entries)
+        offset += FES[j].ndofs
+    end    
+    return FEVector{T}(Blocks, entries)
+end
+
 # show function for FEVector
 function show(FEF::FEVector)
 	println("\nFEVector information")
     println("=========================")
     println("   nblocks = $(length(FEF))")
     for j=1:length(FEF.FEVectorBlocks)
-        println("  block[$j] = $(FEF[j].name) (FEtype = $(FEF[j].FEType.name), ndof = $(FEF[j].FEType.ndofs))");
+        println("  block[$j] = $(FEF[j].name) (FEtype = $(FEF[j].FES.name), ndof = $(FEF[j].FES.ndofs))");
     end    
 end
-
-function FEVector{T}(name::String, FEType::AbstractFiniteElement) where T <: Real
-    entries = zeros(T,FEType.ndofs)
-    Block = FEVectorBlock{T}(name, FEType, 0 , size(entries,1), entries)
-    return FEVector{T}([Block], entries)
-end
-
-function FEVector{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) where T <: Real
-    ndofs = 0
-    for j = 1:length(FETypes)
-        ndofs += FETypes[j].ndofs
-    end    
-    entries = zeros(T,ndofs)
-    Blocks = Array{FEVectorBlock,1}(undef,length(FETypes))
-    offset = 0
-    for j = 1:length(FETypes)
-        Blocks[j] = FEVectorBlock{T}(name, FETypes[j], offset , offset+FETypes[j].ndofs, entries)
-        offset += FETypes[j].ndofs
-    end    
-    return FEVector{T}(Blocks, entries)
-end
-
 
 Base.getindex(FEF::FEVector,i) = FEF.FEVectorBlocks[i]
 Base.getindex(FEB::FEVectorBlock,i::Int)=FEB.entries[FEB.offset+i]
@@ -59,9 +58,9 @@ Base.length(FEF::FEVector)=length(FEF.FEVectorBlocks)
 Base.length(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
 
 
-function Base.append!(FEF::FEVector{T},name::String,FEType::AbstractFiniteElement) where T <: Real
-    append!(FEF.entries,zeros(T,FEType.ndofs))
-    newBlock = FEVectorBlock{T}(name, FEType, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FEType.ndofs, FEF.entries)
+function Base.append!(FEF::FEVector{T},name::String,FES::FESpace) where T <: Real
+    append!(FEF.entries,zeros(T,FES.ndofs))
+    newBlock = FEVectorBlock{T}(name, FES, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FES.ndofs, FEF.entries)
     push!(FEF.FEVectorBlocks,newBlock)
 end
 
@@ -71,8 +70,8 @@ end
 
 struct FEMatrixBlock{T} <: AbstractArray{T,2}
     name::String
-    FETypeX::AbstractFiniteElement
-    FETypeY::AbstractFiniteElement
+    FESX::FESpace
+    FESY::FESpace
     offsetX::Int32
     offsetY::Int32
     last_indexX::Int32
@@ -92,42 +91,42 @@ function show(FEM::FEMatrix)
     println("=========================")
     println("   nblocks = $(length(FEM))")
     for j=1:length(FEF.FEVectorBlocks)
-        println("  block[$j] = $(FEM[j].name) (FEtypeX/Y = $(FEM[j].FETypeX.name)/$(FEM[j].FETypeX.name), size = $(FEM[j].FETypeX.ndofs)x$(FEM[j].FETypeY.ndofs))");
+        println("  block[$j] = $(FEM[j].name) (FEtypeX/Y = $(FEM[j].FESX.name)/$(FEM[j].FESY.name), size = $(FEM[j].FESX.ndofs)x$(FEM[j].FESY.ndofs))");
     end    
 end
 
-function FEMatrix{T}(name::String, FEType::AbstractFiniteElement) where T <: Real
-    entries = ExtendableSparseMatrix{T,Int32}(FEType.ndofs,FEType.ndofs)
-    Block = FEMatrixBlock{T}(name, FEType, FEType, 0 , 0, FEType.ndofs, FEType.ndofs, entries)
+function FEMatrix{T}(name::String, FES::FESpace) where T <: Real
+    entries = ExtendableSparseMatrix{T,Int32}(FES.ndofs,FES.ndofs)
+    Block = FEMatrixBlock{T}(name, FES, FES, 0 , 0, FES.ndofs, FES.ndofs, entries)
     return FEMatrix{T}([Block], 1, entries)
 end
 
-function FEMatrix{T}(name::String, FETypeX::AbstractFiniteElement, FETypeY::AbstractFiniteElement) where T <: Real
-    entries = ExtendableSparseMatrix{T,Int32}(FETypeX.ndofs,FETypeY.ndofs)
-    Block = FEMatrixBlock{T}(name, FETypeX, FETypeY, 0 , 0, FETypeX.ndofs, FETypeY.ndofs, entries)
+function FEMatrix{T}(name::String, FESX::FESpace, FESY::FESpace) where T <: Real
+    entries = ExtendableSparseMatrix{T,Int32}(FETypeX.ndofs,FESY.ndofs)
+    Block = FEMatrixBlock{T}(name, FESX, FESY, 0 , 0, FESX.ndofs, FETypeY.ndofs, entries)
     return FEMatrix{T}([Block], 2, entries)
 end
 
-function FEMatrix{T}(name::String, FETypes::Array{<:AbstractFiniteElement,1}) where T <: Real
+function FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
     ndofs = 0
-    for j=1:length(FETypes)
-        ndofs += FETypes[j].ndofs
+    for j=1:length(FES)
+        ndofs += FES[j].ndofs
     end
     entries = ExtendableSparseMatrix{T,Int32}(ndofs,ndofs)
 
-    Blocks = Array{FEMatrixBlock{T},1}(undef,length(FETypes)^2)
+    Blocks = Array{FEMatrixBlock{T},1}(undef,length(FES)^2)
     offsetX = 0
     offsetY = 0
-    for j=1:length(FETypes)
+    for j=1:length(FES)
         offsetY = 0
-        for k=1:length(FETypes)
-            Blocks[(j-1)*length(FETypes)+k] = FEMatrixBlock{T}(name * " [$j,$k]", FETypes[j], FETypes[k], offsetX , offsetY, offsetX+FETypes[j].ndofs, offsetY+FETypes[k].ndofs, entries)
-            offsetY += FETypes[k].ndofs
+        for k=1:length(FES)
+            Blocks[(j-1)*length(FES)+k] = FEMatrixBlock{T}(name * " [$j,$k]", FES[j], FES[k], offsetX , offsetY, offsetX+FES[j].ndofs, offsetY+FES[k].ndofs, entries)
+            offsetY += FES[k].ndofs
         end    
-        offsetX += FETypes[j].ndofs
+        offsetX += FES[j].ndofs
     end    
     
-    return FEMatrix{T}(Blocks, length(FETypes), entries)
+    return FEMatrix{T}(Blocks, length(FES), entries)
 end
 
 function Base.fill!(B::FEMatrixBlock, value::Real)

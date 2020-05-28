@@ -7,7 +7,7 @@ using FEXGrid
 using BenchmarkTools
 
 include("PDETools_PDEDescription.jl")
-export AbstractPDEOperator, StiffnessOperator, ReactionOperator, ConvectionOperator, RhsOperator, BoundaryOperator
+export AbstractPDEOperator, LaplaceOperator, StiffnessOperator, ReactionOperator, ConvectionOperator, RhsOperator, BoundaryOperator
 export LagrangeMultiplier
 export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary, NeumannBoundary
 export AbstractGlobalConstraint, FixedIntegralMean

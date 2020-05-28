@@ -114,16 +114,16 @@ end
 
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ReactionOperator; verbosity::Int = 0)
-    FE1 = A.FETypeX
-    FE2 = A.FETypeY
+    FE1 = A.FESX
+    FE2 = A.FESY
     @assert FE1 == FE2
     L2Product = SymmetricBilinearForm(Float64,AbstractAssemblyTypeCELL, FE1, Identity, O.action; regions = O.regions)    
     FEAssembly.assemble!(A, L2Product; verbosity = verbosity)
 end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::StiffnessOperator; verbosity::Int = 0)
-    FE1 = A.FETypeX
-    FE2 = A.FETypeY
+    FE1 = A.FESX
+    FE2 = A.FESY
     @assert FE1 == FE2
     H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, O.gradient_operator, O.action; regions = O.regions)    
     FEAssembly.assemble!(A, H1Product; verbosity = verbosity)
@@ -131,29 +131,29 @@ end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; verbosity::Int = 0)
     if O.beta_from == 0
-        FE1 = A.FETypeX
-        FE2 = A.FETypeY
+        FE1 = A.FESX
+        FE2 = A.FESY
         ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
         FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
     else
-        FE1 = A.FETypeX
-        FE2 = A.FETypeY
+        FE1 = A.FESX
+        FE2 = A.FESY
         ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
         FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity)
     end
 end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; verbosity::Int = 0, At::FEMatrixBlock)
-    FE1 = A.FETypeX
-    FE2 = A.FETypeY
-    @assert At.FETypeX == FE2
-    @assert At.FETypeY == FE1
+    FE1 = A.FESX
+    FE2 = A.FESY
+    @assert At.FESX == FE2
+    @assert At.FESY == FE1
     DivPressure = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
     FEAssembly.assemble!(At, DivPressure; verbosity = verbosity, transpose_copy = A)
 end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; verbosity::Int = 0) where {AT<:AbstractAssemblyType}
-    FE = b.FEType
+    FE = b.FES
     RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, O.action; regions = O.regions)
     FEAssembly.assemble!(b, RHS; verbosity = verbosity)
 end
@@ -220,9 +220,10 @@ function boundarydata!(
     dirichlet_penalty::Float64 = 1e60,
     verbosity::Int = 0)
 
-    FE = Target.FEType
+    FE = Target.FES
     xdim = size(FE.xgrid[Coordinates],1) 
-    ncomponents = get_ncomponents(typeof(FE))
+    FEType = eltype(typeof(FE))
+    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
     xBFaces = FE.xgrid[BFaces]
     xBFaceDofs = FE.BFaceDofs
     nbfaces = length(xBFaces)
@@ -308,7 +309,8 @@ function boundarydata!(
 
 
         bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
-        Dboperator = DefaultDirichletBoundaryOperator4FE(typeof(FE))
+        FEType = eltype(typeof(FE))
+        Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
         b = zeros(Float64,FE.ndofs,1)
         A = FEMatrix{Float64}("MassMatrixBnd", FE)
 
@@ -377,9 +379,9 @@ end
 # for linear, stationary PDEs that can be solved in one step
 function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; verbosity::Int = 0)
 
-    FEs = Array{AbstractFiniteElement,1}([])
+    FEs = Array{FESpace,1}([])
     for j=1 : length(Target.FEVectorBlocks)
-        push!(FEs,Target.FEVectorBlocks[j].FEType)
+        push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
 
     # ASSEMBLE SYSTEM
@@ -460,9 +462,9 @@ end
 # for nonlinear, stationary PDEs that can be solved by fixpoint iteration
 function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; verbosity::Int = 0)
 
-    FEs = Array{AbstractFiniteElement,1}([])
+    FEs = Array{FESpace,1}([])
     for j=1 : length(Target.FEVectorBlocks)
-        push!(FEs,Target.FEVectorBlocks[j].FEType)
+        push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
 
     # ASSEMBLE SYSTEM init
@@ -587,14 +589,14 @@ function solve!(
         println("===========")
         println("  name = $(PDE.name)")
 
-        FEs = Array{AbstractFiniteElement,1}([])
+        FEs = Array{FESpace,1}([])
         for j=1 : length(Target.FEVectorBlocks)
-            push!(FEs,Target.FEVectorBlocks[j].FEType)
+            push!(FEs,Target.FEVectorBlocks[j].FES)
         end    
         if verbosity > 0
             print("   FEs = ")
             for j = 1 : length(Target)
-                print("$(Target[j].FEType.name) (ndofs = $(Target[j].FEType.ndofs))\n         ");
+                print("$(Target[j].FES.name) (ndofs = $(Target[j].FES.ndofs))\n         ");
             end
         end
 

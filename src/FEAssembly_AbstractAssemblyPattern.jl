@@ -36,7 +36,7 @@
 abstract type AbstractAssemblyPattern{T <: Real, AT<:AbstractAssemblyType} end
 
 struct LinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
-    FE::AbstractFiniteElement
+    FE::FESpace
     operator::Type{<:AbstractFunctionOperator}
     action::AbstractAction
     regions::Array{Int,1}
@@ -45,7 +45,7 @@ end
 function LinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FE::AbstractFiniteElement,
+    FE::FESpace,
     operator::Type{<:AbstractFunctionOperator},
     action::AbstractAction;
     regions::Array{Int,1} = [0])
@@ -53,8 +53,8 @@ function LinearForm(
 end
 
 struct BilinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
-    FE1::AbstractFiniteElement
-    FE2::AbstractFiniteElement
+    FE1::FESpace
+    FE2::FESpace
     operator1::Type{<:AbstractFunctionOperator}
     operator2::Type{<:AbstractFunctionOperator}
     action::AbstractAction # is only applied to FE1/operator1
@@ -64,8 +64,8 @@ end
 function BilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FE1::AbstractFiniteElement,
-    FE2::AbstractFiniteElement,
+    FE1::FESpace,
+    FE2::FESpace,
     operator1::Type{<:AbstractFunctionOperator},
     operator2::Type{<:AbstractFunctionOperator},
     action::AbstractAction; # is only applied to FE1/operator1
@@ -75,7 +75,7 @@ end
 function SymmetricBilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FE1::AbstractFiniteElement,
+    FE1::FESpace,
     operator1::Type{<:AbstractFunctionOperator},
     action::AbstractAction; # is only applied to FE1/operator1
     regions::Array{Int,1} = [0])
@@ -84,9 +84,9 @@ end
 
 
 struct TrilinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
-    FE1::AbstractFiniteElement # < --- FE position that has to be fixed by an FEVectorBlock during assembly
-    FE2::AbstractFiniteElement
-    FE3::AbstractFiniteElement
+    FE1::FESpace # < --- FE position that has to be fixed by an FEVectorBlock during assembly
+    FE2::FESpace
+    FE3::FESpace
     operator1::Type{<:AbstractFunctionOperator}
     operator2::Type{<:AbstractFunctionOperator}
     operator3::Type{<:AbstractFunctionOperator}
@@ -96,9 +96,9 @@ end
 function TrilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FE1::AbstractFiniteElement,
-    FE2::AbstractFiniteElement,
-    FE3::AbstractFiniteElement,
+    FE1::FESpace,
+    FE2::FESpace,
+    FE3::FESpace,
     operator1::Type{<:AbstractFunctionOperator},
     operator2::Type{<:AbstractFunctionOperator},
     operator3::Type{<:AbstractFunctionOperator},
@@ -116,10 +116,10 @@ end
 
 
 # junctions for dof fields
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
-FEPropertyDofs4AssemblyType(FE::AbstractFiniteElement,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
 
 
 # unique functions that only selects uniques in specified regions
@@ -165,7 +165,7 @@ end
 function prepareOperatorAssembly(
     form::AbstractAssemblyPattern{T,AT},
     operator::Array{DataType,1},
-    FE::Array{<:AbstractFiniteElement,1},
+    FE::Array{<:FESpace,1},
     regions::Array{Int32,1},
     nrfactors::Int,
     bonus_quadorder::Int,
@@ -191,14 +191,15 @@ function prepareOperatorAssembly(
         quadorder = 0
         # choose quadrature order for all finite elements
         for k = 1 : length(FE)
-            quadorder = max(quadorder,bonus_quadorder + nrfactors*(FiniteElements.get_polynomialorder(typeof(FE[k]), EG[j]) + QuadratureOrderShift4Operator(typeof(FE[k]),operator[k])))
+            FEType = eltype(typeof(FE[k]))
+            quadorder = max(quadorder,bonus_quadorder + nrfactors*(FiniteElements.get_polynomialorder(FEType, EG[j]) + QuadratureOrderShift4Operator(FEType,operator[k])))
         end
         for k = 1 : length(FE)
             if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
                 basisevaler[j][k] = basisevaler[j][1] # e.g. for symmetric bilinerforms
             else    
                 qf[j] = QuadratureRule{T,EG[j]}(quadorder);
-                basisevaler[j][k] = FEBasisEvaluator{T,typeof(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
+                basisevaler[j][k] = FEBasisEvaluator{T,eltype(typeof(FE[k])),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
             end    
         end    
     end        
@@ -306,7 +307,8 @@ function evaluate!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(form, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    ncomponents = FiniteElements.get_ncomponents(typeof(FE))
+    FEType = eltype(typeof(FE))
+    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     @assert size(b,2) == cvals_resultdim
 
@@ -379,7 +381,7 @@ function evaluate(
     FEB::FEVectorBlock;
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
-    FE = FEB.FEType
+    FE = FEB.FES
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
@@ -403,7 +405,8 @@ function evaluate(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(form, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    ncomponents::Int = FiniteElements.get_ncomponents(typeof(FE))
+    FEType = eltype(typeof(FE))
+    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
 
     # loop over items
@@ -501,7 +504,8 @@ function assemble!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    ncomponents::Int = FiniteElements.get_ncomponents(typeof(FE))
+    FEType = eltype(typeof(FE))
+    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
@@ -607,7 +611,8 @@ function assemble!( # LF has to have resultdim == 1
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    ncomponents = FiniteElements.get_ncomponents(typeof(FE))
+    FEType = eltype(typeof(FE))
+    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     action_resultdim::Int = action.resultdim
     @assert action_resultdim == 1
@@ -718,7 +723,8 @@ function assemble!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
-    ncomponents::Int = FiniteElements.get_ncomponents(typeof(FE[1]))
+    FEType = eltype(typeof(FE[1]))
+    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
@@ -874,7 +880,8 @@ function assemble!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
-    ncomponents::Int = FiniteElements.get_ncomponents(typeof(FE[1]))
+    FEType = eltype(typeof(FE[1]))
+    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1][2].cvals,1)
     action_resultdim::Int = action.resultdim

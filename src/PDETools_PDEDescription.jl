@@ -103,7 +103,7 @@ end
 
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
-    data4region::Array{Function,1},
+    data4region,
     xdim::Int,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,

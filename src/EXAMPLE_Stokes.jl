@@ -49,14 +49,15 @@ function main()
     nlevels = 5 # number of refinement levels
 
     # problem parameters
-    viscosity = 1e-2
     nonlinear = true
 
-    # fem/solver parameters
-    fem = "BR" # Bernardi--Raugel
-    #fem = "CR" # Crouzeix--Raviart
-    #fem = "MINI" # MINI element
-    #fem = "TH" # Taylor--Hood
+    # FETypes for [velocity,pressure]
+    #FETypes = [FiniteElements.H1P2{2}, FiniteElements.H1P1{1}] # Taylor--Hood
+    #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
+    #FETypes = [FiniteElements.H1MINI{2,2}, FiniteElements.H1P1{1}] # MINI element
+    FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
+
+    # solver parameters
     maxIterations = 10  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
     verbosity = 1 # deepness of messaging (the larger, the more)
@@ -97,41 +98,26 @@ function main()
             xgrid = uniform_refine(xgrid)
         end
 
-        # generate FE
-        if fem == "BR" # Bernardi--Raugel
-            FE_velocity = FiniteElements.getH1BRFiniteElement(xgrid)
-            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
-        elseif fem == "MINI" # MINI element
-            FE_velocity = FiniteElements.getH1MINIFiniteElement(xgrid,2)
-            FE_pressure = FiniteElements.getH1P1FiniteElement(xgrid,1)
-        elseif fem == "CR" # Crouzeix--Raviart
-            FE_velocity = FiniteElements.getH1CRFiniteElement(xgrid,2)
-            FE_pressure = FiniteElements.getP0FiniteElement(xgrid,1)
-        elseif fem == "TH" # Taylor--Hood/Q2xP1
-            FE_velocity = FiniteElements.getH1P2FiniteElement(xgrid,2)
-            FE_pressure = FiniteElements.getH1P1FiniteElement(xgrid,1)
-        end        
-        if verbosity > 2
-            FiniteElements.show(FE_velocity)
-            FiniteElements.show(FE_pressure)
-        end    
+        # generate FESpaces
+        FESpaceVelocity = FiniteElements.FESpace{FETypes[1]}(xgrid)
+        FESpacePressure = FiniteElements.FESpace{FETypes[2]}(xgrid)
 
         # solve Stokes problem
-        Solution = FEVector{Float64}("Stokes velocity",FE_velocity)
-        append!(Solution,"Stokes pressure",FE_pressure)
+        Solution = FEVector{Float64}("Stokes velocity",FESpaceVelocity)
+        append!(Solution,"Stokes pressure",FESpacePressure)
         solve!(Solution, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
         push!(NDofs,length(Solution.entries))
 
         # interpolate
-        Interpolation = FEVector{Float64}("Interpolation velocity",FE_velocity)
-        append!(Interpolation,"Interpolation pressure",FE_pressure)
+        Interpolation = FEVector{Float64}("Interpolation velocity",FESpaceVelocity)
+        append!(Interpolation,"Interpolation pressure",FESpacePressure)
         interpolate!(Interpolation[1], exact_velocity!; verbosity = verbosity, bonus_quadorder = 2)
         interpolate!(Interpolation[2], exact_pressure!; verbosity = verbosity, bonus_quadorder = 1)
 
         # solve bestapproximation problems
-        L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FE_velocity)
-        L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FE_pressure)
-        H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FE_velocity)
+        L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)
+        L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FESpacePressure)
+        H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FESpaceVelocity)
         solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; verbosity = verbosity)
         solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem; verbosity = verbosity)
         solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; verbosity = verbosity)
@@ -174,11 +160,11 @@ function main()
                 @printf(" %.5e\n",L2errorBestApproximation_pressure[j])
             end
             println("\nLEGEND\n======")
-            println("VELO-STOKES : discrete Stokes velocity solution ($(FE_velocity.name))")
+            println("VELO-STOKES : discrete Stokes velocity solution ($(FESpaceVelocity.name))")
             println("VELO-INTERP : interpolation of exact velocity")
             println("VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)")
             println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)")
-            println("PRES-STOKES : discrete Stokes pressure solution ($(FE_pressure.name))")
+            println("PRES-STOKES : discrete Stokes pressure solution ($(FESpacePressure.name))")
             println("PRES-INTERP : interpolation of exact pressure")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
             # split grid into triangles for plotter
@@ -191,11 +177,11 @@ function main()
             # plot solution
             nnodes = size(xgrid[Coordinates],2)
             nodevals = zeros(Float64,2,nnodes)
-            nodevalues!(nodevals,Solution[1],FE_velocity)
+            nodevalues!(nodevals,Solution[1],FESpaceVelocity)
             PyPlot.figure(2)
             ExtendableGrids.plot(xgrid, nodevals[1,:][1:nnodes]; Plotter = PyPlot)
             PyPlot.figure(3)
-            nodevalues!(nodevals,Solution[2],FE_pressure)
+            nodevalues!(nodevals,Solution[2],FESpacePressure)
             ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
         end    
     end    

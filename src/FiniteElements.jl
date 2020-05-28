@@ -21,11 +21,9 @@ using ForwardDiff # for FEBasisEvaluator
  abstract type AbstractFiniteElement end
  export AbstractFiniteElement
 
- include("FiniteElements_FEBlockArrays.jl");
- export FEVectorBlock, FEVector
- export FEMatrixBlock, FEMatrix, fill!
 
 include("FiniteElements_FESpaces.jl")
+export FESpace
 
 export AbstractH1FiniteElement
 export getH1P1FiniteElement, getH1CRFiniteElement, getH1MINIFiniteElement, getH1P2FiniteElement
@@ -39,6 +37,11 @@ export getHdivRT0FiniteElement
 export AbstractHcurlFiniteElement
 
 export get_ncomponents, reconstruct!
+
+
+include("FiniteElements_FEBlockArrays.jl");
+export FEVectorBlock, FEVector
+export FEMatrixBlock, FEMatrix, fill!
 
 
 
