@@ -1,7 +1,9 @@
-
 ################
 ### FEVector ###
 ################
+#
+# used to store coefficients for FESpaces and can have several blocks of different FESpaces
+# acts like an AbstractArray{T,1}
 
 struct FEVectorBlock{T} <: AbstractArray{T,1}
     name::String
@@ -67,6 +69,10 @@ end
 ################
 ### FEMatrix ###
 ################
+#
+# used to store (sparse) matrix representations of PDEOperators for FESpaces
+# and can have several blocks of different FESpaces
+# acts like an AbstractArray{T,2}
 
 struct FEMatrixBlock{T} <: AbstractArray{T,2}
     name::String

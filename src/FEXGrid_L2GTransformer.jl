@@ -1,3 +1,16 @@
+##################
+# L2GTransformer #
+##################
+#
+# maps points of reference geometries to global world
+# and is e.g. used by FEBasisEvaluator
+#
+# needs call of update! on entry of a new cell
+# 
+# eval! maps local xref to global x
+# mapderiv! gives the derivative of the mapping (for computation of derivatives of basis functions)
+# piola! gives the piola map (for flux-preserving transformation of Hdiv basis functions)
+
 
 mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: AbstractCoordinateSystem}
     citem::Int

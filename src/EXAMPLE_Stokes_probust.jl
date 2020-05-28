@@ -78,13 +78,17 @@ function main()
     exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
     #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
 
-    # fem/solver parameters
+    # choose finite element type
     FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
     #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
+
+    # reconstruction operator
+    TestFunctionReconstruction = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # do not change
+
+    # solver parameters
     maxIterations = 20  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
     verbosity = 1 # deepness of messaging (the larger, the more)
-    TestFunctionReconstruction = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # do not change
 
     #####################################################################################    
     #####################################################################################

@@ -51,7 +51,7 @@ function main()
     # problem parameters
     nonlinear = true
 
-    # FETypes for [velocity,pressure]
+    # choose finite element type
     #FETypes = [FiniteElements.H1P2{2}, FiniteElements.H1P1{1}] # Taylor--Hood
     #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
     #FETypes = [FiniteElements.H1MINI{2,2}, FiniteElements.H1P1{1}] # MINI element

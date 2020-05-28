@@ -1,10 +1,27 @@
-  
+ 
+#############################
+# Finite Element Supertypes #
+#############################
+#
+# they are used to steer the kind of local2global transformation
+# below subtypes are defined that define basis functions on reference geometries 
+# and some other information like polyonomial degrees etc.
+
 abstract type AbstractHdivFiniteElement <: AbstractFiniteElement end
 abstract type AbstractH1FiniteElement <: AbstractFiniteElement end
 abstract type AbstractH1FiniteElementWithCoefficients <: AbstractH1FiniteElement end
 abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
 abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
+
+#########################
+# Finite Element Spaces #
+#########################
+#
+# struct that has a finite element subtype (see below) as parameter
+# and carries dofmaps, grid information and access to coefficients
+# (links have to be stored here to avoid search in xgrid dicts)
+#
 mutable struct FESpace{FEType<:AbstractFiniteElement}
   name::String                          # full name of finite element space (used in messages)
   ndofs::Int                            # total number of dofs
@@ -18,38 +35,7 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
   xCellSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
 end
 
-Base.eltype(::Type{FESpace{FEType}}) where {FEType} = FEType
-
-# show function for FiniteElementSpace
-function show(FES::FESpace)
-	println("\nFESpace information")
-	println("=====================")
-	println("   name = " * FES.name)
-	println("  ndofs = $(FES.ndofs)")
-end
-
-# FEDefinitions
-  
-# Hdiv-conforming elements (only vector-valued)
-# lowest order
-include("FEdefinitions/Hdiv_RT0.jl");
-
-# H1 conforming elements (also Crouzeix-Raviart)
-# lowest order
-include("FEdefinitions/H1_P1.jl");
-include("FEdefinitions/H1_MINI.jl");
-include("FEdefinitions/H1nc_CR.jl");
-include("FEdefinitions/H1v_BR.jl"); # Bernardi--Raugel (only vector-valued)
-# second order
-include("FEdefinitions/H1_P2.jl");
-
-# L2 conforming elements
-include("FEdefinitions/L2_P0.jl"); # currently masked as H1 element
-
-# Hcurl-conforming elements
-# TODO
-
-
+# constructor
 function FESpace{FEType}(xgrid::ExtendableGrid; dofmap_needed = true) where {FEType <:AbstractFiniteElement}
   # first generate some empty FESpace
   dummyVTA = VariableTargetAdjacency(Int32)
@@ -60,3 +46,40 @@ function FESpace{FEType}(xgrid::ExtendableGrid; dofmap_needed = true) where {FET
 
   return FES
 end
+
+Base.eltype(::Type{FESpace{FEType}}) where {FEType} = FEType
+
+# show function for FiniteElementSpace
+function show(FES::FESpace)
+	println("\nFESpace information")
+	println("=====================")
+	println("   name = " * FES.name)
+	println("  ndofs = $(FES.ndofs)")
+end
+
+###########################
+# Finite Element Subtypes #
+###########################
+#
+# subtypes of the finite element supertypes above
+# each defined in its own file
+  
+# Hdiv-conforming elements (only vector-valued)
+# lowest order
+include("FEdefinitions/Hdiv_RT0.jl");
+
+# H1 conforming elements (also Crouzeix-Raviart)
+# lowest order
+include("FEdefinitions/H1_P1.jl");
+include("FEdefinitions/H1_MINI.jl");
+include("FEdefinitions/H1nc_CR.jl");
+include("FEdefinitions/H1v_BR.jl"); # Bernardi--Raugel (only vector-valued, with coefficients)
+# second order
+include("FEdefinitions/H1_P2.jl");
+
+# L2 conforming elements
+include("FEdefinitions/L2_P0.jl"); # currently masked as H1 element
+
+# Hcurl-conforming elements
+# TODO
+
