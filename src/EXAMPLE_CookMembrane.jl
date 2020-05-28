@@ -18,7 +18,7 @@ include("testgrids.jl")
 # problem data
 function neumann_force_right!(result,x)
     result[1] = 0.0
-    result[2] = -1.0
+    result[2] = 1000.0
 end    
 
 function main()
@@ -38,9 +38,10 @@ function main()
 
     # fem/solver parameters
     #fem = "P1" # P1-Courant
-    fem = "P2" # Crouzeix--Raviart
-    #fem = "P2" # P2 element
+    #fem = "CR" # Crouzeix--Raviart
+    fem = "P2" # P2 element
     verbosity = 10 # deepness of messaging (the larger, the more)
+    factor_plotdisplacement = 4
 
     #####################################################################################    
     #####################################################################################
@@ -90,9 +91,15 @@ function main()
             # plot solution
             PyPlot.figure(2)
             nnodes = size(xgrid[Coordinates],2)
-            nodevals = zeros(Float64,2,nnodes)
+            nodevals = zeros(Float64,3,nnodes)
             nodevalues!(nodevals,Solution[1],FE)
-            ExtendableGrids.plot(xgrid, nodevals[2,:]; Plotter = PyPlot)
+            nodevals[3,:] = sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2)
+            ExtendableGrids.plot(xgrid, nodevals[3,:]; Plotter = PyPlot)
+
+            # plot displaced triangulation
+            xgrid[Coordinates] = xgrid[Coordinates] + factor_plotdisplacement*nodevals[[1,2],:]
+            PyPlot.figure(3)
+            ExtendableGrids.plot(xgrid, Plotter = PyPlot)
         end    
     end    
 

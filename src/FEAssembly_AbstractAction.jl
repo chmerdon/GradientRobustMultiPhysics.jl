@@ -98,7 +98,7 @@ function RegionWiseMultiplyScalarAction(value::Array{<:Real,1}, resultdim::Int =
     return RegionWiseMultiplyScalarAction{eltype(value)}(value, 1, resultdim,0)
 end
 
-function FunctionAction(f::Function, resultdim::Int = 1; bonus_quadorder::Int = 0)
+function FunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
     return FunctionAction{Float64}(f, resultdim, bonus_quadorder)
 end
 

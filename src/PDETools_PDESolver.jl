@@ -121,11 +121,11 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ReactionOpera
     FEAssembly.assemble!(A, L2Product; verbosity = verbosity)
 end
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LaplaceOperator; verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::StiffnessOperator; verbosity::Int = 0)
     FE1 = A.FETypeX
     FE2 = A.FETypeY
     @assert FE1 == FE2
-    H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, Gradient, O.action; regions = O.regions)    
+    H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, O.gradient_operator, O.action; regions = O.regions)    
     FEAssembly.assemble!(A, H1Product; verbosity = verbosity)
 end
 

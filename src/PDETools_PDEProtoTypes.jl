@@ -47,7 +47,7 @@ function LinearElasticityProblem(dimension::Int = 2; shearmodulus = 1.0, lambda 
     # LEFT-HAND-SIDE: LINEAR ELASTICITY TENSOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
     #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
-    MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(shearmodulus,dimension^2))]
+    MyLHS[1,1] = [HookStiffnessOperator(shearmodulus,lambda,dimension)]
 
     # RIGHT-HAND SIDE: empty, user can fill in data later
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)

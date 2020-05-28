@@ -8,13 +8,31 @@
 abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 
-struct LaplaceOperator <: AbstractPDEOperator
-    action::AbstractAction             #      --ACTION--     
+struct StiffnessOperator <: AbstractPDEOperator
+    gradient_operator::Type{<:AbstractFunctionOperator} # e.g. SymmetricGradient or Gradient
+    action::AbstractAction             #      --ACTION--     # action describes Hookes law
                                        # e.g. (K grad u) : grad v
     regions::Array{Int,1}
 end
+
 function LaplaceOperator(action::AbstractAction; regions::Array{Int,1} = [0])
-    return LaplaceOperator(action, regions)
+    return StiffnessOperator(Gradient, action, regions)
+end
+# todo
+# here a general connection to arbitrary tensors C_ijkl (encoded as an action) is possible in future
+function HookStiffnessOperator(mu::Real, lambda::Real, dimension::Int = 2; regions::Array{Int,1} = [0])
+    @assert dimension == 2 # 3d case or more general Hook laws come later
+    function tensor_apply(result, input)
+        # compute sigma_ij = C_ijkl eps_kl
+        # where input = [eps_11,eps_12,eps_21] is the symmetric gradient in Voigt notation
+        # and result = [sigma_11,sigma_12,sigma_21] is Voigt representation of sigma_11
+        # the tensor C is just a 3x3 matrix
+        result[1] = (lambda + 2*mu)*input[1] + lambda*input[2]
+        result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
+        result[3] = mu*input[3]
+    end   
+    action = FunctionAction(tensor_apply, 4, dimension)
+    return StiffnessOperator(SymmetricGradient, action, regions)
 end
 
 struct LagrangeMultiplier <: AbstractPDEOperator
