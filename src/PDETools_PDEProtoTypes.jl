@@ -5,7 +5,7 @@ function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, 
     # LEFT-HAND-SIDE: STOKES OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
     #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
-    MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(viscosity,dimension^2))]
+    MyLHS[1,1] = [LaplaceOperator(viscosity,dimension,dimension)]
     MyLHS[1,2] = [LagrangeMultiplier(Divergence)] # automatically fills transposed block
     MyLHS[2,1] = []
     MyLHS[2,2] = []
@@ -62,6 +62,27 @@ function LinearElasticityProblem(dimension::Int = 2; shearmodulus = 1.0, lambda 
 end
 
 
+# Prototype for Poisson problem
+function PoissonProblem(dimension::Int = 2; ncomponents::Int = 1, diffusion = 1.0)
+
+    # LEFT-HAND-SIDE: LAPLACE OPERATOR
+    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
+    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
+    MyLHS[1,1] = [LaplaceOperator(diffusion,dimension,ncomponents)]
+
+    # RIGHT-HAND SIDE: empty, user can fill in data later
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
+    MyRHS[1] = []
+
+    # BOUNDARY OPERATOR: empty, user can fill in data later
+    MyBoundary = BoundaryOperator(dimension,dimension)
+
+    name = "Poisson problem"
+
+    return PDEDescription(name,MyLHS,MyRHS,[MyBoundary])
+end
+
+
 # Prototype for L2Bestapproximation
 function L2BestapproximationProblem(exact_function::Function, dimension::Int = 2, ncomponents::Int = 1; bonus_quadorder::Int = 0, bestapprox_boundary_regions = [])
 
@@ -88,7 +109,7 @@ function H1BestapproximationProblem(exact_function_gradient::Function, exact_fun
 
     # LEFT-HAND-SIDE: LAPLACE OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
-    MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(dimension*ncomponents))]
+    MyLHS[1,1] = [StiffnessOperator(Gradient,DoNotChangeAction(dimension*ncomponents),[0])]
 
     # RIGHT-HAND-SIDE: H1-Product with exact_function_gradient
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)

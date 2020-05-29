@@ -210,6 +210,7 @@ function prepareOperatorAssembly(
             println("      FE[$k] = $(FE[k].name), ndofs = $(FE[k].ndofs)")
             println("operator[$k] = $(operator[k])")
         end    
+        println("     action = $(form.action)")
         println("    regions = $regions")
         println("   uniqueEG = $EG")
         for j = 1 : length(EG)

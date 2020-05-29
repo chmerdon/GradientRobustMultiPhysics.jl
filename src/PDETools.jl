@@ -19,6 +19,7 @@ export assemble!, solve!
 include("PDETools_PDEProtoTypes.jl")
 export IncompressibleNavierStokesProblem
 export LinearElasticityProblem
+export PoissonProblem
 export L2BestapproximationProblem
 export H1BestapproximationProblem
 

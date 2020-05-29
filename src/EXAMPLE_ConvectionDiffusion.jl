@@ -66,18 +66,15 @@ function main()
     #####################################################################################    
     #####################################################################################
 
-    # PDE description
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
-    MyLHS[1,1] = [LaplaceOperator(MultiplyScalarAction(diffusion,2)),
-                  ConvectionOperator(convection!,2,1)]
+    # PDE description = start with Poisson problem and add convection and data
+    ConvectionDiffusionProblem = PoissonProblem(2; diffusion = diffusion)
+    push!(ConvectionDiffusionProblem.LHSOperators[1,1],ConvectionOperator(convection!,2,1))
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
-    MyRHS[1] = [RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3)]
-    MyBoundary = BoundaryOperator(2,1)
-    append!(MyBoundary, 1, BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
-    append!(MyBoundary, 2, InterpolateDirichletBoundary; data = bnd_data_right!)
-    append!(MyBoundary, 3, BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
-    append!(MyBoundary, 4, HomogeneousDirichletBoundary)
-    ConvectionDiffusionProblem = PDEDescription("ConvectionDiffusionProblem",MyLHS,MyRHS,[MyBoundary])
+    push!(ConvectionDiffusionProblem.RHSOperators[1],RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3))
+    append!(ConvectionDiffusionProblem.BoundaryOperators[1], [1,3], BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
+    append!(ConvectionDiffusionProblem.BoundaryOperators[1], [2], InterpolateDirichletBoundary; data = bnd_data_right!)
+    append!(ConvectionDiffusionProblem.BoundaryOperators[1], [4], HomogeneousDirichletBoundary)
+    show(ConvectionDiffusionProblem)
 
     # define ItemIntegrators for L2/H1 error computation
     L2ErrorEvaluator = L2ErrorIntegrator(exact_solution!, Identity, 2, 1; bonus_quadorder = 4)

@@ -21,7 +21,7 @@ end
 
 function main()
 
-    verbosity = 2 # <-- increase/decrease this number to get more/less printouts on what is happening
+    verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # load mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
@@ -31,12 +31,13 @@ function main()
     
     # Define Bestapproximation problem via PDETooles_PDEProtoTypes
     Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
+    show(Problem)
 
     # choose some finite element space
     FEType = FiniteElements.HDIVRT0{2}
     #FEType = FiniteElements.H1P2{2}
     FESpace = FiniteElements.FESpace{FEType}(xgrid)
-    Base.show(FESpace)
+    show(FESpace)
 
     # solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FESpace)

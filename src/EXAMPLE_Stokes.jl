@@ -46,7 +46,7 @@ function main()
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
-    nlevels = 1 # number of refinement levels
+    nlevels = 5 # number of refinement levels
 
     # problem parameters
     nonlinear = true

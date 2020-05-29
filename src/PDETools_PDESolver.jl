@@ -102,7 +102,7 @@ function Base.show(io::IO, SC::SolverConfig)
         end
         println("")
     end
-    println("            LEGEND :  I = Once, T = EachTimeStep, A = Always")
+    println("                     (I = Once, T = EachTimeStep, A = Always)")
 
 end
 

@@ -19,8 +19,8 @@ struct StiffnessOperator <: AbstractPDEOperator
     regions::Array{Int,1}
 end
 
-function LaplaceOperator(action::AbstractAction; regions::Array{Int,1} = [0])
-    return StiffnessOperator(Gradient, action, regions)
+function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; regions::Array{Int,1} = [0])
+    return StiffnessOperator(Gradient, MultiplyScalarAction(diffusion, ncomponents*xdim), regions)
 end
 # todo
 # here a general connection to arbitrary tensors C_ijkl (encoded as an action) is possible in future
@@ -35,7 +35,7 @@ function HookStiffnessOperator(mu::Real, lambda::Real, dimension::Int = 2; regio
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
         result[3] = mu*input[3]
     end   
-    action = FunctionAction(tensor_apply, 4, dimension)
+    action = FunctionAction(tensor_apply, 3, dimension)
     return StiffnessOperator(SymmetricGradient, action, regions)
 end
 
@@ -304,7 +304,26 @@ function Base.show(io::IO, PDE::PDEDescription)
 
     println("")
     for j=1:length(PDE.BoundaryOperators)
-        println("   BoundaryOperator[$j] : $(PDE.BoundaryOperators[j].regions4boundarytype)")
+        print("   BoundaryOperator[$j] : ")
+        try
+            if length(PDE.BoundaryOperators[j].regions4boundarytype[BestapproxDirichletBoundary]) > 0
+                print("BestapproxDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[BestapproxDirichletBoundary])\n                         ")
+            end
+        catch
+        end
+        try
+            if length(PDE.BoundaryOperators[j].regions4boundarytype[InterpolateDirichletBoundary]) > 0
+                print("InterpolateDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[InterpolateDirichletBoundary])\n                         ")
+            end
+        catch
+        end
+        try
+            if length(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary]) > 0
+                print("HomogeneousDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary])\n                          ")
+            end
+        catch
+        end
+        println("")
     end
 
     println("")

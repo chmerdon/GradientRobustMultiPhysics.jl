@@ -18,7 +18,7 @@ include("testgrids.jl")
 # problem data
 function neumann_force_right!(result,x)
     result[1] = 0.0
-    result[2] = 1000.0
+    result[2] = 10.0
 end    
 
 function main()
@@ -33,8 +33,8 @@ function main()
     end
 
     # problem parameters
-    elasticity_modulus = 100000 # elasticity modulus
-    poisson_number = 0.4999 # Poisson number
+    elasticity_modulus = 1000 # elasticity modulus
+    poisson_number = 1//3 # Poisson number
     shear_modulus = (1/(1+poisson_number))*elasticity_modulus
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
@@ -53,7 +53,7 @@ function main()
     LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
     append!(LinElastProblem.BoundaryOperators[1], [1], HomogeneousDirichletBoundary)
     push!(LinElastProblem.RHSOperators[1], RhsOperator(Identity, neumann_force_right!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
-    Base.show(LinElastProblem)
+    show(LinElastProblem)
 
     # generate FESpace
     FESpace = FiniteElements.FESpace{FEType}(xgrid)
