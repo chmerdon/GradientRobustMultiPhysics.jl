@@ -68,7 +68,6 @@ function testgrid_tire(k::Int = 1, S::Int = 2)
         xCoordinates[1,2*N+j] = r3*cos(2*pi*j/N)
         xCoordinates[2,2*N+j] = r3*sin(2*pi*j/N)
     end
-    xCoordinates[:,end] = [0.01,0.01]
     xgrid[Coordinates]=xCoordinates
 
 
