@@ -7,14 +7,14 @@
 #
 # needs call of update! on entry of a new cell
 # 
-# eval! maps local xref to global x
+# eval! maps local xref on cell to global x (e.g. for evaluation of data functions)
 # mapderiv! gives the derivative of the mapping (for computation of derivatives of basis functions)
 # piola! gives the piola map (for flux-preserving transformation of Hdiv basis functions)
 
 
 mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: AbstractCoordinateSystem}
     citem::Int
-    nonlinear::Bool
+    nonlinear::Bool # so that users know if derivatives of map change in every quadrature point of cell or not
     Coords::Array{T,2}
     Nodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}}
     ItemVolumes::Array{T,1}
@@ -75,6 +75,15 @@ function eval!(x::Vector, T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, xref)
     x[2] = T.A[2,1]*xref[1] + T.b[2]
 end
 
+# EDGE1D/CARTESIAN2D (tangential) map derivative
+# x = A*xref + b
+# Dxref/dx = A*tangent^{-1} = |E|^{-1}
+function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, xref)
+    # transposed inverse of A
+    det = T.ItemVolumes[T.citem]
+    M[1,1] = 1.0/det
+    return det
+end
 # TRIANGLE2D/CARTESIAN2D map derivative
 # x = A*xref + b
 # Dxref/dx = A^{-T}

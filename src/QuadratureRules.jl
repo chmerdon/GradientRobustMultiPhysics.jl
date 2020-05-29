@@ -46,14 +46,14 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementG
     if order <= 1
         name = "midpoint rule"
         xref = Vector{Array{T,1}}(undef,1);
-        xref[1] = ones(T,2) * 1 // 2
+        xref[1] = ones(T,1) * 1 // 2
         w = [1]
     elseif order == 2
         name = "Simpson's rule"
         xref = Vector{Array{T,1}}(undef,3);
-        xref[1] = [0 ,1];
-        xref[2] = [1//2, 1//2];
-        xref[3] = [1,0];
+        xref[1] = [0];
+        xref[2] = [1//2];
+        xref[3] = [1];
         w = [1//6; 2//3; 1//6]     
     else
         name = "generic Gauss rule of order $order"

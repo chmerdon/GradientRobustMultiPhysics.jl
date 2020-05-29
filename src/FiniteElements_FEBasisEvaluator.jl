@@ -18,7 +18,8 @@ abstract type ReconstructionIdentity{FEreconst<:AbstractFiniteElement} <: Identi
 abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
 abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for Hcurl on Edges
 abstract type Gradient <: AbstractFunctionOperator end # D_geom(v_h)
-abstract type SymmetricGradient <: AbstractFunctionOperator end # eps_geom(v_h)
+abstract type SymmetricGradient <: AbstractFunctionOperator end # sym(D_geom(v_h))
+abstract type TangentialGradient <: AbstractFunctionOperator end # D_geom(v_h x n) = only gradient of tangential part of vector-valued function
 abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
 abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
 abstract type Curl <: AbstractFunctionOperator end # only 2D: Curl(v_h) = D(v_h)^\perp
@@ -37,6 +38,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl}) = 1
@@ -53,6 +55,7 @@ Length4Operator(::Type{Divergence}, xdim::Int, ncomponents::Int) = ceil(ncompone
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{Curl}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
 Length4Operator(::Type{Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
+Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 
@@ -62,6 +65,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
@@ -71,7 +75,7 @@ FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeFACE}) = FE.F
 FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
 FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
 
-mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     ItemDofs::VariableTargetAdjacency    # link to ItemDofs
@@ -88,6 +92,7 @@ mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EGEG
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients
     coefficients2::Array{T,2}            # coefficients for reconstruction
+    #coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
 end
 
 function vector_hessian(f, x)
@@ -392,6 +397,38 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
 end
 
 
+# TANGENTGRADIENT OPERATOR
+# H1 ELEMENTS
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: TangentialGradient, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # update L2G (we need the matrix)
+        FEXGrid.update!(FEBE.L2G, item)
+
+        # compute tangent of item
+        tangent = [0.0,0.0]
+        tangent[1] = FEBE.FE.xgrid[FaceNormals][2,item]
+        tangent[2] = -FEBE.FE.xgrid[FaceNormals][1,item]
+
+        for i = 1 : length(FEBE.xref)
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
+                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
+                    for j = 1 : FEBE.offsets[2] # xdim
+                        # compute duc/dxk
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i] * tangent[c]
+                    end    
+                end    
+            end    
+        end  
+    end    
+end
+
+
 # SYMMETRIC GRADIENT OPERATOR
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
@@ -399,7 +436,7 @@ end
 # symmetric gradients are saved in reduced Voigt notation
 # the following mapping tells where each entry of the full gradient lands in the reduced vector
 voigt_mapper = Array{Array{Int64,1},1}(undef,3)
-voigt_mapper[1] = [1]
+voigt_mapper[1] = [1,1]
 voigt_mapper[2] = [1,3,3,2]
 voigt_mapper[3] = [1,4,5,4,2,6,5,6,3]
 
@@ -419,7 +456,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
                     for j = 1 : FEBE.offsets[2] # xdim
                         # compute duc/dxk
-                        FEBE.cvals[voigt_mapper[FEBE.ncomponents][k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[voigt_mapper[dim_element(EG)][k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    

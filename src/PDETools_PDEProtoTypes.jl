@@ -42,12 +42,16 @@ function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, 
 end
 
 # Prototype for linear elasticity
-function LinearElasticityProblem(dimension::Int = 2; shearmodulus = 1.0, lambda = 1.0)
+function LinearElasticityProblem(dimension::Int = 2; elasticity_modulus = 1.0, shearmodulus = 1.0, lambda = 1.0)
 
     # LEFT-HAND-SIDE: LINEAR ELASTICITY TENSOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
     #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
-    MyLHS[1,1] = [HookStiffnessOperator(shearmodulus,lambda,dimension)]
+    if dimension == 2
+        MyLHS[1,1] = [HookStiffnessOperator2D(shearmodulus,lambda)]
+    elseif dimension == 1
+        MyLHS[1,1] = [HookStiffnessOperator1D(elasticity_modulus)]
+    end
 
     # RIGHT-HAND SIDE: empty, user can fill in data later
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)

@@ -23,7 +23,6 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P1
 
     # generate dofmaps
     if dofmap_needed
-        dim = size(FES.xgrid[Coordinates],1) 
         xCellNodes = FES.xgrid[CellNodes]
         xFaceNodes = FES.xgrid[FaceNodes]
         xCellGeometries = FES.xgrid[CellGeometries]
@@ -123,6 +122,18 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
+function get_basis_on_cell(::Type{H1P1{1}}, ::Type{<:Vertex0D})
+    function closure(xref)
+        return [1]
+    end
+end
+
+function get_basis_on_cell(::Type{H1P1{2}}, ::Type{<:Vertex0D})
+    function closure(xref)
+        return [1 0;
+                0 1]
+    end
+end
 
 function get_basis_on_cell(::Type{H1P1{1}}, ::Type{<:Edge1D})
     function closure(xref)
@@ -190,6 +201,6 @@ end
 
 function get_basis_on_face(FE::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry})
     function closure(xref)
-        return get_basis_on_cell(FE, EG)(xref[1:end-1])
+        return get_basis_on_cell(FE, EG)(xref)
     end    
 end

@@ -345,7 +345,7 @@ function boundarydata!(
                     result[1] *= input[1] 
                 end   
             end   
-            action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,1; bonus_quadorder = bonus_quadorder)
+            action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,xdim; bonus_quadorder = bonus_quadorder)
             RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
             FEAssembly.assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
@@ -569,7 +569,6 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
         end
     end
 
-    #blah[:] = 1
 end
 
 

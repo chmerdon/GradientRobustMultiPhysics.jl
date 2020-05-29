@@ -24,9 +24,16 @@ function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int 
 end
 # todo
 # here a general connection to arbitrary tensors C_ijkl (encoded as an action) is possible in future
-function HookStiffnessOperator(mu::Real, lambda::Real, dimension::Int = 2; regions::Array{Int,1} = [0])
-    @assert dimension == 2 # 3d case or more general Hook laws come later
-    function tensor_apply(result, input)
+function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient_operator = TangentialGradient)
+    function tensor_apply_1d(result, input)
+        # just Hook law like a spring where mu is the elasticity modulus
+        result[1] = mu*input[1]
+    end   
+    action = FunctionAction(tensor_apply_1d, 1, 1)
+    return StiffnessOperator(gradient_operator, action, regions)
+end
+function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
+    function tensor_apply_2d(result, input)
         # compute sigma_ij = C_ijkl eps_kl
         # where input = [eps_11,eps_12,eps_21] is the symmetric gradient in Voigt notation
         # and result = [sigma_11,sigma_12,sigma_21] is Voigt representation of sigma_11
@@ -35,8 +42,8 @@ function HookStiffnessOperator(mu::Real, lambda::Real, dimension::Int = 2; regio
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
         result[3] = mu*input[3]
     end   
-    action = FunctionAction(tensor_apply, 3, dimension)
-    return StiffnessOperator(SymmetricGradient, action, regions)
+    action = FunctionAction(tensor_apply_2d, 3, 2)
+    return StiffnessOperator(gradient_operator, action, regions)
 end
 
 struct LagrangeMultiplier <: AbstractPDEOperator
@@ -124,6 +131,7 @@ function RhsOperator(
             end
         end
     end    
+
     action = RegionWiseXFunctionAction(rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
     if on_boundary == true
         return RhsOperator{AbstractAssemblyTypeBFACE}(action, operator, regions)
@@ -273,7 +281,11 @@ function Base.show(io::IO, PDE::PDEDescription)
         if length(PDE.LHSOperators[j,k]) > 0
             print("    [$j,$k]   | ")
             for o = 1 : length(PDE.LHSOperators[j,k])
-                print("$(typeof(PDE.LHSOperators[j,k][o]))")
+                try
+                    print("$(typeof(PDE.LHSOperators[j,k][o])) (regions = $(PDE.LHSOperators[j,k][o].regions))")
+                catch
+                    print("$(typeof(PDE.LHSOperators[j,k][o])) (regions = [0])")
+                end
                 if o == length(PDE.LHSOperators[j,k])
                     println("")
                 else
@@ -290,7 +302,7 @@ function Base.show(io::IO, PDE::PDEDescription)
         if length(PDE.RHSOperators[j]) > 0
             print("     [$j]    | ")
             for o = 1 : length(PDE.RHSOperators[j])
-                print("$(typeof(PDE.RHSOperators[j][o]))")
+                print("$(typeof(PDE.RHSOperators[j][o])) (regions = $(PDE.RHSOperators[j][o].regions))")
                 if o == length(PDE.RHSOperators[j])
                     println("")
                 else

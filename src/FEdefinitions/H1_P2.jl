@@ -315,6 +315,6 @@ end
 
 function get_basis_on_face(FE::Type{<:H1P2}, EG::Type{<:AbstractElementGeometry})
     function closure(xref)
-        return get_basis_on_cell(FE, EG)(xref[1:end-1])
+        return get_basis_on_cell(FE, EG)(xref)
     end    
 end

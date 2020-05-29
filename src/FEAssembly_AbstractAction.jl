@@ -103,15 +103,15 @@ function FunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_qu
 end
 
 function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return XFunctionAction{Float64}(f, resultdim, [], bonus_quadorder)
+    return XFunctionAction{Float64}(f, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
 function ItemWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return ItemWiseXFunctionAction{Float64}(f, 0, resultdim, [], bonus_quadorder)
+    return ItemWiseXFunctionAction{Float64}(f, 0, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
 function RegionWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return RegionWiseXFunctionAction{Float64}(f, 1, resultdim, [], bonus_quadorder)
+    return RegionWiseXFunctionAction{Float64}(f, 1, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
 ###
@@ -132,7 +132,7 @@ function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
     while length(C.x) < length(FEBE.xref)
-        push!(C.x,deepcopy(FEBE.xref[1]))
+        push!(C.x,deepcopy(C.x[1]))
     end  
     for i = 1 : length(FEBE.xref) 
         FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
@@ -150,7 +150,7 @@ function update!(C::ItemWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, 
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
     while length(C.x) < length(FEBE.xref)
-        push!(C.x,deepcopy(FEBE.xref[1]))
+        push!(C.x,deepcopy(C.x[1]))
     end  
     for i = 1 : length(FEBE.xref) 
         FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
@@ -166,7 +166,7 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
     while length(C.x) < length(FEBE.xref)
-        push!(C.x,deepcopy(FEBE.xref[1]))
+        push!(C.x,deepcopy(C.x[1]))
     end  
     for i = 1 : length(FEBE.xref) 
         FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])

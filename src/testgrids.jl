@@ -45,3 +45,92 @@ function testgrid_cookmembrane()
 
     return xgrid
 end
+
+
+function testgrid_tire(k::Int = 1, S::Int = 2)
+    
+    N = 4^k # number of points on circle
+
+    r1 = 1.0 # outer tire radius
+    r2 = 0.9 # innter tire radius
+    r3 = 0.1 # innter circle radius
+
+
+    xgrid=ExtendableGrid{Float64,Int32}()
+
+    npoints = 3*N + 1# = three circles
+    xCoordinates = zeros(Float64,2,npoints)
+    for j = 1 : N
+        xCoordinates[1,j] = r1*cos(2*pi*j/N)
+        xCoordinates[2,j] = r1*sin(2*pi*j/N)
+        xCoordinates[1,N+j] = r2*cos(2*pi*j/N)
+        xCoordinates[2,N+j] = r2*sin(2*pi*j/N)
+        xCoordinates[1,2*N+j] = r3*cos(2*pi*j/N)
+        xCoordinates[2,2*N+j] = r3*sin(2*pi*j/N)
+    end
+    xCoordinates[:,end] = [0.01,0.01]
+    xgrid[Coordinates]=xCoordinates
+
+
+    ntriangles = 3*N
+    nspokes = Int(ceil(N/S))
+
+    xCellNodes=VariableTargetAdjacency(Int32)
+    xCellRegions=ones(Int32,ntriangles+nspokes)
+    xCellGeometries=Array{DataType,1}(undef,ntriangles+nspokes)
+    for j = 1 : ntriangles
+        xCellGeometries[j] = Triangle2D
+    end
+    for j = 1 : N
+        if j==N
+            append!(xCellNodes,[j 1 N+1])
+            append!(xCellNodes,[j N+1 N+j])
+            append!(xCellNodes,[2*N+j 2*N+1 3*N+1])
+        else
+            append!(xCellNodes,[j j+1 N+j+1])
+            append!(xCellNodes,[j N+j+1 N+j])
+            append!(xCellNodes,[2*N+j 2*N+j+1 3*N+1])
+        end
+    end
+    for j = 1 : nspokes
+        xCellGeometries[ntriangles+j] = Edge1D
+        append!(xCellNodes,[N+j*S,2*N+j*S])
+        xCellRegions[ntriangles+j] = 2
+    end
+    xgrid[CellNodes] = xCellNodes
+    xgrid[CellGeometries] = xCellGeometries
+    ncells = num_sources(xCellNodes)
+    xgrid[CellRegions]=xCellRegions
+
+
+
+    nbfaces = 3*N+nspokes
+    xBFaceRegions=zeros(Int32,nbfaces)
+    xBFaceNodes=zeros(Int32,2,nbfaces)
+    for j = 1 : N
+        xBFaceRegions[j] = 1
+        xBFaceRegions[N+j] = 2
+        xBFaceRegions[2*N+j] = 3
+        if j == N
+            xBFaceNodes[:,j] = [j, 1]
+            xBFaceNodes[:,N+j] = [N+1,N+j]
+            xBFaceNodes[:,2*N+j] = [2*N+j,2*N+1]
+        else
+            xBFaceNodes[:,j] = [j, j+1]
+            xBFaceNodes[:,N+j] = [N+j+1,N+j]
+            xBFaceNodes[:,2*N+j] = [2*N+j,2*N+j+1]
+        end
+    end
+    for j = 1 : nspokes
+        xBFaceNodes[:,3*N+j] = [N+j*S,2*N+j*S]
+        xBFaceRegions[3*N+j] = 4
+    end
+    xgrid[BFaceNodes]=xBFaceNodes
+    xgrid[BFaceRegions]=xBFaceRegions
+    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,nbfaces)
+
+    xgrid[CoordinateSystem]=Cartesian2D
+
+
+    return xgrid
+end

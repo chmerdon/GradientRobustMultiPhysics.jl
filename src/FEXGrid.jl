@@ -23,6 +23,14 @@ export uniqueEG,split_grid_into, uniform_refine
 
 
 # additional ElementGeometryTypes with parent information
+abstract type Vertex0DWithParent{Parent <: AbstractElementGeometry} <: Vertex0D end
+abstract type Vertex0DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Vertex0D end
+export Vertex0DWithParent, Vertex0DWithParents
+
+function AddParent(FEG::Type{<:Vertex0D}, CEG::Type{<:AbstractElementGeometry})
+    return Vertex0DWithParent{CEG}
+end
+
 abstract type Edge1DWithParent{Parent <: AbstractElementGeometry} <: Edge1D end
 abstract type Edge1DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Edge1D end
 export Edge1DWithParent, Edge1DWithParents
@@ -119,12 +127,14 @@ facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1DWithParent{Triangle2D}
 facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1DWithParent{Quadrilateral2D}
 facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
 
+facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1DWithParents{P1,P2}
 
 
 # functions that tell how to split one ElementGeometry into another
 split_rule(::Type{Triangle2D}, ::Type{Triangle2D}) = reshape([1,2,3],1,3)
 split_rule(::Type{<:Quadrilateral2D}, ::Type{Triangle2D}) = [1 2 3;1 3 4]
+split_rule(::Type{Edge1D}, ::Type{Triangle2D}) = reshape([1,2,2],1,3)
 
 # function that generates a new simplexgrid from a mixed grid
 function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{Triangle2D}) where {T,K}
@@ -486,7 +496,7 @@ end
 
 # some methods to compute volume of different ElemTypes (beware: on submanifolds formulas get different)
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{ExtendableGrids.AbstractCoordinateSystem})
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{<:ExtendableGrids.AbstractCoordinateSystem})
     return 0.0
 end
 
@@ -558,7 +568,22 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceVolumes})
-    xgrid[FaceVolumes][xgrid[BFaces]]
+
+    # get links to other stuff
+    xCoordinates = xgrid[Coordinates]
+    xBFaceNodes = xgrid[BFaceNodes]
+    nbfaces = num_sources(xBFaceNodes)
+    xBFaceGeometries = xgrid[BFaceGeometries]
+    xCoordinateSystem = xgrid[CoordinateSystem]
+
+    # init FaceVolumes
+    xBFaceVolumes = zeros(Real,nbfaces)
+
+    for bface = 1 : nbfaces
+        xBFaceVolumes[bface] = Volume4ElemType(xCoordinates,xBFaceNodes,bface,xBFaceGeometries[bface],xCoordinateSystem)
+    end
+
+    xBFaceVolumes
 end
 
 
@@ -664,8 +689,12 @@ end
 
 
 
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{Cartesian2D})
+    normal[1] = 0.0
+    normal[2] = 0.0
+end
+
 function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{Cartesian1D})
-    # rotate tangent
     normal[1] = 1.0
 end
 

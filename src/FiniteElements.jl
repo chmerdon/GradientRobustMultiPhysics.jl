@@ -39,6 +39,8 @@ export AbstractHcurlFiniteElement
 
 export get_ncomponents, reconstruct!
 
+get_polynomialorder(::Type{<:AbstractFiniteElement}, ::Type{<:Vertex0D}) = 0;
+
 
 include("FiniteElements_FEBlockArrays.jl");
 export FEVectorBlock, FEVector
@@ -52,7 +54,7 @@ export FEBasisEvaluator, update!
 export AbstractFunctionOperator
 export Identity, ReconstructionIdentity
 export NormalFlux, TangentFlux
-export Gradient, SymmetricGradient
+export Gradient, SymmetricGradient, TangentialGradient
 export Divergence
 export Curl, Rotation
 export Laplacian, Hessian
