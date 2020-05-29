@@ -27,11 +27,7 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid = testgrid_tire(3,2) # initial simplex grid
-
-    show(xgrid[CellVolumes])
-    show(xgrid[CellGeometries])
-    show(xgrid[CellRegions])
+    xgrid = testgrid_tire(3,4) # initial simplex grid
 
     # problem parameters
     elasticity_modulus = 100000 # elasticity modulus
@@ -44,7 +40,7 @@ function main()
     FEType = FiniteElements.H1P1{2}
 
     # other parameters[]
-    verbosity = 5 # deepness of messaging (the larger, the more)
+    verbosity = 1 # deepness of messaging (the larger, the more)
     factor_plotdisplacement = 50
 
     #####################################################################################    
