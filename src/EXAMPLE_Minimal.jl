@@ -35,7 +35,7 @@ function main()
 
     # choose some finite element space
     FEType = FiniteElements.HDIVRT0{2}
-    #FEType = FiniteElements.H1P2{2}
+    #FEType = FiniteElements.H1P2{2,2}
     FESpace = FiniteElements.FESpace{FEType}(xgrid)
     show(FESpace)
 

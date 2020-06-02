@@ -4,13 +4,21 @@ using FEAssembly
 using FiniteElements
 using ExtendableGrids
 using FEXGrid
+using ExtendableSparse
+using SparseArrays
 using BenchmarkTools
 
 include("PDETools_PDEDescription.jl")
-export AbstractPDEOperator, LaplaceOperator, StiffnessOperator, HookStiffnessOperator2D, HookStiffnessOperator1D, ReactionOperator, ConvectionOperator, RhsOperator, BoundaryOperator
+export AbstractPDEOperator
+export DiagonalOperator
+export StiffnessOperator, LaplaceOperator, HookStiffnessOperator2D, HookStiffnessOperator1D
+export ReactionOperator
+export ConvectionOperator
+export RhsOperator
+export BoundaryOperator
 export LagrangeMultiplier
 export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary, NeumannBoundary
-export AbstractGlobalConstraint, FixedIntegralMean
+export AbstractGlobalConstraint, FixedIntegralMean, CombineDofs
 export PDEDescription
 
 include("PDETools_PDESolver.jl")

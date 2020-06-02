@@ -1,8 +1,12 @@
 
-abstract type H1P2{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
+abstract type H1P2{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
-get_ncomponents(::Type{H1P2{1}}) = 1
-get_ncomponents(::Type{H1P2{2}}) = 2
+get_edim(::Type{H1P2{ncomponents,1}}) where ncomponents = 1
+get_edim(::Type{H1P2{ncomponents,2}}) where ncomponents = 2
+get_edim(::Type{H1P2{ncomponents,3}}) where ncomponents = 3
+
+get_ncomponents(::Type{H1P2{1,edim}}) where edim = 1
+get_ncomponents(::Type{H1P2{2,edim}}) where edim = 2
 
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Triangle2D}) = 2;
@@ -10,6 +14,7 @@ get_polynomialorder(::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = 3;
 
 function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2}
     ncomponents = get_ncomponents(FEType)
+    edim = get_edim(FEType)
     name = "P2"
     for n = 1 : ncomponents-1
         name = name * "xP2"
@@ -20,8 +25,9 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
 
     # total number of dofs
     ndofs = 0
+    xCellNodes = FES.xgrid[CellNodes]
     xCellGeometries = FES.xgrid[CellGeometries]
-    edim = dim_element(xCellGeometries[1])
+    ncells = num_sources(xCellNodes)
     nfaces = num_sources(FES.xgrid[FaceNodes])
     nnodes = num_sources(FES.xgrid[Coordinates]) 
     if edim == 1
@@ -31,17 +37,15 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
     elseif edim == 3
         # TODO
     end    
-    FES.ndofs = ndofs
+    FES.ndofs = ndofs 
 
     # generate dofmaps
     if dofmap_needed
-        dim = size(FES.xgrid[Coordinates],1) 
-        xCellNodes = FES.xgrid[CellNodes]
+        xFaceGeometries = FES.xgrid[FaceGeometries]
         xFaceNodes = FES.xgrid[FaceNodes]
         xBFaceNodes = FES.xgrid[BFaceNodes]
         xCellFaces = FES.xgrid[CellFaces]
         xBFaces = FES.xgrid[BFaces]
-        ncells = num_sources(xCellNodes)
         nbfaces = num_sources(xBFaceNodes)
         xCellDofs = VariableTargetAdjacency(Int32)
         xFaceDofs = VariableTargetAdjacency(Int32)
@@ -205,113 +209,66 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis_on_cell(::Type{H1P2{1}}, ::Type{<:Edge1D})
+function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Edge1D})
     function closure(xref)
-        temp = 1 - xref[1];
-        return [2*temp*(temp - 1//2),
-                2*xref[1]*(xref[1] - 1//2),
-                4*temp*xref[1]]
-    end
-end
-
-
-function get_basis_on_cell(::Type{H1P2{2}}, ::Type{<:Edge1D})
-    function closure(xref)
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents*3,ncomponents)
         temp = 1 - xref[1]
-        a = 2*temp*(temp - 1//2)
-        b = 2*xref[1]*(xref[1] - 1//2)
-        c = 4*temp*xref[1]
-        return [a 0.0;
-                b 0.0;
-                c 0.0;
-                0.0 a;
-                0.0 b;
-                0.0 c]
+        for k = 1 : ncomponents
+            refbasis[3*k-2,k] = 2*temp*(temp - 1//2)            # node 1
+            refbasis[3*k-1,k] = 2*xref[1]*(xref[1] - 1//2)      # node 2
+            refbasis[3*k,k] = 4*temp*xref[1]                    # face 1
+        end
+        return refbasis
     end
 end
 
-function get_basis_on_cell(::Type{H1P2{1}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Triangle2D})
     function closure(xref)
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents*6,ncomponents)
         temp = 1 - xref[1] - xref[2]
-        return [2*temp*(temp - 1//2);
-                2*xref[1]*(xref[1] - 1//2);
-                2*xref[2]*(xref[2] - 1//2);
-                4*temp*xref[1];
-                4*xref[1]*xref[2];
-                4*xref[2]*temp]
+        for k = 1 : ncomponents
+            refbasis[6*k-5,k] = 2*temp*(temp - 1//2)            # node 1
+            refbasis[6*k-4,k] = 2*xref[1]*(xref[1] - 1//2)      # node 2
+            refbasis[6*k-3,k] = 2*xref[2]*(xref[2] - 1//2)      # node 3
+            refbasis[6*k-2,k] = 4*temp*xref[1]                  # face 1
+            refbasis[6*k-1,k] = 4*xref[1]*xref[2]               # face 2
+            refbasis[6*k,k] = 4*xref[2]*temp                    # face 3
+        end
+        return refbasis
     end
 end
 
-function get_basis_on_cell(::Type{H1P2{2}}, ::Type{<:Triangle2D})
+
+function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D})
     function closure(xref)
-        temp = 1 - xref[1] - xref[2];
-        a = 2*temp*(temp - 1//2);
-        b = 2*xref[1]*(xref[1] - 1//2);
-        c = 2*xref[2]*(xref[2] - 1//2);
-        d = 4*temp*xref[1];
-        e = 4*xref[1]*xref[2];
-        f = 4*temp*xref[2];
-        return [a 0.0;    
-                b 0.0;
-                c 0.0;
-                d 0.0;
-                e 0.0;
-                f 0.0;
-                0.0 a;
-                0.0 b;
-                0.0 c;
-                0.0 d;
-                0.0 e;
-                0.0 f]
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents*8,ncomponents)
+        refbasis[1,1] = 1 - xref[1]
+        refbasis[2,1] = 1 - xref[2]
+        refbasis[3,1] = 2*xref[1]*xref[2]*(xref[1]+xref[2]-3//2);
+        refbasis[4,1]= -2*xref[2]*refbasis[1,1]*(xref[1]-xref[2]+1//2);
+        refbasis[5,1] = 4*xref[1]*refbasis[1,1]*refbasis[2,1]
+        refbasis[6,1] = 4*xref[2]*xref[1]*refbasis[2,1]
+        refbasis[7,1] = 4*xref[1]*xref[2]*refbasis[1,1]
+        refbasis[8,1] = 4*xref[2]*refbasis[1,1]*refbasis[2,1]
+        refbasis[1,1] = -2*refbasis[1,1]*refbasis[2,1]*(xref[1]+xref[2]-1//2);
+        refbasis[2,1] = -2*xref[1]*refbasis[2,1]*(xref[2]-xref[1]+1//2);
+        for k = 2 : ncomponents
+            refbasis[8*k-7,k] = refbasis[1,1] # node 1
+            refbasis[8*k-6,k] = refbasis[2,1] # node 2
+            refbasis[8*k-5,k] = refbasis[3,1] # node 3
+            refbasis[8*k-4,k] = refbasis[4,1] # node 4
+            refbasis[8*k-3,k] = refbasis[5,1] # face 1
+            refbasis[8*k-2,k] = refbasis[6,1] # face 2
+            refbasis[8*k-1,k] = refbasis[7,1] # face 3
+            refbasis[8*k,k] = refbasis[8,1]  # face 4
+        end
+        return refbasis
     end
 end
 
-function get_basis_on_cell(::Type{H1P2{1}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        return [-2*a*b*(xref[1]+xref[2]-1//2);
-                -2*xref[1]*b*(xref[2]-xref[1]+1//2);
-                2*xref[1]*xref[2]*(xref[1]+xref[2]-3//2);
-                -2*xref[2]*a*(xref[1]-xref[2]+1//2);
-                4*xref[1]*a*b
-                4*xref[2]*xref[1]*b
-                4*xref[1]*xref[2]*a
-                4*xref[2]*a*b
-                ]
-    end
-end
-
-function get_basis_on_cell(::Type{H1P2{2}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        c = 2*xref[1]*xref[2]*(xref[1]+xref[2]-3//2);
-        d = -2*xref[2]*a*(xref[1]-xref[2]+1//2);
-        e = 4*xref[1]*a*b
-        f = 4*xref[2]*xref[1]*b
-        g = 4*xref[1]*xref[2]*a
-        h = 4*xref[2]*a*b
-        a = -2*a*b*(xref[1]+xref[2]-1//2);
-        b = -2*xref[1]*b*(xref[2]-xref[1]+1//2);
-        return [a 0.0;    
-                b 0.0;
-                c 0.0;
-                d 0.0;
-                e 0.0;
-                f 0.0;
-                g 0.0;
-                h 0.0;
-                0.0 a;
-                0.0 b;
-                0.0 c;
-                0.0 d;
-                0.0 e;
-                0.0 f;
-                0.0 g;
-                0.0 h]
-    end
-end
 
 function get_basis_on_face(FE::Type{<:H1P2}, EG::Type{<:AbstractElementGeometry})
     function closure(xref)

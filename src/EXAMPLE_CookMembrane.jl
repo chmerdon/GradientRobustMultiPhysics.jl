@@ -40,7 +40,7 @@ function main()
 
     # choose finite element type
     #FEType = FiniteElements.H1P1{2} # P1-Courant
-    FEType = FiniteElements.H1P2{2} # P2
+    FEType = FiniteElements.H1P2{2,2} # P2
 
     # other parameters
     verbosity = 1 # deepness of messaging (the larger, the more)

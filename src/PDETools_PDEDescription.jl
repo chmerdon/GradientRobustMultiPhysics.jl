@@ -12,6 +12,15 @@
 abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 
+struct DiagonalOperator <: AbstractPDEOperator
+    value::Real
+    onlynz::Bool                # only values on diagonal that are nonzero are set to value (might prevent nasty situations at region boundary)
+    regions::Array{Int,1}
+end
+function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [])
+    return DiagonalOperator(value, onlynz, regions)
+end
+
 struct StiffnessOperator <: AbstractPDEOperator
     gradient_operator::Type{<:AbstractFunctionOperator} # e.g. SymmetricGradient or Gradient
     action::AbstractAction             #      --ACTION--     # action describes Hookes law
@@ -49,7 +58,6 @@ end
 struct LagrangeMultiplier <: AbstractPDEOperator
     operator :: Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
 end
-
 
 struct ReactionOperator <: AbstractPDEOperator
     action::AbstractAction             #      --ACTION--
@@ -231,12 +239,26 @@ abstract type AssemblyAlways <: AssemblyEachTimeStep end        # is always (re)
 abstract type AssemblyFinal <: AbstractAssemblyTrigger end       # is only assembled after solving
 
 abstract type AbstractGlobalConstraint end
+
 struct FixedIntegralMean <: AbstractGlobalConstraint
+    component::Int
     value::Real
     when_assemble::Type{<:AbstractAssemblyTrigger}
 end 
-function FixedIntegralMean(value::Real)
-    return FixedIntegralMean(value, AssemblyFinal)
+function FixedIntegralMean(component::Int, value::Real)
+    return FixedIntegralMean(component, value, AssemblyFinal)
+end
+
+struct CombineDofs <: AbstractGlobalConstraint
+    componentX::Int                  # component nr for dofsX
+    componentY::Int                  # component nr for dofsY
+    dofsX::Array{Int,1}     # dofsX that should be the same as dofsY in Y component
+    dofsY::Array{Int,1}
+    when_assemble::Type{<:AbstractAssemblyTrigger}
+end 
+function CombineDofs(componentX,componentY,dofsX,dofsY)
+    @assert length(dofsX) == length(dofsY)
+    return CombineDofs(componentX,componentY,dofsX,dofsY, AssemblyAlways)
 end
 
 
@@ -257,15 +279,12 @@ mutable struct PDEDescription
     LHSOperators::Array{Array{AbstractPDEOperator,1},2}
     RHSOperators::Array{Array{AbstractPDEOperator,1},1}
     BoundaryOperators::Array{BoundaryOperator,1}
-    GlobalConstraints::Array{Array{AbstractGlobalConstraint,1}}
+    GlobalConstraints::Array{AbstractGlobalConstraint,1}
 end
 
 function PDEDescription(name, LHS, RHS, BoundaryOperators)
     nFEs = length(RHS)
-    NoConstraints = Array{Array{AbstractGlobalConstraint,1},1}(undef,nFEs)
-    for j = 1 : nFEs
-        NoConstraints[j] = Array{AbstractGlobalConstraint,1}(undef,0)
-    end
+    NoConstraints = Array{AbstractGlobalConstraint,1}(undef,0)
     return PDEDescription(name, LHS, RHS, BoundaryOperators, NoConstraints)
 end
 
@@ -340,6 +359,6 @@ function Base.show(io::IO, PDE::PDEDescription)
 
     println("")
     for j=1:length(PDE.GlobalConstraints)
-        println("  GlobalConstraints[$j] : $(PDE.GlobalConstraints[j])")
+        println("  GlobalConstraints[$j] : $(typeof(PDE.GlobalConstraints[j]))")
     end
 end

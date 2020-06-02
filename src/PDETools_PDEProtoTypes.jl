@@ -24,12 +24,9 @@ function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, 
     MyBoundaryPressure = BoundaryOperator(dimension,1) # empty, no pressure boundary conditions
     
     # GLOBAL CONSTRAINTS: zero pressure integral mean
-    MyGlobalConstraints = Array{Array{AbstractGlobalConstraint,1},1}(undef,2)
-    MyGlobalConstraints[1] = Array{AbstractGlobalConstraint,1}(undef,0)
-    if no_pressure_constraint == true
-        MyGlobalConstraints[2] = Array{AbstractGlobalConstraint,1}(undef,0)
-    else
-        MyGlobalConstraints[2] = [FixedIntegralMean(0.0)]
+    MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,1)
+    if no_pressure_constraint == false
+        MyGlobalConstraints[1] = FixedIntegralMean(2,0.0)
     end
 
     if nonlinear == true

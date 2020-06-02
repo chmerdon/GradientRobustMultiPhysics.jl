@@ -28,6 +28,9 @@ function main()
 
     # meshing parameters
     xgrid, ConnectionPoints = testgrid_tire(3,4) # initial simplex grid
+    nnodes = num_sources(xgrid[Coordinates])
+    ConnectionDofs = [ConnectionPoints;nnodes .+ ConnectionPoints]
+    show(ConnectionDofs)
 
     # problem parameters
     elasticity_modulus = 100000 # elasticity modulus
@@ -37,29 +40,51 @@ function main()
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
     # choose finite element type
-    FEType = FiniteElements.H1P1{2}
+    FEType_spokes = FiniteElements.H1P1{2}
+    FEType_rest = FiniteElements.H1P1{2}
 
-    # other parameters[]
-    verbosity = 1 # deepness of messaging (the larger, the more)
-    factor_plotdisplacement = 50
+    # other parameters
+    verbosity = 5 # deepness of messaging (the larger, the more)
+    factor_plotdisplacement = 100
 
     #####################################################################################    
     #####################################################################################
 
     # PDE description
-    LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
-    LinElastProblem.LHSOperators[1,1] = [HookStiffnessOperator2D(shear_modulus,lambda; regions = [1]),
-                                         HookStiffnessOperator1D(elasticity_modulus_spoke; regions = [2])]
-    append!(LinElastProblem.BoundaryOperators[1], [1], HomogeneousDirichletBoundary)
-    push!(LinElastProblem.RHSOperators[1], RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    # LEFT-HAND-SIDE
+    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
+    MyLHS[1,1] = [HookStiffnessOperator2D(shear_modulus,lambda; regions = [1]), DiagonalOperator(1e60;regions = [2])]
+    MyLHS[1,2] = []
+    MyLHS[2,1] = []
+    MyLHS[2,2] = [HookStiffnessOperator1D(elasticity_modulus_spoke; regions = [2]), DiagonalOperator(1e60;regions = [1])]
+
+    # RIGHT-HAND SIDE
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
+    MyRHS[1] = [RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0)]
+    MyRHS[2] = []
+
+    # BOUNDARY OPERATOR
+    MyBoundaryRest = BoundaryOperator(2,2)
+    MyBoundaryEmpty = BoundaryOperator(2,2)
+    append!(MyBoundaryRest, [1], HomogeneousDirichletBoundary)
+
+    # GLOBAL CONSTRAINTS
+    MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,1)
+    MyGlobalConstraints[1] = CombineDofs(1,2,ConnectionDofs,ConnectionDofs)
+    name = "linear elasticity problem"
+    LinElastProblem = PDEDescription(name,MyLHS,MyRHS,[MyBoundaryRest,MyBoundaryEmpty,MyBoundaryEmpty],MyGlobalConstraints)
     show(LinElastProblem)
 
     # generate FESpace
-    FESpace = FiniteElements.FESpace{FEType}(xgrid)
+    FESpace_rest = FiniteElements.FESpace{FEType_rest}(xgrid)
+    FESpace_spokes = FiniteElements.FESpace{FEType_spokes}(xgrid)
+    show(FESpace_rest)
+    show(FESpace_spokes)
 
     # solve PDE
-    Solution = FEVector{Float64}("Displacement",FESpace)
-    solve!(Solution, LinElastProblem; verbosity = verbosity, dirichlet_penalty=1e10)
+    Solution = FEVector{Float64}("Displacement",FESpace_rest)
+    append!(Solution,"Displacement Spokes",FESpace_spokes)
+    solve!(Solution, LinElastProblem; verbosity = verbosity, dirichlet_penalty=1e60)
     
     # plot triangulation
     PyPlot.figure(1)
@@ -70,7 +95,7 @@ function main()
     PyPlot.figure(2)
     nnodes = size(xgrid[Coordinates],2)
     nodevals = zeros(Float64,3,nnodes)
-    nodevalues!(nodevals,Solution[1],FESpace)
+    nodevalues!(nodevals,Solution[1],FESpace_rest)
     nodevals[3,:] = sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2)
     ExtendableGrids.plot(xgrid, nodevals[3,:]; Plotter = PyPlot)
 

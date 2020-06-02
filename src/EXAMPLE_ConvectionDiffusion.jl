@@ -57,7 +57,7 @@ function main()
 
     # choose finite element type
     #FEType = FiniteElements.H1P1{1} # P1-Courant
-    #FEType = FiniteElements.H1P2{1} # P2
+    #FEType = FiniteElements.H1P2{1,2} # P2
     FEType = FiniteElements.H1CR{1} # Crouzeix-Raviart
 
     # solver parameters

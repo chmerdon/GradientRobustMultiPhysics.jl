@@ -46,6 +46,12 @@ function FESpace{FEType}(xgrid::ExtendableGrid; dofmap_needed = true) where {FET
 
     return FES
 end
+function FESpace(name::String, length::Int)
+    # first generate some empty FESpace
+    dummyVTA = VariableTargetAdjacency(Int32)
+    FES = FESpace{AbstractFiniteElement}(name,length,ExtendableGrid{Float64,Int32}(),dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
+    return FES
+end
 
 Base.eltype(::Type{FESpace{FEType}}) where {FEType} = FEType
 

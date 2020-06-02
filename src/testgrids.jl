@@ -74,6 +74,7 @@ function testgrid_tire(k::Int = 1, S::Int = 2)
     ntriangles = 3*N
     nspokes = Int(ceil(N/S))
 
+    ConnectionPoints = zeros(Int,nspokes*2)
     xCellNodes=VariableTargetAdjacency(Int32)
     xCellRegions=ones(Int32,ntriangles+nspokes)
     xCellGeometries=Array{DataType,1}(undef,ntriangles+nspokes)
@@ -95,6 +96,8 @@ function testgrid_tire(k::Int = 1, S::Int = 2)
         xCellGeometries[ntriangles+j] = Edge1D
         append!(xCellNodes,[N+j*S,2*N+j*S])
         xCellRegions[ntriangles+j] = 2
+        ConnectionPoints[2*j-1] = N+j*S
+        ConnectionPoints[2*j] = 2*N+j*S
     end
     xgrid[CellNodes] = xCellNodes
     xgrid[CellGeometries] = xCellGeometries
@@ -131,5 +134,5 @@ function testgrid_tire(k::Int = 1, S::Int = 2)
     xgrid[CoordinateSystem]=Cartesian2D
 
 
-    return xgrid
+    return xgrid, ConnectionPoints
 end
