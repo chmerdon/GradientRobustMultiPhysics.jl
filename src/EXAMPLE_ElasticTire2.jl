@@ -41,7 +41,7 @@ function main()
     #FEType_rest = FiniteElements.H1P1{2}; ConnectionDofs1 = [ConnectionPoints;nnodes .+ ConnectionPoints]
     FEType_rest = FiniteElements.H1P2{2,2}; ConnectionDofs1 = [ConnectionPoints;(nnodes + num_sources(xgrid[FaceNodes])) .+ ConnectionPoints]
 
-    # finite element type for spokes is P1
+    # finite element type for spokes
     FEType_spokes = FiniteElements.H1P1{2}; ConnectionDofs2 = [ConnectionPoints;nnodes .+ ConnectionPoints]
     #FEType_spokes = FiniteElements.H1P2{2,1}; ConnectionDofs2 = [ConnectionPoints;(nnodes + num_sources(xgrid[CellNodes])) .+ ConnectionPoints]
 

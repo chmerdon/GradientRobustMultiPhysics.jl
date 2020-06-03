@@ -12,34 +12,54 @@
 abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 
+########################
+### DiagonalOperator ###
+########################
+#
+# puts _value_ on the diagonal entries of the cell dofs within given _regions_
+# if _onlyz_ == true only values that are zero are changed
+#
 struct DiagonalOperator <: AbstractPDEOperator
+    name::String
     value::Real
-    onlynz::Bool                # only values on diagonal that are nonzero are set to value (might prevent nasty situations at region boundary)
+    onlyz::Bool
     regions::Array{Int,1}
 end
 function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [])
-    return DiagonalOperator(value, onlynz, regions)
+    return DiagonalOperator("Diag($value)",value, onlynz, regions)
 end
 
-struct StiffnessOperator <: AbstractPDEOperator
-    gradient_operator::Type{<:AbstractFunctionOperator} # e.g. SymmetricGradient or Gradient
-    action::AbstractAction             #      --ACTION--     # action describes Hookes law
-                                       # e.g. (K grad u) : grad v
+
+############################
+### AbstractBilinearForm ###
+############################
+#
+# expects two operators _operator1_ and _operator2_ and an _action_ and an AT::AbtractAssemblyType and _regions_
+# 
+# and assembles b(u,v) = int_regions action(operator1(u)) * operator2(v)
+#
+struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperator
+    name::String
+    operator1::Type{<:AbstractFunctionOperator}
+    operator2::Type{<:AbstractFunctionOperator}
+    action::AbstractAction
     regions::Array{Int,1}
 end
-
-function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; regions::Array{Int,1} = [0])
-    return StiffnessOperator(Gradient, MultiplyScalarAction(diffusion, ncomponents*xdim), regions)
+function AbstractBilinearForm(operator1,operator2;regions::Array{Int,1} = [0])
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1), regions)
+end
+function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; gradient_operator = Gradient, regions::Array{Int,1} = [0])
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim), regions)
 end
 # todo
-# here a general connection to arbitrary tensors C_ijkl (encoded as an action) is possible in future
+# here a general connection to arbitrary tensors C_ijkl (encencodedoded as an action) is possible in future
 function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient_operator = TangentialGradient)
     function tensor_apply_1d(result, input)
         # just Hook law like a spring where mu is the elasticity modulus
         result[1] = mu*input[1]
     end   
     action = FunctionAction(tensor_apply_1d, 1, 1)
-    return StiffnessOperator(gradient_operator, action, regions)
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian1D",gradient_operator, gradient_operator, action, regions)
 end
 function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_2d(result, input)
@@ -52,24 +72,24 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
         result[3] = mu*input[3]
     end   
     action = FunctionAction(tensor_apply_2d, 3, 2)
-    return StiffnessOperator(gradient_operator, action, regions)
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian2D",gradient_operator, gradient_operator, action, regions)
 end
+function ReactionOperator(action::AbstractAction; identity_operator = Identity, regions::Array{Int,1} = [0])
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Reaction",identity_operator, identity_operator, action, regions)
+end
+
+
 
 struct LagrangeMultiplier <: AbstractPDEOperator
-    operator :: Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
+    name::String
+    operator::Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
 end
-
-struct ReactionOperator <: AbstractPDEOperator
-    action::AbstractAction             #      --ACTION--
-                                        # e.g.  (gamma * u) * v
-    regions::Array{Int,1}
+function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator})
+    return LagrangeMultiplier("LagrangeMultiplier($operator)",operator)
 end
-function ReactionOperator(action::AbstractAction; regions::Array{Int,1} = [0])
-    return ReactionOperator(action, regions)
-end
-
 
 struct ConvectionOperator <: AbstractPDEOperator
+    name::String
     action::AbstractAction                                      #      ----ACTION-----
     beta_from::Int                                              # e.g. (beta * grad) u * testfunction_operator(v)
     testfunction_operator::Type{<:AbstractFunctionOperator}     # beta_from = 0 if beta is encoded in action
@@ -93,7 +113,7 @@ function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_q
         end    
     end    
     convection_action = XFunctionAction(convection_function_func(), ncomponents, xdim; bonus_quadorder = bonus_quadorder)
-    return ConvectionOperator(convection_action,0,testfunction_operator, regions)
+    return ConvectionOperator("Convection(XFunction)",convection_action,0,testfunction_operator, regions)
 end
 
 function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
@@ -111,7 +131,7 @@ function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction
         end    
     end    
     convection_action = FunctionAction(convection_function_fe(), ncomponents)
-    return ConvectionOperator(convection_action,beta,testfunction_operator, regions)
+    return ConvectionOperator("Convection(Component[$beta])",convection_action,beta,testfunction_operator, regions)
 end
 
 struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperator
@@ -182,10 +202,20 @@ abstract type DirichletBoundary <: AbstractBoundaryType end
 abstract type BestapproxDirichletBoundary <: DirichletBoundary end
 abstract type InterpolateDirichletBoundary <: DirichletBoundary end
 abstract type HomogeneousDirichletBoundary <: DirichletBoundary end
-#abstract type NeumannBoundary <: AbstractBoundaryType end
-#abstract type DoNothingBoundary <: NeumannBoundary end
 
 
+########################
+### BoundaryOperator ###
+########################
+#
+# collects boundary data for a component of the system and allows to specify a AbstractBoundaryType for each boundary region
+# so far only DirichletBoundary types (see above)
+#
+# later also SymmetryBoundary
+#
+# Note: NeumannBoundary has to be implemented as a RhsOperator with on_boundary = true
+# Note: PeriodicBoundary has to be implemented as a CombineDofs <: AbstractGlobalConstraint
+#
 struct BoundaryOperator <: AbstractPDEOperator
     regions4boundarytype :: Dict{Type{<:AbstractBoundaryType},Array{Int,1}}
     data4bregion :: Array{Any,1}
@@ -238,18 +268,38 @@ abstract type AssemblyEachTimeStep <: AssemblyInitial end       # is (re)assembl
 abstract type AssemblyAlways <: AssemblyEachTimeStep end        # is always (re)assembled
 abstract type AssemblyFinal <: AbstractAssemblyTrigger end       # is only assembled after solving
 
+
+
+
+#################################
+### AbstractGlobalConstraints ###
+#################################
+#
+# further constraints that cannot be described with (sparse) PDEOperators and are realized by manipulations of the
+# already assembled system
+#
+# FixedIntegralMean: Ensure that integral mean of a _component_ attains _value_
+# (e.g. for pressure in Stokes, avoids full row/column in matrix)
+#
+# CombineDofs: Identify given dofs of two components with each other
+# (might be used for periodic boundary conditions, or using different FETypes in different regions)
+#
+# NOTE: constraints like zero divergence have to be realised with PDEOperators like LagrangeMultiplier
+#
 abstract type AbstractGlobalConstraint end
 
 struct FixedIntegralMean <: AbstractGlobalConstraint
+    name::String
     component::Int
     value::Real
     when_assemble::Type{<:AbstractAssemblyTrigger}
 end 
 function FixedIntegralMean(component::Int, value::Real)
-    return FixedIntegralMean(component, value, AssemblyFinal)
+    return FixedIntegralMean("Mean[$component] != $value",component, value, AssemblyFinal)
 end
 
 struct CombineDofs <: AbstractGlobalConstraint
+    name::String
     componentX::Int                  # component nr for dofsX
     componentY::Int                  # component nr for dofsY
     dofsX::Array{Int,1}     # dofsX that should be the same as dofsY in Y component
@@ -258,7 +308,7 @@ struct CombineDofs <: AbstractGlobalConstraint
 end 
 function CombineDofs(componentX,componentY,dofsX,dofsY)
     @assert length(dofsX) == length(dofsY)
-    return CombineDofs(componentX,componentY,dofsX,dofsY, AssemblyAlways)
+    return CombineDofs("CombineDofs[$componentX,$componentY] (ndofs = $(length(dofsX)))",componentX,componentY,dofsX,dofsY, AssemblyAlways)
 end
 
 
@@ -301,9 +351,9 @@ function Base.show(io::IO, PDE::PDEDescription)
             print("    [$j,$k]   | ")
             for o = 1 : length(PDE.LHSOperators[j,k])
                 try
-                    print("$(typeof(PDE.LHSOperators[j,k][o])) (regions = $(PDE.LHSOperators[j,k][o].regions))")
+                    print("$(PDE.LHSOperators[j,k][o].name) (regions = $(PDE.LHSOperators[j,k][o].regions))")
                 catch
-                    print("$(typeof(PDE.LHSOperators[j,k][o])) (regions = [0])")
+                    print("$(PDE.LHSOperators[j,k][o].name) (regions = [0])")
                 end
                 if o == length(PDE.LHSOperators[j,k])
                     println("")
@@ -359,6 +409,6 @@ function Base.show(io::IO, PDE::PDEDescription)
 
     println("")
     for j=1:length(PDE.GlobalConstraints)
-        println("  GlobalConstraints[$j] : $(typeof(PDE.GlobalConstraints[j]))")
+        println("  GlobalConstraints[$j] : $(PDE.GlobalConstraints[j].name)")
     end
 end

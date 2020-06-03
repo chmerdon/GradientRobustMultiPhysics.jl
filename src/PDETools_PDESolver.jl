@@ -107,22 +107,6 @@ function Base.show(io::IO, SC::SolverConfig)
 end
 
 
-
-
-
-
-
-
-
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ReactionOperator; verbosity::Int = 0)
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert FE1 == FE2
-    L2Product = SymmetricBilinearForm(Float64,AbstractAssemblyTypeCELL, FE1, Identity, O.action; regions = O.regions)    
-    FEAssembly.assemble!(A, L2Product; verbosity = verbosity)
-end
-
-
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOperator; verbosity::Int = 0)
     FE1 = A.FESX
     FE2 = A.FESY
@@ -137,9 +121,8 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
             if xCellRegions[item] == O.regions[r]
                 for k = 1 : num_targets(xCellDofs,item)
                     dof = xCellDofs[k,item]
-                    if O.onlynz == true
+                    if O.onlyz == true
                         if A[dof,dof] == 0
-                            #println(" PEN dof=$dof")
                             A[dof,dof] = O.value
                         end
                     else
@@ -152,12 +135,15 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
 end
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::StiffnessOperator; verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     FE1 = A.FESX
     FE2 = A.FESY
-    @assert FE1 == FE2
-    H1Product = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, O.gradient_operator, O.action; regions = O.regions)    
-    FEAssembly.assemble!(A, H1Product; verbosity = verbosity)
+    if FE1 == FE2 && O.operator1 == O.operator2
+        BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+    else
+        BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+    end
+    FEAssembly.assemble!(A, BLF; verbosity = verbosity)
 end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; verbosity::Int = 0)
