@@ -107,74 +107,6 @@ function Base.show(io::IO, SC::SolverConfig)
 end
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOperator; verbosity::Int = 0)
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert FE1 == FE2
-    xCellDofs = FE1.CellDofs
-    xCellRegions = FE1.xgrid[CellRegions]
-    ncells = num_sources(xCellDofs)
-    dof::Int = 0
-    for item = 1 : ncells
-        for r = 1 : length(O.regions)
-            # check if item region is in regions
-            if xCellRegions[item] == O.regions[r]
-                for k = 1 : num_targets(xCellDofs,item)
-                    dof = xCellDofs[k,item]
-                    if O.onlyz == true
-                        if A[dof,dof] == 0
-                            A[dof,dof] = O.value
-                        end
-                    else
-                        A[dof,dof] = O.value
-                    end    
-                end
-            end
-        end
-    end
-end
-
-
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; verbosity::Int = 0) where {AT<:AbstractAssemblyType}
-    FE1 = A.FESX
-    FE2 = A.FESY
-    if FE1 == FE2 && O.operator1 == O.operator2
-        BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
-    else
-        BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
-    end
-    FEAssembly.assemble!(A, BLF; verbosity = verbosity)
-end
-
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; verbosity::Int = 0)
-    if O.beta_from == 0
-        FE1 = A.FESX
-        FE2 = A.FESY
-        ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
-    else
-        FE1 = A.FESX
-        FE2 = A.FESY
-        ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity)
-    end
-end
-
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; verbosity::Int = 0, At::FEMatrixBlock)
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert At.FESX == FE2
-    @assert At.FESY == FE1
-    DivPressure = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
-    FEAssembly.assemble!(At, DivPressure; verbosity = verbosity, transpose_copy = A)
-end
-
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; verbosity::Int = 0) where {AT<:AbstractAssemblyType}
-    FE = b.FES
-    RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, O.action; regions = O.regions)
-    FEAssembly.assemble!(b, RHS; verbosity = verbosity)
-end
-
 function assemble!(
     A::FEMatrix,
     b::FEVector,
@@ -226,280 +158,6 @@ function assemble!(
     end
 end
 
-
-# this function assembles all boundary data at once
-# first all interpolation Dirichlet boundaries are assembled
-# then all hoomogeneous Dirichlet boundaries are set to zero
-# then all DirichletBestapprox boundaries are handled (previous data is fixed)
-function boundarydata!(
-    Target::FEVectorBlock,
-    O::BoundaryOperator;
-    dirichlet_penalty::Float64 = 1e60,
-    verbosity::Int = 0)
-    fixed_dofs = []
-  
-    FE = Target.FES
-    xdim = size(FE.xgrid[Coordinates],1) 
-    FEType = eltype(typeof(FE))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
-    xBFaces = FE.xgrid[BFaces]
-    xBFaceDofs = FE.BFaceDofs
-    nbfaces = length(xBFaces)
-    xBFaceRegions = FE.xgrid[BFaceRegions]
-
-
-    ######################
-    # Dirichlet boundary #
-    ######################
-
-    # INTERPOLATION DIRICHLET BOUNDARY
-    InterDirichletBoundaryRegions = get(O.regions4boundarytype,InterpolateDirichletBoundary,[])
-    if length(InterDirichletBoundaryRegions) > 0
-
-        # find Dirichlet dofs
-        for r = 1 : length(InterDirichletBoundaryRegions)
-            bregiondofs = []
-            for bface = 1 : nbfaces
-                if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
-                    append!(bregiondofs,xBFaceDofs[:,bface])
-                end
-            end    
-            bregiondofs = Base.unique(bregiondofs)
-            interpolate!(Target, O.data4bregion[InterDirichletBoundaryRegions[r]]; dofs = bregiondofs)
-            append!(fixed_dofs,bregiondofs)
-            bregiondofs = []
-        end   
-
-        if verbosity > 0
-            println("   Int-DBnd = $InterDirichletBoundaryRegions (ndofs = $(length(fixed_dofs)))")
-        end    
-
-        
-    end
-
-    # HOMOGENEOUS DIRICHLET BOUNDARY
-    HomDirichletBoundaryRegions = get(O.regions4boundarytype,HomogeneousDirichletBoundary,[])
-    if length(HomDirichletBoundaryRegions) > 0
-
-        # find Dirichlet dofs
-        hom_dofs = []
-        for r = 1 : length(HomDirichletBoundaryRegions)
-            for bface = 1 : nbfaces
-                if xBFaceRegions[bface] == HomDirichletBoundaryRegions[r]
-                    append!(hom_dofs,xBFaceDofs[:,bface])
-                end    
-            end    
-        end
-        hom_dofs = Base.unique(hom_dofs)
-        append!(fixed_dofs,hom_dofs)
-        fixed_dofs = Base.unique(fixed_dofs)
-        for j in hom_dofs
-            Target[j] = 0
-        end    
-
-        if verbosity > 0
-            println("   Hom-DBnd = $HomDirichletBoundaryRegions (ndofs = $(length(hom_dofs)))")
-        end    
-        
-    end
-
-    # BEST-APPROXIMATION DIRICHLET BOUNDARY
-    BADirichletBoundaryRegions = get(O.regions4boundarytype,BestapproxDirichletBoundary,[])
-    if length(BADirichletBoundaryRegions) > 0
-
-        # find Dirichlet dofs
-        BAdofs = []
-        for bface = 1 : nbfaces
-            for r = 1 : length(BADirichletBoundaryRegions)
-                if xBFaceRegions[bface] == BADirichletBoundaryRegions[r]
-                    append!(BAdofs,xBFaceDofs[:,bface])
-                    break
-                end    
-            end    
-        end
-        BAdofs = Base.unique(BAdofs)
-
-        if verbosity > 0
-            println("    BA-DBnd = $BADirichletBoundaryRegions (ndofs = $(length(BAdofs)))")
-                
-        end    
-
-
-        bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
-        FEType = eltype(typeof(FE))
-        Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
-        b = zeros(Float64,FE.ndofs,1)
-        A = FEMatrix{Float64}("MassMatrixBnd", FE)
-
-        if Dboperator == Identity
-            function bnd_rhs_function_h1()
-                temp = zeros(Float64,ncomponents)
-                function closure(result, input, x, region)
-                    O.data4bregion[region](temp,x)
-                    result[1] = 0.0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end 
-                end   
-            end   
-            action = RegionWiseXFunctionAction(bnd_rhs_function_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
-            FEAssembly.assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
-            FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
-        elseif Dboperator == NormalFlux
-            xFaceNormals = FE.xgrid[FaceNormals]
-            xBFaces = FE.xgrid[BFaces]
-            function bnd_rhs_function_hdiv()
-                temp = zeros(Float64,ncomponents)
-                function closure(result, input, x, bface)
-                    O.data4bregion[xBFaceRegions[bface]](temp,x)
-                    result[1] = 0.0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]
-                    end 
-                    result[1] *= input[1] 
-                end   
-            end   
-            action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
-            FEAssembly.assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
-            FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
-        end    
-
-        # fix already set dofs by other boundary conditions
-        for j in fixed_dofs
-            A[1][j,j] = dirichlet_penalty
-            b[j] = Target[j]*dirichlet_penalty
-        end
-        append!(fixed_dofs,BAdofs)
-        fixed_dofs = Base.unique(fixed_dofs)
-
-        # solve best approximation problem on boundary and write into Target
-        Target[fixed_dofs] = A.entries[fixed_dofs,fixed_dofs]\b[fixed_dofs,1]
-    end
-    
-    return fixed_dofs
-end    
-
-
-# check if operator causes nonlinearity or time-dependence
-function check_PDEoperator(O::AbstractPDEOperator)
-    return false, false
-end
-function check_PDEoperator(O::ConvectionOperator)
-    return O.beta_from != 0, false
-end
-
-
-function apply_constraints!(
-    A::FEMatrix,
-    b::FEVector,
-    PDE::PDEDescription,
-    SC::SolverConfig,
-    Target::FEVector;
-    verbosity::Int = 0)
-
-    fixed_dofs = []
-
-    for j = 1 : length(PDE.GlobalConstraints)
-        if typeof(PDE.GlobalConstraints[j]) == FixedIntegralMean
-            c = PDE.GlobalConstraints[j].component
-            if verbosity > 0
-                println("\n  Ensuring fixed integral mean for component $j...")
-            end
-            b[c][1] = 0.0
-            A[c,c][1,1] = SC.dirichlet_penalty
-            push!(fixed_dofs,A[c,c].offsetX+1)
-        elseif typeof(PDE.GlobalConstraints[j]) == CombineDofs
-            c = PDE.GlobalConstraints[j].componentX
-            c2 = PDE.GlobalConstraints[j].componentY
-            if verbosity > 0 
-                println("\n  Combining dofs of component $c and $c2...")
-            end
-            # add subblock [dofsY,dofsY] of block [c2,c2] to subblock [dofsX,dofsX] of block [c,c]
-            # and penalize dofsY dofs
-            rows = rowvals(A.entries.cscmatrix)
-            targetrow = 0
-            sourcerow = 0
-            targetcolumn = 0
-            sourcecolumn = 0
-            for dof = 1 :length(PDE.GlobalConstraints[j].dofsX)
-
-
-                targetrow = A[c,c].offsetX + PDE.GlobalConstraints[j].dofsX[dof]
-                sourcerow = A[c2,c2].offsetX + PDE.GlobalConstraints[j].dofsY[dof]
-                #println("copying sourcerow=$sourcerow to targetrow=$targetrow")
-                for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
-                    sourcecolumn = PDE.GlobalConstraints[j].dofsY[dof] + A[c2,c2].offsetY
-                    for r in nzrange(A.entries.cscmatrix, sourcecolumn)
-                        if sourcerow == rows[r]
-                            targetcolumn = PDE.GlobalConstraints[j].dofsX[dof] + A[c,c].offsetY
-                            A.entries[targetrow, targetcolumn] += 0.5*A.entries.cscmatrix.nzval[r] 
-                        end
-                    end
-                end
-                targetcolumn = A[c,c].offsetY + PDE.GlobalConstraints[j].dofsX[dof]
-                sourcecolumn = A[c2,c2].offsetY + PDE.GlobalConstraints[j].dofsY[dof]
-                #println("copying sourcecolumn=$sourcecolumn to targetcolumn=$targetcolumn")
-                for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
-                    sourcerow = PDE.GlobalConstraints[j].dofsY[dof] + A[c2,c2].offsetX
-                    for r in nzrange(A.entries.cscmatrix, sourcecolumn)
-                        if sourcerow == rows[r]
-                            targetrow = PDE.GlobalConstraints[j].dofsX[dof] + A[c,c].offsetX
-                            A.entries[targetrow,targetcolumn] += 0.5*A.entries.cscmatrix.nzval[r] 
-                        end
-                    end
-                end
-
-                # penalize Y dofs
-                #println(" PEN dof=$sourcecolumn")
-                b.entries[sourcecolumn] = 0.0
-                A.entries[sourcecolumn,sourcecolumn] = SC.dirichlet_penalty
-                push!(fixed_dofs,sourcecolumn)
-            end
-        end
-    end
-
-    return fixed_dofs
-end
-
-function realize_constraints!(
-    Target::FEVector,
-    PDE::PDEDescription,
-    SC::SolverConfig;
-    verbosity::Int = 0)
-
-    for j = 1 : length(PDE.GlobalConstraints)
-        if typeof(PDE.GlobalConstraints[j]) == FixedIntegralMean
-            c = PDE.GlobalConstraints[j].component
-            if verbosity > 0
-                println("\n  Moving integral mean for component $c to value $(PDE.GlobalConstraints[j][k].value)")
-            end
-            # move integral mean
-            pmeanIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
-            meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)
-            total_area = sum(Target.FEVectorBlocks[c].FES.xgrid[CellVolumes], dims=1)[1]
-            meanvalue /= total_area
-            for dof=1:Target.FEVectorBlocks[c].FES.ndofs
-                Target[c][dof] -= meanvalue + PDE.GlobalConstraints[j].value
-            end    
-        elseif typeof(PDE.GlobalConstraints[j]) == CombineDofs
-            c = PDE.GlobalConstraints[j].componentX
-            c2 = PDE.GlobalConstraints[j].componentY
-            if verbosity > 0
-                println("\n  Moving entries of combined dofs from component $c to component $c2")
-            end
-            for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
-                Target[c2][PDE.GlobalConstraints[j].dofsY[dof]] = Target[c][PDE.GlobalConstraints[j].dofsX[dof]]
-            end 
-            
-        end
-    end
-end
-
-
 # for linear, stationary PDEs that can be solved in one step
 function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; verbosity::Int = 0)
 
@@ -528,18 +186,20 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
         end    
     end    
 
+    # PREPARE GLOBALCONSTRAINTS
+    flush!(A.entries)
+    for j = 1 : length(PDE.GlobalConstraints)
+        additional_fixed_dofs = apply_constraint!(A,b,PDE.GlobalConstraints[j],Target; verbosity = verbosity - 1)
+        append!(fixed_dofs,additional_fixed_dofs)
+    end
+
     # PENALIZE FIXED DOFS
-    # (possibly from boundary conditions)
+    # (from boundary conditions and constraints)
+    fixed_dofs = unique(fixed_dofs)
     for j = 1 : length(fixed_dofs)
         b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
         A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
     end
-
-    # PREPARE GLOBALCONSTRAINTS
-    # (possibly more penalties)
-    flush!(A.entries)
-    apply_constraints!(A,b,PDE,SC,Target; verbosity = verbosity - 1)
-
 
     # SOLVE
     if verbosity > 1
@@ -556,10 +216,11 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
         println("\n  residual = $(sqrt(sum(residual, dims = 1)[1]))")
     end
 
-
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
-    realize_constraints!(Target,PDE,SC;verbosity = verbosity - 1)
+    for j = 1 : length(PDE.GlobalConstraints)
+        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 1)
+    end
 end
 
 
@@ -601,17 +262,20 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
     end
     for j = 1 : SC.maxIterations
 
+        # PREPARE GLOBALCONSTRAINTS
+        flush!(A.entries)
+        for j = 1 : length(PDE.GlobalConstraints)
+            additional_fixed_dofs = apply_constraint!(A,b,PDE.GlobalConstraints[j],Target; verbosity = verbosity - 1)
+            append!(fixed_dofs,additional_fixed_dofs)
+        end
+
         # PENALIZE FIXED DOFS
-        # (possibly from boundary conditions)
+        # (from boundary conditions and constraints)
+        fixed_dofs = unique(fixed_dofs)
         for j = 1 : length(fixed_dofs)
             b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
             A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
         end
-
-        # PREPARE GLOBALCONSTRAINTS
-        # (possibly more penalties)
-        flush!(A.entries)
-        apply_constraints!(A,b,PDE,SC,Target; verbosity = verbosity - 1)
 
         # SOLVE
         if verbosity > 1
@@ -649,10 +313,11 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
 
     end
 
-
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
-    realize_constraints!(Target,PDE,SC;verbosity = verbosity - 1)
+    for j = 1 : length(PDE.GlobalConstraints)
+        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 1)
+    end
 
 end
 

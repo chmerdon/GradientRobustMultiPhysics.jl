@@ -1,0 +1,149 @@
+#################################
+### AbstractGlobalConstraints ###
+#################################
+#
+# further constraints that cannot be described with (sparse) PDEOperators and are realized by manipulations of the
+# already assembled system
+#
+# FixedIntegralMean: Ensure that integral mean of a _component_ attains _value_
+# (e.g. for pressure in Stokes, avoids full row/column in matrix)
+#
+# CombineDofs: Identify given dofs of two components with each other
+# (might be used for periodic boundary conditions, or using different FETypes in different regions)
+#
+# NOTE: constraints like zero divergence have to be realised with PDEOperators like LagrangeMultiplier
+#
+abstract type AbstractGlobalConstraint end
+
+struct FixedIntegralMean <: AbstractGlobalConstraint
+    name::String
+    component::Int
+    value::Real
+    when_assemble::Type{<:AbstractAssemblyTrigger}
+end 
+function FixedIntegralMean(component::Int, value::Real)
+    return FixedIntegralMean("Mean[$component] != $value",component, value, AssemblyFinal)
+end
+
+struct CombineDofs <: AbstractGlobalConstraint
+    name::String
+    componentX::Int                  # component nr for dofsX
+    componentY::Int                  # component nr for dofsY
+    dofsX::Array{Int,1}     # dofsX that should be the same as dofsY in Y component
+    dofsY::Array{Int,1}
+    when_assemble::Type{<:AbstractAssemblyTrigger}
+end 
+function CombineDofs(componentX,componentY,dofsX,dofsY)
+    @assert length(dofsX) == length(dofsY)
+    return CombineDofs("CombineDofs[$componentX,$componentY] (ndofs = $(length(dofsX)))",componentX,componentY,dofsX,dofsY, AssemblyAlways)
+end
+
+function apply_constraint!(
+    A::FEMatrix,
+    b::FEVector,
+    Constraint::FixedIntegralMean,
+    Target::FEVector;
+    verbosity::Int = 0)
+    c = Constraint.component
+    if verbosity > 0
+        println("\n  Ensuring fixed integral mean for component $j...")
+    end
+
+    # fix the first dof
+    dof = A[c,c].offsetX+1
+    Target[c][1] = 0
+    return [dof]
+end
+
+
+function apply_constraint!(
+    A::FEMatrix,
+    b::FEVector,
+    Constraint::CombineDofs,
+    Target::FEVector;
+    verbosity::Int = 0)
+
+    fixed_dofs = []
+
+    c = Constraint.componentX
+    c2 = Constraint.componentY
+    if verbosity > 0 
+        println("\n  Combining dofs of component $c and $c2...")
+    end
+    # add subblock [dofsY,dofsY] of block [c2,c2] to subblock [dofsX,dofsX] of block [c,c]
+    # and penalize dofsY dofs
+    rows = rowvals(A.entries.cscmatrix)
+    targetrow = 0
+    sourcerow = 0
+    targetcolumn = 0
+    sourcecolumn = 0
+    for dof = 1 :length(Constraint.dofsX)
+
+        targetrow = A[c,c].offsetX + Constraint.dofsX[dof]
+        sourcerow = A[c2,c2].offsetX + Constraint.dofsY[dof]
+        #println("copying sourcerow=$sourcerow to targetrow=$targetrow")
+        for dof = 1 : length(Constraint.dofsX)
+            sourcecolumn = Constraint.dofsY[dof] + A[c2,c2].offsetY
+            for r in nzrange(A.entries.cscmatrix, sourcecolumn)
+                if sourcerow == rows[r]
+                    targetcolumn = Constraint.dofsX[dof] + A[c,c].offsetY
+                    A.entries[targetrow, targetcolumn] += 0.5*A.entries.cscmatrix.nzval[r] 
+                end
+            end
+        end
+        targetcolumn = A[c,c].offsetY + Constraint.dofsX[dof]
+        sourcecolumn = A[c2,c2].offsetY + Constraint.dofsY[dof]
+        #println("copying sourcecolumn=$sourcecolumn to targetcolumn=$targetcolumn")
+        for dof = 1 : length(Constraint.dofsX)
+            sourcerow = Constraint.dofsY[dof] + A[c2,c2].offsetX
+            for r in nzrange(A.entries.cscmatrix, sourcecolumn)
+                if sourcerow == rows[r]
+                    targetrow = Constraint.dofsX[dof] + A[c,c].offsetX
+                    A.entries[targetrow,targetcolumn] += 0.5*A.entries.cscmatrix.nzval[r] 
+                end
+            end
+        end
+
+        # fix one of the dofs
+        Target.entries[sourcecolumn] = 0
+        push!(fixed_dofs,sourcecolumn)
+    end
+    return fixed_dofs
+end
+
+function realize_constraint!(
+    Target::FEVector,
+    Constraint::FixedIntegralMean;
+    verbosity::Int = 0)
+
+    c = Constraint.component
+    if verbosity > 0
+        println("\n  Moving integral mean for component $c to value $(Constraint.value)")
+    end
+    # move integral mean
+    pmeanIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
+    meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)
+    total_area = sum(Target.FEVectorBlocks[c].FES.xgrid[CellVolumes], dims=1)[1]
+    meanvalue /= total_area
+    for dof=1:Target.FEVectorBlocks[c].FES.ndofs
+        Target[c][dof] -= meanvalue + Constraint.value
+    end    
+end
+
+
+function realize_constraint!(
+    Target::FEVector,
+    Constraint::CombineDofs;
+    verbosity::Int = 0)
+
+    c = Constraint.componentX
+    c2 = Constraint.componentY
+    if verbosity > 0
+        println("\n  Moving entries of combined dofs from component $c to component $c2")
+    end
+    for dof = 1 : length(Constraint.dofsX)
+        Target[c2][Constraint.dofsY[dof]] = Target[c][Constraint.dofsX[dof]]
+    end 
+end
+
+

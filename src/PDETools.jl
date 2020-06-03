@@ -8,21 +8,46 @@ using ExtendableSparse
 using SparseArrays
 using BenchmarkTools
 
-include("PDETools_PDEDescription.jl")
+# type to steer when a PDE block is (re)assembled
+abstract type AbstractAssemblyTrigger end
+abstract type AssemblyInitial <: AbstractAssemblyTrigger end    # is only assembled in initial assembly
+abstract type AssemblyEachTimeStep <: AssemblyInitial end       # is (re)assembled in each timestep
+abstract type AssemblyAlways <: AssemblyEachTimeStep end        # is always (re)assembled
+abstract type AssemblyFinal <: AbstractAssemblyTrigger end       # is only assembled after solving
+
+
+
+include("PDETools_PDEOperators.jl")
 export AbstractPDEOperator
+
+export AbstractBilinearForm
+export StiffnessOperator, LaplaceOperator, HookStiffnessOperator2D, HookStiffnessOperator1D, ReactionOperator
+
 export DiagonalOperator
-export StiffnessOperator, LaplaceOperator, HookStiffnessOperator2D, HookStiffnessOperator1D
-export ReactionOperator
 export ConvectionOperator
-export RhsOperator
-export BoundaryOperator
 export LagrangeMultiplier
-export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary, NeumannBoundary
-export AbstractGlobalConstraint, FixedIntegralMean, CombineDofs
+
+export RhsOperator
+
+
+include("PDETools_PDEBoundaryData.jl")
+export BoundaryOperator
+export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary
+
+
+include("PDETools_PDEGlobalConstraints.jl")
+export AbstractGlobalConstraint
+export FixedIntegralMean
+export CombineDofs
+
+
+include("PDETools_PDEDescription.jl")
 export PDEDescription
+
 
 include("PDETools_PDESolver.jl")
 export assemble!, solve!
+
 
 include("PDETools_PDEProtoTypes.jl")
 export IncompressibleNavierStokesProblem
