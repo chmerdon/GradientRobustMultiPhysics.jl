@@ -27,10 +27,8 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid, ConnectionPoints = testgrid_tire(3,4) # initial simplex grid
+    xgrid, ConnectionPoints = testgrid_tire(1,1) # initial simplex grid
     nnodes = num_sources(xgrid[Coordinates])
-    ConnectionDofs = [ConnectionPoints;nnodes .+ ConnectionPoints]
-    show(ConnectionDofs)
 
     # problem parameters
     elasticity_modulus = 100000 # elasticity modulus
@@ -39,12 +37,16 @@ function main()
     shear_modulus = (1/(1+poisson_number))*elasticity_modulus
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
-    # choose finite element type
-    FEType_spokes = FiniteElements.H1P1{2}
-    FEType_rest = FiniteElements.H1P1{2}
+    # choose finite element type for wheel and mid area
+    #FEType_rest = FiniteElements.H1P1{2}; ConnectionDofs1 = [ConnectionPoints;nnodes .+ ConnectionPoints]
+    FEType_rest = FiniteElements.H1P2{2,2}; ConnectionDofs1 = [ConnectionPoints;(nnodes + num_sources(xgrid[FaceNodes])) .+ ConnectionPoints]
+
+    # finite element type for spokes is P1
+    FEType_spokes = FiniteElements.H1P1{2}; ConnectionDofs2 = [ConnectionPoints;nnodes .+ ConnectionPoints]
+    #FEType_spokes = FiniteElements.H1P2{2,1}; ConnectionDofs2 = [ConnectionPoints;(nnodes + num_sources(xgrid[CellNodes])) .+ ConnectionPoints]
 
     # other parameters
-    verbosity = 5 # deepness of messaging (the larger, the more)
+    verbosity = 1 # deepness of messaging (the larger, the more)
     factor_plotdisplacement = 100
 
     #####################################################################################    
@@ -70,7 +72,7 @@ function main()
 
     # GLOBAL CONSTRAINTS
     MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,1)
-    MyGlobalConstraints[1] = CombineDofs(1,2,ConnectionDofs,ConnectionDofs)
+    MyGlobalConstraints[1] = CombineDofs(1,2,ConnectionDofs1,ConnectionDofs2)
     name = "linear elasticity problem"
     LinElastProblem = PDEDescription(name,MyLHS,MyRHS,[MyBoundaryRest,MyBoundaryEmpty,MyBoundaryEmpty],MyGlobalConstraints)
     show(LinElastProblem)
@@ -78,8 +80,6 @@ function main()
     # generate FESpace
     FESpace_rest = FiniteElements.FESpace{FEType_rest}(xgrid)
     FESpace_spokes = FiniteElements.FESpace{FEType_spokes}(xgrid)
-    show(FESpace_rest)
-    show(FESpace_spokes)
 
     # solve PDE
     Solution = FEVector{Float64}("Displacement",FESpace_rest)

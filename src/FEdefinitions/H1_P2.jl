@@ -19,7 +19,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
     for n = 1 : ncomponents-1
         name = name * "xP2"
     end
-    FES.name = name * " (H1)"   
+    FES.name = name * " (H1, edim=$edim)"   
 
     # count number of dofs
 
@@ -30,10 +30,13 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
     ncells = num_sources(xCellNodes)
     nfaces = num_sources(FES.xgrid[FaceNodes])
     nnodes = num_sources(FES.xgrid[Coordinates]) 
+    ndofs4component = 0
     if edim == 1
         ndofs = (nnodes + ncells) * ncomponents
+        ndofs4component = nnodes + ncells
     elseif edim == 2
         ndofs = (nnodes + nfaces) * ncomponents
+        ndofs4component = nnodes + nfaces
     elseif edim == 3
         # TODO
     end    
@@ -54,21 +57,20 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
         nnodes4item = 0
         nextra4item = 0
         ndofs4item = 0
-        ndofs4component = nnodes + nfaces
         for cell = 1 : ncells
             nnodes4item = num_targets(xCellNodes,cell)
             for k = 1 : nnodes4item
                 dofs4item[k] = xCellNodes[k,cell]
             end
-            if edim == 0 # in 1D also cell midpoints are dofs
+            if edim == 1 # in 1D also cell midpoints are dofs
                 nextra4item = 1
                 dofs4item[nnodes4item+1] = nnodes + cell
-            elseif edim > 1 # in 2D also face midpoints are dofs
+            elseif edim == 2 # in 2D also face midpoints are dofs
                 nextra4item = num_targets(xCellFaces,cell)
                 for k = 1 : nextra4item
                     dofs4item[nnodes4item+k] = nnodes + xCellFaces[k,cell]
                 end
-            elseif edim > 2 # in 3D also edge midpoints are dofs
+            elseif edim == 3 # in 3D also edge midpoints are dofs
                 # TODO
             end
             ndofs4item = nnodes4item + nextra4item

@@ -139,7 +139,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
                     dof = xCellDofs[k,item]
                     if O.onlynz == true
                         if A[dof,dof] == 0
-                            println(" PEN dof=$dof")
+                            #println(" PEN dof=$dof")
                             A[dof,dof] = O.value
                         end
                     else
@@ -417,7 +417,6 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
 
     # ASSEMBLE SYSTEM
     A = FEMatrix{Float64}("SystemMatrix", FEs)
-    show(A)
     b = FEVector{Float64}("SystemRhs", FEs)
     for j = 1:size(PDE.RHSOperators,1)
         assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyInitial, verbosity = verbosity - 1)
@@ -463,12 +462,16 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
             # add subblock [dofsY,dofsY] of block [c2,c2] to subblock [dofsX,dofsX] of block [c,c]
             # and penalize dofsY dofs
             rows = rowvals(A.entries.cscmatrix)
+            targetrow = 0
+            sourcerow = 0
+            targetcolumn = 0
+            sourcecolumn = 0
             for dof = 1 :length(PDE.GlobalConstraints[j].dofsX)
 
 
                 targetrow = A[c,c].offsetX + PDE.GlobalConstraints[j].dofsX[dof]
                 sourcerow = A[c2,c2].offsetX + PDE.GlobalConstraints[j].dofsY[dof]
-                println("copying sourcerow=$sourcerow to targetrow=$targetrow")
+                #println("copying sourcerow=$sourcerow to targetrow=$targetrow")
                 for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
                     sourcecolumn = PDE.GlobalConstraints[j].dofsY[dof] + A[c2,c2].offsetY
                     for r in nzrange(A.entries.cscmatrix, sourcecolumn)
@@ -480,7 +483,7 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
                 end
                 targetcolumn = A[c,c].offsetY + PDE.GlobalConstraints[j].dofsX[dof]
                 sourcecolumn = A[c2,c2].offsetY + PDE.GlobalConstraints[j].dofsY[dof]
-                println("copying sourcecolumn=$sourcecolumn to targetcolumn=$targetcolumn")
+                #println("copying sourcecolumn=$sourcecolumn to targetcolumn=$targetcolumn")
                 for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
                     sourcerow = PDE.GlobalConstraints[j].dofsY[dof] + A[c2,c2].offsetX
                     for r in nzrange(A.entries.cscmatrix, sourcecolumn)
@@ -492,18 +495,11 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
                 end
 
                 # penalize Y dofs
-                println(" PEN dof=$sourcecolumn")
+                #println(" PEN dof=$sourcecolumn")
                 b.entries[sourcecolumn] = 0.0
                 A.entries[sourcecolumn,sourcecolumn] = SC.dirichlet_penalty
                 push!(fixed_dofs,sourcecolumn)
             end
-
-            # for d = 1:length(PDE.GlobalConstraints[j].dofsX)
-            #     dof = PDE.GlobalConstraints[j].dofsX[d]
-            #     show(A.entries[dof,:] - A.entries[26+dof,:])
-            #     #show(A.entries[:,dof] - A.entries[:,26+dof])
-            #     #show(b.entries[dof] - b.entries[26+dof])
-            # end
         end
     end
     flush!(A.entries)
