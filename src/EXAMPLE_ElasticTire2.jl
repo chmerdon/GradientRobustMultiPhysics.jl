@@ -27,7 +27,7 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid, ConnectionPoints = testgrid_tire(1,1) # initial simplex grid
+    xgrid, ConnectionPoints = testgrid_tire(3,4) # initial simplex grid
     nnodes = num_sources(xgrid[Coordinates])
 
     # problem parameters
@@ -46,7 +46,7 @@ function main()
     #FEType_spokes = FiniteElements.H1P2{2,1}; ConnectionDofs2 = [ConnectionPoints;(nnodes + num_sources(xgrid[CellNodes])) .+ ConnectionPoints]
 
     # other parameters
-    verbosity = 1 # deepness of messaging (the larger, the more)
+    verbosity = 2 # deepness of messaging (the larger, the more)
     factor_plotdisplacement = 100
 
     #####################################################################################    

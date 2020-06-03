@@ -52,10 +52,10 @@ function main()
     nonlinear = true
 
     # choose finite element type
-    FETypes = [FiniteElements.H1P2{2,2}, FiniteElements.H1P1{1}] # Taylor--Hood
+    #FETypes = [FiniteElements.H1P2{2,2}, FiniteElements.H1P1{1}] # Taylor--Hood
     #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
     #FETypes = [FiniteElements.H1MINI{2,2}, FiniteElements.H1P1{1}] # MINI element
-    #FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
+    FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
 
     # solver parameters
     maxIterations = 10  # termination criterion 1 for nonlinear mode

@@ -407,47 +407,20 @@ function check_PDEoperator(O::ConvectionOperator)
 end
 
 
-# for linear, stationary PDEs that can be solved in one step
-function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; verbosity::Int = 0)
+function apply_constraints!(
+    A::FEMatrix,
+    b::FEVector,
+    PDE::PDEDescription,
+    SC::SolverConfig,
+    Target::FEVector;
+    verbosity::Int = 0)
 
-    FEs = Array{FESpace,1}([])
-    for j=1 : length(Target.FEVectorBlocks)
-        push!(FEs,Target.FEVectorBlocks[j].FES)
-    end    
-
-    # ASSEMBLE SYSTEM
-    A = FEMatrix{Float64}("SystemMatrix", FEs)
-    b = FEVector{Float64}("SystemRhs", FEs)
-    for j = 1:size(PDE.RHSOperators,1)
-        assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyInitial, verbosity = verbosity - 1)
-    end
-
-    # ASSEMBLE BOUNDARY DATA
     fixed_dofs = []
-    for j= 1 : length(Target.FEVectorBlocks)
-        if verbosity > 1
-            println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
-            append!(fixed_dofs, new_fixed_dofs)
-        else
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
-            append!(fixed_dofs, new_fixed_dofs)
-        end    
-    end    
 
-    # penalize fixed dofs
-    for j = 1 : length(fixed_dofs)
-        b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
-        A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
-    end
-
-    flush!(A.entries)
-
-    # prepare further global constraints
     for j = 1 : length(PDE.GlobalConstraints)
         if typeof(PDE.GlobalConstraints[j]) == FixedIntegralMean
             c = PDE.GlobalConstraints[j].component
-            if verbosity > 1
+            if verbosity > 0
                 println("\n  Ensuring fixed integral mean for component $j...")
             end
             b[c][1] = 0.0
@@ -456,7 +429,7 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
         elseif typeof(PDE.GlobalConstraints[j]) == CombineDofs
             c = PDE.GlobalConstraints[j].componentX
             c2 = PDE.GlobalConstraints[j].componentY
-            if verbosity > 1 
+            if verbosity > 0 
                 println("\n  Combining dofs of component $c and $c2...")
             end
             # add subblock [dofsY,dofsY] of block [c2,c2] to subblock [dofsX,dofsX] of block [c,c]
@@ -502,10 +475,87 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
             end
         end
     end
+
+    return fixed_dofs
+end
+
+function realize_constraints!(
+    Target::FEVector,
+    PDE::PDEDescription,
+    SC::SolverConfig;
+    verbosity::Int = 0)
+
+    for j = 1 : length(PDE.GlobalConstraints)
+        if typeof(PDE.GlobalConstraints[j]) == FixedIntegralMean
+            c = PDE.GlobalConstraints[j].component
+            if verbosity > 0
+                println("\n  Moving integral mean for component $c to value $(PDE.GlobalConstraints[j][k].value)")
+            end
+            # move integral mean
+            pmeanIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
+            meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)
+            total_area = sum(Target.FEVectorBlocks[c].FES.xgrid[CellVolumes], dims=1)[1]
+            meanvalue /= total_area
+            for dof=1:Target.FEVectorBlocks[c].FES.ndofs
+                Target[c][dof] -= meanvalue + PDE.GlobalConstraints[j].value
+            end    
+        elseif typeof(PDE.GlobalConstraints[j]) == CombineDofs
+            c = PDE.GlobalConstraints[j].componentX
+            c2 = PDE.GlobalConstraints[j].componentY
+            if verbosity > 0
+                println("\n  Moving entries of combined dofs from component $c to component $c2")
+            end
+            for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
+                Target[c2][PDE.GlobalConstraints[j].dofsY[dof]] = Target[c][PDE.GlobalConstraints[j].dofsX[dof]]
+            end 
+            
+        end
+    end
+end
+
+
+# for linear, stationary PDEs that can be solved in one step
+function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; verbosity::Int = 0)
+
+    FEs = Array{FESpace,1}([])
+    for j=1 : length(Target.FEVectorBlocks)
+        push!(FEs,Target.FEVectorBlocks[j].FES)
+    end    
+
+    # ASSEMBLE SYSTEM
+    A = FEMatrix{Float64}("SystemMatrix", FEs)
+    b = FEVector{Float64}("SystemRhs", FEs)
+    for j = 1:size(PDE.RHSOperators,1)
+        assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyInitial, verbosity = verbosity - 1)
+    end
+
+    # ASSEMBLE BOUNDARY DATA
+    fixed_dofs = []
+    for j= 1 : length(Target.FEVectorBlocks)
+        if verbosity > 1
+            println("\n  Assembling boundary data for block [$j]...")
+            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
+            append!(fixed_dofs, new_fixed_dofs)
+        else
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
+            append!(fixed_dofs, new_fixed_dofs)
+        end    
+    end    
+
+    # PENALIZE FIXED DOFS
+    # (possibly from boundary conditions)
+    for j = 1 : length(fixed_dofs)
+        b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
+        A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
+    end
+
+    # PREPARE GLOBALCONSTRAINTS
+    # (possibly more penalties)
     flush!(A.entries)
+    apply_constraints!(A,b,PDE,SC,Target; verbosity = verbosity - 1)
 
 
-    # solve
+    # SOLVE
     if verbosity > 1
         println("\n  Solving")
         @time Target.entries[:] = A.entries\b.entries
@@ -514,41 +564,16 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
     end
 
     if verbosity > 0
-        # check residual of current solution
+        # CHECK RESIDUAL
         residual = (A.entries*Target.entries - b.entries).^2
         residual[fixed_dofs] .= 0
         println("\n  residual = $(sqrt(sum(residual, dims = 1)[1]))")
     end
 
 
-    # realize global constraints
-
-    for j = 1 : length(PDE.GlobalConstraints)
-        if typeof(PDE.GlobalConstraints[j]) == FixedIntegralMean
-            c = PDE.GlobalConstraints[j].component
-            if verbosity > 1
-                println("\n  Moving integral mean for component $c to value $(PDE.GlobalConstraints[j][k].value)")
-            end
-            # move integral mean
-            pmeanIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
-            meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)
-            total_area = sum(FEs[c].xgrid[CellVolumes], dims=1)[1]
-            meanvalue /= total_area
-            for dof=1:FEs[c].ndofs
-                Target[c][dof] -= meanvalue + PDE.GlobalConstraints[j].value
-            end    
-        elseif typeof(PDE.GlobalConstraints[j]) == CombineDofs
-            c = PDE.GlobalConstraints[j].componentX
-            c2 = PDE.GlobalConstraints[j].componentY
-            if verbosity > 1
-                println("\n  Moving entries of combined dofs from component $c to value component $c2")
-            end
-            for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
-                Target[c2][PDE.GlobalConstraints[j].dofsY[dof]] = Target[c][PDE.GlobalConstraints[j].dofsX[dof]]
-            end 
-            
-        end
-    end
+    # REALIZE GLOBAL GLOBALCONSTRAINTS 
+    # (possibly changes some entries of Target)
+    realize_constraints!(Target,PDE,SC;verbosity = verbosity - 1)
 end
 
 
@@ -562,7 +587,7 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
         push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
 
-    # ASSEMBLE SYSTEM init
+    # ASSEMBLE SYSTEM INIT
     A = FEMatrix{Float64}("SystemMatrix", FEs)
     b = FEVector{Float64}("SystemRhs", FEs)
     for j = 1:size(PDE.RHSOperators,1)
@@ -590,50 +615,19 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
     end
     for j = 1 : SC.maxIterations
 
-        # penalize fixed dofs
+        # PENALIZE FIXED DOFS
+        # (possibly from boundary conditions)
         for j = 1 : length(fixed_dofs)
             b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
             A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
         end
 
-        # prepare further global constraints
-        for j = 1 : length(PDE.GlobalConstraints)
-            if typeof(PDE.GlobalConstraints[j]) == FixedIntegralMean
-                c = PDE.GlobalConstraints[j].component
-                if verbosity > 1
-                    println("\n  Ensuring fixed integral mean for component $j...")
-                end
-                b[c][1] = 0.0
-                A[c,c][1,1] = SC.dirichlet_penalty
-            elseif typeof(PDE.GlobalConstraints[j]) == CombineDofs
-                c = PDE.GlobalConstraints[j].componentX
-                c2 = PDE.GlobalConstraints[j].componentY
-                if verbosity > 1 
-                    println("\n  Combining dofs of component $c and $c2...")
-                end
-                # add rows dofsY of block (c2,c2) to the corresponding rows dofsX in block (j,c2)
-                row = 0
-                for dof = 1 : length(PDE.GlobalConstraints[j].dofsX)
-                    col = PDE.GlobalConstraints[j].dofsX[dof]
-                    for r in nzrange(A[c,c].entries.cscmatrix, col)
-                        row = rowvals(A[c,c].entries.cscmatrix)[r]
-                        A[c2,c][col,row] = A[c,c].entries.cscmatrix.nzval[r] 
-                        println("adding entry A[$c,$c][$row,$col] to A[$c2,$c][$col,$row]")
-                    end
-                    col = PDE.GlobalConstraints[j].dofsX[dof]
-                    for r in nzrange(A[c2,c2].entries.cscmatrix, col)
-                        row = rowvals(A[c2,c2].entries.cscmatrix)[r]
-                        A[c,c2][col,row] = A[c2,c2].entries.cscmatrix.nzval[r] 
-                        println("adding entry A[$c2,$c2][$row,$col] to A[$c,$c2][$col,$row]")
-                    end
-                    b[c][col] = 0.0
-                    A[c2,c2][col,col] = SC.dirichlet_penalty
-                end
+        # PREPARE GLOBALCONSTRAINTS
+        # (possibly more penalties)
+        flush!(A.entries)
+        apply_constraints!(A,b,PDE,SC,Target; verbosity = verbosity - 1)
 
-            end
-        end
-
-        # solve
+        # SOLVE
         if verbosity > 1
             println("\n  Solving")
             @time Target.entries[:] = A.entries\b.entries
@@ -641,12 +635,12 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
             Target.entries[:] = A.entries\b.entries
         end
 
-        # reassemble nonlinear parts of PDE
+        # REASSEMBLE NONLINEAR PARTS
         for j = 1:size(PDE.RHSOperators,1)
             assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyAlways, verbosity = verbosity - 2)
         end
 
-        # check residual of current solution
+        # CHECK RESIDUAL
         residual = (A.entries*Target.entries - b.entries).^2
         residual[fixed_dofs] .= 0
         resnorm = (sqrt(sum(residual, dims = 1)[1]))
@@ -670,24 +664,9 @@ function solve_fixpoint!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig
     end
 
 
-    # realize global constraints
-
-    for j = 1 : length(PDE.GlobalConstraints)
-        if typeof(PDE.GlobalConstraints[j]) == FixedIntegralMean
-            c = PDE.GlobalConstraints[j].component
-            if verbosity > 1
-                println("\n  Moving integral mean for component $c to value $(PDE.GlobalConstraints[j][k].value)")
-            end
-            # move integral mean
-            pmeanIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
-            meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)
-            total_area = sum(FEs[c].xgrid[CellVolumes], dims=1)[1]
-            meanvalue /= total_area
-            for dof=1:FEs[c].ndofs
-                Target[c][dof] -= meanvalue + PDE.GlobalConstraints[j].value
-            end    
-        end
-    end
+    # REALIZE GLOBAL GLOBALCONSTRAINTS 
+    # (possibly changes some entries of Target)
+    realize_constraints!(Target,PDE,SC;verbosity = verbosity - 1)
 
 end
 
