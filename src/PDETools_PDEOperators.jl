@@ -65,7 +65,7 @@ end
 # and assembles b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
 #            or b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
 #
-struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperator
+mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperator
     name::String
     operator1::Type{<:AbstractFunctionOperator}
     operator2::Type{<:AbstractFunctionOperator}

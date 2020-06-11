@@ -58,6 +58,9 @@ function main()
     FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}, FiniteElements.L2P0{1}] # Bernardi--Raugel
     #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}, FiniteElements.L2P0{1}] # Crouzeix--Raviart (needs smaller timesteps)
 
+    #TestFunctionOperator = Identity # classical scheme
+    TestFunctionOperator = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # gradient-robust scheme
+
     # solver parameters
     timestep = 1 // 2
     start_with_constant_density = false
@@ -70,6 +73,7 @@ function main()
 
     # load Stokes problem prototype and assign data
     StokesProblem = CompressibleNavierStokesProblem(equation_of_state!, rhs_gravity!, 2; timestep = timestep, viscosity = viscosity, lambda = lambda, nonlinear = false)
+    StokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperator
     append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], HomogeneousDirichletBoundary)
     Base.show(StokesProblem)
 
@@ -129,7 +133,7 @@ function main()
     # velocity
     nodevalues!(nodevals,Solution[1],FESpaceVelocity)
     PyPlot.figure(2)
-    #ExtendableGrids.plot(xgrid, nodevals[1,:][1:nnodes]; Plotter = PyPlot)
+    ExtendableGrids.plot(xgrid, nodevals[1,:][1:nnodes]; Plotter = PyPlot)
 
     # density
     nodevalues!(nodevals,Solution[2],FESpacePressureDensity)
