@@ -1,6 +1,6 @@
 
 # Prototype for incompressible StokesProblem
-function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, stationary::Bool = true, no_pressure_constraint::Bool = false)
+function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, no_pressure_constraint::Bool = false)
 
     # LEFT-HAND-SIDE: STOKES OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
@@ -38,43 +38,63 @@ function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, 
     return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
 end
 
-# Prototype for incompressible StokesProblem
-function CompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, stationary::Bool = true, no_pressure_constraint::Bool = false)
+# Prototype for compressible StokesProblem
+# component 1 = velocity
+# component 2 = density
+# component 3 = pressure
+function CompressibleNavierStokesProblem(equation_of_state!::Function, gravity!::Function, dimension::Int = 2; timestep::Real = 0.1, viscosity = 1.0, lambda = 1.0, nonlinear::Bool = true, no_pressure_constraint::Bool = false)
+
+
+    function gravity_function() # result = G(v) = -gravity*input
+        temp = zeros(Float64,dimension)
+        function closure(result,input,x)
+            gravity!(temp,x)
+            result[1] = 0
+            for j = 1 : dimension
+                result[1] += temp[j]*input[j] 
+            end
+        end
+    end    
+    gravity_action = XFunctionAction(gravity_function(),1,dimension)
 
     # LEFT-HAND-SIDE: STOKES OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,3,3)
-    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
     MyLHS[1,1] = [LaplaceOperator(viscosity,dimension,dimension)]
-    MyLHS[1,2] = [Abstract()] # automatically fills transposed block
+    if lambda != 0
+        push!(MyLHS[1,1],AbstractBilinearForm{AbstractAssemblyTypeCELL}("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1),1,[0]))
+    end
+    MyLHS[1,2] = [AbstractBilinearForm{AbstractAssemblyTypeCELL}("gravity*velocity*density",Identity,Identity,gravity_action,1,[0])]
+    MyLHS[1,3] = [AbstractBilinearForm(Divergence,Identity)]
     MyLHS[2,1] = []
-    MyLHS[2,2] = []
+    MyLHS[2,2] = [FVUpwindDivergenceOperator(1)]
+    MyLHS[2,3] = []
+    MyLHS[3,1] = []
+    eos_action = FunctionAction(equation_of_state!,1,dimension)
+    MyLHS[3,2] = [ReactionOperator(eos_action; apply_action_to = 2)]
+    MyLHS[3,3] = [ReactionOperator(MultiplyScalarAction(-1.0,1))]
 
     if nonlinear
         push!(MyLHS[1,1], ConvectionOperator(1, dimension, dimension))
     end
 
     # RIGHT-HAND SIDE: empty, user can fill in data later
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,3)
     MyRHS[1] = []
     MyRHS[2] = []
+    MyRHS[3] = []
 
     # BOUNDARY OPERATOR: empty, user can fill in data later
     MyBoundaryVelocity = BoundaryOperator(dimension,dimension)
+    MyBoundaryDensity = BoundaryOperator(dimension,1) # empty, no density boundary conditions
     MyBoundaryPressure = BoundaryOperator(dimension,1) # empty, no pressure boundary conditions
-    
-    # GLOBAL CONSTRAINTS: zero pressure integral mean
-    MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,1)
-    if no_pressure_constraint == false
-        MyGlobalConstraints[1] = FixedIntegralMean(2,0.0)
-    end
 
     if nonlinear == true
-        name = "incompressible Navier-Stokes-Problem"
+        name = "compressible Navier-Stokes-Problem"
     else
-        name = "incompressible Stokes-Problem"
+        name = "compressible Stokes-Problem"
     end
 
-    return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
+    return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryDensity,MyBoundaryPressure])
 end
 
 # Prototype for linear elasticity

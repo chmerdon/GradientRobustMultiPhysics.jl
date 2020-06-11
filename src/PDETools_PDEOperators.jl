@@ -22,6 +22,7 @@
 abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 
+
 ########################
 ### DiagonalOperator ###
 ########################
@@ -35,10 +36,25 @@ struct DiagonalOperator <: AbstractPDEOperator
     onlyz::Bool
     regions::Array{Int,1}
 end
-function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [])
+function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [0])
     return DiagonalOperator("Diag($value)",value, onlynz, regions)
 end
 
+
+####################
+### CopyOperator ###
+####################
+#
+# copies entries from TargetVector to rhs block
+#
+struct CopyOperator <: AbstractPDEOperator
+    name::String
+    copy_from::Int
+    factor::Real
+end
+function CopyOperator(copy_from, factor)
+    return CopyOperator("CopyOperator",copy_from, factor)
+end
 
 ############################
 ### AbstractBilinearForm ###
@@ -46,20 +62,22 @@ end
 #
 # expects two operators _operator1_ and _operator2_ and an _action_ and an AT::AbtractAssemblyType and _regions_
 # 
-# and assembles b(u,v) = int_regions action(operator1(u)) * operator2(v)
+# and assembles b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
+#            or b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
 #
 struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperator
     name::String
     operator1::Type{<:AbstractFunctionOperator}
     operator2::Type{<:AbstractFunctionOperator}
     action::AbstractAction
+    apply_action_to::Int
     regions::Array{Int,1}
 end
-function AbstractBilinearForm(operator1,operator2;regions::Array{Int,1} = [0])
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1), regions)
+function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1), apply_action_to, regions)
 end
 function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; gradient_operator = Gradient, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim), regions)
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim), 1, regions)
 end
 # todo
 # here a general connection to arbitrary tensors C_ijkl (encencodedoded as an action) is possible in future
@@ -69,7 +87,7 @@ function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient
         result[1] = mu*input[1]
     end   
     action = FunctionAction(tensor_apply_1d, 1, 1)
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian1D",gradient_operator, gradient_operator, action, regions)
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian1D",gradient_operator, gradient_operator, action, 1, regions)
 end
 function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_2d(result, input)
@@ -82,10 +100,10 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
         result[3] = mu*input[3]
     end   
     action = FunctionAction(tensor_apply_2d, 3, 2)
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian2D",gradient_operator, gradient_operator, action, regions)
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian2D",gradient_operator, gradient_operator, action, 1, regions)
 end
-function ReactionOperator(action::AbstractAction; identity_operator = Identity, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Reaction",identity_operator, identity_operator, action, regions)
+function ReactionOperator(action::AbstractAction; apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Reaction",identity_operator, identity_operator, action, apply_action_to, regions)
 end
 
 
@@ -207,6 +225,45 @@ function RhsOperator(
 end
 
 
+##################################
+### FVUpwindDivergenceOperator ###
+##################################
+#
+# finite-volume upwind divergence div_upw(beta*rho)
+#
+# assumes rho is constant on each cell
+# 
+# (1) calculate normalfluxes from component at _beta_from_
+# (2) compute upwind divergence on each cell and put coefficient in matrix
+#           div_upw(beta*rho)|_T = sum_{F face of T} normalflux(F) * rho(F)
+#
+#           where rho(F) is the rho in upwind direction 
+#
+#     and put it into P0xP0 matrix block like this:
+#
+#           Loop over cell, face of cell
+#
+#               other_cell = other face neighbour cell
+#               if flux := normalflux(F_j) * CellSigns[face,cell] > 0
+#                   A(cell,cell) += flux
+#                   A(other_cell,cell) -= flux
+#               else
+#                   A(other_cell,other_cell) -= flux
+#                   A(cell,other_cell) += flux
+#                   
+# see coressponding assemble! routine
+
+mutable struct FVUpwindDivergenceOperator <: AbstractPDEOperator
+    name::String
+    beta_from::Int                   # component that determines
+    fluxes::Array{Float64,2}         # saves normalfluxes of beta here
+end
+function FVUpwindDivergenceOperator(beta_from::Int)
+    @assert beta_from > 0
+    fluxes = zeros(Float64,0,1)
+    return FVUpwindDivergenceOperator("FVUpwindDivergence",beta_from,fluxes)
+end
+
 
 ################ ASSEMBLY SPECIFICATIONS ################
 
@@ -219,10 +276,16 @@ end
 function check_PDEoperator(O::ConvectionOperator)
     return O.beta_from != 0, false
 end
+function check_PDEoperator(O::FVUpwindDivergenceOperator)
+    return O.beta_from != 0, O.beta_from != 0
+end
+function check_PDEoperator(O::CopyOperator)
+    return true, true
+end
 
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOperator; verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOperator; time::Real = 0, verbosity::Int = 0)
     FE1 = A.FESX
     FE2 = A.FESY
     @assert FE1 == FE2
@@ -231,9 +294,9 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
     ncells = num_sources(xCellDofs)
     dof::Int = 0
     for item = 1 : ncells
-        for r = 1 : length(O.regions)
+        for r = 1 : length(O.regions) 
             # check if item region is in regions
-            if xCellRegions[item] == O.regions[r]
+            if xCellRegions[item] == O.regions[r] || O.regions[r] == 0
                 for k = 1 : num_targets(xCellDofs,item)
                     dof = xCellDofs[k,item]
                     if O.onlyz == true
@@ -250,7 +313,65 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
 end
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDivergenceOperator; time::Real = 0, verbosity::Int = 0)
+    FE1 = A.FESX
+    FE2 = A.FESY
+    @assert FE1 == FE2
+    xFaceNodes = FE1.xgrid[FaceNodes]
+    xFaceNormals = FE1.xgrid[FaceNormals]
+    xFaceCells = FE1.xgrid[FaceCells]
+    xFaceVolumes = FE1.xgrid[FaceVolumes]
+    xCellFaces = FE1.xgrid[CellFaces]
+    xCellSigns = FE1.xgrid[CellSigns]
+    nfaces = num_sources(xFaceNodes)
+    ncells = num_sources(xCellSigns)
+    nnodes = num_sources(FE1.xgrid[Coordinates])
+    
+    # ensure that flux field is long enough
+    if length(O.fluxes) < nfaces
+        O.fluxes = zeros(Float64,nfaces,1)
+    end
+
+    # compute normal fluxes of component beta
+    c = O.beta_from
+    fill!(O.fluxes,0)
+    fluxIntegrator = ItemIntegrator{Float64,AbstractAssemblyTypeFACE}(NormalFlux, DoNotChangeAction(1), [0])
+    evaluate!(O.fluxes,fluxIntegrator,CurrentSolution[c]; verbosity = verbosity - 1)
+
+    nfaces4cell = 0
+    face = 0
+    flux = 0.0
+    other_cell = 0
+    for cell = 1 : ncells
+        nfaces4cell = num_targets(xCellFaces,cell)
+        for cf = 1 : nfaces4cell
+            face = xCellFaces[cf,cell]
+            other_cell = xFaceCells[1,face]
+            if other_cell == cell
+                other_cell = xFaceCells[2,face]
+            end
+            flux = - O.fluxes[face] * xCellSigns[cf,cell]
+            if (other_cell > 0) 
+                flux *= 1 // 2
+            end       
+            if flux > 0
+                A[cell,cell] += flux
+                if other_cell > 0
+                    A[other_cell,cell] -= flux
+                end    
+            else   
+                if other_cell > 0
+                    A[other_cell,other_cell] -= flux
+                    A[cell,other_cell] += flux
+                end 
+            end
+        end
+    end
+
+
+end
+
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     FE1 = A.FESX
     FE2 = A.FESY
     if FE1 == FE2 && O.operator1 == O.operator2
@@ -258,34 +379,53 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilin
     else
         BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
     end
-    FEAssembly.assemble!(A, BLF; verbosity = verbosity)
+    FEAssembly.assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
 end
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; verbosity::Int = 0)
+
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0) where {AT<:AbstractAssemblyType}
+    FE1 = b.FES
+    FE2 = CurrentSolution[fixed_component].FES
+    if FE1 == FE2 && O.operator1 == O.operator2
+        BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+    else
+        BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+    end
+    FEAssembly.assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+end
+
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; time::Real = 0, verbosity::Int = 0)
     if O.beta_from == 0
         FE1 = A.FESX
         FE2 = A.FESY
         ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity)
+        FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity, transposed_assembly = true)
     else
         FE1 = A.FESX
         FE2 = A.FESY
         ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity)
+        FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity, transposed_assembly = true)
     end
 end
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; verbosity::Int = 0, At::FEMatrixBlock)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; time::Real = 0, verbosity::Int = 0, At::FEMatrixBlock)
     FE1 = A.FESX
     FE2 = A.FESY
     @assert At.FESX == FE2
     @assert At.FESY == FE1
     DivPressure = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
-    FEAssembly.assemble!(At, DivPressure; verbosity = verbosity, transpose_copy = A)
+    FEAssembly.assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     FE = b.FES
     RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, O.action; regions = O.regions)
     FEAssembly.assemble!(b, RHS; verbosity = verbosity)
+end
+
+
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::CopyOperator; time::Real = 0, verbosity::Int = 0) 
+    for j = 1 : length(b)
+        b[j] = CurrentSolution[O.copy_from][j] * O.factor
+    end
 end

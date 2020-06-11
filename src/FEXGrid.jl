@@ -123,12 +123,12 @@ nnodes_per_cellface(::Type{<:Quadrilateral2D}, k) = 2
 
 # functions that specify the facetype of the k-th cellface
 facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
-facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1DWithParent{Triangle2D}
-facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1DWithParent{Quadrilateral2D}
+facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D #WithParent{Triangle2D}
+facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D #WithParent{Quadrilateral2D}
 facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
 
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
-facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1DWithParents{P1,P2}
+facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D #WithParents{P1,P2}
 
 
 # functions that tell how to split one ElementGeometry into another

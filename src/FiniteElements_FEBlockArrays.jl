@@ -18,6 +18,19 @@ struct FEVector{T} <: AbstractArray{T,1}
     entries::Array{T,1}
 end
 
+# overload stuff for AbstractArray{T,1} behaviour
+Base.getindex(FEF::FEVector,i) = FEF.FEVectorBlocks[i]
+Base.getindex(FEB::FEVectorBlock,i::Int)=FEB.entries[FEB.offset+i]
+Base.getindex(FEB::FEVectorBlock,i::AbstractArray)=FEB.entries[FEB.offset.+i]
+Base.getindex(FEB::FEVectorBlock,::Colon)=FEB.entries[FEB.offset+1:FEB.last_index]
+Base.setindex!(FEB::FEVectorBlock, v, i::Int) = (FEB.entries[FEB.offset+i] = v)
+Base.setindex!(FEB::FEVectorBlock, v, ::Colon) = (FEB.entries[FEB.offset+1:FEB.last_index] = v)
+Base.setindex!(FEB::FEVectorBlock, v, i::AbstractArray) = (FEB.entries[FEB.offset.+i] = v)
+Base.size(FEF::FEVector)=size(FEF.FEVectorBlocks)
+Base.size(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
+Base.length(FEF::FEVector)=length(FEF.FEVectorBlocks)
+Base.length(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
+
 function FEVector{T}(name::String, FES::FESpace) where T <: Real
     entries = zeros(T,FES.ndofs)
     Block = FEVectorBlock{T}(name, FES, 0 , size(entries,1), entries)
@@ -50,24 +63,26 @@ function Base.show(io::IO, FEF::FEVector) where {T}
     end    
 end
 
-# overload stuff for AbstractArray{T,1} behaviour
-Base.getindex(FEF::FEVector,i) = FEF.FEVectorBlocks[i]
-Base.getindex(FEB::FEVectorBlock,i::Int)=FEB.entries[FEB.offset+i]
-Base.getindex(FEB::FEVectorBlock,i::AbstractArray)=FEB.entries[FEB.offset.+i]
-Base.getindex(FEB::FEVectorBlock,::Colon)=FEB.entries[FEB.offset+1:FEB.last_index]
-Base.setindex!(FEB::FEVectorBlock, v, i::Int) = (FEB.entries[FEB.offset+i] = v)
-Base.setindex!(FEB::FEVectorBlock, v, ::Colon) = (FEB.entries[FEB.offset+1:FEB.last_index] = v)
-Base.setindex!(FEB::FEVectorBlock, v, i::AbstractArray) = (FEB.entries[FEB.offset.+i] = v)
-Base.size(FEF::FEVector)=size(FEF.FEVectorBlocks)
-Base.size(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
-Base.length(FEF::FEVector)=length(FEF.FEVectorBlocks)
-Base.length(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
 
 
 function Base.append!(FEF::FEVector{T},name::String,FES::FESpace) where T <: Real
     append!(FEF.entries,zeros(T,FES.ndofs))
     newBlock = FEVectorBlock{T}(name, FES, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FES.ndofs, FEF.entries)
     push!(FEF.FEVectorBlocks,newBlock)
+end
+
+function Base.fill!(b::FEVectorBlock, value::Real)
+    for j = b.offset+1 : b.last_index
+        b.entries[j] = 0
+    end
+end
+
+
+# a = a + b*factor
+function addblock(a::FEVectorBlock, b::FEVectorBlock; factor::Real = 1)
+    for j = b.offset+1 : b.last_index
+        a.entries[j] += b.entries[j] * factor
+    end
 end
 
 ################
@@ -94,6 +109,14 @@ struct FEMatrix{T} <: AbstractArray{T,1}
     nFE::Int
     entries::AbstractMatrix
 end
+
+Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
+Base.getindex(FEF::FEMatrix,i,j) = FEF.FEMatrixBlocks[(i-1)*FEF.nFE+j]
+Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
+Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
+Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = (FEB.entries[FEB.offsetX+i,FEB.offsetY+j] = v)
+Base.size(FEF::FEMatrix)=length(FEF.FEMatrixBlocks)
+Base.size(FEB::FEMatrixBlock)=[FEB.last_indexX-FEB.offsetX,FEB.last_indexY-FEB.offsetY]
 
 # show function for FEMatrix
 function Base.show(io::IO, FEM::FEMatrix) where {T}
@@ -145,24 +168,35 @@ function FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 end
 
 function Base.fill!(B::FEMatrixBlock, value::Real)
-    row = 0
+    rows = rowvals(B.entries.cscmatrix)
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(B.entries.cscmatrix, col)
-            row = rowvals(B.entries.cscmatrix)[r]
-            if row >= B.offsetX && row <= B.last_indexX
+            if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
                 B.entries.cscmatrix.nzval[r] = value
             end
         end
     end
 end
 
+function addblock(A::FEMatrixBlock, B::FEMatrixBlock; factor::Real = 1)
+    rows = rowvals(B.entries.cscmatrix)
+    for col = B.offsetY+1:B.last_indexY
+        for r in nzrange(B.entries.cscmatrix, col)
+            if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
+                A[rows[r],col] += B.entries.cscmatrix.nzval[r] * factor
+            end
+        end
+    end
+end
 
-
-
-Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
-Base.getindex(FEF::FEMatrix,i,j) = FEF.FEMatrixBlocks[(i-1)*FEF.nFE+j]
-Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
-Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
-Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = (FEB.entries[FEB.offsetX+i,FEB.offsetY+j] = v)
-Base.size(FEF::FEMatrix)=length(FEF.FEMatrixBlocks)
-Base.size(FEB::FEMatrixBlock)=[FEB.last_indexX-FEB.offsetX,FEB.last_indexY-FEB.offsetY]
+# a = a + B*b*factor
+function addblock_matmul(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor::Real = 1)
+    rows = rowvals(B.entries.cscmatrix)
+    for col = B.offsetY+1:B.last_indexY
+        for r in nzrange(B.entries.cscmatrix, col)
+            if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
+                a.entries[rows[r]] += B.entries.cscmatrix.nzval[r] * b[col] * factor 
+            end
+        end
+    end
+end

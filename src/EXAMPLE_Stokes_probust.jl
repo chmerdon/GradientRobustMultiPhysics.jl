@@ -75,8 +75,8 @@ function main()
 
     # problem parameters
     viscosity = 1e-2
-    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
-    #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
+    #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
+    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
 
     # choose finite element type
     FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel

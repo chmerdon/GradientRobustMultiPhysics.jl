@@ -58,7 +58,11 @@ function Base.show(io::IO, PDE::PDEDescription)
         if length(PDE.RHSOperators[j]) > 0
             print("     [$j]    | ")
             for o = 1 : length(PDE.RHSOperators[j])
-                print("$(typeof(PDE.RHSOperators[j][o])) (regions = $(PDE.RHSOperators[j][o].regions))")
+                try
+                    print("$(typeof(PDE.RHSOperators[j][o])) (regions = $(PDE.RHSOperators[j][o].regions))")
+                catch
+                    print("$(typeof(PDE.RHSOperators[j][o])) (regions = [0])")
+                end
                 if o == length(PDE.RHSOperators[j])
                     println("")
                 else

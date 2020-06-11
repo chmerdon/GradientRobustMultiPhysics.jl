@@ -46,7 +46,7 @@ function apply_constraint!(
     verbosity::Int = 0)
     c = Constraint.component
     if verbosity > 0
-        println("\n  Ensuring fixed integral mean for component $j...")
+        println("\n  Ensuring fixed integral mean for component $c...")
     end
 
     # fix the first dof

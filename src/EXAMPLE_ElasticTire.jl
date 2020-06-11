@@ -40,7 +40,7 @@ function main()
     FEType = FiniteElements.H1P1{2}
 
     # other parameters[]
-    verbosity = 1 # deepness of messaging (the larger, the more)
+    verbosity = 2 # deepness of messaging (the larger, the more)
     factor_plotdisplacement = 50
 
     #####################################################################################    

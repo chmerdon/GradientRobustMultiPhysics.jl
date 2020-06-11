@@ -44,7 +44,8 @@ get_polynomialorder(::Type{<:AbstractFiniteElement}, ::Type{<:Vertex0D}) = 0;
 
 include("FiniteElements_FEBlockArrays.jl");
 export FEVectorBlock, FEVector
-export FEMatrixBlock, FEMatrix, fill!
+export FEMatrixBlock, FEMatrix
+export fill!, addblock, addblock_matmul
 
 
 
