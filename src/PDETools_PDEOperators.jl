@@ -277,10 +277,18 @@ function check_PDEoperator(O::ConvectionOperator)
     return O.beta_from != 0, false
 end
 function check_PDEoperator(O::FVUpwindDivergenceOperator)
-    return O.beta_from != 0, O.beta_from != 0
+    return O.beta_from != 0, false
 end
 function check_PDEoperator(O::CopyOperator)
     return true, true
+end
+
+function check_dependency(O::AbstractPDEOperator, arg::Int)
+    return false
+end
+
+function check_dependency(O::Union{ConvectionOperator,FVUpwindDivergenceOperator}, arg::Int)
+    return O.beta_from == arg
 end
 
 

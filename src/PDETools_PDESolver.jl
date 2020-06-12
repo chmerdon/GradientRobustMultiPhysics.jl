@@ -3,7 +3,9 @@ mutable struct SolverConfig
     is_nonlinear::Bool      # PDE is nonlinear
     is_timedependent::Bool  # PDE is time_dependent
     LHS_AssemblyTriggers::Array{DataType,2} # assembly triggers for blocks in LHS
+    LHS_dependencies::Array{Array{Int,1},2} # dependencies on components
     RHS_AssemblyTriggers::Array{DataType,1} # assembly triggers for blocks in RHS
+    RHS_dependencies::Array{Array{Int,1},1} # dependencies on components
     subiterations::Array{Array{Int,1},1} # combination of equations (= rows in PDE.LHS) that should be solved together
     maxIterations::Int          # maximum number of iterations
     maxResidual::Real           # tolerance for residual
@@ -24,11 +26,21 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
     op_nonlinear::Bool = false
     op_timedependent::Bool = false
     LHS_ATs = Array{DataType,2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
+    LHS_dep = Array{Array{Int,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
+    current_dep::Array{Int,1} = []
     for j = 1 : size(PDE.LHSOperators,1), k = 1 : size(PDE.LHSOperators,2)
         block_nonlinear = false
         block_timedependent = false
+        current_dep = [j,k]
         for o = 1 : length(PDE.LHSOperators[j,k])
+            # check nonlinearity and time-dependency of operator
             op_nonlinear, op_timedependent = check_PDEoperator(PDE.LHSOperators[j,k][o])
+            # check dependency on components
+            for beta = 1:size(PDE.LHSOperators,2)
+                if check_dependency(PDE.LHSOperators[j,k][o],beta) == true
+                    push!(current_dep,beta)
+                end
+            end
             if op_nonlinear == true
                 block_nonlinear = true
             end
@@ -36,6 +48,8 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
                 block_timedependent = true
             end
         end
+        # check nonlinearity and time-dependency of whole block
+        # and assign appropriate AssemblyTrigger
         if length(PDE.LHSOperators[j,k]) == 0
             LHS_ATs[j,k] = AssemblyNever
         else
@@ -49,13 +63,22 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
                 LHS_ATs[j,k] = AssemblyAlways
             end
         end
+        # assign dependencies
+        LHS_dep[j,k] = deepcopy(unique(current_dep))
     end
     RHS_ATs = Array{DataType,1}(undef,size(PDE.RHSOperators,1))
+    RHS_dep = Array{Array{Int,1},1}(undef,size(PDE.RHSOperators,1))
     for j = 1 : size(PDE.RHSOperators,1)
         block_nonlinear = false
         block_timedependent = false
+        current_dep = []
         for o = 1 : length(PDE.RHSOperators[j])
             op_nonlinear, op_timedependent = check_PDEoperator(PDE.RHSOperators[j][o])
+            for beta = 1:size(PDE.LHSOperators,2)
+                if check_dependency(PDE.RHSOperators[j][o],beta) == true
+                    push!(current_dep,beta)
+                end
+            end
             if op_nonlinear == true
                 block_nonlinear = true
             end
@@ -76,6 +99,8 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
                 RHS_ATs[j] = AssemblyAlways
             end
         end
+        # assign dependencies
+        RHS_dep[j] = deepcopy(unique(current_dep))
     end
 
 
@@ -83,15 +108,15 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
         for s = 1 : length(subiterations), k = 1 : size(PDE.LHSOperators,1)
             if (k in subiterations[s]) == false
                 for j in subiterations[s]
-                    if LHS_ATs[j,k] != AssemblyNever
-                        LHS_ATs[j,k] = AssemblyAlways
+                    if LHS_ATs[j,k] == AssemblyInitial
+                        LHS_ATs[j,k] = AssemblyEachTimeStep
                     end
                 end
             end
         end
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, RHS_ATs,subiterations, 10, 1e-10, 0.0, 1e60, verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, verbosity)
     else
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, RHS_ATs,[1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, verbosity)
     end
 
 end
@@ -134,6 +159,7 @@ function Base.show(io::IO, SC::SolverConfig)
         println("")
     end
     println("                     (I = Once, T = EachTimeStep, A = Always, N = Never)")
+    println("\n LHS_dependencies = $(SC.LHS_dependencies)")
 
 end
 
@@ -146,15 +172,15 @@ function assemble!(
     CurrentSolution::FEVector;
     time::Real = 0,
     equations = [],
-    columns = [],
+    if_depends_on = [], # block is only assembled if it depends on these components
     min_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyAlways,
     verbosity::Int = 0)
 
     if length(equations) == 0
         equations = 1:size(PDE.LHSOperators,1)
     end
-    if length(columns) == 0
-        columns = 1:size(PDE.LHSOperators,1)
+    if length(if_depends_on) == 0
+        if_depends_on = 1:size(PDE.LHSOperators,1)
     end
 
     if verbosity > 0
@@ -189,51 +215,53 @@ function assemble!(
     subblock = 0
     for j = 1:length(equations)
         for k = 1 : size(PDE.LHSOperators,2)
-            if (k in equations) && (k in columns)
-                subblock += 1
-                #println("\n  Equation $j, subblock $subblock")
-                if SC.LHS_AssemblyTriggers[equations[j],k] <: min_trigger
-                    if verbosity > 0
-                        println("  Erasing lhs block [$j,$subblock]")
-                    end
-                    fill!(A[j,subblock],0.0)
-                    for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                        PDEoperator = PDE.LHSOperators[equations[j],k][o]
+            if length(intersect(SC.LHS_dependencies[equations[j],k], if_depends_on)) > 0
+                if (k in equations)
+                    subblock += 1
+                    #println("\n  Equation $j, subblock $subblock")
+                    if SC.LHS_AssemblyTriggers[equations[j],k] <: min_trigger
                         if verbosity > 0
-                            println("  Assembling into matrix block[$j,$subblock]: $(PDEoperator.name)")
-                            if typeof(PDEoperator) <: LagrangeMultiplier
-                                @time assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity, At = A[subblock,j])
-                            else
-                                @time assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity)
-                            end    
-                        else
-                            if typeof(PDEoperator) <: LagrangeMultiplier
-                                assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity, At = A[subblock,j])
-                            else
-                                assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity)
-                            end    
-                        end  
-                    end  
-                end
-            elseif k in columns
-                if SC.LHS_AssemblyTriggers[equations[j],k] <: min_trigger
-                    if (length(PDE.LHSOperators[equations[j],k]) > 0) && (!(SC.RHS_AssemblyTriggers[equations[j]] <: min_trigger))
-                        if rhs_block_has_been_erased[j] == false
-                            if verbosity > 0
-                                println("  Erasing rhs block [$j]")
-                            end
-                            fill!(b[j],0.0)
-                            rhs_block_has_been_erased[j] = true
+                            println("  Erasing lhs block [$j,$subblock]")
                         end
-                    end
-                    for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                        PDEoperator = PDE.LHSOperators[equations[j],k][o]
-                        if verbosity > 0
-                            println("  Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(PDEoperator.name)") 
-                            @time assemble!(b[j], CurrentSolution, PDEoperator; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
-                        else  
-                            assemble!(b[j], CurrentSolution, PDEoperator; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                        fill!(A[j,subblock],0.0)
+                        for o = 1 : length(PDE.LHSOperators[equations[j],k])
+                            PDEoperator = PDE.LHSOperators[equations[j],k][o]
+                            if verbosity > 0
+                                println("  Assembling into matrix block[$j,$subblock]: $(PDEoperator.name)")
+                                if typeof(PDEoperator) <: LagrangeMultiplier
+                                    @time assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity, At = A[subblock,j])
+                                else
+                                    @time assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity)
+                                end    
+                            else
+                                if typeof(PDEoperator) <: LagrangeMultiplier
+                                    assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity, At = A[subblock,j])
+                                else
+                                    assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity)
+                                end    
+                            end  
                         end  
+                    end
+                else
+                    if SC.LHS_AssemblyTriggers[equations[j],k] <: min_trigger
+                        if (length(PDE.LHSOperators[equations[j],k]) > 0) && (!(SC.RHS_AssemblyTriggers[equations[j]] <: min_trigger))
+                            if rhs_block_has_been_erased[j] == false
+                                if verbosity > 0
+                                    println("  Erasing rhs block [$j]")
+                                end
+                                fill!(b[j],0.0)
+                                rhs_block_has_been_erased[j] = true
+                            end
+                        end
+                        for o = 1 : length(PDE.LHSOperators[equations[j],k])
+                            PDEoperator = PDE.LHSOperators[equations[j],k][o]
+                            if verbosity > 0
+                                println("  Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(PDEoperator.name)") 
+                                @time assemble!(b[j], CurrentSolution, PDEoperator; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                            else  
+                                assemble!(b[j], CurrentSolution, PDEoperator; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                            end  
+                        end
                     end
                 end
             end
@@ -809,12 +837,9 @@ function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
             println("    ... change = $(sqrt(change[s]))")
         end
 
-        # REASSEMBLE NONLINEAR PARTS DEPENDING ON CURRENT SUBITERATES
-        # todo: only reassemble blocks that really change because they depend on subiterates
-        # i.e. blocks that are in the respective columns and nonlinearterms that depend on the subiterates elsewhere (e.g. Upwind)
-        for s2 = 1 : nsubiterations
-            assemble!(A[s2],b[s2],PDE,SC,X; equations = SC.subiterations[s2], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
-        end
+        # REASSEMBLE PARTS FOR NEXT SUBITERATION
+        next_eq = (s == nsubiterations) ? 1 : s+1
+        assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
     end
     TCS.last_timestep = timestep
     TCS.ctime += timestep

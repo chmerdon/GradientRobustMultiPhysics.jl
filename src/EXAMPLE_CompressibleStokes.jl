@@ -50,7 +50,7 @@ function main()
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
 
     # uniform mesh refinement
-    for j = 1:2
+    for j = 1:3
         xgrid = uniform_refine(xgrid)
     end
 
@@ -64,9 +64,9 @@ function main()
     # solver parameters
     timestep = 1 // 2
     start_with_constant_density = false
-    maxIterations = 200  # termination criterion 1 for nonlinear mode
+    maxIterations = 2  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-8 # termination criterion 2 for nonlinear mode
-    verbosity = 0 # deepness of messaging (the larger, the more)
+    verbosity = 2 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
     #####################################################################################
