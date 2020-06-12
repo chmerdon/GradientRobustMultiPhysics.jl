@@ -72,12 +72,17 @@ mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOper
     action::AbstractAction
     apply_action_to::Int
     regions::Array{Int,1}
+    store_operator::Bool                    # should the matrix repsentation of the operator be stored?
+    storage::AbstractArray{Float64,2}  # matrix can be stored here to allow for fast matmul operations in iterative settings
+end
+function AbstractBilinearForm(name, operator1,operator2, action; apply_action_to = 1, regions::Array{Int,1} = [0])
+    return AbstractBilinearForm{AbstractAssemblyTypeCELL}(name,operator1, operator2, action, apply_action_to, regions,false,zeros(Float64,0,0))
 end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1), apply_action_to, regions)
+    return AbstractBilinearForm("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
 end
 function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; gradient_operator = Gradient, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim), 1, regions)
+    return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); regions = regions)
 end
 # todo
 # here a general connection to arbitrary tensors C_ijkl (encencodedoded as an action) is possible in future
@@ -87,7 +92,7 @@ function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient
         result[1] = mu*input[1]
     end   
     action = FunctionAction(tensor_apply_1d, 1, 1)
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian1D",gradient_operator, gradient_operator, action, 1, regions)
+    return AbstractBilinearForm("Hookian1D",gradient_operator, gradient_operator, action; regions = regions)
 end
 function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_2d(result, input)
@@ -100,10 +105,10 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
         result[3] = mu*input[3]
     end   
     action = FunctionAction(tensor_apply_2d, 3, 2)
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Hookian2D",gradient_operator, gradient_operator, action, 1, regions)
+    return AbstractBilinearForm("Hookian2D",gradient_operator, gradient_operator, action; regions = regions)
 end
 function ReactionOperator(action::AbstractAction; apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm{AbstractAssemblyTypeCELL}("Reaction",identity_operator, identity_operator, action, apply_action_to, regions)
+    return AbstractBilinearForm("Reaction",identity_operator, identity_operator, action; apply_action_to = apply_action_to, regions = regions)
 end
 
 
@@ -375,31 +380,56 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDiver
             end
         end
     end
-
-
 end
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
-    FE1 = A.FESX
-    FE2 = A.FESY
+
+
+function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector, j::Int, k::Int; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+
+    # ensure that storage is large_enough
+    FE1 = CurrentSolution[j].FES
+    FE2 = CurrentSolution[k].FES
+    O.storage = ExtendableSparseMatrix{Float64,Int32}(FE1.ndofs,FE2.ndofs)
+
     if FE1 == FE2 && O.operator1 == O.operator2
         BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
     else
         BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
     end
-    FEAssembly.assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+
+    FEAssembly.assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+    flush!(O.storage)
+end
+
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+    if O.store_operator == true
+        addblock(A,O.storage; factor = factor)
+    else
+        FE1 = A.FESX
+        FE2 = A.FESY
+        if FE1 == FE2 && O.operator1 == O.operator2
+            BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+        else
+            BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+        end
+        FEAssembly.assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+    end
 end
 
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0) where {AT<:AbstractAssemblyType}
-    FE1 = b.FES
-    FE2 = CurrentSolution[fixed_component].FES
-    if FE1 == FE2 && O.operator1 == O.operator2
-        BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+    if O.store_operator == true
+        addblock_matmul(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
-        BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+        FE1 = b.FES
+        FE2 = CurrentSolution[fixed_component].FES
+        if FE1 == FE2 && O.operator1 == O.operator2
+            BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+        else
+            BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+        end
+        FEAssembly.assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
     end
-    FEAssembly.assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
 end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; time::Real = 0, verbosity::Int = 0)

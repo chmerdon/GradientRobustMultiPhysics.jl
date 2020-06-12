@@ -18,7 +18,7 @@ include("testgrids.jl")
 # problem data
 viscosity = 1
 lambda = - 1//3 * viscosity
-c = 1
+c = 10
 gamma = 1.4
 M = 1 
 
@@ -50,7 +50,7 @@ function main()
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
 
     # uniform mesh refinement
-    for j = 1:3
+    for j = 1:4
         xgrid = uniform_refine(xgrid)
     end
 
@@ -62,11 +62,11 @@ function main()
     TestFunctionOperator = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # gradient-robust scheme
 
     # solver parameters
-    timestep = 1 // 2
+    timestep = viscosity // (10*c)
     start_with_constant_density = false
-    maxIterations = 2  # termination criterion 1 for nonlinear mode
+    maxIterations = 300  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-8 # termination criterion 2 for nonlinear mode
-    verbosity = 2 # deepness of messaging (the larger, the more)
+    verbosity = 0 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
     #####################################################################################
@@ -74,6 +74,8 @@ function main()
     # load Stokes problem prototype and assign data
     StokesProblem = CompressibleNavierStokesProblem(equation_of_state!, rhs_gravity!, 2; timestep = timestep, viscosity = viscosity, lambda = lambda, nonlinear = false)
     StokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperator
+    StokesProblem.LHSOperators[1,2][1].store_operator = true
+    StokesProblem.LHSOperators[1,3][1].store_operator = true
     append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], HomogeneousDirichletBoundary)
     Base.show(StokesProblem)
 

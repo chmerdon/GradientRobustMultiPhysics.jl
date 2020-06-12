@@ -140,8 +140,8 @@ function FEMatrix{T}(name::String, FES::FESpace) where T <: Real
 end
 
 function FEMatrix{T}(name::String, FESX::FESpace, FESY::FESpace) where T <: Real
-    entries = ExtendableSparseMatrix{T,Int32}(FETypeX.ndofs,FESY.ndofs)
-    Block = FEMatrixBlock{T}(name, FESX, FESY, 0 , 0, FESX.ndofs, FETypeY.ndofs, entries)
+    entries = ExtendableSparseMatrix{T,Int32}(FESX.ndofs,FESY.ndofs)
+    Block = FEMatrixBlock{T}(name, FESX, FESY, 0 , 0, FESX.ndofs, FESY.ndofs, entries)
     return FEMatrix{T}([Block], 2, entries)
 end
 
@@ -189,6 +189,15 @@ function addblock(A::FEMatrixBlock, B::FEMatrixBlock; factor::Real = 1)
     end
 end
 
+function addblock(A::FEMatrixBlock, B::ExtendableSparseMatrix; factor::Real = 1)
+    rows = rowvals(B.cscmatrix)
+    for col = 1:size(B,2)
+        for r in nzrange(B.cscmatrix, col)
+            A[rows[r],col] += B.cscmatrix.nzval[r] * factor
+        end
+    end
+end
+
 # a = a + B*b*factor
 function addblock_matmul(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor::Real = 1)
     rows = rowvals(B.entries.cscmatrix)
@@ -197,6 +206,18 @@ function addblock_matmul(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; f
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
                 a.entries[rows[r]] += B.entries.cscmatrix.nzval[r] * b[col] * factor 
             end
+        end
+    end
+end
+
+
+
+# a = a + B*b*factor
+function addblock_matmul(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVectorBlock; factor::Real = 1)
+    rows = rowvals(B.cscmatrix)
+    for col = 1:size(B,2)
+        for r in nzrange(B.cscmatrix, col)
+            a.entries[rows[r]] += B.cscmatrix.nzval[r] * b[col] * factor
         end
     end
 end

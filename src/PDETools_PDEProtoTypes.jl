@@ -61,9 +61,9 @@ function CompressibleNavierStokesProblem(equation_of_state!::Function, gravity!:
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,3,3)
     MyLHS[1,1] = [LaplaceOperator(viscosity,dimension,dimension)]
     if lambda != 0
-        push!(MyLHS[1,1],AbstractBilinearForm{AbstractAssemblyTypeCELL}("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1),1,[0]))
+        push!(MyLHS[1,1],AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1)))
     end
-    MyLHS[1,2] = [AbstractBilinearForm{AbstractAssemblyTypeCELL}("gravity*velocity*density",Identity,Identity,gravity_action,1,[0])]
+    MyLHS[1,2] = [AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action)]
     MyLHS[1,3] = [AbstractBilinearForm(Divergence,Identity)]
     MyLHS[2,1] = []
     MyLHS[2,2] = [FVUpwindDivergenceOperator(1)]

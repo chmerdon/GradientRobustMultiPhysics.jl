@@ -187,11 +187,34 @@ function assemble!(
         println("\n  Entering assembly of equations=$equations (min_trigger = $min_trigger)")
     end
 
-    rhs_block_has_been_erased = Array{Bool,1}(undef,length(equations))
+    # force (re)assembly of stored bilinearform operators
+    if (min_trigger == AssemblyInitial) == true
+        for j = 1:length(equations)
+            for k = 1 : size(PDE.LHSOperators,2)
+                for o = 1 : length(PDE.LHSOperators[equations[j],k])
+                    PDEoperator = PDE.LHSOperators[equations[j],k][o]
+                    try
+                        if PDEoperator.store_operator == true
+                            if verbosity > 0
+                                println("  Updating storage of operator $(PDEoperator.name)")
+                            end
+                        else
+                            break
+                        end
+                    catch
+                        break
+                    end
+                    update_storage!(PDEoperator, CurrentSolution, j, k ; time = time, verbosity = verbosity)
+                end
+            end
+        end
+    end
 
+    # (re)assembly right-hand side
+    rhs_block_has_been_erased = Array{Bool,1}(undef,length(equations))
     for j = 1 : length(equations)
         rhs_block_has_been_erased[j] = false
-        if SC.RHS_AssemblyTriggers[equations[j]] <: min_trigger
+        if (min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) == true
             if verbosity > 0
                 println("  Erasing rhs block [$j]")
             end
@@ -212,6 +235,7 @@ function assemble!(
         end
     end
 
+    # (re)assembly left-hand side
     subblock = 0
     for j = 1:length(equations)
         for k = 1 : size(PDE.LHSOperators,2)
@@ -219,7 +243,7 @@ function assemble!(
                 if (k in equations)
                     subblock += 1
                     #println("\n  Equation $j, subblock $subblock")
-                    if SC.LHS_AssemblyTriggers[equations[j],k] <: min_trigger
+                    if (min_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) == true
                         if verbosity > 0
                             println("  Erasing lhs block [$j,$subblock]")
                         end
@@ -243,8 +267,8 @@ function assemble!(
                         end  
                     end
                 else
-                    if SC.LHS_AssemblyTriggers[equations[j],k] <: min_trigger
-                        if (length(PDE.LHSOperators[equations[j],k]) > 0) && (!(SC.RHS_AssemblyTriggers[equations[j]] <: min_trigger))
+                    if (min_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) == true
+                        if (length(PDE.LHSOperators[equations[j],k]) > 0) && (!(min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]))
                             if rhs_block_has_been_erased[j] == false
                                 if verbosity > 0
                                     println("  Erasing rhs block [$j]")
@@ -767,7 +791,7 @@ function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
         # add change in mass matrix to diagonal blocks if needed
         for k = 1 : length(nsubiterations)
             d = SC.subiterations[s][k]
-            if (SC.LHS_AssemblyTriggers[d,d] <: AssemblyEachTimeStep) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
+            if (AssemblyEachTimeStep <: SC.LHS_AssemblyTriggers[d,d]) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
                 if SC.verbosity > 1
                     println("  Adding mass matrix to block [$k,$k] of subiteration $s")
                 end
@@ -780,7 +804,7 @@ function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
                     addblock(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
                 end
             end
-            if SC.RHS_AssemblyTriggers[d] <: AssemblyEachTimeStep || TCS.last_timestep == 0 # if rhs block was reassembled at the end of the last iteration
+            if  (AssemblyEachTimeStep <: SC.RHS_AssemblyTriggers[d]) || TCS.last_timestep == 0 # if rhs block was reassembled at the end of the last iteration
                 if SC.verbosity > 1
                     println("  Adding time derivative to rhs block [$k] of subiteration $s")
                 end

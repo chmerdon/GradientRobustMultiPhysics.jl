@@ -11,11 +11,11 @@ using LinearAlgebra
 
 # type to steer when a PDE block is (re)assembled
 abstract type AbstractAssemblyTrigger end
-abstract type AssemblyNever <: AbstractAssemblyTrigger end    # is never assembled
-abstract type AssemblyInitial <: AbstractAssemblyTrigger end    # is only assembled in initial assembly
-abstract type AssemblyEachTimeStep <: AssemblyInitial end       # is (re)assembled in each timestep
-abstract type AssemblyAlways <: AssemblyEachTimeStep end        # is always (re)assembled
-abstract type AssemblyFinal <: AbstractAssemblyTrigger end       # is only assembled after solving
+abstract type AssemblyFinal <: AbstractAssemblyTrigger end   # is only assembled after solving
+abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)assembled
+    abstract type AssemblyEachTimeStep <: AssemblyAlways end     # is (re)assembled in each timestep
+        abstract type AssemblyInitial <: AssemblyEachTimeStep end    # is only assembled in initial assembly
+            abstract type AssemblyNever <: AssemblyInitial end   # is never assembled
 
 
 
