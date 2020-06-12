@@ -28,10 +28,10 @@ function equation_of_state!(pressure,density)
     end
 end
 
-d = log(M/(c*(exp(1)^(1/c)-1.0)))
-function exact_density!(result,x) # only exact for gamma = 1
-    result[1] = 1.0 - (x[2] - 0.5)/c
-end 
+#d = log(M/(c*(exp(1)^(1/c)-1.0)))
+#function exact_density!(result,x) # only exact for gamma = 1
+#    result[1] = 1.0 - (x[2] - 0.5)/c
+#end 
 
 function rhs_gravity!(result,x)
     exact_density!(result,x)
@@ -47,7 +47,7 @@ function main()
 
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
-    #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
+    # xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
 
     # uniform mesh refinement
     for j = 1:4
@@ -65,7 +65,7 @@ function main()
     timestep = viscosity // (10*c)
     start_with_constant_density = false
     maxIterations = 300  # termination criterion 1 for nonlinear mode
-    maxResidual = 1e-8 # termination criterion 2 for nonlinear mode
+    maxResidual = 1e-10 # termination criterion 2 for nonlinear mode
     verbosity = 0 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
@@ -73,9 +73,13 @@ function main()
 
     # load Stokes problem prototype and assign data
     StokesProblem = CompressibleNavierStokesProblem(equation_of_state!, rhs_gravity!, 2; timestep = timestep, viscosity = viscosity, lambda = lambda, nonlinear = false)
+
+    # modify operators
     StokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperator
     StokesProblem.LHSOperators[1,2][1].store_operator = true
     StokesProblem.LHSOperators[1,3][1].store_operator = true
+
+    # assign boundary data
     append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], HomogeneousDirichletBoundary)
     Base.show(StokesProblem)
 
@@ -105,10 +109,10 @@ function main()
     end
     equation_of_state!(Solution[3],Solution[2])
 
-
-    # solve by manual solver config
+    # generate time-dependent solver
     TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], timedependent_equations = [1,2], verbosity = verbosity)
 
+    # time loop
     change = 0.0
     for iteration = 1 : maxIterations
         change = advance(TCS, timestep)
