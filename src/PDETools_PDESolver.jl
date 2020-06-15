@@ -155,6 +155,8 @@ function Base.show(io::IO, SC::SolverConfig)
             print(" A ")
         elseif SC.RHS_AssemblyTriggers[j] == AssemblyEachTimeStep
             print(" T ")
+        elseif SC.LHS_AssemblyTriggers[j,k] == AssemblyNever
+            print(" N ")
         end
         println("")
     end
@@ -689,7 +691,7 @@ function TimeControlSolver(
     # generate solver for time-independent problem
     SC = generate_solver(PDE; subiterations = subiterations, verbosity = verbosity)
     for j = 1 : length(InitialValues.FEVectorBlocks)
-        if !(SC.RHS_AssemblyTriggers[j] <: AssemblyEachTimeStep)
+        if (SC.RHS_AssemblyTriggers[j] <: AssemblyEachTimeStep)
             SC.RHS_AssemblyTriggers[j] = AssemblyEachTimeStep
         end
     end

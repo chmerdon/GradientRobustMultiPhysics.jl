@@ -25,6 +25,7 @@ abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
 abstract type Curl <: AbstractFunctionOperator end # only 2D: Curl(v_h) = D(v_h)^\perp
 abstract type Rotation <: AbstractFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
 abstract type Divergence <: AbstractFunctionOperator end # div(v_h)
+abstract type ReconstructionDivergence{FEreconst<:AbstractFiniteElement} <: Divergence end # 1*R(v_h)
 abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 
@@ -43,7 +44,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Rotation}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
@@ -63,7 +64,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Divergence}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
@@ -191,8 +192,8 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3)
 end    
 
-# constructor for ReconstructionIdentity
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: ReconstructionIdentity{FETypeReconst}, AT <: AbstractAssemblyType}
+# constructor for ReconstructionIdentity, ReconstructionDivergence
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{ReconstructionIdentity{FETypeReconst},ReconstructionDivergence{FETypeReconst}}, AT <: AbstractAssemblyType}
     # generate reconstruction space
     # avoid computation of full dofmap
     # we will just use local basis functions
@@ -236,14 +237,29 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     derivorder = NeededDerivative4Operator(FEType,FEOP)
     edim = dim_element(EG)
     xdim = size(FE.xgrid[Coordinates],1)
+    if derivorder > 0
+        refoperatorvals = zeros(T,ndofs4item2*ncomponents,edim,length(qf.w));
+        for i in eachindex(qf.w)
+            # evaluate gradients of basis function
+            # = list of vectors [du_k/dx_1; du_k,dx_2]
+            refoperatorvals[:,:,i] = ForwardDiff.jacobian(refbasis_reconst,qf.xref[i]);
+        end 
+    end
 
     xref = copy(qf.xref)
     coefficients = zeros(T,ncomponents,ndofs4item2)
     coefficients2 = zeros(T,ndofs4item,ndofs4item2)
-    refoperatorvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
-    current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
+    if FEOP <: ReconstructionIdentity
+        refoperatorvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
+        current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
+    elseif FEOP <: ReconstructionDivergence
+        current_eval = zeros(T,1,ndofs4item,length(qf.w));
+    else
+        refoperatorvals = zeros(T,1,ndofs4item2,length(qf.w));
+        current_eval = zeros(T,1,ndofs4item,length(qf.w));
+    end
     offsets = 0:edim:(ncomponents*edim);
-    offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
+    offsets2 = 0:ndofs4item2:ncomponents*ndofs4item2;
     coefficients3 = zeros(T,0,0)
     
     return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3)
@@ -270,7 +286,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
 
         # use Piola transformation on Hdiv basis
-        # and save it in operatorvals
+        # and save it in refoperatorvals
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
@@ -293,7 +309,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
-            for dof_i = 1 : FEBE.offsets2[2], dof_j = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
+            for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
                 if FEBE.coefficients2[dof_i,dof_j] != 0
                     for k = 1 : FEBE.offsets[2] # ncomponents
                         FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refoperatorvals[k,dof_j,i]; 
@@ -567,7 +583,7 @@ end
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
 
@@ -595,7 +611,7 @@ end
 # H1 ELEMENTS WITH COEFFICIENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
 
@@ -627,10 +643,49 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 end
 
 
+# RECONSTRUCTION DIVERGENCE OPERATOR
+# H1 ELEMENTS
+# HDIV RECONSTRUCTION
+# Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType, FETypeReconst <: AbstractFiniteElement, FEOP <: ReconstructionDivergence{FETypeReconst}}
+    if FEBE.citem != item
+        FEBE.citem = item
+    
+        # cell update transformation
+        FEXGrid.update!(FEBE.L2G, item)
+        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
+
+        # get local reconstruction coefficients
+        FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
+
+        # use Piola transformation on Hdiv basis
+        # and accumulate according to reconstruction coefficients
+        fill!(FEBE.cvals,0.0)
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : size(FEBE.cvals,2) # ndofs4item (H1)
+                for dof_j = 1 : FEBE.offsets2[2] # ndofs4item (Hdiv)
+                    if FEBE.coefficients2[dof_i,dof_j] != 0
+                        for j = 1 : FEBE.offsets[2] # xdim
+                            FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refoperatorvals[dof_j + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]/FEBE.iteminfo[1]
+                        end  
+                    end
+                end
+            end
+        end  
+
+    end
+end
+
+
+
 # DIVERGENCE OPERATOR
 # HDIV ELEMENTS
 # Piola transformation preserves divergence (up to a factor 1/det(A))
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: Divergence, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
         

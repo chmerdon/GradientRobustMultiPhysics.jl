@@ -18,7 +18,7 @@ include("testgrids.jl")
 # problem data
 viscosity = 1
 lambda = - 1//3 * viscosity
-c = 10
+c = 1
 gamma = 1.4
 M = 1 
 
@@ -28,10 +28,10 @@ function equation_of_state!(pressure,density)
     end
 end
 
-#d = log(M/(c*(exp(1)^(1/c)-1.0)))
-#function exact_density!(result,x) # only exact for gamma = 1
-#    result[1] = 1.0 - (x[2] - 0.5)/c
-#end 
+d = log(M/(c*(exp(1)^(1/c)-1.0)))
+function exact_density!(result,x) # only exact for gamma = 1
+    result[1] = 1.0 - (x[2] - 0.5)/c
+end 
 
 function rhs_gravity!(result,x)
     exact_density!(result,x)
@@ -47,7 +47,7 @@ function main()
 
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
-    # xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
+    xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
 
     # uniform mesh refinement
     for j = 1:4
@@ -58,11 +58,12 @@ function main()
     FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}, FiniteElements.L2P0{1}] # Bernardi--Raugel
     #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}, FiniteElements.L2P0{1}] # Crouzeix--Raviart (needs smaller timesteps)
 
-    #TestFunctionOperator = Identity # classical scheme
-    TestFunctionOperator = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # gradient-robust scheme
+   #TestFunctionOperatorIdentity = Identity; TestFunctionOperatorDivergence = Divergence # classical scheme
+    TestFunctionOperatorIdentity = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # identity operator for gradient-robust scheme
+    TestFunctionOperatorDivergence = ReconstructionDivergence{FiniteElements.HDIVRT0{2}} # divergence operator for gradient-robust scheme
 
     # solver parameters
-    timestep = viscosity // (10*c)
+    timestep = viscosity // (2*c)
     start_with_constant_density = false
     maxIterations = 300  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-10 # termination criterion 2 for nonlinear mode
@@ -75,7 +76,9 @@ function main()
     StokesProblem = CompressibleNavierStokesProblem(equation_of_state!, rhs_gravity!, 2; timestep = timestep, viscosity = viscosity, lambda = lambda, nonlinear = false)
 
     # modify operators
-    StokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperator
+    StokesProblem.LHSOperators[1,1][2].operator1 = TestFunctionOperatorDivergence
+    StokesProblem.LHSOperators[1,1][2].operator2 = TestFunctionOperatorDivergence
+    StokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperatorIdentity
     StokesProblem.LHSOperators[1,2][1].store_operator = true
     StokesProblem.LHSOperators[1,3][1].store_operator = true
 
@@ -110,7 +113,7 @@ function main()
     equation_of_state!(Solution[3],Solution[2])
 
     # generate time-dependent solver
-    TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], timedependent_equations = [1,2], verbosity = verbosity)
+    TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], timedependent_equations = [2], verbosity = verbosity)
 
     # time loop
     change = 0.0

@@ -56,7 +56,7 @@ export AbstractFunctionOperator
 export Identity, ReconstructionIdentity
 export NormalFlux, TangentFlux
 export Gradient, SymmetricGradient, TangentialGradient
-export Divergence
+export Divergence, ReconstructionDivergence
 export Curl, Rotation
 export Laplacian, Hessian
 export Trace, Deviator
