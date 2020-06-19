@@ -1,6 +1,6 @@
 
 # Prototype for incompressible StokesProblem
-function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, no_pressure_constraint::Bool = false)
+function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, no_pressure_constraint::Bool = false, pmean = 0)
 
     # LEFT-HAND-SIDE: STOKES OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
@@ -26,7 +26,7 @@ function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, 
     # GLOBAL CONSTRAINTS: zero pressure integral mean
     MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,1)
     if no_pressure_constraint == false
-        MyGlobalConstraints[1] = FixedIntegralMean(2,0.0)
+        MyGlobalConstraints[1] = FixedIntegralMean(2,pmean)
     end
 
     if nonlinear == true

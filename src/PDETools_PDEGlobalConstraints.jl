@@ -51,7 +51,7 @@ function apply_constraint!(
 
     # fix the first dof
     dof = A[c,c].offsetX+1
-    Target[c][1] = 0
+    #Target[c][1] = 0
     return [dof]
 end
 

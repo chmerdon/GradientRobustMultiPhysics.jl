@@ -125,7 +125,7 @@ function Base.show(io::IO, FEM::FEMatrix) where {T}
     println("  block |  ndofsX |  ndofsY | name (FETypeX, FETypeY) ")
     for j=1:length(FEM)
         n = mod(j-1,FEM.nFE)+1
-        m = Int(floor(j/FEM.nFE))
+        m = Int(ceil(j/FEM.nFE))
         @printf("  [%d,%d] |",m,n);
         @printf("  %6d |",FEM[j].FESX.ndofs);
         @printf("  %6d |",FEM[j].FESY.ndofs);
@@ -183,7 +183,7 @@ function addblock(A::FEMatrixBlock, B::FEMatrixBlock; factor::Real = 1)
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(B.entries.cscmatrix, col)
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                A[rows[r],col] += B.entries.cscmatrix.nzval[r] * factor
+                A[rows[r]-B.offsetX,col-B.offsetY] += B.entries.cscmatrix.nzval[r] * factor
             end
         end
     end
@@ -204,7 +204,7 @@ function addblock_matmul(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; f
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(B.entries.cscmatrix, col)
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                a.entries[rows[r]] += B.entries.cscmatrix.nzval[r] * b[col] * factor 
+                a[rows[r]-B.offsetX] += B.entries.cscmatrix.nzval[r] * b[col-B.offsetY] * factor 
             end
         end
     end
@@ -217,7 +217,7 @@ function addblock_matmul(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVecto
     rows = rowvals(B.cscmatrix)
     for col = 1:size(B,2)
         for r in nzrange(B.cscmatrix, col)
-            a.entries[rows[r]] += B.cscmatrix.nzval[r] * b[col] * factor
+            a[rows[r]] += B.cscmatrix.nzval[r] * b[col] * factor
         end
     end
 end

@@ -1,5 +1,28 @@
 using Triangulate
 
+function testgrid_square_uniform()
+
+    xgrid=ExtendableGrid{Float64,Int32}()
+    xgrid[Coordinates]=Array{Float64,2}([0 0; 1 0; 1 1; 0 1]')
+    xCellNodes=VariableTargetAdjacency(Int32)
+    xCellGeometries=[Parallelogram2D];
+    
+    append!(xCellNodes,[1,2,3,4])
+
+    xgrid[CellNodes] = xCellNodes
+    xgrid[CellGeometries] = xCellGeometries
+    ncells = num_sources(xCellNodes)
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
+    xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 4;4 1]')
+    xgrid[BFaceNodes]=xBFaceNodes
+    nbfaces = num_sources(xBFaceNodes)
+    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,nbfaces)
+    xgrid[CoordinateSystem]=Cartesian2D
+
+    return xgrid
+end
+
 function testgrid_mixedEG()
 
     xgrid=ExtendableGrid{Float64,Int32}()

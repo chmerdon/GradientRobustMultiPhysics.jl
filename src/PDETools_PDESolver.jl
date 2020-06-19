@@ -155,7 +155,7 @@ function Base.show(io::IO, SC::SolverConfig)
             print(" A ")
         elseif SC.RHS_AssemblyTriggers[j] == AssemblyEachTimeStep
             print(" T ")
-        elseif SC.LHS_AssemblyTriggers[j,k] == AssemblyNever
+        elseif SC.RHS_AssemblyTriggers[j] == AssemblyNever
             print(" N ")
         end
         println("")
@@ -791,7 +791,7 @@ function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
             println("\n\n\n  Entering subiteration $s...")
         end
         # add change in mass matrix to diagonal blocks if needed
-        for k = 1 : length(nsubiterations)
+        for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
             if (AssemblyEachTimeStep <: SC.LHS_AssemblyTriggers[d,d]) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
                 if SC.verbosity > 1
@@ -826,6 +826,15 @@ function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
         # PENALIZE FIXED DOFS
         # (from boundary conditions and constraints)
         fixed_dofs = TCS.fixed_dofs
+
+            # PREPARE GLOBALCONSTRAINTS
+            #for j = 1 : length(PDE.GlobalConstraints)
+            #    additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],X)
+            #    append!(fixed_dofs,additional_fixed_dofs)
+            #    show(additional_fixed_dofs)
+            #end
+
+
         eqoffsets = TCS.eqoffsets
         for j = 1 : length(fixed_dofs)
             for eq = 1 : length(SC.subiterations[s])
@@ -848,6 +857,7 @@ function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
         else
             x[s].entries[:] = A[s].entries\b[s].entries
         end
+
 
         # WRITE INTO X and COMPUTE CHANGE
         l = 0

@@ -32,7 +32,7 @@ export ConvectionOperator
 export LagrangeMultiplier
 export FVUpwindDivergenceOperator
 
-export RhsOperator
+export RhsOperator, BLFeval
 
 
 include("PDETools_PDEBoundaryData.jl")

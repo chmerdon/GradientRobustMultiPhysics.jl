@@ -230,6 +230,12 @@ function RhsOperator(
 end
 
 
+struct BLFeval <: AbstractPDEOperator
+    BLF::AbstractBilinearForm
+    Data::FEVectorBlock
+end
+
+
 ##################################
 ### FVUpwindDivergenceOperator ###
 ##################################
@@ -429,6 +435,22 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
             BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
         end
         FEAssembly.assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+    end
+end
+
+
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0)
+    if O.BLF.store_operator == true
+        addblock_matmul(b,O.BLF.storage,O.Data; factor = factor)
+    else
+        FE1 = b.FES
+        FE2 = O.Data.FES
+        if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
+            BLF = SymmetricBilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, O.BLF.operator1, O.BLF.action; regions = O.BLF.regions)    
+        else
+            BLF = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
+        end
+        FEAssembly.assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor, verbosity = verbosity)
     end
 end
 
