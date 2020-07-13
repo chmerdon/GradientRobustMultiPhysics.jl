@@ -102,6 +102,7 @@ include("FEdefinitions/H1_P2.jl");
 
 # L2 conforming elements
 include("FEdefinitions/L2_P0.jl"); # currently masked as H1 element
+include("FEdefinitions/L2_P1.jl"); # currently masked as H1 element
 
 # Hcurl-conforming elements
 # TODO

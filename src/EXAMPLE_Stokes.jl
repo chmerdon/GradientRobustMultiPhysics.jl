@@ -45,8 +45,10 @@ function main()
 
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
+    initgrid = deepcopy(xgrid)
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
-    nlevels = 5 # number of refinement levels
+    barycentric_refinement = false;
+    nlevels = 4 # number of refinement levels
 
     # problem parameters
     nonlinear = true
@@ -55,8 +57,9 @@ function main()
     #FETypes = [FiniteElements.H1P2{2,2}, FiniteElements.H1P1{1}] # Taylor--Hood
     #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
     #FETypes = [FiniteElements.H1MINI{2,2}, FiniteElements.H1P1{1}] # MINI element
-    FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
-
+    #FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
+    FETypes = [FiniteElements.H1P2{2,2}, FiniteElements.L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
+ 
     # solver parameters
     maxIterations = 10  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
@@ -95,8 +98,16 @@ function main()
     for level = 1 : nlevels
 
         # uniform mesh refinement
-        if (level > 1) 
-            xgrid = uniform_refine(xgrid)
+        if barycentric_refinement == true
+            xgrid = deepcopy(initgrid)
+            for ref = 1 : level - 1
+                xgrid = uniform_refine(xgrid)
+            end
+            xgrid = barycentric_refine(xgrid)
+        else
+            if (level > 1) 
+                xgrid = uniform_refine(xgrid)
+            end
         end
 
         # generate FESpaces

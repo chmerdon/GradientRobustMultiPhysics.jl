@@ -19,7 +19,7 @@ include("FEXGrid_L2GTransformer.jl");
 export L2GTransformer, update!, eval!, mapderiv!, piola!
 
 
-export uniqueEG,split_grid_into, uniform_refine
+export uniqueEG,split_grid_into, uniform_refine, barycentric_refine
 
 
 # additional ElementGeometryTypes with parent information
@@ -164,7 +164,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     end
     xCellNodes = reshape(xCellNodes,3,ncells)
     xgrid[CellNodes] = Array{Int32,2}(xCellNodes)
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,8)
+    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,ncells)
     xgrid[CellRegions]=ones(Int32,ncells)
     xgrid[BFaceNodes]=source_grid[BFaceNodes]
     xgrid[BFaceRegions]=source_grid[BFaceRegions]
@@ -173,7 +173,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     return xgrid
 end
 
-# uniform uniform_refine
+# uniform refinement rules
 # first k nodes are the CellNodes
 # next m nodes are the CellFaces (midpoints)
 # next node is the CellMidpoint (if needed)
@@ -183,6 +183,12 @@ uniform_refine_rule(::Type{<:Quadrilateral2D}) = [1 5 9 8; 2 6 9 5; 3 7 9 6; 4 8
 
 uniform_refine_needcellmidpoints(::Type{<:AbstractElementGeometry}) = false
 uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
+
+
+# barycentric refinement rules
+# first k nodes are the CellNodes, k+1-th  node is cell midpoint
+barycentric_refine_rule(::Type{<:Triangle2D}) = [1 2 4; 2 3 4; 3 1 4]
+
 
 # function that generates a new simplexgrid from a mixed grid
 function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
@@ -298,6 +304,94 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid[BFaceNodes]=xBFaceNodes
     xgrid[BFaceRegions]=xBFaceRegions
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,2*nbfaces)
+    xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
+    Base.show()
+    return xgrid
+end
+
+# function that generates a new barycentrically refined simplexgrid from a mixed grid
+# (first grid is plit into triangles)
+function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
+    # split first into triangles
+    source_grid = split_grid_into(source_grid,Triangle2D)
+
+    xgrid = ExtendableGrid{T,K}()
+    oldCoordinates = source_grid[Coordinates]
+    oldCellTypes = source_grid[CellGeometries]
+    EG = unique(oldCellTypes)
+    
+    refine_rules = Array{Array{Int,2},1}(undef,length(EG))
+    for j = 1 : length(EG)
+        refine_rules[j] = barycentric_refine_rule(EG[j])
+    end
+    xCellNodes = VariableTargetAdjacency(Int32)
+    xCellGeometries = []
+
+    oldCellNodes = source_grid[CellNodes]
+    oldCellFaces = source_grid[CellFaces]
+
+    # determine number of new vertices
+    cellEG = Triangle2D
+    newvertices = 0
+    for cell = 1 : num_sources(oldCellNodes)
+        newvertices += 1
+    end
+    oldvertices = size(oldCoordinates,2)
+    xCoordinates = zeros(Float64,size(oldCoordinates,1),oldvertices+newvertices)
+    @views xCoordinates[:,1:oldvertices] = oldCoordinates
+
+    # determine new cells
+    nnodes4cell = 0
+    ncells = 0
+    iEG = 1
+    subcellnodes = zeros(Int32,max_num_targets_per_source(oldCellNodes)+max_num_targets_per_source(oldCellFaces)+1)
+    newnode = oldvertices
+    m = 0
+    newvertex = zeros(Float64,size(xCoordinates,1))
+    for cell = 1 : num_sources(oldCellNodes)
+        nnodes4cell = num_targets(oldCellNodes,cell)
+        nfaces4cell = num_targets(oldCellFaces,cell)
+        cellEG = oldCellTypes[cell]
+        iEG = findfirst(isequal(cellEG), EG)
+        
+            # add cell midpoint to Coordinates
+            newnode += 1
+            fill!(newvertex,0.0)
+            for k = 1 : nnodes4cell, d = 1 : size(xCoordinates,1)
+                newvertex[d] += xCoordinates[d,oldCellNodes[k,cell]] 
+            end    
+            newvertex ./= nnodes4cell
+            for d = 1 : size(xCoordinates,1)
+                xCoordinates[d,newnode] = newvertex[d]
+            end
+
+        for j = 1 : size(refine_rules[iEG],1)
+            for k = 1 : size(refine_rules[iEG],2)
+                m = refine_rules[iEG][j,k]
+                if m <= nnodes4cell 
+                    subcellnodes[k] = oldCellNodes[m,cell]
+                else
+                    subcellnodes[k] = newnode
+                end        
+            end    
+            append!(xCellNodes,subcellnodes[1:size(refine_rules[iEG],2)])
+            push!(xCellGeometries,cellEG)
+        end    
+        ncells += size(refine_rules[iEG],1)
+    end
+
+    xgrid[Coordinates] = xCoordinates
+    if typeof(oldCellNodes) == Array{Int32,2}
+        nnodes4cell = size(oldCellNodes,1)
+        xgrid[CellNodes] = reshape(xCellNodes.colentries,nnodes4cell,num_sources(xCellNodes))
+    else
+        xgrid[CellNodes] = xCellNodes
+    end
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    xgrid[CellGeometries] = Array{DataType,1}(xCellGeometries)
+    xgrid[BFaceNodes]=source_grid[BFaceNodes]
+    xgrid[BFaceRegions]=source_grid[BFaceRegions]
+    xgrid[BFaceGeometries]=source_grid[BFaceGeometries]
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
     Base.show()
     return xgrid
