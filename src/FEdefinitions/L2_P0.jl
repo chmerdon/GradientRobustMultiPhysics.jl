@@ -23,10 +23,14 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: L2P0
     # generate dofmaps
     if dofmap_needed
         xCellDofs = VariableTargetAdjacency(Int32)
-        dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xCellNodes))
+        dofs4item = zeros(Int32,ncomponents)
         nnodes4item = 0
         for cell = 1 : ncells
-            append!(xCellDofs,cell*ones(Int32,ncomponents))
+            dofs4item[1] = cell
+            for n = 1 : ncomponents-1
+                dofs4item[1+n] = n*ncells + cell
+            end    
+            append!(xCellDofs,dofs4item)
         end
 
         # save dofmaps
