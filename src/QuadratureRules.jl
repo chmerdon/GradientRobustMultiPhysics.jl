@@ -227,4 +227,56 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
     end
 end
 
+# as above but only return full intergral value
+function integrate!(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; verbosity::Int = 0)
+    xCoords = grid[Coordinates]
+    dim = size(xCoords,1)
+    xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
+    
+    # find proper quadrature rules
+    EG = unique(xItemGeometries)
+    qf = Array{QuadratureRule,1}(undef,length(EG))
+    local2global = Array{L2GTransformer,1}(undef,length(EG))
+    for j = 1 : length(EG)
+        qf[j] = QuadratureRule{NumberType,EG[j]}(order);
+        local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid,AT)
+    end    
+    if verbosity > 0
+        println("INTEGRATE")
+        println("=========")
+        println("nitems = $nitems")
+        for j = 1 : length(EG)
+            println("QuadratureRule [$j] for $(EG[j]):")
+            show(qf[j])
+        end
+    end
+
+    # loop over items
+    x = zeros(NumberType, dim)
+    result = zeros(NumberType, resultdim)
+    itemET = xItemGeometries[1]
+    iEG = 1
+    integral = zeros(NumberType, resultdim)
+    for item = 1 : nitems
+        # find index for CellType
+        itemET = xItemGeometries[item]
+        iEG = findfirst(isequal(itemET), EG)
+
+        update!(local2global[iEG],item)
+
+        for i in eachindex(qf[iEG].w)
+            eval!(x, local2global[iEG], qf[iEG].xref[i])
+            integrand!(result,x)
+            for j = 1 : resultdim
+                integral[j] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
+            end
+        end  
+    end
+
+    return integral
+end
+
 end
