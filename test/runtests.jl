@@ -1,8 +1,8 @@
 using Test
 using ExtendableGrids
-using JUFELIA
 
 push!(LOAD_PATH, "../src")
+using JUFELIA
 
 ############################
 # TESTSET QUADRATURE RULES #
