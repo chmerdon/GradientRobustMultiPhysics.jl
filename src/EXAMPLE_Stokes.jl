@@ -1,11 +1,6 @@
 
-using FEXGrid
+using JUFELIA
 using ExtendableGrids
-using ExtendableSparse
-using FiniteElements
-using FEAssembly
-using PDETools
-using QuadratureRules
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
@@ -54,11 +49,11 @@ function main()
     nonlinear = true
 
     # choose finite element type
-    #FETypes = [FiniteElements.H1P2{2,2}, FiniteElements.H1P1{1}] # Taylor--Hood
-    #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
-    #FETypes = [FiniteElements.H1MINI{2,2}, FiniteElements.H1P1{1}] # MINI element
-    #FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
-    FETypes = [FiniteElements.H1P2{2,2}, FiniteElements.L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
+    #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
+    #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
+    #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element
+    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     # solver parameters
     maxIterations = 10  # termination criterion 1 for nonlinear mode
@@ -111,8 +106,8 @@ function main()
         end
 
         # generate FESpaces
-        FESpaceVelocity = FiniteElements.FESpace{FETypes[1]}(xgrid)
-        FESpacePressure = FiniteElements.FESpace{FETypes[2]}(xgrid)
+        FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
+        FESpacePressure = FESpace{FETypes[2]}(xgrid)
 
         # solve Stokes problem
         Solution = FEVector{Float64}("Stokes velocity",FESpaceVelocity)

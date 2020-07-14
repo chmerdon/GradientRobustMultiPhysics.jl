@@ -70,12 +70,6 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialG
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
-# junctions for dof fields
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
-
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
@@ -113,16 +107,16 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
 
     # pre-allocate memory for basis functions
-    ncomponents = FiniteElements.get_ncomponents(FEType)
+    ncomponents = get_ncomponents(FEType)
     if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
         if FEType <: AbstractHdivFiniteElement
-            refbasis = FiniteElements.get_basis_normalflux_on_face(FEType, EG)
+            refbasis = get_basis_normalflux_on_face(FEType, EG)
             ncomponents = 1
         else
-            refbasis = FiniteElements.get_basis_on_face(FEType, EG)
+            refbasis = get_basis_on_face(FEType, EG)
         end
     else
-        refbasis = FiniteElements.get_basis_on_cell(FEType, EG)
+        refbasis = get_basis_on_cell(FEType, EG)
     end    
     
     # probe for ndofs4item
@@ -209,9 +203,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     L2GM = copy(L2G.A)
 
     # pre-allocate memory for reconstruction basis functions
-    ncomponents = FiniteElements.get_ncomponents(FEType)
-    refbasis = FiniteElements.get_basis_on_cell(FEType, EG)
-    refbasis_reconst = FiniteElements.get_basis_on_cell(FETypeReconst, EG)
+    ncomponents = get_ncomponents(FEType)
+    refbasis = get_basis_on_cell(FEType, EG)
+    refbasis_reconst = get_basis_on_cell(FETypeReconst, EG)
     
     # probe for ndofs4item
     ndofs4item::Int = 0
@@ -282,8 +276,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.citem = item
     
         # cell update transformation
-        FEXGrid.update!(FEBE.L2G, item)
-        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
+        update!(FEBE.L2G, item)
+        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
 
         # use Piola transformation on Hdiv basis
         # and save it in refoperatorvals
@@ -305,7 +299,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         # get local reconstruction coefficients
         # and accumulate
-        FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
+        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
@@ -328,8 +322,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
         FEBE.citem = item
     
         # cell update transformation
-        FEXGrid.update!(FEBE.L2G, item)
-        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        update!(FEBE.L2G, item)
+        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
@@ -354,15 +348,15 @@ end
 # IDENTITY OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: FiniteElements.AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
         
         # get coefficients
         if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
-            FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+            get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
         else
-            FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+            get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
         end    
 
 
@@ -412,7 +406,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) w
         end
         
         # get coefficients
-        FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+        get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
 
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
@@ -453,7 +447,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
         FEBE.citem = item
 
         # update L2G (we need the matrix)
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
 
         for i = 1 : length(FEBE.xref)
             if FEBE.L2G.nonlinear || i == 1
@@ -480,7 +474,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
         FEBE.citem = item
 
         # update L2G (we need the matrix)
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
 
         # compute tangent of item
         FEBE.iteminfo[1] = FEBE.coefficients3[2,item]
@@ -520,7 +514,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
         FEBE.citem = item
 
         # update L2G (we need the matrix)
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
@@ -552,13 +546,13 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.citem = item
 
         # update L2G (we need the matrix)
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
 
         # get coefficients
         if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
-            FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+            get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
         else
-            FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+            get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
         end    
 
         for i = 1 : length(FEBE.xref)
@@ -588,7 +582,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
         FEBE.citem = item
 
         # update L2G (we need the matrix)
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
 
         for i = 1 : length(FEBE.xref)
             if FEBE.L2G.nonlinear || i == 1
@@ -616,13 +610,13 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence,AT}, item::Int) w
         FEBE.citem = item
 
         # update L2G (we need the matrix)
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
 
         # get coefficients
         if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
-            FiniteElements.get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+            get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
         else
-            FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+            get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
         end    
 
         for i = 1 : length(FEBE.xref)
@@ -652,11 +646,11 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.citem = item
     
         # cell update transformation
-        FEXGrid.update!(FEBE.L2G, item)
-        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
+        update!(FEBE.L2G, item)
+        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
 
         # get local reconstruction coefficients
-        FiniteElements.get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
+        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
 
         # use Piola transformation on Hdiv basis
         # and accumulate according to reconstruction coefficients
@@ -690,8 +684,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
         FEBE.citem = item
         
         # cell update transformation
-        FEXGrid.update!(FEBE.L2G, item)
-        FiniteElements.get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        update!(FEBE.L2G, item)
+        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)

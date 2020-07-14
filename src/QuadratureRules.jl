@@ -1,11 +1,3 @@
-module QuadratureRules
-
-using LinearAlgebra
-using ExtendableGrids
-using FEXGrid
-
-export QuadratureRule, VertexRule, integrate!
-
 struct QuadratureRule{T <: Real, ET <: AbstractElementGeometry}
     name::String
     xref::Array{Array{T, 1}}
@@ -40,7 +32,6 @@ function VertexRule(ET::Type{Parallelogram2D})
     w = [1//4, 1//4, 1//4, 1//4]
     return QuadratureRule{Float64, ET}("vertex rule parallelogram", xref, w)
 end
-
 
 function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry1D}
     if order <= 1
@@ -187,7 +178,7 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
     nitems = num_sources(xItemNodes)
     
     # find proper quadrature rules
-    EG = unique(xItemGeometries)
+    EG = Base.unique(xItemGeometries)
     qf = Array{QuadratureRule,1}(undef,length(EG))
     local2global = Array{L2GTransformer,1}(undef,length(EG))
     for j = 1 : length(EG)
@@ -237,7 +228,7 @@ function integrate!(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, inte
     nitems = num_sources(xItemNodes)
     
     # find proper quadrature rules
-    EG = unique(xItemGeometries)
+    EG = Base.unique(xItemGeometries)
     qf = Array{QuadratureRule,1}(undef,length(EG))
     local2global = Array{L2GTransformer,1}(undef,length(EG))
     for j = 1 : length(EG)
@@ -277,6 +268,4 @@ function integrate!(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, inte
     end
 
     return integral
-end
-
 end

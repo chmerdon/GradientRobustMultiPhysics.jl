@@ -1,15 +1,7 @@
-
-using FEXGrid
+using JUFELIA
 using ExtendableGrids
-using ExtendableSparse
-using FiniteElements
-using FEAssembly
-using PDETools
-using QuadratureRules
-#using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
-using Printf
 
 
 include("testgrids.jl")
@@ -55,12 +47,12 @@ function main()
     end
 
     # choose finite element type [velocity, density,  pressure]
-    FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}, FiniteElements.L2P0{1}] # Bernardi--Raugel
-    #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}, FiniteElements.L2P0{1}] # Crouzeix--Raviart (needs smaller timesteps)
+    FETypes = [H1BR{2}, L2P0{1}, L2P0{1}] # Bernardi--Raugel
+    #FETypes = [H1CR{2}, L2P0{1}, L2P0{1}] # Crouzeix--Raviart (needs smaller timesteps)
 
    #TestFunctionOperatorIdentity = Identity; TestFunctionOperatorDivergence = Divergence # classical scheme
-    TestFunctionOperatorIdentity = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # identity operator for gradient-robust scheme
-    TestFunctionOperatorDivergence = ReconstructionDivergence{FiniteElements.HDIVRT0{2}} # divergence operator for gradient-robust scheme
+    TestFunctionOperatorIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
+    TestFunctionOperatorDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
 
     # solver parameters
     timestep = viscosity // (2*c)
@@ -90,8 +82,8 @@ function main()
     L2DensityBestapproximationProblem = L2BestapproximationProblem(exact_density!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 2)
 
     # generate FESpaces
-    FESpaceVelocity = FiniteElements.FESpace{FETypes[1]}(xgrid)
-    FESpacePressureDensity = FiniteElements.FESpace{FETypes[2]}(xgrid)
+    FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
+    FESpacePressureDensity = FESpace{FETypes[2]}(xgrid)
 
     # set initial values
     Solution = FEVector{Float64}("velocity",FESpaceVelocity)

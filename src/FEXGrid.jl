@@ -1,27 +1,3 @@
-module FEXGrid
-
-using ExtendableGrids
-
-export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
-export CellFaces, CellSigns, CellVolumes
-export BFaces, BFaceCellPos, BFaceVolumes
-export nfaces_per_cell, facetype_of_cellface
-
-include("FEXGrid_AssemblyJunctions.jl");
-export AbstractAssemblyType
-export AbstractAssemblyTypeCELL, AbstractAssemblyTypeFACE, AbstractAssemblyTypeBFACE, AbstractAssemblyTypeBFACECELL
-export GridComponentNodes4AssemblyType
-export GridComponentVolumes4AssemblyType
-export GridComponentGeometries4AssemblyType
-export GridComponentRegions4AssemblyType
-
-include("FEXGrid_L2GTransformer.jl");
-export L2GTransformer, update!, eval!, mapderiv!, piola!
-
-
-export uniqueEG,split_grid_into, uniform_refine, barycentric_refine
-
-
 # additional ElementGeometryTypes with parent information
 abstract type Vertex0DWithParent{Parent <: AbstractElementGeometry} <: Vertex0D end
 abstract type Vertex0DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Vertex0D end
@@ -141,7 +117,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     xgrid=ExtendableGrid{T,K}()
     xgrid[Coordinates]=source_grid[Coordinates]
     oldCellTypes = source_grid[CellGeometries]
-    EG = unique(oldCellTypes)
+    EG = Base.unique(oldCellTypes)
     
     split_rules = Array{Array{Int,2},1}(undef,length(EG))
     for j = 1 : length(EG)
@@ -195,7 +171,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid = ExtendableGrid{T,K}()
     oldCoordinates = source_grid[Coordinates]
     oldCellTypes = source_grid[CellGeometries]
-    EG = unique(oldCellTypes)
+    EG = Base.unique(oldCellTypes)
     
     refine_rules = Array{Array{Int,2},1}(undef,length(EG))
     for j = 1 : length(EG)
@@ -318,7 +294,7 @@ function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid = ExtendableGrid{T,K}()
     oldCoordinates = source_grid[Coordinates]
     oldCellTypes = source_grid[CellGeometries]
-    EG = unique(oldCellTypes)
+    EG = Base.unique(oldCellTypes)
     
     refine_rules = Array{Array{Int,2},1}(undef,length(EG))
     for j = 1 : length(EG)
@@ -822,5 +798,3 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
 
     xFaceNormals
 end
-
-end # module

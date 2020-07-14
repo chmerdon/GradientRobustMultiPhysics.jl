@@ -1,15 +1,12 @@
 using Test
 using ExtendableGrids
-using LinearAlgebra
+using JUFELIA
 
 push!(LOAD_PATH, "../src")
 
 ############################
 # TESTSET QUADRATURE RULES #
 ############################
-
-using QuadratureRules
-using FEXGrid
 
 include("../src/testgrids.jl")
 
@@ -49,22 +46,16 @@ end
 # TESTSET Finite Elements interpolations #
 ##########################################
 
-using FiniteElements
-using FEAssembly
-using PDETools
-
-
-
 # list of FETypes that should be tested
 TestCatalog = [
-#                FiniteElements.HDIVRT0{2},
-                FiniteElements.L2P0{2},
-                FiniteElements.H1P1{2}, 
-                FiniteElements.H1CR{2},
-                FiniteElements.H1MINI{2,2},
-                FiniteElements.H1BR{2},
-                FiniteElements.L2P1{2},
-                FiniteElements.H1P2{2,2}]
+#                HDIVRT0{2},
+                L2P0{2},
+                H1P1{2}, 
+                H1CR{2},
+                H1MINI{2,2},
+                H1BR{2},
+                L2P1{2},
+                H1P2{2,2}]
 ExpectedOrders = [0,1,1,1,1,1,2]
 
 
@@ -82,10 +73,10 @@ ExpectedOrders = [0,1,1,1,1,1,2]
 
         # choose FE and generate FESpace
         FEType = TestCatalog[n]
-        FESpace = FiniteElements.FESpace{FEType}(xgrid)
+        FES = FESpace{FEType}(xgrid)
 
         # interpolate
-        Solution = FEVector{Float64}("L2-Bestapproximation",FESpace)
+        Solution = FEVector{Float64}("L2-Bestapproximation",FES)
         interpolate!(Solution[1], exact_function!; bonus_quadorder = ExpectedOrders[n])
 
         # check error
@@ -101,14 +92,14 @@ end
 #################################################
 
 # list of FETypes that should be tested
-TestCatalog = [FiniteElements.HDIVRT0{2},
-                FiniteElements.L2P0{2},
-                FiniteElements.H1P1{2}, 
-                FiniteElements.H1CR{2},
-                FiniteElements.H1MINI{2,2},
-                FiniteElements.H1BR{2},
-                FiniteElements.L2P1{2},
-                FiniteElements.H1P2{2,2}]
+TestCatalog = [HDIVRT0{2},
+                L2P0{2},
+                H1P1{2}, 
+                H1CR{2},
+                H1MINI{2,2},
+                H1BR{2},
+                L2P1{2},
+                H1P2{2,2}]
 ExpectedOrders = [0,0,1,1,1,1,1,2]
 
 @testset "L2-Bestapprox on Triangles/Quads" begin
@@ -126,10 +117,10 @@ ExpectedOrders = [0,0,1,1,1,1,1,2]
 
         # choose FE and generate FESpace
         FEType = TestCatalog[n]
-        FESpace = FiniteElements.FESpace{FEType}(xgrid)
+        FES = FESpace{FEType}(xgrid)
 
         # solve
-        Solution = FEVector{Float64}("L2-Bestapproximation",FESpace)
+        Solution = FEVector{Float64}("L2-Bestapproximation",FES)
         solve!(Solution, Problem)
 
         # check error
@@ -141,14 +132,14 @@ ExpectedOrders = [0,0,1,1,1,1,1,2]
 end
 
 # list of FETypes that should be tested
-TestCatalog = [FiniteElements.H1P1{2}, 
-                FiniteElements.H1CR{2},
-                FiniteElements.H1MINI{2,2},
-                FiniteElements.H1BR{2},
-                FiniteElements.H1P2{2,2}]
+TestCatalog = [H1P1{2}, 
+                H1CR{2},
+                H1MINI{2,2},
+                H1BR{2},
+                H1P2{2,2}]
 ExpectedOrders = [1,1,1,1,2]
 
-@testset "L2-Bestapprox on Triangles/Quads" begin
+@testset "H1-Bestapprox on Triangles/Quads" begin
     println("\n")
     println("================================================")
     println("Testing H1-Bestapproximations on Triangles/Quads")
@@ -163,10 +154,10 @@ ExpectedOrders = [1,1,1,1,2]
 
         # choose FE and generate FESpace
         FEType = TestCatalog[n]
-        FESpace = FiniteElements.FESpace{FEType}(xgrid)
+        FES = FESpace{FEType}(xgrid)
 
         # solve
-        Solution = FEVector{Float64}("H1-Bestapproximation",FESpace)
+        Solution = FEVector{Float64}("H1-Bestapproximation",FES)
         solve!(Solution, Problem)
 
         # check error

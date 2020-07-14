@@ -127,7 +127,7 @@ function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int
 
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
     end
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
@@ -135,7 +135,7 @@ function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int
         push!(C.x,deepcopy(C.x[1]))
     end  
     for i = 1 : length(FEBE.xref) 
-        FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
+        eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
 
 end
@@ -145,7 +145,7 @@ function update!(C::ItemWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, 
     C.citem = item
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
     end
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
@@ -153,7 +153,7 @@ function update!(C::ItemWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, 
         push!(C.x,deepcopy(C.x[1]))
     end  
     for i = 1 : length(FEBE.xref) 
-        FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
+        eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
 
 end
@@ -161,7 +161,7 @@ end
 function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != item 
-        FEXGrid.update!(FEBE.L2G, item)
+        update!(FEBE.L2G, item)
     end
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
@@ -169,7 +169,7 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
         push!(C.x,deepcopy(C.x[1]))
     end  
     for i = 1 : length(FEBE.xref) 
-        FEXGrid.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
+        eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
 
 end

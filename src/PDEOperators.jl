@@ -1,3 +1,14 @@
+
+# type to steer when a PDE block is (re)assembled
+abstract type AbstractAssemblyTrigger end
+abstract type AssemblyFinal <: AbstractAssemblyTrigger end   # is only assembled after solving
+abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)assembled
+    abstract type AssemblyEachTimeStep <: AssemblyAlways end     # is (re)assembled in each timestep
+        abstract type AssemblyInitial <: AssemblyEachTimeStep end    # is only assembled in initial assembly
+            abstract type AssemblyNever <: AssemblyInitial end   # is never assembled
+
+
+
 #######################
 # AbstractPDEOperator #
 #######################
@@ -403,7 +414,7 @@ function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector,
         BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
     end
 
-    FEAssembly.assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+    assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
     flush!(O.storage)
 end
 
@@ -418,7 +429,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilin
         else
             BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
         end
-        FEAssembly.assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+        assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
     end
 end
 
@@ -434,7 +445,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
         else
             BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
         end
-        FEAssembly.assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+        assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
     end
 end
 
@@ -450,7 +461,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; fact
         else
             BLF = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
         end
-        FEAssembly.assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor, verbosity = verbosity)
+        assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor, verbosity = verbosity)
     end
 end
 
@@ -459,12 +470,12 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOpe
         FE1 = A.FESX
         FE2 = A.FESY
         ConvectionForm = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        FEAssembly.assemble!(A, ConvectionForm; verbosity = verbosity, transposed_assembly = true)
+        assemble!(A, ConvectionForm; verbosity = verbosity, transposed_assembly = true)
     else
         FE1 = A.FESX
         FE2 = A.FESY
         ConvectionForm = TrilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        FEAssembly.assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity, transposed_assembly = true)
+        assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity, transposed_assembly = true)
     end
 end
 
@@ -474,13 +485,13 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
     @assert At.FESX == FE2
     @assert At.FESY == FE1
     DivPressure = BilinearForm(Float64, AbstractAssemblyTypeCELL, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
-    FEAssembly.assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
+    assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
 end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     FE = b.FES
     RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, O.action; regions = O.regions)
-    FEAssembly.assemble!(b, RHS; verbosity = verbosity)
+    assemble!(b, RHS; verbosity = verbosity)
 end
 
 

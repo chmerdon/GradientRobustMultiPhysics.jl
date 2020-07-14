@@ -123,7 +123,7 @@ FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACECELL}) =
 
 
 # unique functions that only selects uniques in specified regions
-function unique(xItemGeometries, xItemRegions, xItemDofs, regions)
+function Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
     nitems = 0
     try
         nitems = num_sources(xItemGeometries)
@@ -179,7 +179,7 @@ function prepareOperatorAssembly(
     end    
 
     # find unique ElementGeometries
-    EG, ndofs4EG = unique(xItemGeometries, xItemRegions, xItemDofs, regions)
+    EG, ndofs4EG = Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
 
     # find proper quadrature QuadratureRules
     # and construct matching FEBasisEvaluators
@@ -192,7 +192,7 @@ function prepareOperatorAssembly(
         # choose quadrature order for all finite elements
         for k = 1 : length(FE)
             FEType = eltype(typeof(FE[k]))
-            quadorder = max(quadorder,bonus_quadorder + nrfactors*(FiniteElements.get_polynomialorder(FEType, EG[j]) + QuadratureOrderShift4Operator(FEType,operator[k])))
+            quadorder = max(quadorder,bonus_quadorder + nrfactors*(get_polynomialorder(FEType, EG[j]) + QuadratureOrderShift4Operator(FEType,operator[k])))
         end
         for k = 1 : length(FE)
             if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
@@ -246,7 +246,7 @@ end
 #         itemEG = facetype_of_cellface(EG[j],1)
 #         nfaces4cell = nfaces_per_cell(EG[j])
 #         basisevaler[j] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
-#         quadorder = bonus_quadorder + nrfactors*FiniteElements.get_polynomialorder(typeof(FE), itemEG)
+#         quadorder = bonus_quadorder + nrfactors*get_polynomialorder(typeof(FE), itemEG)
 #         qf[j] = QuadratureRule{T,itemEG}(quadorder);
 #         qfxref = qf[j].xref
 #         xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
@@ -317,7 +317,7 @@ function evaluate!(
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(typeof(FE))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     @assert size(b,2) == cvals_resultdim
 
@@ -354,7 +354,7 @@ function evaluate!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
@@ -421,7 +421,7 @@ function evaluate(
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(typeof(FE))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
 
     # loop over items
@@ -458,7 +458,7 @@ function evaluate(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
@@ -525,7 +525,7 @@ function assemble!(
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(typeof(FE))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
@@ -564,7 +564,7 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
@@ -638,7 +638,7 @@ function assemble!( # LF has to have resultdim == 1
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(typeof(FE))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     action_resultdim::Int = action.resultdim
     @assert action_resultdim == 1
@@ -678,7 +678,7 @@ function assemble!( # LF has to have resultdim == 1
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
@@ -755,7 +755,7 @@ function assemble!(
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(typeof(FE[1]))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][apply_action_to].cvals,1)
     action_resultdim::Int = action.resultdim
 
@@ -798,8 +798,8 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
-        FiniteElements.update!(basisevaler[iEG][evalnr[2]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[2]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
         basisvals2 = basisevaler[iEG][evalnr[2]].cvals
 
@@ -957,7 +957,7 @@ function assemble!(
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(typeof(FE[1]))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][apply_action_to].cvals,1)
     action_resultdim::Int = action.resultdim
 
@@ -1001,8 +1001,8 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
-        FiniteElements.update!(basisevaler[iEG][evalnr[2]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[2]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
         basisvals2 = basisevaler[iEG][evalnr[2]].cvals
 
@@ -1110,7 +1110,7 @@ function assemble!(
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(typeof(FE[1]))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1][2].cvals,1)
     action_resultdim::Int = action.resultdim
@@ -1161,9 +1161,9 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        FiniteElements.update!(basisevaler[iEG][evalnr[1]],dofitem)
-        FiniteElements.update!(basisevaler[iEG][evalnr[2]],dofitem)
-        FiniteElements.update!(basisevaler[iEG][evalnr[3]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[2]],dofitem)
+        update!(basisevaler[iEG][evalnr[3]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
         basisvals2 = basisevaler[iEG][evalnr[2]].cvals
         basisvals3 = basisevaler[iEG][evalnr[3]].cvals
@@ -1226,4 +1226,20 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+end
+
+
+function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL, bonus_quadorder::Int = 0)
+    function L2error_function()
+        temp = zeros(Float64,ncomponents)
+        function closure(result,input,x)
+            exact_function(temp,x)
+            result[1] = 0.0
+            for j=1:length(temp)
+                result[1] += (temp[j] - input[j])^2
+            end    
+        end
+    end    
+    L2error_action = XFunctionAction(L2error_function(),1,xdim; bonus_quadorder = bonus_quadorder)
+    return ItemIntegrator{Float64,AT}(operator, L2error_action, [0])
 end

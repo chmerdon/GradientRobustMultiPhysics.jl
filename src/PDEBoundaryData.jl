@@ -78,7 +78,7 @@ function boundarydata!(
     FE = Target.FES
     xdim = size(FE.xgrid[Coordinates],1) 
     FEType = eltype(typeof(FE))
-    ncomponents::Int = FiniteElements.get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
     xBFaces = FE.xgrid[BFaces]
     xBFaceDofs = FE.BFaceDofs
     nbfaces = length(xBFaces)
@@ -181,9 +181,9 @@ function boundarydata!(
             end   
             action = RegionWiseXFunctionAction(bnd_rhs_function_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
             RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
-            FEAssembly.assemble!(b, RHS_bnd; verbosity = verbosity - 1)
+            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
-            FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         elseif Dboperator == NormalFlux
             xFaceNormals = FE.xgrid[FaceNormals]
             xBFaces = FE.xgrid[BFaces]
@@ -200,9 +200,9 @@ function boundarydata!(
             end   
             action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,xdim; bonus_quadorder = bonus_quadorder)
             RHS_bnd = LinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
-            FEAssembly.assemble!(b, RHS_bnd; verbosity = verbosity - 1)
+            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, AbstractAssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
-            FEAssembly.assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         end    
 
         # fix already set dofs by other boundary conditions

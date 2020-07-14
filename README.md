@@ -4,7 +4,7 @@ FiniteElements for Julia
 
 Learning julia by implementing finite elements
 
-EXAMPLE scripts
+EXAMPLE scripts (can be run by include("..."))
 - Minimal: EXAMPLE_Minimal.jl
 - Convection-Diffusion: EXAMPLE_ConvectionDiffusion.jl
 - Elasticity: EXAMPLE_CookMembrane.jl, EXAMPLE_ElasticTire_.jl
@@ -20,11 +20,11 @@ Dependencies on other Julia packages:
 
 Features/Limitations:
 - type-treed FiniteElements
-    H1 elements (so far P1, P2, MINI, CR)
-    H1 elements with coefficients (so far BR)
-    L2 elements (so far P0, P1)
-    Hdiv elements (so far RT0)
-    Hcurl elements (in future)
+    - H1 elements (so far P1, P2, MINI, CR)
+    - H1 elements with coefficients (so far BR)
+    - L2 elements (so far P0, P1)
+    - Hdiv elements (so far RT0)
+    - Hcurl elements (in future)
 - PDEDescription module and problem prototypes for easy problem description and discretisations setup
 - PDEDescription recognizes nonlinear problem and automatically devises a fixpoint algorihtm
 - handling of mixed element geometries via ExtendableGrids and flexible operator assembly

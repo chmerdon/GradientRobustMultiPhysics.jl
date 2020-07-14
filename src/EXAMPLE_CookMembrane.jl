@@ -1,15 +1,7 @@
-
-using FEXGrid
+using JUFELIA
 using ExtendableGrids
-using ExtendableSparse
-using FiniteElements
-using FEAssembly
-using PDETools
-using QuadratureRules
-#using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
-using BenchmarkTools
 using Printf
 
 
@@ -39,8 +31,8 @@ function main()
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
     # choose finite element type
-    #FEType = FiniteElements.H1P1{2} # P1-Courant
-    FEType = FiniteElements.H1P2{2,2} # P2
+    #FEType = H1P1{2} # P1-Courant
+    FEType = H1P2{2,2} # P2
 
     # other parameters
     verbosity = 1 # deepness of messaging (the larger, the more)
@@ -56,10 +48,10 @@ function main()
     show(LinElastProblem)
 
     # generate FESpace
-    FESpace = FiniteElements.FESpace{FEType}(xgrid)
+    FES = FESpace{FEType}(xgrid)
 
     # solve PDE
-    Solution = FEVector{Float64}("Displacement",FESpace)
+    Solution = FEVector{Float64}("Displacement",FES)
     solve!(Solution, LinElastProblem; verbosity = verbosity)
     
     # plot triangulation
@@ -71,7 +63,7 @@ function main()
     PyPlot.figure(2)
     nnodes = size(xgrid[Coordinates],2)
     nodevals = zeros(Float64,3,nnodes)
-    nodevalues!(nodevals,Solution[1],FESpace)
+    nodevalues!(nodevals,Solution[1],FES)
     nodevals[3,:] = sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2)
     ExtendableGrids.plot(xgrid, nodevals[3,:]; Plotter = PyPlot)
 

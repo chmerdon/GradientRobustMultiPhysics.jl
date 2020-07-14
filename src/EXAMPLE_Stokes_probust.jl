@@ -1,16 +1,8 @@
-
-using FEXGrid
+using JUFELIA
 using ExtendableGrids
-using ExtendableSparse
-using FiniteElements
-using FEAssembly
-using PDETools
-using QuadratureRules
-#using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-
 
 include("testgrids.jl")
 
@@ -79,11 +71,11 @@ function main()
     exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
 
     # choose finite element type
-    FETypes = [FiniteElements.H1BR{2}, FiniteElements.L2P0{1}] # Bernardi--Raugel
-    #FETypes = [FiniteElements.H1CR{2}, FiniteElements.L2P0{1}] # Crouzeix--Raviart
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
 
     # reconstruction operator
-    TestFunctionReconstruction = ReconstructionIdentity{FiniteElements.HDIVRT0{2}} # do not change
+    TestFunctionReconstruction = ReconstructionIdentity{HDIVRT0{2}} # do not change
 
     # solver parameters
     maxIterations = 20  # termination criterion 1 for nonlinear mode
@@ -129,8 +121,8 @@ function main()
         end
 
         # generate FESpaces
-        FESpaceVelocity = FiniteElements.FESpace{FETypes[1]}(xgrid)
-        FESpacePressure = FiniteElements.FESpace{FETypes[2]}(xgrid)
+        FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
+        FESpacePressure = FESpace{FETypes[2]}(xgrid)
 
         # solve Stokes problem with classical right-hand side/convection term
         StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = 2)

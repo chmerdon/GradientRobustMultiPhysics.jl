@@ -1,11 +1,7 @@
-using FEXGrid
+using JUFELIA
 using ExtendableGrids
-using FiniteElements
-using FEAssembly
-using PDETools
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
-
 
 
 # define some (vector-valued) function (to be L2-bestapproximated in this example)
@@ -17,7 +13,6 @@ end
 function exact_divergence!(result,x)
     result[1] = 2*x[1]
 end
-
 
 function main()
 
@@ -34,13 +29,13 @@ function main()
     show(Problem)
 
     # choose some finite element space
-    FEType = FiniteElements.HDIVRT0{2}
-    #FEType = FiniteElements.H1P2{2,2}
-    FESpace = FiniteElements.FESpace{FEType}(xgrid)
+    FEType = HDIVRT0{2}
+    #FEType = H1P2{2,2}
+    FES = FESpace{FEType}(xgrid)
     show(FESpace)
 
     # solve the problem
-    Solution = FEVector{Float64}("L2-Bestapproximation",FESpace)
+    Solution = FEVector{Float64}("L2-Bestapproximation",FES)
     solve!(Solution, Problem; verbosity = verbosity)
     
     # calculate L2 error and L2 divergence error
@@ -52,7 +47,7 @@ function main()
     # evaluate/interpolate function at nodes and plot
     PyPlot.figure(1)
     nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
-    nodevalues!(nodevals,Solution[1],FESpace)
+    nodevalues!(nodevals,Solution[1],FES)
     ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
 end
 

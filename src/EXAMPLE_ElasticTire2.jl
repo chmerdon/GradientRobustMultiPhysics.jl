@@ -1,17 +1,8 @@
-
-using FEXGrid
+using JUFELIA
 using ExtendableGrids
-using ExtendableSparse
-using FiniteElements
-using FEAssembly
-using PDETools
-using QuadratureRules
-#using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
-using BenchmarkTools
 using Printf
-
 
 include("testgrids.jl")
 
@@ -38,12 +29,12 @@ function main()
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
     # choose finite element type for wheel and mid area
-    #FEType_rest = FiniteElements.H1P1{2}; ConnectionDofs1 = [ConnectionPoints;nnodes .+ ConnectionPoints]
-    FEType_rest = FiniteElements.H1P2{2,2}; ConnectionDofs1 = [ConnectionPoints;(nnodes + num_sources(xgrid[FaceNodes])) .+ ConnectionPoints]
+    #FEType_rest = H1P1{2}; ConnectionDofs1 = [ConnectionPoints;nnodes .+ ConnectionPoints]
+    FEType_rest = H1P2{2,2}; ConnectionDofs1 = [ConnectionPoints;(nnodes + num_sources(xgrid[FaceNodes])) .+ ConnectionPoints]
 
     # finite element type for spokes
-    FEType_spokes = FiniteElements.H1P1{2}; ConnectionDofs2 = [ConnectionPoints;nnodes .+ ConnectionPoints]
-    #FEType_spokes = FiniteElements.H1P2{2,1}; ConnectionDofs2 = [ConnectionPoints;(nnodes + num_sources(xgrid[CellNodes])) .+ ConnectionPoints]
+    FEType_spokes = H1P1{2}; ConnectionDofs2 = [ConnectionPoints;nnodes .+ ConnectionPoints]
+    #FEType_spokes = H1P2{2,1}; ConnectionDofs2 = [ConnectionPoints;(nnodes + num_sources(xgrid[CellNodes])) .+ ConnectionPoints]
 
     # other parameters
     verbosity = 2 # deepness of messaging (the larger, the more)
@@ -78,8 +69,8 @@ function main()
     show(LinElastProblem)
 
     # generate FESpace
-    FESpace_rest = FiniteElements.FESpace{FEType_rest}(xgrid)
-    FESpace_spokes = FiniteElements.FESpace{FEType_spokes}(xgrid)
+    FESpace_rest = FESpace{FEType_rest}(xgrid)
+    FESpace_spokes = FESpace{FEType_spokes}(xgrid)
 
     # solve PDE
     Solution = FEVector{Float64}("Displacement",FESpace_rest)

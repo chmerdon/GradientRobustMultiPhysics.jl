@@ -1,17 +1,8 @@
-
-using FEXGrid
+using JUFELIA
 using ExtendableGrids
-using ExtendableSparse
-using FiniteElements
-using FEAssembly
-using PDETools
-using QuadratureRules
-#using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
-using BenchmarkTools
 using Printf
-
 
 include("testgrids.jl")
 
@@ -56,9 +47,9 @@ function main()
     diffusion = 1
 
     # choose finite element type
-    #FEType = FiniteElements.H1P1{1} # P1-Courant
-    #FEType = FiniteElements.H1P2{1,2} # P2
-    FEType = FiniteElements.H1CR{1} # Crouzeix-Raviart
+    #FEType = H1P1{1} # P1-Courant
+    #FEType = H1P2{1,2} # P2
+    FEType = H1CR{1} # Crouzeix-Raviart
 
     # solver parameters
     verbosity = 1 # deepness of messaging (the larger, the more)
@@ -94,18 +85,18 @@ function main()
         end
 
         # generate FESpace
-        FESpace = FiniteElements.FESpace{FEType}(xgrid)
+        FES = FESpace{FEType}(xgrid)
         if verbosity > 2
-            FiniteElements.show(FESpace)
+            show(FES)
         end    
 
         # solve PDE
-        Solution = FEVector{Float64}("Problem solution",FESpace)
+        Solution = FEVector{Float64}("Problem solution",FES)
         solve!(Solution, ConvectionDiffusionProblem; verbosity = verbosity)
         push!(NDofs,length(Solution.entries))
 
         # interpolate
-        Interpolation = FEVector{Float64}("Interpolation",FESpace)
+        Interpolation = FEVector{Float64}("Interpolation",FES)
         interpolate!(Interpolation[1], exact_solution!; verbosity = verbosity - 1)
 
         # compute L2 and H1 error
@@ -142,7 +133,7 @@ function main()
             PyPlot.figure(2)
             nnodes = size(xgrid[Coordinates],2)
             nodevals = zeros(Float64,2,nnodes)
-            nodevalues!(nodevals,Solution[1],FESpace)
+            nodevalues!(nodevals,Solution[1],FES)
             ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
         end    
     end    

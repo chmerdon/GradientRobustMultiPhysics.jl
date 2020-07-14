@@ -1,3 +1,4 @@
+
 function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [], verbosity::Int = 0, bonus_quadorder::Int = 0)
     if verbosity > 0
         println("\nINTERPOLATING")
@@ -61,7 +62,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
         ndofs4item = ndofs4EG[1][iEG]
 
         # update FEbasisevaler
-        FiniteElements.update!(basisevaler[iEG],item)
+        update!(basisevaler[iEG],item)
         basisvals = basisevaler[iEG].cvals
 
         # update dofs

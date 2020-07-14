@@ -64,7 +64,7 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
             end
         end
         # assign dependencies
-        LHS_dep[j,k] = deepcopy(unique(current_dep))
+        LHS_dep[j,k] = deepcopy(Base.unique(current_dep))
     end
     RHS_ATs = Array{DataType,1}(undef,size(PDE.RHSOperators,1))
     RHS_dep = Array{Array{Int,1},1}(undef,size(PDE.RHSOperators,1))
@@ -100,7 +100,7 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
             end
         end
         # assign dependencies
-        RHS_dep[j] = deepcopy(unique(current_dep))
+        RHS_dep[j] = deepcopy(Base.unique(current_dep))
     end
 
 
@@ -333,7 +333,7 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig)
 
     # PENALIZE FIXED DOFS
     # (from boundary conditions and constraints)
-    fixed_dofs = unique(fixed_dofs)
+    fixed_dofs = Base.unique(fixed_dofs)
     for j = 1 : length(fixed_dofs)
         b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
         A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
@@ -407,7 +407,7 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
 
         # PENALIZE FIXED DOFS
         # (from boundary conditions and constraints)
-        fixed_dofs = unique(fixed_dofs)
+        fixed_dofs = Base.unique(fixed_dofs)
         for j = 1 : length(fixed_dofs)
             b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
             A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
@@ -523,7 +523,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
 
             # PENALIZE FIXED DOFS
             # (from boundary conditions and constraints)
-            fixed_dofs = unique(fixed_dofs)
+            fixed_dofs = Base.unique(fixed_dofs)
             for j = 1 : length(fixed_dofs)
                 for eq = 1 : length(SC.subiterations[s])
                     # check if fixed_dof is necessary for subiteration
