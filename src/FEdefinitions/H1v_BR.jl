@@ -101,19 +101,31 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR}, exac
             end    
         end
         # interpolate at face midpoints
+        linpart = zeros(Float64,ncomponents)
+        node = 0
         for face = 1 : nfaces
             nnodes4item = num_targets(xFaceNodes,face)
+            # compute midpoint
             for k=1:xdim
                 x[k] = 0
                 for n=1:nnodes4item
-                    x[k] += xCoords[k,xFaceNodes[n,face]]
+                    node = xFaceNodes[n,face]
+                    x[k] += xCoords[k,node]
                 end
                 x[k] /= nnodes4item    
             end    
+            # compute linear part
+            fill!(linpart,0)
+            for n=1:nnodes4item
+                node = xFaceNodes[n,face]
+                for c=1:ncomponents
+                    linpart[c] += Target[node+(c-1)*nnodes] / nnodes4item
+                end
+            end
             exact_function!(result,x)
             Target[ncomponents*nnodes+face] = 0.0
             for k = 1 : ncomponents
-                Target[ncomponents*nnodes+face] = result[k]*xFaceNormals[k,face]
+                Target[ncomponents*nnodes+face] = (result[k] - linpart[k]) * xFaceNormals[k,face]
             end    
         end
     else

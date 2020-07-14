@@ -51,7 +51,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
         integrals4cell = zeros(Float64,ncells,ncomponents)
         integrate!(integrals4cell, FE.xgrid, AbstractAssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
         for cell = 1 : ncells
-            Target[cell] = integrals4cell[cell,1] / xCellVolumes[cell]
+            for c = 1 : ncomponents
+                Target[cell + (c-1)*ncells] = integrals4cell[cell,c] / xCellVolumes[cell]
+            end
         end    
     else
         #TODO 
