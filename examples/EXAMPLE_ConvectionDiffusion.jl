@@ -1,10 +1,13 @@
-using JUFELIA
+
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
 
-include("testgrids.jl")
+push!(LOAD_PATH, "../src")
+using JUFELIA
+
+include("../src/testgrids.jl")
 
 # problem data and expected exact solution
 diffusion = 1.0

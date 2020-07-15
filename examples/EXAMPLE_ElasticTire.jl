@@ -1,16 +1,19 @@
-using JUFELIA
+
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
 
 
-include("testgrids.jl")
+push!(LOAD_PATH, "../src")
+using JUFELIA
+
+include("../src/testgrids.jl")
 
 # problem data
-function neumann_force_right!(result,x)
+function neumann_force_center!(result,x)
     result[1] = 0.0
-    result[2] = 10.0
+    result[2] = -10.0
 end    
 
 function main()
@@ -19,32 +22,31 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid = testgrid_cookmembrane() # initial simplex grid
-    for j=1:4
-        xgrid = uniform_refine(xgrid)
-    end
+    xgrid, ConnectionPoints = testgrid_tire(3,4) # initial simplex grid
 
     # problem parameters
-    elasticity_modulus = 1000 # elasticity modulus
-    poisson_number = 1//3 # Poisson number
+    elasticity_modulus = 100000 # elasticity modulus
+    elasticity_modulus_spoke = 1000 # elasticity modulus for spokes
+    poisson_number = 0.3 # Poisson number
     shear_modulus = (1/(1+poisson_number))*elasticity_modulus
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
     # choose finite element type
-    #FEType = H1P1{2} # P1-Courant
-    FEType = H1P2{2,2} # P2
+    FEType = H1P1{2}
 
-    # other parameters
-    verbosity = 1 # deepness of messaging (the larger, the more)
-    factor_plotdisplacement = 4
+    # other parameters[]
+    verbosity = 2 # deepness of messaging (the larger, the more)
+    factor_plotdisplacement = 50
 
     #####################################################################################    
     #####################################################################################
 
     # PDE description
     LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
+    LinElastProblem.LHSOperators[1,1] = [HookStiffnessOperator2D(shear_modulus,lambda; regions = [1]),
+                                         HookStiffnessOperator1D(elasticity_modulus_spoke; regions = [2])]
     append!(LinElastProblem.BoundaryOperators[1], [1], HomogeneousDirichletBoundary)
-    push!(LinElastProblem.RHSOperators[1], RhsOperator(Identity, neumann_force_right!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    push!(LinElastProblem.RHSOperators[1], RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
     show(LinElastProblem)
 
     # generate FESpace
@@ -52,7 +54,7 @@ function main()
 
     # solve PDE
     Solution = FEVector{Float64}("Displacement",FES)
-    solve!(Solution, LinElastProblem; verbosity = verbosity)
+    solve!(Solution, LinElastProblem; verbosity = verbosity, dirichlet_penalty=1e10)
     
     # plot triangulation
     PyPlot.figure(1)

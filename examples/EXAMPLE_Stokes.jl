@@ -1,13 +1,14 @@
 
-using JUFELIA
 using ExtendableGrids
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
 
+push!(LOAD_PATH, "../src")
+using JUFELIA
 
-include("testgrids.jl")
+include("../src/testgrids.jl")
 
 # data for Hagen-Poiseuille flow
 viscosity = 1.0
