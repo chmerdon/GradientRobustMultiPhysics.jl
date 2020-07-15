@@ -317,11 +317,11 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
             @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
-            append!(fixed_dofs, new_fixed_dofs)
         else
             new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
-            append!(fixed_dofs, new_fixed_dofs)
         end    
+        new_fixed_dofs .+= Target[j].offset
+        append!(fixed_dofs, new_fixed_dofs)
     end    
 
     # PREPARE GLOBALCONSTRAINTS
