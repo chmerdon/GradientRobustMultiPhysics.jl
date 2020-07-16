@@ -1,3 +1,15 @@
+###############################
+# EXAMPLE COMPRESSIBLE STOKES #
+###############################
+#
+# Julia implementation of scheme from
+#
+# https://doi.org/10.1016/j.cma.2020.113069
+# https://arxiv.org/abs/1911.01295
+#
+# here even for triangles/quads
+
+
 
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
@@ -42,7 +54,7 @@ function main()
 
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
-    xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
+    #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
 
     # uniform mesh refinement
     for j = 1:4
@@ -60,8 +72,8 @@ function main()
     # solver parameters
     timestep = viscosity // (2*c)
     start_with_constant_density = false
-    maxIterations = 300  # termination criterion 1 for nonlinear mode
-    maxResidual = 1e-10 # termination criterion 2 for nonlinear mode
+    maxIterations = 300  # termination criterion 1
+    maxResidual = 1e-10 # termination criterion 2
     verbosity = 0 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
