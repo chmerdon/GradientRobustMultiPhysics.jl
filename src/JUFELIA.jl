@@ -6,6 +6,7 @@ using SparseArrays
 using BenchmarkTools
 using LinearAlgebra
 using ForwardDiff
+using DocStringExtensions
 using Printf
 
 
@@ -62,10 +63,14 @@ export get_ncomponents
 export reconstruct!
 
 
-include("FEBlockArrays.jl");
+include("FEVector.jl");
 export FEVectorBlock, FEVector
+export fill!, addblock!
+
+
+include("FEMatrix.jl");
 export FEMatrixBlock, FEMatrix
-export fill!, addblock, addblock_matmul
+export fill!, addblock!, addblock_matmul!
 
 
 include("FEBasisEvaluator.jl")
@@ -97,6 +102,7 @@ export MultiplyScalarAction, MultiplyVectorAction
 export MultiplyMatrixAction, RegionWiseMultiplyScalarAction, RegionWiseMultiplyVectorAction
 export FunctionAction, XFunctionAction
 export ItemWiseXFunctionAction, RegionWiseXFunctionAction
+
 
 include("AbstractAssemblyPattern.jl")
 export AbstractAssemblyPattern

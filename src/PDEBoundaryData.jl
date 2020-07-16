@@ -1,23 +1,33 @@
 
 abstract type AbstractBoundaryType end
 abstract type DirichletBoundary <: AbstractBoundaryType end
+"""
+$(TYPEDEF)
+
+DirichletBoundary where data is computed by L2-bestapproximation
+"""
 abstract type BestapproxDirichletBoundary <: DirichletBoundary end
+"""
+$(TYPEDEF)
+
+DirichletBoundary where data is computed by interpolation
+"""
 abstract type InterpolateDirichletBoundary <: DirichletBoundary end
+"""
+$(TYPEDEF)
+
+homogeneous Dirichlet data
+"""
 abstract type HomogeneousDirichletBoundary <: DirichletBoundary end
 
 
-########################
-### BoundaryOperator ###
-########################
-#
-# collects boundary data for a component of the system and allows to specify a AbstractBoundaryType for each boundary region
-# so far only DirichletBoundary types (see above)
-#
-# later also SymmetryBoundary
-#
-# Note: NeumannBoundary has to be implemented as a RhsOperator with on_boundary = true
-# Note: PeriodicBoundary has to be implemented as a CombineDofs <: AbstractGlobalConstraint
-#
+"""
+$(TYPEDEF)
+
+collects boundary data for a component of the system and allows to specify a AbstractBoundaryType for each boundary region
+so far only DirichletBoundary types (see above)
+
+"""
 struct BoundaryOperator <: AbstractPDEOperator
     regions4boundarytype :: Dict{Type{<:AbstractBoundaryType},Array{Int,1}}
     data4bregion :: Array{Any,1}
@@ -77,7 +87,7 @@ function boundarydata!(
   
     FE = Target.FES
     xdim = size(FE.xgrid[Coordinates],1) 
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     xBFaces = FE.xgrid[BFaces]
     xBFaceDofs = FE.BFaceDofs
@@ -163,7 +173,7 @@ function boundarydata!(
 
 
         bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
-        FEType = eltype(typeof(FE))
+        FEType = eltype(FE)
         Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
         b = zeros(Float64,FE.ndofs,1)
         A = FEMatrix{Float64}("MassMatrixBnd", FE)

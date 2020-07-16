@@ -299,7 +299,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         # get local reconstruction coefficients
         # and accumulate
-        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
+        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(FEBE.FE2), EG, item)
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
@@ -650,7 +650,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
 
         # get local reconstruction coefficients
-        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(typeof(FEBE.FE2)), EG, item)
+        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(FEBE.FE2), EG, item)
 
         # use Piola transformation on Hdiv basis
         # and accumulate according to reconstruction coefficients

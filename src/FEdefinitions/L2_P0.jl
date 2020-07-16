@@ -1,3 +1,10 @@
+"""
+$(TYPEDEF)
+
+piecewise constant polynomials
+
+allowed on every ElementGeometry
+"""
 abstract type L2P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 
@@ -44,7 +51,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
     xCoords = FE.xgrid[Coordinates]
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
     xdim = size(xCoords,1)
     if length(dofs) == 0 # interpolate at all dofs
@@ -66,7 +73,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     xCellNodes = FE.xgrid[CellNodes]
     xNodeCells = atranspose(xCellNodes)
     ncells = num_sources(xCellNodes)
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
     value = 0.0
     nneighbours = 0

@@ -1,3 +1,12 @@
+"""
+$(TYPEDEF)
+
+Hdiv-conforming vector-valued (ncomponents = spacedim) lowest-order Raviart-Thomas space
+
+allowed ElementGeometries:
+- Triangle2D
+- Quadrilateral2D
+"""
 abstract type HDIVRT0{spacedim} <: AbstractHdivFiniteElement where {spacedim<:Int} end
 
 get_ncomponents(::Type{<:HDIVRT0{2}}) = 2

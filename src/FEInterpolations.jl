@@ -33,7 +33,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   EG, ndofs4EG = uniqueEG(xItemGeometries, xItemRegions, [xItemDofs], regions)
   qf = Array{QuadratureRule,1}(undef,length(EG))
   basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
-  FEType = Base.eltype(typeof(FE))
+  FEType = Base.eltype(FE)
   for j = 1 : length(EG)
       qf[j] = VertexRule(EG[j])
       basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],Identity,AssemblyTypeCELL}(FE, qf[j])

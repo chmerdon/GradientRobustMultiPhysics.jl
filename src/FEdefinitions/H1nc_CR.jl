@@ -1,4 +1,13 @@
 
+"""
+$(TYPEDEF)
+
+Crouzeix-Raviart element (only continuous at face centers)
+
+allowed ElementGeometries:
+- Triangle2D (piecewise linear, similar to P1)
+- Quadrilateral2D (similar to Q1 space)
+"""
 abstract type H1CR{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 
@@ -73,7 +82,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1CR}, exac
     xFaceNodes = FE.xgrid[FaceNodes]
     nfaces = num_sources(xFaceNodes)
     nnodes4item::Int = 0
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     result = zeros(Float64,ncomponents)
     if length(dofs) == 0 # interpolate at all dofs

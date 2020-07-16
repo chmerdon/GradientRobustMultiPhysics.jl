@@ -1,3 +1,14 @@
+
+"""
+$(TYPEDEF)
+
+vector-valued (ncomponents = spacedim) Bernardi--Raugel element
+(first-order polynomials + normal-weighted face bubbles)
+
+allowed ElementGeometries:
+- Triangle2D (piecewise linear + normale-weighted face bubbles)
+- Quadrilateral2D (Q1 space + normal-weighted face bubbles)
+"""
 abstract type H1BR{spacedim} <: AbstractH1FiniteElementWithCoefficients where {spacedim<:Int} end
 
 get_ncomponents(::Type{<:H1BR{2}}) = 2
@@ -83,7 +94,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR}, exac
     xCoords = FE.xgrid[Coordinates]
     xFaceNodes = FE.xgrid[FaceNodes]
     xFaceNormals = FE.xgrid[FaceNormals]
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
     result = zeros(Float64,ncomponents)
     xdim = size(xCoords,1)
@@ -162,7 +173,7 @@ end
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR})
     nnodes = num_sources(FE.xgrid[Coordinates])
     nfaces = num_sources(FE.xgrid[FaceNodes])
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
     offset4component = 0:nnodes:ncomponents*nnodes
     for node = 1 : nnodes

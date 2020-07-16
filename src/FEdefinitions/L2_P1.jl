@@ -1,4 +1,14 @@
+"""
+$(TYPEDEF)
 
+discontinuous piecewise first-order polynomials
+(same as H1P1 but with other dofmap)
+
+allowed ElementGeometries:
+- Edge1D (linear polynomials)
+- Triangle2D (linear polynomials)
+- Quadrilateral2D (Q1 space)
+"""
 abstract type L2P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 get_ncomponents(::Type{L2P1{1}}) = 1
@@ -59,7 +69,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P1}, exac
     xCellNodes = FE.xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nnodes4item::Int = 0
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     result = zeros(Float64,ncomponents)
     ndofs4component::Int = ceil(FE.ndofs / ncomponents)

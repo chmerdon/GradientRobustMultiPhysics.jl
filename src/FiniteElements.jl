@@ -26,14 +26,11 @@ abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
 abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
 
-#########################
-# Finite Element Spaces #
-#########################
-#
-# struct that has a finite element subtype (see below) as parameter
-# and carries dofmaps, grid information and access to coefficients
-# (links have to be stored here to avoid search in xgrid dicts)
-#
+"""
+$(TYPEDEF)
+
+A struct that has a finite element type as parameter and carries dofmaps (CellDofs, FaceDofs, BFaceDofs) plus additional grid information and access to arrays holding coefficients if needed.
+"""
 mutable struct FESpace{FEType<:AbstractFiniteElement}
     name::String                          # full name of finite element space (used in messages)
     ndofs::Int                            # total number of dofs
@@ -47,11 +44,10 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     xCellSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
 end
 
-# constructor
-function FESpace{FEType}(xgrid::ExtendableGrid; dofmap_needed = true) where {FEType <:AbstractFiniteElement}
+function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmap_needed = true) where {FEType <:AbstractFiniteElement}
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)
-    FES = FESpace{FEType}("",0,xgrid,dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
+    FES = FESpace{FEType}(name,0,xgrid,dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
 
     # then update data according to init specifications in FEdefinition files
     init!(FES; dofmap_needed = dofmap_needed)
@@ -65,10 +61,20 @@ function FESpace(name::String, length::Int)
     return FES
 end
 
-Base.eltype(::Type{FESpace{FEType}}) where {FEType} = FEType
+"""
+$(TYPEDSIGNATURES)
 
-# show function for FiniteElementSpace
-function Base.show(io::IO, FES::FESpace{FEType}) where {FEType}
+Custom `eltype` function for `FESpace` returns the finite element type of the finite element space.
+"""
+Base.eltype(::FESpace{FEType}) where {FEType<:AbstractFiniteElement} = FEType
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Custom `show` function for `FESpace` that prints some information and all available dofmaps.
+"""
+function Base.show(io::IO, FES::FESpace{FEType}) where {FEType<:AbstractFiniteElement}
 	  println("\nFESpace information")
     println("===================")
     println("     name = $(FES.name)")

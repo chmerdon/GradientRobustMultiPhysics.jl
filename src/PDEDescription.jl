@@ -1,16 +1,16 @@
 
-##################
-# PDEDescription #
-##################
-#
-# A PDE is described by an nxn matrix and vector of PDEOperator
-# the indices of matrix relate to FEBlocks given to solver
-# all Operators of [i,k] - matrixblock are assembled into system matrix block [i*n+k]
-# all Operators of [i] - rhs-block are assembled into rhs block [i]
-#
-# additionally BoundayOperators and GlobalConstraints are assigned to handle
-# boundary data and global side constraints (like a fixed global integral mean)
+"""
+$(TYPEDEF)
 
+struct that describes a PDE system
+
+A PDE system is described by
+- its name::String
+- an Array{Array{AbstractPDEOperator,1},2} that describes the left-hand sides
+- an Array{Array{AbstractPDEOperator,1},1} that describes the right-hand sides
+- an Array{BoundaryOperator,1} that describes the boundary conditions
+- an Array{AbstractGlobalConstraint,1} that describes additional global constraints
+"""
 mutable struct PDEDescription
     name::String
     LHSOperators::Array{Array{AbstractPDEOperator,1},2}
@@ -27,6 +27,11 @@ end
 
 
 
+"""
+$(TYPEDSIGNATURES)
+
+Custom `show` function for `PDEDescription` that prints the PDE systems and all assigned operators
+"""
 function Base.show(io::IO, PDE::PDEDescription)
     println("\nPDE-DESCRIPTION")
     println("===============")

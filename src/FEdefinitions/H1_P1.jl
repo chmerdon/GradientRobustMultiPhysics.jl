@@ -1,4 +1,14 @@
 
+"""
+$(TYPEDEF)
+
+Continuous piecewise first-order polynomials
+
+allowed ElementGeometries:
+- Edge1D (linear polynomials)
+- Triangle2D (linear polynomials)
+- Quadrilateral2D (Q1 space)
+"""
 abstract type H1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 get_ncomponents(::Type{H1P1{1}}) = 1
@@ -83,7 +93,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P1}, exac
     xCellNodes = FE.xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nnodes4item::Int = 0
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     result = zeros(Float64,ncomponents)
     if length(dofs) == 0 # interpolate at all dofs
@@ -112,7 +122,7 @@ end
 
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1P1})
     nnodes = num_sources(FE.xgrid[Coordinates])
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     offset4component = 0:nnodes:ncomponents*nnodes
     for node = 1 : nnodes

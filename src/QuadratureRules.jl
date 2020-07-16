@@ -1,13 +1,38 @@
+###################
+# QuadratureRules #
+###################
+#
+# here all quadrature rules for the different ElementGeometries are collected
+# there are some hard-coded ones for the lowest-order rules (that might be extended later)
+# and also generic functions that generate rules of arbitrary order
+#
+# integrate! allows to intgrate cell-wise (order face-wise etc. depending on the AbstractAssemblyType)
+# integrate does the same but only returns the full integral and is more memory-friendly
+
+"""
+$(TYPEDEF)
+
+A struct that contains the name of the quadrature rule, the reference points and the weights for the parameter-determined element geometry.
+"""
 struct QuadratureRule{T <: Real, ET <: AbstractElementGeometry}
     name::String
     xref::Array{Array{T, 1}}
     w::Array{T, 1}
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Custom `eltype` function for `QuadratureRule{T,ET}`.
+"""
 Base.eltype(::QuadratureRule{T,ET}) where{T <: Real, ET <: AbstractElementGeometry} = [T,ET]
 
-# show function for Quadrature
-function show(Q::QuadratureRule{T,ET} where{T <: Real, ET <: AbstractElementGeometry})
+"""
+$(TYPEDSIGNATURES)
+
+Custom `show` function for `QuadratureRule{T,ET}` that prints some information.
+"""
+function Base.show(io::IO, Q::QuadratureRule{T,ET} where{T <: Real, ET <: AbstractElementGeometry})
     npoints = length(Q.xref);
     println("QuadratureRule information");
     println("    shape ; $(eltype(Q)[2])")
@@ -33,6 +58,13 @@ function VertexRule(ET::Type{Parallelogram2D})
     return QuadratureRule{Float64, ET}("vertex rule parallelogram", xref, w)
 end
 
+"""
+````
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry1D}
+````
+
+Constructs 1D quadrature rule of specified order.
+"""
 function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry1D}
     if order <= 1
         name = "midpoint rule"
@@ -53,6 +85,13 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementG
     return QuadratureRule{T, ET}(name, xref, w)
 end
 
+"""
+````
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry0D}
+````
+
+Constructs 0D quadrature rule of specified order (always point evaluation).
+"""
 function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementGeometry0D}
     name = "point evaluation"
     xref = Vector{Array{T,1}}(undef,1);
@@ -62,6 +101,13 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementG
 end
 
 
+"""
+````
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
+````
+
+Constructs quadrature rule on Triangle2D of specified order.
+"""
 function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
   if order <= 1
       name = "midpoint rule"
@@ -83,6 +129,13 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
 end
 
 
+"""
+````
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelogram2D}
+````
+
+Constructs quadrature rule on Parallelogram2D of specified order.
+"""
 function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelogram2D}
   if order <= 1
       name = "midpoint rule"
@@ -165,17 +218,19 @@ function get_generic_quadrature_Stroud(order::Int)
     return xref, w[:]
 end
 
+"""
+$(TYPEDSIGNATURES)
 
-# integrates and writes item-wise integrals into integral4cells
-# AT can be AssemblyTypeCELL or AssemblyTypeFACE to integrate over cells/faces
-# integrand has to have the form function integrand!(result,x)
-function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; verbosity::Int = 0)
+Integration that writes result on every item into integral4items.
+"""
+function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int; verbosity::Int = 0)
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
+    NumberType = eltype(integral4items)
     
     # find proper quadrature rules
     EG = Base.unique(xItemGeometries)
@@ -218,14 +273,19 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
     end
 end
 
-# as above but only return full intergral value
-function integrate(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; verbosity::Int = 0)
+"""
+$(TYPEDSIGNATURES)
+
+Integration that returns total integral.
+"""
+function integrate(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int; verbosity::Int = 0)
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
+    NumberType = eltype(xCoords)
     
     # find proper quadrature rules
     EG = Base.unique(xItemGeometries)

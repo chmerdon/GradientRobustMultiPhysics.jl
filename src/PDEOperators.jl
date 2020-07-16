@@ -34,13 +34,15 @@ abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 
 
-########################
-### DiagonalOperator ###
-########################
-#
-# puts _value_ on the diagonal entries of the cell dofs within given _regions_
-# if _onlyz_ == true only values that are zero are changed
-#
+"""
+$(TYPEDEF)
+
+puts _value_ on the diagonal entries of the cell dofs within given _regions_
+
+if _onlyz_ == true only values that are zero are changed
+
+can only be applied in PDE LHS
+"""
 struct DiagonalOperator <: AbstractPDEOperator
     name::String
     value::Real
@@ -52,12 +54,13 @@ function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array
 end
 
 
-####################
-### CopyOperator ###
-####################
-#
-# copies entries from TargetVector to rhs block
-#
+"""
+$(TYPEDEF)
+
+copies entries from TargetVector to rhs block
+
+can only be applied in PDE RHS
+"""
 struct CopyOperator <: AbstractPDEOperator
     name::String
     copy_from::Int
@@ -67,15 +70,15 @@ function CopyOperator(copy_from, factor)
     return CopyOperator("CopyOperator",copy_from, factor)
 end
 
-############################
-### AbstractBilinearForm ###
-############################
-#
-# expects two operators _operator1_ and _operator2_ and an _action_ and an AT::AbtractAssemblyType and _regions_
-# 
-# and assembles b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
-#            or b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
-#
+"""
+$(TYPEDEF)
+
+abstract bilinearform operator that assembles
+- b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
+- b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
+
+can only be applied in PDE LHS
+"""
 mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperator
     name::String
     operator1::Type{<:AbstractFunctionOperator}
@@ -124,6 +127,14 @@ end
 
 
 
+"""
+$(TYPEDEF)
+
+considers the second argument to be a Lagrange multiplier for operator(first argument) = 0,
+automatically triggers copy of transposed operator in transposed block, hence only needs to be assigned and assembled once!
+
+can only be applied in PDE LHS
+"""
 struct LagrangeMultiplier <: AbstractPDEOperator
     name::String
     operator::Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
@@ -132,6 +143,13 @@ function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator})
     return LagrangeMultiplier("LagrangeMultiplier($operator)",operator)
 end
 
+"""
+$(TYPEDEF)
+
+convection operator (beta * grad) u * testfunction_operator(v) where beta can be either a given function (e.g. for Oseen problem) or one of the unknowns (e.g. u for Navier-Stokes)
+
+can only be applied in PDE LHS
+"""
 struct ConvectionOperator <: AbstractPDEOperator
     name::String
     action::AbstractAction                                      #      ----ACTION-----
@@ -178,6 +196,13 @@ function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction
     return ConvectionOperator("Convection(Component[$beta])",convection_action,beta,testfunction_operator, regions)
 end
 
+"""
+$(TYPEDEF)
+
+right-hand side operator
+
+can only be applied in PDE RHS
+"""
 struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperator
     action::AbstractAction                                  #       -----ACTION----
     testfunction_operator::Type{<:AbstractFunctionOperator} # e.g.  f * testfunction_operator(v)
@@ -241,6 +266,13 @@ function RhsOperator(
 end
 
 
+"""
+$(TYPEDEF)
+
+evaluation of a bilineaform where the second argument is fixed by given FEVectorBlock
+
+can only be applied in PDE RHS
+"""
 struct BLFeval <: AbstractPDEOperator
     BLF::AbstractBilinearForm
     Data::FEVectorBlock
@@ -420,7 +452,7 @@ end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
-        addblock(A,O.storage; factor = factor)
+        addblock!(A,O.storage; factor = factor)
     else
         FE1 = A.FESX
         FE2 = A.FESY
@@ -436,7 +468,7 @@ end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
-        addblock_matmul(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
+        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
         FE1 = b.FES
         FE2 = CurrentSolution[fixed_component].FES
@@ -452,7 +484,7 @@ end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0)
     if O.BLF.store_operator == true
-        addblock_matmul(b,O.BLF.storage,O.Data; factor = factor)
+        addblock_matmul!(b,O.BLF.storage,O.Data; factor = factor)
     else
         FE1 = b.FES
         FE2 = O.Data.FES

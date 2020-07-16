@@ -11,30 +11,20 @@
 #   - can be called with evaluate to compute total integral (of a given FEBlock)
 #   - constructor is independent of FE or grid!
 
-# LinearForm
-#   - functional that depend on one FE function, i.e.
-#     for each v_h: F(v_h) = Int_regions action(operator(v_h)) dx
-#   - action (like multiplying coefficients, user-defined operation)
-#     may be applied after evaluation of the standard operator
-
-# BilinearForm
-#   - functional that depend on two FE function, i.e.
-#     for each u_h,v_h: A(u_h,v_h) = Int_regions action(op1(u_h))*op2(v_h) dx
-#   - constructor for symmetric bilinearforms where FEType of u_h and v_h are the same
-#     is also available (and everything should be written such that double evaluations are avoided)
-#
-#   - maybe in future: fixing one component with given FE function to define a LinearForm
-#                      automatically, also handle skew-symmetry (symmetry might be come a type or value from -1,0,1)
-
-# TrilinearForm
-#   - functional that depend on three FE function, i.e.
-#     for each a_h,u_h,v_h: C(a_h,u_h,v_h) = Int_regions op1(a_h)*op2(u_h)*op3(v_h) dx
-#   - assembly! where a_h (or also u_h) is fixed with given FEBlock
-#   - action has to be dependent on a_h and u_h (idea: put everything together into input of action)
 
 
+"""
+$(TYPEDEF)
+
+abstract type for assembly patterns
+"""
 abstract type AbstractAssemblyPattern{T <: Real, AT<:AbstractAssemblyType} end
 
+"""
+$(TYPEDEF)
+
+assembly pattern linear form (that only depends on one quantity)
+"""
 struct LinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
     FE::FESpace
     operator::Type{<:AbstractFunctionOperator}
@@ -42,6 +32,19 @@ struct LinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPatt
     regions::Array{Int,1}
 end   
 
+"""
+````
+function LinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE::FESpace,
+    operator::Type{<:AbstractFunctionOperator},
+    action::AbstractAction;
+    regions::Array{Int,1} = [0])
+````
+
+Creates a LinearForm.
+"""
 function LinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
@@ -52,6 +55,11 @@ function LinearForm(
     return LinearForm{T,AT}(FE,operator,action,regions)
 end
 
+"""
+$(TYPEDEF)
+
+assembly pattern bilinear form (that depends on two quantities)
+"""
 struct BilinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
     FE1::FESpace
     FE2::FESpace
@@ -61,6 +69,22 @@ struct BilinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPa
     regions::Array{Int,1}
     symmetric::Bool
 end   
+
+"""
+````
+function BilinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE1::FESpace,
+    FE2::FESpace,
+    operator1::Type{<:AbstractFunctionOperator},
+    operator2::Type{<:AbstractFunctionOperator},
+    action::AbstractAction; # is only applied to FE1/operator1
+    regions::Array{Int,1} = [0])
+````
+
+Creates an unsymmetric BilinearForm.
+"""
 function BilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
@@ -72,6 +96,20 @@ function BilinearForm(
     regions::Array{Int,1} = [0])
     return BilinearForm{T,AT}(FE1,FE2,operator1,operator2,action,regions,false)
 end
+
+"""
+````
+function SymmetricBilinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE1::FESpace,
+    operator1::Type{<:AbstractFunctionOperator},
+    action::AbstractAction; # is only applied to FE1/operator1
+    regions::Array{Int,1} = [0])
+````
+
+Creates a symmetric BilinearForm.
+"""
 function SymmetricBilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
@@ -83,6 +121,11 @@ function SymmetricBilinearForm(
 end
 
 
+"""
+$(TYPEDEF)
+
+assembly pattern trilinear form (that depends on three quantities)
+"""
 struct TrilinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
     FE1::FESpace # < --- FE position that has to be fixed by an FEVectorBlock during assembly
     FE2::FESpace
@@ -93,6 +136,24 @@ struct TrilinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyP
     action::AbstractAction # is only applied to FE2/operator2
     regions::Array{Int,1}
 end   
+
+"""
+````
+function TrilinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE1::FESpace,
+    FE2::FESpace,
+    FE3::FESpace,
+    operator1::Type{<:AbstractFunctionOperator},
+    operator2::Type{<:AbstractFunctionOperator},
+    operator3::Type{<:AbstractFunctionOperator},
+    action::AbstractAction; # is only applied to FE1/operator1 + FE2/operator2
+    regions::Array{Int,1} = [0])
+````
+
+Creates a TrilinearForm.
+"""
 function TrilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
@@ -107,6 +168,11 @@ function TrilinearForm(
     return TrilinearForm{T,AT}(FE1,FE2,FE3,operator1,operator2,operator3,action,regions)
 end
 
+"""
+$(TYPEDEF)
+
+assembly pattern item integrator that can e.g. be used for error/norm evaluations
+"""
 struct ItemIntegrator{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
     operator::Type{<:AbstractFunctionOperator}
     action::AbstractAction
@@ -191,7 +257,7 @@ function prepareOperatorAssembly(
         quadorder = 0
         # choose quadrature order for all finite elements
         for k = 1 : length(FE)
-            FEType = eltype(typeof(FE[k]))
+            FEType = eltype(FE[k])
             quadorder = max(quadorder,bonus_quadorder + nrfactors*(get_polynomialorder(FEType, EG[j]) + QuadratureOrderShift4Operator(FEType,operator[k])))
         end
         for k = 1 : length(FE)
@@ -199,7 +265,7 @@ function prepareOperatorAssembly(
                 basisevaler[j][k] = basisevaler[j][1] # e.g. for symmetric bilinerforms
             else    
                 qf[j] = QuadratureRule{T,EG[j]}(quadorder);
-                basisevaler[j][k] = FEBasisEvaluator{T,eltype(typeof(FE[k])),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
+                basisevaler[j][k] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
             end    
         end    
     end        
@@ -280,11 +346,17 @@ end
 
 
 
-#######################
-# ITEMINTEGRATOR EVAL #
-#    itemwise eval    #
-#######################
+"""
+````
+function evaluate!(
+    b::AbstractArray{<:Real,2},
+    form::ItemIntegrator{T,AT},
+    FEB::FEVectorBlock;
+    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
+````
 
+Evaluation of an ItemIntegrator form with given FEVectorBlock FEB into given two-dimensional Array b.
+"""
 function evaluate!(
     b::AbstractArray{<:Real,2},
     form::ItemIntegrator{T,AT},
@@ -292,7 +364,7 @@ function evaluate!(
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
     FE = FEB.FES
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
@@ -316,7 +388,7 @@ function evaluate!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(form, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     @assert size(b,2) == cvals_resultdim
@@ -385,12 +457,17 @@ function evaluate!(
     end # item for loop
 end
 
+"""
+````
+function evaluate(
+    form::ItemIntegrator{T,AT},
+    FEB::FEVectorBlock;
+    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
-#######################
-# ITEMINTEGRATOR EVAL #
-#    global eval      #
-#######################
+````
 
+Evaluation of an ItemIntegrator form with given FEVectorBlock FEB, only returns accumulation over all items.
+"""
 function evaluate(
     form::ItemIntegrator{T,AT},
     FEB::FEVectorBlock;
@@ -420,7 +497,7 @@ function evaluate(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(form, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
 
@@ -490,11 +567,18 @@ function evaluate(
     return result
 end
 
-#######################
-# LINEARFORM ASSEMBLY #
-#    vector-valued    #
-#######################
 
+"""
+````
+assemble!(
+    b::AbstractArray{<:Real,2},
+    LF::LinearForm{T,AT};
+    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
+
+````
+
+Assembly of a LinearForm LF into given two-dimensional Array b.
+"""
 function assemble!(
     b::AbstractArray{<:Real,2},
     LF::LinearForm{T,AT};
@@ -524,7 +608,7 @@ function assemble!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     action_resultdim::Int = action.resultdim
@@ -602,14 +686,19 @@ function assemble!(
 end
 
 
-#######################
-# LINEARFORM ASSEMBLY #
-#   scalar-valued     #
-# into FEVectorBlock  #  
-#######################
+"""
+````
+assemble!(
+    b::AbstractArray{T,1},
+    LF::LinearForm{T,AT}; # LF has to be scalar-valued
+    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
+````
+
+Assembly of a LinearForm LF into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
+"""
 function assemble!( # LF has to have resultdim == 1
-    b::FEVectorBlock,
+    b::AbstractArray{T,1},
     LF::LinearForm{T,AT};
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
     FE = LF.FE
@@ -637,7 +726,7 @@ function assemble!( # LF has to have resultdim == 1
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     action_resultdim::Int = action.resultdim
@@ -713,10 +802,20 @@ function assemble!( # LF has to have resultdim == 1
 end
 
 
-#########################
-# BILINEARFORM ASSEMBLY #
-#########################
+"""
+````
+assemble!(
+    A::AbstractArray{<:Real,2},
+    BLF::BilinearForm{T, AT};
+    apply_action_to::Int = 1,
+    verbosity::Int = 0,
+    factor::Real = 1,
+    transposed_assembly::Bool = false,
+    transpose_copy = Nothing) where {T<: Real, AT <: AbstractAssemblyType}
+````
 
+Assembly of a BilinearForm BLF into given two-dimensional AbstractArray (e.g. FEMatrixBlock).
+"""
 function assemble!(
     A::AbstractArray{<:Real,2},
     BLF::BilinearForm{T, AT};
@@ -754,7 +853,7 @@ function assemble!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
-    FEType = eltype(typeof(FE[1]))
+    FEType = eltype(FE[1])
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][apply_action_to].cvals,1)
     action_resultdim::Int = action.resultdim
@@ -915,11 +1014,21 @@ end
 
 
 
-#########################
-# BILINEARFORM ASSEMBLY #
-#  2nd component fixed  #
-#########################
+"""
+````
+assemble!(
+    b::AbstractArray{<:Real,1},
+    fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
+    BLF::BilinearForm{T, AT};
+    apply_action_to::Int = 1,
+    factor::Real = 1,
+    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
+````
 
+Assembly of a BilinearForm BLF into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
+Here, the second argument is fixed by the given coefficients in fixedFE.
+With apply_action_to=2 the action can be also applied to the second fixed argument instead of the first one (default).
+"""
 function assemble!(
     b::AbstractArray{<:Real,1},
     fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
@@ -956,7 +1065,7 @@ function assemble!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
-    FEType = eltype(typeof(FE[1]))
+    FEType = eltype(FE[1])
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][apply_action_to].cvals,1)
     action_resultdim::Int = action.resultdim
@@ -1068,10 +1177,21 @@ function assemble!(
     end # item for loop
 end
 
-##########################
-# TRILINEARFORM ASSEMBLY #
-# first component fixed  #
-##########################
+"""
+````
+assemble!(
+    assemble!(
+    A::AbstractArray{<:Real,2},
+    TLF::TrilinearForm{T, AT},
+    FE1::FEVectorBlock;
+    verbosity::Int = 0,
+    factor::Real = 1,
+    transposed_assembly::Bool = false) where {T<: Real, AT <: AbstractAssemblyType}
+````
+
+Assembly of a TrilinearForm TLF into given two-dimensional AbstractArray (e.g. a FEMatrixBlock).
+Here, the first argument is fixed by the given coefficients in FE1.
+"""
 function assemble!(
     A::AbstractArray{<:Real,2},
     TLF::TrilinearForm{T, AT},
@@ -1109,7 +1229,7 @@ function assemble!(
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
-    FEType = eltype(typeof(FE[1]))
+    FEType = eltype(FE[1])
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1][2].cvals,1)
@@ -1229,7 +1349,26 @@ function assemble!(
 end
 
 
-function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL, bonus_quadorder::Int = 0)
+"""
+````
+function L2ErrorIntegrator(
+    exact_function::Function,
+    operator::Type{<:AbstractFunctionOperator},
+    xdim::Int,
+    ncomponents::Int = 1;
+    AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL,
+    bonus_quadorder::Int = 0)
+````
+
+Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given exact_function and returns the L2-error.
+"""
+function L2ErrorIntegrator(
+    exact_function::Function,
+    operator::Type{<:AbstractFunctionOperator},
+    xdim::Int,
+    ncomponents::Int = 1;
+    AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL,
+    bonus_quadorder::Int = 0)
     function L2error_function()
         temp = zeros(Float64,ncomponents)
         function closure(result,input,x)

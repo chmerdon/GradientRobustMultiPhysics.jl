@@ -15,6 +15,11 @@
 #
 abstract type AbstractGlobalConstraint end
 
+"""
+$(TYPEDEF)
+
+fixes integral mean of the unknown to the specified value
+"""
 struct FixedIntegralMean <: AbstractGlobalConstraint
     name::String
     component::Int
@@ -25,6 +30,11 @@ function FixedIntegralMean(component::Int, value::Real)
     return FixedIntegralMean("Mean[$component] != $value",component, value, AssemblyFinal)
 end
 
+"""
+$(TYPEDEF)
+
+combines specified degrees of freedom of two unknown (can be the same), which allows to glue together different unknowns in different regions or periodic boundary conditions
+"""
 struct CombineDofs <: AbstractGlobalConstraint
     name::String
     componentX::Int                  # component nr for dofsX

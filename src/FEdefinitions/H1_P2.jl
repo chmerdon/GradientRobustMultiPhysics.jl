@@ -1,4 +1,14 @@
 
+"""
+$(TYPEDEF)
+
+Continuous piecewise second-order polynomials
+
+allowed ElementGeometries:
+- Edge1D (quadratic polynomials)
+- Triangle2D (quadratic polynomials)
+- Quadrilateral2D (Q2 space)
+"""
 abstract type H1P2{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
 get_edim(::Type{H1P2{ncomponents,1}}) where ncomponents = 1
@@ -134,7 +144,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
     xFaceNodes = FE.xgrid[FaceNodes]
     nnodes = num_sources(xCoords)
     nfaces = num_sources(xFaceNodes)
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
 
     result = zeros(Float64,ncomponents)
@@ -201,7 +211,7 @@ end
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2})
     nnodes = num_sources(FE.xgrid[Coordinates])
     nfaces = num_sources(FE.xgrid[FaceNodes])
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     offset4component = 0:(nnodes+nfaces):ncomponents*(nnodes+nfaces)
     for node = 1 : nnodes

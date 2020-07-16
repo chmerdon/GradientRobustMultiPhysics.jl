@@ -1,3 +1,19 @@
+#############
+# PDESolver #
+#############
+#
+# collection of methods to solve the PDE described in a PDEDescription
+# there are several possiblities (in each timestep):
+# - direct solve of all equations at once
+# - fixpoint iteration of all equations at once
+# - fixpoint iteration with subiterations where only subsets of equations are solved together
+#
+# the strut SolverConfig collects all the information needed to assess if a block must be reassembled
+# at some point (e.g. after a time step or after a iteration) and there are triggers that mark a
+# block to be nonlinear/time-dependent
+#
+# also parameter to steer penalties and stopping criterarions are saved in SolverConfig
+
 
 mutable struct SolverConfig
     is_nonlinear::Bool      # PDE is nonlinear
@@ -797,26 +813,26 @@ function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
                 if SC.verbosity > 1
                     println("  Adding mass matrix to block [$k,$k] of subiteration $s")
                 end
-                addblock(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
+                addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
             else
                 if (TCS.last_timestep != timestep) # if block was not reassembled, but timestep changed
                     if SC.verbosity > 1
                         println("  Adding mass matrix change to block [$k,$k] of subiteration $s")
                     end
-                    addblock(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
+                    addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
                 end
             end
             if  (AssemblyEachTimeStep <: SC.RHS_AssemblyTriggers[d]) || TCS.last_timestep == 0 # if rhs block was reassembled at the end of the last iteration
                 if SC.verbosity > 1
                     println("  Adding time derivative to rhs block [$k] of subiteration $s")
                 end
-                addblock_matmul(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
+                addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
             else
                 if SC.verbosity > 1
                     println("  Adding time derivative change to rhs block [$k] of subiteration $s")
                 end
-                addblock_matmul(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
-                addblock_matmul(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep) # add new rhs from last time step
+                addblock_matmul!(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
+                addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep) # add new rhs from last time step
             end
         end
         flush!(A[s].entries)

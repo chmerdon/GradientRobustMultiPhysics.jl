@@ -1,64 +1,104 @@
-##################
-# AbstractAction #
-##################
-#
-# allows modification of assembly patterns and are applied to the the first
-# argument of the AssemblyPattern
-#
-# have the interface
-#   function action(output,input;x,region)
-#
-# use cases:
-# - multiplication of (region-dependent) parameters (e.g. diffusion parameters)
-# - multiplication of (region-dependent) functions (e.g. right-hand side, boundary data)
-# - application of tensors (e.g. Cauchy stress tensor)
-#
+
 
 
 abstract type AbstractAction end
+
+"""
+$(TYPEDEF)
+
+action that does nothing to the input
+"""
 struct DoNotChangeAction <: AbstractAction
     resultdim::Int
     bonus_quadorder::Int
 end
 
+"""
+$(TYPEDEF)
+
+action that multiplies a scalar to the input
+"""
 struct MultiplyScalarAction{T <: Real} <: AbstractAction
     value::T
     resultdim::Int
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that multiplies a different scalar to each component of the input
+"""
 struct MultiplyVectorAction{T <: Real} <: AbstractAction
     value::Array{T,1}
     resultdim::Int
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that multiplies input vector with a matrix
+(note that also gradients are transferred as vectors)
+"""
 struct MultiplyMatrixAction{T <: Real} <: AbstractAction
     value::Array{T,2}
     resultdim::Int
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that multiplies a ergion-dependent scalar to the input
+"""
 struct RegionWiseMultiplyScalarAction{T <: Real} <: AbstractAction
     value::Array{T,1} # one array for each region
     cregion::Int
     resultdim::Int
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that multiplies a different region-dependent scalar to each component of the input
+"""
 struct RegionWiseMultiplyVectorAction{T <: Real} <: AbstractAction
     value::Array{Array{T,1},1} # one array for each region
     cregion::Int
     resultdim::Int
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that puts input into the given function and returns the result
+"""
 struct FunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input)
     resultdim::Int
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that puts input into the given function, that can additionally depend on the global coordinate x, and returns the result
+"""
 struct XFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x)
     resultdim::Int
     x::Array{Array{T,1},1}
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that puts input into the given function, that can additionally depend on the item number, and returns the result
+"""
 mutable struct ItemWiseXFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x,item)
     citem::Int
@@ -66,6 +106,12 @@ mutable struct ItemWiseXFunctionAction{T <: Real} <: AbstractAction
     x::Array{Array{T,1},1}
     bonus_quadorder::Int
 end
+
+"""
+$(TYPEDEF)
+
+action that puts input into the given function, that can additionally depend on the region number, and returns the result
+"""
 mutable struct RegionWiseXFunctionAction{T <: Real} <: AbstractAction
     f::Function # of the interface f!(result,input,x,region)
     cregion::Int

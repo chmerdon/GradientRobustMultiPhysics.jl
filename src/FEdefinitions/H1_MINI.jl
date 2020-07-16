@@ -1,4 +1,13 @@
 
+"""
+$(TYPEDEF)
+
+Mini finite element (continuous piecewise linear + cell bubbles)
+
+allowed element geometries:
+- Triangle2D (linear polynomials + cubic cell bubble)
+- Quadrilateral2D (Q1 space + quartic cell bubble)
+"""
 abstract type H1MINI{ncomponents,spacedim} <: AbstractH1FiniteElement where {ncomponents<:Int,spacedim<:Int} end
 
 get_ncomponents(::Type{H1MINI{1,2}}) = 1
@@ -87,7 +96,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI}, ex
     xCellNodes = FE.xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nnodes4item::Int = 0
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
     result = zeros(Float64,ncomponents)
     linpart = 0.0
@@ -156,7 +165,7 @@ end
 
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI})
     nnodes = num_sources(FE.xgrid[Coordinates])
-    FEType = eltype(typeof(FE))
+    FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
     offset4component = 0:nnodes:ncomponents*nnodes
     for node = 1 : nnodes

@@ -11,7 +11,11 @@
 # mapderiv! gives the derivative of the mapping (for computation of derivatives of basis functions)
 # piola! gives the piola map (for flux-preserving transformation of Hdiv basis functions)
 
+"""
+    L2GTransformer
 
+Transforms reference coordinates to global coordinates
+"""
 mutable struct L2GTransformer{T <: Real, EG <: AbstractElementGeometry, CS <: AbstractCoordinateSystem}
     citem::Int
     nonlinear::Bool # so that users know if derivatives of map change in every quadrature point of cell or not
