@@ -15,7 +15,7 @@ function show(Q::QuadratureRule{T,ET} where{T <: Real, ET <: AbstractElementGeom
 	println("  npoints : $(npoints) ($(eltype(Q)[1]))")
 end
 
-# sets up a quadrature rule that evuates at vertices of element geometry
+# sets up a quadrature rule that evaluates at vertices of element geometry
 # not optimal from quadrature point of view, but helpful when defining nodal interpolations
 function VertexRule(ET::Type{Edge1D})
     xref = [[0],[1]]
@@ -167,7 +167,7 @@ end
 
 
 # integrates and writes item-wise integrals into integral4cells
-# AT can be AbstractAssemblyTypeCELL or AbstractAssemblyTypeFACE to integrate over cells/faces
+# AT can be AssemblyTypeCELL or AssemblyTypeFACE to integrate over cells/faces
 # integrand has to have the form function integrand!(result,x)
 function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; verbosity::Int = 0)
     xCoords = grid[Coordinates]
@@ -219,7 +219,7 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
 end
 
 # as above but only return full intergral value
-function integrate!(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; verbosity::Int = 0)
+function integrate(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int, NumberType::Type{<:Number} = Float64; verbosity::Int = 0)
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]

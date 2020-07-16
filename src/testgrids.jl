@@ -1,5 +1,10 @@
+# here some coarse grids are defined that are usedin the examples and tests
+# they are generated directly or by Triangulate/simplexgrid constructor of ExtendableGrids
+# for finer versions the refinement routines in MeshRefinements.jl can be used
+
 using Triangulate
 
+# unit square as one cell with four boundary regions (bottom, right, top, left)
 function testgrid_square_uniform()
 
     xgrid=ExtendableGrid{Float64,Int32}()
@@ -23,6 +28,7 @@ function testgrid_square_uniform()
     return xgrid
 end
 
+# unit suqare as mixed triangles and squares with four boundary regions (bottom, right, top, left)
 function testgrid_mixedEG()
 
     xgrid=ExtendableGrid{Float64,Int32}()
@@ -51,7 +57,7 @@ function testgrid_mixedEG()
     return xgrid
 end
 
-
+# Cook membrane as triangles with four boundary regions (left, bottom, right, top)
 function testgrid_cookmembrane()
     triin=Triangulate.TriangulateIO()
     triin.pointlist=Matrix{Cdouble}([0 0; 0 -44; 48 0; 48 16]');
@@ -69,7 +75,18 @@ function testgrid_cookmembrane()
     return xgrid
 end
 
-
+# Tire domain
+#
+# region 1 = wheel (2D triangles)
+# region 2 = spokes (1D intervals)
+#
+# bfaceregion 1 = wheel exterior
+# bfaceregion 2 = wheel interior
+# bfaceregion 3 = inner wheel boundary
+# bfaceregion 4 = spokes (yes they are marked as both cells and bfaces, do whatever you like with them)
+#
+# refinement can be steered with k
+# number of spokes can be steered with S
 function testgrid_tire(k::Int = 1, S::Int = 2)
     
     N = 4^k # number of points on circle

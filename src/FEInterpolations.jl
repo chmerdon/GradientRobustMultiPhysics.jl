@@ -1,4 +1,5 @@
 
+# this method calls the interpolate! method specified by the finite element if available
 function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [], verbosity::Int = 0, bonus_quadorder::Int = 0)
     if verbosity > 0
         println("\nINTERPOLATING")
@@ -10,7 +11,8 @@ function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [
 end
 
 
-# abstract nodevalue function that works for any element and can be overwritten for special ones
+# abstract nodevalue function that works for any element by averaging
+# but can be overrridden by special implementations for each finite element
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace; regions::Array{Int,1} = [0])
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]
@@ -34,7 +36,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   FEType = Base.eltype(typeof(FE))
   for j = 1 : length(EG)
       qf[j] = VertexRule(EG[j])
-      basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],Identity,AbstractAssemblyTypeCELL}(FE, qf[j])
+      basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],Identity,AssemblyTypeCELL}(FE, qf[j])
   end    
 
   nitems::Int = num_sources(xItemDofs)

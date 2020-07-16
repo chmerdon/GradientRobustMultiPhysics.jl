@@ -49,7 +49,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
     xdim = size(xCoords,1)
     if length(dofs) == 0 # interpolate at all dofs
         integrals4cell = zeros(Float64,ncells,ncomponents)
-        integrate!(integrals4cell, FE.xgrid, AbstractAssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
+        integrate!(integrals4cell, FE.xgrid, AssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
         for cell = 1 : ncells
             for c = 1 : ncomponents
                 Target[cell + (c-1)*ncells] = integrals4cell[cell,c] / xCellVolumes[cell]

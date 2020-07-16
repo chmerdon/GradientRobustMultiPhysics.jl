@@ -108,7 +108,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     # pre-allocate memory for basis functions
     ncomponents = get_ncomponents(FEType)
-    if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+    if AT <: Union{AssemblyTypeBFACE,AssemblyTypeFACE}
         if FEType <: AbstractHdivFiniteElement
             refbasis = get_basis_normalflux_on_face(FEType, EG)
             ncomponents = 1
@@ -353,7 +353,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
         FEBE.citem = item
         
         # get coefficients
-        if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+        if AT <: Union{AssemblyTypeBFACE,AssemblyTypeFACE}
             get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
         else
             get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
@@ -549,7 +549,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         update!(FEBE.L2G, item)
 
         # get coefficients
-        if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+        if AT <: Union{AssemblyTypeBFACE,AssemblyTypeFACE}
             get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
         else
             get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
@@ -613,7 +613,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence,AT}, item::Int) w
         update!(FEBE.L2G, item)
 
         # get coefficients
-        if AT <: Union{AbstractAssemblyTypeBFACE,AbstractAssemblyTypeFACE}
+        if AT <: Union{AssemblyTypeBFACE,AssemblyTypeFACE}
             get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
         else
             get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)

@@ -34,7 +34,7 @@ end
     xgrid = testgrid_mixedEG(); # initial grid
     for order = 1 : 10
         integrand!, exactvalue = exact_function(order)
-        quadvalue = integrate!(xgrid, AbstractAssemblyTypeCELL, integrand!, order, length(exactvalue))
+        quadvalue = integrate(xgrid, AssemblyTypeCELL, integrand!, order, length(exactvalue))
         println("order = $order | error = $(quadvalue - exactvalue)")
         @test isapprox(quadvalue,exactvalue)
     end

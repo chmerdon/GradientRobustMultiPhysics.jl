@@ -116,10 +116,10 @@ end
 
 
 # junctions for dof fields
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeCELL}) = FE.CellDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeFACE}) = FE.FaceDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACE}) = FE.BFaceDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AbstractAssemblyTypeBFACECELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeCELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeFACE}) = FE.FaceDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeBFACE}) = FE.BFaceDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeBFACECELL}) = FE.CellDofs
 
 
 # unique functions that only selects uniques in specified regions
@@ -230,7 +230,7 @@ end
 
 # dysfunctional at the moment
 # will be repaired when assembly design steps are decided
-# function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AbstractAssemblyTypeBFACECELL}, operator::Type{<:AbstractFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int32,1}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, verbosity::Int)
+# function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AssemblyTypeBFACECELL}, operator::Type{<:AbstractFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int32,1}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, verbosity::Int)
 #     # find proper quadrature QuadratureRules
 #     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
 #     xCellGeometries = FE.xgrid[CellGeometries]
@@ -1229,7 +1229,7 @@ function assemble!(
 end
 
 
-function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = AbstractAssemblyTypeCELL, bonus_quadorder::Int = 0)
+function L2ErrorIntegrator(exact_function::Function, operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL, bonus_quadorder::Int = 0)
     function L2error_function()
         temp = zeros(Float64,ncomponents)
         function closure(result,input,x)
