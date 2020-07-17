@@ -125,7 +125,7 @@ function main()
     # time loop
     change = 0.0
     for iteration = 1 : maxIterations
-        change = advance(TCS, timestep)
+        change = advance!(TCS, timestep)
         M = sum(Solution[2][:] .* xgrid[CellVolumes])
         println("  iteration $iteration | time = $(TCS.ctime) | change = $change | M = $M")
         if change < maxResidual

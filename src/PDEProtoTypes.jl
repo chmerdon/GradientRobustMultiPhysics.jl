@@ -1,6 +1,27 @@
 
-# Prototype for incompressible StokesProblem
-function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, nonlinear::Bool = true, no_pressure_constraint::Bool = false, pmean = 0)
+"""
+````
+function IncompressibleNavierStokesProblem(
+    dimension::Int = 2;
+    viscosity = 1.0,
+    nonlinear::Bool = true,
+    no_pressure_constraint::Bool = false,
+    pmean = 0)
+````
+
+Creates a PDEDescription for the incompressible Navier-Stokes equations of the specified dimension and globally constant viscosity parameter.
+    
+If nonlinear == true a nonlinear convection term is added to the equation.
+If no_pressure_constraint == false a GlobalConstraint for the pressure is added that fixes the pressure mean to the given value for pmean.
+
+Boundary and right-hand side data or other modifications have to be added afterwards.
+"""
+function IncompressibleNavierStokesProblem(
+    dimension::Int = 2;
+    viscosity = 1.0,
+    nonlinear::Bool = true,
+    no_pressure_constraint::Bool = false,
+    pmean = 0)
 
     # LEFT-HAND-SIDE: STOKES OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
@@ -38,11 +59,32 @@ function IncompressibleNavierStokesProblem(dimension::Int = 2; viscosity = 1.0, 
     return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
 end
 
-# Prototype for compressible StokesProblem
-# component 1 = velocity
-# component 2 = density
-# component 3 = pressure
-function CompressibleNavierStokesProblem(equation_of_state!::Function, gravity!::Function, dimension::Int = 2; timestep::Real = 0.1, viscosity = 1.0, lambda = 1.0, nonlinear::Bool = true, no_pressure_constraint::Bool = false)
+"""
+````
+function CompressibleNavierStokesProblem(
+    equation_of_state!::Function,
+    gravity!::Function,
+    dimension::Int = 2;
+    viscosity = 1.0,
+    lambda = 1.0,
+    nonlinear::Bool = true)
+````
+
+Creates a PDEDescription for the compressible Navier-Stokes equations of the specified dimension, Lame parameters viscosity and lambda and the given equation of state function.
+
+The three equations/unknowns of the PDE refer to velocity, density and pressure in that order.
+    
+If nonlinear == true a nonlinear convection term is added to the equation.
+    
+Boundary and right-hand side data or other modifications have to be added afterwards.
+"""
+function CompressibleNavierStokesProblem(
+    equation_of_state!::Function,
+    gravity!::Function,
+    dimension::Int = 2;
+    viscosity = 1.0,
+    lambda = 1.0,
+    nonlinear::Bool = true)
 
 
     function gravity_function() # result = G(v) = -gravity*input
@@ -97,8 +139,27 @@ function CompressibleNavierStokesProblem(equation_of_state!::Function, gravity!:
     return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryDensity,MyBoundaryPressure])
 end
 
-# Prototype for linear elasticity
-function LinearElasticityProblem(dimension::Int = 2; elasticity_modulus = 1.0, shearmodulus = 1.0, lambda = 1.0)
+"""
+````
+function LinearElasticityProblem(
+    dimension::Int = 2;
+    elasticity_modulus = 1.0,
+    shearmodulus = 1.0,
+    lambda = 1.0)
+````
+
+Creates a PDEDescription for the linear elasticity problem of the specified dimension.
+
+If dimension == 1, only the elasticity_modulus is used as a parameter in the Hookian stiffness operator.
+If dimension == 2, shear_modulus and lambda are used as Lame parameters in the Hookian stiffness operator.
+    
+Boundary and right-hand side data or other modifications have to be added afterwards.
+"""
+function LinearElasticityProblem(
+    dimension::Int = 2;
+    elasticity_modulus = 1.0,
+    shearmodulus = 1.0,
+    lambda = 1.0)
 
     # LEFT-HAND-SIDE: LINEAR ELASTICITY TENSOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
@@ -122,8 +183,22 @@ function LinearElasticityProblem(dimension::Int = 2; elasticity_modulus = 1.0, s
 end
 
 
-# Prototype for Poisson problem
-function PoissonProblem(dimension::Int = 2; ncomponents::Int = 1, diffusion = 1.0)
+"""
+````
+function PoissonProblem(
+    dimension::Int = 2;
+    ncomponents::Int = 1,
+    diffusion = 1.0)
+````
+
+Creates a PDEDescription for a Poisson problem with specified number of components and globally constant diffusion parameter.
+    
+Boundary and right-hand side data or other modifications have to be added afterwards.
+"""
+function PoissonProblem(
+    dimension::Int = 2;
+    ncomponents::Int = 1,
+    diffusion = 1.0)
 
     # LEFT-HAND-SIDE: LAPLACE OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
@@ -143,8 +218,24 @@ function PoissonProblem(dimension::Int = 2; ncomponents::Int = 1, diffusion = 1.
 end
 
 
-# Prototype for L2Bestapproximation
-function L2BestapproximationProblem(exact_function::Function, dimension::Int = 2, ncomponents::Int = 1; bonus_quadorder::Int = 0, bestapprox_boundary_regions = [])
+"""
+````
+function L2BestapproximationProblem(
+    exact_function::Function,
+    dimension::Int = 2,
+    ncomponents::Int = 1;
+    bonus_quadorder::Int = 0,
+    bestapprox_boundary_regions = [])
+````
+
+Creates an PDEDescription for an L2-Bestapproximation problem for the given exact function. Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
+"""
+function L2BestapproximationProblem(
+    exact_function::Function,
+    dimension::Int = 2,
+    ncomponents::Int = 1;
+    bonus_quadorder::Int = 0,
+    bestapprox_boundary_regions = [])
 
     # LEFT-HAND-SIDE: REACTION OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
@@ -164,8 +255,28 @@ function L2BestapproximationProblem(exact_function::Function, dimension::Int = 2
 end
 
 
-# Prototype for H1Bestapproximation
-function H1BestapproximationProblem(exact_function_gradient::Function, exact_function_boundary::Function, dimension::Int = 2, ncomponents::Int = 1; bonus_quadorder::Int = 0, bonus_quadorder_boundary::Int = 0, bestapprox_boundary_regions = [])
+"""
+````
+function H1BestapproximationProblem(
+    exact_function_gradient::Function,
+    exact_function_boundary::Function,
+    dimension::Int = 2,
+    ncomponents::Int = 1;
+    bonus_quadorder::Int = 0,
+    bonus_quadorder_boundary::Int = 0,
+    bestapprox_boundary_regions = [])
+````
+
+Creates an PDEDescription for an H1-Bestapproximation problem for the given exact function (only used on the boundary) and its exact gradient (used in the right-hand side). Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
+"""
+function H1BestapproximationProblem(
+    exact_function_gradient::Function,
+    exact_function_boundary::Function,
+    dimension::Int = 2,
+    ncomponents::Int = 1;
+    bonus_quadorder::Int = 0,
+    bonus_quadorder_boundary::Int = 0,
+    bestapprox_boundary_regions = [])
 
     # LEFT-HAND-SIDE: LAPLACE OPERATOR
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)

@@ -12,20 +12,74 @@
 
 
 
+"""
+$(TYPEDEF)
+
+root type for FunctionOperators.
+"""
 abstract type AbstractFunctionOperator end # to dispatch which evaluator of the FE_basis_caller is used
+"""
+$(TYPEDEF)
+
+identity operator: evaluates finite element function.
+"""
 abstract type Identity <: AbstractFunctionOperator end # 1*v_h
+"""
+$(TYPEDEF)
+
+reconstruction identity operator: evaluates a reconstructed version of the finite element function.
+
+FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
+"""
 abstract type ReconstructionIdentity{FEreconst<:AbstractFiniteElement} <: Identity end # 1*R(v_h)
+"""
+$(TYPEDEF)
+
+evaluates the normal-flux of the finite element function.
+
+only available on FACES/BFACES and currently only for H1 and Hdiv elements
+"""
 abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
+
 abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for Hcurl on Edges
+"""
+$(TYPEDEF)
+
+evaluates the gradient of the finite element function.
+"""
 abstract type Gradient <: AbstractFunctionOperator end # D_geom(v_h)
+"""
+$(TYPEDEF)
+
+evaluates the symmetric part of the gradient of the finite element function.
+"""
 abstract type SymmetricGradient <: AbstractFunctionOperator end # sym(D_geom(v_h))
+"""
+$(TYPEDEF)
+
+evaluates the gradient of the tangential part of some vector-valued finite element function.
+"""
 abstract type TangentialGradient <: AbstractFunctionOperator end # D_geom(v_h x n) = only gradient of tangential part of vector-valued function
+
 abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
 abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
 abstract type Curl <: AbstractFunctionOperator end # only 2D: Curl(v_h) = D(v_h)^\perp
 abstract type Rotation <: AbstractFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
+"""
+$(TYPEDEF)
+
+evaluates the divergence of the finite element function.
+"""
 abstract type Divergence <: AbstractFunctionOperator end # div(v_h)
+"""
+$(TYPEDEF)
+
+evaluates the divergence of the reconstructed finite element function.
+
+    FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
+"""
 abstract type ReconstructionDivergence{FEreconst<:AbstractFiniteElement} <: Divergence end # 1*R(v_h)
+
 abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 

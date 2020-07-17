@@ -1,15 +1,23 @@
 
 """
-$(TYPEDEF)
+````
+mutable struct PDEDescription
+    name::String
+    LHS::Array{Array{AbstractPDEOperator,1},2}
+    RHS::Array{Array{AbstractPDEOperator,1},1}
+    BoundaryOperators::Array{BoundaryOperator,1}
+    GlobalConstraints::Array{AbstractGlobalConstraint,1}
+end
+````
 
-struct that describes a PDE system
+struct that describes a PDE system with n equations and n unknowns
 
 A PDE system is described by
 - its name::String
-- an Array{Array{AbstractPDEOperator,1},2} that describes the left-hand sides
-- an Array{Array{AbstractPDEOperator,1},1} that describes the right-hand sides
-- an Array{BoundaryOperator,1} that describes the boundary conditions
-- an Array{AbstractGlobalConstraint,1} that describes additional global constraints
+- an size n x n array of Array{AbstractPDEOperator,1} LHS that describes the left-hand sides
+- an length n array of Array{AbstractPDEOperator,1} RHS that describes the right-hand sides
+- an length n array of BoundaryOperators that describes the boundary conditions for each unknown
+- an array of GlobalConstraints that describes additional global constraints
 """
 mutable struct PDEDescription
     name::String

@@ -1,7 +1,7 @@
 
 # PDE description
 
-PDEs are described as a set of operators arranged in a matrix. The number of rows of this matrix is the number of partial differential equations in the system. The number of columns is the number of unknowns. PDEoperators are independent of any finite element space and hence allows a closer description of the continuous level. There are several prototype PDEs that can be used as a point of departure.
+PDEs are described as a set of operators arranged in a matrix. The number of rows of this matrix is the number of partial differential equations in the system. The number of columns is the number of unknowns. PDEoperators are independent of any finite element space and hence allows a closer description of the continuous level. There are several prototype PDEs documented on the [Examples](@ref) page that can be used as a point of departure.
 
 ```@autodocs
 Modules = [JUFELIA]
@@ -11,6 +11,7 @@ Order   = [:type, :function]
 
 ## PDE Operators
 
+The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE.
 
 ```@autodocs
 Modules = [JUFELIA]
@@ -18,8 +19,20 @@ Pages = ["PDEOperators.jl"]
 Order   = [:type, :function]
 ```
 
+## Function Operators
+
+FunctionOperators are building blocks for the weak form and define the operations that should be applied to the trial and test functions inside some PDEOperator. Below is a list of available FunctionOperators. Especially note the Reconstruction...-Operators that allow to evaluate some recosntructed version of a trial or test function and so allows e.g. gradient-robust discretisations.
+
+```@autodocs
+Modules = [JUFELIA]
+Pages = ["FEBasisEvaluator.jl"]
+Order   = [:type, :function]
+```
+
 
 ## Global Constraints
+
+GlobalConstraints are additional constraints that the user does not wish to implement as a global Lagrange multiplier because it e.g. causes a dense row in the system matrix and therefore may destroy the performance of the sparse matrix routines. Such a constraint may be a fixed integral mean. Another application are peridoci boundary conditions or glued-together quantities in different regions of the grid. Here a CombineDofs constraint may help.
 
 ```@autodocs
 Modules = [JUFELIA]

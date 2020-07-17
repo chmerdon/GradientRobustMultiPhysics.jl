@@ -14,14 +14,15 @@ makedocs(
         "Home" => "index.md",
         "Finite Element Spaces and Arrays" => "fespace.md",
         "Implemented Finite Elements" => "fems.md",
-        "PDEDescription" => "pdedescription.md",
+        "PDE Description" => "pdedescription.md",
         "PDE Solvers" => "pdesolvers.md",
         "Abstract Actions" => "abstractactions.md",
         "Assembly Patterns" => "assemblypatterns.md",
         "Quadrature" => "quadrature.md",
+        "Examples" => "examples.md",
     ]
 )
 
-deploydocs(
-    repo = "github.com/chmerdon/juliaFE",
-)
+#deploydocs(
+#    repo = "github.com/chmerdon/juliaFE",
+#)

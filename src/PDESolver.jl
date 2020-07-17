@@ -620,6 +620,12 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
 
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Solves a given PDE (provided as a PDEDescription) and writes the solution into the FEVector Target. The ansatz spaces are taken from the of this vector.
+The field subiterations specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once, but also might resort to a fixed-point iteration if a nonlinearity is detected.
+"""
 function solve!(
     Target::FEVector,
     PDE::PDEDescription;
@@ -694,6 +700,26 @@ mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
 end
 
 
+
+
+"""
+````
+function TimeControlSolver(
+    PDE::PDEDescription,
+    Solution::FEVector,    # contains initial values and stores solution of advance method below
+    TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
+    timedependent_equations = [],
+    subiterations = "auto",
+    start_time::Real = 0,
+    verbosity::Int = 0,
+    dirichlet_penalty = 1e60)
+````
+
+Creates a time-dependent solver that can be advanced in time with advance!.
+The FEVector Solution stores the initial state but also the solutions of each timestep.
+The field timedependent_equations contains the equation numbers (=rows in PDEDEscription) that are time-dependent.
+The field subiterations specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once.
+"""
 function TimeControlSolver(
     PDE::PDEDescription,
     InitialValues::FEVector,    # contains initial values and stores solution of advance method below
@@ -778,7 +804,12 @@ function TimeControlSolver(
     return  TimeControlSolver{TIR}(PDE,SC,start_time,0,0,timedependent_equations,AM,A,b,x,InitialValues, fixed_dofs, eqoffsets)
 end
 
-function advance(TCS::TimeControlSolver, timestep::Real = 1e-1)
+"""
+$(TYPEDSIGNATURES)
+
+Advances a TimeControlSolver in time with the given timestep.
+"""
+function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
     # update timestep counter
     TCS.cstep += 1
