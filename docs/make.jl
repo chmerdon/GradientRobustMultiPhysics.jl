@@ -21,3 +21,7 @@ makedocs(
         "Quadrature" => "quadrature.md",
     ]
 )
+
+deploydocs(
+    repo = "github.com/chmerdon/juliaFE",
+)
