@@ -7,7 +7,7 @@ Additionally the user can manually trigger subiterations that splits the fixed-p
 Also, there is a preliminary time-dependent solver that can be setup in a similar manner and then performs the subiterations once in eachtimestep. As a TimeIntegrationRule so far only BackwardEuler is implemented.
 
 ```@autodocs
-Modules = [JUFELIA]
+Modules = [GradientRobustMultiPhysics]
 Pages = ["PDESolver.jl"]
 Order   = [:type, :function]
 ```

@@ -27,12 +27,79 @@ mutable struct PDEDescription
     GlobalConstraints::Array{AbstractGlobalConstraint,1}
 end
 
+
 function PDEDescription(name, LHS, RHS, BoundaryOperators)
     nFEs = length(RHS)
     NoConstraints = Array{AbstractGlobalConstraint,1}(undef,0)
     return PDEDescription(name, LHS, RHS, BoundaryOperators, NoConstraints)
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Create empty PDEDEscription for a specified number of unknowns.
+"""
+function PDEDescription(name, nunknowns::Int, ncomponents::Array{Int,1}, dim::Int = 2)
+    # LEFT-HAND-SIDE
+    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
+    for j=1:nunknowns, k = 1:nunknowns
+        MyLHS[j,k] = []
+    end
+
+    # RIGHT-HAND SIDE
+    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,nunknowns)
+    for j=1:nunknowns
+        MyRHS[j] = []
+    end
+
+    # BOUNDARY OPERATOR
+    MyBoundary = Array{BoundaryOperator,1}(undef,nunknowns)
+    for j=1:nunknowns
+        MyBoundary[j] = BoundaryOperator(dim,ncomponents[j])
+    end
+
+    # GLOBAL CONSTRAINTS
+    return PDEDescription(name, MyLHS, MyRHS, MyBoundary)
+end
+
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds the given PDEOperator to the left-hand side of the PDEDescription at the specified position.
+"""
+function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDEOperatorLHS)
+    push!(PDE.LHSOperators[position[1],position[2]],O)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds the given PDEOperator to the right-hand side of the PDEDEscription at the specified position.
+"""
+function add_rhsdata!(PDE::PDEDescription,position::Int,O::AbstractPDEOperatorRHS)
+    push!(PDE.RHSOperators[position],O)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds the given boundary data to the at specified position in the BoundaryOperator of the PDEDEscription.
+"""
+function add_boundarydata!(PDE::PDEDescription,position::Int,regions, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
+    Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data, bonus_quadorder = bonus_quadorder)
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds the given global constraint to the PDEDEscription.
+"""
+function add_constraint!(PDE::PDEDescription,GC::AbstractGlobalConstraint)
+    Base.push!(PDE.GlobalConstraints,GC)
+end
 
 
 """

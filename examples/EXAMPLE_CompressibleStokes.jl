@@ -17,7 +17,7 @@ using PyPlot
 
 
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 include("../src/testgrids.jl")
 
@@ -80,17 +80,20 @@ function main()
     #####################################################################################
 
     # load Stokes problem prototype and assign data
-    StokesProblem = CompressibleNavierStokesProblem(equation_of_state!, rhs_gravity!, 2; timestep = timestep, viscosity = viscosity, lambda = lambda, nonlinear = false)
+    StokesProblem = CompressibleNavierStokesProblem(equation_of_state!, rhs_gravity!, 2; viscosity = viscosity, lambda = lambda, nonlinear = false)
 
-    # modify operators
+    # modify testfunction in operators
     StokesProblem.LHSOperators[1,1][2].operator1 = TestFunctionOperatorDivergence
     StokesProblem.LHSOperators[1,1][2].operator2 = TestFunctionOperatorDivergence
     StokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperatorIdentity
+
+    # store matrix of velo-pressure and velo-gravity operator
+    # so that only a matrix-vector multiplication is needed in every iteration
     StokesProblem.LHSOperators[1,2][1].store_operator = true
     StokesProblem.LHSOperators[1,3][1].store_operator = true
 
     # assign boundary data
-    append!(StokesProblem.BoundaryOperators[1], [1,2,3,4], HomogeneousDirichletBoundary)
+    add_boundarydata!(StokesProblem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
     Base.show(StokesProblem)
 
     # define best approximation problem

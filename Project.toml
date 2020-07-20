@@ -1,4 +1,4 @@
-name = "JUFELIA"
+name = "GradientRobustMultiPhysics"
 uuid = "0802c0ca-1768-4022-988c-6dd5f9588a11"
 authors = ["Christian Merdon <christian.merdon@wias-berlin.de>"]
 version = "0.1.0"

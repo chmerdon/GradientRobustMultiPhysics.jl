@@ -5,7 +5,7 @@ using PyPlot
 
 # load finite element module
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 # define some (vector-valued) function (to be L2-bestapproximated in this example)
 function exact_function!(result,x)

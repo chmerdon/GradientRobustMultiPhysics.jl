@@ -5,7 +5,7 @@ using PyPlot
 using Printf
 
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 include("../src/testgrids.jl")
 
@@ -60,24 +60,20 @@ function main()
     #####################################################################################    
     #####################################################################################
 
-    # PDE description = start with Poisson problem and add convection and data
+    # PDE description = start with Poisson problem and add convection operator and data
     ConvectionDiffusionProblem = PoissonProblem(2; diffusion = diffusion)
-    push!(ConvectionDiffusionProblem.LHSOperators[1,1],ConvectionOperator(convection!,2,1))
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
-    push!(ConvectionDiffusionProblem.RHSOperators[1],RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3))
-    append!(ConvectionDiffusionProblem.BoundaryOperators[1], [1,3], BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
-    append!(ConvectionDiffusionProblem.BoundaryOperators[1], [2], InterpolateDirichletBoundary; data = bnd_data_right!)
-    append!(ConvectionDiffusionProblem.BoundaryOperators[1], [4], HomogeneousDirichletBoundary)
+
+    add_operator!(ConvectionDiffusionProblem, [1,1], ConvectionOperator(convection!,2,1))
+    add_rhsdata!(ConvectionDiffusionProblem, 1, RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3))
+    add_boundarydata!(ConvectionDiffusionProblem, 1, [1,3], BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
+    add_boundarydata!(ConvectionDiffusionProblem, 1, [2], InterpolateDirichletBoundary; data = bnd_data_right!)
+    add_boundarydata!(ConvectionDiffusionProblem, 1, [4], HomogeneousDirichletBoundary)
     show(ConvectionDiffusionProblem)
 
     # define ItemIntegrators for L2/H1 error computation
     L2ErrorEvaluator = L2ErrorIntegrator(exact_solution!, Identity, 2, 1; bonus_quadorder = 4)
     H1ErrorEvaluator = L2ErrorIntegrator(exact_solution_gradient!, Gradient, 2, 2; bonus_quadorder = 3)
-    L2error = []
-    H1error = []
-    L2errorInterpolation = []
-    H1errorInterpolation = []
-    NDofs = []
+    L2error = []; H1error = []; L2errorInterpolation = []; H1errorInterpolation = []; NDofs = []
 
     # loop over levels
     for level = 1 : nlevels

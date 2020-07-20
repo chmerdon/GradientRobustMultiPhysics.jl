@@ -5,16 +5,11 @@ function IncompressibleNavierStokesProblem(
     dimension::Int = 2;
     viscosity = 1.0,
     nonlinear::Bool = true,
-    no_pressure_constraint::Bool = false,
+    nopressureconstraint::Bool = false,
     pmean = 0)
 ````
 
 Creates a PDEDescription for the incompressible Navier-Stokes equations of the specified dimension and globally constant viscosity parameter.
-    
-If nonlinear == true a nonlinear convection term is added to the equation.
-If no_pressure_constraint == false a GlobalConstraint for the pressure is added that fixes the pressure mean to the given value for pmean.
-
-Boundary and right-hand side data or other modifications have to be added afterwards.
 """
 function IncompressibleNavierStokesProblem(
     dimension::Int = 2;
@@ -23,40 +18,33 @@ function IncompressibleNavierStokesProblem(
     no_pressure_constraint::Bool = false,
     pmean = 0)
 
-    # LEFT-HAND-SIDE: STOKES OPERATOR
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
-    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
-    MyLHS[1,1] = [LaplaceOperator(viscosity,dimension,dimension)]
-    MyLHS[1,2] = [LagrangeMultiplier(Divergence)] # automatically fills transposed block
-    MyLHS[2,1] = []
-    MyLHS[2,2] = []
-
-    if nonlinear
-        push!(MyLHS[1,1], ConvectionOperator(1, dimension, dimension))
-    end
-
-    # RIGHT-HAND SIDE: empty, user can fill in data later
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
-    MyRHS[1] = []
-    MyRHS[2] = []
-
-    # BOUNDARY OPERATOR: empty, user can fill in data later
-    MyBoundaryVelocity = BoundaryOperator(dimension,dimension)
-    MyBoundaryPressure = BoundaryOperator(dimension,1) # empty, no pressure boundary conditions
-    
-    # GLOBAL CONSTRAINTS: zero pressure integral mean
-    MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,1)
-    if no_pressure_constraint == false
-        MyGlobalConstraints[1] = FixedIntegralMean(2,pmean)
-    end
-
     if nonlinear == true
         name = "incompressible Navier-Stokes-Problem"
     else
         name = "incompressible Stokes-Problem"
     end
 
-    return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryPressure],MyGlobalConstraints)
+    # generate empty PDEDescription for two unknowns
+    # unknown 1 : velocity (vector-valued)
+    # unknown 2 : pressure
+    Problem = PDEDescription(name, 2, [dimension,1], dimension)
+
+    # add Laplacian for velocity
+    add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension))
+
+    # add Lagrange multiplier for divergence of velocity
+    add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
+    
+    if nonlinear
+        add_operator!(Problem, [1,1], ConvectionOperator(1, dimension, dimension))
+    end
+    
+    # zero pressure integral mean
+    if no_pressure_constraint == false
+        add_constraint!(Problem, FixedIntegralMean(2,pmean))
+    end
+
+    return Problem
 end
 
 """
@@ -71,12 +59,6 @@ function CompressibleNavierStokesProblem(
 ````
 
 Creates a PDEDescription for the compressible Navier-Stokes equations of the specified dimension, Lame parameters viscosity and lambda and the given equation of state function.
-
-The three equations/unknowns of the PDE refer to velocity, density and pressure in that order.
-    
-If nonlinear == true a nonlinear convection term is added to the equation.
-    
-Boundary and right-hand side data or other modifications have to be added afterwards.
 """
 function CompressibleNavierStokesProblem(
     equation_of_state!::Function,
@@ -99,44 +81,39 @@ function CompressibleNavierStokesProblem(
     end    
     gravity_action = XFunctionAction(gravity_function(),1,dimension)
 
-    # LEFT-HAND-SIDE: STOKES OPERATOR
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,3,3)
-    MyLHS[1,1] = [LaplaceOperator(viscosity,dimension,dimension)]
-    if lambda != 0
-        push!(MyLHS[1,1],AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1)))
-    end
-    MyLHS[1,2] = [AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action)]
-    MyLHS[1,3] = [AbstractBilinearForm(Divergence,Identity)]
-    MyLHS[2,1] = []
-    MyLHS[2,2] = [FVUpwindDivergenceOperator(1)]
-    MyLHS[2,3] = []
-    MyLHS[3,1] = []
-    eos_action = FunctionAction(equation_of_state!,1,dimension)
-    MyLHS[3,2] = [ReactionOperator(eos_action; apply_action_to = 2)]
-    MyLHS[3,3] = [ReactionOperator(MultiplyScalarAction(-1.0,1))]
-
-    if nonlinear
-        push!(MyLHS[1,1], ConvectionOperator(1, dimension, dimension))
-    end
-
-    # RIGHT-HAND SIDE: empty, user can fill in data later
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,3)
-    MyRHS[1] = []
-    MyRHS[2] = []
-    MyRHS[3] = []
-
-    # BOUNDARY OPERATOR: empty, user can fill in data later
-    MyBoundaryVelocity = BoundaryOperator(dimension,dimension)
-    MyBoundaryDensity = BoundaryOperator(dimension,1) # empty, no density boundary conditions
-    MyBoundaryPressure = BoundaryOperator(dimension,1) # empty, no pressure boundary conditions
-
     if nonlinear == true
         name = "compressible Navier-Stokes-Problem"
     else
         name = "compressible Stokes-Problem"
     end
 
-    return PDEDescription(name,MyLHS,MyRHS,[MyBoundaryVelocity,MyBoundaryDensity,MyBoundaryPressure])
+    # generate empty PDEDescription for three unknowns
+    # unknown 1 : velocity (vector-valued)
+    # unknown 2 : density
+    # unknown 3 : pressure
+    Problem = PDEDescription(name, 3, [dimension,1,1], dimension)
+
+    # momentum equation
+    add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension))
+    if lambda != 0
+        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1)))
+    end
+    if nonlinear
+        add_operator!(Problem, [1,1], ConvectionOperator(1, dimension, dimension))
+    end
+
+    add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action))
+    add_operator!(Problem, [1,3], AbstractBilinearForm(Divergence,Identity))
+
+    # continuity equation
+    add_operator!(Problem, [2,2], FVUpwindDivergenceOperator(1))
+
+    # equation of state
+    eos_action = FunctionAction(equation_of_state!,1,dimension)
+    add_operator!(Problem, [3,2], ReactionOperator(eos_action; apply_action_to = 2))
+    add_operator!(Problem, [3,3], ReactionOperator(MultiplyScalarAction(-1.0,1)))
+
+    return Problem
 end
 
 """
@@ -161,25 +138,16 @@ function LinearElasticityProblem(
     shearmodulus = 1.0,
     lambda = 1.0)
 
-    # LEFT-HAND-SIDE: LINEAR ELASTICITY TENSOR
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
-    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
+    # generate empty PDEDescription for one unknown
+    # unknown 1 : displacement (vector-valued)
+    Problem = PDEDescription("linear elasticity problem", 1, [dimension], dimension)
     if dimension == 2
-        MyLHS[1,1] = [HookStiffnessOperator2D(shearmodulus,lambda)]
+        add_operator!(Problem, [1,1], HookStiffnessOperator2D(shearmodulus,lambda))
     elseif dimension == 1
-        MyLHS[1,1] = [HookStiffnessOperator1D(elasticity_modulus)]
+        add_operator!(Problem, [1,1], HookStiffnessOperator1D(elasticity_modulus))
     end
 
-    # RIGHT-HAND SIDE: empty, user can fill in data later
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
-    MyRHS[1] = []
-
-    # BOUNDARY OPERATOR: empty, user can fill in data later
-    MyBoundary = BoundaryOperator(dimension,dimension)
-
-    name = "linear elasticity problem"
-
-    return PDEDescription(name,MyLHS,MyRHS,[MyBoundary])
+    return Problem
 end
 
 
@@ -200,28 +168,18 @@ function PoissonProblem(
     ncomponents::Int = 1,
     diffusion = 1.0)
 
-    # LEFT-HAND-SIDE: LAPLACE OPERATOR
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
-    #MyLHS[1,1] = [LaplaceOperator(DoNotChangeAction(4))]
-    MyLHS[1,1] = [LaplaceOperator(diffusion,dimension,ncomponents)]
+    # generate empty PDEDescription for one unknown
+    Problem = PDEDescription("Poisson problem", 1, [ncomponents], dimension)
+    add_operator!(Problem, [1,1], LaplaceOperator(diffusion,dimension,ncomponents))
 
-    # RIGHT-HAND SIDE: empty, user can fill in data later
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
-    MyRHS[1] = []
-
-    # BOUNDARY OPERATOR: empty, user can fill in data later
-    MyBoundary = BoundaryOperator(dimension,dimension)
-
-    name = "Poisson problem"
-
-    return PDEDescription(name,MyLHS,MyRHS,[MyBoundary])
+    return Problem
 end
 
 
 """
 ````
 function L2BestapproximationProblem(
-    exact_function::Function,
+    uexact::Function,
     dimension::Int = 2,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,
@@ -231,27 +189,21 @@ function L2BestapproximationProblem(
 Creates an PDEDescription for an L2-Bestapproximation problem for the given exact function. Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
 """
 function L2BestapproximationProblem(
-    exact_function::Function,
+    uexact::Function,
     dimension::Int = 2,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,
     bestapprox_boundary_regions = [])
 
-    # LEFT-HAND-SIDE: REACTION OPERATOR
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
-    MyLHS[1,1] = [ReactionOperator(DoNotChangeAction(ncomponents))]
-
-    # RIGHT-HAND-SIDE: L2-Product with exact_function
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
-    MyRHS[1] = [RhsOperator(Identity, [exact_function], dimension, ncomponents; bonus_quadorder = bonus_quadorder)]
-
-    # BOUNDARY OPERATOR: 
-    MyBoundary = BoundaryOperator(dimension,1) # leave it like that = no boundary conditions
+    # generate empty PDEDescription for one unknown
+    Problem = PDEDescription("L2-Bestapproximation problem", 1, [ncomponents], dimension)
+    add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents)))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [uexact], dimension, ncomponents; bonus_quadorder = bonus_quadorder))
     if length(bestapprox_boundary_regions) > 0
-        append!(MyBoundary, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = exact_function, bonus_quadorder = bonus_quadorder)
+        add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
     end
 
-    return PDEDescription("L2-Bestapproximation problem",MyLHS,MyRHS,[MyBoundary])
+    return Problem
 end
 
 
@@ -278,26 +230,16 @@ function H1BestapproximationProblem(
     bonus_quadorder_boundary::Int = 0,
     bestapprox_boundary_regions = [])
 
-    # LEFT-HAND-SIDE: LAPLACE OPERATOR
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,1,1)
-    MyLHS[1,1] = [LaplaceOperator(1.0,dimension,ncomponents)]
-
-    # RIGHT-HAND-SIDE: H1-Product with exact_function_gradient
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,1)
-    MyRHS[1] = [RhsOperator(Gradient, [exact_function_gradient], dimension, ncomponents*dimension; bonus_quadorder = bonus_quadorder)]
-
-    # BOUNDARY OPERATOR: 
-    MyBoundary = BoundaryOperator(dimension,1) # leave it like that = no boundary conditions
+    # generate empty PDEDescription for one unknown
+    Problem = PDEDescription("L2-Bestapproximation problem", 1, [ncomponents], dimension)
+    add_operator!(Problem, [1,1], LaplaceOperator(1.0,dimension,ncomponents))
+    add_rhsdata!(Problem, 1, RhsOperator(Gradient, [exact_function_gradient], dimension, ncomponents*dimension; bonus_quadorder = bonus_quadorder))
     if length(bestapprox_boundary_regions) > 0
-        append!(MyBoundary, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = exact_function_boundary, bonus_quadorder = bonus_quadorder_boundary)
-        return PDEDescription("H1-Bestapproximation problem",MyLHS,MyRHS,[MyBoundary])
+        add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = exact_function_boundary, bonus_quadorder = bonus_quadorder_boundary)
     else
-        # choose solution to have zero integral mean
-        MyGlobalConstraints = Array{Array{AbstractGlobalConstraint,1},1}(undef,1)
-        MyGlobalConstraints[1] = Array{AbstractGlobalConstraint,1}(undef,0)
-        MyGlobalConstraints[1] = [FixedIntegralMean(0.0)]
-        return PDEDescription("H1-Bestapproximation problem",MyLHS,MyRHS,[MyBoundary],MyGlobalConstraints)
+        add_constraint!(Problem, FixedIntegralMean(0.0))
     end
 
+    return Problem
 end
 

@@ -5,13 +5,13 @@ Assembly is reduced to one of the following patterns. Each Pattern comes with a 
 
 Examples:
 - the standard piecewise L2 scalar product for a given scalar-valued FESpace FES can be realized via
-  Bilineaform{Float64,AssemblyTypeCELL}(FES,Identity,DoNotChangeAction(1))
+  BilinearForm{Float64,AssemblyTypeCELL}(FES,Identity,DoNotChangeAction(1))
 - the standard piecewise H1 scalar product for a given scalar-valued FESpace FES in 2D and global viscosity coefficient mu can be realized via
-  Bilineaform{Float64,AssemblyTypeCELL}(FES,Gradient,MultiplyScalarAction(mu,2))
+  BilinearForm{Float64,AssemblyTypeCELL}(FES,Gradient,MultiplyScalarAction(mu,2))
 
 
 ```@autodocs
-Modules = [JUFELIA]
+Modules = [GradientRobustMultiPhysics]
 Pages = ["AbstractAssemblyPattern.jl"]
 Order   = [:type, :function]
 ```

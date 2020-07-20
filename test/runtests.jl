@@ -2,7 +2,7 @@ using Test
 using ExtendableGrids
 
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 ############################
 # TESTSET QUADRATURE RULES #

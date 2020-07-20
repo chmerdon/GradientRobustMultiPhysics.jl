@@ -18,9 +18,10 @@ AbstractFiniteElements
 
 Remarks:
 - each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and a generator for the degrees of freedom map of a [`FESpace`](@ref)
-- the type steers how the basis functions are transformed from local to global coordinates
-- AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
-- AbstractHdivFiniteElements additionally have evaluations of nonzero normalfluxes of basisfunctions on faces/bfaces
+- the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated by FEBasisEvaluator.jl
+- depending on additional continuity properties of the element types more basis function sets are defined:
+    - AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
+    - AbstractHdivFiniteElements additionally have evaluations of nonzero normalfluxes of basisfunctions on faces/bfaces
 
 
 ## List of implemented Finite Elements
@@ -34,6 +35,7 @@ The following table lists all curently implemented finite elements. Click on the
 | [`H1MINI`](@ref)   |                      |                       | [`L2P1`](@ref)     |
 | [`H1P2`](@ref)     |                      |                       |                    |
 | [`H1BR`](@ref)     |                      |                       |                    |
+| [`H1CR`](@ref)     |                      |                       |                    |
 
 
 

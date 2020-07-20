@@ -1,4 +1,4 @@
-module JUFELIA
+module GradientRobustMultiPhysics
 
 using ExtendableGrids
 using ExtendableSparse
@@ -146,11 +146,15 @@ export CombineDofs
 
 include("PDEDescription.jl")
 export PDEDescription
+export add_operator!
+export add_rhsdata!
+export add_boundarydata!
+export add_constraint!
 
 
 include("PDESolver.jl")
 export solve!, assemble!
-export TimeControlSolver, advance
+export TimeControlSolver, advance!
 
 export AbstractTimeIntegrationRule
 export BackwardEuler

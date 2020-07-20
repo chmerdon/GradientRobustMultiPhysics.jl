@@ -6,7 +6,7 @@ using PyPlot
 using Printf
 
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 include("../src/testgrids.jl")
 
@@ -66,8 +66,8 @@ function main()
 
     # load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
-    append!(StokesProblem.BoundaryOperators[1], [1,3], HomogeneousDirichletBoundary)
-    append!(StokesProblem.BoundaryOperators[1], [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
+    add_boundarydata!(StokesProblem, 1, [1,3], HomogeneousDirichletBoundary)
+    add_boundarydata!(StokesProblem, 1, [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
     Base.show(StokesProblem)
 
     # define bestapproximation problems

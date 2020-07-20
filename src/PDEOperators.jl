@@ -22,8 +22,8 @@ abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)
 # might be included if they implement the following interfaces
 #
 #   (1) to specify what is assembled into the corressponding MatrixBlock:
-#       assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractPDEOperator) # if intended to use in LHS
-#       assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractPDEOperator) # if intended to use in RHS
+#       assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractPDEOperatorLHS)
+#       assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractPDEOperatorRHS)
 #
 #   (2) to allow SolverConfig to check if operator is nonlinear, timedependent:
 #       Bool, Bool = check_PDEoperator(O::AbstractPDEOperator)
@@ -32,6 +32,8 @@ abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)
 
 abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
+abstract type AbstractPDEOperatorRHS  <: AbstractPDEOperator end # can be used in RHS (and LHS when one component is fixed)
+abstract type AbstractPDEOperatorLHS  <: AbstractPDEOperator end # can be used in RHS (and LHS when one component is fixed)
 
 
 """
@@ -43,7 +45,7 @@ if _onlyz_ == true only values that are zero are changed
 
 can only be applied in PDE LHS
 """
-struct DiagonalOperator <: AbstractPDEOperator
+struct DiagonalOperator <: AbstractPDEOperatorLHS
     name::String
     value::Real
     onlyz::Bool
@@ -61,7 +63,7 @@ copies entries from TargetVector to rhs block
 
 can only be applied in PDE RHS
 """
-struct CopyOperator <: AbstractPDEOperator
+struct CopyOperator <: AbstractPDEOperatorRHS
     name::String
     copy_from::Int
     factor::Real
@@ -79,7 +81,7 @@ abstract bilinearform operator that assembles
 
 can only be applied in PDE LHS
 """
-mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperator
+mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
     operator1::Type{<:AbstractFunctionOperator}
     operator2::Type{<:AbstractFunctionOperator}
@@ -135,7 +137,7 @@ automatically triggers copy of transposed operator in transposed block, hence on
 
 can only be applied in PDE LHS
 """
-struct LagrangeMultiplier <: AbstractPDEOperator
+struct LagrangeMultiplier <: AbstractPDEOperatorLHS
     name::String
     operator::Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
 end
@@ -150,7 +152,7 @@ convection operator (beta * grad) u * testfunction_operator(v) where beta can be
 
 can only be applied in PDE LHS
 """
-struct ConvectionOperator <: AbstractPDEOperator
+struct ConvectionOperator <: AbstractPDEOperatorLHS
     name::String
     action::AbstractAction                                      #      ----ACTION-----
     beta_from::Int                                              # e.g. (beta * grad) u * testfunction_operator(v)
@@ -203,7 +205,7 @@ right-hand side operator
 
 can only be applied in PDE RHS
 """
-struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperator
+struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
     action::AbstractAction                                  #       -----ACTION----
     testfunction_operator::Type{<:AbstractFunctionOperator} # e.g.  f * testfunction_operator(v)
     regions::Array{Int,1}
@@ -273,7 +275,7 @@ evaluation of a bilineaform where the second argument is fixed by given FEVector
 
 can only be applied in PDE RHS
 """
-struct BLFeval <: AbstractPDEOperator
+struct BLFeval <: AbstractPDEOperatorRHS
     BLF::AbstractBilinearForm
     Data::FEVectorBlock
 end
@@ -307,7 +309,7 @@ end
 #                   
 # see coressponding assemble! routine
 
-mutable struct FVUpwindDivergenceOperator <: AbstractPDEOperator
+mutable struct FVUpwindDivergenceOperator <: AbstractPDEOperatorLHS
     name::String
     beta_from::Int                   # component that determines
     fluxes::Array{Float64,2}         # saves normalfluxes of beta here

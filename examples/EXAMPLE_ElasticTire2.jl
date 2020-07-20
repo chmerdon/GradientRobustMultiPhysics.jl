@@ -5,7 +5,7 @@ using PyPlot
 using Printf
 
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 include("../src/testgrids.jl")
 
@@ -46,29 +46,25 @@ function main()
     #####################################################################################    
     #####################################################################################
 
-    # PDE description
-    # LEFT-HAND-SIDE
-    MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,2,2)
-    MyLHS[1,1] = [HookStiffnessOperator2D(shear_modulus,lambda; regions = [1]), DiagonalOperator(1e60;regions = [2])]
-    MyLHS[1,2] = []
-    MyLHS[2,1] = []
-    MyLHS[2,2] = [HookStiffnessOperator1D(elasticity_modulus_spoke; regions = [2]), DiagonalOperator(1e60;regions = [1])]
+    # start froman empty PDEDescription for two globally defined unknowns
+    # unknonw 1 : displacement for rest
+    # unknown 2 : displacement for spokes
+    LinElastProblem = PDEDescription("linear elasticity problem", 2, [2,2], 2)
 
-    # RIGHT-HAND SIDE
-    MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,2)
-    MyRHS[1] = [RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0)]
-    MyRHS[2] = []
+    # add PDEoperator for region 1 (triangles) and 2 (spokes = 1DEdges)
+    add_operator!(LinElastProblem,[1,1],HookStiffnessOperator2D(shear_modulus,lambda; regions = [1])) # 2D deformation
+    add_operator!(LinElastProblem,[1,1],DiagonalOperator(1e60;regions = [2])) # penalization to zero on spokes
+    add_operator!(LinElastProblem,[2,2],HookStiffnessOperator1D(elasticity_modulus_spoke; regions = [2])) # 1D deformation along tangent on spokes
+    add_operator!(LinElastProblem,[2,2],DiagonalOperator(1e60;regions = [1])) # penalization to zero on rest
 
-    # BOUNDARY OPERATOR
-    MyBoundaryRest = BoundaryOperator(2,2)
-    MyBoundaryEmpty = BoundaryOperator(2,2)
-    append!(MyBoundaryRest, [1], HomogeneousDirichletBoundary)
+    # add constraint that dofs at boundary of region 1 and 2 are the same
+    add_constraint!(LinElastProblem,CombineDofs(1,2,ConnectionDofs1,ConnectionDofs2))
+    
+    # add boundary data
+    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    add_boundarydata!(LinElastProblem, 1, [1], HomogeneousDirichletBoundary)
 
-    # GLOBAL CONSTRAINTS
-    MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,1)
-    MyGlobalConstraints[1] = CombineDofs(1,2,ConnectionDofs1,ConnectionDofs2)
-    name = "linear elasticity problem"
-    LinElastProblem = PDEDescription(name,MyLHS,MyRHS,[MyBoundaryRest,MyBoundaryEmpty,MyBoundaryEmpty],MyGlobalConstraints)
+    # show PDEDescription
     show(LinElastProblem)
 
     # generate FESpace

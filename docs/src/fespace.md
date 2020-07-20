@@ -21,7 +21,7 @@ show(::IO, ::FESpace)
 
 
 ```@autodocs
-Modules = [JUFELIA]
+Modules = [GradientRobustMultiPhysics]
 Pages = ["FEVector.jl"]
 Order   = [:type, :function]
 ```
@@ -31,7 +31,7 @@ Order   = [:type, :function]
 
 
 ```@autodocs
-Modules = [JUFELIA]
+Modules = [GradientRobustMultiPhysics]
 Pages = ["FEMatrix.jl"]
 Order   = [:type, :function]
 ```

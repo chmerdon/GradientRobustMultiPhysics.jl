@@ -6,7 +6,7 @@ using Printf
 
 
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 include("../src/testgrids.jl")
 
@@ -46,8 +46,10 @@ function main()
 
     # PDE description
     LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
-    append!(LinElastProblem.BoundaryOperators[1], [1], HomogeneousDirichletBoundary)
-    push!(LinElastProblem.RHSOperators[1], RhsOperator(Identity, neumann_force_right!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    # add Neumann boundary data
+    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, neumann_force_right!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    # add Dirichlet boundary data
+    add_boundarydata!(LinElastProblem, 1, [1], HomogeneousDirichletBoundary)
     show(LinElastProblem)
 
     # generate FESpace

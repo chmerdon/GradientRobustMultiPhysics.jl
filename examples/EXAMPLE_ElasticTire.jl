@@ -6,7 +6,7 @@ using Printf
 
 
 push!(LOAD_PATH, "../src")
-using JUFELIA
+using GradientRobustMultiPhysics
 
 include("../src/testgrids.jl")
 
@@ -35,7 +35,7 @@ function main()
     FEType = H1P1{2}
 
     # other parameters[]
-    verbosity = 2 # deepness of messaging (the larger, the more)
+    verbosity = 1 # deepness of messaging (the larger, the more)
     factor_plotdisplacement = 50
 
     #####################################################################################    
@@ -43,10 +43,12 @@ function main()
 
     # PDE description
     LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
+    # split RHSOperator into two regions
     LinElastProblem.LHSOperators[1,1] = [HookStiffnessOperator2D(shear_modulus,lambda; regions = [1]),
                                          HookStiffnessOperator1D(elasticity_modulus_spoke; regions = [2])]
-    append!(LinElastProblem.BoundaryOperators[1], [1], HomogeneousDirichletBoundary)
-    push!(LinElastProblem.RHSOperators[1], RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    # add boundary data
+    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    add_boundarydata!(LinElastProblem, 1, [1], HomogeneousDirichletBoundary)
     show(LinElastProblem)
 
     # generate FESpace

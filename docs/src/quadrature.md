@@ -3,7 +3,7 @@
 
 
 ```@autodocs
-Modules = [JUFELIA]
+Modules = [GradientRobustMultiPhysics]
 Pages = ["QuadratureRules.jl"]
 Order   = [:type, :function]
 ```

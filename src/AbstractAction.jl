@@ -120,42 +120,132 @@ mutable struct RegionWiseXFunctionAction{T <: Real} <: AbstractAction
     bonus_quadorder::Int
 end
 
+"""
+````
+function DoNotChangeAction(resultdim::Int)
+````
+
+creates action that does nothing. Nevertheless resultdim has to be specified.
+
+"""
 function DoNotChangeAction(resultdim::Int)
     return DoNotChangeAction(resultdim,0)
 end
 
+"""
+````
+function MultiplyScalarAction(value::Real, resultdim::Int = 1)
+````
+
+creates action that multiplies the first resultdim entries of the input vector with the specified valuse.
+
+"""
 function MultiplyScalarAction(value::Real, resultdim::Int = 1)
     return MultiplyScalarAction{eltype(value)}(value, resultdim,0)
 end
 
-function MultiplyVectorAction(value::Array{<:Real,1})
-    return MultiplyVectorAction{eltype(value)}(value, length(value),0)
+"""
+````
+function MultiplyVectorAction(values::Array{<:Real,1})
+````
+
+creates action that multiplies input vector and values element-wise (until length of values).
+
+"""
+function MultiplyVectorAction(values::Array{<:Real,1})
+    return MultiplyVectorAction{eltype(values)}(values, length(value),0)
 end
 
-function MultiplyMatrixAction(value::Array{<:Real,2})
-    return MultiplyMatrixAction{eltype(value)}(value, size(value,1),0)
+"""
+````
+function MultiplyMatrixAction(matrix::Array{<:Real,2})
+````
+
+creates action that return the matrix vector product of the input vector and the specified matrix.
+
+"""
+function MultiplyMatrixAction(matrix::Array{<:Real,2})
+    return MultiplyMatrixAction{eltype(matrix)}(matrix, size(matrix,1),0)
 end
 
-function RegionWiseMultiplyVectorAction(value::Array{Array{<:Real,1},1}, resultdim::Int)
-    return RegionWiseMultiplyVectorAction{eltype(value[1])}(value, 1, length(value[1]),0)
+"""
+````
+function RegionWiseMultiplyScalarAction(value4region::Array{<:Real,1}, resultdim::Int = 1)
+````
+
+creates action that multiplies the first resultdim entries of the input vector with the specified value in the current region.
+
+"""
+function RegionWiseMultiplyScalarAction(value4region::Array{<:Real,1}, resultdim::Int = 1)
+    return RegionWiseMultiplyScalarAction{eltype(value4region)}(value4region, 1, resultdim,0)
 end
 
-function RegionWiseMultiplyScalarAction(value::Array{<:Real,1}, resultdim::Int = 1)
-    return RegionWiseMultiplyScalarAction{eltype(value)}(value, 1, resultdim,0)
+"""
+````
+function RegionWiseMultiplyVectorAction(values4region::Array{Array{<:Real,1},1}, resultdim::Int)
+````
+
+creates action that multiplies input vector and the values4region of the current region element-wise.
+
+"""
+function RegionWiseMultiplyVectorAction(values4region::Array{Array{<:Real,1},1}, resultdim::Int)
+    return RegionWiseMultiplyVectorAction{eltype(values4region[1])}(values4region, 1, length(values4region[1]),0)
 end
 
+"""
+````
+function FunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+````
+
+creates action that puts input into the specified function and return its result. The function should have the interface
+    function!(result,input)
+and result is expected to be of length resultdim. The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
+
+"""
 function FunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
     return FunctionAction{Float64}(f, resultdim, bonus_quadorder)
 end
 
+
+"""
+````
+function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+````
+
+creates action that puts input into the specified function and return its result. The function can depend on x and should have the interface
+    function!(result,input,x)
+and result is expected to be of length resultdim. The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
+
+"""
 function XFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
     return XFunctionAction{Float64}(f, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
+
+"""
+````
+function ItemWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+````
+
+creates action that puts input into the specified function and return its result. The function can depend on x and the item number and should have the interface
+    function!(result,input,x,item)
+and result is expected to be of length resultdim. The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
+
+"""
 function ItemWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
     return ItemWiseXFunctionAction{Float64}(f, 0, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
+"""
+````
+function RegionWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+````
+
+creates action that puts input into the specified function and return its result. The function can depend on x and the region number and should have the interface
+    function!(result,input,x,region)
+and result is expected to be of length resultdim. The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
+
+"""
 function RegionWiseXFunctionAction(f::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
     return RegionWiseXFunctionAction{Float64}(f, 1, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
 end

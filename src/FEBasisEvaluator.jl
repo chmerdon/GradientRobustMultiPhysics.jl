@@ -76,7 +76,7 @@ $(TYPEDEF)
 
 evaluates the divergence of the reconstructed finite element function.
 
-    FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
+FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
 """
 abstract type ReconstructionDivergence{FEreconst<:AbstractFiniteElement} <: Divergence end # 1*R(v_h)
 
