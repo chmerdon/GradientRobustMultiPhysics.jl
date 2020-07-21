@@ -6,7 +6,7 @@ Below all available prototypes (i.e. pre-defined constructors for PDEDEscription
 
 !!! note
 
-    For most prototypes. boundary data and right-hand side data or other modifications to the weak form of the PDE have to be added after a proto-type constructor has been called. Examples how to do that can be found in the examples subfolder.
+    For most prototypes boundary data and right-hand side data or other modifications to the weak form of the PDE have to be added after a proto-type constructor has been called. Examples how to do that can be found in the examples subfolder.
 
 
 ## Poisson equation

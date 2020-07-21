@@ -146,6 +146,7 @@ export CombineDofs
 
 include("PDEDescription.jl")
 export PDEDescription
+export add_unknown!
 export add_operator!
 export add_rhsdata!
 export add_boundarydata!

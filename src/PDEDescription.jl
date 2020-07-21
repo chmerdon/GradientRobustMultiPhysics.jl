@@ -28,10 +28,13 @@ mutable struct PDEDescription
 end
 
 
-function PDEDescription(name, LHS, RHS, BoundaryOperators)
-    nFEs = length(RHS)
-    NoConstraints = Array{AbstractGlobalConstraint,1}(undef,0)
-    return PDEDescription(name, LHS, RHS, BoundaryOperators, NoConstraints)
+"""
+$(TYPEDSIGNATURES)
+
+Create empty PDEDEscription for a specified number of unknowns.
+"""
+function PDEDescription(name)
+    return PDEDescription(name, 0, 0, 0)
 end
 
 """
@@ -59,10 +62,32 @@ function PDEDescription(name, nunknowns::Int, ncomponents::Array{Int,1}, dim::In
     end
 
     # GLOBAL CONSTRAINTS
-    return PDEDescription(name, MyLHS, MyRHS, MyBoundary)
+    MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,0)
+
+    return PDEDescription(name, MyLHS, MyRHS, MyBoundary, MyGlobalConstraints)
 end
 
 
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds another unknown of specified dimensions to the PDEDescription.
+"""
+function add_unknown!(PDE::PDEDescription, ncomponents::Int, dim::Int = 2)
+    nunknowns = length(PDE.RHSOperators)+1
+    push!(PDE.RHSOperators,[])
+    push!(PDE.BoundaryOperators,BoundaryOperator(dim,ncomponents))
+    NewLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
+    for j=1:nunknowns, k = 1:nunknowns
+        if j < nunknowns && k < nunknowns
+            NewLHS[j,k] = deepcopy(PDE.LHSOperators[j,k])
+        else
+            NewLHS[j,k] = []
+        end
+    end
+    PDE.LHSOperators = NewLHS
+end
 
 """
 $(TYPEDSIGNATURES)

@@ -982,11 +982,11 @@ function assemble!(
                     else
                         A[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
                     end
-                    if transpose_copy != Nothing
+                    if transpose_copy != Nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
                         if transposed_assembly == true
-                            transpose_copy[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                            transpose_copy[dofs[dof_i],dofs2[dof_j]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item]
                         else
-                            transpose_copy[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                            transpose_copy[dofs2[dof_j],dofs[dof_i]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item]
                         end
                     end
                 end
