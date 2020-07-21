@@ -46,10 +46,12 @@ end
 # next m nodes are the CellFaces (midpoints)
 # next node is the CellMidpoint (if needed)
 
+uniform_refine_rule(::Type{<:Edge1D}) = [1 3; 3 2]
 uniform_refine_rule(::Type{<:Triangle2D}) = [1 4 6; 2 5 4; 3 6 5; 4 5 6]
 uniform_refine_rule(::Type{<:Quadrilateral2D}) = [1 5 9 8; 2 6 9 5; 3 7 9 6; 4 8 9 7]
 
 uniform_refine_needcellmidpoints(::Type{<:AbstractElementGeometry}) = false
+uniform_refine_needcellmidpoints(::Type{<:Edge1D}) = true
 uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
 
 
@@ -64,6 +66,10 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     oldCoordinates = source_grid[Coordinates]
     oldCellTypes = source_grid[CellGeometries]
     EG = Base.unique(oldCellTypes)
+
+    # get dimension of CellGeometries
+    # currently it is assumed to be the same for all cells
+    dim = dim_element(EG[1]) 
     
     refine_rules = Array{Array{Int,2},1}(undef,length(EG))
     for j = 1 : length(EG)
@@ -78,38 +84,44 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
 
     # determine number of new vertices
     cellEG = Triangle2D
-    newvertices = nfaces
+    newvertices = 0 # in 1D no additional vertices on the faces are needed
+    if dim == 2 # in 2D each face id halved
+        newvertices = nfaces
+    end
+    oldvertices = size(oldCoordinates,2)
+    newnode = oldvertices + newvertices
+    # additionally cell midpoints are needed for some refinements
     for cell = 1 : num_sources(oldCellNodes)
         cellEG = oldCellTypes[cell]
         if uniform_refine_needcellmidpoints(cellEG) == true
             newvertices += 1
         end    
     end
-    oldvertices = size(oldCoordinates,2)
     xCoordinates = zeros(Float64,size(oldCoordinates,1),oldvertices+newvertices)
     @views xCoordinates[:,1:oldvertices] = oldCoordinates
 
-    # add face midpoints to Coordinates
-    nnodes4face = 0
+    
     newvertex = zeros(Float64,size(xCoordinates,1))
-    for face = 1 : nfaces
-        nnodes4face = num_targets(oldFaceNodes,face)
-        fill!(newvertex,0.0)
-        for k = 1 : nnodes4face, d = 1 : size(xCoordinates,1)
-            newvertex[d] += xCoordinates[d,oldFaceNodes[k,face]] 
+    if dim == 2 # add face midpoints to Coordinates
+        nnodes4face = 0
+        for face = 1 : nfaces
+            nnodes4face = num_targets(oldFaceNodes,face)
+            fill!(newvertex,0.0)
+            for k = 1 : nnodes4face, d = 1 : size(xCoordinates,1)
+                newvertex[d] += xCoordinates[d,oldFaceNodes[k,face]] 
+            end    
+            newvertex ./= nnodes4face
+            for d = 1 : size(xCoordinates,1)
+                xCoordinates[d,oldvertices+face] = newvertex[d]
+            end
         end    
-        newvertex ./= nnodes4face
-        for d = 1 : size(xCoordinates,1)
-            xCoordinates[d,oldvertices+face] = newvertex[d]
-        end
-    end    
+    end
     
     # determine new cells
     nnodes4cell = 0
     ncells = 0
     iEG = 1
     subcellnodes = zeros(Int32,max_num_targets_per_source(oldCellNodes)+max_num_targets_per_source(oldCellFaces)+1)
-    newnode = oldvertices + nfaces
     m = 0
     for cell = 1 : num_sources(oldCellNodes)
         nnodes4cell = num_targets(oldCellNodes,cell)
@@ -152,13 +164,25 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xBFaceNodes = zeros(Int32,size(oldBFaceNodes,1),2*size(oldBFaceNodes,2))
     xBFaceRegions = zeros(Int32,2*size(oldBFaceNodes,2))
     nbfaces = num_sources(oldBFaceNodes)
-    for bface = 1 : nbfaces
-        face = oldBFaces[bface]
-        xBFaceNodes[:,2*bface-1] = [oldBFaceNodes[1,bface], oldvertices+face]
-        xBFaceNodes[:,2*bface] = [oldvertices+face, oldBFaceNodes[2,bface]]
-        xBFaceRegions[2*bface-1] = oldBFaceRegions[bface]
-        xBFaceRegions[2*bface] = oldBFaceRegions[bface]
+    
+    if dim == 1
+        xgrid[BFaceNodes] = oldBFaceNodes
+        xgrid[BFaceRegions] = oldBFaceRegions
+        xgrid[BFaceGeometries] = source_grid[BFaceGeometries]
+    elseif dim == 2 # refine boundary faces
+        # todo: use uniform_refine for Edge1D here
+        for bface = 1 : nbfaces
+            face = oldBFaces[bface]
+            xBFaceNodes[:,2*bface-1] = [oldBFaceNodes[1,bface], oldvertices+face]
+            xBFaceNodes[:,2*bface] = [oldvertices+face, oldBFaceNodes[2,bface]]
+            xBFaceRegions[2*bface-1] = oldBFaceRegions[bface]
+            xBFaceRegions[2*bface] = oldBFaceRegions[bface]
+        end
+        xgrid[BFaceNodes] = xBFaceNodes
+        xgrid[BFaceRegions] = xBFaceRegions
+        xgrid[BFaceGeometries] = VectorOfConstants(Edge1D,2*nbfaces)
     end    
+
 
     xgrid[Coordinates] = xCoordinates
     if typeof(oldCellNodes) == Array{Int32,2}
@@ -169,9 +193,6 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     end
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[CellGeometries] = Array{DataType,1}(xCellGeometries)
-    xgrid[BFaceNodes]=xBFaceNodes
-    xgrid[BFaceRegions]=xBFaceRegions
-    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,2*nbfaces)
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
     Base.show()
     return xgrid

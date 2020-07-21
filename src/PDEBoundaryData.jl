@@ -94,7 +94,6 @@ function boundarydata!(
     nbfaces = length(xBFaces)
     xBFaceRegions = FE.xgrid[BFaceRegions]
 
-
     ######################
     # Dirichlet boundary #
     ######################

@@ -95,12 +95,12 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
             for k = 1 : nnodes4item
                 dofs4item[k] = xFaceNodes[k,face]
             end
-            if edim == 0
+            if edim == 1
                 nextra4item = 0
-            elseif edim > 1 # in 2D also face midpoints are dofs
+            elseif edim == 2 # in 2D also face midpoints are dofs
                 nextra4item = 1
                 dofs4item[nnodes4item+1] = nnodes + face
-            elseif edim > 2 # in 3D also edge midpoints are dofs
+            elseif edim == 3 # in 3D also edge midpoints are dofs
                 # TODO
             end
             ndofs4item = nnodes4item + nextra4item
@@ -115,12 +115,12 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
             for k = 1 : nnodes4item
                 dofs4item[k] = xBFaceNodes[k,bface]
             end
-            if edim == 0
+            if edim == 1
                 nextra4item = 0
-            elseif edim > 1 # in 2D also face midpoints are dofs
+            elseif edim == 2 # in 2D also face midpoints are dofs
                 nextra4item = 1
                 dofs4item[nnodes4item+1] = nnodes + xBFaces[bface]
-            elseif edim > 2 # in 3D also edge midpoints are dofs
+            elseif edim == 3 # in 3D also edge midpoints are dofs
                 # TODO
             end
             ndofs4item = nnodes4item + nextra4item
@@ -141,8 +141,10 @@ end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]
+    xCellNodes = FE.xgrid[CellNodes]
     xFaceNodes = FE.xgrid[FaceNodes]
     nnodes = num_sources(xCoords)
+    ncells = num_sources(xCellNodes)
     nfaces = num_sources(xFaceNodes)
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
@@ -152,6 +154,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
     x = zeros(Float64,xdim)
 
     nnodes4item = 0
+    celldim = dim_element(FE.xgrid[CellGeometries][1]) # currently assumed to be the same for cells
     offset4component = [0, nnodes+nfaces]
     face = 0
     if length(dofs) == 0 # interpolate at all dofs
@@ -165,44 +168,89 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
                 Target[j+offset4component[k]] = result[k]
             end    
         end
-        # interpolate at face midpoints
-        for face = 1 : nfaces
-            nnodes4item = num_targets(xFaceNodes,face)
-            for k=1:xdim
-                x[k] = 0
-                for n=1:nnodes4item
-                    x[k] += xCoords[k,xFaceNodes[n,face]]
-                end
-                x[k] /= nnodes4item    
-            end    
-            exact_function!(result,x)
-            for k = 1 : ncomponents
-                Target[nnodes+face+offset4component[k]] = result[k]
-            end    
-        end
-    else
-        item = 0
-        for j in dofs 
-            item = mod(j-1,nnodes+nfaces)+1
-            c = Int(ceil(j/(nnodes+nfaces)))
-            if item <= nnodes
-                for k=1:xdim
-                    x[k] = xCoords[k,item]
-                end    
-                exact_function!(result,x)
-                Target[j] = result[c]
-            elseif item > nnodes && item <= nnodes+nfaces
-                item = j - nnodes
-                nnodes4item = num_targets(xFaceNodes,item)
+        if celldim == 2
+            # interpolate at face midpoints
+            for face = 1 : nfaces
+                nnodes4item = num_targets(xFaceNodes,face)
                 for k=1:xdim
                     x[k] = 0
                     for n=1:nnodes4item
-                        x[k] += xCoords[k,xFaceNodes[n,item]]
+                        x[k] += xCoords[k,xFaceNodes[n,face]]
                     end
                     x[k] /= nnodes4item    
-                end 
+                end    
                 exact_function!(result,x)
-                Target[j] = result[c]
+                for k = 1 : ncomponents
+                    Target[nnodes+face+offset4component[k]] = result[k]
+                end    
+            end
+        elseif celldim == 1
+            # interpolate at cell midpoints
+            for cell = 1 : ncells
+                nnodes4item = num_targets(xCellNodes,cell)
+                for k=1:xdim
+                    x[k] = 0
+                    for n=1:nnodes4item
+                        x[k] += xCoords[k,xCellNodes[n,cell]]
+                    end
+                    x[k] /= nnodes4item    
+                end    
+                exact_function!(result,x)
+                for k = 1 : ncomponents
+                    Target[nnodes+cell+offset4component[k]] = result[k]
+                end    
+            end
+        end
+    else
+        item = 0
+        if celldim == 2
+            println("HALLOA")
+            for j in dofs 
+                item = mod(j-1,nnodes+nfaces)+1
+                c = Int(ceil(j/(nnodes+nfaces)))
+                if item <= nnodes
+                    for k=1:xdim
+                        x[k] = xCoords[k,item]
+                    end    
+                    exact_function!(result,x)
+                    Target[j] = result[c]
+                elseif item > nnodes && item <= nnodes+nfaces
+                    item = j - nnodes
+                    nnodes4item = num_targets(xFaceNodes,item)
+                    for k=1:xdim
+                        x[k] = 0
+                        for n=1:nnodes4item
+                            x[k] += xCoords[k,xFaceNodes[n,item]]
+                        end
+                        x[k] /= nnodes4item    
+                    end 
+                    exact_function!(result,x)
+                    Target[j] = result[c]
+                end
+            end
+        elseif celldim == 1
+            for j in dofs 
+                item = mod(j-1,nnodes+ncells)+1
+                c = Int(ceil(j/(nnodes+ncells)))
+                if item <= nnodes
+                    for k=1:xdim
+                        x[k] = xCoords[k,item]
+                    end    
+                    exact_function!(result,x)
+                    Target[j] = result[c]
+                elseif item > nnodes && item <= nnodes+ncells
+                    item = j - nnodes
+                    nnodes4item = num_targets(xCellNodes,item)
+                    for k=1:xdim
+                        x[k] = 0
+                        for n=1:nnodes4item
+                            x[k] += xCoords[k,xCellNodes[n,item]]
+                        end
+                        x[k] /= nnodes4item    
+                    end 
+                    exact_function!(result,x)
+                    Target[j] = result[c]
+                end
             end
         end
     end
@@ -220,6 +268,21 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
         end    
     end    
 end
+
+
+function get_basis_on_cell(::Type{H1P2{1,1}}, ::Type{<:Vertex0D})
+    function closure(xref)
+        return [1]
+    end
+end
+
+function get_basis_on_cell(::Type{H1P2{2,1}}, ::Type{<:Vertex0D})
+    function closure(xref)
+        return [1 0;
+                0 1]
+    end
+end
+
 
 function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Edge1D})
     function closure(xref)

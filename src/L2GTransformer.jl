@@ -34,6 +34,14 @@ end
 
 
 
+function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian1D}, item::Int)
+    if T.citem != item
+        T.citem = item
+        T.b[1] = T.Coords[1,T.Nodes[1,item]]
+        T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
+    end    
+end
+
 function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int)
     if T.citem != item
         T.citem = item
@@ -73,6 +81,10 @@ function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Triangle2D, Parallelo
     x[2] = T.A[2,1]*xref[1] + T.A[2,2]*xref[2] + T.b[2]
 end
 
+
+function eval!(x::Vector, T::L2GTransformer{<:Real,<:Edge1D,Cartesian1D}, xref)
+    x[1] = T.A[1,1]*xref[1] + T.b[1]
+end
 
 function eval!(x::Vector, T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, xref)
     x[1] = T.A[1,1]*xref[1] + T.b[1]

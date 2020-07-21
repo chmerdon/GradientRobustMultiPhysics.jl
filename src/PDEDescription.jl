@@ -31,7 +31,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Create empty PDEDEscription for a specified number of unknowns.
+Create empty PDEDEscription with no unknowns.
 """
 function PDEDescription(name)
     return PDEDescription(name, 0, 0, 0)

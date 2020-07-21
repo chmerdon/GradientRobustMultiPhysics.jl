@@ -200,7 +200,11 @@ function L2BestapproximationProblem(
     add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents)))
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [uexact], dimension, ncomponents; bonus_quadorder = bonus_quadorder))
     if length(bestapprox_boundary_regions) > 0
-        add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
+        if dimension == 1 # in 1D Dirichlet boundary can be interpolated
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
+        else
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
+        end 
     end
 
     return Problem
@@ -231,11 +235,15 @@ function H1BestapproximationProblem(
     bestapprox_boundary_regions = [])
 
     # generate empty PDEDescription for one unknown
-    Problem = PDEDescription("L2-Bestapproximation problem", 1, [ncomponents], dimension)
+    Problem = PDEDescription("H1-Bestapproximation problem", 1, [ncomponents], dimension)
     add_operator!(Problem, [1,1], LaplaceOperator(1.0,dimension,ncomponents))
     add_rhsdata!(Problem, 1, RhsOperator(Gradient, [exact_function_gradient], dimension, ncomponents*dimension; bonus_quadorder = bonus_quadorder))
     if length(bestapprox_boundary_regions) > 0
-        add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = exact_function_boundary, bonus_quadorder = bonus_quadorder_boundary)
+        if dimension == 1 # in 1D Dirichlet boundary can be interpolated
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = exact_function_boundary, bonus_quadorder = bonus_quadorder_boundary)
+        else
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = exact_function_boundary, bonus_quadorder = bonus_quadorder_boundary)
+        end
     else
         add_constraint!(Problem, FixedIntegralMean(0.0))
     end

@@ -28,7 +28,7 @@ Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_
 show(Problem)
 ```
 
-To discretise, let us choose some lowest-order Raviart-Thomas finite element space. (You can also try and replace FEType by the vector-valued P1 element FEType = H1P2{2,2})
+To discretise, let us choose some lowest-order Raviart-Thomas finite element space. (You can also try and replace FEType by the vector-valued P1 element FEType = H1P1{2})
 
 ```@example EXAMPLE_Minimal
 FEType = HDIVRT0{2}

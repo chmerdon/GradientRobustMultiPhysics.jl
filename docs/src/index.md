@@ -1,12 +1,22 @@
 # GradientRobustMultiPhysics.jl
 
-This package offers finite element methods for multiphysics problems in Julia that focus on the preservation of structural and qualitative properties, in particular the gradient-robustness property for the discretisation of constrained vector-valued quantities (like nearly incompressible flows) and coupled processes. The code therefore offers several classical and novel non-standard finite element discretisations to play and compare with in these applications and a toolkit to setup multi-physics problems by defining PDE systems and fixed-point iterations to solve them.
+This package offers finite element methods for multiphysics problems in Julia that focus on the preservation of structural and qualitative properties, in particular the gradient-robustness property for the discretisation of (nearly) incompressible flows and resulting qualitative properties in coupled processes. The code therefore offers several classical and novel non-standard finite element discretisations to play and compare with in these applications and a toolkit to setup multi-physics problems by defining PDE systems and fixed-point iterations to solve them.
 
 The implementation is based on ExtendableGrids.jl that allows to have unstructured grids with mixed element geometries in it, e.g. triangles and quads in the same mesh. Generic quadrature rules of arbitrary order for intervals, triangles and parallelograms are also provided.
 
 !!! note
 
     The focus is (at least currently) not on maxed-out efficiency or parallel computing. Also, this package is still in an early development stage with a limited number of applications and interfaces and features might change (especially for time-dependent PDEs) in future updates.
+
+
+!!! note
+
+    Currently, only 1D and 2D problem can be solved, but 3D is on the todo list for future update.
+
+
+## What is gradient-robustness?
+
+Todo
 
 
 ## Getting started
