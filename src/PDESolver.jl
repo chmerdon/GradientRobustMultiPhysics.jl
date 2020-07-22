@@ -177,7 +177,7 @@ function Base.show(io::IO, SC::SolverConfig)
         println("")
     end
     println("                     (I = Once, T = EachTimeStep, A = Always, N = Never)")
-    println("\n LHS_dependencies = $(SC.LHS_dependencies)")
+    println("\n LHS_dependencies = $(SC.LHS_dependencies)\n")
 
 end
 
@@ -728,6 +728,7 @@ function TimeControlSolver(
     subiterations = "auto",
     start_time::Real = 0,
     verbosity::Int = 0,
+    dt_testfunction_operator = [],
     dirichlet_penalty = 1e60)
 
     # generate solver for time-independent problem
@@ -775,11 +776,17 @@ function TimeControlSolver(
         for j = 1 : length(SC.subiterations[i])
             if (SC.subiterations[i][j] in timedependent_equations) == true
                 # assembly mass matrix into AM block
+                pos = findall(x->x==SC.subiterations[i][j], timedependent_equations)[1]
+                identity_operator = Identity
+                try
+                    identity_operator = dt_testfunction_operator[pos]
+                catch
+                end
                 if verbosity > 1
                     println("\n  Assembling mass matrix for block [$j,$j] of subiteration $i...")
-                    @time assemble!(AM[i][j,j],InitialValues,ReactionOperator(DoNotChangeAction(get_ncomponents(eltype(FEs[SC.subiterations[i][j]])))); verbosity = verbosity - 2)
+                    @time assemble!(AM[i][j,j],InitialValues,ReactionOperator(DoNotChangeAction(get_ncomponents(eltype(FEs[SC.subiterations[i][j]])));identity_operator = identity_operator); verbosity = verbosity - 2)
                 else
-                    assemble!(AM[i][j,j],InitialValues,ReactionOperator(DoNotChangeAction(get_ncomponents(eltype(FEs[SC.subiterations[i][j]])))); verbosity = verbosity - 2)
+                    assemble!(AM[i][j,j],InitialValues,ReactionOperator(DoNotChangeAction(get_ncomponents(eltype(FEs[SC.subiterations[i][j]]))); identity_operator = identity_operator); verbosity = verbosity - 2)
                 end
             end
         end
@@ -825,7 +832,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     x = TCS.x
     X = TCS.X
 
-    if SC.verbosity > 1
+    if SC.verbosity > 2
         println("\n\n\n  Entering timestep $(TCS.cstep)...")
     end
 
@@ -836,32 +843,32 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     l = 0
     for s = 1 : nsubiterations
 
-        if SC.verbosity > 1
+        if SC.verbosity > 2
             println("\n\n\n  Entering subiteration $s...")
         end
         # add change in mass matrix to diagonal blocks if needed
         for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
             if (AssemblyEachTimeStep <: SC.LHS_AssemblyTriggers[d,d]) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
-                if SC.verbosity > 1
+                if SC.verbosity > 2
                     println("  Adding mass matrix to block [$k,$k] of subiteration $s")
                 end
                 addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
             else
                 if (TCS.last_timestep != timestep) # if block was not reassembled, but timestep changed
-                    if SC.verbosity > 1
+                    if SC.verbosity > 2
                         println("  Adding mass matrix change to block [$k,$k] of subiteration $s")
                     end
                     addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
                 end
             end
             if  (AssemblyEachTimeStep <: SC.RHS_AssemblyTriggers[d]) || TCS.last_timestep == 0 # if rhs block was reassembled at the end of the last iteration
-                if SC.verbosity > 1
+                if SC.verbosity > 2
                     println("  Adding time derivative to rhs block [$k] of subiteration $s")
                 end
                 addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
             else
-                if SC.verbosity > 1
+                if SC.verbosity > 2
                     println("  Adding time derivative change to rhs block [$k] of subiteration $s")
                 end
                 addblock_matmul!(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
@@ -912,7 +919,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         end
 
         # SOLVE
-        if SC.verbosity > 0
+        if SC.verbosity > 1
             println("\n  Solving equation(s) $(SC.subiterations[s])")
             @time x[s].entries[:] = A[s].entries\b[s].entries
             residual = A[s].entries*x[s].entries - b[s].entries
@@ -924,7 +931,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                     end
                 end
             end
-            if SC.verbosity > 0
+            if SC.verbosity > 1
                 println("    ... residual = $(norm(residual))")
             end
         else
@@ -942,7 +949,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             l += length(X[SC.subiterations[s][j]])
         end
         #change[s] /= l^4*timestep^2
-        if SC.verbosity > 0
+        if SC.verbosity > 1
             println("    ... change = $(sqrt(change[s]))")
         end
 

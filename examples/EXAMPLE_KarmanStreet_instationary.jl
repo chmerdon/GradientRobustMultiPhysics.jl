@@ -34,15 +34,15 @@ function main()
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element
     #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
+    FETypes = [H1BR{2}, L2P0{1}]; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel gradient-robust
     #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     # solver parameters
     timestep = 1 // 10
-    finaltime = 8
+    finaltime = 10
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
     plot_every_nth_step = 10 #
-    verbosity = 0 # deepness of messaging (the larger, the more)
+    verbosity = 1 # deepness of messaging (the larger, the more)
 
     #####################################################################################    
     #####################################################################################
@@ -54,7 +54,7 @@ function main()
 
     if reconstruct
         # apply reconstruction operator
-        StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}})
+        StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = testfunction_operator)
     end
     # store Laplacian to avoid reassembly in each iteration
     StokesProblem.LHSOperators[1,1][1].store_operator = true
@@ -65,20 +65,15 @@ function main()
     FESpacePressure = FESpace{FETypes[2]}(xgrid)
     Solution = FEVector{Float64}("velocity",FESpaceVelocity)
     append!(Solution,"pressure",FESpacePressure)
+    show(Solution)
 
     # plot triangulation
     PyPlot.figure(1)
     ExtendableGrids.plot(xgrid, Plotter = PyPlot)
     nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
-    nodevals[1] = 1e-16
-    PyPlot.figure(2)
-    ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot)
-    PyPlot.figure(3)
-    ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot)
-
 
     # generate time-dependent solver
-    TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], verbosity = verbosity)
+    TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity)
     
     # time loop
     change = 0.0
@@ -90,7 +85,7 @@ function main()
         @printf("  change = %.4e \n",change)
 
         # update solution plot
-        if iteration % plot_every_nth_step == 1
+        if (iteration % plot_every_nth_step == 1) || plot_every_nth_step == 1
             println("  updating plots...")
             nodevalues!(nodevals,Solution[1],FESpaceVelocity)
             PyPlot.figure(2)
@@ -101,7 +96,6 @@ function main()
         end
     
     end
-
 
     # show final solution
     nodevalues!(nodevals,Solution[1],FESpaceVelocity)
