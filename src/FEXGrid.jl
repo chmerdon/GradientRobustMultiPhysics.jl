@@ -440,8 +440,25 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
                 break
             end
             if face == nfaces
-                println("! WARNING ! did not find maching face for bface $bface")
-                println("(Maybe BFaceNodes are not in anti-clockwise order?)")
+                #println("! WARNING ! did not find maching face for bface $bface (trying again with backward order)")
+                current_bface = current_bface[end:-1:1]
+                for face = 1 : nfaces
+                    match = true
+                    for k = 1 : nodes_per_bface
+                        if current_bface[k] != xFaceNodes[k,face]
+                            match = false
+                            break
+                        end
+                    end        
+                    if match == true
+                        xBFaces[bface] = face
+                        xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
+                        break
+                    end
+                    if face == nfaces
+                        println("! WARNING ! still did not find maching face for bface $bface")
+                    end
+                end
             end
         end
     end
