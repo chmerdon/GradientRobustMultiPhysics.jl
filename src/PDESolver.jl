@@ -820,7 +820,6 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
     # update timestep counter
     TCS.cstep += 1
-    TCS.last_timestep = timestep
     TCS.ctime += timestep
 
     # unpack
@@ -878,17 +877,14 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         flush!(A[s].entries)
 
         # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA
-        fixed_dofs = []
         for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
             if any(PDE.BoundaryOperators[d].timedependent) == true
                 if SC.verbosity > 1
                     println("\n  Assembling boundary data for block [$d] at time $(TCS.ctime)...")
-                    @time new_fixed_dofs = boundarydata!(X[k],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
-                    append!(fixed_dofs, new_fixed_dofs)
+                    @time boundarydata!(X[d],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
                 else
-                    new_fixed_dofs = boundarydata!(X[k],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
-                    append!(fixed_dofs, new_fixed_dofs)
+                    boundarydata!(X[d],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
                 end    
             else
                 # nothing todo as all boundary data for block d is time-independent
@@ -957,6 +953,8 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         next_eq = (s == nsubiterations) ? 1 : s+1
         assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
     end
+    
+    TCS.last_timestep = timestep
 
     return sqrt(sum(change))
 end

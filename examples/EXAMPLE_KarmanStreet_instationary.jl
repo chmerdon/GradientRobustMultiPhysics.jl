@@ -26,9 +26,10 @@ function main()
 
     barycentric_refinement = false;
     reconstruct = false
+    testfunction_operator = Identity
 
     # problem parameters
-    nonlinear = true
+    nonlinear = true 
 
     # choose finite element type
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -40,7 +41,6 @@ function main()
     # solver parameters
     timestep = 1 // 10
     finaltime = 10
-    maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
     plot_every_nth_step = 10 #
     verbosity = 1 # deepness of messaging (the larger, the more)
 
@@ -52,7 +52,7 @@ function main()
     add_boundarydata!(StokesProblem, 1, [1,3,5], HomogeneousDirichletBoundary)
     add_boundarydata!(StokesProblem, 1, [4], BestapproxDirichletBoundary; data = bnd_inlet!, bonus_quadorder = 2, timedependent = true)
 
-    if reconstruct
+    if reconstruct && nonlinear
         # apply reconstruction operator
         StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = testfunction_operator)
     end
