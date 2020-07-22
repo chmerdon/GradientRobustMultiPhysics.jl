@@ -91,6 +91,15 @@ function eval!(x::Vector, T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, xref)
     x[2] = T.A[2,1]*xref[1] + T.b[2]
 end
 
+# EDGE1D/CARTESIAN1D map derivative
+# x = a*xref + b
+# Dxref/dx = a^{-1} = |E|^{-1}
+function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Edge1D,Cartesian1D}, xref)
+    # transposed inverse of A
+    det = T.ItemVolumes[T.citem]
+    M[1,1] = 1.0/det
+    return det
+end
 # EDGE1D/CARTESIAN2D (tangential) map derivative
 # x = A*xref + b
 # Dxref/dx = A*tangent^{-1} = |E|^{-1}

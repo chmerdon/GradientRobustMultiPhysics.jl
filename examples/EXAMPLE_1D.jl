@@ -24,7 +24,7 @@ function main()
     
     # Define Bestapproximation problem via PDETooles_PDEProtoTypes
     # (actually in 1D interpolation and L2-bestapproximation coincide, but nevertheless...)
-    Problem = L2BestapproximationProblem(exact_function!, 1, 1; bestapprox_boundary_regions = [1,2], bonus_quadorder = 2)
+    Problem = L2BestapproximationProblem(exact_function!,1, 1; bestapprox_boundary_regions = [1,2], bonus_quadorder = 2)
     show(Problem)
 
     # choose some finite element space
@@ -58,7 +58,7 @@ function main()
     nodevalues!(nodevals_fine,Interpolation[1],FES)
     ExtendableGrids.plot(xgrid, nodevals_fine[1,:]; Plotter = PyPlot, clear = false, color = (1,0,0), label = "exact")
     PyPlot.legend()
-    println("\nL2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
+    println("L2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
 end
 
 main()

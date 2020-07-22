@@ -174,7 +174,7 @@ function get_generic_quadrature_Gauss(order::Int)
     w = .5 .* w';
     xref = Array{Array{Float64,1}}(undef,length(r))
     for j = 1 : length(r)
-        xref[j] = [r[j],1-r[j]];
+        xref[j] = [r[j]];
     end
     
     return xref, w[:]
