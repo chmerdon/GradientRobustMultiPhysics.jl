@@ -26,7 +26,7 @@ makedocs(
         "Examples" => [
             "Commented Overview"  => "examples/overview.md",
             "L2-Bestapproximation" => "examples/EXAMPLE_L2Best.md",
-            "Div-Preserving L2-Bestapprox" => "examples/EXAMPLE_L2BestDiv.md",
+            "Div-Preserving L2-Bestapproximation" => "examples/EXAMPLE_L2BestDiv.md",
             "LinElast: CookMembrane" => "examples/EXAMPLE_CookMembrane.md",
         ]
     ]

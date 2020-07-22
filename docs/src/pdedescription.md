@@ -21,7 +21,12 @@ Order   = [:type, :function]
 
 ## Function Operators
 
-FunctionOperators are building blocks for the weak form and define the operations that should be applied to the trial and test functions inside some PDEOperator. Below is a list of available FunctionOperators. Especially note the Reconstruction...-Operators that allow to evaluate some reconstructed version of a trial or test function and so allows e.g. gradient-robust discretisations with classical ansatz spaces.
+FunctionOperators are building blocks for the weak form and define the operations that should be applied to the trial and test functions inside some PDEOperator. Below is a list of available FunctionOperators. 
+
+!!! note
+
+    Especially note the operators ReconstructionIdentity{FEType} and ReconstructionDivergence{FEType} that allow to evaluate some reconstructed version of a vector-valued testfunction and so allows e.g. gradient-robust discretisations with classical non divergence-conforming ansatz spaces. So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
+
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
@@ -43,7 +48,7 @@ Order   = [:type, :function]
 
 ## Boundary Data
 
-BoundaryOperators carry the boundary data for each unknown. Each regions can have a different AbstractBoundaryType. 
+BoundaryOperators carry the boundary data for each unknown. Each regions can have a different AbstractBoundaryType and an associated data function that satisfies the interface function data!(result,x) or function data!(result,x,t) if it is also time-dependent.
 
 So far only DirichletBoundaryData is possible, as most other types can be implemented differently:
 - NeumannBoundary can be implemented as a RhsOperator with on_boundary = true
