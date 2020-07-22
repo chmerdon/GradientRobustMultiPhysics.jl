@@ -194,7 +194,6 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[CellGeometries] = Array{DataType,1}(xCellGeometries)
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
-    Base.show()
     return xgrid
 end
 
