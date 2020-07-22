@@ -112,8 +112,8 @@ $(TYPEDSIGNATURES)
 
 Adds the given boundary data to the at specified position in the BoundaryOperator of the PDEDEscription.
 """
-function add_boundarydata!(PDE::PDEDescription,position::Int,regions, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
-    Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data, bonus_quadorder = bonus_quadorder)
+function add_boundarydata!(PDE::PDEDescription,position::Int,regions, btype::Type{<:AbstractBoundaryType}; timedependent::Bool = false, data = Nothing, bonus_quadorder::Int = 0)
+    Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data, timedependent = timedependent, bonus_quadorder = bonus_quadorder)
 end
 
 

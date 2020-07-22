@@ -31,6 +31,7 @@ so far only DirichletBoundary types (see above)
 struct BoundaryOperator <: AbstractPDEOperator
     regions4boundarytype :: Dict{Type{<:AbstractBoundaryType},Array{Int,1}}
     data4bregion :: Array{Any,1}
+    timedependent :: Array{Bool,1}
     quadorder4bregion :: Array{Int,1}
     xdim :: Int
     ncomponents :: Int
@@ -39,36 +40,28 @@ end
 function BoundaryOperator(xdim::Int, ncomponents::Int = 1)
     regions4boundarytype = Dict{Type{<:AbstractBoundaryType},Array{Int,1}}()
     quadorder4bregion = zeros(Int,0)
-    return BoundaryOperator(regions4boundarytype, [], quadorder4bregion, xdim, ncomponents)
+    timedependent = Array{Bool,1}([])
+    return BoundaryOperator(regions4boundarytype, [], timedependent, quadorder4bregion, xdim, ncomponents)
 end
 
-function BoundaryOperator(boundarytype4bregion::Array{DataType,1}, data4region, xdim::Int, ncomponents::Int = 1; bonus_quadorder::Int = 0)
-    regions4boundarytype = Dict{Type{<:AbstractBoundaryType},Array{Int,1}}()
-    quadorder4bregion = ones(Int,length(boundarytype4bregion))*bonus_quadorder
-    for j = 1 : length(boundarytype4bregion)
-        btype = boundarytype4bregion[j]
-        regions4boundarytype[btype]=push!(get(regions4boundarytype, btype, []),j)
-        
-    end
-    return BoundaryOperator(regions4boundarytype, data4region, quadorder4bregion, xdim, ncomponents)
-end
-
-function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
+function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; timedependent::Bool = false, data = Nothing, bonus_quadorder::Int = 0)
     O.regions4boundarytype[btype]=push!(get(O.regions4boundarytype, btype, []),region)
     while length(O.data4bregion) < region
         push!(O.data4bregion, Nothing)
     end
     while length(O.quadorder4bregion) < region
         push!(O.quadorder4bregion, 0)
+        push!(O.timedependent, false)
     end
     O.quadorder4bregion[region] = bonus_quadorder
     O.data4bregion[region] = data
+    O.timedependent[region] = timedependent
 end
 
 
-function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
+function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; timedependent::Bool = false, data = Nothing, bonus_quadorder::Int = 0)
     for j = 1 : length(regions)
-        append!(O,regions[j], btype; data = data, bonus_quadorder = bonus_quadorder)
+        append!(O,regions[j], btype; timedependent = timedependent, data = data, bonus_quadorder = bonus_quadorder)
     end
 end
 
@@ -81,6 +74,7 @@ end
 function boundarydata!(
     Target::FEVectorBlock,
     O::BoundaryOperator;
+    time = 0,
     dirichlet_penalty::Float64 = 1e60,
     verbosity::Int = 0)
     fixed_dofs = []
@@ -111,7 +105,15 @@ function boundarydata!(
                 end
             end    
             bregiondofs = Base.unique(bregiondofs)
-            interpolate!(Target, O.data4bregion[InterDirichletBoundaryRegions[r]]; dofs = bregiondofs)
+            bregion = InterDirichletBoundaryRegions[r]
+            if O.timedependent[bregion] == true
+                    function bregion_data_at_time(result, input)
+                        O.data4bregion[bregion](temp,x,time)
+                    end   
+                interpolate!(Target, bregion_data_at_time; dofs = bregiondofs)
+            else
+                interpolate!(Target, O.data4bregion[bregion]; dofs = bregiondofs)
+            end
             append!(fixed_dofs,bregiondofs)
             bregiondofs = []
         end   
@@ -181,7 +183,11 @@ function boundarydata!(
             function bnd_rhs_function_h1()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, region)
-                    O.data4bregion[region](temp,x)
+                    if O.timedependent[region] == true
+                        O.data4bregion[region](temp,x,time)
+                    else
+                        O.data4bregion[region](temp,x)
+                    end
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j]*input[j] 
@@ -199,7 +205,11 @@ function boundarydata!(
             function bnd_rhs_function_hdiv()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, bface)
-                    O.data4bregion[xBFaceRegions[bface]](temp,x)
+                    if O.timedependent[xBFaceRegions[bface]] == true
+                        O.data4bregion[xBFaceRegions[bface]](temp,x,time)
+                    else
+                        O.data4bregion[xBFaceRegions[bface]](temp,x)
+                    end
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]

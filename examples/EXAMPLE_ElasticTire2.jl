@@ -46,7 +46,7 @@ function main()
     #####################################################################################    
     #####################################################################################
 
-    # start froman empty PDEDescription for two globally defined unknowns
+    # start from an empty PDEDescription for two globally defined unknowns
     # unknonw 1 : displacement for rest
     # unknown 2 : displacement for spokes
     LinElastProblem = PDEDescription("linear elasticity problem", 2, [2,2], 2)

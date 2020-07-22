@@ -746,7 +746,7 @@ function TimeControlSolver(
         println("\nPREPARING TIME-DEPDENDENT SOLVER FOR PDE")
         println("========================================")
         println("    name = $(PDE.name)")
-        show(SC)
+        Base.show(SC)
     end
 
     # initial assembly
@@ -813,6 +813,8 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
     # update timestep counter
     TCS.cstep += 1
+    TCS.last_timestep = timestep
+    TCS.ctime += timestep
 
     # unpack
     SC = TCS.SC
@@ -868,7 +870,23 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         end
         flush!(A[s].entries)
 
-        # TODO: update boundary data
+        # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA
+        fixed_dofs = []
+        for k = 1 : length(SC.subiterations[s])
+            d = SC.subiterations[s][k]
+            if any(PDE.BoundaryOperators[d].timedependent) == true
+                if SC.verbosity > 1
+                    println("\n  Assembling boundary data for block [$d] at time $(TCS.ctime)...")
+                    @time new_fixed_dofs = boundarydata!(X[k],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
+                    append!(fixed_dofs, new_fixed_dofs)
+                else
+                    new_fixed_dofs = boundarydata!(X[k],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
+                    append!(fixed_dofs, new_fixed_dofs)
+                end    
+            else
+                # nothing todo as all boundary data for block d is time-independent
+            end
+        end    
 
         # PENALIZE FIXED DOFS
         # (from boundary conditions and constraints)
@@ -881,7 +899,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             #    show(additional_fixed_dofs)
             #end
 
-
+        eqdof = 0
         eqoffsets = TCS.eqoffsets
         for j = 1 : length(fixed_dofs)
             for eq = 1 : length(SC.subiterations[s])
@@ -897,9 +915,17 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         if SC.verbosity > 0
             println("\n  Solving equation(s) $(SC.subiterations[s])")
             @time x[s].entries[:] = A[s].entries\b[s].entries
-            residual = norm(A[s].entries*x[s].entries - b[s].entries)
+            residual = A[s].entries*x[s].entries - b[s].entries
+            for j = 1 : length(fixed_dofs)
+                for eq = 1 : length(SC.subiterations[s])
+                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
+                        eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+                        residual[eqdof] = 0
+                    end
+                end
+            end
             if SC.verbosity > 0
-                println("    ... residual = $residual")
+                println("    ... residual = $(norm(residual))")
             end
         else
             x[s].entries[:] = A[s].entries\b[s].entries
@@ -924,8 +950,6 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         next_eq = (s == nsubiterations) ? 1 : s+1
         assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
     end
-    TCS.last_timestep = timestep
-    TCS.ctime += timestep
 
     return sqrt(sum(change))
 end
