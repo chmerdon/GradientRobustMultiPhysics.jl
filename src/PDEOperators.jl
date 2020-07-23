@@ -126,6 +126,25 @@ end
 function ReactionOperator(action::AbstractAction; apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
     return AbstractBilinearForm("Reaction",identity_operator, identity_operator, action; apply_action_to = apply_action_to, regions = regions)
 end
+function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_quadorder::Int = 0, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+    function convection_function_func() # dot(convection!, input=Gradient)
+        convection_vector = zeros(Float64,xdim)
+        function closure(result, input, x)
+            # evaluate beta
+            beta(convection_vector,x)
+            # compute (beta*grad)u
+            for j = 1 : ncomponents
+                result[j] = 0.0
+                for k = 1 : xdim
+                    result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                end
+            end
+        end    
+    end    
+    convection_action = XFunctionAction(convection_function_func(), ncomponents, xdim; bonus_quadorder = bonus_quadorder)
+    return AbstractBilinearForm("(a(=XFunction) * Gradient) u * v", Gradient,testfunction_operator, convection_action; regions = regions)
+end
+
 
 
 
@@ -145,44 +164,30 @@ function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator})
     return LagrangeMultiplier("LagrangeMultiplier($operator)",operator)
 end
 
+
+
 """
 $(TYPEDEF)
 
-convection operator (beta * grad) u * testfunction_operator(v) where beta can be either a given function (e.g. for Oseen problem) or one of the unknowns (e.g. u for Navier-Stokes)
+abstract trilinearform operator that assembles
+- c(a,u,v) = int_regions action(operator1(a) * operator2(u))*operator3(v)
+
+where a is one of the other unknowns of the PDEsystem
 
 can only be applied in PDE LHS
 """
-struct ConvectionOperator <: AbstractPDEOperatorLHS
+mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
-    action::AbstractAction                                      #      ----ACTION-----
-    beta_from::Int                                              # e.g. (beta * grad) u * testfunction_operator(v)
-    testfunction_operator::Type{<:AbstractFunctionOperator}     # beta_from = 0 if beta is encoded in action
-                                                                # =beta_from  k if beta is from k-th PDE unknown (=> fixpoint iteration)
+    operator1::Type{<:AbstractFunctionOperator}
+    operator2::Type{<:AbstractFunctionOperator}
+    operator3::Type{<:AbstractFunctionOperator}
+    a_from::Int
+    action::AbstractAction # is applied to argument 1 and 2, i.e input consists of operator1(a),operator2(u)
     regions::Array{Int,1}
 end
-
-function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_quadorder::Int = 0, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
-    function convection_function_func() # dot(convection!, input=Gradient)
-        convection_vector = zeros(Float64,xdim)
-        function closure(result, input, x)
-            # evaluate beta
-            beta(convection_vector,x)
-            # compute (beta*grad)u
-            for j = 1 : ncomponents
-                result[j] = 0.0
-                for k = 1 : xdim
-                    result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                end
-            end
-        end    
-    end    
-    convection_action = XFunctionAction(convection_function_func(), ncomponents, xdim; bonus_quadorder = bonus_quadorder)
-    return ConvectionOperator("Convection(XFunction)",convection_action,0,testfunction_operator, regions)
-end
-
 function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
-    # input[1:ncomponents] = operator1(beta)
+    # input[1:ncomponents] = operator1(a)
     # input[ncomponents+1:length(input)] = u
     function convection_function_fe()
         function closure(result, input)
@@ -195,7 +200,7 @@ function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction
         end    
     end    
     convection_action = FunctionAction(convection_function_fe(), ncomponents)
-    return ConvectionOperator("Convection(Component[$beta])",convection_action,beta,testfunction_operator, regions)
+    return AbstractTrilinearForm{AssemblyTypeCELL}("(a(=unknown $beta) * Gradient) u * v",Identity,Gradient,testfunction_operator,beta ,convection_action, regions)
 end
 
 """
@@ -271,13 +276,29 @@ end
 """
 $(TYPEDEF)
 
-evaluation of a bilineaform where the second argument is fixed by given FEVectorBlock
+evaluation of a bilinearform where the second argument is fixed by given FEVectorBlock
 
 can only be applied in PDE RHS
 """
 struct BLFeval <: AbstractPDEOperatorRHS
     BLF::AbstractBilinearForm
     Data::FEVectorBlock
+    factor::Real
+end
+
+
+"""
+$(TYPEDEF)
+
+evaluation of a trilinearform where thefirst and  second argument is fixed by given FEVectorBlocks
+
+can only be applied in PDE RHS
+"""
+struct TLFeval <: AbstractPDEOperatorRHS
+    TLF::AbstractTrilinearForm
+    Data1::FEVectorBlock
+    Data2::FEVectorBlock
+    factor::Real
 end
 
 
@@ -329,8 +350,8 @@ end
 function check_PDEoperator(O::AbstractPDEOperator)
     return false, false
 end
-function check_PDEoperator(O::ConvectionOperator)
-    return O.beta_from != 0, false
+function check_PDEoperator(O::AbstractTrilinearForm)
+    return true, false
 end
 function check_PDEoperator(O::FVUpwindDivergenceOperator)
     return O.beta_from != 0, false
@@ -339,12 +360,17 @@ function check_PDEoperator(O::CopyOperator)
     return true, true
 end
 
+# check if operator also depends on arg (additional to the argument relative to position in PDEDescription)
 function check_dependency(O::AbstractPDEOperator, arg::Int)
     return false
 end
 
-function check_dependency(O::Union{ConvectionOperator,FVUpwindDivergenceOperator}, arg::Int)
+function check_dependency(O::FVUpwindDivergenceOperator, arg::Int)
     return O.beta_from == arg
+end
+
+function check_dependency(O::AbstractTrilinearForm, arg::Int)
+    return O.a_from == arg
 end
 
 
@@ -463,7 +489,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilin
         else
             BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
         end
-        assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+        assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity, transposed_assembly = true)
     end
 end
 
@@ -484,7 +510,16 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
 end
 
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0)
+
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)
+    FE1 = O.Data1.FES
+    FE2 = O.Data2.FES
+    FE3 = b.FES
+    TLF = TrilinearForm(Float64, AssemblyTypeCELL, FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
+    assemble!(b, O.Data1, O.Data2, TLF; factor = factor * O.factor, verbosity = verbosity)
+end
+
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)
     if O.BLF.store_operator == true
         addblock_matmul!(b,O.BLF.storage,O.Data; factor = factor)
     else
@@ -495,22 +530,16 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; fact
         else
             BLF = BilinearForm(Float64, AssemblyTypeCELL, FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
         end
-        assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor, verbosity = verbosity)
+        assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity)
     end
 end
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::ConvectionOperator; time::Real = 0, verbosity::Int = 0)
-    if O.beta_from == 0
-        FE1 = A.FESX
-        FE2 = A.FESY
-        ConvectionForm = BilinearForm(Float64, AssemblyTypeCELL, FE1, FE2, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        assemble!(A, ConvectionForm; verbosity = verbosity, transposed_assembly = true)
-    else
-        FE1 = A.FESX
-        FE2 = A.FESY
-        ConvectionForm = TrilinearForm(Float64, AssemblyTypeCELL, FE1, FE1, FE2, O.testfunction_operator, Gradient, O.testfunction_operator, O.action; regions = O.regions)  
-        assemble!(A, ConvectionForm, CurrentSolution[O.beta_from]; verbosity = verbosity, transposed_assembly = true)
-    end
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrilinearForm; time::Real = 0, verbosity::Int = 0)
+    FE1 = CurrentSolution[O.a_from].FES
+    FE2 = A.FESX
+    FE3 = A.FESY
+    TLF = TrilinearForm(Float64, AssemblyTypeCELL, FE1, FE2, FE3, O.operator1, O.operator2, O.operator3, O.action; regions = O.regions)  
+    assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, transposed_assembly = true)
 end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; time::Real = 0, verbosity::Int = 0, At::FEMatrixBlock)

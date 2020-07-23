@@ -126,11 +126,14 @@ export ReactionOperator
 export ConvectionOperator
 export LagrangeMultiplier
 
+export AbstractTrilinearForm
+
 export FVUpwindDivergenceOperator
 export DiagonalOperator, CopyOperator
 
 export RhsOperator
 export BLFeval
+export TLFeval
 
 
 include("PDEBoundaryData.jl")

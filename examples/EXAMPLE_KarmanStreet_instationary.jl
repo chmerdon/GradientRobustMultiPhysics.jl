@@ -29,7 +29,8 @@ function main()
     testfunction_operator = Identity
 
     # problem parameters
-    nonlinear = true 
+    nonlinear = true    # add nonlinear convection term
+    IMEX = true         # beware: may need smaller timestep !
 
     # choose finite element type
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -39,7 +40,7 @@ function main()
     #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     # solver parameters
-    timestep = 1 // 10
+    timestep = 1 // 50
     finaltime = 10
     plot_every_nth_step = 10 #
     verbosity = 1 # deepness of messaging (the larger, the more)
@@ -48,24 +49,31 @@ function main()
     #####################################################################################
 
     # load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear, no_pressure_constraint = true)
+    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
     add_boundarydata!(StokesProblem, 1, [1,3,5], HomogeneousDirichletBoundary)
     add_boundarydata!(StokesProblem, 1, [4], BestapproxDirichletBoundary; data = bnd_inlet!, bonus_quadorder = 2, timedependent = true)
-
-    if reconstruct && nonlinear
-        # apply reconstruction operator
-        StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = testfunction_operator)
-    end
-    # store Laplacian to avoid reassembly in each iteration
-    StokesProblem.LHSOperators[1,1][1].store_operator = true
-    Base.show(StokesProblem)
 
     # generate FESpaces
     FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
     FESpacePressure = FESpace{FETypes[2]}(xgrid)
     Solution = FEVector{Float64}("velocity",FESpaceVelocity)
     append!(Solution,"pressure",FESpacePressure)
-    show(Solution)
+
+    # add IMEX version of nonlinear term
+    if nonlinear
+        if IMEX
+            add_rhsdata!(StokesProblem, 1, TLFeval(ConvectionOperator(1, 2, 2; testfunction_operator = testfunction_operator), Solution[1], Solution[1],-1))
+        else
+            # store Laplacian to avoid reassembly in each iteration
+            StokesProblem.LHSOperators[1,1][1].store_operator = true
+            add_operator!(StokesProblem, [1,1], ConvectionOperator(1, 2, 2; testfunction_operator = testfunction_operator))
+        end
+    end
+
+
+    # show problem and solution structure
+    Base.show(StokesProblem)
+    Base.show(Solution)
 
     # plot triangulation
     PyPlot.figure(1)
