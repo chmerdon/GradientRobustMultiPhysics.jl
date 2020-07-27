@@ -41,7 +41,7 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     xFaceNormals::Array{Float64,2}        # link to coefficient values
     xFaceVolumes::Array{Float64,1}        # link to coefficient values
     xCellFaces::VariableTargetAdjacency   # link to coefficient indices
-    xCellSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
+    xCellFaceSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
 end
 
 function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmap_needed = true) where {FEType <:AbstractFiniteElement}

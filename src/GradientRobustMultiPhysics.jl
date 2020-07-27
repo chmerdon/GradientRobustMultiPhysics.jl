@@ -24,10 +24,11 @@ export L2GTransformer, update!, eval!, mapderiv!, piola!
 
 
 include("FEXGrid.jl")
-export CellFaces, CellSigns, CellVolumes
+export CellFaces, CellEdges, CellFaceSigns, CellVolumes
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
+export EdgeNodes, EdgeGeometries, EdgeVolumes
 export BFaces, BFaceCellPos, BFaceVolumes
-export nfaces_per_cell, facetype_of_cellface
+export nfaces_for_geometry, facetype_of_cellface
 export uniqueEG
 
 

@@ -26,7 +26,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIV
     FES.ndofs = nfaces
 
     # register coefficients
-    FES.xCellSigns = FES.xgrid[CellSigns]
+    FES.xCellFaceSigns = FES.xgrid[CellFaceSigns]
 
     # generate dofmaps
     if dofmap_needed
@@ -97,24 +97,24 @@ end
 
 function get_coefficients_on_cell!(coefficients, FE::FESpace{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)
     # multiplication with normal vectors
-    coefficients[1,1] = FE.xCellSigns[1,cell];
-    coefficients[2,1] = FE.xCellSigns[1,cell];
-    coefficients[1,2] = FE.xCellSigns[2,cell];
-    coefficients[2,2] = FE.xCellSigns[2,cell];
-    coefficients[1,3] = FE.xCellSigns[3,cell];
-    coefficients[2,3] = FE.xCellSigns[3,cell];
+    coefficients[1,1] = FE.xCellFaceSigns[1,cell];
+    coefficients[2,1] = FE.xCellFaceSigns[1,cell];
+    coefficients[1,2] = FE.xCellFaceSigns[2,cell];
+    coefficients[2,2] = FE.xCellFaceSigns[2,cell];
+    coefficients[1,3] = FE.xCellFaceSigns[3,cell];
+    coefficients[2,3] = FE.xCellFaceSigns[3,cell];
 end    
 function get_coefficients_on_cell!(coefficients, FE::FESpace{HDIVRT0{2}}, ::Type{<:Quadrilateral2D}, cell::Int,)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
-    coefficients[1,1] = FE.xCellSigns[1,cell];
-    coefficients[2,1] = FE.xCellSigns[1,cell];
-    coefficients[1,2] = FE.xCellSigns[2,cell];
-    coefficients[2,2] = FE.xCellSigns[2,cell];
-    coefficients[1,3] = FE.xCellSigns[3,cell];
-    coefficients[2,3] = FE.xCellSigns[3,cell];
-    coefficients[1,4] = FE.xCellSigns[4,cell];
-    coefficients[2,4] = FE.xCellSigns[4,cell];
+    coefficients[1,1] = FE.xCellFaceSigns[1,cell];
+    coefficients[2,1] = FE.xCellFaceSigns[1,cell];
+    coefficients[1,2] = FE.xCellFaceSigns[2,cell];
+    coefficients[2,2] = FE.xCellFaceSigns[2,cell];
+    coefficients[1,3] = FE.xCellFaceSigns[3,cell];
+    coefficients[2,3] = FE.xCellFaceSigns[3,cell];
+    coefficients[1,4] = FE.xCellFaceSigns[4,cell];
+    coefficients[2,4] = FE.xCellFaceSigns[4,cell];
 end   
 
 

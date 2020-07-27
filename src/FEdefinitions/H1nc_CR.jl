@@ -36,7 +36,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1CR
     if dofmap_needed
         xFaceNodes = FES.xgrid[FaceNodes]
         xCellFaces = FES.xgrid[CellFaces]
-        xCellSigns = FES.xgrid[CellSigns]
+        xCellFaceSigns = FES.xgrid[CellFaceSigns]
         xBFaceNodes = FES.xgrid[BFaceNodes]
         xBFaces = FES.xgrid[BFaces]
         ncells = num_sources(xCellFaces)

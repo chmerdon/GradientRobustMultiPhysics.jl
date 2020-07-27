@@ -321,7 +321,7 @@ end
 #           Loop over cell, face of cell
 #
 #               other_cell = other face neighbour cell
-#               if flux := normalflux(F_j) * CellSigns[face,cell] > 0
+#               if flux := normalflux(F_j) * CellFaceSigns[face,cell] > 0
 #                   A(cell,cell) += flux
 #                   A(other_cell,cell) -= flux
 #               else
@@ -412,9 +412,9 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDiver
     xFaceCells = FE1.xgrid[FaceCells]
     xFaceVolumes = FE1.xgrid[FaceVolumes]
     xCellFaces = FE1.xgrid[CellFaces]
-    xCellSigns = FE1.xgrid[CellSigns]
+    xCellFaceSigns = FE1.xgrid[CellFaceSigns]
     nfaces = num_sources(xFaceNodes)
-    ncells = num_sources(xCellSigns)
+    ncells = num_sources(xCellFaceSigns)
     nnodes = num_sources(FE1.xgrid[Coordinates])
     
     # ensure that flux field is long enough
@@ -440,7 +440,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDiver
             if other_cell == cell
                 other_cell = xFaceCells[2,face]
             end
-            flux = - O.fluxes[face] * xCellSigns[cf,cell]
+            flux = - O.fluxes[face] * xCellFaceSigns[cf,cell]
             if (other_cell > 0) 
                 flux *= 1 // 2
             end       

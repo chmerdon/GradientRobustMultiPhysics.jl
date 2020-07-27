@@ -20,7 +20,7 @@ function testgrid_cube_uniform()
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
-    xBFaceNodes=Array{Int32,2}([1 2 5 3; 1 2 4 6; 2 5 8 6;3 5 8 7;3 1 4 7;4 6 8 7]')
+    xBFaceNodes=Array{Int32,2}([1 2 5 3; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
     xgrid[BFaceGeometries]=VectorOfConstants(Parallelogram2D,nbfaces)

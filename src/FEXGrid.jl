@@ -28,7 +28,7 @@ abstract type EdgeNodes <: AbstractGridAdjacency end
 abstract type FaceNodes <: AbstractGridAdjacency end
 abstract type CellEdges <: AbstractGridAdjacency end
 abstract type CellFaces <: AbstractGridAdjacency end
-abstract type CellSigns <: AbstractGridAdjacency end
+abstract type CellFaceSigns <: AbstractGridAdjacency end
 abstract type CellVolumes <: AbstractGridFloatArray1D end
 abstract type EdgeVolumes <: AbstractGridFloatArray1D end
 abstract type FaceVolumes <: AbstractGridFloatArray1D end
@@ -36,6 +36,7 @@ abstract type EdgeCells <: AbstractGridAdjacency end
 abstract type FaceCells <: AbstractGridAdjacency end
 abstract type EdgeTangents <: AbstractGridFloatArray2D end
 abstract type FaceNormals <: AbstractGridFloatArray2D end
+abstract type EdgeGeometries <: AbstractElementGeometries end
 abstract type FaceGeometries <: AbstractElementGeometries end
 abstract type FaceRegions <: AbstractElementRegions end
 abstract type BFaces <: AbstractGridIntegerArray1D end
@@ -82,35 +83,40 @@ function uniqueEG(xItemGeometries, xItemRegions, xItemDofs, regions)
     return EG, ndofs4EG
 end
 
+# function that specifies the number of nodes for an AbstractElementGeometry
+nnodes_for_geometry(::Type{<:AbstractElementGeometry0D}) = 1
+nnodes_for_geometry(::Type{<:AbstractElementGeometry1D}) = 2
+nnodes_for_geometry(::Type{<:Triangle2D}) = 3
+nnodes_for_geometry(::Type{<:Quadrilateral2D}) = 4
+nnodes_for_geometry(::Type{<:Tetrahedron3D}) = 4
+nnodes_for_geometry(::Type{<:Parallelepiped3D}) = 8
 
 # functions that specify the number of faces of a celltype
 # (and also the number of edges of a facetype)
-nfaces_per_cell(::Type{<:Edge1D}) = 2
-nfaces_per_cell(::Type{<:Triangle2D}) = 3
-nfaces_per_cell(::Type{<:Tetrahedron3D}) = 4
-nfaces_per_cell(::Type{<:Quadrilateral2D}) = 4
-nfaces_per_cell(::Type{<:Parallelepiped3D}) = 6
+nfaces_for_geometry(::Type{<:AbstractElementGeometry1D}) = 2
+nfaces_for_geometry(::Type{<:Triangle2D}) = 3
+nfaces_for_geometry(::Type{<:Quadrilateral2D}) = 4
+nfaces_for_geometry(::Type{<:Tetrahedron3D}) = 4
+nfaces_for_geometry(::Type{<:Parallelepiped3D}) = 6
+
+# functions that specify the number of edges of a celltype
+# (and also the number of edges of a facetype)
+nedges_for_geometry(::Type{<:AbstractElementGeometry0D}) = 0
+nedges_for_geometry(::Type{<:AbstractElementGeometry1D}) = 0
+nedges_for_geometry(EG::Type{<:AbstractElementGeometry2D}) = nnodes_for_geometry(EG)
+nedges_for_geometry(::Type{<:Tetrahedron3D}) = 6
+nedges_for_geometry(::Type{<:Parallelepiped3D}) = 12
 
 # functions that specify the local enumeration of faces needed in 2D/3D
 face_enum_rule(::Type{<:Edge1D}) = [1; 2]
 face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
 face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
-face_enum_rule(::Type{<:Parallelepiped3D}) = [1 2 5 3; 1 2 4 6; 2 5 8 6;3 5 8 7;3 1 4 7;4 6 8 7]
-
-# functions that specify number of nodes on the k-th cell face
-# why k?: think about ElementTypes that have faces of different nature
-# e.g. a pyramid with rectangular basis and triangular sides
-# this maybe requires a ordering rule for the nodes in the element
-# (e.g. for the pyramid first four nodes for the basis come first)
-nnodes_per_cellface(::Type{<:Edge1D}, k) = 1
-nnodes_per_cellface(::Type{<:Triangle2D}, k) = 2
-nnodes_per_cellface(::Type{<:Tetrahedron3D}, k) = 3
-nnodes_per_cellface(::Type{<:Quadrilateral2D}, k) = 2
-nnodes_per_cellface(::Type{<:Parallelepiped3D}, k) = 4
+face_enum_rule(::Type{<:Parallelepiped3D}) = [1 2 5 3; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]
 
 # functions that specify the facetype of the k-th cellface
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
-facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D #WithParents{P1,P2}
+facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D
+facetype_of_cellface(P1::Type{<:Parallelepiped3D},P2::Type{<:Parallelepiped3D}, k) = Parallelogram2D
 facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D #WithParent{Triangle2D}
 facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D #WithParent{Quadrilateral2D}
@@ -119,7 +125,13 @@ facetype_of_cellface(::Type{<:Parallelepiped3D}, k) = Quadrilateral2D
 
 
 # function that specify the local enumeration of edges needed in 3D
+# idea for future: edge_enum should be EdgeNodes of face_enum of all faces
+edge_enum_rule(::Type{<:Tetrahedron3D}) = [] # todo
 edge_enum_rule(::Type{<:Parallelepiped3D}) = [1 2; 1 3; 1 4; 2 5; 2 6; 3 5; 3 7; 4 6; 4 7; 5 8; 6 8; 7 8]
+edgetype_of_celledge(::Type{<:AbstractElementGeometry3D}, k) = Edge1D
+
+# function that yields the local edge numbers of a local face of a 3D geometry
+celledges_for_cellface(::Type{<:Parallelepiped3D}) = [1 4 6 2; 1 5 8 3; 4 10 11 5; 6 7 12 10; 2 3 9 7; 8 11 12 9]
 
 
 
@@ -154,12 +166,11 @@ end
 # FaceNodes = nodes for each face (implicitly defines the enumerations of faces)
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
-    # each edge consists of dim nodes (beware: has to be replaced later if triangulation of submanifolds are included)
-    dim = size(xgrid[Coordinates],1) 
     xCellNodes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nnodes = num_sources(xgrid[Coordinates])
     xCellGeometries = xgrid[CellGeometries]
+    dim = dim_element(xCellGeometries[1])
 
     #transpose CellNodes to get NodeCells
     xNodeCells = atranspose(xCellNodes)
@@ -168,16 +179,16 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     xFaceNodes = VariableTargetAdjacency(Int32)
     xCellFaces = VariableTargetAdjacency(Int32)
     xFaceCells = zeros(Int32,0) # cells are appended and at the end rewritten into 2,nfaces array
-    xCellSigns = VariableTargetAdjacency(Int32)
+    xCellFaceSigns = VariableTargetAdjacency(Int32)
     xFaceGeometries::Array{DataType,1} = []
     xBFaces::Array{Int32,1} = []
 
-    current_face = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_cellface
-    flag4face = zeros(Bool,nnodes)
+    current_item = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes per cellface
+    flag4item = zeros(Bool,nnodes)
     cellEG = Triangle2D
     cell2EG = Triangle2D
     node = 0
-    node_cells = zeros(Int32,max_ncell4node) # should be large enough to store largest nnodes_per_cellface
+    node_cells = zeros(Int32,max_ncell4node) # should be large enough to store largest nnodes per cellface
     face = 0
     cell2 = 0
     nneighbours = 0
@@ -189,14 +200,14 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     # pre-allocate xCellFaces
     for cell = 1 : ncells
         cellEG = xCellGeometries[cell]
-        append!(xCellFaces,zeros(Int32,nfaces_per_cell(cellEG)))
-        append!(xCellSigns,zeros(Int32,nfaces_per_cell(cellEG)))
+        append!(xCellFaces,zeros(Int32,nfaces_for_geometry(cellEG)))
+        append!(xCellFaceSigns,zeros(Int32,nfaces_for_geometry(cellEG)))
     end   
 
     # loop over cells
     for cell = 1 : ncells
         cellEG = xCellGeometries[cell]
-        faces_per_cell = nfaces_per_cell(cellEG)
+        faces_per_cell = nfaces_for_geometry(cellEG)
         face_rule = face_enum_rule(cellEG)
 
         # loop over cell faces
@@ -207,13 +218,13 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                 continue;
             end    
 
-            nodes_per_cellface = nnodes_per_cellface(cellEG, k)
+            nodes_per_cellface = nnodes_for_geometry(facetype_of_cellface(cellEG, k))
 
             # flag face nodes and commons4cells
             for j = 1 : nodes_per_cellface
                 node = xCellNodes[face_rule[k,j],cell]
-                current_face[j] = node
-                flag4face[node] = true; 
+                current_item[j] = node
+                flag4item[node] = true; 
             end
 
             # get first node and its neighbours
@@ -233,7 +244,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
                 # loop over faces of cell2
                 cell2EG = xCellGeometries[cell2]
-                faces_per_cell2 = nfaces_per_cell(cell2EG)
+                faces_per_cell2 = nfaces_for_geometry(cell2EG)
                 face_rule2 = face_enum_rule(cell2EG)
                 for f2 = 1 : faces_per_cell2
                     # check if face is already known to cell2
@@ -242,11 +253,11 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                     end    
 
                     #otherwise compare nodes of face and face2
-                    nodes_per_cellface2 = nnodes_per_cellface(cell2EG, f2)
+                    nodes_per_cellface2 = nnodes_for_geometry(facetype_of_cellface(cell2EG, f2))
                     common_nodes = 0
                     if nodes_per_cellface == nodes_per_cellface2
                         for j = 1 : nodes_per_cellface2
-                            if flag4face[xCellNodes[face_rule2[f2,j],cell2]]
+                            if flag4item[xCellNodes[face_rule2[f2,j],cell2]]
                                 common_nodes += 1
                             else
                                 continue;    
@@ -265,9 +276,9 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                         push!(xFaceCells,cell2)
                         xCellFaces.colentries[xCellFaces.colstart[cell]+k-1] = face
                         xCellFaces.colentries[xCellFaces.colstart[cell2]+f2-1] = face
-                        xCellSigns.colentries[xCellSigns.colstart[cell]+k-1] = 1
-                        xCellSigns.colentries[xCellSigns.colstart[cell2]+f2-1] = -1
-                        append!(xFaceNodes,current_face[1:nodes_per_cellface])
+                        xCellFaceSigns.colentries[xCellFaceSigns.colstart[cell]+k-1] = 1
+                        xCellFaceSigns.colentries[xCellFaceSigns.colstart[cell2]+f2-1] = -1
+                        append!(xFaceNodes,current_item[1:nodes_per_cellface])
                         push!(xFaceGeometries,facetype_of_cellface(cellEG,cell2EG,k))
                         break;
                     end
@@ -283,23 +294,167 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                 push!(xFaceCells,cell)
                 push!(xFaceCells,0)
                 xCellFaces.colentries[xCellFaces.colstart[cell]+k-1] = face
-                xCellSigns.colentries[xCellSigns.colstart[cell]+k-1] = 1
-                append!(xFaceNodes,current_face[1:nodes_per_cellface])
+                xCellFaceSigns.colentries[xCellFaceSigns.colstart[cell]+k-1] = 1
+                append!(xFaceNodes,current_item[1:nodes_per_cellface])
                 push!(xFaceGeometries,facetype_of_cellface(cellEG,k))
             end
 
-            #reset flag4face
+            #reset flag4item
             for j = 1 : nnodes
-                flag4face[j] = 0
+                flag4item[j] = 0
             end    
         end    
     end
     xgrid[FaceGeometries] = xFaceGeometries
     xgrid[CellFaces] = xCellFaces
-    xgrid[CellSigns] = xCellSigns
+    xgrid[CellFaceSigns] = xCellFaceSigns
     xgrid[FaceCells] = reshape(xFaceCells,2,face)
     xFaceNodes
 end
+
+
+
+# FaceNodes = nodes for each face (implicitly defines the enumerations of faces)
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
+
+    dim = size(xgrid[Coordinates],1) 
+    xCellNodes = xgrid[CellNodes]
+    ncells = num_sources(xCellNodes)
+    nnodes = num_sources(xgrid[Coordinates])
+    xCellGeometries = xgrid[CellGeometries]
+    dim = dim_element(xCellGeometries[1])
+    if dim < 2
+        # do nothing in 2D: alternative one could think of returning FaceNodes or a field 1:nnodes instead (as the edges in 2D would be vertices)
+        return
+    end
+
+    #transpose CellNodes to get NodeCells
+    xNodeCells = atranspose(xCellNodes)
+    max_ncell4node = max_num_targets_per_source(xNodeCells)
+
+    xEdgeNodes = VariableTargetAdjacency(Int32)
+    xEdgeCells = VariableTargetAdjacency(Int32)
+    xCellEdges = VariableTargetAdjacency(Int32)
+
+    xEdgeGeometries::Array{DataType,1} = []
+
+    current_item = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_celledge
+    flag4item = zeros(Bool,nnodes)
+    cellEG = Triangle2D
+    node = 0
+    node_cells = zeros(Int32,max_ncell4node) # should be large enough to store largest nnodes_per_celledge
+    item = 0
+    nneighbours = 0
+    edges_per_cell = 0
+    edges_per_cell2 = 0
+    nodes_per_celledge = 0
+    nodes_per_celledge2 = 0
+    common_nodes = 0
+    # pre-allocate xCellEdges
+    for cell = 1 : ncells
+        cellEG = xCellGeometries[cell]
+        append!(xCellEdges,zeros(Int32,nedges_for_geometry(cellEG)))
+        #append!(xCellEdgeSigns,zeros(Int32,nedges_for_geometry(cellEG)))
+    end   
+
+    # loop over cells
+    cells_with_common_edge = zeros(Int32,max_ncell4node)
+    pos_in_cells_with_common_edge = zeros(Int32,max_ncell4node)
+    ncells_with_common_edge = 0
+    edge = 0
+    for cell = 1 : ncells
+        cellEG = xCellGeometries[cell]
+        edges_per_cell = nedges_for_geometry(cellEG)
+        edge_rule = edge_enum_rule(cellEG)
+
+        # loop over cell edges
+        for k = 1 : edges_per_cell
+
+            # check if edge is already known to cell
+            if xCellEdges[k,cell] > 0
+                continue;
+            end    
+            nodes_per_celledge = nnodes_for_geometry(edgetype_of_celledge(cellEG, k))
+            ncells_with_common_edge = 1
+            cells_with_common_edge[1] = cell
+            pos_in_cells_with_common_edge[1] = k
+
+            # flag edge nodes and commons4cells
+            for j = 1 : nodes_per_celledge
+                node = xCellNodes[edge_rule[k,j],cell]
+                current_item[j] = node
+                flag4item[node] = true; 
+            end
+
+            # get first node and its neighbours
+            node = xCellNodes[edge_rule[k,1],cell]
+            nneighbours = num_targets(xNodeCells,node)
+            node_cells[1:nneighbours] = xNodeCells[:,node]
+
+            # loop over neighbours
+            for n = 1 : nneighbours
+                cell2 = node_cells[n]
+
+                # skip if cell2 is the same as cell
+                if (cell == cell2) 
+                    continue; 
+                end
+
+                # loop over edges of cell2
+                cell2EG = xCellGeometries[cell2]
+                edges_per_cell2 = nedges_for_geometry(cell2EG)
+                edge_rule2 = edge_enum_rule(cell2EG)
+                for f2 = 1 : edges_per_cell2
+                    # check if edge is already known to cell2
+                    if xCellEdges[f2,cell2] > 0 # should never happen
+                        continue;
+                    end    
+
+                    #otherwise compare nodes of face and face2
+                    nodes_per_celledge2 = nnodes_for_geometry(edgetype_of_celledge(cell2EG, f2))
+                    common_nodes = 0
+                    if nodes_per_celledge == nodes_per_celledge2
+                        for j = 1 : nodes_per_celledge2
+                            if flag4item[xCellNodes[edge_rule2[f2,j],cell2]]
+                                common_nodes += 1
+                            else
+                                continue;    
+                            end    
+                        end
+                    end
+
+                    # if all nodes are the same, register edge
+                    if (common_nodes == nodes_per_celledge2)
+                        ncells_with_common_edge += 1
+                        cells_with_common_edge[ncells_with_common_edge] = cell2
+                        pos_in_cells_with_common_edge[ncells_with_common_edge] = f2
+                    end
+
+                end
+            end
+
+            # register edge
+            edge += 1
+            append!(xEdgeCells,cells_with_common_edge)
+            for c = 1 : ncells_with_common_edge
+                xCellEdges.colentries[xCellEdges.colstart[cell]+pos_in_cells_with_common_edge[c]-1] = edge
+            end
+            append!(xEdgeNodes,current_item[1:nodes_per_celledge])
+            push!(xEdgeGeometries,edgetype_of_celledge(cellEG,k))
+
+            #reset flag4item
+            for j = 1 : nnodes
+                flag4item[j] = 0
+            end    
+        end    
+    end
+    xgrid[EdgeGeometries] = xEdgeGeometries
+    xgrid[CellEdges] = xCellEdges
+    xgrid[EdgeCells] = xEdgeCells
+    xEdgeNodes
+end
+
+
 
 # CellFaces = faces for each cell
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
@@ -307,10 +462,10 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
     xgrid[CellFaces]
 end
 
-# CellSigns = orientation signs for each face on each cell
-function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellSigns})
+# CellFaceSigns = orientation signs for each face on each cell
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceSigns})
     ExtendableGrids.instantiate(xgrid, FaceNodes)
-    xgrid[CellSigns]
+    xgrid[CellFaceSigns]
 end
 
 

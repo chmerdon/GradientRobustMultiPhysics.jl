@@ -310,7 +310,7 @@ end
 #     nfaces4cell = 0
 #     for j = 1 : length(EG)
 #         itemEG = facetype_of_cellface(EG[j],1)
-#         nfaces4cell = nfaces_per_cell(EG[j])
+#         nfaces4cell = nfaces_for_geometry(EG[j])
 #         basisevaler[j] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
 #         quadorder = bonus_quadorder + nrfactors*get_polynomialorder(typeof(FE), itemEG)
 #         qf[j] = QuadratureRule{T,itemEG}(quadorder);
