@@ -17,6 +17,7 @@ get_ncomponents(::Type{H1P1{2}}) = 2
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Quadrilateral2D}) = 2;
+get_polynomialorder(::Type{<:H1P1}, ::Type{<:Parallelepiped3D}) = 3;
 
 
 function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P1}
@@ -190,6 +191,24 @@ function get_basis_on_cell(::Type{H1P1{1}}, ::Type{<:Quadrilateral2D})
                 xref[1]*b;
                 xref[1]*xref[2];
                 xref[2]*a;
+                ]
+    end
+end
+
+
+function get_basis_on_cell(::Type{H1P1{1}}, ::Type{<:Parallelepiped3D})
+    function closure(xref)
+        a = 1 - xref[1]
+        b = 1 - xref[2]
+        c = 1 - xref[3]
+        return [a*b*c; # node 1
+                xref[1]*b*c; # node 2
+                xref[2]*a*c; # node 3
+                xref[3]*a*b; # node 4
+                xref[1]*xref[2]*c; # node 5
+                xref[1]*b*xref[3]; # node 6
+                a*xref[2]*xref[3]; # node 7
+                xref[1]*xref[2]*xref[3]; # node 8
                 ]
     end
 end

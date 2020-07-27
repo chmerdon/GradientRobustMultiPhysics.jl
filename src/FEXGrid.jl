@@ -6,30 +6,35 @@
 
 
 # additional ElementGeometryTypes with parent information
-abstract type Vertex0DWithParent{Parent <: AbstractElementGeometry} <: Vertex0D end
-abstract type Vertex0DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Vertex0D end
-export Vertex0DWithParent, Vertex0DWithParents
+#abstract type Vertex0DWithParent{Parent <: AbstractElementGeometry} <: Vertex0D end
+#abstract type Vertex0DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Vertex0D end
+#export Vertex0DWithParent, Vertex0DWithParents
 
-function AddParent(FEG::Type{<:Vertex0D}, CEG::Type{<:AbstractElementGeometry})
-    return Vertex0DWithParent{CEG}
-end
+#function AddParent(FEG::Type{<:Vertex0D}, CEG::Type{<:AbstractElementGeometry})
+#    return Vertex0DWithParent{CEG}
+#end
 
-abstract type Edge1DWithParent{Parent <: AbstractElementGeometry} <: Edge1D end
-abstract type Edge1DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Edge1D end
-export Edge1DWithParent, Edge1DWithParents
+#abstract type Edge1DWithParent{Parent <: AbstractElementGeometry} <: Edge1D end
+#abstract type Edge1DWithParents{Parent1 <: AbstractElementGeometry, Parent2 <: AbstractElementGeometry} <: Edge1D end
+#export Edge1DWithParent, Edge1DWithParents
 
-function AddParent(FEG::Type{<:Edge1D}, CEG::Type{<:AbstractElementGeometry})
-    return Edge1DWithParent{CEG}
-end
+#function AddParent(FEG::Type{<:Edge1D}, CEG::Type{<:AbstractElementGeometry})
+#    return Edge1DWithParent{CEG}
+#end
 
 
 # additional ExtendableGrids adjacency types 
+abstract type EdgeNodes <: AbstractGridAdjacency end
 abstract type FaceNodes <: AbstractGridAdjacency end
+abstract type CellEdges <: AbstractGridAdjacency end
 abstract type CellFaces <: AbstractGridAdjacency end
 abstract type CellSigns <: AbstractGridAdjacency end
 abstract type CellVolumes <: AbstractGridFloatArray1D end
+abstract type EdgeVolumes <: AbstractGridFloatArray1D end
 abstract type FaceVolumes <: AbstractGridFloatArray1D end
+abstract type EdgeCells <: AbstractGridAdjacency end
 abstract type FaceCells <: AbstractGridAdjacency end
+abstract type EdgeTangents <: AbstractGridFloatArray2D end
 abstract type FaceNormals <: AbstractGridFloatArray2D end
 abstract type FaceGeometries <: AbstractElementGeometries end
 abstract type FaceRegions <: AbstractElementRegions end
@@ -79,15 +84,18 @@ end
 
 
 # functions that specify the number of faces of a celltype
+# (and also the number of edges of a facetype)
 nfaces_per_cell(::Type{<:Edge1D}) = 2
 nfaces_per_cell(::Type{<:Triangle2D}) = 3
 nfaces_per_cell(::Type{<:Tetrahedron3D}) = 4
 nfaces_per_cell(::Type{<:Quadrilateral2D}) = 4
+nfaces_per_cell(::Type{<:Parallelepiped3D}) = 6
 
-# functions that specify the local enumeration of faces
+# functions that specify the local enumeration of faces needed in 2D/3D
 face_enum_rule(::Type{<:Edge1D}) = [1; 2]
 face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
 face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
+face_enum_rule(::Type{<:Parallelepiped3D}) = [1 2 5 3; 1 2 4 6; 2 5 8 6;3 5 8 7;3 1 4 7;4 6 8 7]
 
 # functions that specify number of nodes on the k-th cell face
 # why k?: think about ElementTypes that have faces of different nature
@@ -98,15 +106,21 @@ nnodes_per_cellface(::Type{<:Edge1D}, k) = 1
 nnodes_per_cellface(::Type{<:Triangle2D}, k) = 2
 nnodes_per_cellface(::Type{<:Tetrahedron3D}, k) = 3
 nnodes_per_cellface(::Type{<:Quadrilateral2D}, k) = 2
+nnodes_per_cellface(::Type{<:Parallelepiped3D}, k) = 4
 
 # functions that specify the facetype of the k-th cellface
+facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
+facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D #WithParents{P1,P2}
 facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D #WithParent{Triangle2D}
 facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D #WithParent{Quadrilateral2D}
 facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
+facetype_of_cellface(::Type{<:Parallelepiped3D}, k) = Quadrilateral2D
 
-facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
-facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D #WithParents{P1,P2}
+
+# function that specify the local enumeration of edges needed in 3D
+edge_enum_rule(::Type{<:Parallelepiped3D}) = [1 2; 1 3; 1 4; 2 5; 2 6; 3 5; 3 7; 4 6; 4 7; 5 8; 6 8; 7 8]
+
 
 
 
@@ -331,6 +345,13 @@ function Volume4ElemType(Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{
     return 1//2 * (   (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]]) * (Coords[2, Nodes[2, item]] - Coords[2, Nodes[4, item]])
                     + (Coords[1, Nodes[4, item]] - Coords[1, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[3, item]]) );
 end
+
+
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelepiped3D}, ::Type{Cartesian2D})
+    return    ((Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
+    + (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]])) 
+    + (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]])));
+end
   
 
 
@@ -436,7 +457,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
             end        
             if match == true
                 xBFaces[bface] = face
-                xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
+                #xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
                 break
             end
             if face == nfaces
@@ -452,7 +473,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
                     end        
                     if match == true
                         xBFaces[bface] = face
-                        xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
+                        #xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
                         break
                     end
                     if face == nfaces

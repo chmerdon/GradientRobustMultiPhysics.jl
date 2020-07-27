@@ -41,18 +41,31 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     return xgrid
 end
 
-# uniform refinement rules
-# first k nodes are the CellNodes
-# next m nodes are the CellFaces (midpoints)
-# next node is the CellMidpoint (if needed)
-
-uniform_refine_rule(::Type{<:Edge1D}) = [1 3; 3 2]
-uniform_refine_rule(::Type{<:Triangle2D}) = [1 4 6; 2 5 4; 3 6 5; 4 5 6]
-uniform_refine_rule(::Type{<:Quadrilateral2D}) = [1 5 9 8; 2 6 9 5; 3 7 9 6; 4 8 9 7]
 
 uniform_refine_needcellmidpoints(::Type{<:AbstractElementGeometry}) = false
+
+# uniform refinement rules in 1D
+# first k nodes are the CellNodes
+# next node is the CellMidpoint
+uniform_refine_rule(::Type{<:Edge1D}) = [1 3; 3 2]
 uniform_refine_needcellmidpoints(::Type{<:Edge1D}) = true
+
+# uniform refinement rules in 2D
+# first k nodes are the CellNodes
+# next m nodes are the CellFaces midpoints
+# next node is the CellMidpoint (if needed)
+uniform_refine_rule(::Type{<:Triangle2D}) = [1 4 6; 2 5 4; 3 6 5; 4 5 6]
+uniform_refine_rule(::Type{<:Quadrilateral2D}) = [1 5 9 8; 2 6 9 5; 3 7 9 6; 4 8 9 7]
 uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
+
+# uniform refinement rules in 3D
+# first k nodes are the CellNodes
+# next m nodes are the CellEdges midpoints
+# next n nodes are the CellFaces midpoints
+# next node is the CellMidpoint (if needed)
+uniform_refine_rule(::Type{<:Parallelepiped3D}) = [1 9 10 11 21 22 25 27; 9 2 21 22 12 13 27 23; 10 21 3 25 14 27 15 24; 21 12 14 27 5 23 24 18; 11 22 25 4 27 16 17 26; 22 13 27 16 23 6 26 19; 25 27 15 17 24 26 7 20; 27 23 24 26 18 19 20 8]
+uniform_refine_needcellmidpoints(::Type{<:Parallelepiped3D}) = true
+
 
 
 # barycentric refinement rules

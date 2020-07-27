@@ -160,6 +160,38 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelogram2D}
 end
 
 
+"""
+````
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelepiped3D}
+````
+
+Constructs quadrature rule on Parallelepiped3D of specified order.
+"""
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelepiped3D}
+  if order <= 1
+      name = "midpoint rule"
+      xref = Vector{Array{T,1}}(undef,1);
+      xref[1] = ones(T,3) * 1 // 3
+      w = [1]
+  else
+      name = "generic Gauss tensor rule of order $order"
+      xref1D, w1D = get_generic_quadrature_Gauss(order)
+      xref = Vector{Array{T,1}}(undef,length(xref1D)^3)
+      w = zeros(T,length(xref1D)^3)
+      index = 1
+      for j = 1 : length(xref1D), k = 1 : length(xref1D), l = 1 : length(xref1D)
+        xref[index] = zeros(T,3)
+        xref[index][1] = xref1D[j][1]
+        xref[index][2] = xref1D[k][1]
+        xref[index][3] = xref1D[l][1]
+        w[index] = w1D[j] * w1D[k] * w1D[l]
+        index += 1
+      end
+  end
+  return QuadratureRule{T, ET}(name, xref, w)
+end
+
+
 function get_generic_quadrature_Gauss(order::Int)
     ngpts::Int = div(order, 2) + 1
     
