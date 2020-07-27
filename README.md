@@ -1,6 +1,6 @@
-# GradientRobustMultiPhysics
+# GradientRobustMultiPhysics.jl
 
-yet another finite element module for Julia focussing on gradient-robust finite element methods and multiphysics applications
+finite element module for Julia focussing on gradient-robust finite element methods and multiphysics applications
 
 
 ### Features/Limitations:
