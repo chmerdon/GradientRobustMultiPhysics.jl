@@ -197,7 +197,7 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesi
     return det
 end
 
-function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian2D}, xref)
+function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, xref)
     # transposed inverse of A
     det = T.ItemVolumes[T.citem]
     for j = 1 : 3, k = 1 : 3
