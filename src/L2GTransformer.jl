@@ -77,8 +77,23 @@ function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::
     end    
 end
 
+function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian3D}, item::Int)
+    if T.citem != item
+        T.citem = item
+        T.b[1] = T.Coords[1,T.Nodes[1,item]]
+        T.b[2] = T.Coords[2,T.Nodes[1,item]]
+        T.b[3] = T.Coords[3,T.Nodes[1,item]]
+        T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
+        T.A[1,2] = T.Coords[1,T.Nodes[4,item]] - T.b[1]
+        T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
+        T.A[2,2] = T.Coords[2,T.Nodes[4,item]] - T.b[2]
+        T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
+        T.A[3,2] = T.Coords[3,T.Nodes[4,item]] - T.b[3]
+    end    
+end
 
-function update!(T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian2D}, item::Int)
+
+function update!(T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, item::Int)
     if T.citem != item
         T.citem = item
         T.b[1] = T.Coords[1,T.Nodes[1,item]]
@@ -118,7 +133,14 @@ function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Triangle2D, Parallelo
 end
 
 
-function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Parallelepiped3D},Cartesian2D}, xref)
+function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Triangle2D, Parallelogram2D},Cartesian3D}, xref)
+    x[1] = T.A[1,1]*xref[1] + T.A[1,2]*xref[2] + T.b[1]
+    x[2] = T.A[2,1]*xref[1] + T.A[2,2]*xref[2] + T.b[2]
+    x[3] = T.A[3,1]*xref[1] + T.A[3,2]*xref[2] + T.b[3]
+end
+
+
+function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Parallelepiped3D},Cartesian3D}, xref)
     x[1] = T.A[1,1]*xref[1] + T.A[1,2]*xref[2] + T.A[1,3]*xref[3] + T.b[1]
     x[2] = T.A[2,1]*xref[1] + T.A[2,2]*xref[2] + T.A[2,3]*xref[3] + T.b[2]
     x[3] = T.A[3,1]*xref[1] + T.A[3,2]*xref[2] + T.A[3,3]*xref[3] + T.b[3]

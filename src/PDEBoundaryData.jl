@@ -229,6 +229,8 @@ function boundarydata!(
             A[1][j,j] = dirichlet_penalty
             b[j] = Target[j]*dirichlet_penalty
         end
+
+        # add new fixed dofs from best approximation boundary
         append!(fixed_dofs,BAdofs)
         fixed_dofs = Base.unique(fixed_dofs)
 

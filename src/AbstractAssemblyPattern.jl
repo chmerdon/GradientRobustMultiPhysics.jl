@@ -281,7 +281,7 @@ function prepareOperatorAssembly(
         println("   uniqueEG = $EG")
         for j = 1 : length(EG)
             println("\nQuadratureRule [$j] for $(EG[j]):")
-            QuadratureRules.show(qf[j])
+            Base.show(qf[j])
         end
     end
     dofitem4item(item) = item
@@ -335,7 +335,7 @@ end
 #         println("  uniqueEG = $EG")
 #         for j = 1 : length(EG)
 #             println("\nQuadratureRule [$j] for $(EG[j]):")
-#             QuadratureRules.show(qf[j])
+#             show(qf[j])
 #         end
 #     end
 #     dofitem4item(item) = FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]]

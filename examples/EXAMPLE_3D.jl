@@ -28,8 +28,7 @@ function main()
 
     # Define Bestapproximation problem via PDETooles_PDEProtoTypes
     # (actually in 1D interpolation and L2-bestapproximation coincide, but nevertheless...)
-    Problem = L2BestapproximationProblem(exact_function!,3, 1; bestapprox_boundary_regions = [], bonus_quadorder = 2)
-    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], InterpolateDirichletBoundary; data = exact_function!, bonus_quadorder = 2)
+    Problem = L2BestapproximationProblem(exact_function!,3, 1; bestapprox_boundary_regions = [1,2,3,4,5,6], bonus_quadorder = 2)
 
     show(Problem)
 
