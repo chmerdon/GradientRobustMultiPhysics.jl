@@ -234,6 +234,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
             # loop over neighbours
             no_neighbours_found = true
+            common_nodes = 0
             for n = 1 : nneighbours
                 cell2 = node_cells[n]
 
@@ -338,7 +339,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
 
     xEdgeGeometries::Array{DataType,1} = []
 
-    current_item = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes_per_celledge
+    current_item = zeros(Int32,2) # should be large enough to store largest nnodes_per_celledge
     flag4item = zeros(Bool,nnodes)
     cellEG = Triangle2D
     node = 0
@@ -405,12 +406,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
                 edges_per_cell2 = nedges_for_geometry(cell2EG)
                 edge_rule2 = edge_enum_rule(cell2EG)
                 for f2 = 1 : edges_per_cell2
-                    # check if edge is already known to cell2
-                    if xCellEdges[f2,cell2] > 0 # should never happen
-                        continue;
-                    end    
-
-                    #otherwise compare nodes of face and face2
+                    # compare nodes of face and face2
                     nodes_per_celledge2 = nnodes_for_geometry(edgetype_of_celledge(cell2EG, f2))
                     common_nodes = 0
                     if nodes_per_celledge == nodes_per_celledge2
@@ -435,10 +431,10 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
 
             # register edge
             edge += 1
-            append!(xEdgeCells,cells_with_common_edge)
             for c = 1 : ncells_with_common_edge
-                xCellEdges.colentries[xCellEdges.colstart[cell]+pos_in_cells_with_common_edge[c]-1] = edge
+                xCellEdges.colentries[xCellEdges.colstart[cells_with_common_edge[c]]+pos_in_cells_with_common_edge[c]-1] = edge
             end
+            append!(xEdgeCells,cells_with_common_edge)
             append!(xEdgeNodes,current_item[1:nodes_per_celledge])
             push!(xEdgeGeometries,edgetype_of_celledge(cellEG,k))
 
@@ -575,71 +571,59 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     xCoordinates = xgrid[Coordinates]
     xFaceNodes = xgrid[FaceNodes]
     xBFaceNodes = xgrid[BFaceNodes]
-    xFaceCells = xgrid[FaceCells]
-    xCellGeometries = xgrid[CellGeometries]
+    nnodes = num_sources(xCoordinates)
     nbfaces = num_sources(xBFaceNodes)
     nfaces = num_sources(xFaceNodes)
+    flag4item = zeros(Bool,nnodes)
 
     # init BFaces
     xBFaces = zeros(Int32,nbfaces)
-    xBFaceGeometries = xgrid[BFaceGeometries]
-    if typeof(xBFaceGeometries) == VectorOfConstants{DataType}
-        EG = xBFaceGeometries[1]
-        xBFaceGeometries = Array{DataType,1}(undef,nbfaces)
-        for j = 1 : nbfaces
-            xBFaceGeometries[j] = EG
-        end
-    end
+    #xBFaceGeometries = xgrid[BFaceGeometries]
+    #if typeof(xBFaceGeometries) == VectorOfConstants{DataType}
+    #    EG = xBFaceGeometries[1]
+    #    xBFaceGeometries = Array{DataType,1}(undef,nbfaces)
+    #    for j = 1 : nbfaces
+    #        xBFaceGeometries[j] = EG
+    #    end
+    #end
 
-    current_bface = zeros(Int32,max_num_targets_per_source(xFaceNodes))
     nodes_per_bface::Int32 = 0
+    nodes_per_face::Int32 = 0
     swap::Int32 = 0
-    match::Bool = false
+    common_nodes = 0
     for bface = 1 : nbfaces
         nodes_per_bface = num_targets(xBFaceNodes,bface)
         for j = 1 : nodes_per_bface
-            current_bface[j] = xBFaceNodes[j,bface]
+            flag4item[xBFaceNodes[j,bface]] = true
         end    
         
         # find matching face
         for face = 1 : nfaces
-            match = true
-            for k = 1 : nodes_per_bface
-                if current_bface[k] != xFaceNodes[k,face]
-                    match = false
-                    break
+            nodes_per_face = num_targets(xFaceNodes,face)
+            common_nodes = 0
+            for k = 1 : nodes_per_face
+                if flag4item[xFaceNodes[k,face]] == true
+                    common_nodes += 1
+                else
+                    continue;  
                 end
-            end        
-            if match == true
+            end          
+            if common_nodes == nodes_per_face
                 xBFaces[bface] = face
-                #xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
                 break
             end
-            if face == nfaces
-                #println("! WARNING ! did not find maching face for bface $bface (trying again with backward order)")
-                current_bface = current_bface[end:-1:1]
-                for face = 1 : nfaces
-                    match = true
-                    for k = 1 : nodes_per_bface
-                        if current_bface[k] != xFaceNodes[k,face]
-                            match = false
-                            break
-                        end
-                    end        
-                    if match == true
-                        xBFaces[bface] = face
-                        #xBFaceGeometries[bface] = AddParent(xBFaceGeometries[bface],xCellGeometries[xFaceCells[1,face]])
-                        break
-                    end
-                    if face == nfaces
-                        println("! WARNING ! still did not find maching face for bface $bface")
-                    end
-                end
-            end
         end
+
+        if xBFaces[bface] == 0
+            println("WARNING(BFaces): found no matching face for bface $bface with nodes $(xBFaceNodes[:,bface])")
+        end
+
+        for j = 1 : nodes_per_bface
+            flag4item[xBFaceNodes[j,bface]] = false
+        end    
     end
 
-    xgrid[BFaceGeometries] = xBFaceGeometries
+   # xgrid[BFaceGeometries] = xBFaceGeometries
     xBFaces
 end
 
@@ -647,6 +631,11 @@ end
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceCells})
     ExtendableGrids.instantiate(xgrid, FaceNodes)
     xgrid[FaceCells]
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellEdges})
+    ExtendableGrids.instantiate(xgrid, EdgeNodes)
+    xgrid[CellEdges]
 end
 
 # This assigns Regions to faces by looking at neighbouring cells

@@ -64,7 +64,7 @@ uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
 # next n nodes are the CellFaces midpoints
 # next node is the CellMidpoint (if needed)
 uniform_refine_rule(::Type{<:Parallelepiped3D}) = [ 1 9 10 11 21 22 25 27; 
-                                                    9 2 21 22 12 13 27 23; 
+                                                    9 2 21 22 12 13 27 23;
                                                     10 21 3 25 14 27 15 24; 
                                                     21 12 14 27 5 23 24 18; 
                                                     11 22 25 4 27 16 17 26; 
@@ -260,6 +260,12 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
         else
             xBFaceNodes = VariableTargetAdjacency(Int32)
         end
+        if dim == 3
+            xCellEdges = source_grid[CellEdges]
+            xNodeEdges = atranspose(oldEdgeNodes)
+        else
+            xCellEdges = []
+        end
 
         EG = Base.unique(oldBFaceGeometries)
 
@@ -268,18 +274,16 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
             refine_rules[j] = uniform_refine_rule(EG[j])
         end
 
+
         bcell = 0
-        bfaceedges = []
+        edge = 0
         for bface = 1 : nbfaces
             face = oldBFaces[bface]
             itemEG = oldBFaceGeometries[bface]
             nnodes4item = nnodes_for_geometry(itemEG)
             nfaces4item = nfaces_for_geometry(itemEG)
             iEG = findfirst(isequal(itemEG), EG)
-            if (dim == 3)
-                bcell = oldFaceCells[1,face]
-                bfaceedges = celledges_for_cellface(oldCellGeometries[bcell])[oldBFacesCellPos[bface],:]
-            end
+            bface_enum_rule = face_enum_rule(itemEG)
 
             for j = 1 : size(refine_rules[iEG],1)
                 for k = 1 : size(refine_rules[iEG],2)
@@ -290,11 +294,14 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
                         else
                             subitemnodes[k] = oldvertices + face
                         end        
-                    elseif dim == 3 #todo
+                    elseif dim == 3
                         if m <= nnodes4item 
                             subitemnodes[k] = oldBFaceNodes[m,bface]
-                        elseif m <= nnodes4item + nfaces4item # here we need the associated edge numbers of the bfaces
-                            subitemnodes[k] = oldvertices + bfaceedges[m - nnodes4item]
+                        elseif m <= nnodes4item + nfaces4item
+                            edge = m-nnodes4item # local number
+                            # find global edge number
+                            edge = intersect(xNodeEdges[:,oldBFaceNodes[bface_enum_rule[edge,1],bface]],xNodeEdges[:,oldBFaceNodes[bface_enum_rule[edge,2],bface]])[1]
+                            subitemnodes[k] = oldvertices + edge
                         else
                             subitemnodes[k] = oldvertices + nedges + face
                         end        

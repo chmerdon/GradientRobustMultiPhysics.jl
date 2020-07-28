@@ -21,15 +21,16 @@ function main()
 
     # load mesh and refine
     xgrid = testgrid_cube_uniform()
-    show(xgrid[Coordinates]')
 
-    for j = 1:1
+    for j = 1:3
         xgrid = uniform_refine(xgrid)
     end
-    
+
     # Define Bestapproximation problem via PDETooles_PDEProtoTypes
     # (actually in 1D interpolation and L2-bestapproximation coincide, but nevertheless...)
     Problem = L2BestapproximationProblem(exact_function!,3, 1; bestapprox_boundary_regions = [], bonus_quadorder = 2)
+    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], InterpolateDirichletBoundary; data = exact_function!, bonus_quadorder = 2)
+
     show(Problem)
 
     # choose some finite element space
@@ -39,7 +40,6 @@ function main()
     # solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
     solve!(Solution, Problem; verbosity = verbosity)
-    Base.show(Solution[1])
     
     # calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 1)
