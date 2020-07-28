@@ -288,3 +288,80 @@ ExpectedOrders2D = [1,1,1,1,2]
     end
     println("")
 end
+
+
+
+###########################
+# TESTSET Stokes elements #
+###########################
+
+
+function exact_functions_stokes2D(polyorder_velocity,polyorder_pressure)
+    function exact_velocity!(result,x)
+        result[1] = x[2]^polyorder_velocity + 1
+        result[2] = x[1]^polyorder_velocity - 1
+    end
+    function exact_pressure!(result,x)
+        result[1] = x[1]^polyorder_pressure + x[2]^polyorder_pressure - 2 // (polyorder_pressure+1)
+    end
+    function velo_gradient!(result,x)
+        result[1] = 0
+        result[2] = polyorder_velocity * x[2]^(polyorder_velocity-1)
+        result[3] = polyorder_velocity * x[1]^(polyorder_velocity-1)
+        result[4] = 0
+    end
+    function rhs!(result,x) # = Delta u + grad p
+        result[1] = 0
+        result[2] = 0
+        if polyorder_velocity > 1
+            result[1] -= polyorder_velocity*(polyorder_velocity-1)*x[2]^(polyorder_velocity-2)
+            result[2] -= polyorder_velocity*(polyorder_velocity-1)*x[1]^(polyorder_velocity-2)
+        end
+        if polyorder_pressure > 0
+            result[1] += polyorder_pressure * x[1]^(polyorder_pressure-1)
+            result[2] += polyorder_pressure * x[2]^(polyorder_pressure-1)
+        end
+    end
+    return exact_velocity!, exact_pressure!, velo_gradient!, rhs!
+end
+
+# list of FETypes that should be tested
+TestCatalog2D = [
+                [H1CR{2},L2P0{1}],
+                [H1MINI{2,2},H1CR{1}], # taking here a stable variant that also works on quads
+                [H1BR{2},L2P0{1}],
+                [H1P2{2,2},H1P1{1}]]
+ExpectedOrders2D = [[1,0],[1,1],[1,0],[2,1]]
+
+@testset "Stokes-FEM" begin
+    println("\n")
+    println("==========================================")
+    println("Testing Stokes elements on Triangles/Quads")
+    println("==========================================")
+    xgrid = testgrid_mixedEG(); # initial grid
+    for n = 1 : length(TestCatalog2D)
+        exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
+
+        # Define Stokes problem via PDETooles_PDEProtoTypes
+        StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
+        add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders2D[n][1])
+        add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
+        L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
+        L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = ExpectedOrders2D[n][2])
+
+        # choose FE and generate FESpace
+        FETypes = TestCatalog2D[n]
+        FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
+
+        # solve
+        Solution = FEVector{Float64}("H1-Bestapproximation",FES)
+        solve!(Solution, StokesProblem)
+
+        # check error
+        errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
+        errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
+        println("FETypes = $FETypes | orders = $(ExpectedOrders2D[n]) | errorV = $errorV | errorP = $errorP")
+        @test max(errorV,errorP) < 1e-12
+    end
+    println("")
+end
