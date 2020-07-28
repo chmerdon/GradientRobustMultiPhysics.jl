@@ -43,12 +43,6 @@ function main()
     # calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 1)
     println("\nL2error(BestApprox) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-        
-    # evaluate/interpolate function at nodes and plot
-    #PyPlot.figure(1) 
-    #nodevals = zeros(Float64,1,size(xgrid[Coordinates],2))
-    #nodevalues!(nodevals,Solution[1],FES)
-    #ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot, label = "approximation")
 
 end
 

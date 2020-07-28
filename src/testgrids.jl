@@ -43,7 +43,7 @@ function testgrid_square_uniform()
     xgrid[CellGeometries] = xCellGeometries
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
+    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 4;4 1]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)

@@ -40,19 +40,20 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid = testgrid_mixedEG(); # initial grid
-    initgrid = deepcopy(xgrid)
+    xgrid = testgrid_square_uniform(); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
-    barycentric_refinement = false;
-    nlevels = 4 # number of refinement levels
+    initgrid = deepcopy(xgrid)
 
     # problem parameters
     nonlinear = true
+    barycentric_refinement = false;
+    nlevels = 5 # maximal number of refinement levels
 
     # choose finite element type
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
-    FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element
+    #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
+    FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
     #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
     #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
@@ -60,6 +61,11 @@ function main()
     maxIterations = 10  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
     verbosity = 1 # deepness of messaging (the larger, the more)
+
+    # postprocess parameters
+    plot_grid = false
+    plot_pressure = true
+    plot_velocity = true
 
     #####################################################################################    
     #####################################################################################
@@ -179,18 +185,29 @@ function main()
             xgrid = split_grid_into(xgrid,Triangle2D)
 
             # plot triangulation
-            PyPlot.figure(1)
-            ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+            if plot_grid
+                PyPlot.figure("grid")
+                ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+            end
 
-            # plot solution
-            nnodes = size(xgrid[Coordinates],2)
-            nodevals = zeros(Float64,2,nnodes)
-            nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-            PyPlot.figure(2)
-            ExtendableGrids.plot(xgrid, nodevals[1,:][1:nnodes]; Plotter = PyPlot)
-            PyPlot.figure(3)
-            nodevalues!(nodevals,Solution[2],FESpacePressure)
-            ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+            # plot pressure
+            if plot_pressure
+                nnodes = size(xgrid[Coordinates],2)
+                nodevals = zeros(Float64,1,nnodes)
+                PyPlot.figure("pressure")
+                nodevalues!(nodevals,Solution[2],FESpacePressure)
+                ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+            end
+
+            # plot velocity (speed + quiver)
+            if plot_velocity
+                xCoordinates = xgrid[Coordinates]
+                nodevals = zeros(Float64,2,nnodes)
+                nodevalues!(nodevals,Solution[1],FESpaceVelocity)
+                PyPlot.figure("velocity")
+                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+                quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+            end
         end    
     end    
 

@@ -8,9 +8,7 @@ push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 
 
-# inlet data and viscosity for Karman vortex street example
-viscosity = 1e-2
-
+# inlet data for Karman vortex street example
 function bnd_inlet!(result,x)
     result[1] = 6*x[2]*(0.41-x[2])/(0.41*0.41);
     result[2] = 0.0;
@@ -23,26 +21,34 @@ function main()
     # load grid from sg file
     xgrid = simplexgrid(IOStream;file = "EXAMPLE_KarmanStreet.sg")
 
-    barycentric_refinement = false;
-    reconstruct = false
-
     # problem parameters
-    nonlinear = true
+    viscosity = 2e-3
+    nonlinear = true    # add nonlinear convection term?
+    barycentric_refinement = false; reconstruct = false # do not change this line
 
     # choose finite element type
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element
     #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
-    #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
+    #FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
+    FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius (on barycentric refined mesh, much more runtime!)
  
     # solver parameters
-    maxIterations = 20  # termination criterion 1 for nonlinear mode
+    maxIterations = 50  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
     verbosity = 1 # deepness of messaging (the larger, the more)
 
+    # postprocess parameters
+    plot_grid = false
+    plot_pressure = true
+    plot_velocity = true
+
     #####################################################################################    
     #####################################################################################
+
+    if barycentric_refinement
+        xgrid = barycentric_refine(xgrid)
+    end
 
     # load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear, no_pressure_constraint = true)
@@ -67,18 +73,29 @@ function main()
     solve!(Solution, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
 
     # plot triangulation
-    PyPlot.figure(1)
-    ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+    if plot_grid
+        PyPlot.figure("grid")
+        ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+    end
 
-    # plot solution
-    nnodes = size(xgrid[Coordinates],2)
-    nodevals = zeros(Float64,2,nnodes)
-    nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-    PyPlot.figure(2)
-    ExtendableGrids.plot(xgrid, nodevals[1,:][1:nnodes]; Plotter = PyPlot)
-    PyPlot.figure(3)
-    nodevalues!(nodevals,Solution[2],FESpacePressure)
-    ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+    # plot pressure
+    if plot_pressure
+        nnodes = size(xgrid[Coordinates],2)
+        nodevals = zeros(Float64,1,nnodes)
+        PyPlot.figure("pressure")
+        nodevalues!(nodevals,Solution[2],FESpacePressure)
+        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+    end
+
+    # plot velocity (speed + quiver)
+    if plot_velocity
+        xCoordinates = xgrid[Coordinates]
+        nodevals = zeros(Float64,2,nnodes)
+        nodevalues!(nodevals,Solution[1],FESpaceVelocity)
+        PyPlot.figure("velocity")
+        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+        quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+    end
 
 end
 
