@@ -176,7 +176,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     #transpose CellNodes to get NodeCells
     xNodeCells = atranspose(xCellNodes)
     max_ncell4node = max_num_targets_per_source(xNodeCells)
-
     xFaceNodes = VariableTargetAdjacency(Int32)
     xCellFaces = VariableTargetAdjacency(Int32)
     xFaceCells = zeros(Int32,0) # cells are appended and at the end rewritten into 2,nfaces array
@@ -184,20 +183,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     xFaceGeometries::Array{DataType,1} = []
     xBFaces::Array{Int32,1} = []
 
-    current_item = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes per cellface
-    flag4item = zeros(Bool,nnodes)
     cellEG = Triangle2D
-    cell2EG = Triangle2D
-    node = 0
-    node_cells = zeros(Int32,max_ncell4node) # should be large enough to store largest nnodes per cellface
-    face = 0
-    cell2 = 0
-    nneighbours = 0
-    faces_per_cell = 0
-    faces_per_cell2 = 0
-    nodes_per_cellface = 0
-    nodes_per_cellface2 = 0
-    common_nodes = 0
     # pre-allocate xCellFaces
     for cell = 1 : ncells
         cellEG = xCellGeometries[cell]
@@ -206,6 +192,20 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     end   
 
     # loop over cells
+    node::Int32 = 0
+    face::Int32 = 0
+    cell::Int32 = 0
+    cell2::Int32 = 0
+    cell2EG = Triangle2D
+    nneighbours::Int32 = 0
+    faces_per_cell::Int32 = 0
+    faces_per_cell2::Int32 = 0
+    nodes_per_cellface::Int32 = 0
+    nodes_per_cellface2::Int32 = 0
+    common_nodes::Int32 = 0
+    current_item = zeros(Int32,max_num_targets_per_source(xCellNodes)) # should be large enough to store largest nnodes per cellface
+    flag4item = zeros(Bool,nnodes)
+    
     for cell = 1 : ncells
         cellEG = xCellGeometries[cell]
         faces_per_cell = nfaces_for_geometry(cellEG)
@@ -222,22 +222,20 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
             nodes_per_cellface = nnodes_for_geometry(facetype_of_cellface(cellEG, k))
 
             # flag face nodes and commons4cells
-            for j = 1 : nodes_per_cellface
+            for j = nodes_per_cellface:-1:1
                 node = xCellNodes[face_rule[k,j],cell]
                 current_item[j] = node
                 flag4item[node] = true; 
             end
 
-            # get first node and its neighbours
-            node = xCellNodes[face_rule[k,1],cell]
+            # get neighbours for first node
             nneighbours = num_targets(xNodeCells,node)
-            node_cells[1:nneighbours] = xNodeCells[:,node]
 
             # loop over neighbours
             no_neighbours_found = true
             common_nodes = 0
             for n = 1 : nneighbours
-                cell2 = node_cells[n]
+                cell2 = xNodeCells[n,node]
 
                 # skip if cell2 is the same as cell
                 if (cell == cell2) 
@@ -280,7 +278,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                         xCellFaces.colentries[xCellFaces.colstart[cell2]+f2-1] = face
                         xCellFaceSigns.colentries[xCellFaceSigns.colstart[cell]+k-1] = 1
                         xCellFaceSigns.colentries[xCellFaceSigns.colstart[cell2]+f2-1] = -1
-                        append!(xFaceNodes,current_item[1:nodes_per_cellface])
+                        append!(xFaceNodes,view(current_item,1:nodes_per_cellface))
                         push!(xFaceGeometries,facetype_of_cellface(cellEG,cell2EG,k))
                         break;
                     end
@@ -297,20 +295,20 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                 push!(xFaceCells,0)
                 xCellFaces.colentries[xCellFaces.colstart[cell]+k-1] = face
                 xCellFaceSigns.colentries[xCellFaceSigns.colstart[cell]+k-1] = 1
-                append!(xFaceNodes,current_item[1:nodes_per_cellface])
+                append!(xFaceNodes,view(current_item,1:nodes_per_cellface))
                 push!(xFaceGeometries,facetype_of_cellface(cellEG,k))
             end
 
             #reset flag4item
-            for j = 1 : nnodes
-                flag4item[j] = 0
-            end    
+            for j = 1:nodes_per_cellface
+                flag4item[current_item[j]] = false 
+            end
         end    
     end
     xgrid[FaceGeometries] = xFaceGeometries
     xgrid[CellFaces] = xCellFaces
     xgrid[CellFaceSigns] = xCellFaceSigns
-    xgrid[FaceCells] = reshape(xFaceCells,2,face)
+    xgrid[FaceCells] = reshape(xFaceCells,2,Int64(face))
     xFaceNodes
 end
 

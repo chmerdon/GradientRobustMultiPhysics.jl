@@ -235,7 +235,17 @@ function boundarydata!(
         fixed_dofs = Base.unique(fixed_dofs)
 
         # solve best approximation problem on boundary and write into Target
-        Target[fixed_dofs] = A.entries[fixed_dofs,fixed_dofs]\b[fixed_dofs,1]
+        # the uncommented line below is very slow (possibly because dense matrix is extracted and solved)
+        #   Target[fixed_dofs] = A.entries[fixed_dofs,fixed_dofs]\b[fixed_dofs,1]
+        # so instead we solve for all dofs but fix all non-involved dofs in the FE space
+
+        for j in setdiff(1:FE.ndofs,fixed_dofs)
+            A[1][j,j] = dirichlet_penalty
+            b[j] = 0
+        end
+
+        Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
+
     end
     
     return fixed_dofs
