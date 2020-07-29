@@ -30,61 +30,78 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1MI
     ncells = num_sources(FES.xgrid[CellNodes])
     FES.ndofs = (nnodes + ncells) * ncomponents
 
-    # generate dofmaps
-    if dofmap_needed
-        dim = size(FES.xgrid[Coordinates],1) 
-        xCellNodes = FES.xgrid[CellNodes]
-        xFaceNodes = FES.xgrid[FaceNodes]
-        xCellGeometries = FES.xgrid[CellGeometries]
-        xBFaceNodes = FES.xgrid[BFaceNodes]
-        xBFaces = FES.xgrid[BFaces]
-        nfaces = num_sources(xFaceNodes)
-        nbfaces = num_sources(xBFaceNodes)
-        xCellDofs = VariableTargetAdjacency(Int32)
-        xFaceDofs = VariableTargetAdjacency(Int32)
-        xBFaceDofs = VariableTargetAdjacency(Int32)
-        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+1))
-        nnodes4item = 0
-        for cell = 1 : ncells
-            nnodes4item = num_targets(xCellNodes,cell)
-            for k = 1 : nnodes4item
-                dofs4item[k] = xCellNodes[k,cell]
-                for n = 1 : ncomponents-1
-                    dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-                end    
-            end
-            for k = 1 : ncomponents
-                dofs4item[ncomponents*nnodes4item+k] = ncomponents*nnodes + (k-1)*ncells + cell
-            end
-            append!(xCellDofs,dofs4item[1:ncomponents*(nnodes4item+1)])
-        end
-        for face = 1 : nfaces
-            nnodes4item = num_targets(xFaceNodes,face)
-            for k = 1 : nnodes4item
-                dofs4item[k] = xFaceNodes[k,face]
-                for n = 1 : ncomponents-1
-                    dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-                end    
-            end
-            append!(xFaceDofs,dofs4item[1:ncomponents*nnodes4item])
-        end
-        for bface = 1: nbfaces
-            nnodes4item = num_targets(xBFaceNodes,bface)
-            for k = 1 : nnodes4item
-                dofs4item[k] = xBFaceNodes[k,bface]
-                for n = 1 : ncomponents-1
-                    dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-                end    
-            end
-            append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item])
-        end
+end
 
-        # save dofmaps
-        FES.CellDofs = xCellDofs
-        FES.FaceDofs = xFaceDofs
-        FES.BFaceDofs = xBFaceDofs
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: H1MINI}
+    xCellNodes = FES.xgrid[CellNodes]
+    xCellGeometries = FES.xgrid[CellGeometries]
+    nnodes = num_sources(FES.xgrid[Coordinates]) 
+    ncomponents = get_ncomponents(FEType)
+    dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+1))
+    ncells = num_sources(xCellNodes)
+    xCellDofs = VariableTargetAdjacency(Int32)
+    nnodes4item = 0
+    for cell = 1 : ncells
+        nnodes4item = num_targets(xCellNodes,cell)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xCellNodes[k,cell]
+            for n = 1 : ncomponents-1
+                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
+            end    
+        end
+        for k = 1 : ncomponents
+            dofs4item[ncomponents*nnodes4item+k] = ncomponents*nnodes + (k-1)*ncells + cell
+        end
+        append!(xCellDofs,dofs4item[1:ncomponents*(nnodes4item+1)])
     end
+    # save dofmap
+    FES.CellDofs = xCellDofs
+end
 
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: H1MINI}
+    xFaceNodes = FES.xgrid[FaceNodes]
+    xBFaces = FES.xgrid[BFaces]
+    nnodes = num_sources(FES.xgrid[Coordinates]) 
+    nfaces = num_sources(xFaceNodes)
+    xFaceDofs = VariableTargetAdjacency(Int32)
+    ncomponents = get_ncomponents(FEType)
+    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xFaceNodes))
+    nnodes4item = 0
+    for face = 1 : nfaces
+        nnodes4item = num_targets(xFaceNodes,face)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xFaceNodes[k,face]
+            for n = 1 : ncomponents-1
+                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
+            end    
+        end
+        append!(xFaceDofs,dofs4item[1:ncomponents*nnodes4item])
+    end
+    # save dofmap
+    FES.FaceDofs = xFaceDofs
+end
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: H1MINI}
+    xBFaceNodes = FES.xgrid[BFaceNodes]
+    nnodes = num_sources(FES.xgrid[Coordinates]) 
+    nbfaces = num_sources(xBFaceNodes)
+    xBFaceDofs = VariableTargetAdjacency(Int32)
+    ncomponents = get_ncomponents(FEType)
+    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xBFaceNodes))
+    nnodes4item = 0
+    for bface = 1: nbfaces
+        nnodes4item = num_targets(xBFaceNodes,bface)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xBFaceNodes[k,bface]
+            for n = 1 : ncomponents-1
+                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
+            end    
+        end
+        append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item])
+    end
+    # save dofmap
+    FES.BFaceDofs = xBFaceDofs
 end
 
 

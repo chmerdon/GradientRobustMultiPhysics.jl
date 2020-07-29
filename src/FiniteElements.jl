@@ -44,16 +44,30 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     xCellFaceSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
 end
 
-function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmap_needed = true) where {FEType <:AbstractFiniteElement}
+function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = [AssemblyTypeCELL, AssemblyTypeFACE, AssemblyTypeBFACE], verbosity = 0 ) where {FEType <:AbstractFiniteElement}
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)
     FES = FESpace{FEType}(name,0,xgrid,dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
 
+    if verbosity > 0
+        println("  Initialising FESpace $FEType...")
+    end
     # then update data according to init specifications in FEdefinition files
-    init!(FES; dofmap_needed = dofmap_needed)
+    init!(FES)
+
+    # generate required dof maps
+    for j = 1 : length(dofmaps_needed)
+        if verbosity > 0
+            println("  ...generating dofmap for $(dofmaps_needed[j])")
+            @time init_dofmap!(FES, dofmaps_needed[j])
+        else
+            init_dofmap!(FES, dofmaps_needed[j])
+        end
+    end
 
     return FES
 end
+
 function FESpace(name::String, length::Int)
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)

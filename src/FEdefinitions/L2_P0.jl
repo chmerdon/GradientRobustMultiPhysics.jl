@@ -26,25 +26,35 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: L2P0
     xCellNodes = FES.xgrid[CellNodes]
     ncells = num_sources(xCellNodes) 
     FES.ndofs = ncells * ncomponents
-
-    # generate dofmaps
-    if dofmap_needed
-        xCellDofs = VariableTargetAdjacency(Int32)
-        dofs4item = zeros(Int32,ncomponents)
-        nnodes4item = 0
-        for cell = 1 : ncells
-            dofs4item[1] = cell
-            for n = 1 : ncomponents-1
-                dofs4item[1+n] = n*ncells + cell
-            end    
-            append!(xCellDofs,dofs4item)
-        end
-
-        # save dofmaps
-        FES.CellDofs = xCellDofs
-    end
-
 end
+
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: L2P0}
+    xCellNodes = FES.xgrid[CellNodes]
+    ncomponents = get_ncomponents(FEType)
+    dofs4item = zeros(Int32,ncomponents)
+    ncells = num_sources(xCellNodes)
+    xCellDofs = VariableTargetAdjacency(Int32)
+    for cell = 1 : ncells
+        dofs4item[1] = cell
+        for n = 1 : ncomponents-1
+            dofs4item[1+n] = n*ncells + cell
+        end    
+        append!(xCellDofs,dofs4item)
+    end
+    # save dofmap
+    FES.CellDofs = xCellDofs
+end
+
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: L2P0}
+    # not defined for L2 element
+end
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: L2P0}
+    # not defined for L20 element
+end
+
 
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)

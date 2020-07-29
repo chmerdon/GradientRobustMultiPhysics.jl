@@ -14,6 +14,7 @@
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
+using Printf
 
 
 push!(LOAD_PATH, "../src")
@@ -54,10 +55,9 @@ function main()
 
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
-    #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
 
     # uniform mesh refinement
-    for j = 1:4
+    for j = 1:3
         xgrid = uniform_refine(xgrid)
     end
 
@@ -65,7 +65,7 @@ function main()
     FETypes = [H1BR{2}, L2P0{1}, L2P0{1}] # Bernardi--Raugel
     #FETypes = [H1CR{2}, L2P0{1}, L2P0{1}] # Crouzeix--Raviart (needs smaller timesteps)
 
-   #TestFunctionOperatorIdentity = Identity; TestFunctionOperatorDivergence = Divergence # classical scheme
+    #TestFunctionOperatorIdentity = Identity; TestFunctionOperatorDivergence = Divergence # classical scheme
     TestFunctionOperatorIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
     TestFunctionOperatorDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
 
@@ -75,6 +75,12 @@ function main()
     maxIterations = 300  # termination criterion 1
     maxResidual = 1e-10 # termination criterion 2
     verbosity = 0 # deepness of messaging (the larger, the more)
+
+    # postprocess parameters
+    plot_grid = false
+    plot_pressure = true
+    plot_density = true
+    plot_velocity = true
 
     #####################################################################################    
     #####################################################################################
@@ -130,40 +136,52 @@ function main()
     for iteration = 1 : maxIterations
         change = advance!(TCS, timestep)
         M = sum(Solution[2][:] .* xgrid[CellVolumes])
-        println("  iteration $iteration | time = $(TCS.ctime) | change = $change | M = $M")
+        @printf("  iteration %4d",iteration)
+        @printf("  time = %.4e",TCS.ctime)
+        @printf("  change = %.4e",change)
+        @printf("  M = %.4e \n",M)
         if change < maxResidual
             println("  terminated (below tolerance)")
             break;
         end
     end
     
-    # plot
     # split grid into triangles for plotter
     xgrid = split_grid_into(xgrid,Triangle2D)
 
     # plot triangulation
-    PyPlot.figure(1)
-    ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+    if plot_grid
+        PyPlot.figure("grid")
+        ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+    end
 
-    # plot solution
-    nnodes = size(xgrid[Coordinates],2)
-    nodevals = zeros(Float64,2,nnodes)
+    # plot pressure
+    if plot_pressure
+        nnodes = size(xgrid[Coordinates],2)
+        nodevals = zeros(Float64,1,nnodes)
+        PyPlot.figure("pressure")
+        nodevalues!(nodevals,Solution[2],FESpacePressureDensity)
+        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+    end
 
-    # velocity
-    nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-    PyPlot.figure(2)
-    ExtendableGrids.plot(xgrid, nodevals[1,:][1:nnodes]; Plotter = PyPlot)
+    # plot density
+    if plot_pressure
+        nnodes = size(xgrid[Coordinates],2)
+        nodevals = zeros(Float64,1,nnodes)
+        PyPlot.figure("density")
+        nodevalues!(nodevals,Solution[3],FESpacePressureDensity)
+        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+    end
 
-    # density
-    nodevalues!(nodevals,Solution[2],FESpacePressureDensity)
-    PyPlot.figure(3)
-    ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-
-    # pressure
-    nodevalues!(nodevals,Solution[3],FESpacePressureDensity)
-    PyPlot.figure(4)
-    ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-
+    # plot velocity (speed + quiver)
+    if plot_velocity
+        xCoordinates = xgrid[Coordinates]
+        nodevals = zeros(Float64,2,nnodes)
+        nodevalues!(nodevals,Solution[1],FESpaceVelocity)
+        PyPlot.figure("velocity")
+        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+        quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+    end
 
 end
 

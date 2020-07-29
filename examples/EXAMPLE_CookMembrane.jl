@@ -60,12 +60,12 @@ function main()
     solve!(Solution, LinElastProblem; verbosity = verbosity)
     
     # plot triangulation
-    PyPlot.figure(1)
+    PyPlot.figure("grid")
     xgrid = split_grid_into(xgrid,Triangle2D)
     ExtendableGrids.plot(xgrid, Plotter = PyPlot)
 
     # plot solution
-    PyPlot.figure(2)
+    PyPlot.figure("displacement")
     nnodes = size(xgrid[Coordinates],2)
     nodevals = zeros(Float64,3,nnodes)
     nodevalues!(nodevals,Solution[1],FES)
@@ -74,7 +74,7 @@ function main()
 
     # plot displaced triangulation
     xgrid[Coordinates] = xgrid[Coordinates] + factor_plotdisplacement*nodevals[[1,2],:]
-    PyPlot.figure(3)
+    PyPlot.figure("displaced grid")
     ExtendableGrids.plot(xgrid, Plotter = PyPlot)
 
 end

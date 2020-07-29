@@ -28,7 +28,8 @@ function main()
     show(Problem)
 
     # choose some finite element space
-    FEType = HDIVRT0{2}
+    #FEType = HDIVRT0{2}
+    FEType = L2P1{2}
     #FEType = H1P2{2,2}
     FES = FESpace{FEType}(xgrid)
     show(FES)
@@ -37,14 +38,16 @@ function main()
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
     solve!(Solution, Problem; verbosity = verbosity)
     
-    # calculate L2 error and L2 divergence error
+    # calculate L2 error
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2; bonus_quadorder = 2)
     println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
         
     # evaluate/interpolate function at nodes and plot
-    PyPlot.figure(1)
     nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
     nodevalues!(nodevals,Solution[1],FES)
+    PyPlot.figure("solution[1]")
+    ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+    PyPlot.figure("solution[2]")
     ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
 end
 

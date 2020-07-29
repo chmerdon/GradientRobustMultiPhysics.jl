@@ -45,6 +45,11 @@ function main()
     plot_every_nth_step = 10 #
     verbosity = 1 # deepness of messaging (the larger, the more)
 
+    # postprocess parameters
+    plot_grid = false
+    plot_pressure = true
+    plot_velocity = true
+
     #####################################################################################    
     #####################################################################################
 
@@ -76,9 +81,11 @@ function main()
     Base.show(Solution)
 
     # plot triangulation
-    PyPlot.figure(1)
-    ExtendableGrids.plot(xgrid, Plotter = PyPlot)
-    nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
+    if plot_grid
+        PyPlot.figure("grid")
+        ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+    end
+        
 
     # generate time-dependent solver
     TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity)
@@ -86,32 +93,50 @@ function main()
     # time loop
     change = 0.0
     maxIterations = ceil(finaltime / timestep)
+    xCoordinates = xgrid[Coordinates]
+    nnodes = size(xCoordinates,2)
+    nodevals = zeros(Float64,2,nnodes)
     for iteration = 1 : maxIterations
         change = advance!(TCS, timestep)
-        @printf("  iteration %4d |",iteration)
+        @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)
         @printf("  change = %.4e \n",change)
 
         # update solution plot
         if (iteration % plot_every_nth_step == 1) || plot_every_nth_step == 1
             println("  updating plots...")
-            nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-            PyPlot.figure(2)
-            ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot)
-            PyPlot.figure(3)
-            nodevalues!(nodevals,Solution[2],FESpacePressure)
-            ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot)
+            # plot pressure
+            if plot_pressure
+                PyPlot.figure("pressure")
+                nodevalues!(nodevals,Solution[2],FESpacePressure)
+                ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+            end
+        
+            # plot velocity (speed + quiver)
+            if plot_velocity
+                nodevalues!(nodevals,Solution[1],FESpaceVelocity)
+                PyPlot.figure("velocity")
+                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+                quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+            end
         end
     
     end
 
     # show final solution
-    nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-    PyPlot.figure(2)
-    ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot)
-    PyPlot.figure(3)
-    nodevalues!(nodevals,Solution[2],FESpacePressure)
-    ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot)
+    # plot pressure
+    if plot_pressure
+        PyPlot.figure("pressure")
+        nodevalues!(nodevals,Solution[2],FESpacePressure)
+        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+    end
+
+    # plot velocity (speed + quiver)
+    if plot_velocity
+        PyPlot.figure("velocity")
+        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+        quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+    end
 
 end
 

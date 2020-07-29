@@ -28,41 +28,47 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIV
     # register coefficients
     FES.xCellFaceSigns = FES.xgrid[CellFaceSigns]
 
-    # generate dofmaps
-    if dofmap_needed
-        xFaceNodes = FES.xgrid[FaceNodes]
-        xCellFaces = FES.xgrid[CellFaces]
-        xBFaceNodes = FES.xgrid[BFaceNodes]
-        xBFaces = FES.xgrid[BFaces]
-        ncells = num_sources(xCellFaces)
-        nfaces = num_sources(xFaceNodes)
-        nbfaces = num_sources(xBFaceNodes)
-        xCellDofs = VariableTargetAdjacency(Int32)
-        xFaceDofs = VariableTargetAdjacency(Int32)
-        xBFaceDofs = VariableTargetAdjacency(Int32)
-        dofs4item = zeros(Int32,max_num_targets_per_source(xCellFaces))
-        nnodes4item = 0
-        for cell = 1 : ncells
-            nnodes4item = num_targets(xCellFaces,cell)
-            for k = 1 : nnodes4item
-                dofs4item[k] = xCellFaces[k,cell]
-            end
-            append!(xCellDofs,dofs4item[1:nnodes4item])
-        end
-        for face = 1 : nfaces
-            append!(xFaceDofs,[face])
-        end
-        for bface = 1: nbfaces
-            append!(xBFaceDofs,[xBFaces[bface]])
-        end
-
-        # save dofmaps
-        FES.CellDofs = xCellDofs
-        FES.FaceDofs = xFaceDofs
-        FES.BFaceDofs = xBFaceDofs
-    end
-
 end
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: HDIVRT0}
+    xCellFaces = FES.xgrid[CellFaces]
+    xCellGeometries = FES.xgrid[CellGeometries]
+    dofs4item = zeros(Int32,max_num_targets_per_source(xCellFaces))
+    ncells = num_sources(xCellFaces)
+    xCellDofs = VariableTargetAdjacency(Int32)
+    nfaces4item = 0
+    for cell = 1 : ncells
+        nfaces4item = num_targets(xCellFaces,cell)
+        for k = 1 : nfaces4item
+            dofs4item[k] = xCellFaces[k,cell]
+        end
+        append!(xCellDofs,dofs4item[1:nfaces4item])
+    end
+    # save dofmap
+    FES.CellDofs = xCellDofs
+end
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: HDIVRT0}
+    nfaces = num_sources(FES.xgrid[FaceNodes])
+    xFaceDofs = VariableTargetAdjacency(Int32)
+    for face = 1 : nfaces
+        append!(xFaceDofs,[face])
+    end
+    # save dofmap
+    FES.FaceDofs = xFaceDofs
+end
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: HDIVRT0}
+    xBFaces = FES.xgrid[BFaces]
+    nbfaces = length(xBFaces)
+    xBFaceDofs = VariableTargetAdjacency(Int32)
+    for bface = 1: nbfaces
+        append!(xBFaceDofs,[xBFaces[bface]])
+    end
+    # save dofmap
+    FES.BFaceDofs = xBFaceDofs
+end
+
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{HDIVRT0}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     # todo

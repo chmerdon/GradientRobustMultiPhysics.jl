@@ -53,7 +53,7 @@ function main()
         xgrid = uniform_refine(xgrid)
         # choose some finite element space
         FEType = H1P1{1}
-        FES = FESpace{FEType}(xgrid)
+        FES = FESpace{FEType}(xgrid; dofmaps_needed = [AssemblyTypeCELL, AssemblyTypeBFACE], verbosity = verbosity - 1)
 
         # solve the problem
         Solution = FEVector{Float64}("Solution",FES)

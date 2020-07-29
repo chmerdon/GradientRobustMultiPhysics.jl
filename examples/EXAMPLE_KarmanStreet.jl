@@ -30,8 +30,8 @@ function main()
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element
     #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
-    FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius (on barycentric refined mesh, much more runtime!)
+    FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
+    #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius (on barycentric refined mesh, much more runtime!)
  
     # solver parameters
     maxIterations = 50  # termination criterion 1 for nonlinear mode

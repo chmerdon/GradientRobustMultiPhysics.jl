@@ -40,9 +40,10 @@ function main()
 
     #####################################################################################
     #####################################################################################
-
+    
     # meshing parameters
     xgrid = testgrid_mixedEG(); # initial grid
+    
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
     nlevels = 7 # number of refinement levels
 
@@ -51,8 +52,8 @@ function main()
 
     # choose finite element type
     #FEType = H1P1{1} # P1-Courant
-    #FEType = H1P2{1,2} # P2
-    FEType = H1CR{1} # Crouzeix-Raviart
+    FEType = H1P2{1,2} # P2
+    #FEType = H1CR{1} # Crouzeix-Raviart
 
     # solver parameters
     verbosity = 1 # deepness of messaging (the larger, the more)
@@ -84,7 +85,7 @@ function main()
         end
 
         # generate FESpace
-        FES = FESpace{FEType}(xgrid)
+        FES = FESpace{FEType}(xgrid; verbosity = verbosity)
         if verbosity > 2
             show(FES)
         end    
@@ -125,11 +126,11 @@ function main()
             xgrid = split_grid_into(xgrid,Triangle2D)
 
             # plot triangulation
-            PyPlot.figure(1)
+            PyPlot.figure("grid")
             ExtendableGrids.plot(xgrid, Plotter = PyPlot)
 
             # plot solution
-            PyPlot.figure(2)
+            PyPlot.figure("solution")
             nnodes = size(xgrid[Coordinates],2)
             nodevals = zeros(Float64,2,nnodes)
             nodevalues!(nodevals,Solution[1],FES)

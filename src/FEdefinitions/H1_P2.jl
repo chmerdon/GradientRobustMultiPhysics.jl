@@ -35,109 +35,180 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
 
     # total number of dofs
     ndofs = 0
-    xCellNodes = FES.xgrid[CellNodes]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    ncells = num_sources(xCellNodes)
-    nfaces = num_sources(FES.xgrid[FaceNodes])
     nnodes = num_sources(FES.xgrid[Coordinates]) 
     ndofs4component = 0
     if edim == 1
+        ncells = num_sources(FES.xgrid[CellNodes])
         ndofs = (nnodes + ncells) * ncomponents
         ndofs4component = nnodes + ncells
     elseif edim == 2
+        nfaces = num_sources(FES.xgrid[FaceNodes])
         ndofs = (nnodes + nfaces) * ncomponents
         ndofs4component = nnodes + nfaces
     elseif edim == 3
-        # TODO
+        nedges = num_sources(FES.xgrid[EdgeNodes])
+        ndofs = (nnodes + nedges) * ncomponents
+        ndofs4component = nnodes + nedges
     end    
     FES.ndofs = ndofs 
 
-    # generate dofmaps
-    if dofmap_needed
-        xFaceGeometries = FES.xgrid[FaceGeometries]
-        xFaceNodes = FES.xgrid[FaceNodes]
-        xBFaceNodes = FES.xgrid[BFaceNodes]
-        xCellFaces = FES.xgrid[CellFaces]
-        xBFaces = FES.xgrid[BFaces]
-        nbfaces = num_sources(xBFaceNodes)
-        xCellDofs = VariableTargetAdjacency(Int32)
-        xFaceDofs = VariableTargetAdjacency(Int32)
-        xBFaceDofs = VariableTargetAdjacency(Int32)
-        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+max_num_targets_per_source(xCellFaces)))
-        nnodes4item = 0
-        nextra4item = 0
-        ndofs4item = 0
-        for cell = 1 : ncells
-            nnodes4item = num_targets(xCellNodes,cell)
-            for k = 1 : nnodes4item
-                dofs4item[k] = xCellNodes[k,cell]
-            end
-            if edim == 1 # in 1D also cell midpoints are dofs
-                nextra4item = 1
-                dofs4item[nnodes4item+1] = nnodes + cell
-            elseif edim == 2 # in 2D also face midpoints are dofs
-                nextra4item = num_targets(xCellFaces,cell)
-                for k = 1 : nextra4item
-                    dofs4item[nnodes4item+k] = nnodes + xCellFaces[k,cell]
-                end
-            elseif edim == 3 # in 3D also edge midpoints are dofs
-                # TODO
-            end
-            ndofs4item = nnodes4item + nextra4item
-            for n = 1 : ncomponents-1, k = 1:ndofs4item
-                dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
-            end    
-            ndofs4item *= ncomponents
-            append!(xCellDofs,dofs4item[1:ndofs4item])
-        end
-        for face = 1 : nfaces
-            nnodes4item = num_targets(xFaceNodes,face)
-            for k = 1 : nnodes4item
-                dofs4item[k] = xFaceNodes[k,face]
-            end
-            if edim == 1
-                nextra4item = 0
-            elseif edim == 2 # in 2D also face midpoints are dofs
-                nextra4item = 1
-                dofs4item[nnodes4item+1] = nnodes + face
-            elseif edim == 3 # in 3D also edge midpoints are dofs
-                # TODO
-            end
-            ndofs4item = nnodes4item + nextra4item
-            for n = 1 : ncomponents-1, k = 1:ndofs4item
-                dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
-            end    
-            ndofs4item *= ncomponents
-            append!(xFaceDofs,dofs4item[1:ndofs4item])
-        end
-        for bface = 1: nbfaces
-            nnodes4item = num_targets(xBFaceNodes,bface)
-            for k = 1 : nnodes4item
-                dofs4item[k] = xBFaceNodes[k,bface]
-            end
-            if edim == 1
-                nextra4item = 0
-            elseif edim == 2 # in 2D also face midpoints are dofs
-                nextra4item = 1
-                dofs4item[nnodes4item+1] = nnodes + xBFaces[bface]
-            elseif edim == 3 # in 3D also edge midpoints are dofs
-                # TODO
-            end
-            ndofs4item = nnodes4item + nextra4item
-            for n = 1 : ncomponents-1, k = 1:ndofs4item
-                dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
-            end    
-            ndofs4item *= ncomponents
-            append!(xBFaceDofs,dofs4item[1:ndofs4item])
-        end
-
-        # save dofmaps
-        FES.CellDofs = xCellDofs
-        FES.FaceDofs = xFaceDofs
-        FES.BFaceDofs = xBFaceDofs
-    end
-
 end
+
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: H1P2}
+    xCellNodes = FES.xgrid[CellNodes]
+    xCellGeometries = FES.xgrid[CellGeometries]
+    ncomponents = get_ncomponents(FEType)
+    ncells = num_sources(xCellNodes)
+    nnodes = num_sources(FES.xgrid[Coordinates]) 
+    edim = get_edim(FEType)
+    if edim == 1
+        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+1))
+        ndofs4component = nnodes + ncells
+    elseif edim == 2
+        nfaces = num_sources(FES.xgrid[FaceNodes])
+        xCellFaces = FES.xgrid[CellFaces]
+        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+max_num_targets_per_source(xCellFaces)))
+        ndofs4component = nnodes + nfaces
+    elseif edim == 3
+        nedges = num_sources(FES.xgrid[EdgeNodes])
+        xCellEdges = FES.xgrid[CellEdges]
+        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+max_num_targets_per_source(xCellEdges)))
+        ndofs4component = nnodes + nedges
+    end    
+    xCellDofs = VariableTargetAdjacency(Int32)
+    nnodes4item = 0
+    nextra4item = 0
+    for cell = 1 : ncells
+        nnodes4item = num_targets(xCellNodes,cell)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xCellNodes[k,cell]
+        end
+        if edim == 1 # in 1D also cell midpoints are dofs
+            nextra4item = 1
+            dofs4item[nnodes4item+1] = nnodes + cell
+        elseif edim == 2 # in 2D also face midpoints are dofs
+            nextra4item = num_targets(xCellFaces,cell)
+            for k = 1 : nextra4item
+                dofs4item[nnodes4item+k] = nnodes + xCellFaces[k,cell]
+            end
+        elseif edim == 3 # in 3D also edge midpoints are dofs
+            nextra4item = num_targets(xCellEdges,cell)
+            for k = 1 : nextra4item
+                dofs4item[nnodes4item+k] = nnodes + xCellEdges[k,cell]
+            end
+        end
+        ndofs4item = nnodes4item + nextra4item
+        for n = 1 : ncomponents-1, k = 1:ndofs4item
+            dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
+        end    
+        ndofs4item *= ncomponents
+        append!(xCellDofs,dofs4item[1:ndofs4item])
+    end
+    # save dofmap
+    FES.CellDofs = xCellDofs
+end
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: H1P2}
+    xFaceNodes = FES.xgrid[FaceNodes]
+    xBFaces = FES.xgrid[BFaces]
+    nfaces = num_sources(xFaceNodes)
+    nnodes = num_sources(FES.xgrid[Coordinates]) 
+    xFaceDofs = VariableTargetAdjacency(Int32)
+    ncomponents = get_ncomponents(FEType)
+    edim = get_edim(FEType)
+    if edim == 1
+        ncells = num_sources(FES.xgrid[CellNodes])
+        dofs4item = zeros(Int32,ncomponents)
+        ndofs4component = nnodes + ncells
+    elseif edim == 2
+        nfaces = num_sources(FES.xgrid[FaceNodes])
+        xCellFaces = FES.xgrid[CellFaces]
+        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+1))
+        ndofs4component = nnodes + nfaces
+    elseif edim == 3
+        nedges = num_sources(FES.xgrid[EdgeNodes])
+        xCellEdges = FES.xgrid[CellEdges]
+        #TDOO: dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+FACEDGES))
+        ndofs4component = nnodes + nedges
+    end    
+    dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+1))
+    nnodes4item = 0
+    nextra4item = 0
+    for face = 1 : nfaces
+        nnodes4item = num_targets(xFaceNodes,face)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xFaceNodes[k,face]
+        end
+        if edim == 1
+            nextra4item = 0
+        elseif edim == 2 # in 2D also face midpoints are dofs
+            nextra4item = 1
+            dofs4item[nnodes4item+1] = nnodes + face
+        elseif edim == 3 # in 3D also edge midpoints are dofs
+            # TODO
+        end
+        ndofs4item = nnodes4item + nextra4item
+        for n = 1 : ncomponents-1, k = 1:ndofs4item
+            dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
+        end    
+        ndofs4item *= ncomponents
+        append!(xFaceDofs,dofs4item[1:ndofs4item])
+    end
+    # save dofmap
+    FES.FaceDofs = xFaceDofs
+end
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: H1P2}
+    xBFaceNodes = FES.xgrid[BFaceNodes]
+    xBFaces = FES.xgrid[BFaces]
+    nbfaces = num_sources(xBFaceNodes)
+    xBFaceDofs = VariableTargetAdjacency(Int32)
+    ncomponents = get_ncomponents(FEType)
+    nnodes = num_sources(FES.xgrid[Coordinates]) 
+    edim = get_edim(FEType)
+    if edim == 1
+        ncells = num_sources(FES.xgrid[CellNodes])
+        dofs4item = zeros(Int32,ncomponents)
+        ndofs4component = nnodes + ncells
+    elseif edim == 2
+        nfaces = num_sources(FES.xgrid[FaceNodes])
+        xCellFaces = FES.xgrid[CellFaces]
+        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xBFaceNodes)+1))
+        ndofs4component = nnodes + nfaces
+    elseif edim == 3
+        nedges = num_sources(FES.xgrid[EdgeNodes])
+        xCellEdges = FES.xgrid[CellEdges]
+        #TDOO: dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+FACEDGES))
+        ndofs4component = nnodes + nedges
+    end    
+    dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xBFaceNodes)+1))
+    nnodes4item = 0
+    nextra4item = 0
+    for bface = 1: nbfaces
+        nnodes4item = num_targets(xBFaceNodes,bface)
+        for k = 1 : nnodes4item
+            dofs4item[k] = xBFaceNodes[k,bface]
+        end
+        if edim == 1
+            nextra4item = 0
+        elseif edim == 2 # in 2D also face midpoints are dofs
+            nextra4item = 1
+            dofs4item[nnodes4item+1] = nnodes + xBFaces[bface]
+        elseif edim == 3 # in 3D also edge midpoints are dofs
+            # TODO
+        end
+        ndofs4item = nnodes4item + nextra4item
+        for n = 1 : ncomponents-1, k = 1:ndofs4item
+            dofs4item[k+n*ndofs4item] = n*ndofs4component + dofs4item[k]
+        end    
+        ndofs4item *= ncomponents
+        append!(xBFaceDofs,dofs4item[1:ndofs4item])
+    end
+    # save dofmap
+    FES.BFaceDofs = xBFaceDofs
+end
+
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]
@@ -204,7 +275,6 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
     else
         item = 0
         if celldim == 2
-            println("HALLOA")
             for j in dofs 
                 item = mod(j-1,nnodes+nfaces)+1
                 c = Int(ceil(j/(nnodes+nfaces)))

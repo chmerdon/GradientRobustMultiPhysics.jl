@@ -250,7 +250,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         println("  ...constructing FEBasisEvaluator for $FEOP operator of $FEType on $EG")
     end
 
-    FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmap_needed = false)
+    FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmaps_needed = [])
     
     ItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
