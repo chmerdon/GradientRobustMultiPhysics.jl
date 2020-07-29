@@ -6,17 +6,16 @@ using Triangulate
 
 
 # unit cube as one cell with six boundary regions (bottom, front, right, back, left, top)
-function testgrid_cube_uniform()
+function testgrid_cube_uniform(::Type{Hexahedron3D})
 
     xgrid=ExtendableGrid{Float64,Int32}()
     xgrid[Coordinates]=Array{Float64,2}([0 0 0; 1 0 0; 0 1 0; 0 0 1; 1 1 0; 1 0 1; 0 1 1; 1 1 1]')
+
     xCellNodes=VariableTargetAdjacency(Int32)
-    xCellGeometries=[Parallelepiped3D];
-    
     append!(xCellNodes,[1,2,3,4,5,6,7,8])
 
     xgrid[CellNodes] = xCellNodes
-    xgrid[CellGeometries] = xCellGeometries
+    xgrid[CellGeometries] = [Parallelepiped3D]
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4,5,6])
@@ -24,6 +23,26 @@ function testgrid_cube_uniform()
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
     xgrid[BFaceGeometries]=VectorOfConstants(Parallelogram2D,nbfaces)
+    xgrid[CoordinateSystem]=Cartesian3D
+
+    return xgrid
+end
+
+# unit cube as six tets with six boundary regions (bottom, front, right, back, left, top)
+function testgrid_cube_uniform(::Type{Tetrahedron3D})
+    xgrid=ExtendableGrid{Float64,Int32}()
+    xgrid[Coordinates]=Array{Float64,2}([-1 -1 -1; 1 -1 -1; 1 1 -1; -1 1 -1; -1 -1 1; 1 -1 1; 1 1 1; -1 1 1]')
+
+    xCellNodes=Array{Int32,2}([1 2 3 7; 1 3 4 7; 1 5 6 7; 1 8 5 7; 1 6 2 7;1 4 8 7]')
+    xgrid[CellNodes] = xCellNodes
+    xgrid[CellGeometries] = VectorOfConstants(Tetrahedron3D,6);
+    ncells = num_sources(xCellNodes)
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4,5,5,6,6])
+    xBFaceNodes=Array{Int32,2}([1 2 3; 1 3 4; 1 2 6;1 6 5;2 3 7;2 7 6;3 4 7;7 8 4;4 1 8;1 8 5; 5 6 7; 5 7 8]')
+    xgrid[BFaceNodes]=xBFaceNodes
+    nbfaces = num_sources(xBFaceNodes)
+    xgrid[BFaceGeometries]=VectorOfConstants(Triangle2D,nbfaces)
     xgrid[CoordinateSystem]=Cartesian3D
 
     return xgrid

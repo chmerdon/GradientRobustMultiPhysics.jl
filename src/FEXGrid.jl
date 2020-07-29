@@ -111,11 +111,13 @@ nedges_for_geometry(::Type{<:Hexahedron3D}) = 12
 face_enum_rule(::Type{<:Edge1D}) = [1; 2]
 face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
 face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
+face_enum_rule(::Type{<:Tetrahedron3D}) = [1 2 3; 1 2 4; 2 3 4; 3 1 4]
 face_enum_rule(::Type{<:Hexahedron3D}) = [1 2 5 3; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]
 
 # functions that specify the facetype of the k-th cellface
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D
+facetype_of_cellface(P1::Type{<:Tetrahedron3D},P2::Type{<:Tetrahedron3D}, k) = Parallelogram2D
 facetype_of_cellface(P1::Type{<:Hexahedron3D},P2::Type{<:Hexahedron3D}, k) = Parallelogram2D
 facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D #WithParent{Triangle2D}
@@ -127,11 +129,12 @@ facetype_of_cellface(::Type{<:Parallelepiped3D}, k) = Parallelogram2D
 
 # function that specify the local enumeration of edges needed in 3D
 # idea for future: edge_enum should be EdgeNodes of face_enum of all faces
-edge_enum_rule(::Type{<:Tetrahedron3D}) = [] # todo
+edge_enum_rule(::Type{<:Tetrahedron3D}) = [1 2; 1 3; 1 4; 2 3; 2 4; 3 4]
 edge_enum_rule(::Type{<:Hexahedron3D}) = [1 2; 1 3; 1 4; 2 5; 2 6; 3 5; 3 7; 4 6; 4 7; 5 8; 6 8; 7 8]
 edgetype_of_celledge(::Type{<:AbstractElementGeometry3D}, k) = Edge1D
 
 # function that yields the local edge numbers of a local face of a 3D geometry
+celledges_for_cellface(::Type{<:Tetrahedron3D}) = [1 4 2; 1 5 3; 4 6 5; 2 3 6]
 celledges_for_cellface(::Type{<:Hexahedron3D}) = [1 4 6 2; 1 5 8 3; 4 10 11 5; 6 7 12 10; 2 3 9 7; 8 11 12 9]
 
 
@@ -497,6 +500,13 @@ function Volume4ElemType(Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{
 end
 
 
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
+    # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
+    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
+    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
+    return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2) / 2;
+end
+
 function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelogram2D}, ::Type{Cartesian3D})
     # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
     d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
@@ -507,6 +517,13 @@ end
 
 function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelepiped3D}, ::Type{Cartesian3D})
     return    ((Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
+    + (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]])) 
+    + (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]])));
+end
+
+
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Tetrahedron3D}, ::Type{Cartesian3D})
+    return    1 // 6 * ((Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
     + (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]])) 
     + (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]])));
 end

@@ -192,6 +192,32 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelepiped3D
 end
 
 
+"""
+````
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
+````
+
+Constructs quadrature rule on Tetrahedron3D of specified order.
+"""
+function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
+  if order <= 1
+      name = "midpoint rule"
+      xref = Vector{Array{T,1}}(undef,1);
+      xref[1] = ones(T,3) * 1 // 3
+      w = [1]
+  else # order = 2
+      name = "order 2 rule"
+      xref = Vector{Array{T,1}}(undef,4);
+      xref[1] = [0.1381966011250105,0.1381966011250105,0.1381966011250105]
+      xref[2] = [0.5854101966249685,0.1381966011250105,0.1381966011250105]
+      xref[3] = [0.1381966011250105,0.5854101966249685,0.1381966011250105]
+      xref[4] = [0.1381966011250105,0.1381966011250105,0.5854101966249685]
+      w = ones(T,4) * 1 // 4
+  end
+  return QuadratureRule{T, ET}(name, xref, w)
+end
+
+
 function get_generic_quadrature_Gauss(order::Int)
     ngpts::Int = div(order, 2) + 1
     
@@ -237,7 +263,6 @@ function get_generic_quadrature_Stroud(order::Int)
     
     # apply conical product rule
     # xref[:,[1 2]] = [ s_j , r_i(1-s_j) ] 
-    # xref[:,3] = 1 - xref[:,1] - xref[:,2]
     # w = a_i*b_j
     s = repeat(s',ngpts,1)[:];
     r = repeat(r,ngpts,1);

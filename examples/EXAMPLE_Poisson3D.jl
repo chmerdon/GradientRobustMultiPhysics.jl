@@ -26,10 +26,11 @@ end
 
 function main()
 
-    verbosity = 3 # <-- increase/decrease this number to get more/less printouts on what is happening
+    verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # initial mesh
-    xgrid = testgrid_cube_uniform()
+    xgrid = testgrid_cube_uniform(Hexahedron3D)
+    #xgrid = testgrid_cube_uniform(Tetrahedron3D)
     nlevels = 4 # maximal number of refinement levels
 
     # Define Poisson problem via PDETooles_PDEProtoTypes

@@ -12,7 +12,7 @@ include("../src/testgrids.jl")
 
 # define some (vector-valued) function (to be L2-bestapproximated in this example)
 function exact_function!(result,x)
-    result[1] = x[1] + x[2] + x[3]
+    result[1] = x[1] + x[2]*x[2] + x[3]
 end
 
 function main()
@@ -20,14 +20,14 @@ function main()
     verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # load mesh and refine
-    xgrid = testgrid_cube_uniform()
+    #xgrid = testgrid_cube_uniform(Hexahedron3D)
+    xgrid = testgrid_cube_uniform(Tetrahedron3D)
 
     for j = 1:3
         xgrid = uniform_refine(xgrid)
     end
 
     # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-    # (actually in 1D interpolation and L2-bestapproximation coincide, but nevertheless...)
     Problem = L2BestapproximationProblem(exact_function!,3, 1; bestapprox_boundary_regions = [1,2,3,4,5,6], bonus_quadorder = 2)
 
     show(Problem)

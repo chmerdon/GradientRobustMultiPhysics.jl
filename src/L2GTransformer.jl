@@ -77,6 +77,21 @@ function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::
     end    
 end
 
+function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian3D}, item::Int)
+    if T.citem != item
+        T.citem = item
+        T.b[1] = T.Coords[1,T.Nodes[1,item]]
+        T.b[2] = T.Coords[2,T.Nodes[1,item]]
+        T.b[3] = T.Coords[3,T.Nodes[1,item]]
+        T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
+        T.A[1,2] = T.Coords[1,T.Nodes[3,item]] - T.b[1]
+        T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
+        T.A[2,2] = T.Coords[2,T.Nodes[3,item]] - T.b[2]
+        T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
+        T.A[3,2] = T.Coords[3,T.Nodes[3,item]] - T.b[3]
+    end    
+end
+
 function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian3D}, item::Int)
     if T.citem != item
         T.citem = item
@@ -93,7 +108,7 @@ function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian3D}, item::
 end
 
 
-function update!(T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, item::Int)
+function update!(T::L2GTransformer{<:Real,<:Union{Tetrahedron3D,Parallelepiped3D},Cartesian3D}, item::Int)
     if T.citem != item
         T.citem = item
         T.b[1] = T.Coords[1,T.Nodes[1,item]]
@@ -140,7 +155,7 @@ function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Triangle2D, Parallelo
 end
 
 
-function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Parallelepiped3D},Cartesian3D}, xref)
+function eval!(x::Vector, T::L2GTransformer{<:Real,<:Union{Tetrahedron3D, Parallelepiped3D},Cartesian3D}, xref)
     x[1] = T.A[1,1]*xref[1] + T.A[1,2]*xref[2] + T.A[1,3]*xref[3] + T.b[1]
     x[2] = T.A[2,1]*xref[1] + T.A[2,2]*xref[2] + T.A[2,3]*xref[3] + T.b[2]
     x[3] = T.A[3,1]*xref[1] + T.A[3,2]*xref[2] + T.A[3,3]*xref[3] + T.b[3]
@@ -197,11 +212,20 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesi
     return det
 end
 
+function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}, xref)
+    # transposed inverse of A
+    det = 6*T.ItemVolumes[T.citem]
+    for j = 1 : 3, k = 1 : 3
+        M[j,k] = T.C[k,j] / det
+    end
+    return det
+end
+
 function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, xref)
     # transposed inverse of A
     det = T.ItemVolumes[T.citem]
     for j = 1 : 3, k = 1 : 3
-        M[j,k] = T.C[j,k] / det
+        M[j,k] = T.C[k,j] / det
     end
     return det
 end

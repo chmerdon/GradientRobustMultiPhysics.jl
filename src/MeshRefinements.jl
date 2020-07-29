@@ -42,6 +42,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
 end
 
 
+uniform_refine_needfacemidpoints(::Type{<:AbstractElementGeometry}) = true
 uniform_refine_needcellmidpoints(::Type{<:AbstractElementGeometry}) = false
 
 # uniform refinement rules in 1D
@@ -63,7 +64,16 @@ uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
 # next m nodes are the CellEdges midpoints
 # next n nodes are the CellFaces midpoints
 # next node is the CellMidpoint (if needed)
-uniform_refine_rule(::Type{<:Parallelepiped3D}) = [ 1 9 10 11 21 22 25 27; 
+uniform_refine_rule(::Type{<:Tetrahedron3D}) = [ 1 5 6 7;
+                                                 2 8 5 9;
+                                                 3 6 8 10;
+                                                 4 10 9 7;
+                                                 5 9 6 7;
+                                                 5 9 8 6;
+                                                 6 9 10 7;
+                                                 6 9 8 10]
+uniform_refine_needcellmidpoints(::Type{<:Tetrahedron3D}) = false
+uniform_refine_rule(::Type{<:Hexahedron3D}) = [ 1 9 10 11 21 22 25 27; 
                                                     9 2 21 22 12 13 27 23;
                                                     10 21 3 25 14 27 15 24; 
                                                     21 12 14 27 5 23 24 18; 
@@ -71,7 +81,7 @@ uniform_refine_rule(::Type{<:Parallelepiped3D}) = [ 1 9 10 11 21 22 25 27;
                                                     22 13 27 16 23 6 26 19; 
                                                     25 27 15 17 24 26 7 20; 
                                                     27 23 24 26 18 19 20 8]
-uniform_refine_needcellmidpoints(::Type{<:Parallelepiped3D}) = true
+uniform_refine_needcellmidpoints(::Type{<:Hexahedron3D}) = true
 
 
 
@@ -95,8 +105,10 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     dim = dim_element(EG[1]) 
     
     refine_rules = Array{Array{Int,2},1}(undef,length(EG))
+    need_facemidpoints = uniform_refine_needcellmidpoints(EG[1])
     for j = 1 : length(EG)
         refine_rules[j] = uniform_refine_rule(EG[j])
+        @assert uniform_refine_needcellmidpoints(EG[j]) == need_facemidpoints
     end
     xCellNodes = VariableTargetAdjacency(Int32)
     xCellGeometries = []
@@ -122,7 +134,10 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     if dim == 2 # in 2D each face is halved
         newvertices = nfaces
     elseif dim == 3 # in 2D each face and edge is halved
-        newvertices = nfaces + nedges
+        newvertices = nedges
+        if need_facemidpoints 
+            newvertices += nfaces
+        end
     end
     oldvertices = size(oldCoordinates,2)
     newnode = oldvertices + newvertices
@@ -152,7 +167,8 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
             end
         end    
     end
-    if dim > 1 # add face midpoints to Coordinates
+    if dim > 1 && need_facemidpoints 
+        # add face midpoints to Coordinates
         for face = 1 : nfaces
             nnodes4item = num_targets(oldFaceNodes,face)
             fill!(newvertex,0.0)

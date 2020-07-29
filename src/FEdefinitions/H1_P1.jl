@@ -16,6 +16,7 @@ get_ncomponents(::Type{H1P1{2}}) = 2
 
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Triangle2D}) = 1;
+get_polynomialorder(::Type{<:H1P1}, ::Type{<:Tetrahedron3D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Quadrilateral2D}) = 2;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Hexahedron3D}) = 3;
 
@@ -196,6 +197,15 @@ function get_basis_on_cell(::Type{H1P1{2}}, ::Type{<:Triangle2D})
                 0.0 1-xref[1]-xref[2];
                 0.0 xref[1];
                 0.0 xref[2]]
+    end
+end
+
+function get_basis_on_cell(::Type{H1P1{1}}, ::Type{<:Tetrahedron3D})
+    function closure(xref)
+        return [1-xref[1]-xref[2]-xref[3];
+                xref[1];
+                xref[2];
+                xref[3]]
     end
 end
 
