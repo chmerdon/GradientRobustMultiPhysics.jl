@@ -46,16 +46,16 @@ function main()
 
     # problem parameters
     nonlinear = true
-    barycentric_refinement = false;
-    nlevels = 5 # maximal number of refinement levels
+    barycentric_refinement = false
+    nlevels = 6 # maximal number of refinement levels
 
     # choose finite element type
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
-    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     # solver parameters
     maxIterations = 10  # termination criterion 1 for nonlinear mode
@@ -72,6 +72,9 @@ function main()
 
     # load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
+    if nonlinear
+        StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
+    end
     add_boundarydata!(StokesProblem, 1, [1,3], HomogeneousDirichletBoundary)
     add_boundarydata!(StokesProblem, 1, [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
     Base.show(StokesProblem)

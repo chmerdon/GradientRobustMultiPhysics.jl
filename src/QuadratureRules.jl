@@ -171,7 +171,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelepiped3D
   if order <= 1
       name = "midpoint rule"
       xref = Vector{Array{T,1}}(undef,1);
-      xref[1] = ones(T,3) * 1 // 3
+      xref[1] = ones(T,3) * 1 // 2
       w = [1]
   else
       name = "generic Gauss tensor rule of order $order"
@@ -203,7 +203,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
   if order <= 1
       name = "midpoint rule"
       xref = Vector{Array{T,1}}(undef,1);
-      xref[1] = ones(T,3) * 1 // 3
+      xref[1] = ones(T,3) * 1 // 4
       w = [1]
   else # order = 2
       name = "order 2 rule"

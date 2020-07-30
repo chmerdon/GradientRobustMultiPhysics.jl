@@ -19,7 +19,7 @@ function testgrid_cube_uniform(::Type{Hexahedron3D})
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4,5,6])
-    xBFaceNodes=Array{Int32,2}([1 2 5 3; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]')
+    xBFaceNodes=Array{Int32,2}([1 3 5 2; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
     xgrid[BFaceGeometries]=VectorOfConstants(Parallelogram2D,nbfaces)
@@ -39,7 +39,26 @@ function testgrid_cube_uniform(::Type{Tetrahedron3D})
     ncells = num_sources(xCellNodes)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4,5,5,6,6])
-    xBFaceNodes=Array{Int32,2}([1 2 3; 1 3 4; 1 2 6;1 6 5;2 3 7;2 7 6;3 4 7;7 8 4;4 1 8;1 8 5; 5 6 7; 5 7 8]')
+    xBFaceNodes=Array{Int32,2}([1 3 2; 1 4 3; 1 2 6;1 6 5;2 3 7;2 7 6;3 4 7;7 4 8;8 4 1;1 5 8; 5 6 7; 5 7 8]')
+    xgrid[BFaceNodes]=xBFaceNodes
+    nbfaces = num_sources(xBFaceNodes)
+    xgrid[BFaceGeometries]=VectorOfConstants(Triangle2D,nbfaces)
+    xgrid[CoordinateSystem]=Cartesian3D
+
+    return xgrid
+end
+
+# unit cube as six tets with six boundary regions (bottom, front, right, back, left, top)
+function reference_domain(::Type{Tetrahedron3D})
+    xgrid=ExtendableGrid{Float64,Int32}()
+    xgrid[Coordinates]=Array{Float64,2}([0 0 0; 1 0 0; 0 1 0; 0 0 1]')
+    xCellNodes=Array{Int32,2}([1 2 3 4]')
+    xgrid[CellNodes] = xCellNodes
+    xgrid[CellGeometries] = VectorOfConstants(Tetrahedron3D,1);
+    ncells = num_sources(xCellNodes)
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4])
+    xBFaceNodes=Array{Int32,2}([1 3 2; 1 2 4; 2 3 4; 3 1 4]')
     xgrid[BFaceNodes]=xBFaceNodes
     nbfaces = num_sources(xBFaceNodes)
     xgrid[BFaceGeometries]=VectorOfConstants(Triangle2D,nbfaces)

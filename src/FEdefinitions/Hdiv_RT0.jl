@@ -6,15 +6,18 @@ Hdiv-conforming vector-valued (ncomponents = spacedim) lowest-order Raviart-Thom
 allowed ElementGeometries:
 - Triangle2D
 - Quadrilateral2D
+- Tetrahedron3D
+- Hexahedron3D
 """
 abstract type HDIVRT0{spacedim} <: AbstractHdivFiniteElement where {spacedim<:Int} end
 
 get_ncomponents(::Type{<:HDIVRT0{2}}) = 2
 get_ncomponents(::Type{<:HDIVRT0{3}}) = 3
 
-get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:Edge1D}) = 0;
-get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:Triangle2D}) = 1;
-get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:Quadrilateral2D}) = 2;
+get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:AbstractElementGeometry1D}) = 0;
+get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:AbstractElementGeometry2D}) = 1;
+get_polynomialorder(::Type{<:HDIVRT0{3}}, ::Type{<:AbstractElementGeometry2D}) = 0;
+get_polynomialorder(::Type{<:HDIVRT0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
 
 
 function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIVRT0}
@@ -76,9 +79,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{HDIVRT0}, exa
 end
 
 
-function get_basis_normalflux_on_face(::Type{HDIVRT0{2}}, ::Type{<:Edge1D})
+function get_basis_normalflux_on_face(::Type{<:HDIVRT0}, ::Type{<:AbstractElementGeometry})
     function closure(xref)
-        return [1.0]
+        return [1]
     end
 end
 
@@ -90,41 +93,40 @@ function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Triangle2D})
     end
 end
 
-
 function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Quadrilateral2D})
     function closure(xref)
-        return [[0.0 xref[2]-1.0];
-                [xref[1] 0.0];
-                [0.0 xref[2]];
-                [xref[1]-1.0 0.0]] 
+        return [0.0 xref[2]-1.0;
+                xref[1] 0.0;
+                0.0 xref[2];
+                xref[1]-1.0 0.0] 
+    end
+end
+
+function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
+    function closure(xref)
+        return 2*[xref[1] xref[2] xref[3]-1.0;
+                xref[1] xref[2]-1.0 xref[3];
+                xref[1] xref[2] xref[3];
+                xref[1]-1.0 xref[2] xref[3]]
+        # note: factor 2 is chosen, such that normal-flux integrated over faces is 1 again
+    end
+end
+
+function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
+    function closure(xref)
+        return [0.0 0.0 xref[3]-1.0;
+                0.0 xref[2]-1.0 0.0;
+                xref[1] 0.0 0.0;
+                0.0 xref[2] 0.0;
+                xref[1]-1.0 0.0 0.0;
+                0.0 0.0 xref[3]] 
     end
 end
 
 
-function get_coefficients_on_cell!(coefficients, FE::FESpace{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)
-    # multiplication with normal vectors
-    coefficients[1,1] = FE.xCellFaceSigns[1,cell];
-    coefficients[2,1] = FE.xCellFaceSigns[1,cell];
-    coefficients[1,2] = FE.xCellFaceSigns[2,cell];
-    coefficients[2,2] = FE.xCellFaceSigns[2,cell];
-    coefficients[1,3] = FE.xCellFaceSigns[3,cell];
-    coefficients[2,3] = FE.xCellFaceSigns[3,cell];
-end    
-function get_coefficients_on_cell!(coefficients, FE::FESpace{HDIVRT0{2}}, ::Type{<:Quadrilateral2D}, cell::Int,)
-    # multiplication with normal vectors
-    fill!(coefficients,1.0)
-    coefficients[1,1] = FE.xCellFaceSigns[1,cell];
-    coefficients[2,1] = FE.xCellFaceSigns[1,cell];
-    coefficients[1,2] = FE.xCellFaceSigns[2,cell];
-    coefficients[2,2] = FE.xCellFaceSigns[2,cell];
-    coefficients[1,3] = FE.xCellFaceSigns[3,cell];
-    coefficients[2,3] = FE.xCellFaceSigns[3,cell];
-    coefficients[1,4] = FE.xCellFaceSigns[4,cell];
-    coefficients[2,4] = FE.xCellFaceSigns[4,cell];
-end   
-
-
-function get_coefficients_on_face!(coefficients, FE::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D}, face::Int)
-    # multiplication with normal vectors
-    fill!(coefficients,1.0)
+function get_coefficients_on_cell!(coefficients, FE::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}, cell::Int)
+    # multiplication with normal vector signs
+    for j = 1 : nfaces_for_geometry(EG),  k = 1 : size(coefficients,1)
+        coefficients[k,j] = FE.xCellFaceSigns[j,cell];
+    end
 end    

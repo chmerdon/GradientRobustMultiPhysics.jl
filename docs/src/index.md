@@ -11,7 +11,7 @@ The implementation is based on ExtendableGrids.jl that allows to have unstructur
 
 !!! note
 
-    Currently, only 1D and 2D problem can be solved, but 3D is on the todo list for future update.
+    Currently, 3D functionality is very limited, but will be improved in future.
 
 
 ## What is gradient-robustness?

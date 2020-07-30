@@ -130,6 +130,7 @@ function main()
         # solve Stokes problem with classical right-hand side/convection term
         StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = 2)
         if nonlinear
+            StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
             StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = Identity)
         end
         Solution = FEVector{Float64}("Stokes velocity classical",FESpaceVelocity)

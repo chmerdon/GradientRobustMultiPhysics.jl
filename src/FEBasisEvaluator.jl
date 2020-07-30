@@ -481,7 +481,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
     
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
-            for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.offsets[2] # ncomponents
+            for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.ncomponents
                 FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
             end
         end

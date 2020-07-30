@@ -91,7 +91,7 @@ function main()
         end
 
         # generate FESpace
-        FES = FESpace{FEType}(xgrid; verbosity = verbosity)
+        FES = FESpace{FEType}(xgrid; verbosity = verbosity - 1)
         if verbosity > 2
             show(FES)
         end    

@@ -244,7 +244,12 @@ function boundarydata!(
             b[j] = 0
         end
 
-        Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
+        if verbosity > 0
+            println("    ...solving")
+            @time Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
+        else
+            Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
+        end
 
     end
     

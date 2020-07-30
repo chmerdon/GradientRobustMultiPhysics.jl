@@ -111,13 +111,13 @@ nedges_for_geometry(::Type{<:Hexahedron3D}) = 12
 face_enum_rule(::Type{<:Edge1D}) = [1; 2]
 face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
 face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
-face_enum_rule(::Type{<:Tetrahedron3D}) = [1 2 3; 1 2 4; 2 3 4; 3 1 4]
-face_enum_rule(::Type{<:Hexahedron3D}) = [1 2 5 3; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]
+face_enum_rule(::Type{<:Tetrahedron3D}) = [1 3 2; 1 2 4; 2 3 4; 3 1 4]
+face_enum_rule(::Type{<:Hexahedron3D}) = [1 3 5 2; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]
 
 # functions that specify the facetype of the k-th cellface
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D
-facetype_of_cellface(P1::Type{<:Tetrahedron3D},P2::Type{<:Tetrahedron3D}, k) = Parallelogram2D
+facetype_of_cellface(P1::Type{<:Tetrahedron3D},P2::Type{<:Tetrahedron3D}, k) = Triangle2D
 facetype_of_cellface(P1::Type{<:Hexahedron3D},P2::Type{<:Hexahedron3D}, k) = Parallelogram2D
 facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D #WithParent{Triangle2D}
@@ -134,8 +134,8 @@ edge_enum_rule(::Type{<:Hexahedron3D}) = [1 2; 1 3; 1 4; 2 5; 2 6; 3 5; 3 7; 4 6
 edgetype_of_celledge(::Type{<:AbstractElementGeometry3D}, k) = Edge1D
 
 # function that yields the local edge numbers of a local face of a 3D geometry
-celledges_for_cellface(::Type{<:Tetrahedron3D}) = [1 4 2; 1 5 3; 4 6 5; 2 3 6]
-celledges_for_cellface(::Type{<:Hexahedron3D}) = [1 4 6 2; 1 5 8 3; 4 10 11 5; 6 7 12 10; 2 3 9 7; 8 11 12 9]
+celledges_for_cellface(::Type{<:Tetrahedron3D}) = [1 2 4; 1 5 3; 4 6 5; 2 3 6]
+celledges_for_cellface(::Type{<:Hexahedron3D}) = [1 2 6 4; 1 5 8 3; 4 10 11 5; 6 7 12 10; 2 3 9 7; 8 11 12 9]
 
 
 
@@ -719,6 +719,28 @@ function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{
     normal ./= sqrt(normal[1]^2+normal[2]^2)
 end
 
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{Cartesian3D})
+    # cross(p(1)-p(2), p(1)-p(4)) / length
+    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
+    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
+    normal[1] = d12[2]*d14[3]-d12[3]*d14[2]
+    normal[2] = d12[3]*d14[1]-d12[1]*d14[3]
+    normal[3] = d12[1]*d14[2]-d12[2]*d14[1]
+    # divide by length
+    normal ./= sqrt(normal[1]^2+normal[2]^2+normal[3]^2)
+end
+
+function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
+    # cross(p(1)-p(2), p(1)-p(3)) / length
+    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
+    d13 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
+    normal[1] = d12[2]*d13[3]-d12[3]*d13[2]
+    normal[2] = d12[3]*d13[1]-d12[1]*d13[3]
+    normal[3] = d12[1]*d13[2]-d12[2]*d13[1]
+    # divide by length
+    normal ./= sqrt(normal[1]^2+normal[2]^2+normal[3]^2)
+end
+
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
 
     # get links to other stuff
@@ -730,8 +752,8 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceNormals
-    xFaceNormals = zeros(Real,dim,nfaces)
-    normal = zeros(Real,dim)
+    xFaceNormals = zeros(Float64,dim,nfaces)
+    normal = zeros(Float64,dim)
     for face = 1 : nfaces
         Normal4ElemType!(normal,xCoordinates,xFaceNodes,face,xFaceGeometries[face],xCoordinateSystem)
         for k = 1 : dim
