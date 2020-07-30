@@ -29,14 +29,13 @@ function main()
     verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # initial mesh
-    xgrid = testgrid_cube_uniform(Hexahedron3D)
-    #xgrid = testgrid_cube_uniform(Tetrahedron3D)
+    #xgrid = testgrid_cube_uniform(Hexahedron3D)
+    xgrid = testgrid_cube_uniform(Tetrahedron3D)
     nlevels = 4 # maximal number of refinement levels
 
     # Define Poisson problem via PDETooles_PDEProtoTypes
     Problem = PoissonProblem(3; diffusion = 1.0)
-    add_boundarydata!(Problem, 1, [2,5], HomogeneousDirichletBoundary)
-    add_boundarydata!(Problem, 1, [1,3,4,6], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 4)
+    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 4)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [rhs!], 3, 1; bonus_quadorder = 1))
     show(Problem)
 
@@ -52,6 +51,7 @@ function main()
 
         # uniform mesh refinement
         xgrid = uniform_refine(xgrid)
+        
         # choose some finite element space
         FEType = H1P1{1}
         FES = FESpace{FEType}(xgrid; dofmaps_needed = [AssemblyTypeCELL, AssemblyTypeBFACE], verbosity = verbosity - 1)

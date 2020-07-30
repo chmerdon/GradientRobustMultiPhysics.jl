@@ -216,7 +216,7 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian
     # transposed inverse of A
     det = 6*T.ItemVolumes[T.citem]
     for j = 1 : 3, k = 1 : 3
-        M[j,k] = T.C[k,j] / det
+        M[j,k] = T.C[j,k] / det
     end
     return det
 end
@@ -225,7 +225,7 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartes
     # transposed inverse of A
     det = T.ItemVolumes[T.citem]
     for j = 1 : 3, k = 1 : 3
-        M[j,k] = T.C[k,j] / det
+        M[j,k] = T.C[j,k] / det
     end
     return det
 end
