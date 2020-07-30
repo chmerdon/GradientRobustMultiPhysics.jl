@@ -10,7 +10,6 @@ using GradientRobustMultiPhysics
 include("../src/testgrids.jl")
 
 # problem data and expected exact solution
-diffusion = 1.0
 function exact_solution!(result,x)
     result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
 end    
@@ -24,11 +23,13 @@ function exact_solution_gradient!(result,x)
     result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1.0
     result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
 end    
-function exact_solution_rhs!(result,x)
-    # diffusion part
-    result[1] = -diffusion*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
-    # convection part
-    result[1] += x[2]*(2*x[1]-1)*(x[2]-1) + 1.0
+function exact_solution_rhs!(diffusion)
+    function closure(result,x)
+        # diffusion part
+        result[1] = -diffusion*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
+        # convection part
+        result[1] += x[2]*(2*x[1]-1)*(x[2]-1) + 1.0
+    end
 end    
 function convection!(result,x)
     result[1] = 1.0
@@ -58,6 +59,11 @@ function main()
     # solver parameters
     verbosity = 1 # deepness of messaging (the larger, the more)
 
+    # postprocess parameters
+    plot_grid = false
+    plot_solution = true
+    plot_gradient = true
+
     #####################################################################################    
     #####################################################################################
 
@@ -65,7 +71,7 @@ function main()
     ConvectionDiffusionProblem = PoissonProblem(2; diffusion = diffusion)
 
     add_operator!(ConvectionDiffusionProblem, [1,1], ConvectionOperator(convection!,2,1))
-    add_rhsdata!(ConvectionDiffusionProblem, 1, RhsOperator(Identity, [exact_solution_rhs!], 2, 1; bonus_quadorder = 3))
+    add_rhsdata!(ConvectionDiffusionProblem, 1, RhsOperator(Identity, [exact_solution_rhs!(diffusion)], 2, 1; bonus_quadorder = 3))
     add_boundarydata!(ConvectionDiffusionProblem, 1, [1,3], BestapproxDirichletBoundary; data = bnd_data_rest!, bonus_quadorder = 2)
     add_boundarydata!(ConvectionDiffusionProblem, 1, [2], InterpolateDirichletBoundary; data = bnd_data_right!)
     add_boundarydata!(ConvectionDiffusionProblem, 1, [4], HomogeneousDirichletBoundary)
@@ -125,16 +131,29 @@ function main()
             # split grid into triangles for plotter
             xgrid = split_grid_into(xgrid,Triangle2D)
 
-            # plot triangulation
-            PyPlot.figure("grid")
-            ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+            if plot_grid
+                # plot triangulation
+                PyPlot.figure("grid")
+                ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+            end
 
-            # plot solution
-            PyPlot.figure("solution")
-            nnodes = size(xgrid[Coordinates],2)
-            nodevals = zeros(Float64,2,nnodes)
-            nodevalues!(nodevals,Solution[1],FES)
-            ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+            if plot_solution
+                # plot solution
+                PyPlot.figure("solution")
+                nnodes = size(xgrid[Coordinates],2)
+                nodevals = zeros(Float64,1,nnodes)
+                nodevalues!(nodevals,Solution[1],FES)
+                ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+            end
+
+            if plot_gradient
+                # plot gradient
+                PyPlot.figure("|grad(u)|")
+                nnodes = size(xgrid[Coordinates],2)
+                nodevals = zeros(Float64,2,nnodes)
+                nodevalues!(nodevals,Solution[1],FES, Gradient)
+                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[:2,:].^2); Plotter = PyPlot)
+            end
         end    
     end    
 

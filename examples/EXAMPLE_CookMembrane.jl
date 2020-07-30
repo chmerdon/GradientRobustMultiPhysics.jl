@@ -23,7 +23,7 @@ function main()
 
     # meshing parameters
     xgrid = testgrid_cookmembrane() # initial simplex grid
-    for j=1:3
+    for j=1:4
         xgrid = uniform_refine(xgrid)
     end
 
@@ -37,9 +37,14 @@ function main()
     FEType = H1P1{2} # P1-Courant
     #FEType = H1P2{2,2} # P2
 
-    # other parameters
+    # solver parameters
     verbosity = 1 # deepness of messaging (the larger, the more)
+
+    # postprocess parameters
+    plot_grid = false
+    plot_stress = true
     factor_plotdisplacement = 4
+    plot_displacement = true
 
     #####################################################################################    
     #####################################################################################
@@ -59,29 +64,35 @@ function main()
     Solution = FEVector{Float64}("Displacement",FES)
     solve!(Solution, LinElastProblem; verbosity = verbosity)
     
-    # plot triangulation
-    PyPlot.figure("grid")
     xgrid = split_grid_into(xgrid,Triangle2D)
-    ExtendableGrids.plot(xgrid, Plotter = PyPlot)
 
-    # plot solution
-    PyPlot.figure("stress")
-    nnodes = size(xgrid[Coordinates],2)
-    nodevals = zeros(Float64,4,nnodes)
-    nodevalues!(nodevals,Solution[1],FES,SymmetricGradient)
-    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2 + nodevals[3,:].^2 + nodevals[4,:].^2); Plotter = PyPlot)
+    # plot triangulation
+    if plot_grid
+        PyPlot.figure("initial grid")
+        ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+    end
 
-    # plot solution
-    PyPlot.figure("displacement")
-    nnodes = size(xgrid[Coordinates],2)
-    nodevals = zeros(Float64,2,nnodes)
-    nodevalues!(nodevals,Solution[1],FES)
-    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2); Plotter = PyPlot)
+    if plot_stress
+        # plot solution
+        PyPlot.figure("stress")
+        nnodes = size(xgrid[Coordinates],2)
+        nodevals = zeros(Float64,4,nnodes)
+        @time nodevalues!(nodevals,Solution[1],FES,SymmetricGradient; continuous = true)
+        @time nodevalues!(nodevals,Solution[1],FES,SymmetricGradient; continuous = false)
+        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2 + nodevals[3,:].^2 + nodevals[4,:].^2); Plotter = PyPlot)
+    end
 
-    # plot displaced triangulation
-    xgrid[Coordinates] = xgrid[Coordinates] + factor_plotdisplacement*nodevals[[1,2],:]
-    PyPlot.figure("displaced grid")
-    ExtendableGrids.plot(xgrid, Plotter = PyPlot)
+    # plot displacement
+    if plot_displacement
+        PyPlot.figure("displacement")
+        nnodes = size(xgrid[Coordinates],2)
+        nodevals = zeros(Float64,2,nnodes)
+        nodevalues!(nodevals,Solution[1],FES)
+        xgrid[Coordinates] = xgrid[Coordinates] + factor_plotdisplacement*nodevals[[1,2],:]
+        xCoordinates = xgrid[Coordinates]
+        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+        quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+    end
 
 end
 

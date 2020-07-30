@@ -13,7 +13,7 @@ end
 
 # abstract nodevalue function that works for any element by averaging
 # but can be overrridden by special implementations for each finite element
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0])
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], continuous::Bool = false)
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]
   xItemDofs = FE.CellDofs
@@ -50,6 +50,9 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   nregions::Int = length(regions)
   ncomponents::Int = get_ncomponents(FEType)
   iEG::Int = 0
+  node::Int = 0
+  dof::Int = 0
+  flag4node = zeros(Bool,nnodes)
   for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -63,32 +66,31 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
                 break;
             end
         end
-        ndofs4item = ndofs4EG[1][iEG]
 
         # update FEbasisevaler
         update!(basisevaler[iEG],item)
         basisvals = basisevaler[iEG].cvals
 
-        # update dofs
-        for dof_i=1:ndofs4item
-            dofs[dof_i] = xItemDofs[dof_i,item]
-        end
-
         for i in eachindex(qf[iEG].w) # vertices
             node = xItemNodes[i,item]
-            nneighbours[node] += 1
-            for k = 1 : cvals_resultdim
-                for dof_i=1:ndofs4item
-                  Target[k,node] += Source[dofs[dof_i]] * basisvals[k,dof_i,i]
-                end
-            end  
+            if continuous == false || flag4node[node] == false
+                nneighbours[node] += 1
+                for k = 1 : cvals_resultdim
+                    for dof_i::Int32 = 1 : ndofs4EG[1][iEG]
+                        dof = xItemDofs[dof_i,item]
+                        Target[k,node] += Source[dof] * basisvals[k,dof_i,i]
+                    end
+                end  
+            end
         end  
         break; # region for loop
     end # if in region    
     end # region for loop
     end # item for loop
 
-    for node = 1 : nnodes, k = 1 : cvals_resultdim
-      Target[k,node] /= nneighbours[node]
+    if continuous == false
+        for node = 1 : nnodes, k = 1 : cvals_resultdim
+            Target[k,node] /= nneighbours[node]
+        end
     end
 end
