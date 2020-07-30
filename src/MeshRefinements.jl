@@ -72,7 +72,7 @@ uniform_refine_rule(::Type{<:Tetrahedron3D}) = [ 1 5 6 7;
                                                  5 9 8 6;
                                                  6 9 10 7;
                                                  6 9 8 10]
-uniform_refine_needcellmidpoints(::Type{<:Tetrahedron3D}) = false
+uniform_refine_needfacemidpoints(::Type{<:Tetrahedron3D}) = false
 uniform_refine_rule(::Type{<:Hexahedron3D}) = [ 1 9 10 11 21 22 25 27; 
                                                     9 2 21 22 12 13 27 23;
                                                     10 21 3 25 14 27 15 24; 
@@ -105,10 +105,10 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     dim = dim_element(EG[1]) 
     
     refine_rules = Array{Array{Int,2},1}(undef,length(EG))
-    need_facemidpoints = uniform_refine_needcellmidpoints(EG[1])
+    need_facemidpoints = uniform_refine_needfacemidpoints(EG[1])
     for j = 1 : length(EG)
         refine_rules[j] = uniform_refine_rule(EG[j])
-        @assert uniform_refine_needcellmidpoints(EG[j]) == need_facemidpoints
+        @assert uniform_refine_needfacemidpoints(EG[j]) == need_facemidpoints
     end
     xCellNodes = VariableTargetAdjacency(Int32)
     xCellGeometries = []

@@ -13,7 +13,7 @@ end
 
 # abstract nodevalue function that works for any element by averaging
 # but can be overrridden by special implementations for each finite element
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace; regions::Array{Int,1} = [0])
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0])
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]
   xItemDofs = FE.CellDofs
@@ -36,8 +36,10 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   FEType = Base.eltype(FE)
   for j = 1 : length(EG)
       qf[j] = VertexRule(EG[j])
-      basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],Identity,AssemblyTypeCELL}(FE, qf[j])
+      basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],operator,AssemblyTypeCELL}(FE, qf[j])
   end    
+  cvals_resultdim::Int = size(basisevaler[1].cvals,1)
+  @assert size(Target,1) == cvals_resultdim
 
   nitems::Int = num_sources(xItemDofs)
   nnodes::Int = num_sources(FE.xgrid[Coordinates])
@@ -75,7 +77,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
         for i in eachindex(qf[iEG].w) # vertices
             node = xItemNodes[i,item]
             nneighbours[node] += 1
-            for k = 1 : ncomponents
+            for k = 1 : cvals_resultdim
                 for dof_i=1:ndofs4item
                   Target[k,node] += Source[dofs[dof_i]] * basisvals[k,dof_i,i]
                 end
@@ -86,7 +88,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end # region for loop
     end # item for loop
 
-    for node = 1 : nnodes, k = 1 : ncomponents
+    for node = 1 : nnodes, k = 1 : cvals_resultdim
       Target[k,node] /= nneighbours[node]
     end
 end

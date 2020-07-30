@@ -23,7 +23,7 @@ function main()
 
     # meshing parameters
     xgrid = testgrid_cookmembrane() # initial simplex grid
-    for j=1:4
+    for j=1:3
         xgrid = uniform_refine(xgrid)
     end
 
@@ -34,8 +34,8 @@ function main()
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
     # choose finite element type
-    #FEType = H1P1{2} # P1-Courant
-    FEType = H1P2{2,2} # P2
+    FEType = H1P1{2} # P1-Courant
+    #FEType = H1P2{2,2} # P2
 
     # other parameters
     verbosity = 1 # deepness of messaging (the larger, the more)
@@ -65,12 +65,18 @@ function main()
     ExtendableGrids.plot(xgrid, Plotter = PyPlot)
 
     # plot solution
+    PyPlot.figure("stress")
+    nnodes = size(xgrid[Coordinates],2)
+    nodevals = zeros(Float64,4,nnodes)
+    nodevalues!(nodevals,Solution[1],FES,SymmetricGradient)
+    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2 + nodevals[3,:].^2 + nodevals[4,:].^2); Plotter = PyPlot)
+
+    # plot solution
     PyPlot.figure("displacement")
     nnodes = size(xgrid[Coordinates],2)
-    nodevals = zeros(Float64,3,nnodes)
+    nodevals = zeros(Float64,2,nnodes)
     nodevalues!(nodevals,Solution[1],FES)
-    nodevals[3,:] = sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2)
-    ExtendableGrids.plot(xgrid, nodevals[3,:]; Plotter = PyPlot)
+    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2); Plotter = PyPlot)
 
     # plot displaced triangulation
     xgrid[Coordinates] = xgrid[Coordinates] + factor_plotdisplacement*nodevals[[1,2],:]
