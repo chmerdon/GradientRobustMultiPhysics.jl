@@ -83,9 +83,8 @@ function boundarydata!(
     xdim = size(FE.xgrid[Coordinates],1) 
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    xBFaces = FE.xgrid[BFaces]
     xBFaceDofs = FE.BFaceDofs
-    nbfaces = length(xBFaces)
+    nbfaces = num_sources(FE.BFaceDofs)
     xBFaceRegions = FE.xgrid[BFaceRegions]
 
     ######################
@@ -230,26 +229,61 @@ function boundarydata!(
             b[j] = Target[j]*dirichlet_penalty
         end
 
+        flush!(A.entries)
         # add new fixed dofs from best approximation boundary
         append!(fixed_dofs,BAdofs)
         fixed_dofs = Base.unique(fixed_dofs)
 
         # solve best approximation problem on boundary and write into Target
-        # the uncommented line below is very slow (possibly because dense matrix is extracted and solved)
-        #   Target[fixed_dofs] = A.entries[fixed_dofs,fixed_dofs]\b[fixed_dofs,1]
-        # so instead we solve for all dofs but fix all non-involved dofs in the FE space
 
-        for j in setdiff(1:FE.ndofs,fixed_dofs)
-            A[1][j,j] = dirichlet_penalty
-            b[j] = 0
+        if (true) # compress matrix by removing all dofs in the interior
+            dof2sparsedof = zeros(Int32,FE.ndofs)
+            newcolptr = zeros(Int32,0)
+            newrowval = zeros(Int32,0)
+            dof = 0
+            diff = 0
+            for j = 1 : FE.ndofs
+                diff = A.entries.cscmatrix.colptr[j] != A.entries.cscmatrix.colptr[j+1]
+                if diff > 0
+                    dof += 1
+                    dof2sparsedof[j] = dof
+                end
+            end
+
+            smallb = zeros(Float64,dof)
+            sparsedof2dof = zeros(Int32,dof)
+            for j = 1 : FE.ndofs
+                if dof2sparsedof[j] > 0
+                    push!(newcolptr,A.entries.cscmatrix.colptr[j])
+                    append!(newrowval,dof2sparsedof[A.entries.cscmatrix.rowval[A.entries.cscmatrix.colptr[j]:A.entries.cscmatrix.colptr[j+1]-1]])
+                    smallb[dof2sparsedof[j]] = b[j]
+                    sparsedof2dof[dof2sparsedof[j]] = j
+                end
+            end
+            push!(newcolptr,A.entries.cscmatrix.colptr[end])
+            A.entries.cscmatrix = SparseMatrixCSC{Float64,Int32}(dof,dof,newcolptr,newrowval,A.entries.cscmatrix.nzval)
+
+            if verbosity > 0
+                println("    ...solving")
+                @time Target[sparsedof2dof] = A.entries\smallb
+            else
+                Target[sparsedof2dof] = A.entries\smallb
+            end
+        else # old way: penalize all interior dofs
+
+            for j in setdiff(1:FE.ndofs,fixed_dofs)
+                A[1][j,j] = dirichlet_penalty
+                b[j] = 0
+            end
+
+            if verbosity > 0
+                println("    ...solving")
+                @time Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
+            else
+                Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
+            end
         end
 
-        if verbosity > 0
-            println("    ...solving")
-            @time Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
-        else
-            Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
-        end
 
     end
     

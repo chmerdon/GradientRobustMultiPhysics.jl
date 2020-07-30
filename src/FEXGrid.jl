@@ -598,7 +598,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     nnodes = num_sources(xCoordinates)
     nbfaces = num_sources(xBFaceNodes)
     nfaces = num_sources(xFaceNodes)
-    flag4item = zeros(Bool,nnodes)
 
     # init BFaces
     xBFaces = zeros(Int32,nbfaces)
@@ -611,10 +610,10 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     #    end
     #end
 
-    nodes_per_bface::Int32 = 0
-    nodes_per_face::Int32 = 0
-    swap::Int32 = 0
-    common_nodes = 0
+    flag4item = zeros(Bool,nnodes)
+    nodes_per_bface::Int = 0
+    nodes_per_face::Int = 0
+    common_nodes::Int = 0
     for bface = 1 : nbfaces
         nodes_per_bface = num_targets(xBFaceNodes,bface)
         for j = 1 : nodes_per_bface
@@ -629,7 +628,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
                 if flag4item[xFaceNodes[k,face]] == true
                     common_nodes += 1
                 else
-                    continue;  
+                    break  
                 end
             end          
             if common_nodes == nodes_per_face
