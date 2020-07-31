@@ -19,7 +19,7 @@ function main()
     #####################################################################################
 
     # load grid from sg file
-    xgrid = simplexgrid(IOStream;file = "EXAMPLE_KarmanStreet.sg")
+    xgrid = simplexgrid(IOStream;file = "2d_grid_karmanvortexstreet.sg")
 
     # problem parameters
     viscosity = 2e-3

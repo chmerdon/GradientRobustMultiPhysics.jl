@@ -122,20 +122,20 @@ end
   
 # Hdiv-conforming elements (only vector-valued)
 # lowest order
-include("FEdefinitions/Hdiv_RT0.jl");
+include("fedefs/hdiv_rt0.jl");
 
 # H1 conforming elements (also Crouzeix-Raviart)
 # lowest order
-include("FEdefinitions/H1_P1.jl");
-include("FEdefinitions/H1_MINI.jl");
-include("FEdefinitions/H1nc_CR.jl");
-include("FEdefinitions/H1v_BR.jl"); # Bernardi--Raugel (only vector-valued, with coefficients)
+include("fedefs/h1_p1.jl");
+include("fedefs/h1_mini.jl");
+include("fedefs/h1nc_cr.jl");
+include("fedefs/h1v_br.jl"); # Bernardi--Raugel (only vector-valued, with coefficients)
 # second order
-include("FEdefinitions/H1_P2.jl");
+include("fedefs/h1_p2.jl");
 
 # L2 conforming elements
-include("FEdefinitions/L2_P0.jl"); # currently masked as H1 element
-include("FEdefinitions/L2_P1.jl"); # currently masked as H1 element
+include("fedefs/l2_p0.jl"); # currently masked as H1 element
+include("fedefs/l2_p1.jl"); # currently masked as H1 element
 
 # Hcurl-conforming elements
 # TODO

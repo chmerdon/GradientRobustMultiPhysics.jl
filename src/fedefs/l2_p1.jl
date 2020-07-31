@@ -148,6 +148,8 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P1}, exac
     end    
 end
 
+
+# use same functions as P1
 function get_basis_on_cell(::Type{L2P1{1}}, EG::Type{<:AbstractElementGeometry}) 
     return get_basis_on_cell(H1P1{1}, EG)
 end

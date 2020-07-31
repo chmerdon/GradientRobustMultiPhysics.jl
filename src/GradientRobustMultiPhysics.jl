@@ -10,7 +10,7 @@ using DocStringExtensions
 using Printf
 
 
-include("AssemblyJunctions.jl");
+include("junctions.jl");
 export AbstractAssemblyType
 export AssemblyTypeCELL, AssemblyTypeFACE, AssemblyTypeBFACE, AssemblyTypeBFACECELL
 export GridComponentNodes4AssemblyType
@@ -19,11 +19,11 @@ export GridComponentGeometries4AssemblyType
 export GridComponentRegions4AssemblyType
 
 
-include("L2GTransformer.jl");
+include("l2gtransformations.jl");
 export L2GTransformer, update!, eval!, mapderiv!, piola!
 
 
-include("FEXGrid.jl")
+include("gridstuff.jl")
 export CellFaces, CellEdges, CellFaceSigns, CellVolumes
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes
@@ -32,19 +32,19 @@ export nfaces_for_geometry, facetype_of_cellface
 export uniqueEG
 
 
-include("MeshRefinements.jl")
+include("meshrefinements.jl")
 export split_grid_into
 export uniform_refine
 export barycentric_refine
 
 
-include("QuadratureRules.jl")
+include("quadrature.jl")
 export QuadratureRule
 export VertexRule
 export integrate!, integrate
 
 
-include("FiniteElements.jl")
+include("finiteelements.jl")
 export AbstractFiniteElement
 export FESpace
 
@@ -64,17 +64,17 @@ export get_ncomponents
 export reconstruct!
 
 
-include("FEVector.jl");
+include("fevector.jl");
 export FEVectorBlock, FEVector
 export fill!, addblock!
 
 
-include("FEMatrix.jl");
+include("fematrix.jl");
 export FEMatrixBlock, FEMatrix
 export fill!, addblock!, addblock_matmul!
 
 
-include("FEBasisEvaluator.jl")
+include("febasisevaluator.jl")
 export FEBasisEvaluator, update!
 
 export AbstractFunctionOperator
@@ -91,12 +91,12 @@ export FEPropertyDofs4AssemblyType
 export DefaultDirichletBoundaryOperator4FE
 
 
-include("FEInterpolations.jl")
+include("interpolations.jl")
 export interpolate! # must be defined separately by each FEdefinition
 export nodevalues! # = P1interpolation, abstract averaging method that works for any element, but can be overwritten by FEdefinition to something simpler
 
 
-include("AbstractAction.jl")
+include("actions.jl")
 export AbstractAction
 export DoNotChangeAction
 export MultiplyScalarAction, MultiplyVectorAction
@@ -105,7 +105,7 @@ export FunctionAction, XFunctionAction
 export ItemWiseXFunctionAction, RegionWiseXFunctionAction
 
 
-include("AbstractAssemblyPattern.jl")
+include("assemblypatterns.jl")
 export AbstractAssemblyPattern
 export ItemIntegrator
 export LinearForm
@@ -115,7 +115,7 @@ export assemble!, evaluate!, evaluate
 export L2ErrorIntegrator
 
 
-include("PDEOperators.jl")
+include("pdeoperators.jl")
 export AbstractAssemblyTrigger
 export AbstractPDEOperator
 
@@ -137,18 +137,18 @@ export BLFeval
 export TLFeval
 
 
-include("PDEBoundaryData.jl")
+include("boundarydata.jl")
 export BoundaryOperator
 export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary
 
 
-include("PDEGlobalConstraints.jl")
+include("globalconstraints.jl")
 export AbstractGlobalConstraint
 export FixedIntegralMean
 export CombineDofs
 
 
-include("PDEDescription.jl")
+include("pdedescription.jl")
 export PDEDescription
 export add_unknown!
 export add_operator!
@@ -157,7 +157,7 @@ export add_boundarydata!
 export add_constraint!
 
 
-include("PDESolver.jl")
+include("solvers.jl")
 export solve!, assemble!
 export TimeControlSolver, advance!
 
@@ -165,7 +165,7 @@ export AbstractTimeIntegrationRule
 export BackwardEuler
 
 
-include("PDEProtoTypes.jl")
+include("pdeprototypes.jl")
 export CompressibleNavierStokesProblem
 export IncompressibleNavierStokesProblem
 export LinearElasticityProblem
