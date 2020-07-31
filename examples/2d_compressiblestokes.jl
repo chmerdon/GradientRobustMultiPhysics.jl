@@ -54,7 +54,7 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid = testgrid_mixedEG(); # initial grid
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
 
     # uniform mesh refinement
     for j = 1:3

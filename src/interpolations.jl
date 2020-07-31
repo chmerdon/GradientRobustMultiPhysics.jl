@@ -75,8 +75,8 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
             node = xItemNodes[i,item]
             if continuous == false || flag4node[node] == false
                 nneighbours[node] += 1
-                for k = 1 : cvals_resultdim
-                    for dof_i::Int32 = 1 : ndofs4EG[1][iEG]
+                for k = 1 :  size(basisvals,1)
+                    for dof_i = 1 : ndofs4EG[1][iEG]
                         dof = xItemDofs[dof_i,item]
                         Target[k,node] += Source[dof] * basisvals[k,dof_i,i]
                     end

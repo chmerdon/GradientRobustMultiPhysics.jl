@@ -55,7 +55,7 @@ maxorder2D = 16
     println("==========================================")
     println("Testing QuadratureRules on Triangles/Quads")
     println("==========================================")
-    xgrid = testgrid_mixedEG(); # initial grid
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
     for order = 1 : maxorder2D
         integrand!, exactvalue = exact_function2D(order)
         quadvalue = integrate(xgrid, AssemblyTypeCELL, integrand!, order, length(exactvalue))
@@ -118,7 +118,7 @@ ExpectedOrders2D = [0,1,1,1,1,1,2]
     println("=========================================")
     println("Testing Interpolations on Triangles/Quads")
     println("=========================================")
-    xgrid = testgrid_mixedEG(); # initial grid
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
     for n = 1 : length(TestCatalog2D)
         exact_function!, exactvalue = exact_function2D(ExpectedOrders2D[n])
 
@@ -193,7 +193,7 @@ ExpectedOrders2D = [0,0,1,1,1,1,1,2]
     println("================================================")
     println("Testing L2-Bestapproximations on Triangles/Quads")
     println("================================================")
-    xgrid = testgrid_mixedEG(); # initial grid
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
     for n = 1 : length(TestCatalog2D)
         exact_function!, exactvalue = exact_function2D(ExpectedOrders2D[n])
 
@@ -265,7 +265,7 @@ ExpectedOrders2D = [1,1,1,1,2]
     println("================================================")
     println("Testing H1-Bestapproximations on Triangles/Quads")
     println("================================================")
-    xgrid = testgrid_mixedEG(); # initial grid
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
     for n = 1 : length(TestCatalog2D)
         exact_function!, exactvalue, exact_function_gradient! = exact_function2D(ExpectedOrders2D[n])
 
@@ -338,7 +338,7 @@ ExpectedOrders2D = [[1,0],[1,1],[1,0],[2,1]]
     println("==========================================")
     println("Testing Stokes elements on Triangles/Quads")
     println("==========================================")
-    xgrid = testgrid_mixedEG(); # initial grid
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
     for n = 1 : length(TestCatalog2D)
         exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
 

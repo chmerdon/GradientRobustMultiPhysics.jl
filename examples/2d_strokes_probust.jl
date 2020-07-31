@@ -64,7 +64,7 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid = uniform_refine(uniform_refine(testgrid_mixedEG())); # initial grid
+    xgrid = uniform_refine(uniform_refine(grid_unitsquare_mixedgeometries())); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
     nlevels = 3 # number of refinement levels
 

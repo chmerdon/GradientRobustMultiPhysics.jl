@@ -40,7 +40,7 @@ function main()
     #####################################################################################
 
     # meshing parameters
-    xgrid = testgrid_square_uniform(); # initial grid
+    xgrid = grid_unitsquare(); # initial grid
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
     initgrid = deepcopy(xgrid)
 

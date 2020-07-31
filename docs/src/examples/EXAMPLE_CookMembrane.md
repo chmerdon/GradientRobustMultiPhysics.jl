@@ -6,7 +6,7 @@ This example is a shortened version of EXAMPLE_CookMembrane.jl.
 We first load the CookMembrane mesh (predefined inside the package) and refine it a bit
 
 ```@example EXAMPLE_CookMembrane
-    xgrid = testgrid_cookmembrane() # initial simplex grid
+    xgrid = grid_cookmembrane() # initial simplex grid
     for j=1:4
         xgrid = uniform_refine(xgrid)
     end

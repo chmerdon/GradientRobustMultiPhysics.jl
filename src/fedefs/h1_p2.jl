@@ -215,13 +215,13 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
     nfaces = num_sources(xFaceNodes)
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
+    edim = get_edim(FEType)
 
     result = zeros(Float64,ncomponents)
     xdim = size(xCoords,1)
     x = zeros(Float64,xdim)
 
     nnodes4item = 0
-    celldim = dim_element(FE.xgrid[CellGeometries][1]) # currently assumed to be the same for cells
     offset4component = [0, nnodes+nfaces]
     face = 0
     if length(dofs) == 0 # interpolate at all dofs
@@ -235,7 +235,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
                 Target[j+offset4component[k]] = result[k]
             end    
         end
-        if celldim == 2
+        if edim == 2
             # interpolate at face midpoints
             for face = 1 : nfaces
                 nnodes4item = num_targets(xFaceNodes,face)
@@ -251,7 +251,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
                     Target[nnodes+face+offset4component[k]] = result[k]
                 end    
             end
-        elseif celldim == 1
+        elseif edim == 1
             # interpolate at cell midpoints
             for cell = 1 : ncells
                 nnodes4item = num_targets(xCellNodes,cell)
@@ -270,7 +270,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
         end
     else
         item = 0
-        if celldim == 2
+        if edim == 2
             for j in dofs 
                 item = mod(j-1,nnodes+nfaces)+1
                 c = Int(ceil(j/(nnodes+nfaces)))
@@ -294,7 +294,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
                     Target[j] = result[c]
                 end
             end
-        elseif celldim == 1
+        elseif edim == 1
             for j in dofs 
                 item = mod(j-1,nnodes+ncells)+1
                 c = Int(ceil(j/(nnodes+ncells)))
@@ -324,10 +324,16 @@ end
 
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2})
     nnodes = num_sources(FE.xgrid[Coordinates])
-    nfaces = num_sources(FE.xgrid[FaceNodes])
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    offset4component = 0:(nnodes+nfaces):ncomponents*(nnodes+nfaces)
+    edim = get_edim(FEType)
+    if edim == 1
+        ncells = num_sources(FE.xgrid[CellNodes])
+        offset4component = 0:(nnodes+ncells):ncomponents*(nnodes+ncells)
+    elseif edim == 2
+        nfaces = num_sources(FE.xgrid[FaceNodes])
+        offset4component = 0:(nnodes+nfaces):ncomponents*(nnodes+nfaces)
+    end
     for node = 1 : nnodes
         for c = 1 : ncomponents
             Target[c,node] = Source[offset4component[c]+node]

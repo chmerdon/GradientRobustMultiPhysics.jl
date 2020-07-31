@@ -22,8 +22,8 @@ function main()
     verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # load mesh and refine
-    xgrid = testgrid_cube_uniform(Hexahedron3D)
-    #xgrid = testgrid_cube_uniform(Tetrahedron3D)
+    xgrid = grid_unitcube(Hexahedron3D)
+    #xgrid = grid_unitcube(Tetrahedron3D)
 
     for j = 1:3
         xgrid = uniform_refine(xgrid)

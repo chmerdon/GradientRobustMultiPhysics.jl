@@ -43,7 +43,7 @@ function main()
     #####################################################################################
     
     # meshing parameters
-    xgrid = testgrid_mixedEG(); # initial grid
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
     
     #xgrid = split_grid_into(xgrid,Triangle2D) # if you want just triangles
     nlevels = 7 # number of refinement levels
