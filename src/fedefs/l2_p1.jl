@@ -16,6 +16,8 @@ get_ncomponents(FEType::Type{<:L2P1}) = FEType.parameters[1]
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Quadrilateral2D}) = 2;
+get_polynomialorder(::Type{<:L2P1}, ::Type{<:Tetrahedron3D}) = 1;
+get_polynomialorder(::Type{<:L2P1}, ::Type{<:Hexahedron3D}) = 3;
 
 
 function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: L2P1}
@@ -149,20 +151,11 @@ end
 
 
 # use same functions as P1
-function get_basis_on_cell(::Type{L2P1{1}}, EG::Type{<:AbstractElementGeometry}) 
-    return get_basis_on_cell(H1P1{1}, EG)
-end
-
-
-function get_basis_on_cell(::Type{L2P1{2}}, EG::Type{<:AbstractElementGeometry}) 
-    return get_basis_on_cell(H1P1{2}, EG)
+function get_basis_on_cell(FEType::Type{<:L2P1}, EG::Type{<:AbstractElementGeometry}) 
+    return get_basis_on_cell(H1P1{get_ncomponents(FEType)}, EG)
 end
 
 # face functions are not continuous and should only be used on BFACES
-function get_basis_on_face(::Type{L2P1{1}}, EG::Type{<:AbstractElementGeometry}) 
-    return get_basis_on_face(H1P1{1}, EG)
-end
-
-function get_basis_on_face(::Type{L2P1{2}}, EG::Type{<:AbstractElementGeometry}) 
-    return get_basis_on_face(H1P1{2}, EG)
+function get_basis_on_face(FEType::Type{<:L2P1}, EG::Type{<:AbstractElementGeometry}) 
+    return get_basis_on_face(H1P1{get_ncomponents(FEType)}, EG)
 end

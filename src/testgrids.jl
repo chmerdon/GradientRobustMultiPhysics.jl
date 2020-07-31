@@ -68,8 +68,8 @@ function reference_domain(ET::Type{<:Hexahedron3D}; scale = [1,1,1])
 end
 
 # unit cube as one cell with six boundary regions (bottom, front, right, back, left, top)
-function grid_unitcube(::Type{Hexahedron3D})
-    return reference_domain(Hexahedron3D)
+function grid_unitcube(EG::Type{<:Hexahedron3D})
+    return reference_domain(EG)
 end
 
 # unit cube as six tets with six boundary regions (bottom, front, right, back, left, top)
@@ -94,8 +94,21 @@ end
 
 
 # unit square as one cell with four boundary regions (bottom, right, top, left)
-function grid_unitsquare()
-    return reference_domain(Quadrilateral2D)
+function grid_unitsquare(EG::Type{<:Quadrilateral2D})
+    return reference_domain(EG)
+end
+
+# unit square as two triangles with four boundary regions (bottom, right, top, left)
+function grid_unitsquare(::Type{<:Triangle2D})
+    xgrid=ExtendableGrid{Float64,Int32}()
+    xgrid[Coordinates]=Array{Float64,2}([0 0; 1 0; 1 1; 0 1]')
+    xgrid[CellNodes]=Array{Int32,2}([1 2 3; 1 3 4]')
+    xgrid[CellGeometries]=VectorOfConstants(Triangle2D,2)
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,2)
+    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
+    xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 1]')
+    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,4)
+    xgrid[CoordinateSystem]=Cartesian2D
 end
 
 # unit suqare as mixed triangles and squares with four boundary regions (bottom, right, top, left)
