@@ -11,8 +11,7 @@ allowed ElementGeometries:
 abstract type H1CR{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 
-get_ncomponents(::Type{H1CR{1}}) = 1
-get_ncomponents(::Type{H1CR{2}}) = 2
+get_ncomponents(FEType::Type{<:H1CR}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Edge1D}) = 0;
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Triangle2D}) = 1;

@@ -2,17 +2,16 @@
 """
 $(TYPEDEF)
 
-vector-valued (ncomponents = spacedim) Bernardi--Raugel element
+vector-valued (ncomponents = edim) Bernardi--Raugel element
 (first-order polynomials + normal-weighted face bubbles)
 
 allowed ElementGeometries:
 - Triangle2D (piecewise linear + normale-weighted face bubbles)
 - Quadrilateral2D (Q1 space + normal-weighted face bubbles)
 """
-abstract type H1BR{spacedim} <: AbstractH1FiniteElementWithCoefficients where {spacedim<:Int} end
+abstract type H1BR{edim} <: AbstractH1FiniteElementWithCoefficients where {edim<:Int} end
 
-get_ncomponents(::Type{<:H1BR{2}}) = 2
-get_ncomponents(::Type{<:H1BR{3}}) = 3
+get_ncomponents(FEType::Type{<:H1BR}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Triangle2D}) = 2;

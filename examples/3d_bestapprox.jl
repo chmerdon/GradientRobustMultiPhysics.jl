@@ -22,8 +22,8 @@ function main()
     verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # load mesh and refine
-    #xgrid = testgrid_cube_uniform(Hexahedron3D)
-    xgrid = testgrid_cube_uniform(Tetrahedron3D)
+    xgrid = testgrid_cube_uniform(Hexahedron3D)
+    #xgrid = testgrid_cube_uniform(Tetrahedron3D)
 
     for j = 1:3
         xgrid = uniform_refine(xgrid)
@@ -34,7 +34,8 @@ function main()
     show(Problem)
 
     # choose some finite element space
-    FEType = HDIVRT0{3}
+    FEType = H1P1{3}
+    #FEType = HDIVRT0{3}
     FES = FESpace{FEType}(xgrid)
 
     # solve the problem

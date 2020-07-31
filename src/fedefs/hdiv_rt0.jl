@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 
-Hdiv-conforming vector-valued (ncomponents = spacedim) lowest-order Raviart-Thomas space
+Hdiv-conforming vector-valued (ncomponents = edim) lowest-order Raviart-Thomas space
 
 allowed ElementGeometries:
 - Triangle2D
@@ -9,10 +9,9 @@ allowed ElementGeometries:
 - Tetrahedron3D
 - Hexahedron3D
 """
-abstract type HDIVRT0{spacedim} <: AbstractHdivFiniteElement where {spacedim<:Int} end
+abstract type HDIVRT0{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
-get_ncomponents(::Type{<:HDIVRT0{2}}) = 2
-get_ncomponents(::Type{<:HDIVRT0{3}}) = 3
+get_ncomponents(FEType::Type{<:HDIVRT0}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:AbstractElementGeometry1D}) = 0;
 get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:AbstractElementGeometry2D}) = 1;

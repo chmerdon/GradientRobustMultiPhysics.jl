@@ -8,10 +8,10 @@ allowed element geometries:
 - Triangle2D (linear polynomials + cubic cell bubble)
 - Quadrilateral2D (Q1 space + quartic cell bubble)
 """
-abstract type H1MINI{ncomponents,spacedim} <: AbstractH1FiniteElement where {ncomponents<:Int,spacedim<:Int} end
+abstract type H1MINI{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
-get_ncomponents(::Type{H1MINI{1,2}}) = 1
-get_ncomponents(::Type{H1MINI{2,2}}) = 2
+get_ncomponents(FEType::Type{<:H1MINI}) = FEType.parameters[1]
+get_edim(FEType::Type{<:H1MINI}) = FEType.parameters[2]
 
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Edge1D}) = 1
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Triangle2D}) = 3;

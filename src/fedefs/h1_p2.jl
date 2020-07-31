@@ -11,12 +11,8 @@ allowed ElementGeometries:
 """
 abstract type H1P2{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
-get_edim(::Type{H1P2{ncomponents,1}}) where ncomponents = 1
-get_edim(::Type{H1P2{ncomponents,2}}) where ncomponents = 2
-get_edim(::Type{H1P2{ncomponents,3}}) where ncomponents = 3
-
-get_ncomponents(::Type{H1P2{1,edim}}) where edim = 1
-get_ncomponents(::Type{H1P2{2,edim}}) where edim = 2
+get_ncomponents(FEType::Type{<:H1P2}) = FEType.parameters[1]
+get_edim(FEType::Type{<:H1P2}) = FEType.parameters[2]
 
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Triangle2D}) = 2;

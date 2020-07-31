@@ -8,8 +8,7 @@ allowed on every ElementGeometry
 abstract type L2P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 
-get_ncomponents(::Type{L2P0{1}}) = 1
-get_ncomponents(::Type{L2P0{2}}) = 2
+get_ncomponents(FEType::Type{<:L2P0}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:L2P0}, ::Type{<:AbstractElementGeometry}) = 0;
 

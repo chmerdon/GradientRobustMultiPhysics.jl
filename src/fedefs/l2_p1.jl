@@ -11,8 +11,7 @@ allowed ElementGeometries:
 """
 abstract type L2P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
-get_ncomponents(::Type{L2P1{1}}) = 1
-get_ncomponents(::Type{L2P1{2}}) = 2
+get_ncomponents(FEType::Type{<:L2P1}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Triangle2D}) = 1;
