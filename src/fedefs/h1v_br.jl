@@ -16,6 +16,10 @@ get_ncomponents(FEType::Type{<:H1BR}) = FEType.parameters[1]
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Triangle2D}) = 2;
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Quadrilateral2D}) = 3;
+get_polynomialorder(::Type{<:H1BR{3}}, ::Type{<:Triangle2D}) = 3;
+get_polynomialorder(::Type{<:H1BR{3}}, ::Type{<:Tetrahedron3D}) = 3;
+get_polynomialorder(::Type{<:H1BR{3}}, ::Type{<:Parallelogram2D}) = 4;
+get_polynomialorder(::Type{<:H1BR{3}}, ::Type{<:Hexahedron3D}) = 5;
 
 
 function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1BR}
@@ -50,6 +54,9 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
             for n = 1 : ncomponents-1
                 dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
             end    
+        end
+        nnodes4item = num_targets(xCellFaces,cell)
+        for k = 1 : nnodes4item
             dofs4item[ncomponents*nnodes4item+k] = ncomponents*nnodes + xCellFaces[k,cell]
         end
         append!(xCellDofs,dofs4item[1:(ncomponents+1)*nnodes4item])
@@ -186,6 +193,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR}, exac
     end    
 end
 
+
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR})
     nnodes = num_sources(FE.xgrid[Coordinates])
     nfaces = num_sources(FE.xgrid[FaceNodes])
@@ -199,6 +207,10 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
+
+############
+# 2D basis #
+############
 
 function get_basis_on_face(::Type{H1BR{2}}, ::Type{<:Edge1D})
     function closure(xref)
@@ -230,7 +242,6 @@ function get_basis_on_cell(::Type{H1BR{2}}, ::Type{<:Triangle2D})
     end
 end
 
-
 function get_basis_on_cell(::Type{H1BR{2}}, ::Type{<:Quadrilateral2D})
     function closure(xref)
         a = 1 - xref[1]
@@ -254,7 +265,6 @@ function get_basis_on_cell(::Type{H1BR{2}}, ::Type{<:Quadrilateral2D})
     end
 end
 
-
 function get_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::Type{<:Triangle2D}, cell::Int)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
@@ -265,6 +275,7 @@ function get_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::Type{<:
     coefficients[1,9] = FE.xFaceNormals[1, FE.xCellFaces[3,cell]];
     coefficients[2,9] = FE.xFaceNormals[2, FE.xCellFaces[3,cell]];
 end    
+
 function get_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::Type{<:Quadrilateral2D}, cell::Int,)
     # multiplication with normal vectors
     fill!(coefficients,1.0)
@@ -280,11 +291,190 @@ end
 
 
 function get_coefficients_on_face!(coefficients, FE::FESpace{H1BR{2}}, ::Type{<:Edge1D}, face::Int)
-    # multiplication with normal vectors
+    # multiplication of face bubble with normal vector of face
     fill!(coefficients,1.0)
     coefficients[1,5] = FE.xFaceNormals[1, face];
     coefficients[2,5] = FE.xFaceNormals[2, face];
 end    
+
+
+############
+# 3D basis #
+############
+
+function get_basis_on_face(::Type{H1BR{3}}, ::Type{<:Triangle2D})
+    function closure(xref)
+        temp = 1 - xref[1] - xref[2];
+        bf = 9 * xref[1] * temp * xref[2];
+        return [temp 0.0 0.0;
+                xref[1] 0.0 0.0;
+                xref[2] 0.0 0.0;
+                0.0 temp 0.0;
+                0.0 xref[1] 0.0;
+                0.0 xref[2] 0.0;
+                0.0 0.0 temp;
+                0.0 0.0 xref[1];
+                0.0 0.0 xref[2];
+                bf bf bf]
+    end
+end
+
+function get_basis_on_face(::Type{H1BR{3}}, ::Type{<:Quadrilateral2D})
+    function closure(xref)
+        a = 1 - xref[1]
+        b = 1 - xref[2]
+        bf = 16 * xref[1] * a * b * xref[2];
+        return [a*b 0.0 0.0;
+                xref[1]*b 0.0 0.0;
+                xref[1]*xref[2] 0.0 0.0;
+                xref[2]*a 0.0 0.0;
+                0.0 a*b 0.0;
+                0.0 xref[1]*b 0.0;
+                0.0 xref[1]*xref[2] 0.0;
+                0.0 xref[2]*a 0.0;
+                0.0 0.0 a*b;
+                0.0 0.0 xref[1]*b;
+                0.0 0.0 xref[1]*xref[2];
+                0.0 0.0 xref[2]*a;
+                bf bf bf]
+    end
+end
+
+function get_basis_on_cell(::Type{H1BR{3}}, ::Type{<:Tetrahedron3D})
+    function closure(xref)
+        temp = 1 - xref[1] - xref[2] - xref[3];
+        bf1 = 9 * xref[1] * temp * xref[2];
+        bf2 = 9 * temp * xref[2] * xref[3];
+        bf3 = 9 * xref[1] * xref[2] * xref[3];
+        bf4 = 9 * temp * xref[2] * xref[3];
+        return [temp 0.0 0.0;
+                xref[1] 0.0 0.0;
+                xref[2] 0.0 0.0;
+                xref[3] 0.0 0.0;
+                0.0 temp 0.0;
+                0.0 xref[1] 0.0;
+                0.0 xref[2] 0.0;
+                0.0 xref[3] 0.0;
+                0.0 0.0 temp;
+                0.0 0.0 xref[1];
+                0.0 0.0 xref[2];
+                0.0 0.0 xref[3];
+                bf1 bf1 bf1;
+                bf2 bf2 bf2;
+                bf3 bf3 bf3;
+                bf4 bf4 bf4]
+    end
+end
+
+
+function get_basis_on_cell(::Type{H1BR{3}}, ::Type{<:Hexahedron3D})
+    function closure(xref)
+        a = 1 - xref[1]
+        b = 1 - xref[2]
+        c = 1 - xref[3]
+        fb1 = 16*a*b*xref[1]*xref[2]*c # bottom
+        fb2 = 16*a*xref[1]*c*xref[3]*b # front
+        fb3 = 16*a*b*c*xref[2]*xref[3] # left
+        fb4 = 16*a*xref[1]*c*xref[3]*xref[2] # back
+        fb5 = 16*xref[1]*b*c*xref[2]*xref[3] # right
+        fb6 = 16*a*b*xref[1]*xref[2]*xref[3] # top
+        return [a*b*c 0.0 0.0;
+                xref[1]*b*c 0.0 0.0;
+                xref[2]*a*c 0.0 0.0;
+                xref[3]*a*b 0.0 0.0;
+                xref[1]*xref[2]*c 0.0 0.0;
+                xref[1]*b*xref[3]c 0.0 0.0;
+                a*xref[2]*xref[3] 0.0 0.0;
+                xref[1]*xref[2]*xref[3] 0.0 0.0;
+                0.0 a*b*c 0.0;
+                0.0 xref[1]*b*c 0.0;
+                0.0 xref[2]*a*c 0.0;
+                0.0 xref[3]*a*b 0.0;
+                0.0 xref[1]*xref[2]*c 0.0;
+                0.0 xref[1]*b*xref[3] 0.0;
+                0.0 a*xref[2]*xref[3] 0.0;
+                0.0 xref[1]*xref[2]*xref[3] 0.0;
+                0.0 0.0 a*b*c;
+                0.0 0.0 xref[1]*b*c;
+                0.0 0.0 xref[2]*a*c;
+                0.0 0.0 xref[3]*a*b;
+                0.0 0.0 xref[1]*xref[2]*c;
+                0.0 0.0 xref[1]*b*xref[3];
+                0.0 0.0 a*xref[2]*xref[3];
+                0.0 0.0 xref[1]*xref[2]*xref[3];
+                fb1 fb1 fb1;
+                fb2 fb2 fb2;
+                fb3 fb3 fb3;
+                fb4 fb4 fb4;
+                fb5 fb5 fb5;
+                fb6 fb6 fb6]
+    end
+end
+
+
+function get_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{3}}, ::Type{<:Tetrahedron3D}, cell::Int)
+    # multiplication with normal vectors
+    fill!(coefficients,1.0)
+    coefficients[1,13] = FE.xFaceNormals[1, FE.xCellFaces[1,cell]];
+    coefficients[2,13] = FE.xFaceNormals[2, FE.xCellFaces[1,cell]];
+    coefficients[3,13] = FE.xFaceNormals[3, FE.xCellFaces[1,cell]];
+    coefficients[1,14] = FE.xFaceNormals[1, FE.xCellFaces[2,cell]];
+    coefficients[2,14] = FE.xFaceNormals[2, FE.xCellFaces[2,cell]];
+    coefficients[3,14] = FE.xFaceNormals[3, FE.xCellFaces[2,cell]];
+    coefficients[1,15] = FE.xFaceNormals[1, FE.xCellFaces[3,cell]];
+    coefficients[2,15] = FE.xFaceNormals[2, FE.xCellFaces[3,cell]];
+    coefficients[3,15] = FE.xFaceNormals[3, FE.xCellFaces[3,cell]];
+    coefficients[1,16] = FE.xFaceNormals[1, FE.xCellFaces[4,cell]];
+    coefficients[2,16] = FE.xFaceNormals[2, FE.xCellFaces[4,cell]];
+    coefficients[3,16] = FE.xFaceNormals[3, FE.xCellFaces[4,cell]];
+end    
+
+
+function get_coefficients_on_face!(coefficients, FE::FESpace{H1BR{3}}, ::Type{<:Triangle2D}, face::Int)
+    # multiplication of face bubble with normal vector of face
+    fill!(coefficients,1.0)
+    coefficients[1,10] = FE.xFaceNormals[1, face];
+    coefficients[2,10] = FE.xFaceNormals[2, face];
+    coefficients[3,10] = FE.xFaceNormals[3, face];
+end    
+
+
+function get_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{3}}, ::Type{<:Hexahedron3D}, cell::Int)
+    # multiplication with normal vectors
+    fill!(coefficients,1.0)
+    coefficients[1,25] = FE.xFaceNormals[1, FE.xCellFaces[1,cell]];
+    coefficients[2,25] = FE.xFaceNormals[2, FE.xCellFaces[1,cell]];
+    coefficients[3,25] = FE.xFaceNormals[3, FE.xCellFaces[1,cell]];
+    coefficients[1,26] = FE.xFaceNormals[1, FE.xCellFaces[2,cell]];
+    coefficients[2,26] = FE.xFaceNormals[2, FE.xCellFaces[2,cell]];
+    coefficients[3,26] = FE.xFaceNormals[3, FE.xCellFaces[2,cell]];
+    coefficients[1,27] = FE.xFaceNormals[1, FE.xCellFaces[3,cell]];
+    coefficients[2,27] = FE.xFaceNormals[2, FE.xCellFaces[3,cell]];
+    coefficients[3,27] = FE.xFaceNormals[3, FE.xCellFaces[3,cell]];
+    coefficients[1,28] = FE.xFaceNormals[1, FE.xCellFaces[4,cell]];
+    coefficients[2,28] = FE.xFaceNormals[2, FE.xCellFaces[4,cell]];
+    coefficients[3,28] = FE.xFaceNormals[3, FE.xCellFaces[4,cell]];
+    coefficients[1,29] = FE.xFaceNormals[1, FE.xCellFaces[5,cell]];
+    coefficients[2,29] = FE.xFaceNormals[2, FE.xCellFaces[5,cell]];
+    coefficients[3,29] = FE.xFaceNormals[3, FE.xCellFaces[5,cell]];
+    coefficients[1,30] = FE.xFaceNormals[1, FE.xCellFaces[6,cell]];
+    coefficients[2,30] = FE.xFaceNormals[2, FE.xCellFaces[6,cell]];
+    coefficients[3,30] = FE.xFaceNormals[3, FE.xCellFaces[6,cell]];
+end    
+
+
+function get_coefficients_on_face!(coefficients, FE::FESpace{H1BR{3}}, ::Type{<:Quadrilateral2D}, face::Int)
+    # multiplication of face bubble with normal vector of face
+    fill!(coefficients,1.0)
+    coefficients[1,13] = FE.xFaceNormals[1, face];
+    coefficients[2,13] = FE.xFaceNormals[2, face];
+    coefficients[3,13] = FE.xFaceNormals[3, face];
+end    
+
+######################
+# RT0 Reconstruction #
+######################
+
 
 
 function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::Type{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)

@@ -205,7 +205,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
       xref = Vector{Array{T,1}}(undef,1);
       xref[1] = ones(T,3) * 1 // 4
       w = [1]
-  else # order = 2
+  elseif order > 1
       name = "order 2 rule"
       xref = Vector{Array{T,1}}(undef,4);
       xref[1] = [0.1381966011250105,0.1381966011250105,0.1381966011250105]
@@ -213,6 +213,8 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
       xref[3] = [0.1381966011250105,0.5854101966249685,0.1381966011250105]
       xref[4] = [0.1381966011250105,0.1381966011250105,0.5854101966249685]
       w = ones(T,4) * 1 // 4
+  else
+      # no generic rule implemented yet
   end
   return QuadratureRule{T, ET}(name, xref, w)
 end
@@ -230,6 +232,7 @@ function get_generic_quadrature_Gauss(order::Int)
     # transform to interval [0,1]
     r = .5 .* r .+ .5;
     w = .5 .* w';
+
     xref = Array{Array{Float64,1}}(undef,length(r))
     for j = 1 : length(r)
         xref[j] = [r[j]];
@@ -274,6 +277,7 @@ function get_generic_quadrature_Stroud(order::Int)
     
     return xref, w[:]
 end
+
 
 """
 $(TYPEDSIGNATURES)
