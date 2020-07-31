@@ -196,7 +196,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     xdim = size(FE.xgrid[Coordinates],1)
     if derivorder > 0
         refoperatorvals = zeros(T,ndofs4item*ncomponents,edim,length(qf.w));
-        current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
+       # current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
             # = list of vectors [du_k/dx_1; du_k,dx_2]
@@ -205,12 +205,13 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
     if derivorder > 1
         refoperatorvals = zeros(T,ndofs4item*ncomponents*edim,edim,length(qf.w));
-        current_eval = zeros(T,ncomponents*edim*edim,ndofs4item,length(qf.w));
+        #current_eval = zeros(T,ncomponents*edim*edim,ndofs4item,length(qf.w));
         for i in eachindex(qf.w)
             # evaluate gradients of basis function
             refoperatorvals[:,:,i] = vector_hessian(refbasis,qf.xref[i])
         end   
     end
+    current_eval = zeros(T,Int(Length4Operator(FEOP,edim,ncomponents)),ndofs4item,length(qf.w))
 
     xref = copy(qf.xref)
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}

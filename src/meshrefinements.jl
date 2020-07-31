@@ -4,7 +4,14 @@ split_rule(::Type{Triangle2D}, ::Type{Triangle2D}) = reshape([1,2,3],1,3)
 split_rule(::Type{<:Quadrilateral2D}, ::Type{Triangle2D}) = [1 2 3;1 3 4]
 split_rule(::Type{Edge1D}, ::Type{Triangle2D}) = reshape([1,2,2],1,3)
 
-# function that generates a new simplexgrid from a mixed grid
+"""
+$(TYPEDSIGNATURES)
+
+generates a new ExtendableGrid by splitting each cell into subcells of the specified targetgeometry
+
+split rules exist for
+    - Quadrilateral2D into Triangle2D
+"""
 function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{Triangle2D}) where {T,K}
     xgrid=ExtendableGrid{T,K}()
     xgrid[Coordinates]=source_grid[Coordinates]
@@ -84,13 +91,22 @@ uniform_refine_rule(::Type{<:Hexahedron3D}) = [ 1 9 10 11 21 22 25 27;
 uniform_refine_needcellmidpoints(::Type{<:Hexahedron3D}) = true
 
 
+"""
+$(TYPEDSIGNATURES)
 
-# barycentric refinement rules
-# first k nodes are the CellNodes, k+1-th  node is cell midpoint
-barycentric_refine_rule(::Type{<:Triangle2D}) = [1 2 4; 2 3 4; 3 1 4]
+generates a new ExtendableGrid by uniform refinement of each cell in the given grid
 
+uniform refinement rules are available for these AbstractElementGeometries:
+    - Line1D (bisection into two subsegments)
+    - Triangle2D (red refinement into four subtriangles)
+    - Quadrilateral2D (into four subquadrilaterals)
+    - Tetrahedron (into eight subtetrahedrons)
+    - Hexahedron (into eight subhexahedrons)
 
-# function that generates a new simplexgrid from a uniformly refined mixed grid
+if multiple geometries are in the mesh uniform refinement will only work
+if all refinement rules refine faces and edges (in 3D) equally
+(so no hanging nodes are created)
+"""
 function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid = ExtendableGrid{T,K}()
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
@@ -341,8 +357,21 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     return xgrid
 end
 
-# function that generates a new barycentrically refined simplexgrid from a mixed grid
-# (first grid is plit into triangles)
+
+# barycentric refinement rules
+# first k nodes are the CellNodes, k+1-th  node is cell midpoint
+barycentric_refine_rule(::Type{<:Triangle2D}) = [1 2 4; 2 3 4; 3 1 4]
+
+
+"""
+$(TYPEDSIGNATURES)
+
+generates a new ExtendableGrid by barycentric refinement of each cell in the source grid
+
+barcentric refinement is available for these ElementGeometries
+    - Quadrilateral2D (first split into Triangle2D)
+    - Triangle2D
+"""
 function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     # split first into triangles
     source_grid = split_grid_into(source_grid,Triangle2D)

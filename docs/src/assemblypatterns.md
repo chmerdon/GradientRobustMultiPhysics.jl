@@ -12,6 +12,6 @@ Examples:
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["AbstractAssemblyPattern.jl"]
+Pages = ["assemblypatterns.jl"]
 Order   = [:type, :function]
 ```

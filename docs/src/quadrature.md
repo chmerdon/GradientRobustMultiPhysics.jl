@@ -4,6 +4,6 @@
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["QuadratureRules.jl"]
+Pages = ["quadrature.jl"]
 Order   = [:type, :function]
 ```

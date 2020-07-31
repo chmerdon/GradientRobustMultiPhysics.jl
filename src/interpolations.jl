@@ -39,7 +39,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
       basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],operator,AssemblyTypeCELL}(FE, qf[j])
   end    
   cvals_resultdim::Int = size(basisevaler[1].cvals,1)
-  @assert size(Target,1) == cvals_resultdim
+  @assert size(Target,1) >= cvals_resultdim
 
   nitems::Int = num_sources(xItemDofs)
   nnodes::Int = num_sources(FE.xgrid[Coordinates])

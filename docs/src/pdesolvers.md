@@ -8,6 +8,6 @@ Also, there is a preliminary time-dependent solver that can be setup in a simila
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["PDESolver.jl"]
+Pages = ["solvers.jl"]
 Order   = [:type, :function]
 ```

@@ -15,7 +15,7 @@ The PDE consists of PDEOperators characterising some feature of the model (like 
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["PDEOperators.jl"]
+Pages = ["pdeoperators.jl"]
 Order   = [:type, :function]
 ```
 
@@ -30,7 +30,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["FEBasisEvaluator.jl"]
+Pages = ["febasisevaluator.jl"]
 Order   = [:type, :function]
 ```
 
@@ -41,7 +41,7 @@ GlobalConstraints are additional constraints that the user does not wish to impl
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["PDEGlobalConstraints.jl"]
+Pages = ["globalconstraints.jl"]
 Order   = [:type, :function]
 ```
 
@@ -57,6 +57,6 @@ So far only DirichletBoundaryData is possible, as most other types can be implem
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["PDEBoundaryData.jl"]
+Pages = ["boundarydata.jl"]
 Order   = [:type, :function]
 ```

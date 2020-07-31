@@ -6,7 +6,7 @@ The implementation is based on ExtendableGrids.jl that allows to have unstructur
 
 !!! note
 
-    The focus is (at least currently) not on maxed-out efficiency or parallel computing. Also, this package is still in an early development stage with a limited number of applications and interfaces and features might change (especially for time-dependent PDEs) in future updates.
+    The focus is (at least currently) not on high-performance or parallel-computing. Also, this package is still in an early development stage with a limited number of applications and interfaces and features might change (especially for time-dependent PDEs) in future updates.
 
 
 !!! note
@@ -16,11 +16,27 @@ The implementation is based on ExtendableGrids.jl that allows to have unstructur
 
 ## What is gradient-robustness?
 
-Gradient-robustness describes discretisations that exactly balance gradient forces and the momentum balance. In the case of the incompressible Navier--Stokes equations this means that the discrete velocity does not depend on the exact pressure. Divergence-conforming finite element metods have this property but are usually expensive and difficult to contruct. However, also non-divergence-conforming classical finite element methods can be made pressure-robust with the help of reconstruction operators applied to testfuntions in certain terms of the momentum balance.
+Gradient-robustness is a feature of discretisations that exactly balance gradient forces in the momentum balance. In the case of the incompressible Navier--Stokes equations this means that the discrete velocity does not depend on the exact pressure. Divergence-conforming finite element methods have this property but are usually expensive and difficult to contruct. However, also non-divergence-conforming classical finite element methods can be made pressure-robust with the help of reconstruction operators applied to testfuntions in certain terms of the momentum balance, see e.g. references [1,2] below.
 
-Recently gradient-robustness was also shown to produce well-balanced schemes e.g. in the context of (nearly) compressible flows.
+Recently gradient-robustness was also connected to the design of well-balanced schemes e.g. in the context of (nearly) compressible flows, see e.g. reference [3] below.
 
-Todo: add some references
+#### References
+
+- [1]   "On the divergence constraint in mixed finite element methods for incompressible flows"
+        V. John, A. Linke, C. Merdon, M. Neilan and L. Rebholz
+        SIAM Review 59(3) (2017), 492--544
+        [>Journal-Link<](https://doi.org/10.1137/15M1047696) 
+        [>Preprint-Link<](http://www.wias-berlin.de/publications/wias-publ/run.jsp?template=abstract&type=Preprint&year=2015&number=2177)
+- [2]   "Pressure-robustness and discrete Helmholtz projectors in mixed finite element methods for the incompressible Navier--Stokes equations"
+        A. Linke and C. Merdon
+        Computer Methods in Applied Mechanics and Engineering 311 (2016), 304--326
+        [>Journal-Link<](http://dx.doi.org/10.1016/j.cma.2016.08.018) 
+        [>Preprint-Link<](http://www.wias-berlin.de/publications/wias-publ/run.jsp?template=abstract&type=Preprint&year=2016&number=2250)
+- [3]   "A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem"
+        M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon
+        Computer Methods in Applied Mechanics and Engineering 367 (2020)
+        [>Journal-Link<](https://doi.org/10.1016/j.cma.2020.113069) 
+        [>Preprint-Link<](https://arxiv.org/abs/1911.01295)
 
 
 ## Getting started
@@ -32,4 +48,4 @@ The general work-flow is as follows:
 3. Define finite element ansatz spaces for the unknowns of your PDE system.
 4. Solve by using solve! or via a TimeControlSolver and advance! if the PDE system is time-dependent.
 
-Please have a look at the Examples in the examples subfolder or the documented examples here, see [Examples Overview](@ref).
+Please have a look at the Examples.

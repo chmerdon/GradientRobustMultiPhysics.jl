@@ -1,17 +1,29 @@
+#= 
 
+# 3D Poisson problem
+([source code](SOURCE_URL))
+
+This example computes the solution ``u`` of the three dimensional Poisson problem
+```math
+\begin{aligned}
+-\Delta u & = f \quad \text{in } \Omega
+\end{aligned}
+```
+with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series of uniform refined meshes (tetrahedra or parallelepipeds).
+
+=#
+
+push!(LOAD_PATH, "../src")
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-
-# load finite element module
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 
-
+## include file where mesh is defined
 include("../src/testgrids.jl")
 
-# problem data
+## problem data
 function exact_function!(result,x)
     result[1] = x[1]*x[2]*x[3]^2 - x[1]*x[2]
 end
@@ -26,46 +38,43 @@ end
 
 function main()
 
-    verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
+    ## choose initial mesh
+    ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
+    xgrid = grid_unitcube(Parallelepiped3D)
+    nlevels = 5 # maximal number of refinement levels
 
-    # initial mesh
-    #xgrid = grid_unitcube(Hexahedron3D)
-    xgrid = grid_unitcube(Tetrahedron3D)
-    nlevels = 4 # maximal number of refinement levels
+    ## set finite element type used for discretisation
+    FEType = H1P1{1}
 
-    # Define Poisson problem via PDETooles_PDEProtoTypes
+    ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(3; diffusion = 1.0)
     add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 4)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [rhs!], 3, 1; bonus_quadorder = 1))
-    show(Problem)
 
-    # prepare error calculation
+    ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 4)
     H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient!, Gradient, 3, 3; bonus_quadorder = 4)
-    L2error = []
-    H1error = []
-    NDofs = []
+    L2error = []; H1error = []; NDofs = []
 
-    # loop over levels
+    ## loop over levels
     for level = 1 : nlevels
 
-        # uniform mesh refinement
+        ## uniform mesh refinement
         xgrid = uniform_refine(xgrid)
         
-        # choose some finite element space
-        FEType = H1P1{1}
-        FES = FESpace{FEType}(xgrid; dofmaps_needed = [AssemblyTypeCELL, AssemblyTypeBFACE], verbosity = verbosity - 1)
+        ## create finite element space
+        FES = FESpace{FEType}(xgrid; dofmaps_needed = [AssemblyTypeCELL, AssemblyTypeBFACE])
 
-        # solve the problem
+        ## solve the problem
         Solution = FEVector{Float64}("Solution",FES)
         push!(NDofs,length(Solution.entries))
-        solve!(Solution, Problem; verbosity = verbosity)
+        solve!(Solution, Problem; verbosity = 1)
 
-        # calculate L2 error and L2 divergence error
+        ## calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
 
-        # output
+        ## output errors in a nice table
         if (level == nlevels)
             println("\n   NDOF  |   L2ERROR   |   H1ERROR")
             for j=1:nlevels

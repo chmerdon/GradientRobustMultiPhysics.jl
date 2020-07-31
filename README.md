@@ -33,5 +33,5 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - ExtendableGrids.jl
 - ForwardDiff.jl
 - BenchmarkTools.jl
-- Triangulate.jl (for grid generation in some examples)
+- Triangulate.jl (for runtests.jl and grid generation in some examples)
 - PyPlot.jl (to run most of the examples with plots)

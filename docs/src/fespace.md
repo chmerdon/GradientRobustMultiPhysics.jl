@@ -22,7 +22,7 @@ show(::IO, ::FESpace)
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["FEVector.jl"]
+Pages = ["fevector.jl"]
 Order   = [:type, :function]
 ```
 
@@ -32,6 +32,6 @@ Order   = [:type, :function]
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["FEMatrix.jl"]
+Pages = ["fematrix.jl"]
 Order   = [:type, :function]
 ```
