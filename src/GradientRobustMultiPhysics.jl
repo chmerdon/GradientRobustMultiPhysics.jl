@@ -2,6 +2,7 @@ module GradientRobustMultiPhysics
 
 using ExtendableGrids
 using ExtendableSparse
+using SuiteSparse
 using SparseArrays
 using BenchmarkTools
 using LinearAlgebra

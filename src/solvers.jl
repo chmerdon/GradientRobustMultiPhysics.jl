@@ -696,6 +696,7 @@ mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
     X::FEVector              # full solution vector
     fixed_dofs::Array{Int,1}            # fixed dof numbes (values are stored in X)
     eqoffsets::Array{Array{Int,1},1}    # offsets for subblocks of each equation package
+    ALU::Array{Any,1}  # LU decompositions of matrices A
 end
 
 
@@ -808,7 +809,7 @@ function TimeControlSolver(
     end    
 
 
-    return  TimeControlSolver{TIR}(PDE,SC,start_time,0,0,timedependent_equations,AM,A,b,x,InitialValues, fixed_dofs, eqoffsets)
+    return  TimeControlSolver{TIR}(PDE,SC,start_time,0,0,timedependent_equations,AM,A,b,x,InitialValues, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
 end
 
 """
@@ -816,7 +817,11 @@ $(TYPEDSIGNATURES)
 
 Advances a TimeControlSolver in time with the given timestep.
 """
-function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
+function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = [])
+
+    if reuse_matrix == []
+        reuse_matrix = zeros(Bool,length(TCS.SC.subiterations))
+    end
 
     # update timestep counter
     TCS.cstep += 1
@@ -938,11 +943,15 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end
         end
 
+        if (reuse_matrix[s] == false) || (TCS.cstep == 1)
+            flush!(A[s].entries)
+            TCS.ALU[s] = lu(A[s].entries.cscmatrix)
+        end
 
         # SOLVE
         if SC.verbosity > 1
             println("\n  Solving equation(s) $(SC.subiterations[s])")
-            @time x[s].entries[:] = A[s].entries\b[s].entries
+            @time x[s].entries[:] = TCS.ALU[s]\b[s].entries
             residual = A[s].entries*x[s].entries - b[s].entries
             for j = 1 : length(fixed_dofs)
                 for eq = 1 : length(SC.subiterations[s])
@@ -956,7 +965,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                 println("    ... residual = $(norm(residual))")
             end
         else
-            x[s].entries[:] = A[s].entries\b[s].entries
+            x[s].entries[:] = TCS.ALU[s]\b[s].entries
         end
         
 

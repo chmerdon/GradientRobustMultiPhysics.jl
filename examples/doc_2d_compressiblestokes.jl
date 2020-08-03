@@ -178,7 +178,9 @@ function main()
     ## we also output M to see that the mass constraint is preserved all the way
     change = 0.0
     for iteration = 1 : maxIterations
-        change = advance!(TCS, timestep)
+        ## in the advance! step we can tell which matrices of which subiterations do not change
+        ## and so allow for reuse of the lu factorization
+        change = advance!(TCS, timestep; reuse_matrix = [true, false, true])
         M = sum(Solution[2][:] .* xgrid[CellVolumes])
         @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)

@@ -97,7 +97,7 @@ function main()
     nnodes = size(xCoordinates,2)
     nodevals = zeros(Float64,2,nnodes)
     for iteration = 1 : maxIterations
-        change = advance!(TCS, timestep)
+        change = advance!(TCS, timestep; reuse_matrix = true)
         @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)
         @printf("  change = %.4e \n",change)
