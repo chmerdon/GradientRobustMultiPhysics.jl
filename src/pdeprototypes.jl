@@ -64,7 +64,7 @@ function CompressibleNavierStokesProblem(
     equation_of_state!::Function,
     gravity!::Function,
     dimension::Int = 2;
-    viscosity = 1.0,
+    shear_modulus = 1.0,
     lambda = 1.0,
     nonlinear::Bool = true)
 
@@ -94,7 +94,7 @@ function CompressibleNavierStokesProblem(
     Problem = PDEDescription(name, 3, [dimension,1,1], dimension)
 
     # momentum equation
-    add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension))
+    add_operator!(Problem, [1,1], LaplaceOperator(shear_modulus,dimension,dimension))
     if lambda != 0
         add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1)))
     end

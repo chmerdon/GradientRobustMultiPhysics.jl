@@ -80,7 +80,7 @@ The compressible Navier--Stokes equations in d dimensions seek a (vector-valued)
         \varrho & \geq 0
 \end{aligned}
 ```
-where eos is some equation of state function that describes the dependence of the pressure on the density (and further physical quantities like temperature in a more general setting). Moreover, ``\mu`` and ``\lambda`` are Lame parameters and ``f`` and ``g`` are given right-hand side data.
+where eos is some equation of state function that describes the dependence of the pressure on the density (and further physical quantities like temperature in a more general setting). Moreover, ``\mu`` and ``\lambda`` are Lame parameters and ``\mathbf{f}`` and ``\mathbf{g}`` are given right-hand side data.
 
 
 The weak formulation (for homogeneous Dirichlet boundary data) seeks ``(\mathbf{u},p,\varrho)`` such that
