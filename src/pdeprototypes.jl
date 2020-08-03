@@ -193,17 +193,20 @@ function L2BestapproximationProblem(
     dimension::Int = 2,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,
-    bestapprox_boundary_regions = [])
+    bestapprox_boundary_regions = [],
+    time_dependent_data::Bool = false,
+    time = 0)
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("L2-Bestapproximation problem", 1, [ncomponents], dimension)
     add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents)))
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [uexact], dimension, ncomponents; bonus_quadorder = bonus_quadorder))
+    data(result,x) = (time_dependent_data) ? uexact(result,x,time) : uexact(result,x)
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], data, dimension, ncomponents; bonus_quadorder = bonus_quadorder))
     if length(bestapprox_boundary_regions) > 0
         if dimension == 1 # in 1D Dirichlet boundary can be interpolated
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = data, bonus_quadorder = bonus_quadorder)
         else
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = data, bonus_quadorder = bonus_quadorder)
         end 
     end
 
@@ -226,23 +229,27 @@ function H1BestapproximationProblem(
 Creates an PDEDescription for an H1-Bestapproximation problem for the given exact function (only used on the boundary) and its exact gradient (used in the right-hand side). Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
 """
 function H1BestapproximationProblem(
-    exact_function_gradient::Function,
-    exact_function_boundary::Function,
+    uexact_gradient::Function,
+    uexact::Function,
     dimension::Int = 2,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,
     bonus_quadorder_boundary::Int = 0,
-    bestapprox_boundary_regions = [])
+    bestapprox_boundary_regions = [],
+    time_dependent_data::Bool = false,
+    time = 0)
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("H1-Bestapproximation problem", 1, [ncomponents], dimension)
     add_operator!(Problem, [1,1], LaplaceOperator(1.0,dimension,ncomponents))
-    add_rhsdata!(Problem, 1, RhsOperator(Gradient, [exact_function_gradient], dimension, ncomponents*dimension; bonus_quadorder = bonus_quadorder))
+    data(result,x) = (time_dependent_data) ? uexact(result,x,time) : uexact(result,x)
+    data_gradient(result,x) = (time_dependent_data) ? uexact_gradient(result,x,time) : uexact_gradient(result,x)
+    add_rhsdata!(Problem, 1, RhsOperator(Gradient, [0], data_gradient, dimension, ncomponents*dimension; bonus_quadorder = bonus_quadorder))
     if length(bestapprox_boundary_regions) > 0
         if dimension == 1 # in 1D Dirichlet boundary can be interpolated
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = exact_function_boundary, bonus_quadorder = bonus_quadorder_boundary)
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = data, bonus_quadorder = bonus_quadorder_boundary)
         else
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = exact_function_boundary, bonus_quadorder = bonus_quadorder_boundary)
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = data, bonus_quadorder = bonus_quadorder_boundary)
         end
     else
         add_constraint!(Problem, FixedIntegralMean(0.0))

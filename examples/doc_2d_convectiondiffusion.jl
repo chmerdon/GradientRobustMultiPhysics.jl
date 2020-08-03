@@ -80,7 +80,7 @@ function main()
     add_operator!(ConvectionDiffusionProblem, [1,1], ConvectionOperator(beta!,2,1))
 
     ## add right-hand side data to equation 1 (there is only one in this example)
-    add_rhsdata!(ConvectionDiffusionProblem, 1, RhsOperator(Identity, [exact_solution_rhs!(diffusion)], 2, 1; bonus_quadorder = 3))
+    add_rhsdata!(ConvectionDiffusionProblem, 1, RhsOperator(Identity, [0], exact_solution_rhs!(diffusion), 2, 1; bonus_quadorder = 3))
 
     ## add boundary data to unknown 1 (there is only one in this example)
     ## on boundary regions where the solution is linear only need to be interpolated

@@ -22,7 +22,7 @@ function main()
     verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
 
     # load mesh and refine
-    xgrid = grid_unitcube(Hexahedron3D)
+    xgrid = grid_unitcube(Parallelepiped3D)
     #xgrid = grid_unitcube(Tetrahedron3D)
 
     for j = 1:3

@@ -137,7 +137,7 @@ function main()
     #FEType_spokes = H1P2{2,1}; ConnectionDofs2 = [ConnectionPoints;(nnodes + num_sources(xgrid[CellNodes])) .+ ConnectionPoints]
 
     # solve parameter
-    verbosity = 2 # deepness of messaging (the larger, the more)
+    verbosity = 1 # deepness of messaging (the larger, the more)
 
     # postprocess parameters
     plot_grid = true
@@ -162,7 +162,7 @@ function main()
     add_constraint!(LinElastProblem,CombineDofs(1,2,ConnectionDofs1,ConnectionDofs2))
     
     # add boundary data
-    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, neumann_force_center!, 2, 2; regions = [3], on_boundary = true, bonus_quadorder = 0))
+    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [3], neumann_force_center!, 2, 2; on_boundary = true, bonus_quadorder = 0))
     add_boundarydata!(LinElastProblem, 1, [1], HomogeneousDirichletBoundary)
 
     # show PDEDescription

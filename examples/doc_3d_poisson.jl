@@ -49,7 +49,7 @@ function main()
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(3; diffusion = 1.0)
     add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 4)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [rhs!], 3, 1; bonus_quadorder = 1))
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], rhs!, 3, 1; bonus_quadorder = 1))
 
     ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 4)

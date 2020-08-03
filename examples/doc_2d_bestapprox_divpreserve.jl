@@ -45,7 +45,7 @@ function main()
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
     ## add the right-hand side data for the constraint
-    add_rhsdata!(Problem, 2, RhsOperator(Identity, [exact_divergence!], 2, 1; bonus_quadorder = 2))
+    add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], exact_divergence!, 2, 1; bonus_quadorder = 2))
 
     ## choose some (inf-sup stable) finite element types
     FEType = [HDIVRT0{2}, L2P0{1}]

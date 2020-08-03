@@ -514,7 +514,7 @@ ExpectedOrders3D = [[1,0]]
         # Define Stokes problem via PDETooles_PDEProtoTypes
         StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
         add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders2D[n][1])
-        add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
+        add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
         L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
         L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = ExpectedOrders2D[n][2])
 
@@ -543,7 +543,7 @@ ExpectedOrders3D = [[1,0]]
         # Define Stokes problem via PDETooles_PDEProtoTypes
         StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
         add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders3D[n][1])
-        add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [rhs!], 3, 3; bonus_quadorder = max(0,ExpectedOrders3D[n][2]-1)))
+        add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs!, 3, 3; bonus_quadorder = max(0,ExpectedOrders3D[n][2]-1)))
         L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
         L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 3, 1; bonus_quadorder = ExpectedOrders3D[n][2])
 

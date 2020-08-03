@@ -674,7 +674,6 @@ function solve!(
     end
 end
 
-
 #########################
 # TIME-DEPENDENT SOLVER #
 #########################
@@ -765,7 +764,7 @@ function TimeControlSolver(
         A[i] = FEMatrix{Float64}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
         AM[i] = FEMatrix{Float64}("MassMatrix subiteration $i", FEs[SC.subiterations[i]])
         b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
-        x[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
+        x[i] = FEVector{Float64}("Solution subiteration $i", FEs[SC.subiterations[i]])
         assemble!(A[i],b[i],PDE,SC,InitialValues; time = start_time, equations = SC.subiterations[i], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
         eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
         for j= 1 : length(FEs), eq = 1 : length(SC.subiterations[i])
@@ -795,6 +794,7 @@ function TimeControlSolver(
 
 
     # ASSEMBLE BOUNDARY DATA
+    # will be overwritten in solve if time-dependent
     fixed_dofs = []
     for j= 1 : length(InitialValues.FEVectorBlocks)
         if verbosity > 1
@@ -845,6 +845,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         if SC.verbosity > 2
             println("\n\n\n  Entering subiteration $s...")
         end
+
         # add change in mass matrix to diagonal blocks if needed
         for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
@@ -876,7 +877,27 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         end
         flush!(A[s].entries)
 
-        # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA
+
+        # UPDATE TIME-DEPENDENT RHS-DATA
+        # rhs evaluated at last time step (ctime - timestep) is already assembled
+        # and it depends on the timestep_rule how to update it
+        # atm only BackwardEuler is supported so ew have to replace the right-hand side by its evaluation at current ctime
+        for k = 1 : length(SC.subiterations[s])
+            d = SC.subiterations[s][k]
+            for o = 1 : length(PDE.RHSOperators[d])
+                if typeof(PDE.RHSOperators[d][o]) <: RhsOperator
+                    if PDE.RHSOperators[d][o].timedependent
+                        if SC.verbosity > 1
+                            println("  Updating time-dependent rhs data of equation $d")
+                        end
+                        assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = -1, time = TCS.ctime - timestep)
+                        assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = +1, time = TCS.ctime)
+                    end
+                end    
+            end
+        end  
+
+        # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA at current (already updated) time ctime
         for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
             if any(PDE.BoundaryOperators[d].timedependent) == true
@@ -891,28 +912,32 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end
         end    
 
-        # PENALIZE FIXED DOFS
-        # (from boundary conditions and constraints)
         fixed_dofs = TCS.fixed_dofs
 
-            # PREPARE GLOBALCONSTRAINTS
-            #for j = 1 : length(PDE.GlobalConstraints)
-            #    additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],X)
-            #    append!(fixed_dofs,additional_fixed_dofs)
-            #    show(additional_fixed_dofs)
-            #end
+        # PREPARE GLOBALCONSTRAINTS
+        # known bug: this will only work if no components in front of the constrained component(s)
+        # are missing in the subiteration
+        for j = 1 : length(PDE.GlobalConstraints)
+            if PDE.GlobalConstraints[j].component in SC.subiterations[s]
+                additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],X; verbosity = SC.verbosity - 1)
+                append!(fixed_dofs, additional_fixed_dofs)
+            end
+        end
 
+        # PENALIZE FIXED DOFS
+        # (from boundary conditions and constraints)
         eqdof = 0
         eqoffsets = TCS.eqoffsets
         for j = 1 : length(fixed_dofs)
             for eq = 1 : length(SC.subiterations[s])
                 if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
                     eqdof = fixed_dofs[j] - eqoffsets[s][eq]
-                    b[s].entries[eqdof] = SC.dirichlet_penalty * X.entries[fixed_dofs[j]]
-                    A[s][1][eqdof,eqdof] = SC.dirichlet_penalty
+                    b[s][eq][eqdof] = SC.dirichlet_penalty * X.entries[fixed_dofs[j]]
+                    A[s][eq,eq][eqdof,eqdof] = SC.dirichlet_penalty
                 end
             end
         end
+
 
         # SOLVE
         if SC.verbosity > 1
@@ -933,7 +958,16 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         else
             x[s].entries[:] = A[s].entries\b[s].entries
         end
+        
 
+        # REALIZE GLOBAL GLOBALCONSTRAINTS 
+        # known bug: this will only work if no components in front of the constrained component(s)
+        # are missing in the subiteration
+        for j = 1 : length(PDE.GlobalConstraints)
+            if PDE.GlobalConstraints[j].component in SC.subiterations[s]
+                realize_constraint!(x[s],PDE.GlobalConstraints[j]; verbosity = SC.verbosity - 1)
+            end
+        end
 
         # WRITE INTO X and COMPUTE CHANGE
         l = 0
@@ -949,9 +983,10 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             println("    ... change = $(sqrt(change[s]))")
         end
 
+
         # REASSEMBLE PARTS FOR NEXT SUBITERATION
         next_eq = (s == nsubiterations) ? 1 : s+1
-        assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
+        assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1, time = TCS.ctime + timestep)
     end
     
     TCS.last_timestep = timestep

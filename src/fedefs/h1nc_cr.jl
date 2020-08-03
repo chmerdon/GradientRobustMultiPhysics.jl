@@ -31,6 +31,10 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1CR
     nfaces = num_sources(FES.xgrid[FaceNodes])
     FES.ndofs = nfaces * ncomponents
 
+    # register coefficients (needed in case of reconstruction)
+    FES.xFaceNormals = FES.xgrid[FaceNormals]
+    FES.xFaceVolumes = FES.xgrid[FaceVolumes]
+    FES.xCellFaces = FES.xgrid[CellFaces]
 end
 
 function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: H1CR}
@@ -212,7 +216,7 @@ end
 
 
 
-function get_reconstruction_coefficients_on_cell!(coefficients, FE::H1CR{2}, ::Type{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1CR{2}}, ::Type{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)
     # reconstruction coefficients for P1 basis functions on reference element
     fill!(coefficients,0.0)
     coefficients[1,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
@@ -224,7 +228,7 @@ function get_reconstruction_coefficients_on_cell!(coefficients, FE::H1CR{2}, ::T
 end
 
 
-function get_reconstruction_coefficients_on_cell!(coefficients, FE::H1CR{2}, ::Type{HDIVRT0{2}}, ::Type{<:Parallelogram2D}, cell::Int)
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1CR{2}}, ::Type{HDIVRT0{2}}, ::Type{<:Parallelogram2D}, cell::Int)
     # reconstruction coefficients for P1 basis functions on reference element
     fill!(coefficients,0.0)
     coefficients[1,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]

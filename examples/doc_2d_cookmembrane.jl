@@ -83,7 +83,7 @@ function main()
     LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
 
     ## add Neumann boundary data
-    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, neumann_force_right!, 2, 2; regions = [2], on_boundary = true, bonus_quadorder = 0))
+    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [2], neumann_force_right!, 2, 2; on_boundary = true, bonus_quadorder = 0))
 
     ## add Dirichlet boundary data
     add_boundarydata!(LinElastProblem, 1, [4], HomogeneousDirichletBoundary)

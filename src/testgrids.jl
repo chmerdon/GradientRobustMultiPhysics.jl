@@ -88,7 +88,6 @@ function grid_unitcube(::Type{Tetrahedron3D})
     nbfaces = num_sources(xBFaceNodes)
     xgrid[BFaceGeometries]=VectorOfConstants(Triangle2D,nbfaces)
     xgrid[CoordinateSystem]=Cartesian3D
-
     return xgrid
 end
 
@@ -109,6 +108,7 @@ function grid_unitsquare(::Type{<:Triangle2D})
     xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 1]')
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,4)
     xgrid[CoordinateSystem]=Cartesian2D
+    return xgrid
 end
 
 # unit suqare as mixed triangles and squares with four boundary regions (bottom, right, top, left)

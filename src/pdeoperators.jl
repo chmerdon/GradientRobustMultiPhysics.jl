@@ -88,11 +88,12 @@ mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOper
     action::AbstractAction
     apply_action_to::Int
     regions::Array{Int,1}
+    transposed_assembly::Bool
     store_operator::Bool                    # should the matrix repsentation of the operator be stored?
     storage::AbstractArray{Float64,2}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
-function AbstractBilinearForm(name, operator1,operator2, action; apply_action_to = 1, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm{AssemblyTypeCELL}(name,operator1, operator2, action, apply_action_to, regions,false,zeros(Float64,0,0))
+function AbstractBilinearForm(name, operator1,operator2, action; apply_action_to = 1, regions::Array{Int,1} = [0], transposed_assembly::Bool = false)
+    return AbstractBilinearForm{AssemblyTypeCELL}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,false,zeros(Float64,0,0))
 end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
     return AbstractBilinearForm("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
@@ -142,7 +143,7 @@ function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_q
         end    
     end    
     convection_action = XFunctionAction(convection_function_func(), ncomponents, xdim; bonus_quadorder = bonus_quadorder)
-    return AbstractBilinearForm("(a(=XFunction) * Gradient) u * v", Gradient,testfunction_operator, convection_action; regions = regions)
+    return AbstractBilinearForm("(a(=XFunction) * Gradient) u * v", Gradient,testfunction_operator, convection_action; regions = regions, transposed_assembly = true)
 end
 
 
@@ -184,6 +185,7 @@ mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOpe
     a_from::Int
     action::AbstractAction # is applied to argument 1 and 2, i.e input consists of operator1(a),operator2(u)
     regions::Array{Int,1}
+    transposed_assembly::Bool
 end
 function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
@@ -200,7 +202,7 @@ function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction
         end    
     end    
     convection_action = FunctionAction(convection_function_fe(), ncomponents)
-    return AbstractTrilinearForm{AssemblyTypeCELL}("(a(=unknown $beta) * Gradient) u * v",Identity,Gradient,testfunction_operator,beta ,convection_action, regions)
+    return AbstractTrilinearForm{AssemblyTypeCELL}("(a(=unknown $beta) * Gradient) u * v",Identity,Gradient,testfunction_operator,beta ,convection_action, regions, true)
 end
 
 """
@@ -211,64 +213,28 @@ right-hand side operator
 can only be applied in PDE RHS
 """
 struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
-    action::AbstractAction                                  #       -----ACTION----
-    testfunction_operator::Type{<:AbstractFunctionOperator} # e.g.  f * testfunction_operator(v)
+    rhsfunction::Function
+    testfunction_operator::Type{<:AbstractFunctionOperator}
+    timedependent::Bool
     regions::Array{Int,1}
+    xdim:: Int
+    ncomponents:: Int
+    bonus_quadorder:: Int
 end
 
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
-    data4region,
+    regions::Array{Int,1},
+    rhsfunction::Function,
     xdim::Int,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,
-    regions::Array{Int,1} = [0],
-    on_boundary::Bool = false)
-
-    function rhs_function() # result = F(v) = f*operator(v) = f*input
-        temp = zeros(Float64,ncomponents)
-        function closure(result,input,x,region)
-            data4region[region](temp,x)
-            result[1] = 0
-            for j = 1 : ncomponents
-                result[1] += temp[j]*input[j] 
-            end
-        end
-    end    
-
-    action = RegionWiseXFunctionAction(rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
+    on_boundary::Bool = false,
+    timedependent::Bool = false)
     if on_boundary == true
-        return RhsOperator{AssemblyTypeBFACE}(action, operator, regions)
+        return RhsOperator{AssemblyTypeBFACE}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder)
     else
-        return RhsOperator{AssemblyTypeCELL}(action, operator, regions)
-    end
-end
-
-
-function RhsOperator(
-    operator::Type{<:AbstractFunctionOperator},
-    data4allregions::Function,
-    xdim::Int,
-    ncomponents::Int = 1;
-    bonus_quadorder::Int = 0,
-    regions::Array{Int,1} = [0],
-    on_boundary::Bool = false)
-
-    function rhs_function() # result = F(v) = f*operator(v) = f*input
-        temp = zeros(Float64,ncomponents)
-        function closure(result,input,x)
-            data4allregions(temp,x)
-            result[1] = 0
-            for j = 1 : ncomponents
-                result[1] += temp[j]*input[j] 
-            end
-        end
-    end    
-    action = XFunctionAction(rhs_function(),1,xdim; bonus_quadorder = bonus_quadorder)
-    if on_boundary == true
-        return RhsOperator{AssemblyTypeBFACE}(action, operator, regions)
-    else
-        return RhsOperator{AssemblyTypeCELL}(action, operator, regions)
+        return RhsOperator{AssemblyTypeCELL}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder)
     end
 end
 
@@ -339,6 +305,9 @@ function FVUpwindDivergenceOperator(beta_from::Int)
     @assert beta_from > 0
     fluxes = zeros(Float64,0,1)
     return FVUpwindDivergenceOperator("FVUpwindDivergence",beta_from,fluxes)
+end
+function check_PDEoperator(O::RhsOperator)
+    return false, O.timedependent
 end
 
 
@@ -489,7 +458,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilin
         else
             BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
         end
-        assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity, transposed_assembly = true)
+        assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity, transposed_assembly = O.transposed_assembly)
     end
 end
 
@@ -539,7 +508,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrili
     FE2 = A.FESX
     FE3 = A.FESY
     TLF = TrilinearForm(Float64, AssemblyTypeCELL, FE1, FE2, FE3, O.operator1, O.operator2, O.operator3, O.action; regions = O.regions)  
-    assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, transposed_assembly = true)
+    assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, transposed_assembly = O.transposed_assembly)
 end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; time::Real = 0, verbosity::Int = 0, At::FEMatrixBlock)
@@ -551,10 +520,35 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
     assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     FE = b.FES
-    RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, O.action; regions = O.regions)
-    assemble!(b, RHS; verbosity = verbosity)
+    if O.timedependent
+        function rhs_function_td() # result = F(v) = f*operator(v) = f*input
+            temp = zeros(Float64,O.ncomponents)
+            function closure(result,input,x)
+                O.rhsfunction(temp,x,time)
+                result[1] = 0
+                for j = 1 : O.ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
+            end
+        end    
+        action = XFunctionAction(rhs_function_td(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+    else
+        function rhs_function() # result = F(v) = f*operator(v) = f*input
+            temp = zeros(Float64,O.ncomponents)
+            function closure(result,input,x)
+                O.rhsfunction(temp,x)
+                result[1] = 0
+                for j = 1 : O.ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
+            end
+        end    
+        action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+    end
+    RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
+    assemble!(b, RHS; factor = factor, verbosity = verbosity)
 end
 
 

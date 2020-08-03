@@ -91,7 +91,7 @@ function main()
     # load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
-    add_rhsdata!(StokesProblem, 1, RhsOperator(ReconstructionIdentity, [rhs!], 2, 2; bonus_quadorder = 2))
+    add_rhsdata!(StokesProblem, 1, RhsOperator(ReconstructionIdentity, [0], rhs!, 2, 2; bonus_quadorder = 2))
 
     # define bestapproximation problems
     L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
@@ -128,7 +128,7 @@ function main()
         FESpacePressure = FESpace{FETypes[2]}(xgrid)
 
         # solve Stokes problem with classical right-hand side/convection term
-        StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [rhs!], 2, 2; bonus_quadorder = 2)
+        StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = 2)
         if nonlinear
             StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
             StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = Identity)
@@ -139,7 +139,7 @@ function main()
         push!(NDofs,length(Solution.entries))
 
         # solve Stokes problem with pressure-robust right-hand side/convection term
-        StokesProblem.RHSOperators[1][1] = RhsOperator(TestFunctionReconstruction, [rhs!], 2, 2; bonus_quadorder = 2)
+        StokesProblem.RHSOperators[1][1] = RhsOperator(TestFunctionReconstruction, [0], rhs!, 2, 2; bonus_quadorder = 2)
         if nonlinear
             StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = TestFunctionReconstruction)
         end

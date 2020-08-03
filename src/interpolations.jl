@@ -1,13 +1,18 @@
 
 # this method calls the interpolate! method specified by the finite element if available
-function interpolate!(Target::FEVectorBlock, exact_function!::Function; dofs = [], verbosity::Int = 0, bonus_quadorder::Int = 0)
+function interpolate!(Target::FEVectorBlock, source_function!::Function; dofs = [], verbosity::Int = 0, bonus_quadorder::Int = 0, time_dependent = false, time = 0)
     if verbosity > 0
         println("\nINTERPOLATING")
         println("=============")
         println("     target = $(Target.name)")
         println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
     end
-    interpolate!(Target, Target.FES, exact_function!; dofs = dofs, bonus_quadorder = bonus_quadorder)
+    if time_dependent
+        source_function_fixt!(result,x) = source_function!(result,x,time)
+        interpolate!(Target, Target.FES, source_function_fixt!; dofs = dofs, bonus_quadorder = bonus_quadorder)
+    else
+        interpolate!(Target, Target.FES, source_function!; dofs = dofs, bonus_quadorder = bonus_quadorder)
+    end
 end
 
 

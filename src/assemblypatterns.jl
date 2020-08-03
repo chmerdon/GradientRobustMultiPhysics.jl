@@ -700,7 +700,8 @@ Assembly of a LinearForm LF into given one-dimensional AbstractArray (e.g. a FEV
 function assemble!( # LF has to have resultdim == 1
     b::AbstractArray{T,1},
     LF::LinearForm{T,AT};
-    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
+    verbosity::Int = 0,
+    factor::Real = 1) where {T<: Real, AT <: AbstractAssemblyType}
     FE = LF.FE
     operator = LF.operator
     action = LF.action
@@ -792,7 +793,7 @@ function assemble!( # LF has to have resultdim == 1
         end  
 
         for dof_i = 1 : ndofs4item
-            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item]
+            b[dofs[dof_i]] += factor * localb[dof_i] * xItemVolumes[item]
         end
         fill!(localb, 0.0)
         break; # region for loop
@@ -1538,11 +1539,17 @@ function L2ErrorIntegrator(
     xdim::Int,
     ncomponents::Int = 1;
     AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL,
-    bonus_quadorder::Int = 0)
+    bonus_quadorder::Int = 0,
+    time_dependent_data::Bool = false,
+    time = 0)
     function L2error_function()
         temp = zeros(Float64,ncomponents)
         function closure(result,input,x)
-            exact_function(temp,x)
+            if time_dependent_data
+                exact_function(temp,x,time)
+            else
+                exact_function(temp,x)
+            end
             result[1] = 0.0
             for j=1:length(temp)
                 result[1] += (temp[j] - input[j])^2
