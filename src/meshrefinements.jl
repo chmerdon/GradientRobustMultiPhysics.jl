@@ -358,6 +358,15 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
 end
 
 
+function uniform_refine(source_grid::ExtendableGrid{T,K}, nrefinements::Int) where {T,K}
+    xgrid = source_grid
+    for j=1:nrefinements
+        xgrid = uniform_refine(xgrid)
+    end
+    return xgrid
+end
+
+
 # barycentric refinement rules
 # first k nodes are the CellNodes, k+1-th  node is cell midpoint
 barycentric_refine_rule(::Type{<:Triangle2D}) = [1 2 4; 2 3 4; 3 1 4]

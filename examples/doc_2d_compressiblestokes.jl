@@ -90,9 +90,7 @@ function main()
     ## generate mesh
     #xgrid = grid_unitsquare(Triangle2D); # uncomment this line for a structured grid
     xgrid = grid_unitsquare_mixedgeometries(); # not so structured
-    for j = 1:3
-        xgrid = uniform_refine(xgrid)
-    end
+    xgrid = uniform_refine(xgrid,4)
 
     ## problem data
     c = 10 # coefficient in equation of state
@@ -107,7 +105,7 @@ function main()
 
     ## solver parameters
     timestep = shear_modulus / (2*c)
-    reconstruct = false # use pressure-robust discretisation of the finite element method?
+    reconstruct = true # use pressure-robust discretisation of the finite element method?
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
     maxIterations = 300  # termination criterion 1
     maxResidual = 1e-10 # termination criterion 2
@@ -180,6 +178,7 @@ function main()
     for iteration = 1 : maxIterations
         ## in the advance! step we can tell which matrices of which subiterations do not change
         ## and so allow for reuse of the lu factorization
+        ## here only the matrix for the density update (2nd subiteration) changes in each step
         change = advance!(TCS, timestep; reuse_matrix = [true, false, true])
         M = sum(Solution[2][:] .* xgrid[CellVolumes])
         @printf("  iteration %4d",iteration)

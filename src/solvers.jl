@@ -840,6 +840,10 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
         println("\n\n\n  Entering timestep $(TCS.cstep)...")
     end
 
+    if (TCS.last_timestep != timestep) && any(reuse_matrix)
+        println("   WARNING: reuse_matrix active, but timestep changed! Results may be wrong!")
+    end
+
 
     nsubiterations = length(SC.subiterations)
     change = zeros(Float64,nsubiterations)
@@ -854,17 +858,19 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
         # add change in mass matrix to diagonal blocks if needed
         for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
-            if (AssemblyEachTimeStep <: SC.LHS_AssemblyTriggers[d,d]) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
-                if SC.verbosity > 2
-                    println("  Adding mass matrix to block [$k,$k] of subiteration $s")
-                end
-                addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
-            else
-                if (TCS.last_timestep != timestep) # if block was not reassembled, but timestep changed
+            if (reuse_matrix[s] == false) || (TCS.cstep == 1) ## if user claims that matrix should not change this is skipped
+                if (AssemblyEachTimeStep <: SC.LHS_AssemblyTriggers[d,d]) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
                     if SC.verbosity > 2
-                        println("  Adding mass matrix change to block [$k,$k] of subiteration $s")
+                        println("  Adding mass matrix to block [$k,$k] of subiteration $s")
                     end
-                    addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
+                    addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
+                else
+                    if (TCS.last_timestep != timestep) # if block was not reassembled, but timestep changed
+                        if SC.verbosity > 2
+                            println("  Adding mass matrix change to block [$k,$k] of subiteration $s")
+                        end
+                        addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
+                    end
                 end
             end
             if  (AssemblyEachTimeStep <: SC.RHS_AssemblyTriggers[d]) || TCS.last_timestep == 0 # if rhs block was reassembled at the end of the last iteration
@@ -873,11 +879,13 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
                 end
                 addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
             else
-                if SC.verbosity > 2
-                    println("  Adding time derivative change to rhs block [$k] of subiteration $s")
+                if (TCS.last_timestep != timestep) # if block was not reassembled, but timestep changed
+                    if SC.verbosity > 2
+                        println("  Adding time derivative change to rhs block [$k] of subiteration $s")
+                    end
+                    addblock_matmul!(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
+                    addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep) # add new rhs from last time step
                 end
-                addblock_matmul!(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
-                addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep) # add new rhs from last time step
             end
         end
         flush!(A[s].entries)
