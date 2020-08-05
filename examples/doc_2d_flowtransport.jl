@@ -81,7 +81,7 @@ function main()
     plot_grid = false
     plot_pressure = false
     plot_velocity = true
-    plot_divergence = true
+    plot_divergence = false
     plot_concentration = true
 
     #####################################################################################    

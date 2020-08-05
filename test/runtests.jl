@@ -85,7 +85,7 @@ maxorder1D = 12
 EG2D = [Triangle2D,Parallelogram2D]
 maxorder2D = [12,12]
 EG3D = [Parallelepiped3D,Tetrahedron3D]
-maxorder3D = [12,2]
+maxorder3D = [12,4]
 
 @testset "QuadratureRules" begin
     println("\n")
