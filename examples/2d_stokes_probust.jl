@@ -167,7 +167,7 @@ function main()
         append!(H1error_velocity2,sqrt(evaluate(H1VelocityErrorEvaluator,Solution2[1])))
         append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1])))
         
-        # plot final solution
+        # print results
         if (level == nlevels)
             println("\n         |   L2ERROR    |   L2ERROR    |   L2ERROR")
             println("   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-L2BEST");

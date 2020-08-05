@@ -57,7 +57,7 @@ function main()
 
     if reconstruct
         # apply reconstruction operator
-        StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}})
+        StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, ReconstructionIdentity{HDIVRT0{2}}, 2, 2; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}})
     end
     # store Laplacian to avoid reassembly in each iteration
     StokesProblem.LHSOperators[1,1][1].store_operator = true

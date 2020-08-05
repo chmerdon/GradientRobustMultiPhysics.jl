@@ -187,22 +187,22 @@ mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOpe
     regions::Array{Int,1}
     transposed_assembly::Bool
 end
-function ConvectionOperator(beta::Int, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+function ConvectionOperator(beta::Int, beta_operator, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
-    # input[1:ncomponents] = operator1(a)
-    # input[ncomponents+1:length(input)] = u
+    # input[1:xdim] = operator1(a)
+    # input[xdim+1:length(input)] = u
     function convection_function_fe()
         function closure(result, input)
             for j = 1 : ncomponents
                 result[j] = 0.0
                 for k = 1 : xdim
-                    result[j] += input[k]*input[ncomponents+(j-1)*xdim+k]
+                    result[j] += input[k]*input[xdim+(j-1)*xdim+k]
                 end
             end
         end    
     end    
     convection_action = FunctionAction(convection_function_fe(), ncomponents)
-    return AbstractTrilinearForm{AssemblyTypeCELL}("(a(=unknown $beta) * Gradient) u * v",Identity,Gradient,testfunction_operator,beta ,convection_action, regions, true)
+    return AbstractTrilinearForm{AssemblyTypeCELL}("(a(=unknown $beta) * Gradient) u * v",beta_operator,Gradient,testfunction_operator,beta ,convection_action, regions, true)
 end
 
 """

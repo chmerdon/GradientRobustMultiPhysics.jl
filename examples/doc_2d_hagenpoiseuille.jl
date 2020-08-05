@@ -3,7 +3,7 @@
 # 2D Navier--Stokes problem (Hagen-Poiseuille)
 ([source code](SOURCE_URL))
 
-This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{o}`` of the incompressible Navier--Stokes problem
+This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
 ```math
 \begin{aligned}
 - \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p & = \mathbf{f}\\

@@ -398,10 +398,10 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
     for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         else
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end    
@@ -511,14 +511,14 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
     for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         else
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end    
-
+    
     residual = Array{Array{Float64},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
         residual[s] = zeros(Float64,length(b[s].entries))
@@ -535,18 +535,25 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
                 println("\n  Subiteration $s with equations $(SC.subiterations[s])")
             end
 
-            # TODO: INCLUDE GLOBALCONSTRAINTS
+            # PREPARE GLOBALCONSTRAINTS
+            # known bug: this will only work if no components in front of the constrained component(s)
+            # are missing in the subiteration
+            for j = 1 : length(PDE.GlobalConstraints)
+                if PDE.GlobalConstraints[j].component in SC.subiterations[s]
+                    additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; verbosity = SC.verbosity - 1)
+                    append!(fixed_dofs, additional_fixed_dofs)
+                end
+            end
 
             # PENALIZE FIXED DOFS
             # (from boundary conditions and constraints)
-            fixed_dofs = Base.unique(fixed_dofs)
             for j = 1 : length(fixed_dofs)
                 for eq = 1 : length(SC.subiterations[s])
                     # check if fixed_dof is necessary for subiteration
                     if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
-                        b[s].entries[eqdof] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
-                        A[s][1][eqdof,eqdof] = SC.dirichlet_penalty
+                        b[s][eq][eqdof] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
+                        A[s][eq,eq][eqdof,eqdof] = SC.dirichlet_penalty
                     end
                 end
             end
@@ -566,12 +573,10 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
                 end
             end
 
-        end
+            # REASSEMBLE PARTS FOR NEXT SUBITERATION
+            next_eq = (s == nsubiterations) ? 1 : s+1
+            assemble!(A[next_eq],b[next_eq],PDE,SC,Target; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
 
-
-        # REASSEMBLE NONLINEAR PARTS
-        for s = 1 : nsubiterations
-            assemble!(A[s],b[s],PDE,SC,Target; equations = SC.subiterations[s], min_trigger = AssemblyAlways, verbosity = verbosity - 2)
         end
 
         # CHECK RESIDUAL
@@ -800,10 +805,10 @@ function TimeControlSolver(
     for j= 1 : length(InitialValues.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            @time new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ InitialValues[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         else
-            new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2)
+            new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ InitialValues[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end    

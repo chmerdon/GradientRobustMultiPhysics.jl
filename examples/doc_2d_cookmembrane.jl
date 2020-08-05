@@ -39,7 +39,7 @@ function grid_cookmembrane(maxarea::Float64)
     triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
     triin.segmentmarkerlist=Vector{Int32}([4, 1, 2, 3])
     xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
-    xgrid[CellRegions] = VectorOfConstants(Int32(1),num_sources(xgrid[CellNodes]))
+    xgrid[CellRegions] = ones(Int32,num_sources(xgrid[CellNodes]))
     xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
     return xgrid
 end

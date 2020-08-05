@@ -36,7 +36,7 @@ function IncompressibleNavierStokesProblem(
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
     
     if nonlinear
-        add_operator!(Problem, [1,1], ConvectionOperator(1, dimension, dimension))
+        add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, dimension, dimension))
     end
     
     # zero pressure integral mean
@@ -99,7 +99,7 @@ function CompressibleNavierStokesProblem(
         add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1)))
     end
     if nonlinear
-        add_operator!(Problem, [1,1], ConvectionOperator(1, dimension, dimension))
+        add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, dimension, dimension))
     end
 
     add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action))

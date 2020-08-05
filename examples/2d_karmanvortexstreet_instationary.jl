@@ -67,11 +67,11 @@ function main()
     # add IMEX version of nonlinear term
     if nonlinear
         if IMEX
-            add_rhsdata!(StokesProblem, 1, TLFeval(ConvectionOperator(1, 2, 2; testfunction_operator = testfunction_operator), Solution[1], Solution[1],-1))
+            add_rhsdata!(StokesProblem, 1, TLFeval(ConvectionOperator(1, ReconstructionIdentity{HDIVRT0{2}}, 2, 2; testfunction_operator = testfunction_operator), Solution[1], Solution[1],-1))
         else
             # store Laplacian to avoid reassembly in each iteration
             StokesProblem.LHSOperators[1,1][1].store_operator = true
-            add_operator!(StokesProblem, [1,1], ConvectionOperator(1, 2, 2; testfunction_operator = testfunction_operator))
+            add_operator!(StokesProblem, [1,1], ConvectionOperator(1, testfunction_operator, 2, 2; testfunction_operator = testfunction_operator))
         end
     end
 
