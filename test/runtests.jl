@@ -143,8 +143,8 @@ TestCatalog1D = [
                 H1P2{1,1}]
 ExpectedOrders1D = [0,1,1,2]
 TestCatalog2D = [
-#                HDIVRT0{2}, # has not interpolation yet
-#                HDIVBDM1{2}, # has not interpolation yet
+                HDIVRT0{2},
+                HDIVBDM1{2},
                 L2P0{2},
                 H1P1{2}, 
                 H1CR{2},
@@ -152,7 +152,7 @@ TestCatalog2D = [
                 H1BR{2},
                 L2P1{2},
                 H1P2{2,2}]
-ExpectedOrders2D = [0,1,1,1,1,1,2]
+ExpectedOrders2D = [0,1,0,1,1,1,1,1,2]
 
 
 @testset "Interpolations" begin

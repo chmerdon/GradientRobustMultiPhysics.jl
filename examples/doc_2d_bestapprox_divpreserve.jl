@@ -52,7 +52,7 @@ function main()
     ## create a solution vector and solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
     solve!(Solution, Problem)
-    
+
     ## calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2; bonus_quadorder = 3)
     L2DivergenceErrorEvaluator = L2ErrorIntegrator(exact_divergence!, Divergence, 2, 1; bonus_quadorder = 2)

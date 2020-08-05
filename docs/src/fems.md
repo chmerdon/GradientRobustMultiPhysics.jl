@@ -32,7 +32,7 @@ The following table lists all curently implemented finite elements. Click on the
 | H1 finite elements | Hdiv finite elements | Hcurl finite elements | L2 finite elements |
 | :----------------: | :------------------: | :-------------------: | :----------------: |
 | [`H1P1`](@ref)     | [`HDIVRT0`](@ref)    |                       | [`L2P0`](@ref)     |
-| [`H1MINI`](@ref)   |                      |                       | [`L2P1`](@ref)     |
+| [`H1MINI`](@ref)   | [`HDIVBDM1`](@ref)   |                       | [`L2P1`](@ref)     |
 | [`H1P2`](@ref)     |                      |                       |                    |
 | [`H1BR`](@ref)     |                      |                       |                    |
 | [`H1CR`](@ref)     |                      |                       |                    |
@@ -41,6 +41,7 @@ The following table lists all curently implemented finite elements. Click on the
 
 ## Details
 
+#### H1-conforming finite elements
 ```@docs
 H1P1
 H1MINI
@@ -49,9 +50,17 @@ H1CR
 H1BR
 ```
 
+#### Hdiv-conforming finite elements
+
 ```@docs
 HDIVRT0
+HDIVBDM1
 ```
+
+#### Hcurl-conforming finite elements
+
+
+#### L2-conforming finite elements
 
 ```@docs
 L2P0

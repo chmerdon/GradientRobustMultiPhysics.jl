@@ -1,17 +1,17 @@
 # GradientRobustMultiPhysics.jl
 
-This package offers finite element methods for multiphysics problems in Julia that focus on the preservation of structural and qualitative properties, in particular the gradient-robustness property for the discretisation of (nearly) incompressible flows and resulting qualitative properties in coupled processes. The code therefore offers several classical and novel non-standard finite element discretisations to play and compare with in these applications and a toolkit to setup multi-physics problems by defining PDE systems and fixed-point iterations to solve them.
+This package offers (mostly low-order) finite element methods for multiphysics problems in Julia that focus on the preservation of structural and qualitative properties, in particular the gradient-robustness property for the discretisation of (nearly) incompressible flows and resulting qualitative properties in coupled processes. The code therefore offers several classical and novel non-standard finite element discretisations to play and compare with in these applications and a toolkit to setup multi-physics problems by defining PDE systems and generating fixed-point iterations to solve them.
 
-The implementation is based on ExtendableGrids.jl that allows to have unstructured grids with mixed element geometries in it, e.g. triangles and quads in the same mesh. Generic quadrature rules of arbitrary order for intervals, triangles and parallelograms are also provided.
-
-!!! note
-
-    The focus is (at least currently) not on high-performance or parallel-computing. Also, this package is still in an early development stage with a limited number of applications and interfaces and features might change (especially for time-dependent PDEs) in future updates.
-
+The implementation is based on ExtendableGrids.jl that allows to have unstructured grids with mixed element geometries in it, e.g. triangles and quads in the same mesh. Generic quadrature rules of arbitrary order for common element geometries are also provided.
 
 !!! note
 
-    Currently, 3D functionality is very limited, but will be improved in future.
+    The focus is (at least currently) not on high-performance, high-order or parallel-computing. Also, this package is still in an early development stage with a limited number of applications and interfaces and features might change (especially for time-dependent PDEs) in future updates.
+
+
+!!! note
+
+    Currently, 3D functionality and support for instationary simulations is very limited, but will be improved in future.
 
 
 ## What is gradient-robustness?
@@ -22,20 +22,20 @@ Recently gradient-robustness was also connected to the design of well-balanced s
 
 #### References
 
-- [1]   "On the divergence constraint in mixed finite element methods for incompressible flows"
-        V. John, A. Linke, C. Merdon, M. Neilan and L. Rebholz
-        SIAM Review 59(3) (2017), 492--544
-        [>Journal-Link<](https://doi.org/10.1137/15M1047696) 
+- [1]   "On the divergence constraint in mixed finite element methods for incompressible flows",\
+        V. John, A. Linke, C. Merdon, M. Neilan and L. Rebholz,\
+        SIAM Review 59(3) (2017), 492--544,\
+        [>Journal-Link<](https://doi.org/10.1137/15M1047696),
         [>Preprint-Link<](http://www.wias-berlin.de/publications/wias-publ/run.jsp?template=abstract&type=Preprint&year=2015&number=2177)
-- [2]   "Pressure-robustness and discrete Helmholtz projectors in mixed finite element methods for the incompressible Navier--Stokes equations"
-        A. Linke and C. Merdon
-        Computer Methods in Applied Mechanics and Engineering 311 (2016), 304--326
-        [>Journal-Link<](http://dx.doi.org/10.1016/j.cma.2016.08.018) 
+- [2]   "Pressure-robustness and discrete Helmholtz projectors in mixed finite element methods for the incompressible Navier--Stokes equations",\
+        A. Linke and C. Merdon,
+        Computer Methods in Applied Mechanics and Engineering 311 (2016), 304--326,\
+        [>Journal-Link<](http://dx.doi.org/10.1016/j.cma.2016.08.018)
         [>Preprint-Link<](http://www.wias-berlin.de/publications/wias-publ/run.jsp?template=abstract&type=Preprint&year=2016&number=2250)
-- [3]   "A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem"
-        M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon
-        Computer Methods in Applied Mechanics and Engineering 367 (2020)
-        [>Journal-Link<](https://doi.org/10.1016/j.cma.2020.113069) 
+- [3]   "A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem",\
+        M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon,\
+        Computer Methods in Applied Mechanics and Engineering 367 (2020),\
+        [>Journal-Link<](https://doi.org/10.1016/j.cma.2020.113069)
         [>Preprint-Link<](https://arxiv.org/abs/1911.01295)
 
 

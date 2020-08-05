@@ -284,7 +284,17 @@ $(TYPEDSIGNATURES)
 
 Integration that writes result on every item into integral4items.
 """
-function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int; verbosity::Int = 0)
+function integrate!(
+    integral4items::AbstractArray,
+    grid::ExtendableGrid,
+    AT::Type{<:AbstractAssemblyType},
+    integrand!::Function,
+    order::Int,
+    resultdim::Int;
+    verbosity::Int = 0,
+    index_offset::Int = 0,
+    item_dependent_integrand::Bool = false)
+    
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
@@ -311,26 +321,47 @@ function integrate!(integral4items::Array, grid::ExtendableGrid, AT::Type{<:Abst
         end
     end
 
+    item_integrand!(result,x,item,xref) = item_dependent_integrand ? integrand!(result,x,item,xref) : integrand!(result,x)
+
     # loop over items
-    fill!(integral4items, 0)
     x = zeros(NumberType, dim)
     result = zeros(NumberType, resultdim)
     itemET = xItemGeometries[1]
     iEG = 1
-    for item = 1 : nitems
-        # find index for CellType
-        itemET = xItemGeometries[item]
-        iEG = findfirst(isequal(itemET), EG)
+    if resultdim == 1
+        for item = 1 : nitems
+            integral4items[item+index_offset] = 0
 
-        update!(local2global[iEG],item)
+            # find index for CellType
+            itemET = xItemGeometries[item]
+            iEG = findfirst(isequal(itemET), EG)
 
-        for i in eachindex(qf[iEG].w)
-            eval!(x, local2global[iEG], qf[iEG].xref[i])
-            integrand!(result,x)
-            for j = 1 : resultdim
-                integral4items[item, j] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
-            end
-        end  
+            update!(local2global[iEG],item)
+
+            for i in eachindex(qf[iEG].w)
+                eval!(x, local2global[iEG], qf[iEG].xref[i])
+                item_integrand!(result,x,item, qf[iEG].xref[i])
+                integral4items[item+index_offset] += result[1] * qf[iEG].w[i] * xItemVolumes[item];
+            end  
+        end
+    else
+        for item = 1 : nitems
+            integral4items[item] = 0
+
+            # find index for CellType
+            itemET = xItemGeometries[item]
+            iEG = findfirst(isequal(itemET), EG)
+
+            update!(local2global[iEG],item)
+
+            for i in eachindex(qf[iEG].w)
+                eval!(x, local2global[iEG], qf[iEG].xref[i])
+                item_integrand!(result,x,item,qf[iEG].xref[i])
+                for j = 1 : resultdim
+                    integral4items[item, j] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
+                end
+            end  
+        end
     end
 end
 

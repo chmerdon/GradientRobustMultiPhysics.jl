@@ -31,9 +31,13 @@ have a much smaller L2 velocity error (i.e. approximate the well-balanced state 
 the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density.
 Also, on a uniform mesh the gradient-robust method is perfect!
 
-References:
-https://doi.org/10.1016/j.cma.2020.113069
-https://arxiv.org/abs/1911.01295
+!!! reference
+
+    "A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem",\
+    M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon,\
+    Computer Methods in Applied Mechanics and Engineering 367 (2020),\
+    [>Journal-Link<](https://doi.org/10.1016/j.cma.2020.113069)
+    [>Preprint-Link<](https://arxiv.org/abs/1911.01295)
 
 =#
 
