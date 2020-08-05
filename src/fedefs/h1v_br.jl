@@ -471,13 +471,12 @@ function get_coefficients_on_face!(coefficients, FE::FESpace{H1BR{3}}, ::Type{<:
     coefficients[3,13] = FE.xFaceNormals[3, face];
 end    
 
-######################
-# RT0 Reconstruction #
-######################
 
+###########################
+# RT0/BDM1 Reconstruction #
+###########################
 
-
-function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::Type{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::FESpace{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)
     # reconstruction coefficients for P1 basis functions on reference element
     fill!(coefficients,0.0)
     coefficients[1,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
@@ -492,13 +491,57 @@ function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR
     coefficients[5,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
     coefficients[6,2] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
     coefficients[6,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    # reconstruction coefficients for face bubbles on reference element
     coefficients[7,1] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]]
     coefficients[8,2] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]]
     coefficients[9,3] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
 end
 
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Triangle2D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
 
-function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::Type{HDIVRT0{2}}, ::Type{<:Parallelogram2D}, cell::Int)
+    # P1 first component RT0
+    coefficients[1,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[1,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+
+    # P1 first component BDM1/RT0
+    coefficients[1,6] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell];
+    coefficients[1,2] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[2,2] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[2,4] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[3,4] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[3,6] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell]
+
+    # P2 second component RT0
+    coefficients[4,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[4,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[5,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[5,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[6,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[6,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+
+    # P1 second component BDM1/RT0
+    coefficients[4,6] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell]
+    coefficients[4,2] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[5,2] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[5,4] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[6,4] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[6,6] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell]
+
+    # reconstruction coefficients for face bubbles on reference element (same as RT0, BDM1 coefficients are zero)
+    coefficients[7,1] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]]
+    coefficients[8,3] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]]
+    coefficients[9,5] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
+end
+
+
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, ::FESpace{HDIVRT0{2}}, ::Type{<:Parallelogram2D}, cell::Int)
     # reconstruction coefficients for P1 basis functions on reference element
     fill!(coefficients,0.0)
     coefficients[1,4] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
@@ -517,8 +560,57 @@ function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR
     coefficients[7,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
     coefficients[8,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
     coefficients[8,4] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
+
     coefficients[9,1] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]]
     coefficients[10,2] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]]
     coefficients[11,3] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
     coefficients[12,4] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[4,cell]]
+end
+
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Parallelogram2D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
+
+    # RT0
+    coefficients[1,7] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
+    coefficients[1,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[2,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[3,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[4,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[4,7] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
+    coefficients[5,7] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
+    coefficients[5,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[6,1] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[6,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[7,3] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[7,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[8,5] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[8,7] = 1 // 2 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
+
+    # higher-order BDM1
+    coefficients[1,8] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]] * FER.xCellFaceSigns[4,cell]
+    coefficients[1,2] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[2,2] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[2,4] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[3,4] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[3,6] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell]
+    coefficients[4,6] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell]
+    coefficients[4,8] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]] * FER.xCellFaceSigns[4,cell]
+    coefficients[5,8] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]] * FER.xCellFaceSigns[4,cell]
+    coefficients[5,2] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[6,2] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]] * FER.xCellFaceSigns[1,cell]
+    coefficients[6,4] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[7,4] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]] * FER.xCellFaceSigns[2,cell]
+    coefficients[7,6] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell]
+    coefficients[8,6] = 1 // 6 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]] * FER.xCellFaceSigns[3,cell]
+    coefficients[8,8] = -1 // 6 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]] * FER.xCellFaceSigns[4,cell]
+
+
+    coefficients[9,1] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]]
+    coefficients[10,3] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]]
+    coefficients[11,5] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
+    coefficients[12,7] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[4,cell]]
 end

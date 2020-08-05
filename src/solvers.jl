@@ -205,6 +205,10 @@ function assemble!(
         println("\n  Entering assembly of equations=$equations (min_trigger = $min_trigger)")
     end
 
+    # important to flush first in case there is some cached stuff that
+    # will not be seen by fill! functions
+    flush!(A.entries)
+
     # force (re)assembly of stored bilinearform operators
     if (min_trigger == AssemblyInitial) == true
         for j = 1:length(equations)
@@ -519,9 +523,9 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
         end    
     end    
     
-    residual = Array{Array{Float64},1}(undef,nsubiterations)
+    residual = Array{FEVector{Float64},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        residual[s] = zeros(Float64,length(b[s].entries))
+        residual[s] = FEVector{Float64}("residual subiteration $s", FEs[SC.subiterations[s]])
     end
     resnorm::Float64 = 0.0
 
@@ -540,8 +544,8 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
             # are missing in the subiteration
             for j = 1 : length(PDE.GlobalConstraints)
                 if PDE.GlobalConstraints[j].component in SC.subiterations[s]
-                    additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; verbosity = SC.verbosity - 1)
-                    append!(fixed_dofs, additional_fixed_dofs)
+                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; verbosity = SC.verbosity - 1)
+                   append!(fixed_dofs, additional_fixed_dofs)
                 end
             end
 
@@ -552,6 +556,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
                     # check if fixed_dof is necessary for subiteration
                     if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+                        #println("fixing dof $eqdof of unknown $eq")
                         b[s][eq][eqdof] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
                         A[s][eq,eq][eqdof,eqdof] = SC.dirichlet_penalty
                     end
@@ -582,18 +587,18 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
         # CHECK RESIDUAL
         resnorm = 0.0
         for s = 1 : nsubiterations
-            residual[s] = (A[s].entries*x[s].entries - b[s].entries).^2
+            residual[s].entries[:] = (A[s].entries*x[s].entries - b[s].entries).^2
             for j = 1 : length(fixed_dofs)
                 for eq = 1 : length(SC.subiterations[s])
                     if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
-                        residual[s][eqdof] = 0
+                        residual[s][eq][eqdof] = 0
                     end
                 end
             end
-            resnorm += (sqrt(sum(residual[s], dims = 1)[1]))
+            resnorm += (sqrt(sum(residual[s].entries, dims = 1)[1]))
             if verbosity > 1
-                println("  residual[$s] = $(sqrt(sum(residual[s], dims = 1)[1]))")
+                println("  residual[$s] = $(sqrt(sum(residual[s].entries, dims = 1)[1]))")
             end
         end
         if verbosity > 0

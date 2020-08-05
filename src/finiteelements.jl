@@ -123,6 +123,7 @@ end
 # Hdiv-conforming elements (only vector-valued)
 # lowest order
 include("fedefs/hdiv_rt0.jl");
+include("fedefs/hdiv_bdm1.jl");
 
 # H1 conforming elements (also Crouzeix-Raviart)
 # lowest order

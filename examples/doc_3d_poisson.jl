@@ -74,17 +74,15 @@ function main()
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
 
-        ## output errors in a nice table
-        if (level == nlevels)
-            println("\n   NDOF  |   L2ERROR   |   H1ERROR")
-            for j=1:nlevels
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e |",L2error[j])
-                @printf(" %.5e\n",H1error[j])
-            end
-        end    
     end
 
+    ## output errors in a nice table
+    println("\n   NDOF  |   L2ERROR   |   H1ERROR")
+    for j=1:nlevels
+        @printf("  %6d |",NDofs[j]);
+        @printf(" %.5e |",L2error[j])
+        @printf(" %.5e\n",H1error[j])
+    end
 end
 
 main()

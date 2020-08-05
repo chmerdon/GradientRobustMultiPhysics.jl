@@ -78,7 +78,8 @@ function main()
     #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
 
     # reconstruction operator
-    TestFunctionReconstruction = ReconstructionIdentity{HDIVRT0{2}} # do not change
+    #ReconstructionOperator = ReconstructionIdentity{HDIVRT0{2}}
+    ReconstructionOperator = ReconstructionIdentity{HDIVBDM1{2}}
 
     # solver parameters
     maxIterations = 20  # termination criterion 1 for nonlinear mode
@@ -131,7 +132,7 @@ function main()
         StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = 2)
         if nonlinear
             StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
-            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = Identity)
+            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, Identity, 2, 2)
         end
         Solution = FEVector{Float64}("Stokes velocity classical",FESpaceVelocity)
         append!(Solution,"Stokes pressure (classical)",FESpacePressure)
@@ -139,9 +140,9 @@ function main()
         push!(NDofs,length(Solution.entries))
 
         # solve Stokes problem with pressure-robust right-hand side/convection term
-        StokesProblem.RHSOperators[1][1] = RhsOperator(TestFunctionReconstruction, [0], rhs!, 2, 2; bonus_quadorder = 2)
+        StokesProblem.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!, 2, 2; bonus_quadorder = 2)
         if nonlinear
-            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, 2, 2; testfunction_operator = TestFunctionReconstruction)
+            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, ReconstructionOperator, 2, 2; testfunction_operator = ReconstructionOperator)
         end
         Solution2 = FEVector{Float64}("Stokes velocity p-robust",FESpaceVelocity)
         append!(Solution2,"Stokes pressure (p-robust)",FESpacePressure)

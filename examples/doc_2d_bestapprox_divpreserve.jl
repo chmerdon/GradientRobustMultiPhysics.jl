@@ -31,9 +31,7 @@ function main()
 
     ## generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
-    for j=1:4
-        xgrid = uniform_refine(xgrid)
-    end
+    xgrid = uniform_refine(xgrid,4)
     
     ## setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 3)
@@ -48,7 +46,7 @@ function main()
     add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], exact_divergence!, 2, 1; bonus_quadorder = 2))
 
     ## choose some (inf-sup stable) finite element types
-    FEType = [HDIVRT0{2}, L2P0{1}]
+    FEType = [HDIVBDM1{2}, L2P0{1}]
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
 
     ## create a solution vector and solve the problem
