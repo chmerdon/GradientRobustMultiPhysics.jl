@@ -14,9 +14,6 @@ with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series o
 =#
 
 push!(LOAD_PATH, "../src")
-using ExtendableGrids
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
 using Printf
 using GradientRobustMultiPhysics
 

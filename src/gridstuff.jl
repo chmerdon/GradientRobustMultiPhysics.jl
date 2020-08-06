@@ -741,16 +741,12 @@ function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Triangle2D}, ::T
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
-
-    # get links to other stuff
     dim = size(xgrid[Coordinates],1) 
     xCoordinates = xgrid[Coordinates]
     xFaceNodes = xgrid[FaceNodes]
     nfaces = num_sources(xFaceNodes)
     xFaceGeometries = xgrid[FaceGeometries]
     xCoordinateSystem = xgrid[CoordinateSystem]
-
-    # init FaceNormals
     xFaceNormals = zeros(Float64,dim,nfaces)
     normal = zeros(Float64,dim)
     for face = 1 : nfaces
@@ -761,4 +757,39 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     end
 
     xFaceNormals
+end
+
+
+function Tangent4ElemType!(tangent, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
+    tangent[1] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
+    tangent[2] = Coords[2,Nodes[1,item]] - Coords[2, Nodes[2,item]]
+    # divide by length
+    tangent ./= sqrt(tangent[1]^2+tangent[2]^2)
+end
+
+function Tangent4ElemType!(tangent, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian3D})
+    tangent[1] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
+    tangent[2] = Coords[2,Nodes[1,item]] - Coords[2, Nodes[2,item]]
+    tangent[3] = Coords[3,Nodes[1,item]] - Coords[3, Nodes[2,item]]
+    # divide by length
+    tangent ./= sqrt(tangent[1]^2+tangent[2]^2+tangent[3]^2)
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeTangents})
+    dim = size(xgrid[Coordinates],1) 
+    xCoordinates = xgrid[Coordinates]
+    xEdgeNodes = xgrid[EdgeNodes]
+    nedges = num_sources(xEdgeNodes)
+    xEdgeGeometries = xgrid[EdgeGeometries]
+    xCoordinateSystem = xgrid[CoordinateSystem]
+    xEdgeTangents = zeros(Float64,dim,nedges)
+    tangent = zeros(Float64,dim)
+    for edge = 1 : nedges
+        Tangent4ElemType!(tangent,xCoordinates,xEdgeNodes,face,xEdgeGeometries[edge],xCoordinateSystem)
+        for k = 1 : dim
+            xEdgeTangents[k, edge] = tangent[k]
+        end    
+    end
+
+    xEdgeTangents
 end

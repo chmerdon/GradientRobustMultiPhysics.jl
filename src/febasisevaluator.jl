@@ -41,7 +41,7 @@ only available on FACES/BFACES and currently only for H1 and Hdiv elements
 """
 abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
 
-abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for Hcurl on Edges
+abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for HCurlScalar on Edges
 """
 $(TYPEDEF)
 
@@ -63,7 +63,7 @@ abstract type TangentialGradient <: AbstractFunctionOperator end # D_geom(v_h x 
 
 abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
 abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
-abstract type Curl <: AbstractFunctionOperator end # only 2D: Curl(v_h) = D(v_h)^\perp
+abstract type CurlScalar <: AbstractFunctionOperator end # only 2D: CurlScalar(v_h) = D(v_h)^\perp
 abstract type Rotation <: AbstractFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
 """
 $(TYPEDEF)
@@ -96,7 +96,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradie
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Rotation}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
@@ -108,7 +108,7 @@ Length4Operator(::Type{NormalFlux}, xdim::Int, ncomponents::Int) = ceil(ncompone
 Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/(xdim-1))
 Length4Operator(::Type{Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
-Length4Operator(::Type{Curl}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
+Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
 Length4Operator(::Type{Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
@@ -118,6 +118,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = -1
@@ -509,9 +510,9 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
+                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
-                    for j = 1 : FEBE.offsets[2] # xdim
+                    for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk
                         FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
@@ -522,8 +523,40 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
 end
 
 
+# CurlScalar OPERATOR
+# H1 ELEMENTS
+#
+# This operator can only be applied to scalar elements and produces the rotated 2D Gradient
+# only works in 2D/Cartesian2D at the moment
+#
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: CurlScalar, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # update L2G (we need the matrix)
+        update!(FEBE.L2G, item)
+
+        for i = 1 : length(FEBE.xref)
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = 0.0;
+                FEBE.cvals[2,dof_i,i] = 0.0;
+                for j = 1 : FEBE.offsets[2] # edim
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refoperatorvals[dof_i,j,i]
+                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refoperatorvals[dof_i,j,i]
+                end    
+            end    
+        end  
+    end    
+end
+
+
 # TANGENTGRADIENT OPERATOR
 # H1 ELEMENTS
+#
+# only 1D/Cartesian2D at the moment
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: TangentialGradient, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
@@ -540,9 +573,9 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
+                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
-                    for j = 1 : FEBE.offsets[2] # xdim
+                    for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk
                         FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i] * FEBE.iteminfo[c]
                     end    
@@ -577,8 +610,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
-                    for j = 1 : FEBE.offsets[2] # xdim
+                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
+                    for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk
                         FEBE.cvals[voigt_mapper[dim_element(EG)][k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
@@ -615,9 +648,9 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # xdim
+                for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
-                    for j = 1 : FEBE.offsets[2] # xdim
+                    for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk
                         FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
@@ -645,8 +678,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
-                for k = 1 : FEBE.offsets[2] # xdim
-                    for j = 1 : FEBE.offsets[2] # xdim
+                for k = 1 : FEBE.offsets[2] # edim
+                    for j = 1 : FEBE.offsets[2] # edim
                         # compute duk/dxk
                         FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[k],j,i]
                     end    
@@ -680,8 +713,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence,AT}, item::Int) w
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
-                for k = 1 : FEBE.offsets[2] # xdim
-                    for j = 1 : FEBE.offsets[2] # xdim
+                for k = 1 : FEBE.offsets[2] # edim
+                    for j = 1 : FEBE.offsets[2] # edim
                         # compute duk/dxk
                         FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[k],j,i] * FEBE.coefficients[k, dof_i]
                     end    
@@ -705,7 +738,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
 
         # get local reconstruction coefficients
-        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, eltype(FEBE.FE2), EG, item)
+        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
 
         # use Piola transformation on Hdiv basis
         # and accumulate according to reconstruction coefficients
@@ -718,7 +751,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
             for dof_i = 1 : size(FEBE.cvals,2) # ndofs4item (H1)
                 for dof_j = 1 : FEBE.offsets2[2] # ndofs4item (Hdiv)
                     if FEBE.coefficients2[dof_i,dof_j] != 0
-                        for j = 1 : FEBE.offsets[2] # xdim
+                        for j = 1 : FEBE.offsets[2] # edim
                             FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refoperatorvals[dof_j + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]/FEBE.iteminfo[1]
                         end  
                     end
@@ -750,7 +783,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
-                for j = 1 : FEBE.offsets[2] # xdim
+                for j = 1 : FEBE.offsets[2] # edim
                     FEBE.cvals[1,dof_i,i] += FEBE.refoperatorvals[dof_i + FEBE.offsets2[j],j,i]
                 end  
                 FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.iteminfo[1];

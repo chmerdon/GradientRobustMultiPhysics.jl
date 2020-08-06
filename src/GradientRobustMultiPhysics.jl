@@ -86,7 +86,7 @@ export Identity, ReconstructionIdentity
 export NormalFlux, TangentFlux
 export Gradient, SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
-export Curl, Rotation
+export CurlScalar, Rotation
 export Laplacian, Hessian
 export Trace, Deviator
 

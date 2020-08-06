@@ -44,7 +44,6 @@ Also, on a uniform mesh the gradient-robust method is perfect!
 
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
-using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf

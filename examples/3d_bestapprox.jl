@@ -32,8 +32,8 @@ function main()
     show(Problem)
 
     # choose some finite element space
-    #FEType = H1P1{3}
-    FEType = L2P1{3}
+    FEType = H1P1{3}
+    #FEType = L2P1{3}
     #FEType = HDIVRT0{3}
     FES = FESpace{FEType}(xgrid)
 
