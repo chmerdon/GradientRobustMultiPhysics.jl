@@ -29,18 +29,16 @@ end
 
 
 function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: L2P0}
-    xCellNodes = FES.xgrid[CellNodes]
     ncomponents = get_ncomponents(FEType)
-    dofs4item = zeros(Int32,ncomponents)
-    ncells = num_sources(xCellNodes)
-    xCellDofs = VariableTargetAdjacency(Int32)
+    ncells = num_sources(FES.xgrid[CellNodes]) 
+    dof = 0
+    colstart = Array{Int32,1}([1])
     for cell = 1 : ncells
-        dofs4item[1] = cell
-        for n = 1 : ncomponents-1
-            dofs4item[1+n] = n*ncells + cell
-        end    
-        append!(xCellDofs,dofs4item)
+        dof += ncomponents
+        push!(colstart,dof+1)
     end
+    #xCellDofs = VariableTargetAdjacency{Int32}(1:dof,colstart)
+    xCellDofs = SerialVariableTargetAdjacency{Int32}(colstart)
     # save dofmap
     FES.CellDofs = xCellDofs
 end
@@ -68,7 +66,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
         integrate!(integrals4cell, FE.xgrid, AssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
         for cell = 1 : ncells
             for c = 1 : ncomponents
-                Target[cell + (c-1)*ncells] = integrals4cell[cell,c] / xCellVolumes[cell]
+                Target[(cell-1)*ncomponents + c] = integrals4cell[cell,c] / xCellVolumes[cell]
             end
         end    
     else
@@ -86,13 +84,12 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     ncomponents = get_ncomponents(FEType)
     value = 0.0
     nneighbours = 0
-    offset4component = 0:ncells:ncomponents*ncells
     for node = 1 : num_sources(xCoords)
         for c = 1 : ncomponents
             value = 0.0
             nneighbours = num_targets(xNodeCells,node)
             for n = 1 : nneighbours
-                value += Source[offset4component[c]+xNodeCells[n,node]]
+                value += Source[(xNodeCells[n,node]-1)*ncomponents+c]
             end
             value /= nneighbours
             Target[c,node] = value

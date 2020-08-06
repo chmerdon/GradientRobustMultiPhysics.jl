@@ -19,13 +19,11 @@ end
 
 function main()
 
-    verbosity = 1 # <-- increase/decrease this number to get more/less printouts on what is happening
-
     # load mesh and refine
     xgrid = grid_unitcube(Parallelepiped3D)
     #xgrid = grid_unitcube(Tetrahedron3D)
 
-    for j = 1:3
+    for j = 1:2
         xgrid = uniform_refine(xgrid)
     end
 
@@ -34,13 +32,14 @@ function main()
     show(Problem)
 
     # choose some finite element space
-    FEType = H1P1{3}
+    #FEType = H1P1{3}
+    FEType = L2P1{3}
     #FEType = HDIVRT0{3}
     FES = FESpace{FEType}(xgrid)
 
     # solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
-    solve!(Solution, Problem; verbosity = verbosity)
+    solve!(Solution, Problem; verbosity = 1)
     
     # calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 3; bonus_quadorder = 1)

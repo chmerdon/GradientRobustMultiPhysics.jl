@@ -35,7 +35,7 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     name::String                          # full name of finite element space (used in messages)
     ndofs::Int                            # total number of dofs
     xgrid::ExtendableGrid                 # link to xgrid 
-    CellDofs::VariableTargetAdjacency     # place to save cell dofs (filled by constructor)
+    CellDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}     # place to save cell dofs (filled by constructor)
     FaceDofs::VariableTargetAdjacency     # place to save face dofs (filled by constructor)
     BFaceDofs::VariableTargetAdjacency    # place to save bface dofs (filled by constructor)
     xFaceNormals::Array{Float64,2}        # link to coefficient values

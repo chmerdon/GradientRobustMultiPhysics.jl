@@ -43,31 +43,16 @@ end
 
 function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: L2P1}
     xCellNodes = FES.xgrid[CellNodes]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    xCellDofs = VariableTargetAdjacency(Int32)
     ncomponents = get_ncomponents(FEType)
     ncells = num_sources(xCellNodes) 
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xCellNodes))
-    nnodes4item = 0
     dof = 0
-    ndofs4component = 0
-    if ncomponents > 0
-        for cell = 1 : ncells
-            ndofs4component += num_targets(xCellNodes,cell)
-        end
-    end
+    colstart = Array{Int32,1}([1])
     for cell = 1 : ncells
-        nnodes4item = num_targets(xCellNodes,cell)
-        for k = 1 : nnodes4item
-            dof += 1
-            dofs4item[k] = dof
-            for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*ndofs4component + dof
-            end    
-        end
-        append!(xCellDofs,dofs4item[1:ncomponents*nnodes4item])
+        dof += num_targets(xCellNodes,cell) * ncomponents
+        push!(colstart,dof+1)
     end
-
+    #xCellDofs = VariableTargetAdjacency{Int32}(1:dof,colstart)
+    xCellDofs = SerialVariableTargetAdjacency{Int32}(colstart)
     # save dofmap
     FES.CellDofs = xCellDofs
 end
@@ -81,34 +66,31 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
     xCellGeometries = FES.xgrid[CellGeometries]
     xBFaceNodes = FES.xgrid[BFaceNodes]
     nbfaces = num_sources(xBFaceNodes)
-    ncells = num_sources(xCellNodes) 
     xBFaceCellPos = FES.xgrid[BFaceCellPos]
     xBFaces = FES.xgrid[BFaces]
     xFaceCells = FES.xgrid[FaceCells]
     ncomponents = get_ncomponents(FEType)
     dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xBFaceNodes))
-    xBFaceDofs = VariableTargetAdjacency(Int32)
-    ndofs4component = 0
-    if ncomponents > 0
-        for cell = 1 : ncells
-            ndofs4component += num_targets(xCellNodes,cell)
-        end
-    end
-    nnodes4item = 0
+    nnodes4bface = 0
+    nnodes4cell = 0
     cell = 0
     pos = 0
+    pos_node = 0
+    xBFaceDofs = VariableTargetAdjacency(Int32)
     for bface = 1: nbfaces
         face = xBFaces[bface]
         cell = xFaceCells[1,face]
         pos = xBFaceCellPos[bface]
-        nnodes4item = num_targets(xBFaceNodes,bface)
-        for k = 1 : nnodes4item
-            dofs4item[k] = FES.CellDofs[1,cell] + face_enum_rule(xCellGeometries[cell])[pos,k] - 1
+        nnodes4bface = num_targets(xBFaceNodes,bface)
+        nnodes4cell = num_targets(xCellNodes,cell)
+        for k = 1 : nnodes4bface
+            pos_node = findall(x->x==xBFaceNodes[k,bface], xCellNodes[:,cell])[1]
+            dofs4item[k] = FES.CellDofs[1,cell] - 1 + pos_node
             for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*ndofs4component + dofs4item[k]
+                dofs4item[k+n*nnodes4bface] = n*nnodes4cell + dofs4item[k]
             end    
         end
-        append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item])
+        append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4bface])
     end
     # save dofmap
     FES.BFaceDofs = xBFaceDofs
@@ -126,23 +108,22 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P1}, exac
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     result = zeros(Float64,ncomponents)
-    ndofs4component::Int = ceil(FE.ndofs / ncomponents)
     node::Int = 0
     if length(dofs) == 0 # interpolate at all dofs
         dof::Int = 0
         for cell = 1 : ncells
             nnodes4item = num_targets(xCellNodes,cell)
             for k = 1 : nnodes4item
-                dof += 1
                 node = xCellNodes[k,cell]
                 for d=1:xdim
                     x[d] = xCoords[d,node]
                 end    
                 exact_function!(result,x)
                 for c = 1 : ncomponents
-                    Target[dof+(c-1)*ndofs4component] = result[c]
+                    Target[dof+(c-1)*nnodes4item+k] = result[c]
                 end
             end
+            dof += nnodes4item*ncomponents
         end
     else
         #TODO 

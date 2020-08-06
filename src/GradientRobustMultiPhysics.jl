@@ -32,6 +32,9 @@ export BFaces, BFaceCellPos, BFaceVolumes
 export nfaces_for_geometry, facetype_of_cellface
 export uniqueEG
 
+include("serialadjacency.jl")
+export SerialVariableTargetAdjacency
+
 
 include("meshrefinements.jl")
 export split_grid_into

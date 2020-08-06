@@ -127,7 +127,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) =
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
-    ItemDofs::VariableTargetAdjacency    # link to ItemDofs
+    ItemDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
