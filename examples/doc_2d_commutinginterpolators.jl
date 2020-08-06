@@ -1,6 +1,6 @@
 #= 
 
-# 2D Commuting interpolators
+# 2D Commuting Interpolators
 ([source code](SOURCE_URL))
 
 This example verifies a structural property of the lowest-order H1 and Hdiv finite element spaces and their interpolators which is
@@ -17,12 +17,10 @@ their nodal values should be identical.
 
     There are also higher-order commuting interpolators which will be tested as well once they are implemented.
 
-
 =#
 
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
-
 
 ## define some function
 function exact_function!(result,x)
@@ -42,28 +40,31 @@ function main()
 
     ## choose some grid
     xgrid = uniform_refine(reference_domain(Triangle2D),1)
-    
-    ## choose finite element spaces that allow commuting interpolators
-    FETypeH1 = H1P1{1}
-    FETypeHdiv = HDIVRT0{2}
-    FES1 = FESpace{FETypeH1}(xgrid)
-    FES2 = FESpace{FETypeHdiv}(xgrid)
 
-    ## do the interpolations
-    H1Interpolation = FEVector{Float64}("H1-Interpolation",FES1)
-    HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FES2)
+    ## do the P1 nodal interpolation of the function
+    FESH1 = FESpace{H1P1{1}}(xgrid)
+    H1Interpolation = FEVector{Float64}("H1-Interpolation",FESH1)
     interpolate!(H1Interpolation[1], exact_function!)
+
+    ## do the RT0 interpolation of the Curl of the function
+    ## since integrals over faces have to be computed exactly we need to tune the quadrature order
+    FESHdiv = FESpace{HDIVRT0{2}}(xgrid)
+    HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FESHdiv)
     interpolate!(HdivCurlInterpolation[1], exact_curl!; bonus_quadorder = 3)
 
-    ## evaluate the nodal values of Curl(H1(psi)) and Hdiv(Curl(psi))
-    ## and subtract from each other, all values should be close to zero
-    nodevalsH1 = zeros(Float64,2,size(xgrid[Coordinates],2))
-    nodevalues!(nodevalsH1,H1Interpolation[1],FES1,CurlScalar)
-    nodevalsHdiv = zeros(Float64,2,size(xgrid[Coordinates],2))
-    nodevalues!(nodevalsHdiv,HdivCurlInterpolation[1],FES2)
-    println("\nnodevals(Curl(H1(psi) - Hdiv(Curl(psi))):")
-    Base.show(nodevalsHdiv-nodevalsH1)
-    
+    ## evaluate the piecewise integral means of Curl of H1 interpolation
+    meanCurlH1 = zeros(Float64,num_sources(xgrid[CellNodes]),2)
+    meanIntegratorCurlH1 = ItemIntegrator{Float64,AssemblyTypeCELL}(CurlScalar, DoNotChangeAction(2), [0])
+    evaluate!(meanCurlH1,meanIntegratorCurlH1,H1Interpolation[1])
+
+    ## evaluate the piecewise integral means of Hdiv interpolation of Curl
+    meanHdiv = zeros(Float64,num_sources(xgrid[CellNodes]),2)
+    meanIntegratorHdiv = ItemIntegrator{Float64,AssemblyTypeCELL}(Identity, DoNotChangeAction(2), [0])
+    evaluate!(meanHdiv,meanIntegratorHdiv,HdivCurlInterpolation[1])
+
+    ## check their difference in the l2 vector norm
+    error = sum((meanCurlH1-meanHdiv).^2, dims = 1)
+    println("\n|| Curl(H1(psi) - Hdiv(Curl(psi)) ||_l2 = $error")
 end
 
 main()

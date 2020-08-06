@@ -1,6 +1,6 @@
 #= 
 
-# 2D Navier--Stokes problem (Hagen-Poiseuille)
+# 2D Hagen-Poiseuille (Navier--Stokes)
 ([source code](SOURCE_URL))
 
 This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem

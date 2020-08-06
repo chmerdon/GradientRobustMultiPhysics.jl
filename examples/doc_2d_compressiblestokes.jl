@@ -1,6 +1,6 @@
 #= 
 
-# 2D compressible Stokes
+# 2D Compressible Stokes
 ([source code](SOURCE_URL))
 
 This example solves the compressible Stokes equations where one seeks a (vector-valued) velocity ``\mathbf{u}``, a density ``\varrho`` and a pressure ``p`` such that

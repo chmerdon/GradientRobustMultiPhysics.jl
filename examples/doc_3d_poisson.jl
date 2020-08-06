@@ -1,6 +1,6 @@
 #= 
 
-# 3D Poisson problem
+# 3D Poisson-Problem
 ([source code](SOURCE_URL))
 
 This example computes the solution ``u`` of the three dimensional Poisson problem
