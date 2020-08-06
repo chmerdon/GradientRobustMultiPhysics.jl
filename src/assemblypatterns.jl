@@ -399,7 +399,7 @@ function evaluate!(
     ndofs4item = 0 # number of dofs for item
     evalnr = [0] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
-    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
+    coeffs = zeros(Float64,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
     weights::Array{T,1} = [] # pointer to quadrature weights
@@ -434,7 +434,7 @@ function evaluate!(
 
         # update dofs
         for j=1:ndofs4item
-            dofs[j] = xItemDofs[j,dofitem]
+            coeffs[j] = FEB[xItemDofs[j,dofitem]]
         end
 
         weights = qf[iEG].w
@@ -443,7 +443,7 @@ function evaluate!(
             fill!(action_input,0)
             for dof_i = 1 : ndofs4item
                 for k = 1 : cvals_resultdim
-                    action_input[k] += FEB[dofs[dof_i]] * basisvals[k,dof_i,i]
+                    action_input[k] += coeffs[dof_i] * basisvals[k,dof_i,i]
                 end    
             end
             apply_action!(action_result, action_input, action, i)
@@ -507,7 +507,7 @@ function evaluate(
     ndofs4item::Int = 0 # number of dofs for item
     evalnr = [0] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
-    dofs = zeros(Int,max_num_targets_per_source(xItemDofs))
+    coeffs = zeros(T,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
     weights::Array{T,1} = [] # pointer to quadrature weights
@@ -515,6 +515,7 @@ function evaluate(
 
     result = 0.0
     nregions::Int = length(regions)
+    dof = 0
     for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -543,7 +544,7 @@ function evaluate(
 
         # update dofs
         for j=1:ndofs4item
-            dofs[j] = xItemDofs[j,dofitem]
+            coeffs[j] = FEB[xItemDofs[j,dofitem]]
         end
 
         weights = qf[iEG].w
@@ -552,7 +553,7 @@ function evaluate(
             fill!(action_input,0)
             for dof_i = 1 : ndofs4item
                 for k = 1 : cvals_resultdim
-                    action_input[k] += FEB[dofs[dof_i]] * basisvals[k,dof_i,i]
+                    action_input[k] += coeffs[dof_i] * basisvals[k,dof_i,i]
                 end    
             end 
             apply_action!(action_result, action_input, action, i)
