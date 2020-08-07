@@ -63,6 +63,11 @@ abstract type TangentialGradient <: AbstractFunctionOperator end # D_geom(v_h x 
 
 abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
 abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
+"""
+$(TYPEDEF)
+
+evaluates the curl of some scalar function in 2D, i.e. the rotated gradient.
+"""
 abstract type CurlScalar <: AbstractFunctionOperator end # only 2D: CurlScalar(v_h) = D(v_h)^\perp
 abstract type Rotation <: AbstractFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
 """
@@ -801,7 +806,7 @@ end
 
 # use basisevaluator to evaluate some function at quadrature point i with the given coefficients
 function eval!(result, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, coefficients::Array{T,1}, i) where {T <: Real, FEType, FEOP, EG}
-    for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+    for dof_i = 1 : size(FEBE.cvals,2) # ndofs4item
         for k = 1 : size(FEBE.cvals,1) # resultdim
             result[k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i]
         end    

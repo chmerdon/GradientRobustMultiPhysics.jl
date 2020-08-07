@@ -160,9 +160,9 @@ end
 
 function get_basis_on_cell(::Type{H1CR{1}}, ::Type{<:Triangle2D})
     function closure(xref)
-        return [1 - 2*xref[2] 0.0;
-                2*(xref[1]+xref[2]) - 1 0.0;
-                1 - 2*xref[1] 0.0]
+        return [1 - 2*xref[2];
+                2*(xref[1]+xref[2]) - 1;
+                1 - 2*xref[1]]
     end
 end
 
