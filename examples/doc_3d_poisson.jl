@@ -38,7 +38,7 @@ function main()
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
     xgrid = grid_unitcube(Parallelepiped3D)
-    nlevels = 5 # maximal number of refinement levels
+    nlevels = 4 # maximal number of refinement levels
 
     ## set finite element type used for discretisation
     FEType = H1P1{1}
@@ -50,7 +50,7 @@ function main()
 
     ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 4)
-    H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient!, Gradient, 3, 3; bonus_quadorder = 4)
+    H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient!, Gradient, 3, 3; bonus_quadorder = 3)
     L2error = []; H1error = []; NDofs = []
 
     ## loop over levels

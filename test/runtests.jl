@@ -495,10 +495,10 @@ end
 # list of FETypes that should be tested
 TestCatalog2D = [
                 [H1CR{2},L2P0{1}],
-                [H1MINI{2,2},H1CR{1}], # taking here a stable variant that also works on quads
+                #[H1MINI{2,2},H1CR{1}], # taking here a stable variant that also works on quads
                 [H1BR{2},L2P0{1}],
                 [H1P2{2,2},H1P1{1}]]
-ExpectedOrders2D = [[1,0],[1,1],[1,0],[2,1]]
+ExpectedOrders2D = [[1,0],[1,0],[2,1]]
 TestCatalog3D = [
                 #[H1BR{3},L2P0{1}]
                 ]

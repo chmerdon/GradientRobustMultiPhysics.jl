@@ -287,9 +287,7 @@ function prepareOperatorAssembly(
     dofitem4item(item) = item
     EG4item(item) = xItemGeometries[item]
     function FEevaler4item(target,item) 
-        for j = 1 : length(FE)
-            target[j]= j
-        end
+        return nothing # we assume that target is already 1:length(FE) which stays the same for all items
     end
     return EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, FEevaler4item
 end
@@ -397,13 +395,12 @@ function evaluate!(
     itemET = xItemGeometries[1] # type of the current item
     iEG = 1 # index to the correct unique geometry
     ndofs4item = 0 # number of dofs for item
-    evalnr = [0] # evaler number that has to be used for current item
+    evalnr = [1] # evaler number that has to be used for current item
     dofitem = 0 # itemnr where the dof numbers can be found
     coeffs = zeros(Float64,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
     weights::Array{T,1} = [] # pointer to quadrature weights
-    basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
 
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -427,7 +424,6 @@ function evaluate!(
         # update FEbasisevaler
         evaler4item!(evalnr,item)
         update!(basisevaler[iEG][evalnr[1]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
         update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
@@ -437,18 +433,13 @@ function evaluate!(
             coeffs[j] = FEB[xItemDofs[j,dofitem]]
         end
 
-        weights = qf[iEG].w
-        for i in eachindex(weights)
+        for i in eachindex(qf[iEG].w)
             # apply action to FEVector
             fill!(action_input,0)
-            for dof_i = 1 : ndofs4item
-                for k = 1 : cvals_resultdim
-                    action_input[k] += coeffs[dof_i] * basisvals[k,dof_i,i]
-                end    
-            end
+            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
-                b[item,j] += action_result[j] * weights[i] * xItemVolumes[item]
+                b[item,j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
             end
         end  
         break; # region for loop
@@ -505,13 +496,11 @@ function evaluate(
     itemET = xItemGeometries[1] # type of the current item
     iEG::Int = 1 # index to the correct unique geometry
     ndofs4item::Int = 0 # number of dofs for item
-    evalnr = [0] # evaler number that has to be used for current item
+    evalnr = [1] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
     coeffs = zeros(T,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
-    basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
 
     result = 0.0
     nregions::Int = length(regions)
@@ -537,7 +526,6 @@ function evaluate(
         # update FEbasisevaler
         evaler4item!(evalnr,item)
         update!(basisevaler[iEG][evalnr[1]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
 
         # update action
         update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
@@ -547,18 +535,13 @@ function evaluate(
             coeffs[j] = FEB[xItemDofs[j,dofitem]]
         end
 
-        weights = qf[iEG].w
-        for i = 1 : length(weights)
+        for i = 1 : length(qf[iEG].w)
             # apply action to FEVector
             fill!(action_input,0)
-            for dof_i = 1 : ndofs4item
-                for k = 1 : cvals_resultdim
-                    action_input[k] += coeffs[dof_i] * basisvals[k,dof_i,i]
-                end    
-            end 
+            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
-                result += action_result[j] * weights[i] * xItemVolumes[item]
+                result += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
             end
         end  
         break; # region for loop
@@ -618,7 +601,7 @@ function assemble!(
     itemET = xItemGeometries[1] # type of the current item
     iEG::Int = 1 # index to the correct unique geometry
     ndofs4item::Int = 0 # number of dofs for item
-    evalnr = [0] # evaler number that has to be used for current item
+    evalnr = [1] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
     maxdofs::Int = max_num_targets_per_source(xItemDofs)
     dofs = zeros(Int32,maxdofs)
@@ -660,18 +643,13 @@ function assemble!(
             dofs[j] = xItemDofs[j,dofitem]
         end
 
-        weights = qf[iEG].w
-        for i in eachindex(weights)
-
+        for i in eachindex(qf[iEG].w)
             for dof_i = 1 : ndofs4item
                 # apply action
-                for k = 1 : cvals_resultdim
-                    action_input[k] = basisvals[k,dof_i,i]
-                end    
+                eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
                 apply_action!(action_result, action_input, action, i)
-
                 for j = 1 : action_resultdim
-                   localb[dof_i,j] += action_result[j] * weights[i]
+                   localb[dof_i,j] += action_result[j] * qf[iEG].w[i]
                 end
             end 
         end  
@@ -738,7 +716,7 @@ function assemble!( # LF has to have resultdim == 1
     itemET = xItemGeometries[1] # type of the current item
     iEG::Int = 1 # index to the correct unique geometry
     ndofs4item::Int = 0 # number of dofs for item
-    evalnr = [0] # evaler number that has to be used for current item
+    evalnr = [1] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
     maxdofs::Int = max_num_targets_per_source(xItemDofs)
     dofs = zeros(Int,maxdofs)
@@ -780,16 +758,11 @@ function assemble!( # LF has to have resultdim == 1
             dofs[j] = xItemDofs[j,dofitem]
         end
         
-        weights = qf[iEG].w
-        for i in eachindex(weights)
+        for i in eachindex(qf[iEG].w)
             for dof_i = 1 : ndofs4item
-                # apply action
-                for k = 1 : cvals_resultdim
-                    action_input[k] = basisvals[k,dof_i,i]
-                end   
+                eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
                 apply_action!(action_result, action_input, action, i)
-
-                localb[dof_i] += action_result[1] * weights[i]
+                localb[dof_i] += action_result[1] * qf[iEG].w[i]
             end 
         end  
 
@@ -865,7 +838,7 @@ function assemble!(
     iEG::Int = 1 # index to the correct unique geometry
     ndofs4item1::Int = 0 # number of dofs for item
     ndofs4item2::Int = 0 # number of dofs for item
-    evalnr = [0,0] # evaler number that has to be used for current item
+    evalnr = [1,2] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
     maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
     maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
@@ -921,10 +894,7 @@ function assemble!(
            
             if apply_action_to == 1
                 for dof_i = 1 : ndofs4item1
-                    # apply action to first argument
-                    for k = 1 : cvals_resultdim
-                        action_input[k] = basisvals[k,dof_i,i]
-                    end    
+                    eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
                     apply_action!(action_result, action_input, action, i)
 
                     if BLF.symmetric == false
@@ -947,10 +917,7 @@ function assemble!(
                 end 
             else
                 for dof_j = 1 : ndofs4item2
-                    # apply action to second argument
-                    for k = 1 : cvals_resultdim
-                        action_input[k] = basisvals2[k,dof_j,i]
-                    end    
+                    eval!(action_input,basisevaler[iEG][evalnr[2]], dof_j, i)
                     apply_action!(action_result, action_input, action, i)
 
                     if BLF.symmetric == false
@@ -1077,7 +1044,7 @@ function assemble!(
     iEG::Int = 1 # index to the correct unique geometry
     ndofs4item1::Int = 0 # number of dofs for item
     ndofs4item2::Int = 0 # number of dofs for item
-    evalnr = [0,0] # evaler number that has to be used for current item
+    evalnr = [1,2] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
     maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
     maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
@@ -1243,12 +1210,12 @@ function assemble!(
     ndofs4item1::Int = 0 # number of dofs for item
     ndofs4item2::Int = 0 # number of dofs for item
     ndofs4item3::Int = 0 # number of dofs for item
-    evalnr = [0,0,0] # evaler number that has to be used for current item
+    evalnr = [1,2,3] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
     maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
     maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
     maxdofs3::Int = max_num_targets_per_source(xItemDofs3)
-    dofs = zeros(Int,maxdofs1)
+    coeffs = zeros(T,maxdofs1)
     dofs2 = zeros(Int,maxdofs2)
     dofs3 = zeros(Int,maxdofs3)
     temp::T = 0 # some temporary variable
@@ -1295,7 +1262,7 @@ function assemble!(
 
         # update dofs
         for j=1:ndofs4item1
-            dofs[j] = xItemDofs1[j,dofitem]
+            coeffs[j] = FE1[xItemDofs1[j,dofitem]]
         end
         for j=1:ndofs4item2
             dofs2[j] = xItemDofs2[j,dofitem]
@@ -1308,12 +1275,8 @@ function assemble!(
         for i in eachindex(weights)
 
             # evaluate first component
-            for k = 1 : cvals_resultdim
-                action_input[k] = 0
-                for dof_i = 1 : ndofs4item1
-                    action_input[k] += basisvals[k,dof_i,i] * FE1[dofs[dof_i]]
-                end
-            end
+            fill!(action_input,0.0)
+            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
            
             for dof_i = 1 : ndofs4item2
                 # apply action to FE1 eval and second argument
@@ -1416,7 +1379,7 @@ function assemble!(
     ndofs4item1::Int = 0 # number of dofs for item
     ndofs4item2::Int = 0 # number of dofs for item
     ndofs4item3::Int = 0 # number of dofs for item
-    evalnr = [0,0,0] # evaler number that has to be used for current item
+    evalnr = [1,2,3] # evaler number that has to be used for current item
     dofitem::Int = 0 # itemnr where the dof numbers can be found
     maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
     maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
