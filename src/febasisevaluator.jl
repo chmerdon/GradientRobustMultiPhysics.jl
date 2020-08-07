@@ -798,17 +798,17 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
 end
 
 # use basisevaluator to evaluate j-th basis function at quadrature point i
-function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i)
+function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i; offset::Int = 0)
     for k = 1 : size(FEBE.cvals,1) # resultdim
-        result[k] = FEBE.cvals[k,j,i]
+        result[offset + k] = FEBE.cvals[k,j,i]
     end  
 end
 
 # use basisevaluator to evaluate some function at quadrature point i with the given coefficients
-function eval!(result, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, coefficients::Array{T,1}, i) where {T <: Real, FEType, FEOP, EG}
+function eval!(result, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, coefficients::Array{T,1}, i; offset::Int = 0) where {T <: Real, FEType, FEOP, EG}
     for dof_i = 1 : size(FEBE.cvals,2) # ndofs4item
         for k = 1 : size(FEBE.cvals,1) # resultdim
-            result[k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i]
+            result[offset+k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i]
         end    
     end 
 end

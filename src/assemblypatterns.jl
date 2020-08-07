@@ -400,7 +400,7 @@ function evaluate!(
     coeffs = zeros(Float64,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -433,13 +433,14 @@ function evaluate!(
             coeffs[j] = FEB[xItemDofs[j,dofitem]]
         end
 
-        for i in eachindex(qf[iEG].w)
+        weights = qf[iEG].w
+        for i in eachindex(weights)
             # apply action to FEVector
             fill!(action_input,0)
             eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
-                b[item,j] += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                b[item,j] += action_result[j] * weights[i] * xItemVolumes[item]
             end
         end  
         break; # region for loop
@@ -501,6 +502,7 @@ function evaluate(
     coeffs = zeros(T,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
     result = 0.0
     nregions::Int = length(regions)
@@ -535,13 +537,14 @@ function evaluate(
             coeffs[j] = FEB[xItemDofs[j,dofitem]]
         end
 
-        for i = 1 : length(qf[iEG].w)
+        weights = qf[iEG].w
+        for i = 1 : length(weights)
             # apply action to FEVector
             fill!(action_input,0)
             eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
-                result += action_result[j] * qf[iEG].w[i] * xItemVolumes[item]
+                result += action_result[j] * weights[i] * xItemVolumes[item]
             end
         end  
         break; # region for loop
@@ -608,10 +611,11 @@ function assemble!(
     temp::T = 0 # some temporary variable
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
     basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
     localb = zeros(T,maxdofs,action_resultdim)
     nregions::Int = length(regions)
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+
     for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -643,13 +647,14 @@ function assemble!(
             dofs[j] = xItemDofs[j,dofitem]
         end
 
-        for i in eachindex(qf[iEG].w)
+        weights = qf[iEG].w
+        for i in eachindex(weights)
             for dof_i = 1 : ndofs4item
                 # apply action
                 eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
                 apply_action!(action_result, action_input, action, i)
                 for j = 1 : action_resultdim
-                   localb[dof_i,j] += action_result[j] * qf[iEG].w[i]
+                   localb[dof_i,j] += action_result[j] * weights[i]
                 end
             end 
         end  
@@ -723,10 +728,11 @@ function assemble!( # LF has to have resultdim == 1
     temp::T = 0 # some temporary variable
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
     basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
     localb = zeros(T,maxdofs)
     nregions::Int = length(regions)
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+
     for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -758,11 +764,12 @@ function assemble!( # LF has to have resultdim == 1
             dofs[j] = xItemDofs[j,dofitem]
         end
         
-        for i in eachindex(qf[iEG].w)
+        weighs = qf[iEG].w
+        for i in eachindex(weights)
             for dof_i = 1 : ndofs4item
                 eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
                 apply_action!(action_result, action_input, action, i)
-                localb[dof_i] += action_result[1] * qf[iEG].w[i]
+                localb[dof_i] += action_result[1] * weights[i]
             end 
         end  
 
@@ -847,11 +854,12 @@ function assemble!(
     temp::T = 0 # some temporary variable
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
     localmatrix = zeros(T,maxdofs1,maxdofs2)
     basisvals::Array{T,3} = basisevaler[1][1].cvals
     basisvals2::Array{T,3} = basisevaler[1][2].cvals
     nregions::Int = length(regions)
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+
     for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -888,8 +896,7 @@ function assemble!(
             dofs2[j] = xItemDofs2[j,dofitem]
         end
 
-        weights = qf[iEG].w .* factor
-
+        weights = qf[iEG].w
         for i in eachindex(weights)
            
             if apply_action_to == 1
@@ -947,15 +954,15 @@ function assemble!(
             for dof_i = 1 : ndofs4item1, dof_j = 1 : ndofs4item2
                 if localmatrix[dof_i,dof_j] != 0
                     if transposed_assembly == true
-                        A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
+                        A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor   
                     else
-                        A[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
+                        A[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor     
                     end
                     if transpose_copy != Nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
                         if transposed_assembly == true
-                            transpose_copy[dofs[dof_i],dofs2[dof_j]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                            transpose_copy[dofs[dof_i],dofs2[dof_j]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
                         else
-                            transpose_copy[dofs2[dof_j],dofs[dof_i]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                            transpose_copy[dofs2[dof_j],dofs[dof_i]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
                         end
                     end
                 end
@@ -963,13 +970,13 @@ function assemble!(
         else # symmetric case
             for dof_i = 1 : ndofs4item1, dof_j = dof_i+1 : ndofs4item2
                 if localmatrix[dof_i,dof_j] != 0 
-                    temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                    temp = localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
                     A[dofs2[dof_j],dofs[dof_i]] += temp
                     A[dofs2[dof_i],dofs[dof_j]] += temp
                 end
             end    
             for dof_i = 1 : ndofs4item1
-                A[dofs2[dof_i],dofs[dof_i]] += localmatrix[dof_i,dof_i] * xItemVolumes[item]
+                A[dofs2[dof_i],dofs[dof_i]] += localmatrix[dof_i,dof_i] * xItemVolumes[item] * factor
             end    
         end    
         fill!(localmatrix,0.0)
@@ -1049,16 +1056,16 @@ function assemble!(
     maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
     maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
     dofs = zeros(Int,maxdofs1)
-    dofs2 = zeros(Int,maxdofs2)
+    coeffs2 = zeros(T,maxdofs2)
     temp::T = 0 # some temporary variable
     fixedval = zeros(T,action_resultdim)
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
     localb = zeros(T,maxdofs1)
     basisvals::Array{T,3} = basisevaler[1][1].cvals
-    basisvals2::Array{T,3} = basisevaler[1][2].cvals
     nregions::Int = length(regions)
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+
     for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -1082,7 +1089,6 @@ function assemble!(
         update!(basisevaler[iEG][evalnr[1]],dofitem)
         update!(basisevaler[iEG][evalnr[2]],dofitem)
         basisvals = basisevaler[iEG][evalnr[1]].cvals
-        basisvals2 = basisevaler[iEG][evalnr[2]].cvals
 
         # update action
         update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
@@ -1092,23 +1098,21 @@ function assemble!(
             dofs[j] = xItemDofs1[j,dofitem]
         end
         for j=1:ndofs4item2
-            dofs2[j] = xItemDofs2[j,dofitem]
+            coeffs2[j] = fixedFE[xItemDofs2[j,dofitem]]
         end
 
-        weights = qf[iEG].w .* factor
+        weights = qf[iEG].w
         for i in eachindex(weights)
 
             # evaluate second component
-            for k = 1 : action_resultdim
-                fixedval[k] = 0
-                for dof_i = 1 : ndofs4item2
-                    fixedval[k] += basisvals2[k,dof_i,i] * fixedFE[dofs2[dof_i]]
-                end
-            end
+            fill!(fixedval,0.0)
+            eval!(fixedval,basisevaler[iEG][evalnr[2]],coeffs2, i)
 
             if apply_action_to == 2
+                # apply action to second argument
                 apply_action!(action_result, fixedval, action, i)
 
+                # multiply first argument
                 for dof_i = 1 : ndofs4item1
                     temp = 0
                     for k = 1 : action_resultdim
@@ -1117,26 +1121,23 @@ function assemble!(
                     localb[dof_i] += temp * weights[i]
                 end 
             else
-           
                 for dof_i = 1 : ndofs4item1
                     # apply action to first argument
-                    for k = 1 : cvals_resultdim
-                        action_input[k] = basisvals[k,dof_i,i]
-                    end    
+                    eval!(action_input,basisevaler[iEG][evalnr[1]],dof_i, i)
                     apply_action!(action_result, action_input, action, i)
     
+                    # multiply second argument
                     temp = 0
                     for k = 1 : action_resultdim
                         temp += action_result[k]*fixedval[k]
                     end
                     localb[dof_i] += temp * weights[i]
                 end 
-
             end
         end 
 
         for dof_i = 1 : ndofs4item1
-            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item]
+            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item] * factor
         end
         fill!(localb, 0.0)
 
@@ -1222,12 +1223,10 @@ function assemble!(
     evalFE1 = zeros(T,cvals_resultdim) # heap for action input
     action_input = zeros(T,cvals_resultdim+cvals_resultdim2) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
     localmatrix = zeros(T,maxdofs2,maxdofs3)
-    basisvals::Array{T,3} = basisevaler[1][1].cvals
-    basisvals2::Array{T,3} = basisevaler[1][2].cvals
     basisvals3::Array{T,3} = basisevaler[1][3].cvals
     nregions::Int = length(regions)
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
     for item = 1 : nitems
     for r = 1 : nregions
@@ -1253,8 +1252,6 @@ function assemble!(
         update!(basisevaler[iEG][evalnr[1]],dofitem)
         update!(basisevaler[iEG][evalnr[2]],dofitem)
         update!(basisevaler[iEG][evalnr[3]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
-        basisvals2 = basisevaler[iEG][evalnr[2]].cvals
         basisvals3 = basisevaler[iEG][evalnr[3]].cvals
 
         # update action
@@ -1271,7 +1268,7 @@ function assemble!(
             dofs3[j] = xItemDofs3[j,dofitem]
         end
 
-        weights = qf[iEG].w .* factor
+        weights = qf[iEG].w
         for i in eachindex(weights)
 
             # evaluate first component
@@ -1280,9 +1277,7 @@ function assemble!(
            
             for dof_i = 1 : ndofs4item2
                 # apply action to FE1 eval and second argument
-                for k = 1 : cvals_resultdim2
-                    action_input[cvals_resultdim+k] = basisvals2[k,dof_i,i]
-                end    
+                eval!(action_input,basisevaler[iEG][evalnr[2]],dof_i, i, offset = cvals_resultdim)
                 apply_action!(action_result, action_input, action, i)
 
                 for dof_j = 1 : ndofs4item3
@@ -1299,9 +1294,9 @@ function assemble!(
         for dof_i = 1 : ndofs4item2, dof_j = 1 : ndofs4item3
              if localmatrix[dof_i,dof_j] != 0
                 if transposed_assembly == true
-                    A[dofs3[dof_j],dofs2[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
+                    A[dofs3[dof_j],dofs2[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
                 else
-                    A[dofs2[dof_i],dofs3[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item]    
+                    A[dofs2[dof_i],dofs3[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor 
                 end
             end
         end
@@ -1384,19 +1379,17 @@ function assemble!(
     maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
     maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
     maxdofs3::Int = max_num_targets_per_source(xItemDofs3)
-    dofs = zeros(Int,maxdofs1)
-    dofs2 = zeros(Int,maxdofs2)
+    coeffs1 = zeros(T,maxdofs1)
+    coeffs2 = zeros(T,maxdofs2)
     dofs3 = zeros(Int,maxdofs3)
     temp::T = 0 # some temporary variable
     evalFE1 = zeros(T,cvals_resultdim) # heap for action input
     action_input = zeros(T,cvals_resultdim+cvals_resultdim2) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    weights::Array{T,1} = [] # pointer to quadrature weights
     localb = zeros(T,maxdofs3)
-    basisvals::Array{T,3} = basisevaler[1][1].cvals
-    basisvals2::Array{T,3} = basisevaler[1][2].cvals
     basisvals3::Array{T,3} = basisevaler[1][3].cvals
     nregions::Int = length(regions)
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
     for item = 1 : nitems
     for r = 1 : nregions
@@ -1422,8 +1415,6 @@ function assemble!(
         update!(basisevaler[iEG][evalnr[1]],dofitem)
         update!(basisevaler[iEG][evalnr[2]],dofitem)
         update!(basisevaler[iEG][evalnr[3]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
-        basisvals2 = basisevaler[iEG][evalnr[2]].cvals
         basisvals3 = basisevaler[iEG][evalnr[3]].cvals
 
         # update action
@@ -1431,37 +1422,27 @@ function assemble!(
 
         # update dofs
         for j=1:ndofs4item1
-            dofs[j] = xItemDofs1[j,dofitem]
+            coeffs[j] = FE1[xItemDofs1[j,dofitem]]
         end
         for j=1:ndofs4item2
-            dofs2[j] = xItemDofs2[j,dofitem]
+            coeff2[j] = FE2[xItemDofs2[j,dofitem]]
         end
         for j=1:ndofs4item3
             dofs3[j] = xItemDofs3[j,dofitem]
         end
 
-        weights = qf[iEG].w .* factor
+        weights = qf[iEG].w
         for i in eachindex(weights)
 
-            # evaluate first component
-            for k = 1 : cvals_resultdim
-                action_input[k] = 0
-                for dof_i = 1 : ndofs4item1
-                    action_input[k] += basisvals[k,dof_i,i] * FE1[dofs[dof_i]]
-                end
-            end
-
-            # evaluate second component
-            for k = 1 : cvals_resultdim2
-                action_input[cvals_resultdim+k] = 0
-                for dof_i = 1 : ndofs4item2
-                    action_input[cvals_resultdim+k] += basisvals2[k,dof_i,i] * FE2[dofs2[dof_i]]
-                end
-            end
+            # evaluate first and second component
+            fill!(action_input,0.0)
+            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
+            eval!(action_input,basisevaler[iEG][evalnr[2]],coeffs2, i, offset = cvals_resultdim)
 
             # apply action to FE1 and FE2
             apply_action!(action_result, action_input, action, i)
            
+            # multiply third component
             for dof_j = 1 : ndofs4item2
                 temp = 0
                 for k = 1 : action_resultdim
@@ -1472,7 +1453,7 @@ function assemble!(
         end 
 
         for dof_i = 1 : ndofs4item1
-            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item]
+            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item] * factor
         end
         fill!(localb, 0.0)
 
