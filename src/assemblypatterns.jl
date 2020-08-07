@@ -764,7 +764,7 @@ function assemble!( # LF has to have resultdim == 1
             dofs[j] = xItemDofs[j,dofitem]
         end
         
-        weighs = qf[iEG].w
+        weights = qf[iEG].w
         for i in eachindex(weights)
             for dof_i = 1 : ndofs4item
                 eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
