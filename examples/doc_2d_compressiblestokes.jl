@@ -71,11 +71,11 @@ function exact_velocity!(result,x)
     result[2] = 0.0
 end 
 
-## gravity right-hand side 
+## gravity right-hand side (just gravity but with opposite sign!)
 function rhs_gravity!(gamma,c)
     function closure(result,x)
         result[1] = 1.0 - (x[2] - 0.5)/c # = density
-        result[2] = -result[1]^(gamma-2) * gamma
+        result[2] = - result[1]^(gamma-2) * gamma
         result[1] = 0.0
     end
 end   
@@ -93,7 +93,7 @@ function main()
     ## generate mesh
     #xgrid = grid_unitsquare(Triangle2D); # uncomment this line for a structured grid
     xgrid = grid_unitsquare_mixedgeometries(); # not so structured
-    xgrid = uniform_refine(xgrid,4)
+    xgrid = uniform_refine(xgrid,3)
 
     ## problem data
     c = 10 # coefficient in equation of state
@@ -173,7 +173,7 @@ function main()
     ## we have three equations [1] for velocity, [2] for density, [3] for pressure
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
-    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], timedependent_equations = [2], verbosity = 1)
+    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], timedependent_equations = [1,2], verbosity = 1)
 
     ## loop in pseudo-time until stationarity detected
     ## we also output M to see that the mass constraint is preserved all the way
@@ -213,14 +213,14 @@ function main()
     if plot_pressure
         nodevals = zeros(Float64,1,nnodes)
         PyPlot.figure("pressure")
-        nodevalues!(nodevals,Solution[2],FESpacePD)
+        nodevalues!(nodevals,Solution[3],FESpacePD)
         ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
     end
 
-    if plot_pressure
+    if plot_density
         nodevals = zeros(Float64,1,nnodes)
         PyPlot.figure("density")
-        nodevalues!(nodevals,Solution[3],FESpacePD)
+        nodevalues!(nodevals,Solution[2],FESpacePD)
         ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
     end
 

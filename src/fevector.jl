@@ -127,3 +127,14 @@ function addblock!(a::FEVectorBlock, b::FEVectorBlock; factor::Real = 1)
         a.entries[j] += b.entries[j] * factor
     end
 end
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds Array b to FEVectorBlock a.
+"""
+function addblock!(a::FEVectorBlock, b::AbstractArray{<:Real,1}; factor::Real = 1)
+    for j = 1 : length(b)
+        a.entries[j] += b[j] * factor
+    end
+end

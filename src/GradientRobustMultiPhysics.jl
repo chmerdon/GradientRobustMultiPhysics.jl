@@ -133,7 +133,7 @@ export LagrangeMultiplier
 
 export AbstractTrilinearForm
 
-export FVUpwindDivergenceOperator
+export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
 
 export RhsOperator

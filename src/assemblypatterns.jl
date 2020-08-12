@@ -389,7 +389,7 @@ function evaluate!(
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
-    @assert size(b,2) == cvals_resultdim
+    @assert size(b,1) == cvals_resultdim
 
     # loop over items
     itemET = xItemGeometries[1] # type of the current item
@@ -440,7 +440,7 @@ function evaluate!(
             eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
-                b[item,j] += action_result[j] * weights[i] * xItemVolumes[item]
+                b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
             end
         end  
         break; # region for loop

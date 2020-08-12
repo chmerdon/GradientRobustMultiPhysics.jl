@@ -49,7 +49,15 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FET
 end
 
 function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: L2P0}
-    # not defined for L20 element
+    xBFaceNodes = FES.xgrid[BFaceNodes]
+    nbfaces = num_sources(xBFaceNodes)
+    xBFaces = FES.xgrid[BFaces]
+    xFaceCells = FES.xgrid[FaceCells]
+    xBFaceDofs = VariableTargetAdjacency(Int32)
+    for bface = 1: nbfaces
+        append!(xBFaceDofs,[xFaceCells[1,xBFaces[bface]]])
+    end
+    FES.BFaceDofs = xBFaceDofs
 end
 
 
@@ -69,8 +77,14 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
                 Target[(cell-1)*ncomponents + c] = integrals4cell[cell,c] / xCellVolumes[cell]
             end
         end    
-    else
-        #TODO 
+    else # todo: does not work for more than one component at the moment, also does not need to compute all integral means on all cells
+        integrals4cell = zeros(Float64,ncells,ncomponents)
+        integrate!(integrals4cell, FE.xgrid, AssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
+        for dof in dofs
+            cell = dof
+            c = 1
+            Target[(cell-1)*ncomponents + c] = integrals4cell[cell,c] / xCellVolumes[cell]
+        end    
     end    
 end
 

@@ -75,7 +75,7 @@ function CompressibleNavierStokesProblem(
             gravity!(temp,x)
             result[1] = 0
             for j = 1 : dimension
-                result[1] += temp[j]*input[j] 
+                result[1] -= temp[j]*input[j] 
             end
         end
     end    
@@ -94,7 +94,7 @@ function CompressibleNavierStokesProblem(
     Problem = PDEDescription(name, 3, [dimension,1,1], dimension)
 
     # momentum equation
-    add_operator!(Problem, [1,1], LaplaceOperator(shear_modulus,dimension,dimension))
+    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,dimension,dimension))
     if lambda != 0
         add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1)))
     end
@@ -103,10 +103,10 @@ function CompressibleNavierStokesProblem(
     end
 
     add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action))
-    add_operator!(Problem, [1,3], AbstractBilinearForm(Divergence,Identity))
+    add_operator!(Problem, [1,3], AbstractBilinearForm("div(velocity)*pressure",Divergence,Identity,MultiplyScalarAction(-1.0)))
 
     # continuity equation
-    add_operator!(Problem, [2,2], FVUpwindDivergenceOperator(1))
+    add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
 
     # equation of state
     eos_action = FunctionAction(equation_of_state!,1,dimension)

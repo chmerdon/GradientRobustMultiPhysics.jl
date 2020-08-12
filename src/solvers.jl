@@ -209,7 +209,7 @@ function assemble!(
     # will not be seen by fill! functions
     flush!(A.entries)
 
-    # force (re)assembly of stored bilinearform operators
+    # force (re)assembly of stored bilinearforms and RhsOperators
     if (min_trigger == AssemblyInitial) == true
         for j = 1:length(equations)
             for k = 1 : size(PDE.LHSOperators,2)
@@ -228,6 +228,23 @@ function assemble!(
                     end
                     update_storage!(PDEoperator, CurrentSolution, j, k ; time = time, verbosity = verbosity)
                 end
+            end
+        end
+        for j = 1:length(equations)
+            for o = 1 : length(PDE.RHSOperators[equations[j]])
+                PDEoperator = PDE.RHSOperators[equations[j]][o]
+                try
+                    if PDEoperator.store_operator == true
+                        if verbosity > 0
+                            println("  Updating storage of operator $(PDEoperator.name)")
+                        end
+                    else
+                        break
+                    end
+                catch
+                    break
+                end
+                update_storage!(PDEoperator, CurrentSolution, j ; time = time, verbosity = verbosity)
             end
         end
     end
@@ -556,7 +573,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
                     # check if fixed_dof is necessary for subiteration
                     if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
-                        #println("fixing dof $eqdof of unknown $eq")
+                        #println("fixing dof $eqdof (global $(fixed_dofs[j])) of unknown $eq with value $(Target.entries[fixed_dofs[j]])")
                         b[s][eq][eqdof] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
                         A[s][eq,eq][eqdof,eqdof] = SC.dirichlet_penalty
                     end
@@ -754,8 +771,8 @@ function TimeControlSolver(
 
     if verbosity > 0
 
-        println("\nPREPARING TIME-DEPDENDENT SOLVER FOR PDE")
-        println("========================================")
+        println("\nPREPARING TIME-DEPENDENT SOLVER FOR PDE")
+        println("=======================================")
         println("    name = $(PDE.name)")
         Base.show(SC)
     end
@@ -850,7 +867,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
         println("\n\n\n  Entering timestep $(TCS.cstep)...")
     end
 
-    if (TCS.last_timestep != timestep) && any(reuse_matrix)
+    if (TCS.last_timestep != timestep) && any(reuse_matrix) && (TCS.cstep > 1)
         println("   WARNING: reuse_matrix active, but timestep changed! Results may be wrong!")
     end
 

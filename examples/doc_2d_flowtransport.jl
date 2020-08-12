@@ -52,7 +52,7 @@ function grid_pipe(maxarea::Float64)
     triin=Triangulate.TriangulateIO()
     triin.pointlist=Matrix{Cdouble}([0 0; 3 0; 3 -3; 7 -3; 7 0; 10 0; 10 1; 6 1; 6 -2; 4 -2; 4 1; 0 1]');
     triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5; 5 6; 6 7; 7 8; 8 9; 9 10; 10 11; 11 12; 12 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([1,1,1,1,1,2,1,1,1,1,1,3])
+    triin.segmentmarkerlist=Vector{Int32}([1,1,1,1,1,2,1,1,1,1,1,4])
     xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
     xgrid[CellRegions] = ones(Int32,num_sources(xgrid[CellNodes]))
     xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
@@ -65,18 +65,22 @@ function main()
 
     ## initial grid
     ## replace Parallelogrm2D by Triangle2D if you like
-    xgrid = grid_pipe(2e-3);
+    xgrid = grid_pipe(1e-3);
 
     ## problem parameters
     viscosity = 1
-    diffusion = 5e-7
+    diffusion_FE = 1e-7
 
-    ## choose one of these (inf-sup stable) finite element type pairs
-    #FETypes = [H1P2{2,2}, H1P1{1}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
-    #FETypes = [H1BR{2}, L2P0{1}, H1P1{1}]; postprocess_operator = Identity # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}, H1P1{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
-    #FETypes = [H1BR{2}, L2P0{1}, H1P1{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
+    ## choose one of these (inf-sup stable) finite element type pairs for the flow
+    #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
+    FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
+    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
+    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
     
+    ## choose discretisation for the transport equation
+    #FETypeTransport = H1P1{1}; FVtransport = false
+    FETypeTransport = L2P0{1}; FVtransport = true # note: ingores postprocess_operator, since FV operator does the same on triangles
+
     ## postprocess parameters
     plot_grid = false
     plot_pressure = false
@@ -90,30 +94,60 @@ function main()
     ## load Stokes problem prototype
     ## and assign boundary data (inlet profile in bregion 2, zero Dichlet at walls 1 and nothing at outlet region 2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
-    add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary)
-    add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = inlet_velocity!, bonus_quadorder = 2)
+    add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = inlet_velocity!, bonus_quadorder = 2)
 
     ## add transport equation of species
     ## with boundary data (i.e. inlet concentration)
     add_unknown!(Problem, 2, 1)
-    add_operator!(Problem, [3,3], LaplaceOperator(diffusion,2,1))
-    add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
-    add_boundarydata!(Problem, 3, [3], InterpolateDirichletBoundary; data = inlet_concentration!, bonus_quadorder = 0)
+    if FVtransport == true
+        add_operator!(Problem, [3,3], FVConvectionDiffusionOperator(1))
+    else
+        add_operator!(Problem, [3,3], LaplaceOperator(diffusion_FE,2,1))
+        add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
+    end
+    add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = inlet_concentration!, bonus_quadorder = 0)
     Base.show(Problem)
     
     ## generate FESpaces
     FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
     FESpacePressure = FESpace{FETypes[2]}(xgrid)
-    FESpaceConcentration = FESpace{FETypes[3]}(xgrid)
+    FESpaceConcentration = FESpace{FETypeTransport}(xgrid)
 
-    ## solve the problem
-    ## since the flow is independent of the concentration, we first can solve the
-    ## Stokes problem (equation set [1,2]) and then the transport equation ([3]) and
-    ## therefore define them as an array of subiterations (but one could also solve them together)
+    ## solve the decoupled flow problem
     Solution = FEVector{Float64}("velocity",FESpaceVelocity)
     append!(Solution,"pressure",FESpacePressure)
     append!(Solution,"species concentration",FESpaceConcentration)
-    solve!(Solution, Problem; subiterations = [[1,2],[3]], verbosity = 1, maxIterations = 5, maxResidual = 1e-12)
+    solve!(Solution, Problem; subiterations = [[1,2]], verbosity = 1, maxIterations = 5, maxResidual = 1e-12)
+
+    ## solve the transport by finite volumes or finite elements
+    if FVtransport == true
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], timedependent_equations = [3], verbosity = 1)
+
+        ## loop in pseudo-time until stationarity detected
+        ## we also output M to see that the mass constraint is preserved all the way
+        change = 0.0
+        timestep = 1000
+        maxResidual = 1e-10
+        for iteration = 1 : 100
+            ## in the advance! step we can tell which matrices of which subiterations do not change
+            ## and so allow for reuse of the lu factorization
+            ## here only the matrix for the density update (2nd subiteration) changes in each step
+            change = advance!(TCS, timestep; reuse_matrix = [true, true])
+            @printf("  iteration %4d",iteration)
+            @printf("  time = %.4e",TCS.ctime)
+            @printf("  change = %.4e \n",change)
+            if change < maxResidual
+                println("  terminated (below tolerance)")
+                break;
+            end
+        end
+    else
+        solve!(Solution, Problem; subiterations = [[3]], verbosity = 1, maxIterations = 5, maxResidual = 1e-12)
+    end
+
+
+
 
     println("[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 

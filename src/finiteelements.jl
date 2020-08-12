@@ -36,8 +36,8 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     ndofs::Int                            # total number of dofs
     xgrid::ExtendableGrid                 # link to xgrid 
     CellDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}     # place to save cell dofs (filled by constructor)
-    FaceDofs::VariableTargetAdjacency     # place to save face dofs (filled by constructor)
-    BFaceDofs::VariableTargetAdjacency    # place to save bface dofs (filled by constructor)
+    FaceDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}    # place to save face dofs (filled by constructor)
+    BFaceDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}    # place to save bface dofs (filled by constructor)
     xFaceNormals::Array{Float64,2}        # link to coefficient values
     xFaceVolumes::Array{Float64,1}        # link to coefficient values
     xCellFaces::VariableTargetAdjacency   # link to coefficient indices

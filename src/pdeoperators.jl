@@ -212,7 +212,7 @@ right-hand side operator
 
 can only be applied in PDE RHS
 """
-struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
+mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
     rhsfunction::Function
     testfunction_operator::Type{<:AbstractFunctionOperator}
     timedependent::Bool
@@ -220,6 +220,8 @@ struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
     xdim:: Int
     ncomponents:: Int
     bonus_quadorder:: Int
+    store_operator::Bool                    # should the matrix repsentation of the operator be stored?
+    storage::AbstractArray{Float64,1}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
 
 function RhsOperator(
@@ -232,9 +234,9 @@ function RhsOperator(
     on_boundary::Bool = false,
     timedependent::Bool = false)
     if on_boundary == true
-        return RhsOperator{AssemblyTypeBFACE}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder)
+        return RhsOperator{AssemblyTypeBFACE}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
     else
-        return RhsOperator{AssemblyTypeCELL}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder)
+        return RhsOperator{AssemblyTypeCELL}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
     end
 end
 
@@ -268,16 +270,21 @@ struct TLFeval <: AbstractPDEOperatorRHS
 end
 
 
-##################################
-### FVUpwindDivergenceOperator ###
-##################################
+#####################################
+### FVConvectionDiffusionOperator ###
+#####################################
 #
-# finite-volume upwind divergence div_upw(beta*rho)
+# finite-volume convection diffusion operator (for cell-wise P0 rho)
 #
-# assumes rho is constant on each cell
+# - div(\kappa \nabla \rho + beta*rho)
+#
+# For kappa = 0, the upwind divergence: div_upw(beta*rho) is generated
+# For kappa > 0, TODO
 # 
 # (1) calculate normalfluxes from component at _beta_from_
-# (2) compute upwind divergence on each cell and put coefficient in matrix
+# (2) compute FV flux on each face and put coefficients on neighbouring cells in matrix
+#
+#     if kappa == 0:
 #           div_upw(beta*rho)|_T = sum_{F face of T} normalflux(F) * rho(F)
 #
 #           where rho(F) is the rho in upwind direction 
@@ -296,15 +303,16 @@ end
 #                   
 # see coressponding assemble! routine
 
-mutable struct FVUpwindDivergenceOperator <: AbstractPDEOperatorLHS
+mutable struct FVConvectionDiffusionOperator <: AbstractPDEOperatorLHS
     name::String
+    diffusion::Float64               # diffusion coefficient
     beta_from::Int                   # component that determines
     fluxes::Array{Float64,2}         # saves normalfluxes of beta here
 end
-function FVUpwindDivergenceOperator(beta_from::Int)
+function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
     @assert beta_from > 0
     fluxes = zeros(Float64,0,1)
-    return FVUpwindDivergenceOperator("FVUpwindDivergence",beta_from,fluxes)
+    return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
 end
 function check_PDEoperator(O::RhsOperator)
     return false, O.timedependent
@@ -322,7 +330,7 @@ end
 function check_PDEoperator(O::AbstractTrilinearForm)
     return true, false
 end
-function check_PDEoperator(O::FVUpwindDivergenceOperator)
+function check_PDEoperator(O::FVConvectionDiffusionOperator)
     return O.beta_from != 0, false
 end
 function check_PDEoperator(O::CopyOperator)
@@ -334,7 +342,7 @@ function check_dependency(O::AbstractPDEOperator, arg::Int)
     return false
 end
 
-function check_dependency(O::FVUpwindDivergenceOperator, arg::Int)
+function check_dependency(O::FVConvectionDiffusionOperator, arg::Int)
     return O.beta_from == arg
 end
 
@@ -372,7 +380,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
 end
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDivergenceOperator; time::Real = 0, verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVConvectionDiffusionOperator; time::Real = 0, verbosity::Int = 0)
     FE1 = A.FESX
     FE2 = A.FESY
     @assert FE1 == FE2
@@ -388,9 +396,8 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDiver
     
     # ensure that flux field is long enough
     if length(O.fluxes) < nfaces
-        O.fluxes = zeros(Float64,nfaces,1)
+        O.fluxes = zeros(Float64,1,nfaces)
     end
-
     # compute normal fluxes of component beta
     c = O.beta_from
     fill!(O.fluxes,0)
@@ -409,7 +416,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDiver
             if other_cell == cell
                 other_cell = xFaceCells[2,face]
             end
-            flux = - O.fluxes[face] * xCellFaceSigns[cf,cell]
+            flux = O.fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
             if (other_cell > 0) 
                 flux *= 1 // 2
             end       
@@ -422,6 +429,8 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVUpwindDiver
                 if other_cell > 0
                     A[other_cell,other_cell] -= flux
                     A[cell,other_cell] += flux
+                else
+                    A[cell,cell] += flux
                 end 
             end
         end
@@ -446,6 +455,43 @@ function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector,
     assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
     flush!(O.storage)
 end
+
+
+function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+
+    # ensure that storage is large_enough
+    FE = CurrentSolution[j].FES
+    O.storage = zeros(Float64,FE.ndofs)
+
+    if O.timedependent
+        function rhs_function_td() # result = F(v) = f*operator(v) = f*input
+            temp = zeros(Float64,O.ncomponents)
+            function closure(result,input,x)
+                O.rhsfunction(temp,x,time)
+                result[1] = 0
+                for j = 1 : O.ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
+            end
+        end    
+        action = XFunctionAction(rhs_function_td(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+    else
+        function rhs_function() # result = F(v) = f*operator(v) = f*input
+            temp = zeros(Float64,O.ncomponents)
+            function closure(result,input,x)
+                O.rhsfunction(temp,x)
+                result[1] = 0
+                for j = 1 : O.ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
+            end
+        end    
+        action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+    end
+    RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
+    assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
+end
+
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
@@ -521,34 +567,38 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
 end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
-    FE = b.FES
-    if O.timedependent
-        function rhs_function_td() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(Float64,O.ncomponents)
-            function closure(result,input,x)
-                O.rhsfunction(temp,x,time)
-                result[1] = 0
-                for j = 1 : O.ncomponents
-                    result[1] += temp[j]*input[j] 
-                end
-            end
-        end    
-        action = XFunctionAction(rhs_function_td(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+    if O.store_operator == true
+        addblock!(b, O.storage; factor = factor)
     else
-        function rhs_function() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(Float64,O.ncomponents)
-            function closure(result,input,x)
-                O.rhsfunction(temp,x)
-                result[1] = 0
-                for j = 1 : O.ncomponents
-                    result[1] += temp[j]*input[j] 
+        FE = b.FES
+        if O.timedependent
+            function rhs_function_td() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,O.ncomponents)
+                function closure(result,input,x)
+                    O.rhsfunction(temp,x,time)
+                    result[1] = 0
+                    for j = 1 : O.ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
                 end
-            end
-        end    
-        action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+            end    
+            action = XFunctionAction(rhs_function_td(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+        else
+            function rhs_function() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,O.ncomponents)
+                function closure(result,input,x)
+                    O.rhsfunction(temp,x)
+                    result[1] = 0
+                    for j = 1 : O.ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
+                end
+            end    
+            action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+        end
+        RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
+        assemble!(b, RHS; factor = factor, verbosity = verbosity)
     end
-    RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
-    assemble!(b, RHS; factor = factor, verbosity = verbosity)
 end
 
 
