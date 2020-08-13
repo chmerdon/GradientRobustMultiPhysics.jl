@@ -3,6 +3,8 @@
 ````
 mutable struct PDEDescription
     name::String
+    equation_names::Array{String,1}
+    unknown_names::Array{String,1}
     LHS::Array{Array{AbstractPDEOperator,1},2}
     RHS::Array{Array{AbstractPDEOperator,1},1}
     BoundaryOperators::Array{BoundaryOperator,1}
@@ -14,6 +16,7 @@ struct that describes a PDE system with n equations and n unknowns
 
 A PDE system is described by
 - its name::String
+- the names of the equation
 - the names of the unknowns
 - an size n x n array of Array{AbstractPDEOperator,1} LHS that describes the left-hand sides
 - an length n array of Array{AbstractPDEOperator,1} RHS that describes the right-hand sides
@@ -34,7 +37,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Create empty PDEDEscription with no unknowns.
+Create empty PDEDescription with no unknowns.
 """
 function PDEDescription(name::String)
     return PDEDescription(name, 0, [0], 0)
@@ -43,7 +46,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Create empty PDEDEscription for a specified number of unknowns.
+Create empty PDEDescription for a specified number of unknowns.
 """
 function PDEDescription(name::String, nunknowns::Int, ncomponents::Array{Int,1}, dim::Int = 2; unknown_names::Array{String,1} = Array{String,1}(undef,0), equation_names::Array{String,1} = Array{String,1}(undef,0))
 
@@ -122,7 +125,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds the given PDEOperator to the right-hand side of the PDEDEscription at the specified position.
+Adds the given PDEOperator to the right-hand side of the PDEDescription at the specified position.
 """
 function add_rhsdata!(PDE::PDEDescription,position::Int,O::AbstractPDEOperatorRHS)
     push!(PDE.RHSOperators[position],O)
@@ -131,7 +134,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds the given boundary data to the at specified position in the BoundaryOperator of the PDEDEscription.
+Adds the given boundary data to the at specified position in the BoundaryOperator of the PDEDescription.
 
 If timedependent == true, that data function depends also on time t and is reassembled in any advance! step of a TimeControlSolver.
 """
@@ -143,7 +146,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds the given global constraint to the PDEDEscription.
+Adds the given global constraint to the PDEDescription.
 """
 function add_constraint!(PDE::PDEDescription,GC::AbstractGlobalConstraint)
     Base.push!(PDE.GlobalConstraints,GC)

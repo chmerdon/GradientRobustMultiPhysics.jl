@@ -98,9 +98,16 @@ end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
     return AbstractBilinearForm("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
 end
+
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
+"""
 function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; gradient_operator = Gradient, regions::Array{Int,1} = [0])
     return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); regions = regions)
 end
+
 # todo
 # here a general connection to arbitrary tensors C_ijkl (encencodedoded as an action) is possible in future
 function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient_operator = TangentialGradient)
@@ -206,7 +213,19 @@ function ConvectionOperator(beta::Int, beta_operator, xdim::Int, ncomponents::In
 end
 
 """
-$(TYPEDEF)
+````
+mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
+    rhsfunction::Function
+    testfunction_operator::Type{<:AbstractFunctionOperator}
+    timedependent::Bool
+    regions::Array{Int,1}
+    xdim:: Int
+    ncomponents:: Int
+    bonus_quadorder:: Int
+    store_operator::Bool                    # should the vector of the operator be stored?
+    storage::AbstractArray{Float64,1}       # vector can be stored here to allow for fast reassembly in iterative settings
+end
+````
 
 right-hand side operator
 

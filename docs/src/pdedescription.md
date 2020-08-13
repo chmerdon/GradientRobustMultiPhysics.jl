@@ -1,17 +1,45 @@
 
 # PDE description
 
-PDEs are described as a set of operators arranged in a matrix. The number of rows of this matrix is the number of partial differential equations in the system. The number of columns is the number of unknowns. PDEoperators are independent of any finite element space and hence allows a closer description of the continuous level. There are several prototype PDEs documented on the [PDE Prototypes](@ref) page that can be used as a point of departure.
+Although a more manually low-level assembly of your problem is possible, it is advised to describe it in the form of a PDEDescription
+that has similarities with the weak form of your problem and in general does not need any information on the discretisation at this point.
+
+The following flow chart summarises the assemble process that is run during the solve process. The green parts can be modified/specified by the user, the rest is handled automatically. For details on steering the solver see [PDE Solvers](@ref)
+
+![Assembly Flowchart](assembly_flowchart.png) 
+
+
+A PDEDescription is as a set of PDEOperators arranged in a quadratic n by n matrix. Every matrix row refers to one equation and the positioning of the PDEOperators (e.g. a bilinerform) immediately sets the information which unknowns have to be used to evaluate the operator. Also 
+nonlinear PDEOperator are possible where extra information on the further involved uknowns have to be specified.
+UserData is also assigned to the PDEDescription depending on their type. Operator coefficients are assigned directly to the PDEOperators (in form of AbstractActions), right-hand side data is assigned to the right-hand side array of PDEOperators and boundary data is assigned to the BoundaryOperators of the PDEDescription. Additionaly global constraints (like a global zero integral mean) can be assigned as a GlobalConstraint.
+
+Several add...! funcions allow to extend the problems at any stage. There are several prototype PDEs documented on the [PDE Prototypes](@ref) page that can be used as a point of departure. Below is a list of functions that allows to generate, extend or inspect a PDEDEscription.
+
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["PDEDescription.jl"]
+Pages = ["pdedescription.jl"]
 Order   = [:type, :function]
 ```
 
 ## PDE Operators
 
-The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE.
+The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE. The following table lists all available operators and physics-motivated constructors for them. Click on them to find out more details.
+
+
+| PDEOperator subtype                 | Special constructors                 | Mathematically                               |
+| :---------------------------------: | :----------------------------------: | :------------------------------------------: |
+| [`AbstractBilinearForm`](@ref)      |                                      | ``(Operator1(u),Operator2(v))``              |
+|                                     | [`LaplaceOperator`](@ref)            | ``(\kappa \nabla u,\nabla v)``               |
+|                                     | [`ReactionOperator`](@ref)           | ``(\alpha u, v)``                            |
+|                                     | [`ConvectionOperator`](@ref)         | ``(\beta \cdot \nabla u, v)``                |
+|                                     | [`HookStiffnessOperator2D`](@ref)    | ``(\mathbb{C} \epsilon(u),\epsilon(v))``     |
+| [`AbstractTrilinearForm`](@ref)     |                                      | ``(Operator1(a)*Operator2(u),Operator3(v))`` |
+|                                     | [`ConvectionOperator`](@ref)         | ``(a \cdot \nabla u, v)`` (a is unknown)     |
+| [`RhsOperator`](@ref)               |                                      | ``(f*Operator(v))``                          |
+
+
+### Complete List and Details
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]

@@ -12,7 +12,7 @@ This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{o}`` of t
 ```
 with (possibly time-dependent) exterior force ``\mathbf{f}`` and some viscosity parameter ``\mu``.
 
-In this example we solve a analytical toy problem with prescribed solution
+In this example we solve an analytical toy problem with prescribed solution
 ```math
 \begin{aligned}
 \mathbf{u}(\mathbf{x},t) & = (1+t)(\cos(x_2), \sin(x_1))^T\\
@@ -158,11 +158,7 @@ function main()
         change = 0.0
         maxIterations = ceil(T / timestep)
         for iteration = 1 : maxIterations
-            if iteration > 1
-                change = advance!(TCS, timestep; reuse_matrix = [true])
-            else
-                change = advance!(TCS, timestep)
-            end
+            change = advance!(TCS, timestep; reuse_matrix = [true])
             @printf("  iteration %4d",iteration)
             @printf("  time = %.4e",TCS.ctime)
             @printf("  change = %.4e \n",change)

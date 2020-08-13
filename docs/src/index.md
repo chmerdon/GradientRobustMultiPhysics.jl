@@ -12,7 +12,7 @@ The implementation is based on ExtendableGrids.jl that allows to have unstructur
 !!! note
 
     Currently, 3D functionality and support for instationary simulations is very limited, but will be improved in future.
-
+    
 
 ## What is gradient-robustness?
 

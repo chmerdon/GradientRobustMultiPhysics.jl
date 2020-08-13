@@ -744,7 +744,7 @@ function TimeControlSolver(
 
 Creates a time-dependent solver that can be advanced in time with advance!.
 The FEVector Solution stores the initial state but also the solutions of each timestep.
-The field timedependent_equations contains the equation numbers (=rows in PDEDEscription) that are time-dependent.
+The field timedependent_equations contains the equation numbers (=rows in PDEDescription) that are time-dependent.
 The field subiterations specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once.
 """
 function TimeControlSolver(

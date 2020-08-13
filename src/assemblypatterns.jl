@@ -1422,10 +1422,10 @@ function assemble!(
 
         # update dofs
         for j=1:ndofs4item1
-            coeffs[j] = FE1[xItemDofs1[j,dofitem]]
+            coeffs1[j] = FE1[xItemDofs1[j,dofitem]]
         end
         for j=1:ndofs4item2
-            coeff2[j] = FE2[xItemDofs2[j,dofitem]]
+            coeffs2[j] = FE2[xItemDofs2[j,dofitem]]
         end
         for j=1:ndofs4item3
             dofs3[j] = xItemDofs3[j,dofitem]
@@ -1436,7 +1436,7 @@ function assemble!(
 
             # evaluate first and second component
             fill!(action_input,0.0)
-            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
+            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs1, i)
             eval!(action_input,basisevaler[iEG][evalnr[2]],coeffs2, i, offset = cvals_resultdim)
 
             # apply action to FE1 and FE2
@@ -1452,8 +1452,8 @@ function assemble!(
             end 
         end 
 
-        for dof_i = 1 : ndofs4item1
-            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item] * factor
+        for dof_i = 1 : ndofs4item3
+            b[dofs3[dof_i]] += localb[dof_i] * xItemVolumes[item] * factor
         end
         fill!(localb, 0.0)
 
