@@ -14,6 +14,7 @@ struct that describes a PDE system with n equations and n unknowns
 
 A PDE system is described by
 - its name::String
+- the names of the unknowns
 - an size n x n array of Array{AbstractPDEOperator,1} LHS that describes the left-hand sides
 - an length n array of Array{AbstractPDEOperator,1} RHS that describes the right-hand sides
 - an length n array of BoundaryOperators that describes the boundary conditions for each unknown
@@ -21,6 +22,8 @@ A PDE system is described by
 """
 mutable struct PDEDescription
     name::String
+    equation_names::Array{String,1}
+    unknown_names::Array{String,1}
     LHSOperators::Array{Array{AbstractPDEOperator,1},2}
     RHSOperators::Array{Array{AbstractPDEOperator,1},1}
     BoundaryOperators::Array{BoundaryOperator,1}
@@ -33,8 +36,8 @@ $(TYPEDSIGNATURES)
 
 Create empty PDEDEscription with no unknowns.
 """
-function PDEDescription(name)
-    return PDEDescription(name, 0, 0, 0)
+function PDEDescription(name::String)
+    return PDEDescription(name, 0, [0], 0)
 end
 
 """
@@ -42,7 +45,8 @@ $(TYPEDSIGNATURES)
 
 Create empty PDEDEscription for a specified number of unknowns.
 """
-function PDEDescription(name, nunknowns::Int, ncomponents::Array{Int,1}, dim::Int = 2)
+function PDEDescription(name::String, nunknowns::Int, ncomponents::Array{Int,1}, dim::Int = 2; unknown_names::Array{String,1} = Array{String,1}(undef,0), equation_names::Array{String,1} = Array{String,1}(undef,0))
+
     # LEFT-HAND-SIDE
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
     for j=1:nunknowns, k = 1:nunknowns
@@ -53,6 +57,12 @@ function PDEDescription(name, nunknowns::Int, ncomponents::Array{Int,1}, dim::In
     MyRHS = Array{Array{AbstractPDEOperator,1},1}(undef,nunknowns)
     for j=1:nunknowns
         MyRHS[j] = []
+        if length(unknown_names) < j
+            push!(unknown_names,"unknown $j")
+        end
+        if length(equation_names) < j
+            push!(equation_names,"equation $j")
+        end
     end
 
     # BOUNDARY OPERATOR
@@ -64,7 +74,7 @@ function PDEDescription(name, nunknowns::Int, ncomponents::Array{Int,1}, dim::In
     # GLOBAL CONSTRAINTS
     MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,0)
 
-    return PDEDescription(name, MyLHS, MyRHS, MyBoundary, MyGlobalConstraints)
+    return PDEDescription(name, equation_names, unknown_names, MyLHS, MyRHS, MyBoundary, MyGlobalConstraints)
 end
 
 
@@ -74,8 +84,16 @@ $(TYPEDSIGNATURES)
 
 Adds another unknown of specified dimensions to the PDEDescription.
 """
-function add_unknown!(PDE::PDEDescription, ncomponents::Int, dim::Int = 2)
+function add_unknown!(PDE::PDEDescription, ncomponents::Int, dim::Int = 2; equation_name::String = "", unknown_name::String = "")
     nunknowns = length(PDE.RHSOperators)+1
+    if equation_name == ""
+        equation_name = "equation $nunknowns"
+    end
+    if unknown_name == ""
+        unknown_name = "unknown $nunknowns"
+    end
+    push!(PDE.equation_names,equation_name)
+    push!(PDE.unknown_names,unknown_name)
     push!(PDE.RHSOperators,[])
     push!(PDE.BoundaryOperators,BoundaryOperator(dim,ncomponents))
     NewLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
@@ -94,8 +112,11 @@ $(TYPEDSIGNATURES)
 
 Adds the given PDEOperator to the left-hand side of the PDEDescription at the specified position.
 """
-function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDEOperatorLHS)
+function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDEOperatorLHS; equation_name::String = "")
     push!(PDE.LHSOperators[position[1],position[2]],O)
+    if equation_name != ""
+        PDE.equation_names[position[1]] = equation_name
+    end
 end
 
 """
@@ -137,9 +158,15 @@ Custom `show` function for `PDEDescription` that prints the PDE systems and all 
 function Base.show(io::IO, PDE::PDEDescription)
     println("\nPDE-DESCRIPTION")
     println("===============")
-    println("  name = $(PDE.name)\n")
+    println("  system name = $(PDE.name)\n")
 
-    println("  LHS block | PDEOperator(s)")
+    println("     id   | unknown name / equation name")
+    for j=1:length(PDE.unknown_names)
+        print("    [$j]   | $(PDE.unknown_names[j]) / $(PDE.equation_names[j]) \n")
+    end
+
+
+    println("\n  LHS block | PDEOperator(s)")
     for j=1:size(PDE.LHSOperators,1), k=1:size(PDE.LHSOperators,2)
         if length(PDE.LHSOperators[j,k]) > 0
             print("    [$j,$k]   | ")
@@ -207,6 +234,6 @@ function Base.show(io::IO, PDE::PDEDescription)
 
     println("")
     for j=1:length(PDE.GlobalConstraints)
-        println("  GlobalConstraints[$j] : $(PDE.GlobalConstraints[j].name)")
+        println("  GlobalConstraints[$j] : $(PDE.GlobalConstraints[j].name) ")
     end
 end

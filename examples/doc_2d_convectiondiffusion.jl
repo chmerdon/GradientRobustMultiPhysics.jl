@@ -75,9 +75,9 @@ function main()
     #####################################################################################    
     #####################################################################################
 
-    ## create PDE description = start with Poisson problem and add convection operator to block [1,1]
+    ## create PDE description = start with Poisson problem and add convection operator to block [1,1] and change equation name
     ConvectionDiffusionProblem = PoissonProblem(2; diffusion = diffusion)
-    add_operator!(ConvectionDiffusionProblem, [1,1], ConvectionOperator(beta!,2,1))
+    add_operator!(ConvectionDiffusionProblem, [1,1], ConvectionOperator(beta!,2,1); equation_name = "convection diffusion equation")
 
     ## add right-hand side data to equation 1 (there is only one in this example)
     add_rhsdata!(ConvectionDiffusionProblem, 1, RhsOperator(Identity, [0], exact_solution_rhs!(diffusion), 2, 1; bonus_quadorder = 3))

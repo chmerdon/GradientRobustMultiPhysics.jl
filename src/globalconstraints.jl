@@ -26,8 +26,11 @@ struct FixedIntegralMean <: AbstractGlobalConstraint
     value::Real
     when_assemble::Type{<:AbstractAssemblyTrigger}
 end 
-function FixedIntegralMean(component::Int, value::Real)
-    return FixedIntegralMean("Mean[$component] != $value",component, value, AssemblyFinal)
+function FixedIntegralMean(component::Int, value::Real; name::String = "")
+    if name == ""
+        name = "Mean[$component] != $value"
+    end
+    return FixedIntegralMean(name,component, value, AssemblyFinal)
 end
 
 """

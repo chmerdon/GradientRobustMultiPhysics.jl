@@ -39,11 +39,12 @@ function main()
     ## add a new unknown (Lagrange multiplier that handles the divergence constraint)
     ## here 1 is the number of components (it is scalar-valued)
     ## and 2 is the dimension (it lives in 2D)
-    add_unknown!(Problem,1,2)
+    add_unknown!(Problem,1,2; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
-    ## add the right-hand side data for the constraint
+    ## add the right-hand side data for the constraint and inspect the defined problem
     add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], exact_divergence!, 2, 1; bonus_quadorder = 2))
+    Base.show(Problem)
 
     ## choose some (inf-sup stable) finite element types
     FEType = [HDIVBDM1{2}, L2P0{1}]
@@ -51,7 +52,7 @@ function main()
 
     ## create a solution vector and solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
-    solve!(Solution, Problem)
+    solve!(Solution, Problem; verbosity = 1)
 
     ## calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2; bonus_quadorder = 3)

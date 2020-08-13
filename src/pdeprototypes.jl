@@ -27,7 +27,9 @@ function IncompressibleNavierStokesProblem(
     # generate empty PDEDescription for two unknowns
     # unknown 1 : velocity (vector-valued)
     # unknown 2 : pressure
-    Problem = PDEDescription(name, 2, [dimension,1], dimension)
+    Problem = PDEDescription(name)
+    add_unknown!(Problem,  dimension, dimension; equation_name = "momentum equation", unknown_name = "velocity")
+    add_unknown!(Problem,  1, dimension; equation_name = "incompressibility constraint", unknown_name = "pressure")
 
     # add Laplacian for velocity
     add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension))
@@ -91,7 +93,10 @@ function CompressibleNavierStokesProblem(
     # unknown 1 : velocity (vector-valued)
     # unknown 2 : density
     # unknown 3 : pressure
-    Problem = PDEDescription(name, 3, [dimension,1,1], dimension)
+    Problem = PDEDescription(name)
+    add_unknown!(Problem, dimension, dimension; unknown_name = "velocity", equation_name = "momentum equation")
+    add_unknown!(Problem, 1, dimension; unknown_name = "density", equation_name = "continuity equation")
+    add_unknown!(Problem, 1, dimension; unknown_name = "pressure", equation_name = "equation of state")
 
     # momentum equation
     add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,dimension,dimension))
@@ -140,7 +145,8 @@ function LinearElasticityProblem(
 
     # generate empty PDEDescription for one unknown
     # unknown 1 : displacement (vector-valued)
-    Problem = PDEDescription("linear elasticity problem", 1, [dimension], dimension)
+    Problem = PDEDescription("linear elasticity problem")
+    add_unknown!(Problem, dimension, dimension; unknown_name = "displacement", equation_name = "displacement equation")
     if dimension == 2
         add_operator!(Problem, [1,1], HookStiffnessOperator2D(shearmodulus,lambda))
     elseif dimension == 1
@@ -169,7 +175,8 @@ function PoissonProblem(
     diffusion = 1.0)
 
     # generate empty PDEDescription for one unknown
-    Problem = PDEDescription("Poisson problem", 1, [ncomponents], dimension)
+    Problem = PDEDescription("Poisson problem")
+    add_unknown!(Problem, ncomponents, dimension; unknown_name = "unknown", equation_name = "Poisson equation")
     add_operator!(Problem, [1,1], LaplaceOperator(diffusion,dimension,ncomponents))
 
     return Problem
@@ -198,7 +205,8 @@ function L2BestapproximationProblem(
     time = 0)
 
     # generate empty PDEDescription for one unknown
-    Problem = PDEDescription("L2-Bestapproximation problem", 1, [ncomponents], dimension)
+    Problem = PDEDescription("L2-Bestapproximation problem")
+    add_unknown!(Problem, ncomponents, dimension; unknown_name = "L2-bestapproximation", equation_name = "L2-bestapproximation equation")
     add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents)))
     data(result,x) = (time_dependent_data) ? uexact(result,x,time) : uexact(result,x)
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], data, dimension, ncomponents; bonus_quadorder = bonus_quadorder))
@@ -240,7 +248,8 @@ function H1BestapproximationProblem(
     time = 0)
 
     # generate empty PDEDescription for one unknown
-    Problem = PDEDescription("H1-Bestapproximation problem", 1, [ncomponents], dimension)
+    Problem = PDEDescription("H1-Bestapproximation problem")
+    add_unknown!(Problem, ncomponents, dimension; unknown_name = "H1-bestapproximation", equation_name = "H1-bestapproximation equation")
     add_operator!(Problem, [1,1], LaplaceOperator(1.0,dimension,ncomponents))
     data(result,x) = (time_dependent_data) ? uexact(result,x,time) : uexact(result,x)
     data_gradient(result,x) = (time_dependent_data) ? uexact_gradient(result,x,time) : uexact_gradient(result,x)

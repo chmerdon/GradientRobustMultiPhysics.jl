@@ -12,13 +12,20 @@ Altogether, we are looking for a velocity ``\mathbf{u}``, a pressure ``\mathbf{p
 - \kappa \Delta \mathbf{c} + \mathbf{u} \cdot \nabla \mathbf{c} & = 0
 \end{aligned}
 ```
-with some viscosity parameter ``\mu`` and diffusion parameter ``\kappa``.
+with some viscosity parameter  and diffusion parameter ``\kappa``.
 
-The diffusion coefficient for the species is so small that the isolines of the concentration should stay parallel from inlet to outlet. Observe that a pressure-robust
-    Bernardi--Raugel method preserves this much better than a classical Bernardi--Raugel method. For comparison also a Taylor--Hood method can be switched on
-    which is comparable to the pressure-robust lowest-order method in this example. Also note, that the transport equation is very convection-dominated
-    and no stabilisation was used here. The results are very sensitive to ``\kappa`` and may be different if a stabilisation is used (work in progress).
-    Another approach would be to use a finite volume discretisation (coupling is also work in progress).
+The diffusion coefficient for the species is chosen (almost) zero such that the isolines of the concentration should stay parallel from inlet to outlet. 
+For the discretisation of the convection term in the transport equation two three possibilities can be chosen:
+
+1. Classical finite element discretisations ``\mathbf{u}_h \cdot \nabla \mathbf{c}_h``
+2. Pressure-robust finite element discretisation ``\Pi_\text{reconst} \mathbf{u}_h \cdot \nabla \mathbf{c}_h`` with some divergence-free reconstruction operator ``\Pi_\text{reconst}``
+3. Upwind finite volume discretisation for ``\kappa = 0`` based on normal fluxes along the faces (also divergence-free in finite volume sense)
+
+Observe that a pressure-robust Bernardi--Raugel discretisation preserves this much better than a classical Bernardi--Raugel method. For comparison also a Taylor--Hood method can be switched on
+which is comparable to the pressure-robust lowest-order method in this example. 
+
+Note, that the transport equation is very convection-dominated and no stabilisation in the finite element discretisations was used here (but instead a nonzero ``\kappa``). The results are very sensitive to ``\kappa`` and may be different if a stabilisation is used (work in progress).
+Also note, that only the finite volume discretisation perfectly obeys the maximum principle for the concentration but the isolines do no stay parallel until the outlet is reached, possibly due to articifial diffusion.
 =#
 
 push!(LOAD_PATH, "../src")
@@ -65,16 +72,16 @@ function main()
 
     ## initial grid
     ## replace Parallelogrm2D by Triangle2D if you like
-    xgrid = grid_pipe(1e-3);
+    xgrid = grid_pipe(5e-4);
 
     ## problem parameters
     viscosity = 1
-    diffusion_FE = 1e-7
+    diffusion_FE = 1e-7 # diffusion coefficient for transport equation
 
     ## choose one of these (inf-sup stable) finite element type pairs for the flow
     #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
-    FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
-    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
+    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
+    FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
     #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
     
     ## choose discretisation for the transport equation
@@ -94,18 +101,21 @@ function main()
     ## load Stokes problem prototype
     ## and assign boundary data (inlet profile in bregion 2, zero Dichlet at walls 1 and nothing at outlet region 2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
+    Problem.name = "Stokes + Transport"
     add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = inlet_velocity!, bonus_quadorder = 2)
 
     ## add transport equation of species
-    ## with boundary data (i.e. inlet concentration)
-    add_unknown!(Problem, 2, 1)
+    add_unknown!(Problem, 2, 1; unknown_name = "concentration", equation_name = "transport equation")
     if FVtransport == true
+        ## finite volume upwind discretisation
         add_operator!(Problem, [3,3], FVConvectionDiffusionOperator(1))
     else
+        ## finite element convection and diffusion (very small) operators
         add_operator!(Problem, [3,3], LaplaceOperator(diffusion_FE,2,1))
         add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
     end
+    ## with boundary data (i.e. inlet concentration)
     add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = inlet_concentration!, bonus_quadorder = 0)
     Base.show(Problem)
     
@@ -122,18 +132,15 @@ function main()
 
     ## solve the transport by finite volumes or finite elements
     if FVtransport == true
+        ## pseudo-timestepping until stationarity detected
         TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], timedependent_equations = [3], verbosity = 1)
-
-        ## loop in pseudo-time until stationarity detected
-        ## we also output M to see that the mass constraint is preserved all the way
         change = 0.0
         timestep = 1000
         maxResidual = 1e-10
         for iteration = 1 : 100
-            ## in the advance! step we can tell which matrices of which subiterations do not change
+            ## in the advance! step we can tell that the matrices of which subiterations do not change
             ## and so allow for reuse of the lu factorization
-            ## here only the matrix for the density update (2nd subiteration) changes in each step
-            change = advance!(TCS, timestep; reuse_matrix = [true, true])
+            change = advance!(TCS, timestep; reuse_matrix = [true])
             @printf("  iteration %4d",iteration)
             @printf("  time = %.4e",TCS.ctime)
             @printf("  change = %.4e \n",change)
@@ -143,12 +150,14 @@ function main()
             end
         end
     else
+        ## solve directly
         solve!(Solution, Problem; subiterations = [[3]], verbosity = 1, maxIterations = 5, maxResidual = 1e-12)
     end
 
 
 
-
+    ## print minimal and maximal concentration
+    ## (maximum principle says it should be [0,1])
     println("[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plots

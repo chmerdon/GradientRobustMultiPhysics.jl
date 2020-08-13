@@ -53,12 +53,12 @@ function main()
     interpolate!(HdivCurlInterpolation[1], exact_curl!; bonus_quadorder = 3)
 
     ## evaluate the piecewise integral means of Curl of H1 interpolation
-    meanCurlH1 = zeros(Float64,num_sources(xgrid[CellNodes]),2)
+    meanCurlH1 = zeros(Float64,2,num_sources(xgrid[CellNodes]))
     meanIntegratorCurlH1 = ItemIntegrator{Float64,AssemblyTypeCELL}(CurlScalar, DoNotChangeAction(2), [0])
     evaluate!(meanCurlH1,meanIntegratorCurlH1,H1Interpolation[1])
 
     ## evaluate the piecewise integral means of Hdiv interpolation of Curl
-    meanHdiv = zeros(Float64,num_sources(xgrid[CellNodes]),2)
+    meanHdiv = zeros(Float64,2,num_sources(xgrid[CellNodes]))
     meanIntegratorHdiv = ItemIntegrator{Float64,AssemblyTypeCELL}(Identity, DoNotChangeAction(2), [0])
     evaluate!(meanHdiv,meanIntegratorHdiv,HdivCurlInterpolation[1])
 
