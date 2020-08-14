@@ -57,7 +57,7 @@ function main()
 
     ## problem parameters
     viscosity = 1e-6
-    timestep = 1e-3
+    timestep = 5e-4
     T = 1 # final time
     plot_every_nth_step = 5e-2/timestep # number of steps before redraw
     

@@ -239,23 +239,32 @@ mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
     xdim:: Int
     ncomponents:: Int
     bonus_quadorder:: Int
-    store_operator::Bool                    # should the matrix repsentation of the operator be stored?
+    store_operator::Bool               # should the matrix representation of the operator be stored?
     storage::AbstractArray{Float64,1}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
 
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
     regions::Array{Int,1},
-    rhsfunction::Function,
+    rhsfunction!::Function,
     xdim::Int,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,
-    on_boundary::Bool = false,
-    timedependent::Bool = false)
-    if on_boundary == true
-        return RhsOperator{AssemblyTypeBFACE}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
+    on_boundary::Bool = false)
+
+    # check if function is time-dependent
+    if applicable(rhsfunction!,[0],0,0)
+        timedependent = true
+        rhsfunc = rhsfunction!
     else
-        return RhsOperator{AssemblyTypeCELL}(rhsfunction, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
+        timedependent = false
+        rhsfunc(result,x,t) = rhsfunction!(result,x)
+    end
+
+    if on_boundary == true
+        return RhsOperator{AssemblyTypeBFACE}(rhsfunc, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
+    else
+        return RhsOperator{AssemblyTypeCELL}(rhsfunc, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
     end
 end
 
@@ -590,31 +599,17 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{A
         addblock!(b, O.storage; factor = factor)
     else
         FE = b.FES
-        if O.timedependent
-            function rhs_function_td() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(Float64,O.ncomponents)
-                function closure(result,input,x)
-                    O.rhsfunction(temp,x,time)
-                    result[1] = 0
-                    for j = 1 : O.ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
+        function rhs_function() # result = F(v) = f*operator(v) = f*input
+            temp = zeros(Float64,O.ncomponents)
+            function closure(result,input,x)
+                O.rhsfunction(temp,x,time)
+                result[1] = 0
+                for j = 1 : O.ncomponents
+                    result[1] += temp[j]*input[j] 
                 end
-            end    
-            action = XFunctionAction(rhs_function_td(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
-        else
-            function rhs_function() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(Float64,O.ncomponents)
-                function closure(result,input,x)
-                    O.rhsfunction(temp,x)
-                    result[1] = 0
-                    for j = 1 : O.ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                end
-            end    
-            action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
-        end
+            end
+        end    
+        action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
         RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
         assemble!(b, RHS; factor = factor, verbosity = verbosity)
     end

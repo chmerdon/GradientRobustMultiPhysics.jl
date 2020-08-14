@@ -27,17 +27,18 @@ Order   = [:type, :function]
 The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE. The following table lists all available operators and physics-motivated constructors for them. Click on them to find out more details.
 
 
-| PDEOperator subtype                 | Special constructors                 | Mathematically                               |
-| :---------------------------------: | :----------------------------------: | :------------------------------------------: |
-| [`AbstractBilinearForm`](@ref)      |                                      | ``(Operator1(u),Operator2(v))``              |
-|                                     | [`LaplaceOperator`](@ref)            | ``(\kappa \nabla u,\nabla v)``               |
-|                                     | [`ReactionOperator`](@ref)           | ``(\alpha u, v)``                            |
-|                                     | [`ConvectionOperator`](@ref)         | ``(\beta \cdot \nabla u, v)``                |
-|                                     | [`HookStiffnessOperator2D`](@ref)    | ``(\mathbb{C} \epsilon(u),\epsilon(v))``     |
-| [`AbstractTrilinearForm`](@ref)     |                                      | ``(Operator1(a)*Operator2(u),Operator3(v))`` |
-|                                     | [`ConvectionOperator`](@ref)         | ``(a \cdot \nabla u, v)`` (a is unknown)     |
-| [`RhsOperator`](@ref)               |                                      | ``(f*Operator(v))``                          |
+| PDEOperator subtype                 | Special constructors                 | Mathematically                                   |
+| :---------------------------------: | :----------------------------------: | :----------------------------------------------: |
+| [`AbstractBilinearForm`](@ref)      |                                      | ``(A(FO_1(u)),FO_2(v))``                         |
+|                                     | [`LaplaceOperator`](@ref)            | ``(\kappa \nabla u,\nabla v)``                   |
+|                                     | [`ReactionOperator`](@ref)           | ``(\alpha u, v)``                                |
+|                                     | [`ConvectionOperator`](@ref)         | ``(\beta \cdot \nabla u, v)`` (beta is function) |
+|                                     | [`HookStiffnessOperator2D`](@ref)    | ``(\mathbb{C} \epsilon(u),\epsilon(v))``         |
+| [`AbstractTrilinearForm`](@ref)     |                                      | ``(A(FO_1(a),FO_2(u)),FO_3(v))``                 |
+|                                     | [`ConvectionOperator`](@ref)         | ``(a \cdot \nabla u, v)`` (a is unknown)         |
+| [`RhsOperator`](@ref)               |                                      | ``(f*FO(v))``                                    |
 
+Legend: FO are placeholders for [Function Operators](@ref), and A stands for [Abstract Actions](@ref).
 
 ### Complete List and Details
 
@@ -51,9 +52,22 @@ Order   = [:type, :function]
 
 FunctionOperators are building blocks for the weak form and define the operations that should be applied to the trial and test functions inside some PDEOperator. Below is a list of available FunctionOperators. 
 
+
+| Function operator                          | Description                                   | 
+| :----------------------------------------: | :-------------------------------------------: |
+| [`Identity`](@ref)                         | identity operator                             |
+| [`ReconstructionIdentity{FEType}`](@ref)   | reconstruction operator into specified FEType |
+| [`NormalFlux`](@ref)                       | normal flux (function times normal)           |
+| [`Gradient`](@ref)                         | gradient/Jacobian operator                    |
+| [`SymmetricGradient`](@ref)                | symmetric part of the gradient                |
+| [`Divergence`](@ref)                       | divergence operator                           |
+| [`ReconstructionDivergence{FEType}`](@ref) | divergence of FEType reconstruction operator  |
+| [`CurlScalar`](@ref)                       | curl operator 1D to 2D (rotated gradient)     |
+
 !!! note
 
-    Especially note the operators ReconstructionIdentity{FEType} and ReconstructionDivergence{FEType} that allow to evaluate some reconstructed version of a vector-valued testfunction and so allows e.g. gradient-robust discretisations with classical non divergence-conforming ansatz spaces. So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
+    Especially note the operators ReconstructionIdentity{FEType} and ReconstructionDivergence{FEType} that allow to evaluate some
+    reconstructed version of a vector-valued testfunction that maps its discrete divergence to the divergence and so allows e.g. gradient-robust discretisations with classical non divergence-conforming ansatz spaces. So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
 
 
 ```@autodocs

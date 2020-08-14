@@ -334,7 +334,7 @@ function assemble!(
 end
 
 # for linear, stationary PDEs that can be solved in one step
-function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig)
+function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
 
     verbosity = SC.verbosity
 
@@ -346,16 +346,16 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig)
     # ASSEMBLE SYSTEM
     A = FEMatrix{Float64}("SystemMatrix", FEs)
     b = FEVector{Float64}("SystemRhs", FEs)
-    assemble!(A,b,PDE,SC,Target; equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial, verbosity = verbosity - 1)
+    assemble!(A,b,PDE,SC,Target; equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial, time = time, verbosity = verbosity - 1)
 
     # ASSEMBLE BOUNDARY DATA
     fixed_dofs = []
     for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
+            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 1)
         else
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 1)
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 1)
         end    
         new_fixed_dofs .+= Target[j].offset
         append!(fixed_dofs, new_fixed_dofs)
@@ -400,7 +400,7 @@ end
 
 
 # solve full system iteratively until fixpoint is reached
-function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig)
+function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
 
     verbosity = SC.verbosity
 
@@ -412,17 +412,17 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
     # ASSEMBLE SYSTEM INIT
     A = FEMatrix{Float64}("SystemMatrix", FEs)
     b = FEVector{Float64}("SystemRhs", FEs)
-    assemble!(A,b,PDE,SC,Target; equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial, verbosity = verbosity - 2)
+    assemble!(A,b,PDE,SC,Target; time = time, equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial, verbosity = verbosity - 2)
 
     # ASSEMBLE BOUNDARY DATA
     fixed_dofs = []
     for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
+            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         else
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end    
@@ -460,7 +460,7 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
 
         # REASSEMBLE NONLINEAR PARTS
         for j = 1:size(PDE.RHSOperators,1)
-            assemble!(A,b,PDE,SC,Target; equations = [j], min_trigger = AssemblyAlways, verbosity = verbosity - 2)
+            assemble!(A,b,PDE,SC,Target; time = time, equations = [j], min_trigger = AssemblyAlways, verbosity = verbosity - 2)
         end
 
         # CHECK RESIDUAL
@@ -497,7 +497,7 @@ end
 
 # solve system iteratively until fixpoint is reached
 # by solving each equation on its own
-function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig)
+function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
 
     verbosity = SC.verbosity
 
@@ -517,7 +517,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
         A[i] = FEMatrix{Float64}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
         b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
         x[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
-        assemble!(A[i],b[i],PDE,SC,Target; equations = SC.subiterations[i], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
+        assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = SC.subiterations[i], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
         eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
         for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(SC.subiterations[i])
             if j < SC.subiterations[i][eq]
@@ -532,10 +532,10 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
     for j= 1 : length(Target.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
+            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         else
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ Target[j].offset
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end    
@@ -597,7 +597,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
 
             # REASSEMBLE PARTS FOR NEXT SUBITERATION
             next_eq = (s == nsubiterations) ? 1 : s+1
-            assemble!(A[next_eq],b[next_eq],PDE,SC,Target; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
+            assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 1)
 
         end
 
@@ -658,6 +658,7 @@ function solve!(
     PDE::PDEDescription;
     subiterations = "auto",
     dirichlet_penalty::Real = 1e60,
+    time::Real = 0,
     maxResidual::Real = 1e-12,
     maxIterations::Int = 10,
     verbosity::Int = 0)
@@ -669,6 +670,7 @@ function solve!(
         println("\nSOLVING PDE")
         println("===========")
         println("  name = $(PDE.name)")
+        println("  time = $(time)")
 
         FEs = Array{FESpace,1}([])
         for j=1 : length(Target.FEVectorBlocks)
@@ -692,12 +694,12 @@ function solve!(
     # check if PDE can be solved directly
     if subiterations == "auto"
         if SolverConfig.is_nonlinear == false
-            solve_direct!(Target, PDE, SolverConfig)
+            solve_direct!(Target, PDE, SolverConfig; time = time)
         else
-            solve_fixpoint_full!(Target, PDE, SolverConfig)
+            solve_fixpoint_full!(Target, PDE, SolverConfig; time = time)
         end
     else
-        solve_fixpoint_subiterations!(Target, PDE, SolverConfig)
+        solve_fixpoint_subiterations!(Target, PDE, SolverConfig; time = time)
     end
 end
 

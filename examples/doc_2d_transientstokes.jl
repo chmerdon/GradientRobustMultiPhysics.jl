@@ -110,19 +110,19 @@ function main()
 
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
-    add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 5, timedependent = true)
-    add_rhsdata!(StokesProblem, 1, RhsOperator(testfunction_operator, [1], exact_rhs!(viscosity), 2, 2; bonus_quadorder = 5, timedependent = true))
+    add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 5)
+    add_rhsdata!(StokesProblem, 1, RhsOperator(testfunction_operator, [1], exact_rhs!(viscosity), 2, 2; bonus_quadorder = 5))
 
     ## define bestapproximation problems
     L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 5)
-    L2VelocityBestapproximationProblemInitial = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5, time_dependent_data = true, time = 0)
-    L2VelocityBestapproximationProblemFinal = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5, time_dependent_data = true, time = T)
-    H1VelocityBestapproximationProblemFinal = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5, bonus_quadorder_boundary = 5, time_dependent_data = true, time = T)
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5)
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5, bonus_quadorder_boundary = 5)
+
 
     ## define ItemIntegrators for L2/H1 error computation and arrays to store them
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 5, time_dependent_data = true, time = T)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 5, time = T)
     L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 5)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 5, time_dependent_data = true, time = T)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 5, time = T)
     L2error_velocity = []; L2error_pressure = []; L2errorInterpolation_velocity = []; NDofs = []
     L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
     H1error_velocity = []; H1errorInterpolation_velocity = []; H1errorBestApproximation_velocity = []
@@ -148,7 +148,7 @@ function main()
 
         ## set initial solution ( = bestapproximation at time 0)
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblemInitial)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = 0)
         Solution[1][:] = L2VelocityBestapproximation[1][:]
 
         ## generate time-dependent solver and chance rhs data
@@ -167,15 +167,15 @@ function main()
         ## interpolate exact solution at final time for comparison
         Interpolation = FEVector{Float64}("Interpolation velocity",FESpaceVelocity)
         append!(Interpolation,"Interpolation pressure",FESpacePressure)
-        interpolate!(Interpolation[1], exact_velocity!; bonus_quadorder = 2, time_dependent = true, time = T)
+        interpolate!(Interpolation[1], exact_velocity!; bonus_quadorder = 2, time = T)
         interpolate!(Interpolation[2], exact_pressure!; bonus_quadorder = 1)
 
         ## solve bestapproximation problems at final time for comparison
         L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FESpacePressure)
         H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FESpaceVelocity)
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblemFinal;)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = T)
         solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem;)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblemFinal;)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T)
 
         ## compute L2 and H1 error of all solutions
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))

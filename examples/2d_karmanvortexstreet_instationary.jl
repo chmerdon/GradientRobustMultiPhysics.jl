@@ -10,7 +10,6 @@ using GradientRobustMultiPhysics
 
 
 # inlet data and viscosity for Karman vortex street example
-viscosity = 1e-2
 
 function bnd_inlet!(result,x,t)
     result[1] = 6*x[2]*(0.41-x[2])/(0.41*0.41)*max(0,sin(t*pi/8));
@@ -29,25 +28,26 @@ function main()
     testfunction_operator = Identity
 
     # problem parameters
+    viscosity = 2e-3
     nonlinear = true    # add nonlinear convection term
     IMEX = true         # beware: may need smaller timestep !
 
     # choose finite element type
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element
-    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}]; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel gradient-robust
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    #FETypes = [H1BR{2}, L2P0{1}]; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel gradient-robust
     #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     # solver parameters
-    timestep = 1 // 50
+    timestep = 1e-3
     finaltime = 10
-    plot_every_nth_step = 10 #
+    plot_every_nth_step = 1e-1/timestep #
     verbosity = 1 # deepness of messaging (the larger, the more)
 
     # postprocess parameters
     plot_grid = false
-    plot_pressure = true
+    plot_pressure = false
     plot_velocity = true
 
     #####################################################################################    
@@ -56,7 +56,7 @@ function main()
     # load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
     add_boundarydata!(StokesProblem, 1, [1,3,5], HomogeneousDirichletBoundary)
-    add_boundarydata!(StokesProblem, 1, [4], BestapproxDirichletBoundary; data = bnd_inlet!, bonus_quadorder = 2, timedependent = true)
+    add_boundarydata!(StokesProblem, 1, [4], BestapproxDirichletBoundary; data = bnd_inlet!, bonus_quadorder = 2)
 
     # generate FESpaces
     FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
@@ -109,33 +109,20 @@ function main()
             if plot_pressure
                 PyPlot.figure("pressure")
                 nodevalues!(nodevals,Solution[2],FESpacePressure)
-                ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+                ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot)
             end
         
-            # plot velocity (speed + quiver)
+            # plot velocity
             if plot_velocity
                 nodevalues!(nodevals,Solution[1],FESpaceVelocity)
                 PyPlot.figure("velocity")
-                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
-                quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+                for j = 1 : nnodes
+                    nodevals[1,j] = sqrt(nodevals[1,j]^2 + nodevals[2,j]^2)
+                end
+                ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot, isolines = 3)
             end
         end
     
-    end
-
-    # show final solution
-    # plot pressure
-    if plot_pressure
-        PyPlot.figure("pressure")
-        nodevalues!(nodevals,Solution[2],FESpacePressure)
-        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-    end
-
-    # plot velocity (speed + quiver)
-    if plot_velocity
-        PyPlot.figure("velocity")
-        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
-        quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
     end
 
 end

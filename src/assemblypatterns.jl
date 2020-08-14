@@ -12,7 +12,6 @@
 #   - constructor is independent of FE or grid!
 
 
-
 """
 $(TYPEDEF)
 
@@ -1479,28 +1478,27 @@ function L2ErrorIntegrator(
 Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given exact_function and returns the L2-error.
 """
 function L2ErrorIntegrator(
-    exact_function::Function,
+    exact_function!::Function,
     operator::Type{<:AbstractFunctionOperator},
     xdim::Int,
     ncomponents::Int = 1;
     AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL,
     bonus_quadorder::Int = 0,
-    time_dependent_data::Bool = false,
     time = 0)
-    function L2error_function()
-        temp = zeros(Float64,ncomponents)
-        function closure(result,input,x)
-            if time_dependent_data
-                exact_function(temp,x,time)
-            else
-                exact_function(temp,x)
-            end
-            result[1] = 0.0
-            for j=1:length(temp)
-                result[1] += (temp[j] - input[j])^2
-            end    
-        end
+
+    temp = zeros(Float64,ncomponents)
+    if applicable(exact_function!, temp, 0, 0)
+        exact_func! = exact_function!
+    else
+        exact_func!(temp,x,t) = exact_function!(temp,x)
+    end
+    function L2error_function(result,input,x)
+        exact_func!(temp,x,time)
+        result[1] = 0.0
+        for j=1:length(temp)
+            result[1] += (temp[j] - input[j])^2
+        end    
     end    
-    L2error_action = XFunctionAction(L2error_function(),1,xdim; bonus_quadorder = bonus_quadorder)
+    L2error_action = XFunctionAction(L2error_function,1,xdim; bonus_quadorder = bonus_quadorder)
     return ItemIntegrator{Float64,AT}(operator, L2error_action, [0])
 end

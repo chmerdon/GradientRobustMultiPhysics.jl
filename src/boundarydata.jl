@@ -59,9 +59,23 @@ function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBou
 end
 
 
-function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; timedependent::Bool = false, data = Nothing, bonus_quadorder::Int = 0)
+function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
+
+    # check if function is time-dependent
+    if applicable(data,[0],0,0)
+        timedependent = true
+        datat! = data
+    else
+        timedependent = false
+        if data != Nothing
+            datat!(result,x,t) = data(result,x)
+        else
+            datat! = Nothing
+        end
+    end
+
     for j = 1 : length(regions)
-        append!(O,regions[j], btype; timedependent = timedependent, data = data, bonus_quadorder = bonus_quadorder)
+        append!(O,regions[j], btype; timedependent = timedependent, data = datat!, bonus_quadorder = bonus_quadorder)
     end
 end
 
@@ -182,11 +196,7 @@ function boundarydata!(
             function bnd_rhs_function_h1()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, region)
-                    if O.timedependent[region] == true
-                        O.data4bregion[region](temp,x,time)
-                    else
-                        O.data4bregion[region](temp,x)
-                    end
+                    O.data4bregion[region](temp,x,time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j]*input[j] 
