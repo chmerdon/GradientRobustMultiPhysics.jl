@@ -214,11 +214,7 @@ function boundarydata!(
             function bnd_rhs_function_hdiv()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, bface)
-                    if O.timedependent[xBFaceRegions[bface]] == true
-                        O.data4bregion[xBFaceRegions[bface]](temp,x,time)
-                    else
-                        O.data4bregion[xBFaceRegions[bface]](temp,x)
-                    end
+                    O.data4bregion[xBFaceRegions[bface]](temp,x,time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]

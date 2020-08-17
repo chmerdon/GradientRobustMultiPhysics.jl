@@ -326,6 +326,7 @@ end
 # H1 ELEMENTS (nothing has to be done)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
+    return nothing
 end
 
 
@@ -374,6 +375,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
             end
         end
     end
+    return nothing
 end
 
 
@@ -404,6 +406,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
             end
         end
     end
+    return nothing
 end
 
 
@@ -430,6 +433,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
             end
         end
     end
+    return nothing
 end
 
 
@@ -454,6 +458,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) w
             end
         end
     end
+    return nothing
 end
 
 # NORMALFLUX OPERATOR
@@ -479,6 +484,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) w
             end
         end
     end
+    return nothing
 end
 
 # NORMALFLUX OPERATOR
@@ -494,6 +500,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
             end
         end
     end
+    return nothing
 end
 
 
@@ -525,7 +532,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 end    
             end    
         end  
-    end    
+    end  
+    return nothing  
 end
 
 
@@ -555,7 +563,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 end    
             end    
         end  
-    end    
+    end  
+    return nothing  
 end
 
 
@@ -589,6 +598,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
             end    
         end  
     end    
+    return nothing
 end
 
 
@@ -625,6 +635,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
             end    
         end  
     end    
+    return nothing
 end
 
 
@@ -664,7 +675,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                 end    
             end    
         end  
-    end    
+    end   
+    return nothing 
 end
 
 # DIVERGENCE OPERATOR
@@ -693,6 +705,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
             end    
         end  
     end    
+    return nothing
 end
 
 # DIVERGENCE OPERATOR
@@ -727,7 +740,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence,AT}, item::Int) w
                 end    
             end    
         end  
-    end    
+    end  
+    return nothing  
 end
 
 
@@ -764,8 +778,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                 end
             end
         end  
-
     end
+    return nothing
 end
 
 
@@ -796,6 +810,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
             end
         end    
     end  
+    return nothing
 end
 
 # use basisevaluator to evaluate j-th basis function at quadrature point i
@@ -803,6 +818,7 @@ function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i; offset::Int = 0)
     for k = 1 : size(FEBE.cvals,1) # resultdim
         result[offset + k] = FEBE.cvals[k,j,i]
     end  
+    return nothing
 end
 
 # use basisevaluator to evaluate some function at quadrature point i with the given coefficients
@@ -812,4 +828,5 @@ function eval!(result, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, coefficients::A
             result[offset+k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i]
         end    
     end 
+    return nothing
 end

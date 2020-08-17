@@ -33,6 +33,21 @@ struct FEMatrix{T} <: AbstractArray{T,1}
     entries::AbstractMatrix
 end
 
+#Add value to matrix if it is nonzero
+@inline function _addnz(ESM::ExtendableSparseMatrix,i,j,v::Tv,fac) where Tv
+    if v!=zero(Tv)
+        updateindex!(ESM,+,v*fac,i,j)
+    end
+end
+
+#Add value to matrix if it is nonzero
+@inline function _addnz(FEB::FEMatrixBlock,i,j,v::Tv,fac) where Tv
+    if v!=zero(Tv)
+        updateindex!(FEB.entries,+,v*fac,FEB.offsetX+i,FEB.offsetY+j)
+    end
+end
+
+
 Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
 Base.getindex(FEF::FEMatrix,i,j) = FEF.FEMatrixBlocks[(i-1)*FEF.nFE+j]
 Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
@@ -129,6 +144,7 @@ function Base.fill!(B::FEMatrixBlock, value::Real)
             end
         end
     end
+    return nothing
 end
 
 """
@@ -145,6 +161,7 @@ function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor::Real = 1)
             end
         end
     end
+    return nothing
 end
 
 """
@@ -159,6 +176,7 @@ function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix; factor::Real = 1
             A[rows[r],col] += B.cscmatrix.nzval[r] * factor
         end
     end
+    return nothing
 end
 
 """
@@ -175,6 +193,7 @@ function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; 
             end
         end
     end
+    return nothing
 end
 
 
@@ -191,4 +210,5 @@ function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVect
             a[rows[r]] += B.cscmatrix.nzval[r] * b[col] * factor
         end
     end
+    return nothing
 end

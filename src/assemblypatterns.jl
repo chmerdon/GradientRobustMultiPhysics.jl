@@ -446,6 +446,7 @@ function evaluate!(
     end # if in region    
     end # region for loop
     end # item for loop
+    return nothing
 end
 
 """
@@ -666,6 +667,7 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+    return nothing
 end
 
 
@@ -780,6 +782,7 @@ function assemble!( # LF has to have resultdim == 1
     end # if in region    
     end # region for loop
     end # item for loop
+    return nothing
 end
 
 
@@ -859,7 +862,7 @@ function assemble!(
     nregions::Int = length(regions)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
-    for item = 1 : nitems
+    @inbounds for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
@@ -902,6 +905,7 @@ function assemble!(
                 for dof_i = 1 : ndofs4item1
                     eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
                     apply_action!(action_result, action_input, action, i)
+                    action_result .*= weights[i]
 
                     if BLF.symmetric == false
                         for dof_j = 1 : ndofs4item2
@@ -909,15 +913,15 @@ function assemble!(
                             for k = 1 : action_resultdim
                                 temp += action_result[k]*basisvals2[k,dof_j,i]
                             end
-                            localmatrix[dof_i,dof_j] += temp * weights[i]
+                            localmatrix[dof_i,dof_j] += temp
                         end
                     else # symmetric case
                         for dof_j = dof_i : ndofs4item2
-                            temp = 0
+                            action_input[1] = 0
                             for k = 1 : action_resultdim
-                                temp += action_result[k]*basisvals2[k,dof_j,i]
+                                action_input[1] += action_result[k] * basisvals2[k,dof_j,i]
                             end
-                            localmatrix[dof_i,dof_j] += temp * weights[i]
+                            localmatrix[dof_i,dof_j] += action_input[1]
                         end
                     end
                 end 
@@ -925,6 +929,7 @@ function assemble!(
                 for dof_j = 1 : ndofs4item2
                     eval!(action_input,basisevaler[iEG][evalnr[2]], dof_j, i)
                     apply_action!(action_result, action_input, action, i)
+                    action_result .*= weights[i]
 
                     if BLF.symmetric == false
                         for dof_i = 1 : ndofs4item1
@@ -932,7 +937,7 @@ function assemble!(
                             for k = 1 : action_resultdim
                                 temp += action_result[k]*basisvals[k,dof_j,i]
                             end
-                            localmatrix[dof_i,dof_j] += temp * weights[i]
+                            localmatrix[dof_i,dof_j] += temp
                         end
                     else # symmetric case
                         for dof_i = dof_j : ndofs4item1
@@ -940,7 +945,7 @@ function assemble!(
                             for k = 1 : action_resultdim
                                 temp += action_result[k]*basisvals[k,dof_j,i]
                             end
-                            localmatrix[dof_i,dof_j] += temp * weights[i]
+                            localmatrix[dof_i,dof_j] += temp
                         end
                     end
                 end 
@@ -953,15 +958,15 @@ function assemble!(
             for dof_i = 1 : ndofs4item1, dof_j = 1 : ndofs4item2
                 if localmatrix[dof_i,dof_j] != 0
                     if transposed_assembly == true
-                        A[dofs2[dof_j],dofs[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor   
-                    else
-                        A[dofs[dof_i],dofs2[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor     
+                        _addnz(A,dofs2[dof_j],dofs[dof_i],localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)
+                    else 
+                        _addnz(A,dofs[dof_i],dofs2[dof_j],localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)  
                     end
                     if transpose_copy != Nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
                         if transposed_assembly == true
-                            transpose_copy[dofs[dof_i],dofs2[dof_j]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
+                            _addnz(transpose_copy,dofs[dof_i],dofs2[dof_j],localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
                         else
-                            transpose_copy[dofs2[dof_j],dofs[dof_i]] -= localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
+                            _addnz(transpose_copy,dofs2[dof_j],dofs[dof_i],localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
                         end
                     end
                 end
@@ -969,13 +974,13 @@ function assemble!(
         else # symmetric case
             for dof_i = 1 : ndofs4item1, dof_j = dof_i+1 : ndofs4item2
                 if localmatrix[dof_i,dof_j] != 0 
-                    temp = localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
-                    A[dofs2[dof_j],dofs[dof_i]] += temp
-                    A[dofs2[dof_i],dofs[dof_j]] += temp
+                    temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                    _addnz(A,dofs2[dof_j],dofs[dof_i],temp,factor)
+                    _addnz(A,dofs2[dof_i],dofs[dof_j],temp,factor)
                 end
             end    
             for dof_i = 1 : ndofs4item1
-                A[dofs2[dof_i],dofs[dof_i]] += localmatrix[dof_i,dof_i] * xItemVolumes[item] * factor
+               _addnz(A,dofs2[dof_i],dofs[dof_i],localmatrix[dof_i,dof_i] * xItemVolumes[item],factor)
             end    
         end    
         fill!(localmatrix,0.0)
@@ -985,6 +990,7 @@ function assemble!(
     end # region for loop
     end # item for loop
 
+    return nothing
 end
 
 
@@ -1144,6 +1150,7 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+    return nothing
 end
 
 """
@@ -1293,9 +1300,9 @@ function assemble!(
         for dof_i = 1 : ndofs4item2, dof_j = 1 : ndofs4item3
              if localmatrix[dof_i,dof_j] != 0
                 if transposed_assembly == true
-                    A[dofs3[dof_j],dofs2[dof_i]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor
+                    _addnz(A,dofs3[dof_j],dofs2[dof_i],localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)
                 else
-                    A[dofs2[dof_i],dofs3[dof_j]] += localmatrix[dof_i,dof_j] * xItemVolumes[item] * factor 
+                    _addnz(A,dofs2[dof_i],dofs3[dof_j],localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)
                 end
             end
         end
@@ -1305,6 +1312,7 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+    return nothing
 end
 
 
@@ -1313,7 +1321,7 @@ end
 ````
 assemble!(
     assemble!(
-    A::AbstractArray{<:Real,1},
+    b::AbstractArray{<:Real,1},
     FE1::FEVectorBlock,
     FE2::FEVectorBlock.
     TLF::TrilinearForm{T, AT};
@@ -1460,6 +1468,7 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+    return nothing
 end
 
 

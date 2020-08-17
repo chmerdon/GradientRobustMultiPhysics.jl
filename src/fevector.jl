@@ -103,6 +103,7 @@ function Base.append!(FEF::FEVector{T},name::String,FES::FESpace) where T <: Rea
     append!(FEF.entries,zeros(T,FES.ndofs))
     newBlock = FEVectorBlock{T}(name, FES, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FES.ndofs, FEF.entries)
     push!(FEF.FEVectorBlocks,newBlock)
+    return nothing
 end
 
 """
@@ -114,6 +115,7 @@ function Base.fill!(b::FEVectorBlock, value::Real)
     for j = b.offset+1 : b.last_index
         b.entries[j] = 0
     end
+    return nothing
 end
 
 
@@ -126,6 +128,7 @@ function addblock!(a::FEVectorBlock, b::FEVectorBlock; factor::Real = 1)
     for j = b.offset+1 : b.last_index
         a.entries[j] += b.entries[j] * factor
     end
+    return nothing
 end
 
 """
@@ -137,4 +140,5 @@ function addblock!(a::FEVectorBlock, b::AbstractArray{<:Real,1}; factor::Real = 
     for j = 1 : length(b)
         a.entries[j] += b[j] * factor
     end
+    return nothing
 end
