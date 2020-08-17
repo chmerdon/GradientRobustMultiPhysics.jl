@@ -366,7 +366,9 @@ function integrate!(
         end
     else
         for item = 1 : nitems
-            integral4items[item] = 0
+            for j = 1 : resultdim
+                integral4items[j,item] = 0
+            end
 
             # find index for CellType
             itemET = xItemGeometries[item]
@@ -378,7 +380,7 @@ function integrate!(
                 eval!(x, local2global[iEG], qf[iEG].xref[i])
                 item_integrand!(result,x,item,qf[iEG].xref[i])
                 for j = 1 : resultdim
-                    integral4items[item, j] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
+                    integral4items[j,item] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
                 end
             end  
         end

@@ -60,7 +60,7 @@ export AbstractH1FiniteElementWithCoefficients
 export H1BR
 
 export AbstractHdivFiniteElement
-export HDIVRT0, HDIVBDM1
+export HDIVRT0, HDIVBDM1, HDIVRT1
 
 export AbstractHcurlFiniteElement
 

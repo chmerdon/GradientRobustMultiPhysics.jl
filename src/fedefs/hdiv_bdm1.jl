@@ -71,7 +71,8 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVBDM1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVBDM1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 1)
+   
     # integrate normal flux of exact_function over edges
     ncomponents = get_ncomponents(eltype(FE))
     xFaceNormals = FE.xgrid[FaceNormals]
@@ -107,7 +108,7 @@ end
 function get_basis_normalflux_on_face(::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry})
     function closure(xref)
         return [1;
-                -3+6*xref[1]]; # linear normal-flux of BDM1 function
+                6*(xref[1]- 1//2)]; # linear normal-flux of BDM1 function
     end
 end
 

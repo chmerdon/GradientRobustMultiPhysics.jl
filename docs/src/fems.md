@@ -33,7 +33,7 @@ The following table lists all curently implemented finite elements. Click on the
 | :----------------: | :------------------: | :-------------------: | :----------------: |
 | [`H1P1`](@ref)     | [`HDIVRT0`](@ref)    |                       | [`L2P0`](@ref)     |
 | [`H1MINI`](@ref)   | [`HDIVBDM1`](@ref)   |                       | [`L2P1`](@ref)     |
-| [`H1P2`](@ref)     |                      |                       |                    |
+| [`H1P2`](@ref)     | [`HDIVRT1`](@ref)    |                       |                    |
 | [`H1BR`](@ref)     |                      |                       |                    |
 | [`H1CR`](@ref)     |                      |                       |                    |
 

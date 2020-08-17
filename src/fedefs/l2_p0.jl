@@ -70,20 +70,20 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
     ncomponents = get_ncomponents(FEType)
     xdim = size(xCoords,1)
     if length(dofs) == 0 # interpolate at all dofs
-        integrals4cell = zeros(Float64,ncells,ncomponents)
+        integrals4cell = zeros(Float64,ncomponents,ncells)
         integrate!(integrals4cell, FE.xgrid, AssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
         for cell = 1 : ncells
             for c = 1 : ncomponents
-                Target[(cell-1)*ncomponents + c] = integrals4cell[cell,c] / xCellVolumes[cell]
+                Target[(cell-1)*ncomponents + c] = integrals4cell[c, cell] / xCellVolumes[cell]
             end
         end    
     else # todo: does not work for more than one component at the moment, also does not need to compute all integral means on all cells
-        integrals4cell = zeros(Float64,ncells,ncomponents)
+        integrals4cell = zeros(Float64,ncomponents,ncells)
         integrate!(integrals4cell, FE.xgrid, AssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
         for dof in dofs
             cell = dof
             c = 1
-            Target[(cell-1)*ncomponents + c] = integrals4cell[cell,c] / xCellVolumes[cell]
+            Target[(cell-1)*ncomponents + c] = integrals4cell[c, cell] / xCellVolumes[cell]
         end    
     end    
 end

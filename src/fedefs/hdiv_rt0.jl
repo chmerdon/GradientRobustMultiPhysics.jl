@@ -72,7 +72,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT0}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT0}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 1)
     # integrate normal flux of exact_function over edges
     ncomponents = get_ncomponents(eltype(FE))
     xFaceNormals = FE.xgrid[FaceNormals]

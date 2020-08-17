@@ -47,7 +47,8 @@ function main()
     Base.show(Problem)
 
     ## choose some (inf-sup stable) finite element types
-    FEType = [HDIVBDM1{2}, L2P0{1}]
+    #FEType = [HDIVBDM1{2}, L2P0{1}]
+    FEType = [HDIVRT1{2}, L2P1{1}]
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
 
     ## create a solution vector and solve the problem
