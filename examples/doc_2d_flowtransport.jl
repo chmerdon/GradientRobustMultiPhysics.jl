@@ -31,7 +31,6 @@ Also note, that only the finite volume discretisation perfectly obeys the maximu
 push!(LOAD_PATH, "../src")
 using ExtendableGrids
 using Triangulate
-#using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf

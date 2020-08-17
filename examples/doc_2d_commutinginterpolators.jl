@@ -3,19 +3,17 @@
 # 2D Commuting Interpolators
 ([source code](SOURCE_URL))
 
-This example verifies a structural property of the lowest-order H1 and Hdiv finite element spaces and their interpolators which is
+This example verifies a structural property of the H1 and Hdiv finite element spaces and their interpolators which is
 ```math
-\mathrm{Curl}(I_{\mathrm{P1}}\psi) = I_{\mathrm{RT0}}(\mathrm{Curl}(\psi))
+\mathrm{Curl}(I_{\mathrm{P}_k}\psi) = I_{\mathrm{RT}_{k-1}}(\mathrm{Curl}(\psi))
 ```
-for the nodal interpolator ``I_{\mathrm{P1}}`` into the pieceise linear polynomials and the lowest-order standard Raviart-Thomas interpolator ``I_{\mathrm{RT0}}``
-which we will verify in this example by comparing the nodal values of both sides of the equation. Note, that both expression are piecewise
-constant, so we compare nodalvalues of some discontinuous quantity. Nevertheless, since both quantities are (hopefully) the same discontinuous function,
-their nodal values should be identical.
+for the H1 interpolator ``I_{\mathrm{P}_k}`` and the standard Raviart-Thomas interpolator ``I_{\mathrm{RT}_{k-1}}`` for $k > 0$
+which we will verify in this example for $k=1$ and $k=2$.
 
 
 !!! note
 
-    There are also higher-order commuting interpolators which will be tested as well once they are implemented.
+    There are also higher-order commuting interpolators for $k > 2$ which will be tested as well once they are implemented.
 
 =#
 
@@ -41,14 +39,18 @@ function main()
     ## choose some grid
     xgrid = uniform_refine(reference_domain(Triangle2D),1)
 
+    ## choose commuting interpolators pair
+    #FE = [H1P1{1},HDIVRT0{2}]
+    FE = [H1P2{1,2},HDIVRT1{2}]
+
     ## do the P1 nodal interpolation of the function
-    FESH1 = FESpace{H1P1{1}}(xgrid)
+    FESH1 = FESpace{FE[1]}(xgrid)
     H1Interpolation = FEVector{Float64}("H1-Interpolation",FESH1)
-    interpolate!(H1Interpolation[1], exact_function!)
+    interpolate!(H1Interpolation[1], exact_function!; bonus_quadorder = 4)
 
     ## do the RT0 interpolation of the Curl of the function
     ## since integrals over faces have to be computed exactly we need to tune the quadrature order
-    FESHdiv = FESpace{HDIVRT0{2}}(xgrid)
+    FESHdiv = FESpace{FE[2]}(xgrid)
     HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FESHdiv)
     interpolate!(HdivCurlInterpolation[1], exact_curl!; bonus_quadorder = 3)
 

@@ -55,6 +55,7 @@ H1BR
 ```@docs
 HDIVRT0
 HDIVBDM1
+HDIVRT1
 ```
 
 #### Hcurl-conforming finite elements

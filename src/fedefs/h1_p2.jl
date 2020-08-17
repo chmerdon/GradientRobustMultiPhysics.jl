@@ -235,37 +235,35 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
                 Target[j+offset4component[k]] = result[k]
             end    
         end
-        if edim == 2
-            # interpolate at face midpoints
-            for face = 1 : nfaces
-                nnodes4item = num_targets(xFaceNodes,face)
-                for k=1:xdim
-                    x[k] = 0
-                    for n=1:nnodes4item
-                        x[k] += xCoords[k,xFaceNodes[n,face]]
-                    end
-                    x[k] /= nnodes4item    
-                end    
-                exact_function!(result,x)
-                for k = 1 : ncomponents
-                    Target[nnodes+face+offset4component[k]] = result[k]
-                end    
-            end
-        elseif edim == 1
-            # interpolate at cell midpoints
-            for cell = 1 : ncells
-                nnodes4item = num_targets(xCellNodes,cell)
-                for k=1:xdim
-                    x[k] = 0
-                    for n=1:nnodes4item
-                        x[k] += xCoords[k,xCellNodes[n,cell]]
-                    end
-                    x[k] /= nnodes4item    
-                end    
-                exact_function!(result,x)
-                for k = 1 : ncomponents
-                    Target[nnodes+cell+offset4component[k]] = result[k]
-                end    
+
+        # preserve edge integrals 
+        if edim == 1 # edges are cells
+            xItemNodes = FE.xgrid[CellNodes]
+            xItemVolumes = FE.xgrid[CellVolumes]
+            xItemDofs = FE.CellDofs
+            AT = AssemblyTypeCELL
+        elseif edim == 2 # edges are faces
+            xItemNodes = FE.xgrid[FaceNodes]
+            xItemVolumes = FE.xgrid[FaceVolumes]
+            xItemDofs = FE.FaceDofs
+            AT = AssemblyTypeFACE
+        elseif edgim == 3 # edges are edges
+            #todo
+        end
+
+        # compute exact edge means
+        nitems = num_sources(xItemNodes)
+        edgemeans = zeros(Float64,ncomponents,nitems)
+        integrate!(edgemeans, FE.xgrid, AT, exact_function!, bonus_quadorder, ncomponents)
+
+        for item = 1 : nitems
+            for c = 1 : ncomponents
+                # subtract edge mean value of P1 part
+                for dof = 1 : 2
+                    edgemeans[c,item] -= Target[xItemDofs[(c-1)*3 + dof,item]] * xItemVolumes[item] / 6
+                end
+                # set P2 edge bubble such that edge mean is preserved
+                Target[xItemDofs[3*c,item]] = 3 // 2 * edgemeans[c,item] / xItemVolumes[item]
             end
         end
     else

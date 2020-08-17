@@ -38,7 +38,7 @@ function main()
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
     xgrid = grid_unitcube(Parallelepiped3D)
-    nlevels = 5 # maximal number of refinement levels
+    nlevels = 6 # maximal number of refinement levels
 
     ## set finite element type used for discretisation
     FEType = H1P1{1}
@@ -57,7 +57,9 @@ function main()
     for level = 1 : nlevels
 
         ## uniform mesh refinement
-        xgrid = uniform_refine(xgrid)
+        if level > 1 
+            xgrid = uniform_refine(xgrid)
+        end
         
         ## create finite element space
         FES = FESpace{FEType}(xgrid; dofmaps_needed = [AssemblyTypeCELL, AssemblyTypeBFACE])
