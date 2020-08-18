@@ -81,7 +81,8 @@ function make_all()
         pages = [
             "Home" => "index.md",
             "Implemented Finite Elements" => "fems.md",
-            "Finite Element Spaces and Arrays" => "fespace.md",
+            "FE Spaces and Arrays" => "fespace.md",
+            "Function Operators" => "functionoperators.md",
             "PDE Description" => "pdedescription.md",
             "PDE Prototypes" => "pdeprototypes.md",
             "PDE Solvers" => "pdesolvers.md",

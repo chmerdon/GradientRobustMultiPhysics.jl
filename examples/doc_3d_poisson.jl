@@ -14,11 +14,9 @@ with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series o
 =#
 
 push!(LOAD_PATH, "../src")
-using Printf
 using GradientRobustMultiPhysics
+using Printf
 
-## include file where mesh is defined
-include("../src/testgrids.jl")
 
 ## problem data
 function exact_function!(result,x)
@@ -33,6 +31,7 @@ function rhs!(result,x)
     result[1] = - 2*x[1]*x[2]
 end
 
+## everything is wrapped in a main function
 function main()
 
     ## choose initial mesh

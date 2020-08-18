@@ -29,27 +29,21 @@ Also note, that only the finite volume discretisation perfectly obeys the maximu
 =#
 
 push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 using Triangulate
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-using GradientRobustMultiPhysics
 
-## file that includes the mesh definition
-include("../src/testgrids.jl")
 
+## boundary data
 function inlet_velocity!(result,x)
     result[1] = 4*x[2]*(1-x[2]);
     result[2] = 0.0;
 end
 function inlet_concentration!(result,x)
     result[1] = 1-x[2];
-end
-
-function beta!(result,x)
-    result[1] = 1.0
-    result[2] = 0.0
 end
 
 ## grid generator for the bended pipe via Triangulate.jl/ExtendableGrids.jl
@@ -65,6 +59,7 @@ function grid_pipe(maxarea::Float64)
     return xgrid
 end
 
+## everything is wrapped in a main function
 function main()
     #####################################################################################
     #####################################################################################

@@ -1,7 +1,7 @@
 
 # Meshing
 
-Meshes are stored as an ExtendableGrid, see ExtendableGrid.jl for details and constructors.
+Meshes are stored as an ExtendableGrid, see [ExtendableGrid.jl](https://github.com/j-fu/ExtendableGrids.jl) for details and constructors.
 
 
 ## Available mesh manipulations

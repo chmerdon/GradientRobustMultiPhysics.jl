@@ -1,9 +1,10 @@
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
+using ExtendableGrids
+using ForwardDiff
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-using ForwardDiff
 
 
 function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_nonlinear_convection::Bool = false, use_gravity::Bool = true, symmetric_gradient::Bool = false, c::Real = 1.0, gamma::Real = 1.0, density_power::Real = 0.0, total_mass::Real = 1.0, nrBoundaryRegions::Int = 4)
@@ -118,10 +119,7 @@ function getProblemData(nu::Real = 1.0, lambda::Real = 0.0; use_nonlinear_convec
     return equation_of_state!, volume_data!, exact_velocity!, exact_density!, exact_pressure!, gravity!
 end
 
-## here the mesh is defined
-include("../src/testgrids.jl")
-
-
+## everything is wrapped in a main function
 function main()
 
     #####################################################################################

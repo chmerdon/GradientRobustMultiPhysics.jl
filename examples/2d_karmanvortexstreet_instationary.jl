@@ -1,21 +1,19 @@
-
+push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
 
-push!(LOAD_PATH, "../src")
-using GradientRobustMultiPhysics
 
-
-# inlet data and viscosity for Karman vortex street example
-
+# inlet data
 function bnd_inlet!(result,x,t)
     result[1] = 6*x[2]*(0.41-x[2])/(0.41*0.41)*max(0,sin(t*pi/8));
     result[2] = 0.0;
 end
 
+## everything is wrapped in a main function
 function main()
     #####################################################################################
     #####################################################################################
@@ -28,21 +26,21 @@ function main()
     testfunction_operator = Identity
 
     # problem parameters
-    viscosity = 2e-3
+    viscosity = 1e-4
     nonlinear = true    # add nonlinear convection term
     IMEX = true         # beware: may need smaller timestep !
 
     # choose finite element type
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element
-    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1BR{2}, L2P0{1}]; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel gradient-robust
+    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    FETypes = [H1BR{2}, L2P0{1}]; testfunction_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel gradient-robust
     #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     # solver parameters
-    timestep = 1e-3
+    timestep = 1e-4
     finaltime = 10
-    plot_every_nth_step = 1e-1/timestep #
+    plot_every_nth_step = 1e-2/timestep #
     verbosity = 1 # deepness of messaging (the larger, the more)
 
     # postprocess parameters
@@ -119,7 +117,7 @@ function main()
                 for j = 1 : nnodes
                     nodevals[1,j] = sqrt(nodevals[1,j]^2 + nodevals[2,j]^2)
                 end
-                ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot, isolines = 3)
+                ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = PyPlot, isolines = 11)
             end
         end
     

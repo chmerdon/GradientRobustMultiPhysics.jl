@@ -1,6 +1,7 @@
 module GradientRobustMultiPhysics
 
 using ExtendableGrids
+export Edge1D, Triangle2D, Parallelogram2D, Teatrahedron3D, Parallelepiped3D
 using ExtendableSparse
 using SuiteSparse
 using SparseArrays
@@ -25,7 +26,8 @@ export L2GTransformer, update!, eval!, mapderiv!, piola!
 
 
 include("gridstuff.jl")
-export CellFaces, CellEdges, CellFaceSigns, CellVolumes
+export Coordinates
+export CellNodes, CellFaces, CellEdges, CellFaceSigns, CellVolumes
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes
 export BFaces, BFaceCellPos, BFaceVolumes
@@ -176,6 +178,11 @@ export LinearElasticityProblem
 export PoissonProblem
 export L2BestapproximationProblem
 export H1BestapproximationProblem
+
+include("commongrids.jl")
+export reference_domain
+export grid_unitcube
+export grid_unitsquare, grid_unitsquare_mixedgeometries
 
 
 end #module

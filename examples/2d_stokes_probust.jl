@@ -1,13 +1,8 @@
-
-using ExtendableGrids
+push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysicsusing ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-
-push!(LOAD_PATH, "../src")
-using GradientRobustMultiPhysics
-
-include("../src/testgrids.jl")
 
 # problem data
 function HydrostaticTestProblem()
@@ -59,6 +54,7 @@ function PotentialFlowTestProblem()
 end
 
 
+## everything is wrapped in a main function
 function main()
     #####################################################################################
     #####################################################################################

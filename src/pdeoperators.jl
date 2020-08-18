@@ -108,8 +108,13 @@ function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int 
     return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); regions = regions)
 end
 
-# todo
-# here a general connection to arbitrary tensors C_ijkl (encencodedoded as an action) is possible in future
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (C grad(u), grad(v)) where C is the 1D stiffness tensor
+C grad(u) = mu grad(u)
+    
+"""
 function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient_operator = TangentialGradient)
     function tensor_apply_1d(result, input)
         # just Hook law like a spring where mu is the elasticity modulus
@@ -118,6 +123,14 @@ function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient
     action = FunctionAction(tensor_apply_1d, 1, 1)
     return AbstractBilinearForm("Hookian1D",gradient_operator, gradient_operator, action; regions = regions)
 end
+
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 2D stiffness tensor
+C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+    
+"""
 function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_2d(result, input)
         # compute sigma_ij = C_ijkl eps_kl
@@ -131,9 +144,24 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
     action = FunctionAction(tensor_apply_2d, 3, 2)
     return AbstractBilinearForm("Hookian2D",gradient_operator, gradient_operator, action; regions = regions)
 end
+
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
+    
+"""
 function ReactionOperator(action::AbstractAction; apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
     return AbstractBilinearForm("Reaction",identity_operator, identity_operator, action; apply_action_to = apply_action_to, regions = regions)
 end
+
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) with some user-specified function beta with the
+interface beta(result,x) (so it writes its result into result and returns nothing)
+    
+"""
 function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_quadorder::Int = 0, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     function convection_function_func() # dot(convection!, input=Gradient)
         convection_vector = zeros(Float64,xdim)
@@ -194,6 +222,12 @@ mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOpe
     regions::Array{Int,1}
     transposed_assembly::Bool
 end
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) where beta is the id of some unknown of the PDEDescription
+    
+"""
 function ConvectionOperator(beta::Int, beta_operator, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)

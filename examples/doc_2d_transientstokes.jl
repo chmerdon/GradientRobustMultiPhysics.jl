@@ -28,16 +28,14 @@ Compare e.g. Bernardi--Raugel and bernardi--Raugel pressure-robust by (un)commen
 =#
 
 push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
 using Triangulate
-using GradientRobustMultiPhysics
 
-## file that includes the mesh definition
-include("../src/testgrids.jl")
 
 ## problem data
 function exact_pressure!(result,x)
@@ -60,7 +58,6 @@ function exact_rhs!(viscosity)
     end
 end
 
-
 ## grid generator that generates  unstructured simplex mesh
 function grid_unitsquare_unstructured(maxarea::Float64)
     triin=Triangulate.TriangulateIO()
@@ -74,6 +71,7 @@ function grid_unitsquare_unstructured(maxarea::Float64)
 end
 
 
+## everything is wrapped in a main function
 function main()
     #####################################################################################
     #####################################################################################

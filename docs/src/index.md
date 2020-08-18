@@ -39,13 +39,24 @@ Recently gradient-robustness was also connected to the design of well-balanced s
         [>Preprint-Link<](https://arxiv.org/abs/1911.01295)
 
 
+## Dependencies on other Julia packages
+
+[ExtendableGrid.jl](https://github.com/j-fu/ExtendableGrids.jl)\
+[ExtendableSparse.jl](https://github.com/j-fu/ExtendableSparse.jl)\
+[Triangulate.jl](https://github.com/JuliaGeometry/Triangulate.jl)\
+[DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
+[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
+[BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)
+
+
+
 ## Getting started
 
 The general work-flow is as follows:
 
-1. Describe your PDE with the help of the PDEDescription (possibly based on one of the [PDE Prototypes](@ref)). Additional parameters or non-constant parameters or non-standard terms (like stabilisations) in the weak form can be added manually afterwards.
-2. Generate a mesh (possibly using one of the constructors by ExtendableGrid.jl) and assign boundary and right-hand side data matching the boundary regions and regions in the mesh.
-3. Define finite element ansatz spaces for the unknowns of your PDE system.
-4. Solve by using solve! or via a TimeControlSolver and advance! if the PDE system is time-dependent.
+1. Describe your PDE system with the help of the [PDE Description](@ref) (possibly based on one of the [PDE Prototypes](@ref)). Additional parameters or non-constant parameters or non-standard terms (like stabilisations) in the weak form can be added manually afterwards.
+2. Generate a mesh (possibly using one of the constructors by ExtendableGrid.jl) and assign boundary and right-hand side data matching the boundary regions and regions in the mesh (see [PDE Description](@ref) again for details).
+3. Define finite element ansatz spaces (see [Finite Element Spaces and Arrays](@ref) for details) for the unknowns of your PDE system.
+4. Solve by using solve! or via a TimeControlSolver and advance! if the PDE system is time-dependent (see [PDE Solvers](@ref) for details).
 
 Please have a look at the Examples.

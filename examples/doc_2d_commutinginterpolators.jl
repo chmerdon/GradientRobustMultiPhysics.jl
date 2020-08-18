@@ -9,7 +9,7 @@ This example verifies a structural property of the H1 and Hdiv finite element sp
 ```
 for the ``H_1`` interpolator ``I_{\mathrm{P}_k}`` and the standard Raviart-Thomas interpolator ``I_{\mathrm{RT}_{k-1}}`` for $k > 0$.
 In this example we verify this identity for $k=1$ and $k=2$. Note, that the ``H_1`` interpolator only does nodal interpolations at the
-vertices but not in the additional edgrees of freedom. For ``k=2`` the interpolator e.g.\ preserves the moments along the edges.
+vertices but not in the additional edgrees of freedom. For e.g. ``k=2`` the interpolator preserves the moments along the edges.
 
 
 !!! note
@@ -20,19 +20,17 @@ vertices but not in the additional edgrees of freedom. For ``k=2`` the interpola
 
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## define some function
 function exact_function!(result,x)
     result[1] = x[1]^2-x[2]^4 + 1
 end
-## and its curl = (-dy,dx) 
+## and its CurlScalar = (-dy,dx) 
 function exact_curl!(result,x)
     result[1] = 4*x[2]^3
     result[2] = 2*x[1]
 end
-
-## here the mesh is defined
-include("../src/testgrids.jl")
 
 ## everything is wrapped in a main function
 function main()
@@ -63,11 +61,12 @@ function main()
     FEStest = FESpace{testFE}(xgrid)
     error = FEVector{Float64}("ErrorVector",FEStest)
 
-    ## Define biliner forms that represents testing eachs ide of the identity with the testspace functions
+    ## Define bilinear forms that represents testing eachs ide of the identity with the testspace functions
     BLF1 = BilinearForm(Float64, AssemblyTypeCELL, FEStest, FESHdiv, Identity, Identity, DoNotChangeAction(2))
     BLF2 = BilinearForm(Float64, AssemblyTypeCELL, FEStest, FESH1, Identity, CurlScalar, DoNotChangeAction(2))
 
-    ## evaluate the bilinera forms in the respective interpolations and subtract them from each other
+    ## evaluate the bilinear forms in the respective interpolations and subtract them from each other
+    ## note that in these calls always the second argument of the bilinearform is fixed by the given FEVectorBlock
     assemble!(error[1], HdivCurlInterpolation[1], BLF1)
     assemble!(error[1], H1Interpolation[1], BLF2; factor = -1)
 

@@ -19,15 +19,13 @@ After that the errors of the Stokes solution, interpolations and bestapproximati
 =#
 
 push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-using GradientRobustMultiPhysics
 
-## file that includes the mesh definition
-include("../src/testgrids.jl")
 
 ## data for Hagen-Poiseuille flow
 function exact_pressure!(viscosity)
@@ -46,7 +44,7 @@ function exact_velocity_gradient!(result,x)
     result[4] = 0.0;
 end
 
-
+## everything is wrapped in a main function
 function main()
     #####################################################################################
     #####################################################################################

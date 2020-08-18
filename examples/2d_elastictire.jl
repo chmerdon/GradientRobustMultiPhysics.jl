@@ -1,11 +1,9 @@
-
+push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-
-push!(LOAD_PATH, "../src")
-using GradientRobustMultiPhysics
 
 
 # Tire domain
@@ -106,12 +104,13 @@ function grid_tire(k::Int = 1, S::Int = 2)
     return xgrid, ConnectionPoints
 end
 
-# problem data
+# boundary data
 function neumann_force_center!(result,x)
     result[1] = 0.0
     result[2] = -10.0
 end    
 
+## everything is wrapped in a main function
 function main()
 
     #####################################################################################

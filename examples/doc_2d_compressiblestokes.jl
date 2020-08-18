@@ -44,6 +44,7 @@ Also, on a uniform mesh the gradient-robust method is perfect!
 
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
+using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
@@ -80,11 +81,7 @@ function rhs_gravity!(gamma,c)
     end
 end   
 
-
-## here the mesh is defined
-include("../src/testgrids.jl")
-
-
+## everything is wrapped in a main function
 function main()
 
     #####################################################################################

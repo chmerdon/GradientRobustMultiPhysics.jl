@@ -16,11 +16,11 @@ We also compare with the error of a simple nodal interpolation and plot the solu
 =#
 
 push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-using GradientRobustMultiPhysics
 
 
 ## problem data and expected exact solution
@@ -43,9 +43,6 @@ function exact_solution_rhs!(diffusion)
         result[1] += x[2]*(2*x[1]-1)*(x[2]-1) + 1.0
     end
 end    
-
-## here the mesh that is used is defined
-include("../src/testgrids.jl")
 
 ## everything is wrapped in a main function
 function main()

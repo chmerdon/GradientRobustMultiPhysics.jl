@@ -8,18 +8,16 @@ simultanously.
 =#
 
 push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
+using Triangulate
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-using Triangulate
-using GradientRobustMultiPhysics
 
-## file that includes the mesh definition
-include("../src/testgrids.jl")
 
-## problem data
+## initial data
 function initial_velocity!(result,x)
     r = sqrt(x[1]^2+x[2]^2)
     if (r <= 0.2)
@@ -34,7 +32,6 @@ function initial_velocity!(result,x)
     end
 end
 
-
 ## grid generator that generates  unstructured simplex mesh
 function grid_square(maxarea::Float64)
     triin=Triangulate.TriangulateIO()
@@ -47,7 +44,7 @@ function grid_square(maxarea::Float64)
     return xgrid
 end
 
-
+## everything is wrapped in a main function
 function main()
     #####################################################################################
     #####################################################################################

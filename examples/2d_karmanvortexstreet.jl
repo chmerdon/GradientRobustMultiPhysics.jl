@@ -1,11 +1,9 @@
-
-using ExtendableGrids
+push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysicsusing ExtendableGrids
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 
-push!(LOAD_PATH, "../src")
-using GradientRobustMultiPhysics
 
 
 # inlet data for Karman vortex street example
@@ -14,6 +12,7 @@ function bnd_inlet!(result,x)
     result[2] = 0.0;
 end
 
+## everything is wrapped in a main function
 function main()
     #####################################################################################
     #####################################################################################

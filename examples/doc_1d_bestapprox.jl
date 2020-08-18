@@ -9,10 +9,10 @@ Afterwards the L2 error is computed and the solution is plotted (using PyPlot)
 =#
 
 push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
-using GradientRobustMultiPhysics
 
 
 ## define some (vector-valued) function (to be L2-bestapproximated in this example)

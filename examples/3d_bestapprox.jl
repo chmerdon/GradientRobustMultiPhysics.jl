@@ -1,14 +1,9 @@
-
-using ExtendableGrids
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
-
 # load finite element module
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
-
-
-include("../src/testgrids.jl")
+using ExtendableGrids
+ENV["MPLBACKEND"]="qt5agg"
+using PyPlot
 
 # define some (vector-valued) function (to be L2-bestapproximated in this example)
 function exact_function!(result,x)
@@ -17,13 +12,14 @@ function exact_function!(result,x)
     result[3] = x[2]*x[2]
 end
 
+## everything is wrapped in a main function
 function main()
 
     # load mesh and refine
-    xgrid = grid_unitcube(Parallelepiped3D)
-    #xgrid = grid_unitcube(Tetrahedron3D)
+    #xgrid = grid_unitcube(Parallelepiped3D)
+    xgrid = grid_unitcube(Tetrahedron3D)
 
-    for j = 1:2
+    for j = 1:4
         xgrid = uniform_refine(xgrid)
     end
 

@@ -23,12 +23,12 @@ After solving the solution is plotted on the displaced mesh and also the absolut
 =#
 
 push!(LOAD_PATH, "../src")
+using GradientRobustMultiPhysics
 using ExtendableGrids
 using Triangulate
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
-using GradientRobustMultiPhysics
 
 
 ## grid generator for the Cook membrane via Triangulate.jl/ExtendableGrids.jl

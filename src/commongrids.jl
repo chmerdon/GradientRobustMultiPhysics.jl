@@ -2,8 +2,6 @@
 # REFERENCE DOMAINS #
 #####################
 
-using ExtendableGrids
-
 function reference_domain(::Type{<:Edge1D}; scale = [1])
     xgrid=ExtendableGrid{Float64,Int32}()
     xgrid[Coordinates]=Array{Float64,2}([0; scale]')

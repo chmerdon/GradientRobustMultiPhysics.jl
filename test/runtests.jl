@@ -5,9 +5,6 @@ using Triangulate
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 
-
-include("../src/testgrids.jl")
-
 function testgrid(::Type{Edge1D})
     return uniform_refine(simplexgrid([0.0,1//4,2//3,1.0]))
 end
