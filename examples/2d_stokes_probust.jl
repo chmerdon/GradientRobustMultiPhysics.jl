@@ -1,5 +1,6 @@
 push!(LOAD_PATH, "../src")
-using GradientRobustMultiPhysicsusing ExtendableGrids
+using GradientRobustMultiPhysics
+using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
 using Printf
@@ -66,16 +67,16 @@ function main()
 
     # problem parameters
     viscosity = 1e-2
-    #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
-    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
+    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
+    #exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = PotentialFlowTestProblem()
 
     # choose finite element type
-    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
+    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
 
     # reconstruction operator
-    #ReconstructionOperator = ReconstructionIdentity{HDIVRT0{2}}
-    ReconstructionOperator = ReconstructionIdentity{HDIVBDM1{2}}
+    ReconstructionOperator = ReconstructionIdentity{HDIVRT0{2}}
+    #ReconstructionOperator = ReconstructionIdentity{HDIVBDM1{2}} # only available for Bernardi--Raugel
 
     # solver parameters
     maxIterations = 20  # termination criterion 1 for nonlinear mode

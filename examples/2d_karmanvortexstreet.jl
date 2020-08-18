@@ -1,5 +1,6 @@
 push!(LOAD_PATH, "../src")
-using GradientRobustMultiPhysicsusing ExtendableGrids
+using GradientRobustMultiPhysics
+using ExtendableGrids
 #using VTKView
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot

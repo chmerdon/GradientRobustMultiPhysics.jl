@@ -66,7 +66,7 @@ function main()
 
     ## initial grid
     ## replace Parallelogrm2D by Triangle2D if you like
-    xgrid = grid_pipe(5e-4);
+    xgrid = grid_pipe(1e-3);
 
     ## problem parameters
     viscosity = 1
@@ -88,6 +88,7 @@ function main()
     plot_velocity = true
     plot_divergence = false
     plot_concentration = true
+    write_vtk = true
 
     #####################################################################################    
     #####################################################################################
@@ -185,6 +186,10 @@ function main()
         PyPlot.figure("species concentration")
         nodevalues!(nodevals,Solution[3],FESpaceConcentration)
         ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot, cmap = "cool")
+    end
+
+    if write_vtk
+        writeVTK!("data_flowtransport.vtk", Solution)
     end
 end
 

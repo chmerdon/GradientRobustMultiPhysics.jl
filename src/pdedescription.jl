@@ -15,9 +15,9 @@ end
 struct that describes a PDE system with n equations and n unknowns
 
 A PDE system is described by
-- its name::String
-- the names of the equation
-- the names of the unknowns
+- its name
+- the names of its equations
+- the names of its unknowns
 - an size n x n array of Array{AbstractPDEOperator,1} LHS that describes the left-hand sides
 - an length n array of Array{AbstractPDEOperator,1} RHS that describes the right-hand sides
 - an length n array of BoundaryOperators that describes the boundary conditions for each unknown

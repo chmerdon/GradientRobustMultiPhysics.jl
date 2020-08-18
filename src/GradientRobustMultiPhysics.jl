@@ -184,5 +184,8 @@ export reference_domain
 export grid_unitcube
 export grid_unitsquare, grid_unitsquare_mixedgeometries
 
+include("writevtk.jl")
+export writeVTK!
+
 
 end #module
