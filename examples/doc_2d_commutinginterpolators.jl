@@ -7,14 +7,15 @@ This example verifies a structural property of the H1 and Hdiv finite element sp
 ```math
 \mathrm{Curl}(I_{\mathrm{P}_k}\psi) = I_{\mathrm{RT}_{k-1}}(\mathrm{Curl}(\psi))
 ```
-for the H1 interpolator ``I_{\mathrm{P}_k}`` and the standard Raviart-Thomas interpolator ``I_{\mathrm{RT}_{k-1}}`` for $k > 0$
-which we will verify in this example for $k=1$ and $k=2$.
+for the ``H_1`` interpolator ``I_{\mathrm{P}_k}`` and the standard Raviart-Thomas interpolator ``I_{\mathrm{RT}_{k-1}}`` for $k > 0$.
+In this example we verify this identity for $k=1$ and $k=2$. Note, that the ``H_1`` interpolator only does nodal interpolations at the
+vertices but not in the additional edgrees of freedom. For ``k=2`` the interpolator e.g.\ preserves the moments along the edges.
 
 
 !!! note
 
-    There are also higher-order commuting interpolators for $k > 2$ which will be tested as well once they are implemented.
-
+    In 3D a similar commuting property holds that involves the Nedelec finite element spaces,
+    that will be tested once there are implemented. Also the identities for $k > 2$ will be tested once all functionality is available.    There also is 
 =#
 
 push!(LOAD_PATH, "../src")
@@ -37,11 +38,11 @@ include("../src/testgrids.jl")
 function main()
 
     ## choose some grid
-    xgrid = uniform_refine(reference_domain(Triangle2D),1)
+    xgrid = uniform_refine(reference_domain(Triangle2D),2)
 
     ## choose commuting interpolators pair
-    #FE = [H1P1{1},HDIVRT0{2}]
-    FE = [H1P2{1,2},HDIVRT1{2}]
+    FE = [H1P1{1},HDIVRT0{2}]; testFE = L2P0{2}
+    #FE = [H1P2{1,2},HDIVRT1{2}]; testFE = L2P1{2}
 
     ## do the P1 nodal interpolation of the function
     FESH1 = FESpace{FE[1]}(xgrid)
@@ -54,19 +55,24 @@ function main()
     HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FESHdiv)
     interpolate!(HdivCurlInterpolation[1], exact_curl!; bonus_quadorder = 3)
 
-    ## evaluate the piecewise integral means of Curl of H1 interpolation
-    meanCurlH1 = zeros(Float64,2,num_sources(xgrid[CellNodes]))
-    meanIntegratorCurlH1 = ItemIntegrator{Float64,AssemblyTypeCELL}(CurlScalar, DoNotChangeAction(2), [0])
-    evaluate!(meanCurlH1,meanIntegratorCurlH1,H1Interpolation[1])
+    ## Checking the identity:
+    ## Both sides of the identity are finite element function of FEtype testFE
+    ## Hence, we evaluate the error by testting the identity by all basisfunctions of this type
+    
+    ## first: generate the test space and some matching FEVector
+    FEStest = FESpace{testFE}(xgrid)
+    error = FEVector{Float64}("ErrorVector",FEStest)
 
-    ## evaluate the piecewise integral means of Hdiv interpolation of Curl
-    meanHdiv = zeros(Float64,2,num_sources(xgrid[CellNodes]))
-    meanIntegratorHdiv = ItemIntegrator{Float64,AssemblyTypeCELL}(Identity, DoNotChangeAction(2), [0])
-    evaluate!(meanHdiv,meanIntegratorHdiv,HdivCurlInterpolation[1])
+    ## Define biliner forms that represents testing eachs ide of the identity with the testspace functions
+    BLF1 = BilinearForm(Float64, AssemblyTypeCELL, FEStest, FESHdiv, Identity, Identity, DoNotChangeAction(2))
+    BLF2 = BilinearForm(Float64, AssemblyTypeCELL, FEStest, FESH1, Identity, CurlScalar, DoNotChangeAction(2))
 
-    ## check their difference in the l2 vector norm
-    error = sum((meanCurlH1-meanHdiv).^2, dims = 1)
-    println("\n|| Curl(H1(psi) - Hdiv(Curl(psi)) ||_l2 = $error")
+    ## evaluate the bilinera forms in the respective interpolations and subtract them from each other
+    assemble!(error[1], HdivCurlInterpolation[1], BLF1)
+    assemble!(error[1], H1Interpolation[1], BLF2; factor = -1)
+
+    ## do some norm that recognizes a nonzero in the vector
+    println("\n error(Curl(H1(psi) - Hdiv(Curl(psi))) = $(sum(error[1][:].^2, dims = 1))")
 end
 
 main()
