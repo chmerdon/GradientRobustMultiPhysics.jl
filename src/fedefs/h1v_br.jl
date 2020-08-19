@@ -344,7 +344,7 @@ function get_basis_on_cell(::Type{H1BR{3}}, ::Type{<:Tetrahedron3D})
     function closure(xref)
         temp = 1 - xref[1] - xref[2] - xref[3];
         bf1 = 9 * xref[1] * temp * xref[2];
-        bf2 = 9 * temp * xref[2] * xref[3];
+        bf2 = 9 * temp * xref[1] * xref[3];
         bf3 = 9 * xref[1] * xref[2] * xref[3];
         bf4 = 9 * temp * xref[2] * xref[3];
         return [temp 0.0 0.0;

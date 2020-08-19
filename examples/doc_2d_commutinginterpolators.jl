@@ -55,13 +55,13 @@ function main()
 
     ## Checking the identity:
     ## Both sides of the identity are finite element function of FEtype testFE
-    ## Hence, we evaluate the error by testting the identity by all basisfunctions of this type
+    ## Hence, we evaluate the error by testing the identity by all basisfunctions of this type
     
     ## first: generate the test space and some matching FEVector
     FEStest = FESpace{testFE}(xgrid)
     error = FEVector{Float64}("ErrorVector",FEStest)
 
-    ## Define bilinear forms that represents testing eachs ide of the identity with the testspace functions
+    ## Define bilinear forms that represents testing each side of the identity with the testspace functions
     BLF1 = BilinearForm(Float64, AssemblyTypeCELL, FEStest, FESHdiv, Identity, Identity, DoNotChangeAction(2))
     BLF2 = BilinearForm(Float64, AssemblyTypeCELL, FEStest, FESH1, Identity, CurlScalar, DoNotChangeAction(2))
 

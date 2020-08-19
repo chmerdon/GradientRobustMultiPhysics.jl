@@ -234,9 +234,9 @@ function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1CR
     coefficients[7,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
     coefficients[11,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[3, FE.xCellFaces[3,cell]]
 
-    coefficients[4,3] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
-    coefficients[8,3] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
-    coefficients[12,3] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[3, FE.xCellFaces[4,cell]]
+    coefficients[4,4] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
+    coefficients[8,4] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
+    coefficients[12,4] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[3, FE.xCellFaces[4,cell]]
 end
 
 
