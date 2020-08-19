@@ -74,20 +74,20 @@ uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
 uniform_refine_rule(::Type{<:Tetrahedron3D}) = [ 1 5 6 7;
                                                  2 8 5 9;
                                                  3 6 8 10;
-                                                 4 10 9 7;
-                                                 5 9 6 7;
-                                                 5 9 8 6;
-                                                 6 9 10 7;
-                                                 6 9 8 10]
+                                                 4 9 7 10;
+                                                 9 5 7 6;
+                                                 5 8 6 9;
+                                                 7 10 9 6;
+                                                 8 10 6 9]
 uniform_refine_needfacemidpoints(::Type{<:Tetrahedron3D}) = false
-uniform_refine_rule(::Type{<:Hexahedron3D}) = [ 1 9 10 11 21 22 25 27; 
-                                                    9 2 21 22 12 13 27 23;
-                                                    10 21 3 25 14 27 15 24; 
-                                                    21 12 14 27 5 23 24 18; 
-                                                    11 22 25 4 27 16 17 26; 
-                                                    22 13 27 16 23 6 26 19; 
-                                                    25 27 15 17 24 26 7 20; 
-                                                    27 23 24 26 18 19 20 8]
+uniform_refine_rule(::Type{<:Hexahedron3D}) = [     1   9  21  12  13  22  27  25;
+                                                    9   2  10  21  22  14  23  27;
+                                                   12  21  11   4  25  27  24  16;
+                                                   21  10   3  11  27  23  15  24;
+                                                   13  22  27  25   5  17  26  20;
+                                                   22  14  23  27  17   6  18  26;
+                                                   25  27  24  16  20  26  19   8;
+                                                   27  23  15  24  26  18   7  19]
 uniform_refine_needcellmidpoints(::Type{<:Hexahedron3D}) = true
 
 

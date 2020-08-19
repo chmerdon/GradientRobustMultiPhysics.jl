@@ -83,63 +83,6 @@ function uniqueEG(xItemGeometries, xItemRegions, xItemDofs, regions)
     return EG, ndofs4EG
 end
 
-# function that specifies the number of nodes for an AbstractElementGeometry
-nnodes_for_geometry(::Type{<:AbstractElementGeometry0D}) = 1
-nnodes_for_geometry(::Type{<:AbstractElementGeometry1D}) = 2
-nnodes_for_geometry(::Type{<:Triangle2D}) = 3
-nnodes_for_geometry(::Type{<:Quadrilateral2D}) = 4
-nnodes_for_geometry(::Type{<:Tetrahedron3D}) = 4
-nnodes_for_geometry(::Type{<:Hexahedron3D}) = 8
-
-# functions that specify the number of faces of a celltype
-# (and also the number of edges of a facetype)
-nfaces_for_geometry(::Type{<:AbstractElementGeometry1D}) = 2
-nfaces_for_geometry(::Type{<:Triangle2D}) = 3
-nfaces_for_geometry(::Type{<:Quadrilateral2D}) = 4
-nfaces_for_geometry(::Type{<:Tetrahedron3D}) = 4
-nfaces_for_geometry(::Type{<:Hexahedron3D}) = 6
-
-# functions that specify the number of edges of a celltype
-# (and also the number of edges of a facetype)
-nedges_for_geometry(::Type{<:AbstractElementGeometry0D}) = 0
-nedges_for_geometry(::Type{<:AbstractElementGeometry1D}) = 0
-nedges_for_geometry(EG::Type{<:AbstractElementGeometry2D}) = nnodes_for_geometry(EG)
-nedges_for_geometry(::Type{<:Tetrahedron3D}) = 6
-nedges_for_geometry(::Type{<:Hexahedron3D}) = 12
-
-# functions that specify the local enumeration of faces needed in 2D/3D
-face_enum_rule(::Type{<:Edge1D}) = [1; 2]
-face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
-face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
-face_enum_rule(::Type{<:Tetrahedron3D}) = [1 3 2; 1 2 4; 2 3 4; 3 1 4]
-face_enum_rule(::Type{<:Hexahedron3D}) = [1 3 5 2; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]
-
-# functions that specify the facetype of the k-th cellface
-facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
-facetype_of_cellface(P1::Type{<:AbstractElementGeometry2D},P2::Type{<:AbstractElementGeometry2D}, k) = Edge1D
-facetype_of_cellface(P1::Type{<:Tetrahedron3D},P2::Type{<:Tetrahedron3D}, k) = Triangle2D
-facetype_of_cellface(P1::Type{<:Hexahedron3D},P2::Type{<:Hexahedron3D}, k) = Parallelogram2D
-facetype_of_cellface(::Type{<:Edge1D}, k) = Vertex0D
-facetype_of_cellface(::Type{<:Triangle2D}, k) = Edge1D #WithParent{Triangle2D}
-facetype_of_cellface(::Type{<:Quadrilateral2D}, k) = Edge1D #WithParent{Quadrilateral2D}
-facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
-facetype_of_cellface(::Type{<:Hexahedron3D}, k) = Quadrilateral2D
-facetype_of_cellface(::Type{<:Parallelepiped3D}, k) = Parallelogram2D
-
-
-# function that specify the local enumeration of edges needed in 3D
-# idea for future: edge_enum should be EdgeNodes of face_enum of all faces
-edge_enum_rule(::Type{<:Tetrahedron3D}) = [1 2; 1 3; 1 4; 2 3; 2 4; 3 4]
-edge_enum_rule(::Type{<:Hexahedron3D}) = [1 2; 1 3; 1 4; 2 5; 2 6; 3 5; 3 7; 4 6; 4 7; 5 8; 6 8; 7 8]
-edgetype_of_celledge(::Type{<:AbstractElementGeometry3D}, k) = Edge1D
-
-# function that yields the local edge numbers of a local face of a 3D geometry
-celledges_for_cellface(::Type{<:Tetrahedron3D}) = [1 2 4; 1 5 3; 4 6 5; 2 3 6]
-celledges_for_cellface(::Type{<:Hexahedron3D}) = [1 2 6 4; 1 5 8 3; 4 10 11 5; 6 7 12 10; 2 3 9 7; 8 11 12 9]
-
-
-
-
 # show function for ExtendableGrids and defined Components in its Dict
 function show(xgrid::ExtendableGrid)
 
@@ -467,69 +410,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceSigns
 end
 
 
-
-# some methods to compute volume of different ElemTypes (beware: on submanifolds formulas get different)
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{<:ExtendableGrids.AbstractCoordinateSystem})
-    return 0.0
-end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian1D})
-    return abs(Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]])
-end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
-    return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2)
-end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian2D})
-    return 1 // 2 * ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
-                  +   Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
-                  +   Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
-end
-
-#function Volume4ElemType(Coords, Nodes, item, ::Type{Parallelogram2D}, ::Type{Cartesian2D})
-#    return ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
-#           + Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
-#           + Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
-#end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{Cartesian2D})
-    return 1//2 * (   (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]]) * (Coords[2, Nodes[2, item]] - Coords[2, Nodes[4, item]])
-                    + (Coords[1, Nodes[4, item]] - Coords[1, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[3, item]]) );
-end
-
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
-    # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
-    return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2) / 2;
-end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelogram2D}, ::Type{Cartesian3D})
-    # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
-    return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2);
-end
-
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelepiped3D}, ::Type{Cartesian3D})
-    return    ((Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]])));
-end
-
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Tetrahedron3D}, ::Type{Cartesian3D})
-    return    1 // 6 * ((Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]])));
-end
-  
-
-
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellVolumes})
 
     # get links to other stuff
@@ -700,46 +580,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceCellPos}
 end
 
 
-
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{Cartesian2D})
-    normal[1] = 0.0
-    normal[2] = 0.0
-end
-
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{Cartesian1D})
-    normal[1] = 1.0
-end
-
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
-    # rotate tangent
-    normal[1] = Coords[2, Nodes[2,item]] - Coords[2,Nodes[1,item]]
-    normal[2] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
-    # divide by length
-    normal ./= sqrt(normal[1]^2+normal[2]^2)
-end
-
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{Cartesian3D})
-    # cross(p(1)-p(2), p(1)-p(4)) / length
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
-    normal[1] = d12[2]*d14[3]-d12[3]*d14[2]
-    normal[2] = d12[3]*d14[1]-d12[1]*d14[3]
-    normal[3] = d12[1]*d14[2]-d12[2]*d14[1]
-    # divide by length
-    normal ./= sqrt(normal[1]^2+normal[2]^2+normal[3]^2)
-end
-
-function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
-    # cross(p(1)-p(2), p(1)-p(3)) / length
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d13 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
-    normal[1] = d12[2]*d13[3]-d12[3]*d13[2]
-    normal[2] = d12[3]*d13[1]-d12[1]*d13[3]
-    normal[3] = d12[1]*d13[2]-d12[2]*d13[1]
-    # divide by length
-    normal ./= sqrt(normal[1]^2+normal[2]^2+normal[3]^2)
-end
-
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     dim = size(xgrid[Coordinates],1) 
     xCoordinates = xgrid[Coordinates]
@@ -759,21 +599,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNormals})
     xFaceNormals
 end
 
-
-function Tangent4ElemType!(tangent, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
-    tangent[1] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
-    tangent[2] = Coords[2,Nodes[1,item]] - Coords[2, Nodes[2,item]]
-    # divide by length
-    tangent ./= sqrt(tangent[1]^2+tangent[2]^2)
-end
-
-function Tangent4ElemType!(tangent, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian3D})
-    tangent[1] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
-    tangent[2] = Coords[2,Nodes[1,item]] - Coords[2, Nodes[2,item]]
-    tangent[3] = Coords[3,Nodes[1,item]] - Coords[3, Nodes[2,item]]
-    # divide by length
-    tangent ./= sqrt(tangent[1]^2+tangent[2]^2+tangent[3]^2)
-end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeTangents})
     dim = size(xgrid[Coordinates],1) 

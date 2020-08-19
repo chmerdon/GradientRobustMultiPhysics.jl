@@ -2,68 +2,27 @@
 # REFERENCE DOMAINS #
 #####################
 
-function reference_domain(::Type{<:Edge1D}; scale = [1])
+# reference domain generated from data in shape_specs
+function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = 1)
     xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}([0; scale]')
-    xgrid[CellNodes] = Array{Int32,2}([1 2]')
-    xgrid[CellGeometries] = VectorOfConstants(Edge1D,1);
+    xgrid[Coordinates]=Array{Float64,2}(scale.*refcoords_for_geometry(EG)')
+    xCellNodes = zeros(Int32,nnodes_for_geometry(EG),1)
+    xCellNodes[:] = 1:nnodes_for_geometry(EG)
+    xgrid[CellNodes] = xCellNodes
+    xgrid[CellGeometries] = VectorOfConstants(EG,1);
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,1)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,2])
-    xgrid[BFaceNodes]=Array{Int32,2}([1; 2]')
-    xgrid[BFaceGeometries]=VectorOfConstants(Vertex0D,2)
-    xgrid[CoordinateSystem]=Cartesian1D
-    return xgrid
-end
-
-function reference_domain(ET::Type{<:Triangle2D}; scale = [1,1])
-    xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}([0 0; scale[1] 0; 0 scale[2]]')
-    xgrid[CellNodes] = Array{Int32,2}([1 2 3]')
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,1);
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,1)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3])
-    xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 1]')
-    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,3)
-    xgrid[CoordinateSystem]=Cartesian2D
-    return xgrid
-end
-
-function reference_domain(ET::Type{<:Quadrilateral2D}; scale = [1,1])
-    xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}([0 0; scale[1] 0; scale[1] scale[2]; 0 scale[2]]')
-    xgrid[CellNodes] = Array{Int32,2}([1 2 3 4]')
-    xgrid[CellGeometries] = VectorOfConstants(ET,1);
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,1)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4])
-    xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 1]')
-    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,4)
-    xgrid[CoordinateSystem]=Cartesian2D
-    return xgrid
-end
-
-function reference_domain(ET::Type{<:Tetrahedron3D}; scale = [1,1,1])
-    xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}([0 0 0; scale[1] 0 0; 0 scale[2] 0; 0 0 scale[3]]')
-    xgrid[CellNodes] = Array{Int32,2}([1 2 3 4]')
-    xgrid[CellGeometries] = VectorOfConstants(ET,1);
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,1)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4])
-    xgrid[BFaceNodes]=Array{Int32,2}([1 3 2; 1 2 4; 2 3 4; 3 1 4]')
-    xgrid[BFaceGeometries]=VectorOfConstants(Triangle2D,4)
-    xgrid[CoordinateSystem]=Cartesian3D
-    return xgrid
-end
-
-function reference_domain(ET::Type{<:Hexahedron3D}; scale = [1,1,1])
-    xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}([0 0 0; scale[1] 0 0; 0 scale[2] 0; 0 0 scale[3]; scale[1] scale[2] 0; scale[1] 0 scale[3]; 0 scale[2] scale[3]; scale[1] scale[2] scale[3]]')
-    xgrid[CellNodes] = Array{Int32,2}([1 2 3 4 5 6 7 8]')
-    xgrid[CellGeometries] = VectorOfConstants(ET,1);
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,1)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4,5,6])
-    xgrid[BFaceNodes]=Array{Int32,2}([1 3 5 2; 1 2 6 4; 2 5 8 6;5 3 7 8;3 1 4 7;4 6 8 7]')
-    xgrid[BFaceGeometries]=VectorOfConstants(Parallelogram2D,6)
-    xgrid[CoordinateSystem]=Cartesian3D
+    xgrid[BFaceRegions]=Array{Int32,1}(1:nfaces_for_geometry(EG))
+    xgrid[BFaceNodes]=Array{Int32,2}(face_enum_rule(EG)')
+    xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(EG, 1), nfaces_for_geometry(EG))
+    if dim_element(EG) == 0
+        xgrid[CoordinateSystem]=Cartesian0D
+    elseif dim_element(EG) == 1
+        xgrid[CoordinateSystem]=Cartesian1D
+    elseif dim_element(EG) == 2
+        xgrid[CoordinateSystem]=Cartesian2D
+    elseif dim_element(EG) == 3
+        xgrid[CoordinateSystem]=Cartesian3D
+    end
     return xgrid
 end
 

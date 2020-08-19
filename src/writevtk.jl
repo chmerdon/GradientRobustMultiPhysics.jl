@@ -4,7 +4,10 @@ vtkcelltype(::Type{<:Quadrilateral2D}) = 9
 vtkcelltype(::Type{<:Tetrahedron3D}) = 10
 vtkcelltype(::Type{<:Hexahedron3D}) = 12 # maybe needs renumbering of cellnodes !!!
 
-function writeVTK!(filename::String, Data::FEVector)
+function writeVTK!(filename::String, Data::FEVector; blocks = [], names = [], vectorabs::Bool = true)
+    if blocks == []
+        blocks = 1:length(Data)
+    end
     # open grid
     xgrid = Data[1].FES.xgrid
 
@@ -64,29 +67,61 @@ function writeVTK!(filename::String, Data::FEVector)
     ncomponents = 0
     maxcomponents = 0
     nfields = 0
-    for block = 1 : nblocks
+    for block in blocks
         ncomponents = get_ncomponents(eltype(Data[block].FES))
         if ncomponents > maxcomponents
             maxcomponents = ncomponents
         end
         nfields += ncomponents
+        if vectorabs && ncomponents > 1
+            nfields += 1
+        end
     end
     nodedata = zeros(Float64, maxcomponents, nnodes)
     @printf(io, "CELL_DATA %d\n", ncells)
     @printf(io, "POINT_DATA %d\n", nnodes)
     @printf(io, "FIELD FieldData %d\n", nfields)
     fieldname = ""
-    for block = 1 : nblocks
+    absval = 0
+    for b = 1 : length(blocks)
+        block = blocks[b]
+        ncomponents = get_ncomponents(eltype(Data[block].FES))
         # get node values
         nodevalues!(nodedata, Data[block], Data[block].FES)
-        for c = 1 : get_ncomponents(eltype(Data[block].FES))
-            #fieldname = "data.b$block.c$c"
-            fieldname = "$(Data[block].name[1]).c$c"
+        for c = 1 : ncomponents
+            if length(names) >= b
+                fieldname = names[b]
+            else
+                if ncomponents == 1
+                    fieldname = Data[block].name[1:min(30,length(Data[block].name))]
+                    fieldname = replace(String(fieldname), " " => "_")
+                    fieldname = "$(block)_$fieldname"
+                else
+                    fieldname = Data[block].name[1:min(28,length(Data[block].name))]
+                    fieldname = replace(String(fieldname), " " => "_")
+                    fieldname = "$(block)_$fieldname.$c"
+                end
+            end    
             @printf(io, "%s 1 %d float\n", fieldname, nnodes)
             for node = 1 : nnodes
                 @printf(io, "%f ", nodedata[c,node])
             end
             @printf(io, "\n")
+        end
+        # add data for absolute value of vector quantity
+        if vectorabs && ncomponents > 1
+            nfields += 1
+            fieldname = Data[block].name[1:min(28,length(Data[block].name))]
+            fieldname = replace(String(fieldname), " " => "_")
+            fieldname = "$(block)_$fieldname.a"
+            @printf(io, "%s 1 %d float\n", fieldname, nnodes)
+            for node = 1 : nnodes
+                absval = 0
+                for c = 1 : ncomponents
+                    absval += nodedata[c,node]^2
+                end
+                @printf(io, "%f ", sqrt(absval))
+            end
         end
     end
     close(io)

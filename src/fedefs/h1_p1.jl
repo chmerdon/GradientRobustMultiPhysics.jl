@@ -193,13 +193,13 @@ function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
         c = 1 - xref[3]
         for k = 1 : ncomponents
             refbasis[8*k-7,k] = a*b*c
-            refbasis[8*k-6,k] = xref[1]*b*c
-            refbasis[8*k-5,k] = xref[2]*a*c
-            refbasis[8*k-4,k] = xref[3]*a*b
-            refbasis[8*k-3,k] = xref[1]*xref[2]*c
+            refbasis[8*k-6,k] = xref[1]*b*c 
+            refbasis[8*k-5,k] = xref[1]*xref[2]*c
+            refbasis[8*k-4,k] = xref[2]*a*c
+            refbasis[8*k-3,k] = xref[3]*a*b
             refbasis[8*k-2,k] = xref[1]*b*xref[3]
-            refbasis[8*k-1,k] = a*xref[2]*xref[3]
-            refbasis[8*k,k]   = xref[1]*xref[2]*xref[3]
+            refbasis[8*k-1,k] = xref[1]*xref[2]*xref[3]
+            refbasis[8*k,k] = a*xref[2]*xref[3]
         end
         return refbasis
     end

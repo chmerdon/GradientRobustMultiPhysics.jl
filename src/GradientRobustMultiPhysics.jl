@@ -1,7 +1,7 @@
 module GradientRobustMultiPhysics
 
 using ExtendableGrids
-export Edge1D, Triangle2D, Parallelogram2D, Teatrahedron3D, Parallelepiped3D
+export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D
 using ExtendableSparse
 using SuiteSparse
 using SparseArrays
@@ -24,6 +24,20 @@ export GridComponentRegions4AssemblyType
 include("l2gtransformations.jl");
 export L2GTransformer, update!, eval!, mapderiv!, piola!
 
+include("shape_specs.jl")
+export refcoords_for_geometry
+export nnodes_for_geometry
+export nfaces_for_geometry
+export nedges_for_geometry
+export face_enum_rule
+export edge_enum_rule
+export facetype_of_cellface
+export edgetype_of_celledge
+export celledges_for_cellface
+export Volume4ElemType
+export Normal4ElemType!
+export Tangent4ElemType!
+
 
 include("gridstuff.jl")
 export Coordinates
@@ -31,7 +45,6 @@ export CellNodes, CellFaces, CellEdges, CellFaceSigns, CellVolumes
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes
 export BFaces, BFaceCellPos, BFaceVolumes
-export nfaces_for_geometry, facetype_of_cellface
 export uniqueEG
 
 include("serialadjacency.jl")
