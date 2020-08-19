@@ -20,15 +20,15 @@ using Printf
 
 ## problem data
 function exact_function!(result,x)
-    result[1] = x[1]*x[2]*x[3]^2 - x[1]*x[2]
+    result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
 end
 function exact_gradient!(result,x)
-    result[1] = x[2]*x[3]^2 - x[2]
-    result[2] = x[1]*x[3]^2 - x[1]
-    result[3] = 2*x[1]*x[2]*x[3]
+    result[1] = x[3] - x[2]
+    result[2] = - x[1] + 2*x[2]
+    result[3] = x[1]
 end
 function rhs!(result,x)
-    result[1] = - 2*x[1]*x[2]
+    result[1] = - 2
 end
 
 ## everything is wrapped in a main function
@@ -36,8 +36,9 @@ function main()
 
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
-    xgrid = grid_unitcube(Parallelepiped3D)
+    xgrid_b = grid_unitcube(Parallelepiped3D)
     nlevels = 5 # maximal number of refinement levels
+    split_into_tets = true # grid is split into Tetrahedron3D after each refinement of the basis grid
     write_vtk = false
 
     ## set finite element type used for discretisation
@@ -45,12 +46,12 @@ function main()
 
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(3; diffusion = 1.0)
-    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 4)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], rhs!, 3, 1; bonus_quadorder = 1))
+    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 2)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], rhs!, 3, 1; bonus_quadorder = 0))
 
     ## prepare error calculation
-    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 4)
-    H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient!, Gradient, 3, 3; bonus_quadorder = 3)
+    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 2)
+    H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient!, Gradient, 3, 3; bonus_quadorder = 1)
     L2error = []; H1error = []; NDofs = []
 
     ## loop over levels
@@ -58,7 +59,12 @@ function main()
 
         ## uniform mesh refinement
         if level > 1 
-            xgrid = uniform_refine(xgrid)
+            xgrid_b = uniform_refine(xgrid_b)
+        end
+        if split_into_tets
+            xgrid = split_grid_into(xgrid_b, Tetrahedron3D)
+        else
+            xgrid = xgrid_b
         end
         
         ## create finite element space

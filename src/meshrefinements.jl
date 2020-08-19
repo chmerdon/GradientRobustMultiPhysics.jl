@@ -4,11 +4,8 @@ split_rule(::Type{Triangle2D}, ::Type{Triangle2D}) = reshape([1,2,3],1,3)
 split_rule(::Type{Tetrahedron3D}, ::Type{Tetrahedron3D}) = reshape([1,2,3,4],1,4)
 split_rule(::Type{<:Quadrilateral2D}, ::Type{Triangle2D}) = [1 2 3;1 3 4]
 split_rule(::Type{Edge1D}, ::Type{Triangle2D}) = reshape([1,2,2],1,3)
-split_rule(::Type{<:Hexahedron3D}, ::Type{Tetrahedron3D}) = [1 2 3 7; 1 3 4 7; 1 5 6 7; 1 8 5 7; 1 6 2 7; 1 4 8 7]
-
-# in 3D we also need to know how the splitting splits the faces
-split_rule_faces(::Type{<:Tetrahedron3D}, ::Type{Tetrahedron3D}) = [1 2 3]
-split_rule_faces(::Type{<:Hexahedron3D}, ::Type{Tetrahedron3D}) = [1 2 3; 1 3 4]
+split_rule(::Type{<:Hexahedron3D}, ::Type{Tetrahedron3D}) = [1 2 4 8; 2 3 4 8; 2 7 3 8; 6 8 7 2; 6 5 8 2; 8 5 1 2]
+#[1 2 3 7; 1 3 4 7; 1 5 6 7; 1 8 5 7; 1 6 2 7; 1 4 8 7]
 
 """
 $(TYPEDSIGNATURES)
@@ -54,22 +51,56 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
         xgrid[BFaceNodes]=source_grid[BFaceNodes]
         xgrid[BFaceRegions]=source_grid[BFaceRegions]
         xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(targetgeometry,1),num_sources(xgrid[BFaceNodes]))
-    elseif dim_element(targetgeometry) == 3 # BFaces may change there shape, e.g. from Quadrilateral2D to Triangle2D
+    elseif dim_element(targetgeometry) == 3 
+        # BFaces may be split into different shapes, e.g. from Quadrilateral2D to two Triangle2D
+        # and it is hard to predict how they are splitted
+        # so we do something lazy here and search for new faces that lie in old bfaces
         oldBFaceNodes = source_grid[BFaceNodes]
         oldBFaceRegions = source_grid[BFaceRegions]
+        oldBFaceCellPos = source_grid[BFaceCellPos]
+        newFaceNodes = xgrid[FaceNodes]
+        nfaces = num_sources(newFaceNodes)
         nbfaces = num_sources(oldBFaceNodes)
-        # for simplicity we assume that only one source element geometry exists
-        split_rules[1] = split_rule_faces(EG[1],targetgeometry)
+        
         newBFaceNodes = []
         newBFaceRegions = []
         newnbfaces = 0
+        nnodes = size(xgrid[Coordinates],2)
+        flag4item = zeros(Bool,nnodes)
+        nodes_per_bface::Int = 0
+        nodes_per_face::Int = 0
+        common_nodes::Int = 0
         for bface = 1 : nbfaces
-            for j = 1 : size(split_rules[1],1), k = 1 : size(split_rules[1],2)
-                append!(newBFaceNodes,oldBFaceNodes[split_rules[iEG][j,k],bface])
+            # flag nodes of old bface
+            nodes_per_bface = num_targets(oldBFaceNodes,bface)
+            for j = 1 : nodes_per_bface
+                flag4item[oldBFaceNodes[j,bface]] = true
+            end    
+            
+            # find matching faces
+            for face = 1 : nfaces
+                nodes_per_face = num_targets(newFaceNodes,face)
+                common_nodes = 0
+                for k = 1 : nodes_per_face
+                    if flag4item[newFaceNodes[k,face]] == true
+                        common_nodes += 1
+                    else
+                        break  
+                    end
+                end          
+                if common_nodes == nodes_per_face
+                    append!(newBFaceNodes,newFaceNodes[:,face])
+                    push!(newBFaceRegions,oldBFaceRegions[bface])
+                    newnbfaces += 1
+                end
             end
-            newnbfaces += size(split_rules[1],1)
-            append!(newBFaceRegions,ones(Int32,size(split_rules[1],1))*oldBFaceRegions[bface])
+
+            # reset flags
+            for j = 1 : nodes_per_bface
+                flag4item[oldBFaceNodes[j,bface]] = false
+            end    
         end
+
         newBFaceNodes = reshape(newBFaceNodes,nnodes_for_geometry(facetype_of_cellface(targetgeometry,1)),newnbfaces)
         xgrid[BFaceNodes]=Array{Int32,2}(newBFaceNodes)
         xgrid[BFaceRegions]=Array{Int32,1}(newBFaceRegions)

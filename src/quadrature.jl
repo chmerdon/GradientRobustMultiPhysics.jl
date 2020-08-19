@@ -57,6 +57,12 @@ function VertexRule(ET::Type{Parallelogram2D})
     w = [1//4, 1//4, 1//4, 1//4]
     return QuadratureRule{Float64, ET}("vertex rule parallelogram", xref, w)
 end
+function VertexRule(ET::Type{Tetrahedron3D})
+    xref = [[0, 0, 0], [1, 0, 0], [1,1,0], [0,0,1]]
+    w = [1//4, 1//4, 1//4, 1//4]
+    return QuadratureRule{Float64, ET}("vertex rule tetrahedron", xref, w)
+end
+
 
 """
 ````

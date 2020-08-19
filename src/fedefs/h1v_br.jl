@@ -614,3 +614,37 @@ function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR
     coefficients[11,5] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
     coefficients[12,7] = 2 // 3 * FE.xFaceVolumes[FE.xCellFaces[4,cell]]
 end
+
+[1 3 2; 1 2 4; 2 3 4; 3 1 4]
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1BR{3}}, ::FESpace{HDIVRT0{3}}, ::Type{<:Tetrahedron3D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
+    for k = 1 : 3
+        # node 1
+        coefficients[4*k-3,4] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[k, FE.xCellFaces[4,cell]]
+        coefficients[4*k-3,1] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[k, FE.xCellFaces[1,cell]]
+        coefficients[4*k-3,2] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[k, FE.xCellFaces[2,cell]]
+
+        # node 2
+        coefficients[4*k-2,1] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[k, FE.xCellFaces[1,cell]]
+        coefficients[4*k-2,2] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[k, FE.xCellFaces[2,cell]]
+        coefficients[4*k-2,3] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[k, FE.xCellFaces[3,cell]]#
+
+        # node 3
+        coefficients[4*k-1,1] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[k, FE.xCellFaces[1,cell]]
+        coefficients[4*k-1,3] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[k, FE.xCellFaces[3,cell]]
+        coefficients[4*k-1,4] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[k, FE.xCellFaces[4,cell]]
+
+        # node 4
+        coefficients[4*k,2] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[k, FE.xCellFaces[2,cell]]
+        coefficients[4*k,3] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[k, FE.xCellFaces[3,cell]]
+        coefficients[4*k,4] = 1 // 3 * FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[k, FE.xCellFaces[4,cell]]
+    end
+
+    # reconstruction coefficients for face bubbles on reference element
+    coefficients[13,1] = 3 // 20 * FE.xFaceVolumes[FE.xCellFaces[1,cell]]
+    coefficients[14,2] = 3 // 20 * FE.xFaceVolumes[FE.xCellFaces[2,cell]]
+    coefficients[15,3] = 3 // 20 * FE.xFaceVolumes[FE.xCellFaces[3,cell]]
+    coefficients[16,4] = 3 // 20 * FE.xFaceVolumes[FE.xCellFaces[4,cell]]
+end

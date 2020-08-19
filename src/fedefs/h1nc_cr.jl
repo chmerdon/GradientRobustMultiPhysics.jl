@@ -16,6 +16,7 @@ get_ncomponents(FEType::Type{<:H1CR}) = FEType.parameters[1]
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Edge1D}) = 0;
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Quadrilateral2D}) = 2;
+get_polynomialorder(::Type{<:H1CR}, ::Type{<:Tetrahedron3D}) = 1;
 
 
 
@@ -142,89 +143,100 @@ end
 #
 # all basis functions on a cell are nonzero on all edges,
 # but only the dof associated to the face is eveluated
-# when using get_basis_on dof
+# when using get_basis_on_face
 # this leads to lumped bestapproximations along the boundary for example
 
-function get_basis_on_face(::Type{H1CR{1}}, ::Type{<:Edge1D})
+function get_basis_on_face(FEType::Type{<:H1CR}, ::Type{<:AbstractElementGeometry})
     function closure(xref)
-        return [1.0]
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents,ncomponents)
+        for k = 1 : ncomponents
+            refbasis[k,k] = 1
+        end
+        return refbasis
     end
 end
 
-function get_basis_on_face(::Type{H1CR{2}}, ::Type{<:Edge1D})
+function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Triangle2D})
     function closure(xref)
-        return [1.0 0.0;
-                0.0 1.0]
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents*3,ncomponents)
+        temp = 2*(xref[1]+xref[2]) - 1
+        for k = 1 : ncomponents
+            refbasis[3*k-2,k] = 1 - 2*xref[2]
+            refbasis[3*k-1,k] = temp
+            refbasis[3*k,k] = 1 - 2*xref[1]
+        end
+        return refbasis
     end
 end
 
-function get_basis_on_cell(::Type{H1CR{1}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Tetrahedron3D})
     function closure(xref)
-        return [1 - 2*xref[2];
-                2*(xref[1]+xref[2]) - 1;
-                1 - 2*xref[1]]
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents*4,ncomponents)
+        temp = 3*(xref[1]+xref[2]+xref[3]) - 2
+        for k = 1 : ncomponents
+            refbasis[4*k-3,k] = 1 - 3*xref[3]
+            refbasis[4*k-2,k] = 1 - 3*xref[2]
+            refbasis[4*k-1,k] = temp
+            refbasis[4*k,k] = 1 - 3*xref[1]
+        end
+        return refbasis
     end
 end
 
-function get_basis_on_cell(::Type{H1CR{2}}, ::Type{<:Triangle2D})
+function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Quadrilateral2D})
     function closure(xref)
-        temp = 1 - 2*xref[2]
-        temp2 = 2*(xref[1]+xref[2]) - 1
-        temp3 = 1 - 2*xref[1]
-        return [temp 0.0;
-                temp2 0.0;
-                temp3 0.0;
-                0.0 temp;
-                0.0 temp2;
-                0.0 temp3]
-    end            
-end
-
-function get_basis_on_cell(::Type{H1CR{1}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents*4,ncomponents)
         a = 1 - xref[1]
         b = 1 - xref[2]
-        temp = xref[1]*a - xref[2]*b + b - 1//4
-        temp2 = xref[2]*b - xref[1]*a + xref[1] - 1//4
-        temp3 = temp - b + xref[2]
-        temp4 = temp2 - xref[1] + a
-        return [temp;
-                temp2;
-                temp3;
-                temp4]
+        temp = xref[1]*a + b*b - 1//4
+        temp2 = xref[2]*b + xref[1]*xref[1] - 1//4
+        temp3 = xref[1]*a + xref[2]*xref[2] - 1//4
+        temp4 = xref[2]*b + a*a - 1//4
+        for k = 1 : ncomponents
+            refbasis[4*k-3,k] = temp
+            refbasis[4*k-2,k] = temp2
+            refbasis[4*k-1,k] = temp3
+            refbasis[4*k,k] = temp4
+        end
+        return refbasis
     end
 end
-
-function get_basis_on_cell(::Type{H1CR{2}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        temp = xref[1]*a - xref[2]*b + b - 1//4
-        temp2 = xref[2]*b - xref[1]*a + xref[1] - 1//4
-        temp3 = temp - b + xref[2]
-        temp4 = temp2 - xref[1] + a
-        return [temp 0.0;
-                temp2 0.0;
-                temp3 0.0;
-                temp4 0.0;
-                0.0 temp;
-                0.0 temp2;
-                0.0 temp3;
-                0.0 temp4]
-    end
-end
-
-
 
 function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1CR{2}}, ::FESpace{HDIVRT0{2}}, ::Type{<:Triangle2D}, cell::Int)
     # reconstruction coefficients for P1 basis functions on reference element
     fill!(coefficients,0.0)
     coefficients[1,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
-    coefficients[2,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
-    coefficients[3,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
     coefficients[4,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+
+    coefficients[2,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
     coefficients[5,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    
+    coefficients[3,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
     coefficients[6,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+end
+
+function get_reconstruction_coefficients_on_cell!(coefficients, FE::FESpace{H1CR{3}}, ::FESpace{HDIVRT0{3}}, ::Type{<:Tetrahedron3D}, cell::Int)
+    # reconstruction coefficients for P1 basis functions on reference element
+    fill!(coefficients,0.0)
+    coefficients[1,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[1, FE.xCellFaces[1,cell]]
+    coefficients[5,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[2, FE.xCellFaces[1,cell]]
+    coefficients[9,1] = FE.xFaceVolumes[FE.xCellFaces[1,cell]] * FE.xFaceNormals[3, FE.xCellFaces[1,cell]]
+
+    coefficients[2,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[1, FE.xCellFaces[2,cell]]
+    coefficients[6,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[2, FE.xCellFaces[2,cell]]
+    coefficients[10,2] = FE.xFaceVolumes[FE.xCellFaces[2,cell]] * FE.xFaceNormals[3, FE.xCellFaces[2,cell]]
+
+    coefficients[3,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[1, FE.xCellFaces[3,cell]]
+    coefficients[7,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[2, FE.xCellFaces[3,cell]]
+    coefficients[11,3] = FE.xFaceVolumes[FE.xCellFaces[3,cell]] * FE.xFaceNormals[3, FE.xCellFaces[3,cell]]
+
+    coefficients[4,3] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[1, FE.xCellFaces[4,cell]]
+    coefficients[8,3] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[2, FE.xCellFaces[4,cell]]
+    coefficients[12,3] = FE.xFaceVolumes[FE.xCellFaces[4,cell]] * FE.xFaceNormals[3, FE.xCellFaces[4,cell]]
 end
 
 
