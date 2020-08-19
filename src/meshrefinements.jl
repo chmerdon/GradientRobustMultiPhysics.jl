@@ -1,8 +1,14 @@
 
 # functions that tell how to split one ElementGeometry into another
 split_rule(::Type{Triangle2D}, ::Type{Triangle2D}) = reshape([1,2,3],1,3)
+split_rule(::Type{Tetrahedron3D}, ::Type{Tetrahedron3D}) = reshape([1,2,3,4],1,4)
 split_rule(::Type{<:Quadrilateral2D}, ::Type{Triangle2D}) = [1 2 3;1 3 4]
 split_rule(::Type{Edge1D}, ::Type{Triangle2D}) = reshape([1,2,2],1,3)
+split_rule(::Type{<:Hexahedron3D}, ::Type{Tetrahedron3D}) = [1 2 3 7; 1 3 4 7; 1 5 6 7; 1 8 5 7; 1 6 2 7; 1 4 8 7]
+
+# in 3D we also need to know how the splitting splits the faces
+split_rule_faces(::Type{<:Tetrahedron3D}, ::Type{Tetrahedron3D}) = [1 2 3]
+split_rule_faces(::Type{<:Hexahedron3D}, ::Type{Tetrahedron3D}) = [1 2 3; 1 3 4]
 
 """
 $(TYPEDSIGNATURES)
@@ -12,7 +18,7 @@ generates a new ExtendableGrid by splitting each cell into subcells of the speci
 split rules exist for
     - Quadrilateral2D into Triangle2D
 """
-function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{Triangle2D}) where {T,K}
+function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{<:AbstractElementGeometry}) where {T,K}
     xgrid=ExtendableGrid{T,K}()
     xgrid[Coordinates]=source_grid[Coordinates]
     oldCellGeometries = source_grid[CellGeometries]
@@ -26,7 +32,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     oldCellNodes=source_grid[CellNodes]
     nnodes4item = 0
     ncells = 0
-    itemEG = Triangle2D
+    itemEG = targetgeometry
     iEG = 1
     for cell = 1 : num_sources(oldCellNodes)
         nnodes4item = num_targets(oldCellNodes,cell)
@@ -37,13 +43,38 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
         end    
         ncells += size(split_rules[iEG],1)
     end
-    xCellNodes = reshape(xCellNodes,3,ncells)
+    xCellNodes = reshape(xCellNodes,nnodes_for_geometry(targetgeometry),ncells)
     xgrid[CellNodes] = Array{Int32,2}(xCellNodes)
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,ncells)
+    xgrid[CellGeometries] = VectorOfConstants(targetgeometry,ncells)
     xgrid[CellRegions]=ones(Int32,ncells)
-    xgrid[BFaceNodes]=source_grid[BFaceNodes]
-    xgrid[BFaceRegions]=source_grid[BFaceRegions]
-    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,num_sources(source_grid[BFaceNodes]))
+
+    # find new boundary faces (easy in 2D, not so easy in 3D)
+    if dim_element(targetgeometry) == 2 # BFaces are Edge1D wich stay the same
+        println("hallo")
+        xgrid[BFaceNodes]=source_grid[BFaceNodes]
+        xgrid[BFaceRegions]=source_grid[BFaceRegions]
+        xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(targetgeometry,1),num_sources(xgrid[BFaceNodes]))
+    elseif dim_element(targetgeometry) == 3 # BFaces may change there shape, e.g. from Quadrilateral2D to Triangle2D
+        oldBFaceNodes = source_grid[BFaceNodes]
+        oldBFaceRegions = source_grid[BFaceRegions]
+        nbfaces = num_sources(oldBFaceNodes)
+        # for simplicity we assume that only one source element geometry exists
+        split_rules[1] = split_rule_faces(EG[1],targetgeometry)
+        newBFaceNodes = []
+        newBFaceRegions = []
+        newnbfaces = 0
+        for bface = 1 : nbfaces
+            for j = 1 : size(split_rules[1],1), k = 1 : size(split_rules[1],2)
+                append!(newBFaceNodes,oldBFaceNodes[split_rules[iEG][j,k],bface])
+            end
+            newnbfaces += size(split_rules[1],1)
+            append!(newBFaceRegions,ones(Int32,size(split_rules[1],1))*oldBFaceRegions[bface])
+        end
+        newBFaceNodes = reshape(newBFaceNodes,nnodes_for_geometry(facetype_of_cellface(targetgeometry,1)),newnbfaces)
+        xgrid[BFaceNodes]=Array{Int32,2}(newBFaceNodes)
+        xgrid[BFaceRegions]=Array{Int32,1}(newBFaceRegions)
+        xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(targetgeometry,1),newnbfaces)
+    end
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
     return xgrid
 end
