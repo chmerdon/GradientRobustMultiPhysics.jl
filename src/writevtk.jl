@@ -4,6 +4,13 @@ vtkcelltype(::Type{<:Quadrilateral2D}) = 9
 vtkcelltype(::Type{<:Tetrahedron3D}) = 10
 vtkcelltype(::Type{<:Hexahedron3D}) = 12 # maybe needs renumbering of cellnodes !!!
 
+"""
+$(TYPEDSIGNATURES)
+
+Writes the specified FEVector into a vtk datafile with the given filename. Each component of each FEVectorBlock
+(or the subset specified by blocks) is saved separately. Vector-valued quantities also generate a data field
+that represents the absolute value of the vector field at each grid point.
+"""
 function writeVTK!(filename::String, Data::FEVector; blocks = [], names = [], vectorabs::Bool = true)
     if blocks == []
         blocks = 1:length(Data)

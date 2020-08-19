@@ -17,8 +17,12 @@ function interpolate!(Target::FEVectorBlock, source_function!::Function; dofs = 
 end
 
 
-# abstract nodevalue function that works for any element by averaging
-# but can be overrridden by special implementations for each finite element
+"""
+$(TYPEDSIGNATURES)
+
+Evaluates the finite element function with the specified coefficient vector Source (interpeted as an element of the finite element space FE)
+and the specified FunctionOperator at all the nodes of the grids and writes them into Target. Discontinuous quantities are averaged.
+"""
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], continuous::Bool = false)
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]

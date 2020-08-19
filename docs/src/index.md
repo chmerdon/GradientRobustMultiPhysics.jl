@@ -41,7 +41,7 @@ Recently gradient-robustness was also connected to the design of well-balanced s
 
 ## Dependencies on other Julia packages
 
-[ExtendableGrid.jl](https://github.com/j-fu/ExtendableGrids.jl)\
+[ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)\
 [ExtendableSparse.jl](https://github.com/j-fu/ExtendableSparse.jl)\
 [Triangulate.jl](https://github.com/JuliaGeometry/Triangulate.jl)\
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\

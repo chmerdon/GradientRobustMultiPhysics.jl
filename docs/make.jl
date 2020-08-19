@@ -90,6 +90,7 @@ function make_all()
             "AbstractAssemblyPatterns" => "assemblypatterns.md",
             "Meshing" => "meshing.md",
             "Quadrature" => "quadrature.md",
+            "Export/Viewers" => "viewers.md",
             "Examples" => generated_examples
         ]
     )
