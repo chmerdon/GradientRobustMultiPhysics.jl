@@ -181,10 +181,9 @@ end
 
 
 # junctions for dof fields
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeCELL}) = FE.CellDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeFACE}) = FE.FaceDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeBFACE}) = FE.BFaceDofs
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{AssemblyTypeBFACECELL}) = FE.CellDofs
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{ON_CELLS}) = FE.dofmaps[CellDofs]
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{ON_FACES}) = FE.dofmaps[FaceDofs]
+FEPropertyDofs4AssemblyType(FE::FESpace,::Type{ON_BFACES}) = FE.dofmaps[BFaceDofs]
 
 
 # unique functions that only selects uniques in specified regions
@@ -293,7 +292,7 @@ end
 
 # dysfunctional at the moment
 # will be repaired when assembly design steps are decided
-# function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:AssemblyTypeBFACECELL}, operator::Type{<:AbstractFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int32,1}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, verbosity::Int)
+# function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:ON_BFACESCELL}, operator::Type{<:AbstractFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int32,1}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, verbosity::Int)
 #     # find proper quadrature QuadratureRules
 #     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
 #     xCellGeometries = FE.xgrid[CellGeometries]
@@ -1480,7 +1479,7 @@ function L2ErrorIntegrator(
     operator::Type{<:AbstractFunctionOperator},
     xdim::Int,
     ncomponents::Int = 1;
-    AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL,
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     bonus_quadorder::Int = 0)
 ````
 
@@ -1491,7 +1490,7 @@ function L2ErrorIntegrator(
     operator::Type{<:AbstractFunctionOperator},
     xdim::Int,
     ncomponents::Int = 1;
-    AT::Type{<:AbstractAssemblyType} = AssemblyTypeCELL,
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     bonus_quadorder::Int = 0,
     time = 0)
 

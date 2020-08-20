@@ -51,7 +51,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2
 end
 
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: H1P2}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: H1P2}
     xCellNodes = FES.xgrid[CellNodes]
     xCellGeometries = FES.xgrid[CellGeometries]
     ncomponents = get_ncomponents(FEType)
@@ -102,10 +102,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
         append!(xCellDofs,dofs4item[1:ndofs4item])
     end
     # save dofmap
-    FES.CellDofs = xCellDofs
+    FES.dofmaps[CellDofs] = xCellDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: H1P2}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H1P2}
     xFaceNodes = FES.xgrid[FaceNodes]
     xBFaces = FES.xgrid[BFaces]
     nfaces = num_sources(xFaceNodes)
@@ -152,10 +152,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FET
         append!(xFaceDofs,dofs4item[1:ndofs4item])
     end
     # save dofmap
-    FES.FaceDofs = xFaceDofs
+    FES.dofmaps[FaceDofs] = xFaceDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: H1P2}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: H1P2}
     xBFaceNodes = FES.xgrid[BFaceNodes]
     xBFaces = FES.xgrid[BFaces]
     nbfaces = num_sources(xBFaceNodes)
@@ -202,7 +202,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
         append!(xBFaceDofs,dofs4item[1:ndofs4item])
     end
     # save dofmap
-    FES.BFaceDofs = xBFaceDofs
+    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 
@@ -240,13 +240,13 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exac
         if edim == 1 # edges are cells
             xItemNodes = FE.xgrid[CellNodes]
             xItemVolumes = FE.xgrid[CellVolumes]
-            xItemDofs = FE.CellDofs
-            AT = AssemblyTypeCELL
+            xItemDofs = FE.dofmaps[CellDofs]
+            AT = ON_CELLS
         elseif edim == 2 # edges are faces
             xItemNodes = FE.xgrid[FaceNodes]
             xItemVolumes = FE.xgrid[FaceVolumes]
-            xItemDofs = FE.FaceDofs
-            AT = AssemblyTypeFACE
+            xItemDofs = FE.dofmaps[FaceDofs]
+            AT = ON_FACES
         elseif edgim == 3 # edges are edges
             #todo
         end

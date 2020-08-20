@@ -92,7 +92,7 @@ maxorder3D = [12,4]
     xgrid = testgrid(Edge1D)
     for order = 1 : maxorder1D
         integrand!, exactvalue = exact_function1D(order)
-        quadvalue = integrate(xgrid, AssemblyTypeCELL, integrand!, order, length(exactvalue))
+        quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue))
         println("EG = Edge1D | order = $order | error = $(quadvalue - exactvalue)")
         @test isapprox(quadvalue,exactvalue)
     end
@@ -105,7 +105,7 @@ maxorder3D = [12,4]
         xgrid = testgrid(EG)
         for order = 1 : maxorder2D[j]
             integrand!, exactvalue = exact_function2D(order)
-            quadvalue = integrate(xgrid, AssemblyTypeCELL, integrand!, order, length(exactvalue))
+            quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue))
             println("EG = $EG | order = $order | error = $(quadvalue - exactvalue)")
             @test isapprox(quadvalue,exactvalue)
         end
@@ -119,7 +119,7 @@ maxorder3D = [12,4]
         xgrid = testgrid(EG)
         for order = 1 : maxorder3D[j]
             integrand!, exactvalue = exact_function3D(order)
-            quadvalue = integrate(xgrid, AssemblyTypeCELL, integrand!, order, length(exactvalue))
+            quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue))
             println("EG = $EG | order = $order | error = $(quadvalue - exactvalue)")
             @test isapprox(quadvalue,exactvalue)
         end

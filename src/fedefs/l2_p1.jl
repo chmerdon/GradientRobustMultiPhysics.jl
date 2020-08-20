@@ -41,7 +41,7 @@ end
 
 
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: L2P1}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: L2P1}
     xCellNodes = FES.xgrid[CellNodes]
     ncomponents = get_ncomponents(FEType)
     ncells = num_sources(xCellNodes) 
@@ -54,14 +54,14 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
     #xCellDofs = VariableTargetAdjacency{Int32}(1:dof,colstart)
     xCellDofs = SerialVariableTargetAdjacency{Int32}(colstart)
     # save dofmap
-    FES.CellDofs = xCellDofs
+    FES.dofmaps[CellDofs] = xCellDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: L2P1}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: L2P1}
     # not defined for L2 element
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: L2P1}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: L2P1}
     xCellNodes = FES.xgrid[CellNodes]
     xCellGeometries = FES.xgrid[CellGeometries]
     xBFaceNodes = FES.xgrid[BFaceNodes]
@@ -69,6 +69,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
     xBFaceCellPos = FES.xgrid[BFaceCellPos]
     xBFaces = FES.xgrid[BFaces]
     xFaceCells = FES.xgrid[FaceCells]
+    xCellDofs = FES.dofmaps[CellDofs]
     ncomponents = get_ncomponents(FEType)
     dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xBFaceNodes))
     nnodes4bface = 0
@@ -85,7 +86,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
         nnodes4cell = num_targets(xCellNodes,cell)
         for k = 1 : nnodes4bface
             pos_node = findall(x->x==xBFaceNodes[k,bface], xCellNodes[:,cell])[1]
-            dofs4item[k] = FES.CellDofs[1,cell] - 1 + pos_node
+            dofs4item[k] = xCellDofs[1,cell] - 1 + pos_node
             for n = 1 : ncomponents-1
                 dofs4item[k+n*nnodes4bface] = n*nnodes4cell + dofs4item[k]
             end    
@@ -93,7 +94,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
         append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4bface])
     end
     # save dofmap
-    FES.BFaceDofs = xBFaceDofs
+    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 

@@ -25,6 +25,13 @@ abstract type AbstractH1FiniteElementWithCoefficients <: AbstractH1FiniteElement
 abstract type AbstractL2FiniteElement <: AbstractFiniteElement end
 abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
+# dofmaps are stored as abstract grid adjacencies
+abstract type DofMap <: AbstractGridAdjacency end
+abstract type CellDofs <: DofMap end
+abstract type FaceDofs <: DofMap end
+abstract type EdgeDofs <: DofMap end
+abstract type BFaceDofs <: DofMap end
+
 
 """
 $(TYPEDEF)
@@ -35,19 +42,17 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     name::String                          # full name of finite element space (used in messages)
     ndofs::Int                            # total number of dofs
     xgrid::ExtendableGrid                 # link to xgrid 
-    CellDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}     # place to save cell dofs (filled by constructor)
-    FaceDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}    # place to save face dofs (filled by constructor)
-    BFaceDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}    # place to save bface dofs (filled by constructor)
+    dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
     xFaceNormals::Array{Float64,2}        # link to coefficient values
     xFaceVolumes::Array{Float64,1}        # link to coefficient values
     xCellFaces::VariableTargetAdjacency   # link to coefficient indices
     xCellFaceSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
 end
 
-function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = [AssemblyTypeCELL, AssemblyTypeFACE, AssemblyTypeBFACE], verbosity = 0 ) where {FEType <:AbstractFiniteElement}
+function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = [CellDofs, FaceDofs, BFaceDofs], verbosity = 0 ) where {FEType <:AbstractFiniteElement}
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)
-    FES = FESpace{FEType}(name,0,xgrid,dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
+    FES = FESpace{FEType}(name,0,xgrid,Dict{Type{<:AbstractGridComponent},Any}(),Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
 
     if verbosity > 0
         println("  Initialising FESpace $FEType...")
@@ -95,20 +100,11 @@ function Base.show(io::IO, FES::FESpace{FEType}) where {FEType<:AbstractFiniteEl
     println("   FEType = $FEType")
     println("  FEClass = $(supertype(FEType))")
     println("    ndofs = $(FES.ndofs)\n")
-    if num_sources(FES.CellDofs) > 0
-        println("dofmap for CELL available (nitems=$(num_sources(FES.CellDofs)), maxdofs4item=$(max_num_targets_per_source(FES.CellDofs)))")
-    else
-        println("dofmap for CELL not available")
-    end
-    if num_sources(FES.FaceDofs) > 0
-        println("dofmap for FACE available (nitems=$(num_sources(FES.FaceDofs)), maxdofs4item=$(max_num_targets_per_source(FES.FaceDofs)))")
-    else
-        println("dofmap for FACE not available")
-    end
-    if num_sources(FES.BFaceDofs) > 0
-        println("dofmap for BFACE available (nitems=$(num_sources(FES.BFaceDofs)), maxdofs4item=$(max_num_targets_per_source(FES.BFaceDofs)))")
-    else
-        println("dofmap for BFACE not available")
+    println("")
+    println("DofMaps");
+    println("==========");
+    for tuple in FES.dofmaps
+        println("> $(tuple[1])")
     end
 end
 

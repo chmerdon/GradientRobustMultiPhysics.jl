@@ -28,7 +28,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: L2P0
 end
 
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: L2P0}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: L2P0}
     ncomponents = get_ncomponents(FEType)
     ncells = num_sources(FES.xgrid[CellNodes]) 
     dof = 0
@@ -40,15 +40,15 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
     #xCellDofs = VariableTargetAdjacency{Int32}(1:dof,colstart)
     xCellDofs = SerialVariableTargetAdjacency{Int32}(colstart)
     # save dofmap
-    FES.CellDofs = xCellDofs
+    FES.dofmaps[CellDofs] = xCellDofs
 end
 
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: L2P0}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: L2P0}
     # not defined for L2 element
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: L2P0}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: L2P0}
     xBFaceNodes = FES.xgrid[BFaceNodes]
     nbfaces = num_sources(xBFaceNodes)
     xBFaces = FES.xgrid[BFaces]
@@ -57,7 +57,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
     for bface = 1: nbfaces
         append!(xBFaceDofs,[xFaceCells[1,xBFaces[bface]]])
     end
-    FES.BFaceDofs = xBFaceDofs
+    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 
@@ -71,7 +71,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
     xdim = size(xCoords,1)
     if length(dofs) == 0 # interpolate at all dofs
         integrals4cell = zeros(Float64,ncomponents,ncells)
-        integrate!(integrals4cell, FE.xgrid, AssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
+        integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!, bonus_quadorder, ncomponents)
         for cell = 1 : ncells
             for c = 1 : ncomponents
                 Target[(cell-1)*ncomponents + c] = integrals4cell[c, cell] / xCellVolumes[cell]
@@ -79,7 +79,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P0}, exac
         end    
     else # todo: does not work for more than one component at the moment, also does not need to compute all integral means on all cells
         integrals4cell = zeros(Float64,ncomponents,ncells)
-        integrate!(integrals4cell, FE.xgrid, AssemblyTypeCELL, exact_function!, bonus_quadorder, ncomponents)
+        integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!, bonus_quadorder, ncomponents)
         for dof in dofs
             cell = dof
             c = 1

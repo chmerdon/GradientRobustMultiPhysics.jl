@@ -33,7 +33,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1MI
 end
 
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: H1MINI}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: H1MINI}
     xCellNodes = FES.xgrid[CellNodes]
     xCellGeometries = FES.xgrid[CellGeometries]
     nnodes = num_sources(FES.xgrid[Coordinates]) 
@@ -56,10 +56,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
         append!(xCellDofs,dofs4item[1:ncomponents*(nnodes4item+1)])
     end
     # save dofmap
-    FES.CellDofs = xCellDofs
+    FES.dofmaps[CellDofs] = xCellDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: H1MINI}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H1MINI}
     xFaceNodes = FES.xgrid[FaceNodes]
     xBFaces = FES.xgrid[BFaces]
     nnodes = num_sources(FES.xgrid[Coordinates]) 
@@ -79,10 +79,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FET
         append!(xFaceDofs,dofs4item[1:ncomponents*nnodes4item])
     end
     # save dofmap
-    FES.FaceDofs = xFaceDofs
+    FES.dofmaps[FaceDofs] = xFaceDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: H1MINI}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: H1MINI}
     xBFaceNodes = FES.xgrid[BFaceNodes]
     nnodes = num_sources(FES.xgrid[Coordinates]) 
     nbfaces = num_sources(xBFaceNodes)
@@ -101,7 +101,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
         append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item])
     end
     # save dofmap
-    FES.BFaceDofs = xBFaceDofs
+    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 

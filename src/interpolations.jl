@@ -26,7 +26,7 @@ and the specified FunctionOperator at all the nodes of the grids and writes them
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], continuous::Bool = false)
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]
-  xItemDofs = FE.CellDofs
+  xItemDofs = FE.dofmaps[CellDofs]
   xItemNodes = FE.xgrid[CellNodes]
 
   T = Base.eltype(Target)
@@ -46,7 +46,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   FEType = Base.eltype(FE)
   for j = 1 : length(EG)
       qf[j] = VertexRule(EG[j])
-      basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],operator,AssemblyTypeCELL}(FE, qf[j])
+      basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],operator,ON_CELLS}(FE, qf[j])
   end    
   cvals_resultdim::Int = size(basisevaler[1].cvals,1)
   @assert size(Target,1) >= cvals_resultdim

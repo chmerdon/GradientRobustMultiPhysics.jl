@@ -8,7 +8,6 @@ nfaces_for_geometry(::Type{<:AbstractElementGeometry0D}) = 0
 nedges_for_geometry(::Type{<:AbstractElementGeometry0D}) = 0
 
 
-
 #######################################      
 # EDGE1D <: AbstractElementGeometry1D #     [1]-----[2]        [1] = 0, [2] = 1
 #######################################      
@@ -22,6 +21,8 @@ face_enum_rule(::Type{<:AbstractElementGeometry1D}) = [1; 2]
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 
+xrefFACE2xrefCELL(::Type{<:AbstractElementGeometry1D}) = [ (xref4FACE) -> [1],
+                                                           (xref4FACE) -> [1] ]
 
 #                   [3]                 
 #                    | \   
@@ -36,6 +37,9 @@ refcoords_for_geometry(::Type{<:Triangle2D}) = [0 0; 1 0; 0 1]
 nnodes_for_geometry(::Type{<:Triangle2D}) = 3
 face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
 
+xrefFACE2xrefCELL(::Type{<:Triangle2D}) = [ (xref4FACE) -> [xref4FACE[1],0],
+                                            (xref4FACE) -> [1-xref4FACE[1],xref4FACE[1]], 
+                                            (xref4FACE) -> [0,1-xref4FACE[1]] ]
 
 #                        [4]--------[3]               
 #                         |          |             [1] = (0,0)
@@ -50,6 +54,10 @@ refcoords_for_geometry(::Type{<:Quadrilateral2D}) = [0 0; 1 0; 1 1; 0 1]
 nnodes_for_geometry(::Type{<:Quadrilateral2D}) = 4
 face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
 
+xrefFACE2xrefCELL(::Type{<:Quadrilateral2D}) = [ (xref4FACE) -> [xref4FACE[1],0],
+                                                 (xref4FACE) -> [1,xref4FACE[1]], 
+                                                 (xref4FACE) -> [1-xref4FACE[1],1], 
+                                                 (xref4FACE) -> [0,1-xref4FACE[1]] ]
 
 #############################      
 # AbstractElementGeometry2D #    

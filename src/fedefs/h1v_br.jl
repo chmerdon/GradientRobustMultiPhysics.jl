@@ -37,7 +37,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1BR
     FES.xCellFaces = FES.xgrid[CellFaces]
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: H1BR}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: H1BR}
     xCellNodes = FES.xgrid[CellNodes]
     xCellFaces = FES.xgrid[CellFaces]
     xCellGeometries = FES.xgrid[CellGeometries]
@@ -62,10 +62,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
         append!(xCellDofs,dofs4item[1:(ncomponents+1)*nnodes4item])
     end
     # save dofmap
-    FES.CellDofs = xCellDofs
+    FES.dofmaps[CellDofs] = xCellDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: H1BR}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H1BR}
     xFaceNodes = FES.xgrid[FaceNodes]
     xBFaces = FES.xgrid[BFaces]
     nfaces = num_sources(xFaceNodes)
@@ -86,10 +86,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FET
         append!(xFaceDofs,dofs4item[1:ncomponents*nnodes4item+1])
     end
     # save dofmap
-    FES.FaceDofs = xFaceDofs
+    FES.dofmaps[FaceDofs] = xFaceDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: H1BR}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: H1BR}
     xBFaceNodes = FES.xgrid[BFaceNodes]
     xBFaces = FES.xgrid[BFaces]
     nbfaces = num_sources(xBFaceNodes)
@@ -110,7 +110,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
         append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item+1])
     end
     # save dofmap
-    FES.BFaceDofs = xBFaceDofs
+    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)

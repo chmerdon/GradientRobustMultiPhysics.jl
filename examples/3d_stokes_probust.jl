@@ -43,7 +43,7 @@ function main()
     split_into_tets = true
 
     # problem parameters
-    viscosity = 1
+    viscosity = 1e-2
     exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = HydrostaticTestProblem()
 
     # choose finite element type
@@ -118,10 +118,6 @@ function main()
         Solution2 = FEVector{Float64}("Stokes velocity p-robust",FESpaceVelocity)
         append!(Solution2,"Stokes pressure (p-robust)",FESpacePressure)
         solve!(Solution2, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
-
-        nodevals = zeros(Float64,1,size(xgrid[Coordinates],2))
-        nodevalues!(nodevals, Solution2[1], FESpaceVelocity, ReconstructionDivergence{HDIVRT0{3}})
-        println("diverror = $(sum(nodevals[:].^2, dims = 1))")
 
         # solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)

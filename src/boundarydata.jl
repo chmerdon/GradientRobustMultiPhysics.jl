@@ -97,8 +97,8 @@ function boundarydata!(
     xdim = size(FE.xgrid[Coordinates],1) 
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    xBFaceDofs = FE.BFaceDofs
-    nbfaces = num_sources(FE.BFaceDofs)
+    xBFaceDofs = FE.dofmaps[BFaceDofs]
+    nbfaces = num_sources(xBFaceDofs)
     xBFaceRegions = FE.xgrid[BFaceRegions]
 
     ######################
@@ -204,9 +204,9 @@ function boundarydata!(
                 end   
             end   
             action = RegionWiseXFunctionAction(bnd_rhs_function_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, AssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, AssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         elseif Dboperator == NormalFlux
             xFaceNormals = FE.xgrid[FaceNormals]
@@ -223,9 +223,9 @@ function boundarydata!(
                 end   
             end   
             action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, AssemblyTypeBFACE, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, AssemblyTypeBFACE, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         end    
 

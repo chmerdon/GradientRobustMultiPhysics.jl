@@ -84,27 +84,33 @@ function uniqueEG(xItemGeometries, xItemRegions, xItemDofs, regions)
 end
 
 # show function for ExtendableGrids and defined Components in its Dict
-function show(xgrid::ExtendableGrid)
+function Base.show(io::IO, xgrid::ExtendableGrid)
 
     dim = size(xgrid[Coordinates],1)
     nnodes = num_sources(xgrid[Coordinates])
     ncells = num_sources(xgrid[CellNodes])
     
-	println("ExtendableGrids");
-    println("======");
+	println("ExtendableGrid information");
+    println("==========================");
 	println("dim: $(dim)")
 	println("nnodes: $(nnodes)")
     println("ncells: $(ncells)")
-    if haskey(ExtendableGrids.components,FaceNodes)
+    if haskey(xgrid.components,FaceNodes)
         nfaces = num_sources(xgrid[FaceNodes])
         println("nfaces: $(nfaces)")
     else
         println("nfaces: (FaceNodes not instantiated)")
     end
+    if haskey(xgrid.components,EdgeNodes)
+        nfaces = num_sources(xgrid[FaceNodes])
+        println("nedges: $(nedges)")
+    else
+        println("nedges: (EdgeNodes not instantiated)")
+    end
     println("")
     println("Components");
-    println("===========");
-    for tuple in ExtendableGrids.components
+    println("==========");
+    for tuple in xgrid.components
         println("> $(tuple[1])")
     end
 end

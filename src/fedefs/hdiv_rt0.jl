@@ -32,7 +32,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIV
 
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: HDIVRT0}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HDIVRT0}
     xCellFaces = FES.xgrid[CellFaces]
     xCellGeometries = FES.xgrid[CellGeometries]
     dofs4item = zeros(Int32,max_num_targets_per_source(xCellFaces))
@@ -47,20 +47,20 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
         append!(xCellDofs,dofs4item[1:nfaces4item])
     end
     # save dofmap
-    FES.CellDofs = xCellDofs
+    FES.dofmaps[CellDofs] = xCellDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: HDIVRT0}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: HDIVRT0}
     nfaces = num_sources(FES.xgrid[FaceNodes])
     xFaceDofs = VariableTargetAdjacency(Int32)
     for face = 1 : nfaces
         append!(xFaceDofs,[face])
     end
     # save dofmap
-    FES.FaceDofs = xFaceDofs
+    FES.dofmaps[FaceDofs] = xFaceDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: HDIVRT0}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: HDIVRT0}
     xBFaces = FES.xgrid[BFaces]
     nbfaces = length(xBFaces)
     xBFaceDofs = VariableTargetAdjacency(Int32)
@@ -68,7 +68,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
         append!(xBFaceDofs,[xBFaces[bface]])
     end
     # save dofmap
-    FES.BFaceDofs = xBFaceDofs
+    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 
@@ -86,7 +86,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT0}, e
             end 
         end   
     end   
-    integrate!(Target, FE.xgrid, AssemblyTypeFACE, normalflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
+    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
 end
 
 

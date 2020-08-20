@@ -134,7 +134,7 @@ function realize_constraint!(
         println("\n  Moving integral mean for component $c to value $(Constraint.value)")
     end
     # move integral mean
-    pmeanIntegrator = ItemIntegrator{Float64,AssemblyTypeCELL}(Identity, DoNotChangeAction(1), [0])
+    pmeanIntegrator = ItemIntegrator{Float64,ON_CELLS}(Identity, DoNotChangeAction(1), [0])
     meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)
     total_area = sum(Target.FEVectorBlocks[c].FES.xgrid[CellVolumes], dims=1)[1]
     meanvalue /= total_area

@@ -28,7 +28,7 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIV
 
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FEType <: HDIVBDM1}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HDIVBDM1}
     xCellFaces = FES.xgrid[CellFaces]
     xCellGeometries = FES.xgrid[CellGeometries]
     dofs4item = zeros(Int32,2*max_num_targets_per_source(xCellFaces))
@@ -45,20 +45,20 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeCELL}) where {FET
         append!(xCellDofs,dofs4item[1:2*nfaces4item])
     end
     # save dofmap
-    FES.CellDofs = xCellDofs
+    FES.dofmaps[CellDofs] = xCellDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeFACE}) where {FEType <: HDIVBDM1}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: HDIVBDM1}
     nfaces = num_sources(FES.xgrid[FaceNodes])
     xFaceDofs = VariableTargetAdjacency(Int32)
     for face = 1 : nfaces
         append!(xFaceDofs,[face nfaces+face])
     end
     # save dofmap
-    FES.FaceDofs = xFaceDofs
+    FES.dofmaps[FaceDofs] = xFaceDofs
 end
 
-function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FEType <: HDIVBDM1}
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: HDIVBDM1}
     nfaces = num_sources(FES.xgrid[FaceNodes])
     xBFaces = FES.xgrid[BFaces]
     nbfaces = length(xBFaces)
@@ -67,7 +67,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{AssemblyTypeBFACE}) where {FE
         append!(xBFaceDofs,[xBFaces[bface] nfaces + xBFaces[bface]])
     end
     # save dofmap
-    FES.BFaceDofs = xBFaceDofs
+    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 
@@ -89,7 +89,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVBDM1}, 
     end   
 
     indicesRT0 = Array{Int32,1}(1:2:2*nfaces)
-    integrate!(Target, FE.xgrid, AssemblyTypeFACE, normalflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
+    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
     function normalflux2_eval()
         temp = zeros(Float64,ncomponents)
         function closure(result, x, face, xref)
@@ -101,7 +101,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVBDM1}, 
             result[1] *= 2*(xref[1] - 1//2)
         end   
     end   
-    integrate!(Target, FE.xgrid, AssemblyTypeFACE, normalflux2_eval(), bonus_quadorder + 1, 1; item_dependent_integrand = true, index_offset = nfaces)
+    integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; item_dependent_integrand = true, index_offset = nfaces)
 end
 
 
