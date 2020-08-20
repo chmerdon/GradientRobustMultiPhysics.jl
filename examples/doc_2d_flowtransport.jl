@@ -64,12 +64,11 @@ function main()
     #####################################################################################
     #####################################################################################
 
-    ## initial grid
-    ## replace Parallelogrm2D by Triangle2D if you like
+    ## grid
     xgrid = grid_pipe(1e-3);
 
     ## problem parameters
-    viscosity = 1
+    viscosity = 1 # coefficient for Stokes equation
     diffusion_FE = 1e-7 # diffusion coefficient for transport equation
 
     ## choose one of these (inf-sup stable) finite element type pairs for the flow
@@ -80,7 +79,7 @@ function main()
     
     ## choose discretisation for the transport equation
     #FETypeTransport = H1P1{1}; FVtransport = false
-    FETypeTransport = L2P0{1}; FVtransport = true # note: ingores postprocess_operator, since FV operator does the same on triangles
+    FETypeTransport = L2P0{1}; FVtransport = true # note: ignores postprocess_operator, since FV operator does the same on triangles
 
     ## postprocess parameters
     plot_grid = false
@@ -130,7 +129,7 @@ function main()
         ## pseudo-timestepping until stationarity detected
         TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], timedependent_equations = [3], verbosity = 1)
         change = 0.0
-        timestep = 1000
+        timestep = 10000
         maxResidual = 1e-10
         for iteration = 1 : 100
             ## in the advance! step we can tell that the matrices of which subiterations do not change

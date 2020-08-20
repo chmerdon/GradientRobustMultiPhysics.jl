@@ -47,7 +47,6 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
 
     # find new boundary faces (easy in 2D, not so easy in 3D)
     if dim_element(targetgeometry) == 2 # BFaces are Edge1D wich stay the same
-        println("hallo")
         xgrid[BFaceNodes]=source_grid[BFaceNodes]
         xgrid[BFaceRegions]=source_grid[BFaceRegions]
         xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(targetgeometry,1),num_sources(xgrid[BFaceNodes]))
