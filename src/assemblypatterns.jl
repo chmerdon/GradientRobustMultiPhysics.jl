@@ -235,6 +235,7 @@ function prepare_assembly(
             elseif (dofitemAT[k] == ON_CELLS) && (AT == ON_FACES)
                 # generate basis evaler for each face of the cell geometry by mapping the quadrature points of the face to
                 # the quadrature points of the respective cellface (weights stay the same)
+                # TODO: we need all possible pairs of FACE/CELL geometry combinations here !!!
                 nfaces4cell = nfaces_for_geometry(EG[j])
                 qfxref = qf[j].xref
                 xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
@@ -269,6 +270,8 @@ function prepare_assembly(
 end
 
 
+### DEPRECATED
+### only used for TrilinearForm assembly, will be removed soon
 function prepareOperatorAssembly(
     form::AbstractAssemblyPattern{T,AT},
     operator::Array{DataType,1},
@@ -932,14 +935,9 @@ function assemble!(
     factor::Real = 1,
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
+    # get adjacencies
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
-    action = BLF.action
-    bonus_quadorder = BLF.action.bonus_quadorder
-    regions = BLF.regions
-
-    
-    # collect grid information
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
@@ -947,119 +945,132 @@ function assemble!(
     xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
-    
-    if regions == [0]
-        try
-            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
-        catch
-            regions = [xItemRegions[1]]
-        end        
-    else
-        regions = Array{Int32,1}(regions)    
-    end
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
 
-    # collect FE and FEBasisEvaluator information
-    FEType = eltype(FE[1])
-    ncomponents::Int = get_ncomponents(FEType)
+    # prepare assembly
+    action = BLF.action
+    regions = parse_regions(BLF.regions, xItemRegions)
+    EG, ndofs4EG, qf, basisevaler, dii4op = prepare_assembly(BLF, operator, FE, regions, 2, action.bonus_quadorder, verbosity - 1)
+
+
+    # get size informations
+    ncomponents::Int = get_ncomponents(eltype(FE[1]))
+    ncomponents2::Int = get_ncomponents(eltype(FE[2]))
     cvals_resultdim::Int = size(basisevaler[1][apply_action_to][1].cvals,1)
+    cvals_resultdim2::Int = size(basisevaler[1][2][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
     # loop over items
-    itemET = xItemGeometries[1] # type of the current item
-    iEG::Int = 1 # index to the correct unique geometry
+    EG4dofitem1 = [1,1] # EG id of the current item with respect to operator 1
+    EG4dofitem2 = [1,1] # EG id of the current item with respect to operator 2
+    dofitems1 = [0,0] # itemnr where the dof numbers can be found (operator 1)
+    dofitems2 = [0,0] # itemnr where the dof numbers can be found (operator 2)
+    itempos4dofitem1 = [1,1] # local item position in dofitem1
+    itempos4dofitem2 = [1,1] # local item position in dofitem2
+    coefficient4dofitem1 = [0,0] # coefficients for operator 1
+    coefficient4dofitem2 = [0,0] # coefficients for operator 2
     ndofs4item1::Int = 0 # number of dofs for item
     ndofs4item2::Int = 0 # number of dofs for item
-    evalnr = [1,2] # evaler number that has to be used for current item
-    dofitem::Int = 0 # itemnr where the dof numbers can be found
+    dofitem1 = 0
+    dofitem2 = 0
     maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
     maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
     dofs = zeros(Int,maxdofs1)
     coeffs2 = zeros(T,maxdofs2)
-    temp::T = 0 # some temporary variable
-    fixedval = zeros(T,action_resultdim)
     action_input = zeros(T,cvals_resultdim) # heap for action input
-    action_result = zeros(T,action_resultdim) # heap for action output
-    localb = zeros(T,maxdofs1)
-    basisvals::Array{T,3} = basisevaler[1][1][1].cvals
-    nregions::Int = length(regions)
+    action_result = zeros(T,action.resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+    basisevaler4dofitem1 = basisevaler[1][1][1]
+    basisevaler4dofitem2 = basisevaler[1][2][1]
+    localmatrix = zeros(T,maxdofs1,maxdofs2)
+    fixedval = zeros(T, cvals_resultdim2) # some temporary variable
+    temp::T = 0 # some temporary variable
+    localb = zeros(Float64,maxdofs1)
 
     for item = 1 : nitems
-    for r = 1 : nregions
+    for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
-        dofitem = dofitems4item(item)[1]
+        # get dofitem informations
+        dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
+        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
 
-        # find index for CellType
-        itemET = EG4item(item)
-        for j=1:length(EG)
-            if itemET == EG[j]
-                iEG = j
-                break;
-            end
-        end
-        ndofs4item1 = ndofs4EG[1][iEG]
-        ndofs4item2 = ndofs4EG[2][iEG]
+        # get quadrature weights for integration domain
+        weights = qf[EG4dofitem1[1]].w
 
-        # update FEbasisevaler
-        evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
-        update!(basisevaler[iEG][evalnr[2]][1],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]][1].cvals
+        # loop over associated dofitems (maximal 2 for jump calculations)
+        # di, dj == 2 is only performed if one of the operators jumps
+        for di = 1 : 2, dj = 1 : 2
+            dofitem1 = dofitems1[di]
+            dofitem2 = dofitems2[dj]
+            if dofitem1 > 0 && dofitem2 > 0
 
-        # update action
-        update!(action, basisevaler[iEG][evalnr[1]][1], item, regions[r])
+                # get number of dofs on this dofitem
+                ndofs4item1 = ndofs4EG[1][EG4dofitem1[di]]
+                ndofs4item2 = ndofs4EG[2][EG4dofitem2[dj]]
 
-        # update dofs
-        for j=1:ndofs4item1
-            dofs[j] = xItemDofs1[j,dofitem]
-        end
-        for j=1:ndofs4item2
-            coeffs2[j] = fixedFE[xItemDofs2[j,dofitem]]
-        end
+                # update FEbasisevaler
+                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di]][1][itempos4dofitem1[di]]
+                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj]][2][itempos4dofitem2[dj]]
+                update!(basisevaler4dofitem1,dofitem1)
+                update!(basisevaler4dofitem2,dofitem2)
 
-        weights = qf[iEG].w
-        for i in eachindex(weights)
+                # update action on dofitem
+                if apply_action_to == 1
+                    update!(action, basisevaler4dofitem1, dofitem1, regions[r])
+                else
+                    update!(action, basisevaler4dofitem2, dofitem2, regions[r])
+                end
 
-            # evaluate second component
-            fill!(fixedval,0.0)
-            eval!(fixedval,basisevaler[iEG][evalnr[2]][1],coeffs2, i)
+                # update dofs
+                for j=1:ndofs4item1
+                    dofs[j] = xItemDofs1[j,dofitem1]
+                end
+                for j=1:ndofs4item2
+                    coeffs2[j] = fixedFE[xItemDofs2[j,dofitem2]]
+                end
 
-            if apply_action_to == 2
-                # apply action to second argument
-                apply_action!(action_result, fixedval, action, i)
+                for i in eachindex(weights)
+                
+                    # evaluate second component
+                    fill!(fixedval, 0.0)
+                    eval!(fixedval, basisevaler4dofitem2, coeffs2, i)
+                    fixedval .*= coefficient4dofitem2[dj]
 
-                # multiply first argument
-                for dof_i = 1 : ndofs4item1
-                    temp = 0
-                    for k = 1 : action_resultdim
-                        temp += action_result[k]*basisvals[k,dof_i,i]
+                    if apply_action_to == 2
+                        # apply action to second argument
+                        apply_action!(action_result, fixedval, action, i)
+
+                        # multiply first argument
+                        for dof_i = 1 : ndofs4item1
+                            temp = 0
+                            for k = 1 : action_resultdim
+                                temp += action_result[k] * basisevaler4dofitem1.cvals[k,dof_i,i]
+                            end
+                            localb[dof_i] += temp * weights[i] * coefficient4dofitem1[di]
+                        end 
+                    else
+                        for dof_i = 1 : ndofs4item1
+                            # apply action to first argument
+                            eval!(action_input, basisevaler4dofitem1, dof_i, i)
+                            apply_action!(action_result, action_input, action, i)
+            
+                            # multiply second argument
+                            temp = 0
+                            for k = 1 : action_resultdim
+                                temp += action_result[k] * fixedval[k]
+                            end
+                            localb[dof_i] += temp * weights[i] * coefficient4dofitem1[di]
+                        end 
                     end
-                    localb[dof_i] += temp * weights[i]
-                end 
-            else
+                end
+
                 for dof_i = 1 : ndofs4item1
-                    # apply action to first argument
-                    eval!(action_input,basisevaler[iEG][evalnr[1]][1],dof_i, i)
-                    apply_action!(action_result, action_input, action, i)
-    
-                    # multiply second argument
-                    temp = 0
-                    for k = 1 : action_resultdim
-                        temp += action_result[k]*fixedval[k]
-                    end
-                    localb[dof_i] += temp * weights[i]
-                end 
+                    b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item] * factor
+                end
+                fill!(localb, 0.0)
             end
         end 
-
-        for dof_i = 1 : ndofs4item1
-            b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item] * factor
-        end
-        fill!(localb, 0.0)
-
         break; # region for loop
     end # if in region    
     end # region for loop
@@ -1107,15 +1118,7 @@ function assemble!(
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     
-    if regions == [0]
-        try
-            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
-        catch
-            regions = [xItemRegions[1]]
-        end        
-    else
-        regions = Array{Int32,1}(regions)    
-    end
+    regions = parse_regions(TLF.regions, xItemRegions)
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
@@ -1271,15 +1274,7 @@ function assemble!(
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     
-    if regions == [0]
-        try
-            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
-        catch
-            regions = [xItemRegions[1]]
-        end        
-    else
-        regions = Array{Int32,1}(regions)    
-    end
+    regions = parse_regions(TLF.regions, xItemRegions)
     EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information

@@ -64,6 +64,7 @@ export integrate!, integrate
 
 
 include("finiteelements.jl")
+export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs
 export AbstractFiniteElement
 export FESpace
 

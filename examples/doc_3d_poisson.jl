@@ -68,7 +68,7 @@ function main()
         end
         
         ## create finite element space
-        FES = FESpace{FEType}(xgrid; dofmaps_needed = [ON_CELLS, ON_BFACES])
+        FES = FESpace{FEType}(xgrid; dofmaps_needed = [CellDofs, BFaceDofs])
 
         ## solve the problem
         Solution = FEVector{Float64}("Solution",FES)
