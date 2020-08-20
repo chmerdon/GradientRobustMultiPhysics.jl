@@ -43,9 +43,8 @@ abstract type BFaces <: AbstractGridIntegerArray1D end
 abstract type BFaceCellPos <: AbstractGridIntegerArray1D end # position of bface in adjacent cell
 abstract type BFaceVolumes <: AbstractGridFloatArray1D end
 
-
 # unique functions that only selects uniques in specified regions
-function uniqueEG(xItemGeometries, xItemRegions, xItemDofs, regions)
+function Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
     nitems = 0
     try
         nitems = num_sources(xItemGeometries)
@@ -84,7 +83,7 @@ function uniqueEG(xItemGeometries, xItemRegions, xItemDofs, regions)
 end
 
 # show function for ExtendableGrids and defined Components in its Dict
-function Base.show(io::IO, xgrid::ExtendableGrid)
+function showmore(io::IO, xgrid::ExtendableGrid)
 
     dim = size(xgrid[Coordinates],1)
     nnodes = num_sources(xgrid[Coordinates])

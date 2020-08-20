@@ -45,7 +45,7 @@ export CellNodes, CellFaces, CellEdges, CellFaceSigns, CellVolumes
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes
 export BFaces, BFaceCellPos, BFaceVolumes
-export uniqueEG
+export unique
 
 include("serialadjacency.jl")
 export SerialVariableTargetAdjacency

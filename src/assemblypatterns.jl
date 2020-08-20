@@ -179,43 +179,90 @@ struct ItemIntegrator{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssembly
 end
 
 
-# unique functions that only selects uniques in specified regions
-function Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
-    nitems = 0
-    try
-        nitems = num_sources(xItemGeometries)
-    catch
-        nitems = length(xItemGeometries)
-    end      
-    EG::Array{DataType,1} = []
-    ndofs4EG = Array{Array{Int,1},1}(undef,length(xItemDofs))
-    for e = 1 : length(xItemDofs)
-        ndofs4EG[e] = []
-    end
-    iEG = 0
-    cellEG = Triangle2D
-    for item = 1 : nitems
-        for j = 1 : length(regions)
-            if xItemRegions[item] == regions[j]
-                cellEG = xItemGeometries[item]
-                iEG = 0
-                for k = 1 : length(EG)
-                    if cellEG == EG[k]
-                        iEG = k
-                        break;
-                    end
-                end
-                if iEG == 0
-                    append!(EG, [xItemGeometries[item]])
-                    for e = 1 : length(xItemDofs)
-                        append!(ndofs4EG[e], num_targets(xItemDofs[e],item))
-                    end
-                end  
-                break; # rest of for loop can be skipped
-            end    
-        end
+function prepare_assembly(
+    form::AbstractAssemblyPattern{T,AT},
+    operator::Array{DataType,1},
+    FE::Array{<:FESpace,1},
+    regions::Array{Int32,1},
+    nrfactors::Int,
+    bonus_quadorder::Int,
+    verbosity::Int) where {T<: Real, AT <: AbstractAssemblyType}
+
+    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
+    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(FE))
+    for j=1:length(FE)
+        xItemDofs[j] = Dofmap4Operator(FE[j],AT,operator[j])
     end    
-    return EG, ndofs4EG
+
+    # find unique ElementGeometries
+    EG, ndofs4EG = Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
+
+    # get function that handles the dofitem information for every integration item
+    dii4op = Array{Function,1}(undef,length(FE))
+    dofitemAT = Array{Type{<:AbstractAssemblyType},1}(undef,length(FE))
+    for j=1:length(FE)
+        dii4op[j], dofitemAT[j]  = DofitemInformation4Operator(FE[j], EG, AT, operator[j])
+    end
+
+    # find proper quadrature QuadratureRules
+    # and construct matching FEBasisEvaluators
+    qf = Array{QuadratureRule,1}(undef,length(EG))
+    basisevaler = Array{Array{Array{FEBasisEvaluator,1},1},1}(undef,length(EG))
+    quadorder = 0
+    for j = 1 : length(EG)
+        basisevaler[j] = Array{Array{FEBasisEvaluator,1},1}(undef,length(FE))
+        quadorder = bonus_quadorder
+        for k = 1 : length(FE)
+            quadorder += get_polynomialorder(eltype(FE[k]), EG[j]) + QuadratureOrderShift4Operator(eltype(FE[k]),operator[k])
+        end
+        quadorder = max(quadorder,0)          
+        qf[j] = QuadratureRule{T,EG[j]}(quadorder);
+        # choose quadrature order for all finite elements
+        for k = 1 : length(FE)
+            if dofitemAT[k] == AT
+                basisevaler[j][k] = Array{FEBasisEvaluator,1}(undef,1)
+                if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
+                    basisevaler[j][k][1] = basisevaler[j][1][1] # e.g. for symmetric bilinerforms
+                elseif k > 2 && FE[k] == FE[2] && operator[k] == operator[2]
+                    basisevaler[j][k][1] = basisevaler[j][2][1]
+                else    
+                    basisevaler[j][k][1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
+                end    
+            elseif (dofitemAT == ON_CELLS) && (AT == ON_FACES)
+                # generate basis evaler for each face of the cell geometry by mapping the quadrature points of the face to
+                # the quadrature points of the respective cellface
+                nfaces4cell = nfaces_for_geometry(EG[j])
+                qfxref = qf[j].xref
+                xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
+                basisevaler[j][k] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
+                for f = 1 : nfaces4cell
+                    for i = 1 : length(qfxref)
+                        qf[j].xref[i] = xrefFACE2CELL[f](qfxref[i])
+                    end
+                    for k = 1 : length(FE)
+                        basisevaler[j][k][f] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
+                    end    
+                end
+            end
+        end
+    end        
+    if verbosity > 1
+        println("\nASSEMBLY PREPARATION $(typeof(form))")
+        println("====================================")
+        for k = 1 : length(FE)
+            println("      FE[$k] = $(FE[k].name), ndofs = $(FE[k].ndofs)")
+            println("operator[$k] = $(operator[k])")
+        end    
+        println("     action = $(form.action)")
+        println("    regions = $regions")
+        println("   Base.unique = $EG")
+        for j = 1 : length(EG)
+            println("\nQuadratureRule [$j] for $(EG[j]):")
+            Base.show(qf[j])
+        end
+    end
+    return EG, ndofs4EG, qf, basisevaler, dii4op
 end
 
 
@@ -238,27 +285,54 @@ function prepareOperatorAssembly(
     # find unique ElementGeometries
     EG, ndofs4EG = Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
 
+    # get function that handles the dofitem information for every integration item
+    dii4op = Array{Function,1}(undef,length(FE))
+    dofitemAT = Array{Type{<:AbstractAssemblyType},1}(undef,length(FE))
+    for j=1:length(FE)
+        dii4op[j], dofitemAT[j]  = DofitemInformation4Operator(FE[j], EG, AT, operator[j])
+    end
+
     # find proper quadrature QuadratureRules
     # and construct matching FEBasisEvaluators
     qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler = Array{Array{FEBasisEvaluator,1},1}(undef,length(EG))
+    basisevaler = Array{Array{Array{FEBasisEvaluator,1},1},1}(undef,length(EG))
     quadorder = 0
     for j = 1 : length(EG)
-        basisevaler[j] = Array{FEBasisEvaluator,1}(undef,length(FE))
-        quadorder = 0
+        basisevaler[j] = Array{Array{FEBasisEvaluator,1},1}(undef,length(FE))
+        quadorder = bonus_quadorder
+        for k = 1 : length(FE)
+            quadorder += get_polynomialorder(eltype(FE[k]), EG[j]) + QuadratureOrderShift4Operator(eltype(FE[k]),operator[k])
+        end
+        quadorder = max(quadorder,0)          
+        qf[j] = QuadratureRule{T,EG[j]}(quadorder);
         # choose quadrature order for all finite elements
         for k = 1 : length(FE)
-            FEType = eltype(FE[k])
-            quadorder = max(quadorder,bonus_quadorder + nrfactors*(get_polynomialorder(FEType, EG[j]) + QuadratureOrderShift4Operator(FEType,operator[k])))
+            if dofitemAT[k] == AT
+                basisevaler[j][k] = Array{FEBasisEvaluator,1}(undef,1)
+                if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
+                    basisevaler[j][k][1] = basisevaler[j][1][1] # e.g. for symmetric bilinerforms
+                elseif k > 2 && FE[k] == FE[2] && operator[k] == operator[2]
+                    basisevaler[j][k][1] = basisevaler[j][2][1]
+                else    
+                    basisevaler[j][k][1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
+                end    
+            elseif (dofitemAT == ON_CELLS) && (AT == ON_FACES)
+                # generate basis evaler for each face of the cell geometry by mapping the quadrature points of the face to
+                # the quadrature points of the respective cellface
+                nfaces4cell = nfaces_for_geometry(EG[j])
+                qfxref = qf[j].xref
+                xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
+                basisevaler[j][k] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
+                for f = 1 : nfaces4cell
+                    for i = 1 : length(qfxref)
+                        qf[j].xref[i] = xrefFACE2CELL[f](qfxref[i])
+                    end
+                    for k = 1 : length(FE)
+                        basisevaler[j][k][f] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
+                    end    
+                end
+            end
         end
-        for k = 1 : length(FE)
-            if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
-                basisevaler[j][k] = basisevaler[j][1] # e.g. for symmetric bilinerforms
-            else    
-                qf[j] = QuadratureRule{T,EG[j]}(quadorder);
-                basisevaler[j][k] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
-            end    
-        end    
     end        
     if verbosity > 1
         println("\nASSEMBLY PREPARATION $(typeof(form))")
@@ -269,70 +343,35 @@ function prepareOperatorAssembly(
         end    
         println("     action = $(form.action)")
         println("    regions = $regions")
-        println("   uniqueEG = $EG")
+        println("   Base.unique = $EG")
         for j = 1 : length(EG)
             println("\nQuadratureRule [$j] for $(EG[j]):")
             Base.show(qf[j])
         end
     end
-    dofitem4item(item) = item
+
+    dofitems4item(item) = [item]
     EG4item(item) = xItemGeometries[item]
     function FEevaler4item(target,item) 
         return nothing # we assume that target is already 1:length(FE) which stays the same for all items
     end
-    return EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, FEevaler4item
+    return EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, FEevaler4item, dii4op
 end
 
-# dysfunctional at the moment
-# will be repaired when assembly design steps are decided
-# function prepareOperatorAssembly(form::Type{<:AbstractFEForm}, AT::Type{<:ON_BFACESCELL}, operator::Type{<:AbstractFunctionOperator}, FE::AbstractFiniteElement, regions::Array{Int32,1}, NumberType::Type{<:Real}, nrfactors::Int, bonus_quadorder::Int, verbosity::Int)
-#     # find proper quadrature QuadratureRules
-#     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-#     xCellGeometries = FE.xgrid[CellGeometries]
 
-#     # find unique ElementGeometries
-#     # todo: we need unique CellGeometriy/BFaceGeometrie pairs in BFace regions
-
-#     qf = Array{QuadratureRule,1}(undef,length(EG))
-#     basisevaler = Array{Array{FEBasisEvaluator,1},1}(undef,length(EG))
-#     quadorder = 0
-#     nfaces4cell = 0
-#     for j = 1 : length(EG)
-#         itemEG = facetype_of_cellface(EG[j],1)
-#         nfaces4cell = nfaces_for_geometry(EG[j])
-#         basisevaler[j] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
-#         quadorder = bonus_quadorder + nrfactors*get_polynomialorder(typeof(FE), itemEG)
-#         qf[j] = QuadratureRule{T,itemEG}(quadorder);
-#         qfxref = qf[j].xref
-#         xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
-#         for k = 1 : nfaces4cell
-#             for i = 1 : length(qfxref)
-#                 qf[j].xref[i] = xrefFACE2CELL[k](qfxref[i])
-#             end
-#             basisevaler[j][k] = FEBasisEvaluator{T,typeof(FE),EG[j],operator,AT}(FE, qf[j])
-#         end    
-#         for i = 1 : length(qfxref)
-#             qf[j].xref[i] = qfxref[i]
-#         end
-#     end        
-#     if verbosity > 0
-#         println("\nASSEMBLY PREPARATION $form")
-#         println("====================================")
-#         println("        FE = $(FE.name), ndofs = $(FE.ndofs)")
-#         println("  operator = $operator")
-#         println("   regions = $regions")
-#         println("  uniqueEG = $EG")
-#         for j = 1 : length(EG)
-#             println("\nQuadratureRule [$j] for $(EG[j]):")
-#             show(qf[j])
-#         end
-#     end
-#     dofitem4item(item) = FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]]
-#     EG4item(item) = xCellGeometries[FE.xgrid[FaceCells][1,FE.xgrid[BFaces][item]]]
-#     FEevaler4item(item) = FE.xgrid[BFaceCellPos][item]
-#     return EG, qf, basisevaler, EG4item , dofitem4item, FEevaler4item
-# end
-
+function parse_regions(regions, xItemRegions)
+    regions = deepcopy(regions)
+    if regions == [0]
+        try
+            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end        
+    else
+        regions = Array{Int32,1}(regions)    
+    end
+    return regions
+end
 
 
 """
@@ -352,12 +391,9 @@ function evaluate!(
     FEB::FEVectorBlock;
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
+    # get adjacencies
     FE = FEB.FES
-    FEType = eltype(FE)
     operator = form.operator
-    regions = form.regions
-    action = form.action
-
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
@@ -365,34 +401,28 @@ function evaluate!(
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
 
-    bonus_quadorder = action.bonus_quadorder
-    if regions == [0]
-        try
-            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
-        catch
-            regions = [xItemRegions[1]]
-        end        
-    else
-        regions = Array{Int32,1}(regions)    
-    end
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(form, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
+    # prepare assembly
+    action = form.action
+    regions = parse_regions(form.regions, xItemRegions)
+    EG, ndofs4EG, qf, basisevaler, dii4op = prepare_assembly(form, [operator], [FE], regions, 1, action.bonus_quadorder, verbosity - 1)
 
-    # collect FE and FEBasisEvaluator information
-    FEType = eltype(FE)
-    ncomponents::Int = get_ncomponents(FEType)
-    cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
+    # get size informations
+    ncomponents::Int = get_ncomponents(eltype(FE))
+    cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
     @assert size(b,1) == cvals_resultdim
 
     # loop over items
-    itemET = xItemGeometries[1] # type of the current item
-    iEG = 1 # index to the correct unique geometry
-    ndofs4item = 0 # number of dofs for item
-    evalnr = [1] # evaler number that has to be used for current item
-    dofitem = 0 # itemnr where the dof numbers can be found
+    EG4dofitem = [1,1] # type of the current item
+    ndofs4dofitem = 0 # number of dofs for item
+    dofitems = [0,0] # itemnr where the dof numbers can be found
+    itempos4dofitem = [1,1] # local item position in dofitem SerialVariableTargetAdjacency
+    coefficient4dofitem = [0,0]
+    dofitem = 0
     coeffs = zeros(Float64,max_num_targets_per_source(xItemDofs))
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action.resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+    basisevaler4dofitem = basisevaler[1][1][1]
 
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -400,41 +430,41 @@ function evaluate!(
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
-        # item number for dof provider
-        dofitem = dofitem4item(item)
+        # get dofitem informations
+        dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
 
-        # find index for CellType
-        itemET = EG4item(item)
-        for j=1:length(EG)
-            if itemET == EG[j]
-                iEG = j
-                break;
+        # loop over associated dofitems
+        for di = 1 : length(dofitems)
+            dofitem = dofitems[di]
+            if dofitem != 0
+
+                # get number of dofs on this dofitem
+                ndofs4dofitem = ndofs4EG[1][EG4dofitem[di]]
+
+                # update FEbasisevaler on dofitem
+                basisevaler4dofitem = basisevaler[EG4dofitem[di]][1][itempos4dofitem[di]]
+                update!(basisevaler4dofitem,dofitem)
+
+                # update action on dofitem
+                update!(action, basisevaler4dofitem, dofitem, regions[r])
+
+                # update coeffs on dofitem
+                for j=1:ndofs4dofitem
+                    coeffs[j] = FEB[xItemDofs[j,dofitem]]
+                end
+
+                weights = qf[EG4dofitem[di]].w
+                for i in eachindex(weights)
+                    # apply action to FEVector
+                    fill!(action_input, 0)
+                    eval!(action_input, basisevaler4dofitem, coeffs, i)
+                    apply_action!(action_result, action_input, action, i)
+                    for j = 1 : action.resultdim
+                        b[j,item] += action_result[j] * weights[i] * xItemVolumes[item] * coefficient4dofitem[di]
+                    end
+                end  
             end
         end
-        ndofs4item = ndofs4EG[1][iEG]
-
-        # update FEbasisevaler
-        evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-
-        # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
-
-        # update dofs
-        for j=1:ndofs4item
-            coeffs[j] = FEB[xItemDofs[j,dofitem]]
-        end
-
-        weights = qf[iEG].w
-        for i in eachindex(weights)
-            # apply action to FEVector
-            fill!(action_input,0)
-            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
-            apply_action!(action_result, action_input, action, i)
-            for j = 1 : action.resultdim
-                b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
-            end
-        end  
         break; # region for loop
     end # if in region    
     end # region for loop
@@ -460,7 +490,6 @@ function evaluate(
 
     FE = FEB.FES
     operator = form.operator
-    regions = form.regions
     action = form.action
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -470,21 +499,13 @@ function evaluate(
     nitems = num_sources(xItemNodes)
 
     bonus_quadorder = action.bonus_quadorder
-    if regions == [0]
-        try
-            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
-        catch
-            regions = [xItemRegions[1]]
-        end        
-    else
-        regions = Array{Int32,1}(regions)    
-    end
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(form, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
+    regions = parse_regions(form.regions, xItemRegions)
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(form, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
 
     # loop over items
     itemET = xItemGeometries[1] # type of the current item
@@ -506,7 +527,7 @@ function evaluate(
     if xItemRegions[item] == regions[r]
 
         # item number for dof provider
-        dofitem = dofitem4item(item)
+        dofitem = dofitems4item(item)[1]
 
         # find index for CellType
         itemET = EG4item(item)
@@ -520,10 +541,10 @@ function evaluate(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
+        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
+        update!(action, basisevaler[iEG][evalnr[1]][1], item, regions[r])
 
         # update dofs
         for j=1:ndofs4item
@@ -534,7 +555,7 @@ function evaluate(
         for i = 1 : length(weights)
             # apply action to FEVector
             fill!(action_input,0)
-            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
+            eval!(action_input,basisevaler[iEG][evalnr[1]][1],coeffs, i)
             apply_action!(action_result, action_input, action, i)
             for j = 1 : action.resultdim
                 result += action_result[j] * weights[i] * xItemVolumes[item]
@@ -566,7 +587,6 @@ function assemble!(
     FE = LF.FE
     operator = LF.operator
     action = LF.action
-    regions = LF.regions
 
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -575,22 +595,14 @@ function assemble!(
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
-    if regions == [0]
-        try
-            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
-        catch
-            regions = [xItemRegions[1]]
-        end        
-    else
-        regions = Array{Int32,1}(regions)    
-    end
+    regions = parse_regions(LF.regions, xItemRegions)
     bonus_quadorder = action.bonus_quadorder
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
     # loop over items
@@ -604,7 +616,7 @@ function assemble!(
     temp::T = 0 # some temporary variable
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
+    basisvals::Array{T,3} = basisevaler[1][1][1].cvals # pointer to operator results
     localb = zeros(T,maxdofs,action_resultdim)
     nregions::Int = length(regions)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
@@ -615,7 +627,7 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # item number for dof provider
-        dofitem = dofitem4item(item)
+        dofitem = dofitems4item(item)[1]
 
         # find index for CellType
         itemET = EG4item(item)
@@ -629,11 +641,11 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
+        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
+        basisvals = basisevaler[iEG][evalnr[1]][1].cvals
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
+        update!(action, basisevaler[iEG][evalnr[1]][1], item, regions[r])
 
         # update dofs
         for j=1:ndofs4item
@@ -644,7 +656,7 @@ function assemble!(
         for i in eachindex(weights)
             for dof_i = 1 : ndofs4item
                 # apply action
-                eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
+                eval!(action_input,basisevaler[iEG][evalnr[1]][1], dof_i, i)
                 apply_action!(action_result, action_input, action, i)
                 for j = 1 : action_resultdim
                    localb[dof_i,j] += action_result[j] * weights[i]
@@ -702,12 +714,12 @@ function assemble!( # LF has to have resultdim == 1
         regions = Array{Int32,1}(regions)    
     end
     bonus_quadorder = action.bonus_quadorder
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(LF, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
     action_resultdim::Int = action.resultdim
     @assert action_resultdim == 1
 
@@ -722,7 +734,7 @@ function assemble!( # LF has to have resultdim == 1
     temp::T = 0 # some temporary variable
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
-    basisvals::Array{T,3} = basisevaler[1][1].cvals # pointer to operator results
+    basisvals::Array{T,3} = basisevaler[1][1][1].cvals # pointer to operator results
     localb = zeros(T,maxdofs)
     nregions::Int = length(regions)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
@@ -733,7 +745,7 @@ function assemble!( # LF has to have resultdim == 1
     if xItemRegions[item] == regions[r]
 
         # item number for dof provider
-        dofitem = dofitem4item(item)
+        dofitem = dofitems4item(item)[1]
 
         # find index for CellType
         itemET = EG4item(item)
@@ -747,11 +759,11 @@ function assemble!( # LF has to have resultdim == 1
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
+        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
+        basisvals = basisevaler[iEG][evalnr[1]][1].cvals
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
+        update!(action, basisevaler[iEG][evalnr[1]][1], item, regions[r])
 
         # update dofs
         for j=1:ndofs4item
@@ -761,7 +773,7 @@ function assemble!( # LF has to have resultdim == 1
         weights = qf[iEG].w
         for i in eachindex(weights)
             for dof_i = 1 : ndofs4item
-                eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
+                eval!(action_input,basisevaler[iEG][evalnr[1]][1], dof_i, i)
                 apply_action!(action_result, action_input, action, i)
                 localb[dof_i] += action_result[1] * weights[i]
             end 
@@ -827,12 +839,12 @@ function assemble!(
     else
         regions = Array{Int32,1}(regions)    
     end
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(FE[1])
     ncomponents::Int = get_ncomponents(FEType)
-    cvals_resultdim::Int = size(basisevaler[1][apply_action_to].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[1][apply_action_to][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
     # loop over items
@@ -850,8 +862,8 @@ function assemble!(
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
     localmatrix = zeros(T,maxdofs1,maxdofs2)
-    basisvals::Array{T,3} = basisevaler[1][1].cvals
-    basisvals2::Array{T,3} = basisevaler[1][2].cvals
+    basisvals::Array{T,3} = basisevaler[1][1][1].cvals
+    basisvals2::Array{T,3} = basisevaler[1][2][1].cvals
     nregions::Int = length(regions)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
@@ -860,7 +872,7 @@ function assemble!(
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
-        dofitem = dofitem4item(item)
+        dofitem = dofitems4item(item)[1]
 
         # find index for CellType
         itemET = EG4item(item)
@@ -875,13 +887,13 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-        update!(basisevaler[iEG][evalnr[2]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
-        basisvals2 = basisevaler[iEG][evalnr[2]].cvals
+        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
+        update!(basisevaler[iEG][evalnr[2]][1],dofitem)
+        basisvals = basisevaler[iEG][evalnr[1]][1].cvals
+        basisvals2 = basisevaler[iEG][evalnr[2]][1].cvals
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
+        update!(action, basisevaler[iEG][evalnr[apply_action_to]][1], item, regions[r])
 
         # update dofs
         for j=1:ndofs4item1
@@ -896,7 +908,7 @@ function assemble!(
            
             if apply_action_to == 1
                 for dof_i = 1 : ndofs4item1
-                    eval!(action_input,basisevaler[iEG][evalnr[1]], dof_i, i)
+                    eval!(action_input,basisevaler[iEG][evalnr[1]][1], dof_i, i)
                     apply_action!(action_result, action_input, action, i)
                     action_result .*= weights[i]
 
@@ -920,7 +932,7 @@ function assemble!(
                 end 
             else
                 for dof_j = 1 : ndofs4item2
-                    eval!(action_input,basisevaler[iEG][evalnr[2]], dof_j, i)
+                    eval!(action_input,basisevaler[iEG][evalnr[2]][1], dof_j, i)
                     apply_action!(action_result, action_input, action, i)
                     action_result .*= weights[i]
 
@@ -1036,7 +1048,7 @@ function assemble!(
     else
         regions = Array{Int32,1}(regions)    
     end
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(BLF, operator, FE, regions, 2, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(FE[1])
@@ -1060,7 +1072,7 @@ function assemble!(
     action_input = zeros(T,cvals_resultdim) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
     localb = zeros(T,maxdofs1)
-    basisvals::Array{T,3} = basisevaler[1][1].cvals
+    basisvals::Array{T,3} = basisevaler[1][1][1].cvals
     nregions::Int = length(regions)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
@@ -1069,7 +1081,7 @@ function assemble!(
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
-        dofitem = dofitem4item(item)
+        dofitem = dofitems4item(item)[1]
 
         # find index for CellType
         itemET = EG4item(item)
@@ -1084,12 +1096,12 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-        update!(basisevaler[iEG][evalnr[2]],dofitem)
-        basisvals = basisevaler[iEG][evalnr[1]].cvals
+        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
+        update!(basisevaler[iEG][evalnr[2]][1],dofitem)
+        basisvals = basisevaler[iEG][evalnr[1]][1].cvals
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[1]], item, regions[r])
+        update!(action, basisevaler[iEG][evalnr[1]][1], item, regions[r])
 
         # update dofs
         for j=1:ndofs4item1
@@ -1104,7 +1116,7 @@ function assemble!(
 
             # evaluate second component
             fill!(fixedval,0.0)
-            eval!(fixedval,basisevaler[iEG][evalnr[2]],coeffs2, i)
+            eval!(fixedval,basisevaler[iEG][evalnr[2]][1],coeffs2, i)
 
             if apply_action_to == 2
                 # apply action to second argument
@@ -1121,7 +1133,7 @@ function assemble!(
             else
                 for dof_i = 1 : ndofs4item1
                     # apply action to first argument
-                    eval!(action_input,basisevaler[iEG][evalnr[1]],dof_i, i)
+                    eval!(action_input,basisevaler[iEG][evalnr[1]][1],dof_i, i)
                     apply_action!(action_result, action_input, action, i)
     
                     # multiply second argument
@@ -1195,13 +1207,13 @@ function assemble!(
     else
         regions = Array{Int32,1}(regions)    
     end
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(FE[1])
     ncomponents::Int = get_ncomponents(FEType)
-    cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
-    cvals_resultdim2::Int = size(basisevaler[1][2].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
+    cvals_resultdim2::Int = size(basisevaler[1][2][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
     # loop over items
@@ -1223,7 +1235,7 @@ function assemble!(
     action_input = zeros(T,cvals_resultdim+cvals_resultdim2) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
     localmatrix = zeros(T,maxdofs2,maxdofs3)
-    basisvals3::Array{T,3} = basisevaler[1][3].cvals
+    basisvals3::Array{T,3} = basisevaler[1][3][1].cvals
     nregions::Int = length(regions)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
@@ -1232,7 +1244,7 @@ function assemble!(
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
-        dofitem = dofitem4item(item)
+        dofitem = dofitems4item(item)[1]
 
         # find index for CellType
         itemET = EG4item(item)
@@ -1248,13 +1260,13 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-        update!(basisevaler[iEG][evalnr[2]],dofitem)
-        update!(basisevaler[iEG][evalnr[3]],dofitem)
-        basisvals3 = basisevaler[iEG][evalnr[3]].cvals
+        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
+        update!(basisevaler[iEG][evalnr[2]][1],dofitem)
+        update!(basisevaler[iEG][evalnr[3]][1],dofitem)
+        basisvals3 = basisevaler[iEG][evalnr[3]][1].cvals
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[2]], item, regions[r])
+        update!(action, basisevaler[iEG][evalnr[2]][1], item, regions[r])
 
         # update dofs
         for j=1:ndofs4item1
@@ -1272,11 +1284,11 @@ function assemble!(
 
             # evaluate first component
             fill!(action_input,0.0)
-            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs, i)
+            eval!(action_input,basisevaler[iEG][evalnr[1]][1],coeffs, i)
            
             for dof_i = 1 : ndofs4item2
                 # apply action to FE1 eval and second argument
-                eval!(action_input,basisevaler[iEG][evalnr[2]],dof_i, i, offset = cvals_resultdim)
+                eval!(action_input,basisevaler[iEG][evalnr[2]][1],dof_i, i, offset = cvals_resultdim)
                 apply_action!(action_result, action_input, action, i)
 
                 for dof_j = 1 : ndofs4item3
@@ -1359,13 +1371,13 @@ function assemble!(
     else
         regions = Array{Int32,1}(regions)    
     end
-    EG, ndofs4EG, qf, basisevaler, EG4item, dofitem4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
+    EG, ndofs4EG, qf, basisevaler, EG4item, dofitems4item, evaler4item! = prepareOperatorAssembly(TLF, operator, FE, regions, 3, bonus_quadorder, verbosity-1)
 
     # collect FE and FEBasisEvaluator information
     FEType = eltype(FE[1])
     ncomponents::Int = get_ncomponents(FEType)
-    cvals_resultdim::Int = size(basisevaler[1][1].cvals,1)
-    cvals_resultdim2::Int = size(basisevaler[1][2].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
+    cvals_resultdim2::Int = size(basisevaler[1][2][1].cvals,1)
     action_resultdim::Int = action.resultdim
 
     # loop over items
@@ -1387,7 +1399,7 @@ function assemble!(
     action_input = zeros(T,cvals_resultdim+cvals_resultdim2) # heap for action input
     action_result = zeros(T,action_resultdim) # heap for action output
     localb = zeros(T,maxdofs3)
-    basisvals3::Array{T,3} = basisevaler[1][3].cvals
+    basisvals3::Array{T,3} = basisevaler[1][3][1].cvals
     nregions::Int = length(regions)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
 
@@ -1396,7 +1408,7 @@ function assemble!(
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
-        dofitem = dofitem4item(item)
+        dofitem = dofitems4item(item)[1]
 
         # find index for CellType
         itemET = EG4item(item)
@@ -1412,13 +1424,13 @@ function assemble!(
 
         # update FEbasisevaler
         evaler4item!(evalnr,item)
-        update!(basisevaler[iEG][evalnr[1]],dofitem)
-        update!(basisevaler[iEG][evalnr[2]],dofitem)
-        update!(basisevaler[iEG][evalnr[3]],dofitem)
-        basisvals3 = basisevaler[iEG][evalnr[3]].cvals
+        update!(basisevaler[iEG][evalnr[1]][1],dofitem)
+        update!(basisevaler[iEG][evalnr[2]][1],dofitem)
+        update!(basisevaler[iEG][evalnr[3]][1],dofitem)
+        basisvals3 = basisevaler[iEG][evalnr[3]][1].cvals
 
         # update action
-        update!(action, basisevaler[iEG][evalnr[2]], item, regions[r])
+        update!(action, basisevaler[iEG][evalnr[2]][1], item, regions[r])
 
         # update dofs
         for j=1:ndofs4item1
@@ -1436,8 +1448,8 @@ function assemble!(
 
             # evaluate first and second component
             fill!(action_input,0.0)
-            eval!(action_input,basisevaler[iEG][evalnr[1]],coeffs1, i)
-            eval!(action_input,basisevaler[iEG][evalnr[2]],coeffs2, i, offset = cvals_resultdim)
+            eval!(action_input,basisevaler[iEG][evalnr[1]][1],coeffs1, i)
+            eval!(action_input,basisevaler[iEG][evalnr[2]][1],coeffs2, i, offset = cvals_resultdim)
 
             # apply action to FE1 and FE2
             apply_action!(action_result, action_input, action, i)

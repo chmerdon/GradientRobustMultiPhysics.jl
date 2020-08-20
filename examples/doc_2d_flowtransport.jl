@@ -94,7 +94,7 @@ function main()
     #####################################################################################
 
     ## load Stokes problem prototype
-    ## and assign boundary data (inlet profile in bregion 2, zero Dichlet at walls 1 and nothing at outlet region 2)
+    ## and assign boundary data (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
     Problem.name = "Stokes + Transport"
     add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)

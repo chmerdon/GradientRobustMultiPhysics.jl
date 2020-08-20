@@ -40,7 +40,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
       regions = Array{Int32,1}(regions)    
   end
 
-  EG, ndofs4EG = uniqueEG(xItemGeometries, xItemRegions, [xItemDofs], regions)
+  EG, ndofs4EG = Base.unique(xItemGeometries, xItemRegions, [xItemDofs], regions)
   qf = Array{QuadratureRule,1}(undef,length(EG))
   basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
   FEType = Base.eltype(FE)

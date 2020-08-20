@@ -139,7 +139,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmaps_needed = [])
     
-    ItemDofs = Dofmap4Operator(FE,AT,operator)
+    ItemDofs = Dofmap4Operator(FE,AT,FEOP)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
 

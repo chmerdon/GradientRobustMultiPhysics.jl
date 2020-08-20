@@ -13,6 +13,12 @@ abstract type Identity <: AbstractFunctionOperator end # 1*v_h
 """
 $(TYPEDEF)
 
+identity jump operator: evaluates face jumps of finite element function
+"""
+abstract type FaceJumpIdentity <: Identity end # [[v_h]]
+"""
+$(TYPEDEF)
+
 reconstruction identity operator: evaluates a reconstructed version of the finite element function.
 
 FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
@@ -98,7 +104,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents
 Length4Operator(::Type{NormalFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/(xdim-1))
-Length4Operator(::Type{Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
+Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
 Length4Operator(::Type{Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
@@ -117,7 +123,65 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialG
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
-# junctions for dofmaps
-Dofmap4Operator(FE::FESpace,::Type{ON_CELLS}, ::Type{<:AbstractFunctionOperator}) = FE.dofmaps[CellDofs]
-Dofmap4Operator(FE::FESpace,::Type{ON_FACES}, ::Type{<:AbstractFunctionOperator}) = FE.dofmaps[FaceDofs]
-Dofmap4Operator(FE::FESpace,::Type{ON_BFACES}, ::Type{<:AbstractFunctionOperator}) = FE.dofmaps[BFaceDofs]
+# default junctions
+Dofmap4Operator(FES::FESpace,::Type{ON_CELLS}, ::Type{<:AbstractFunctionOperator}) = FES.dofmaps[CellDofs]
+Dofmap4Operator(FES::FESpace,::Type{ON_FACES}, ::Type{<:AbstractFunctionOperator}) = FES.dofmaps[FaceDofs]
+Dofmap4Operator(FES::FESpace,::Type{ON_BFACES}, ::Type{<:AbstractFunctionOperator}) = FES.dofmaps[BFaceDofs]
+function DofitemInformation4Operator(FES::FESpace, EG, AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFunctionOperator})
+    xItemGeometries = FES.xgrid[GridComponentGeometries4AssemblyType(AT)]
+    function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        dofitems[1] = item
+        dofitems[2] = item
+        itempos4dofitem[1] = 1
+        coefficient4dofitem[1] = 1
+        # find EG index for geometry
+        for j=1:length(EG)
+            if xItemGeometries[item] == EG[j]
+                EG4dofitem[1] = j
+                break;
+            end
+        end
+    end
+    return closure, AT
+end
+
+# special junctions for jump operators
+Dofmap4Operator(FES::FESpace,::Type{ON_FACES}, ::Type{FaceJumpIdentity}) = FES.dofmaps[CellDofs]
+function DofitemInformation4Operator(FES::FESpace, EG, ::Type{ON_FACES}, ::Type{FaceJumpIdentity})
+    xFaceCells = FES.xgrid[FaceCells]
+    xCellFaces = FES.xgrid[CellFaces]
+    xCellGeometries = FES.xgrid[CellGeometries]
+    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        dofitems[1] = xFaceCells[1,item]
+        dofitems[2] = xFaceCells[2,item]
+        for k = 1 : num_targets(xCellFaces,dofitems[1])
+            if xCellFaces[k,dofitems[1]] == item
+                itempos4dofitem[1] = k
+            end
+        end
+        if dofitems[2] > 0
+            for k = 1 : num_targets(xCellFaces,dofitems[2])
+                if xCellFaces[k,dofitems[2]] == item
+                    itempos4dofitem[2] = k
+                end
+            end
+        end
+        coefficient4dofitem[1] = 1
+        coefficient4dofitem[2] = -1
+
+        # find EG index for geometry
+        for j=1:length(EG)
+            if xCellGeometries[dofitems[1]] == EG[j]
+                EG4dofitem[1] = j
+                break;
+            end
+        end
+        for j=1:length(EG)
+            if xCellGeometries[dofitems[2]] == EG[j]
+                EG4dofitem[2] = j
+                break;
+            end
+        end
+    end
+    return closure!, ON_CELLS
+end
