@@ -93,9 +93,7 @@ export FEMatrixBlock, FEMatrix
 export fill!, addblock!, addblock_matmul!
 
 
-include("febasisevaluator.jl")
-export FEBasisEvaluator, update!
-
+include("functionoperators.jl")
 export AbstractFunctionOperator
 export Identity, ReconstructionIdentity
 export NormalFlux, TangentFlux
@@ -104,10 +102,13 @@ export Divergence, ReconstructionDivergence
 export CurlScalar, Rotation
 export Laplacian, Hessian
 export Trace, Deviator
-
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator
-export FEPropertyDofs4AssemblyType
+export Dofmap4Operator
 export DefaultDirichletBoundaryOperator4FE
+
+
+include("febasisevaluator.jl")
+export FEBasisEvaluator, update!, eval!
 
 
 include("interpolations.jl")

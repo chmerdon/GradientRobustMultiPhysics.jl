@@ -179,13 +179,6 @@ struct ItemIntegrator{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssembly
 end
 
 
-
-# junctions for dof fields
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{ON_CELLS}) = FE.dofmaps[CellDofs]
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{ON_FACES}) = FE.dofmaps[FaceDofs]
-FEPropertyDofs4AssemblyType(FE::FESpace,::Type{ON_BFACES}) = FE.dofmaps[BFaceDofs]
-
-
 # unique functions that only selects uniques in specified regions
 function Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
     nitems = 0
@@ -239,7 +232,7 @@ function prepareOperatorAssembly(
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(FE))
     for j=1:length(FE)
-        xItemDofs[j] = FEPropertyDofs4AssemblyType(FE[j],AT)
+        xItemDofs[j] = Dofmap4Operator(FE[j],AT,operator[j])
     end    
 
     # find unique ElementGeometries
@@ -361,16 +354,17 @@ function evaluate!(
 
     FE = FEB.FES
     FEType = eltype(FE)
-    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
-    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = num_sources(xItemNodes)
-
     operator = form.operator
     regions = form.regions
     action = form.action
+
+    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
+    xItemDofs = Dofmap4Operator(FE,AT,operator)
+    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
+
     bonus_quadorder = action.bonus_quadorder
     if regions == [0]
         try
@@ -465,16 +459,16 @@ function evaluate(
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
     FE = FEB.FES
-    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
-    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = num_sources(xItemNodes)
-
     operator = form.operator
     regions = form.regions
     action = form.action
+    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
+    xItemDofs = Dofmap4Operator(FE,AT,operator)
+    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
+
     bonus_quadorder = action.bonus_quadorder
     if regions == [0]
         try
@@ -577,7 +571,7 @@ function assemble!(
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemDofs = Dofmap4Operator(FE,AT,operator)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
@@ -694,7 +688,7 @@ function assemble!( # LF has to have resultdim == 1
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = FEPropertyDofs4AssemblyType(FE,AT)
+    xItemDofs = Dofmap4Operator(FE,AT,operator)
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
     
@@ -819,8 +813,8 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = FEPropertyDofs4AssemblyType(FE[1],AT)
-    xItemDofs2 = FEPropertyDofs4AssemblyType(FE[2],AT)
+    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
+    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     
@@ -1028,8 +1022,8 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = FEPropertyDofs4AssemblyType(FE[1],AT)
-    xItemDofs2 = FEPropertyDofs4AssemblyType(FE[2],AT)
+    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
+    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     
@@ -1186,9 +1180,9 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = FEPropertyDofs4AssemblyType(FE[1],AT)
-    xItemDofs2 = FEPropertyDofs4AssemblyType(FE[2],AT)
-    xItemDofs3 = FEPropertyDofs4AssemblyType(FE[3],AT)
+    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
+    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
+    xItemDofs3 = Dofmap4Operator(FE[3],AT,operator[3])
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     
@@ -1350,9 +1344,9 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = FEPropertyDofs4AssemblyType(FE[1],AT)
-    xItemDofs2 = FEPropertyDofs4AssemblyType(FE[2],AT)
-    xItemDofs3 = FEPropertyDofs4AssemblyType(FE[3],AT)
+    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
+    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
+    xItemDofs3 = Dofmap4Operator(FE[3],AT,operator[3])
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
     

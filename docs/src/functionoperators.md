@@ -25,7 +25,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["febasisevaluator.jl"]
+Pages = ["functionoperators.jl"]
 Order   = [:type, :function]
 ```
 
