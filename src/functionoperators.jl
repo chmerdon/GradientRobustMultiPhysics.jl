@@ -131,7 +131,7 @@ function DofitemInformation4Operator(FES::FESpace, EG, AT::Type{<:AbstractAssemb
     xItemGeometries = FES.xgrid[GridComponentGeometries4AssemblyType(AT)]
     function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
         dofitems[1] = item
-        dofitems[2] = item
+        dofitems[2] = 0
         itempos4dofitem[1] = 1
         coefficient4dofitem[1] = 1
         # find EG index for geometry
