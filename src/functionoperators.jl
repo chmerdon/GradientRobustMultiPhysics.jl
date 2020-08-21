@@ -123,11 +123,13 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialG
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
+Dofmap4AssemblyType(FES::FESpace, ::Type{ON_CELLS}) = FES.dofmaps[CellDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{ON_FACES}) = FES.dofmaps[FaceDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES.dofmaps[BFaceDofs]
+
 # default junctions
-Dofmap4Operator(FES::FESpace,::Type{ON_CELLS}, ::Type{<:AbstractFunctionOperator}) = FES.dofmaps[CellDofs]
-Dofmap4Operator(FES::FESpace,::Type{ON_FACES}, ::Type{<:AbstractFunctionOperator}) = FES.dofmaps[FaceDofs]
-Dofmap4Operator(FES::FESpace,::Type{ON_BFACES}, ::Type{<:AbstractFunctionOperator}) = FES.dofmaps[BFaceDofs]
-function DofitemInformation4Operator(FES::FESpace, EG, AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFunctionOperator})
+DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFunctionOperator}) = AT
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFunctionOperator})
     xItemGeometries = FES.xgrid[GridComponentGeometries4AssemblyType(AT)]
     function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
         dofitems[1] = item
@@ -141,16 +143,19 @@ function DofitemInformation4Operator(FES::FESpace, EG, AT::Type{<:AbstractAssemb
                 break;
             end
         end
+        return EG4dofitem[1]
     end
-    return closure, AT
+    return closure
 end
 
 # special junctions for jump operators
-Dofmap4Operator(FES::FESpace,::Type{ON_FACES}, ::Type{FaceJumpIdentity}) = FES.dofmaps[CellDofs]
-function DofitemInformation4Operator(FES::FESpace, EG, ::Type{ON_FACES}, ::Type{FaceJumpIdentity})
+DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, ::Type{FaceJumpIdentity}) = ON_CELLS
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, ::Type{ON_FACES}, ::Type{FaceJumpIdentity})
     xFaceCells = FES.xgrid[FaceCells]
     xCellFaces = FES.xgrid[CellFaces]
+    xFaceGeometries = FES.xgrid[FaceGeometries]
     xCellGeometries = FES.xgrid[CellGeometries]
+    println("$EGdofitems")
     function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
         dofitems[1] = xFaceCells[1,item]
         dofitems[2] = xFaceCells[2,item]
@@ -170,18 +175,25 @@ function DofitemInformation4Operator(FES::FESpace, EG, ::Type{ON_FACES}, ::Type{
         coefficient4dofitem[2] = -1
 
         # find EG index for geometry
-        for j=1:length(EG)
-            if xCellGeometries[dofitems[1]] == EG[j]
-                EG4dofitem[1] = j
+        for j=1:length(EGdofitems)
+            if xCellGeometries[dofitems[1]] == EGdofitems[j]
+                EG4dofitem[1] = length(EG) + j
                 break;
             end
         end
+        if dofitems[2] > 0
+            for j=1:length(EGdofitems)
+                if xCellGeometries[dofitems[2]] == EGdofitems[j]
+                    EG4dofitem[2] = length(EG) + j
+                    break;
+                end
+            end
+        end
         for j=1:length(EG)
-            if xCellGeometries[dofitems[2]] == EG[j]
-                EG4dofitem[2] = j
-                break;
+            if xFaceGeometries[item] == EG[j]
+                return j
             end
         end
     end
-    return closure!, ON_CELLS
+    return closure!
 end

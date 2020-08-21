@@ -1,7 +1,7 @@
 module GradientRobustMultiPhysics
 
 using ExtendableGrids
-export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D
+export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D, num_sources
 using ExtendableSparse
 using SuiteSparse
 using SparseArrays
@@ -96,7 +96,7 @@ export fill!, addblock!, addblock_matmul!
 
 include("functionoperators.jl")
 export AbstractFunctionOperator
-export Identity, ReconstructionIdentity
+export Identity, ReconstructionIdentity, FaceJumpIdentity
 export NormalFlux, TangentFlux
 export Gradient, SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
@@ -104,7 +104,7 @@ export CurlScalar, Rotation
 export Laplacian, Hessian
 export Trace, Deviator
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator
-export Dofmap4Operator
+export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 
 

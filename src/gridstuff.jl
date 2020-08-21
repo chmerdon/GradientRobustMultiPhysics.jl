@@ -60,7 +60,7 @@ function Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
     cellEG = Triangle2D
     for item = 1 : nitems
         for j = 1 : length(regions)
-            if xItemRegions[item] == regions[j]
+            if xItemRegions[item] == regions[j] || regions[j] == 0
                 cellEG = xItemGeometries[item]
                 iEG = 0
                 for k = 1 : length(EG)
@@ -72,7 +72,7 @@ function Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
                 if iEG == 0
                     append!(EG, [xItemGeometries[item]])
                     for e = 1 : length(xItemDofs)
-                        append!(ndofs4EG[e], num_targets(xItemDofs[e],item))
+                        push!(ndofs4EG[e], num_targets(xItemDofs[e],item))
                     end
                 end  
                 break; # rest of for loop can be skipped

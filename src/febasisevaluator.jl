@@ -38,7 +38,7 @@ end
 
 
 function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
-    ItemDofs = Dofmap4Operator(FE,AT,FEOP)
+    ItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, FEOP))
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
 
@@ -139,7 +139,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmaps_needed = [])
     
-    ItemDofs = Dofmap4Operator(FE,AT,FEOP)
+    ItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, FEOP))
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
 
@@ -208,6 +208,12 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
     return nothing
 end
 
+# IDENTITY OPERATOR
+# H1 ELEMENTS (nothing has to be done)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FaceJumpIdentity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+    FEBE.citem = item
+    return nothing
+end
 
 # RECONSTRUCTION IDENTITY OPERATOR
 # H1 ELEMENTS
@@ -260,7 +266,7 @@ end
 
 # IDENTITY OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,FaceJumpIdentity},AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
     

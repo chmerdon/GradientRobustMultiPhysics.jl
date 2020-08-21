@@ -188,21 +188,46 @@ function prepare_assembly(
     bonus_quadorder::Int,
     verbosity::Int) where {T<: Real, AT <: AbstractAssemblyType}
 
+
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(FE))
+
+    # find out which operators need another assembly type
+    # e.g. FaceJump operators that are assembled ON_CELLS
+    # and get the corressponding dofmaps
+    dofitemAT = Array{Type{<:AbstractAssemblyType},1}(undef,length(FE))
+    facejump_operators = []
     for j=1:length(FE)
-        xItemDofs[j] = Dofmap4Operator(FE[j],AT,operator[j])
+        dofitemAT[j] = DofitemAT4Operator(AT, operator[j])
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j],dofitemAT[j])
+        if (dofitemAT[j] == ON_CELLS) && (AT == ON_FACES)
+            push!(facejump_operators,j)
+        end
     end    
 
     # find unique ElementGeometries
     EG, ndofs4EG = Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
 
+    # if one of the operators is a face jump operator we also need the element geometries 
+    # of the neighbouring cells
+    EGoffset = length(EG)
+    EGdofitem = []
+    if length(facejump_operators) > 0
+        xDofItemGeometries = FE[facejump_operators[1]].xgrid[GridComponentGeometries4AssemblyType(dofitemAT[facejump_operators[1]])]
+        xDofItemRegions = FE[facejump_operators[1]].xgrid[GridComponentRegions4AssemblyType(dofitemAT[facejump_operators[1]])]
+        xDofItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(facejump_operators))
+        for k = 1 : length(facejump_operators)
+            xDofItemDofs[k] = Dofmap4AssemblyType(FE[facejump_operators[k]], dofitemAT[facejump_operators[k]])
+        end
+        EGdofitem, ndofs4EGdofitem = Base.unique(xDofItemGeometries, xDofItemRegions, xDofItemDofs, regions)
+        facejump_operator_involved = true
+    end
+
     # get function that handles the dofitem information for every integration item
     dii4op = Array{Function,1}(undef,length(FE))
-    dofitemAT = Array{Type{<:AbstractAssemblyType},1}(undef,length(FE))
     for j=1:length(FE)
-        dii4op[j], dofitemAT[j]  = DofitemInformation4Operator(FE[j], EG, AT, operator[j])
+        dii4op[j]  = DofitemInformation4Operator(FE[j], EG, EGdofitem, AT, operator[j])
     end
 
     # find proper quadrature QuadratureRules
@@ -210,8 +235,8 @@ function prepare_assembly(
     # dimension 1 = id of element geometry combination of integration domains/dofitem domains
     # dimension 2 = id finite element
     # dimension 3 = position if integration domain in dofitem
-    qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler = Array{Array{Array{FEBasisEvaluator,1},1},1}(undef,length(EG))
+    qf = Array{QuadratureRule,1}(undef,length(EG) + length(EGdofitem))
+    basisevaler = Array{Array{Array{FEBasisEvaluator,1},1},1}(undef,length(EG)+ length(EGdofitem))
     quadorder = 0
     for j = 1 : length(EG)
         basisevaler[j] = Array{Array{FEBasisEvaluator,1},1}(undef,length(FE))
@@ -223,7 +248,7 @@ function prepare_assembly(
         qf[j] = QuadratureRule{T,EG[j]}(quadorder);
         # choose quadrature order for all finite elements
         for k = 1 : length(FE)
-            if dofitemAT[k] == AT
+          #  if dofitemAT[k] == AT
                 basisevaler[j][k] = Array{FEBasisEvaluator,1}(undef,1)
                 if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
                     basisevaler[j][k][1] = basisevaler[j][1][1] # e.g. for symmetric bilinerforms
@@ -232,25 +257,45 @@ function prepare_assembly(
                 else    
                     basisevaler[j][k][1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
                 end    
-            elseif (dofitemAT[k] == ON_CELLS) && (AT == ON_FACES)
-                # generate basis evaler for each face of the cell geometry by mapping the quadrature points of the face to
-                # the quadrature points of the respective cellface (weights stay the same)
-                # TODO: we need all possible pairs of FACE/CELL geometry combinations here !!!
-                nfaces4cell = nfaces_for_geometry(EG[j])
-                qfxref = qf[j].xref
-                xrefFACE2CELL = xrefFACE2xrefCELL(EG[j])
-                basisevaler[j][k] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
+         #   end
+        end
+    end        
+
+    # assign additional basisevaler for FaceJump operators: for each face
+    # of each unique cell geometry (in EGdofitem) quadrature points of their face geometry are mapped to
+    # quadrature points on the cell (NOTE: We assume that all faces of an EGdofitem are of the same shape)
+    if length(facejump_operators) > 0
+        for j = 1 : length(EGdofitem)
+            basisevaler[EGoffset + j] = Array{Array{FEBasisEvaluator,1},1}(undef,length(FE))
+            quadorder = bonus_quadorder
+            for k = 1 : length(FE)
+                quadorder += get_polynomialorder(eltype(FE[k]), EGdofitem[j]) + QuadratureOrderShift4Operator(eltype(FE[k]),operator[k])
+            end
+            quadorder = max(quadorder,0)        
+            nfaces4cell = nfaces_for_geometry(EGdofitem[j])
+            EGface = facetype_of_cellface(EGdofitem[j], 1)
+            qf[EGoffset + j] = QuadratureRule{T,EGface}(quadorder);
+            qfxref = qf[EGoffset + j].xref
+            for k = 1 : length(FE)
+                xrefFACE2CELL = xrefFACE2xrefCELL(EGdofitem[j])
+                basisevaler[EGoffset + j][k] = Array{FEBasisEvaluator,1}(undef,nfaces4cell)
                 for f = 1 : nfaces4cell
                     for i = 1 : length(qfxref)
-                        qf[j].xref[i] = xrefFACE2CELL[f](qfxref[i])
+                        qf[EGoffset + j].xref[i] = xrefFACE2CELL[f](qfxref[i])
                     end
                     for k = 1 : length(FE)
-                        basisevaler[j][k][f] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
+                        basisevaler[EGoffset + j][k][f] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity)
                     end    
                 end
             end
         end
-    end        
+        # append EGdofitem to EG
+        EG = [EG, EGdofitem]
+        for k = 1 : length(FE)
+            ndofs4EG[k] = append!(ndofs4EG[k], ndofs4EGdofitem[k])
+        end
+    end
+
     if verbosity > 1
         println("\nASSEMBLY PREPARATION $(typeof(form))")
         println("====================================")
@@ -308,7 +353,7 @@ function evaluate!(
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = Dofmap4Operator(FE,AT,operator)
+    xItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operator))
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
 
@@ -320,9 +365,13 @@ function evaluate!(
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE))
     cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
-    @assert size(b,1) == cvals_resultdim
+    for k = 2 : size(basisevaler,1)
+        cvals_resultdim = max(cvals_resultdim,size(basisevaler[k][1][1].cvals,1))
+    end
+    @assert size(b,1) == action.resultdim
 
     # loop over items
+    EG4item = 0
     EG4dofitem = [1,1] # type of the current item
     ndofs4dofitem = 0 # number of dofs for item
     dofitems = [0,0] # itemnr where the dof numbers can be found
@@ -342,8 +391,9 @@ function evaluate!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
 
+        weights = qf[EG4item].w
         # loop over associated dofitems
         for di = 1 : length(dofitems)
             dofitem = dofitems[di]
@@ -364,7 +414,6 @@ function evaluate!(
                     coeffs[j] = FEB[xItemDofs[j,dofitem]]
                 end
 
-                weights = qf[EG4dofitem[di]].w
                 for i in eachindex(weights)
                     # apply action to FEVector
                     fill!(action_input, 0)
@@ -405,7 +454,7 @@ function evaluate(
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = Dofmap4Operator(FE,AT,operator)
+    xItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operator))
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
 
@@ -508,7 +557,7 @@ function assemble!(
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = Dofmap4Operator(FE,AT,operator)
+    xItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operator))
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
 
@@ -633,8 +682,8 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
-    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
+    xItemDofs1 = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
+    xItemDofs2 = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
 
@@ -850,8 +899,8 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
-    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
+    xItemDofs1 = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
+    xItemDofs2 = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
 
@@ -1018,9 +1067,9 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
-    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
-    xItemDofs3 = Dofmap4Operator(FE[3],AT,operator[3])
+    xItemDofs1 = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
+    xItemDofs2 = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
+    xItemDofs3 = Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, operator[3]))
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
 
@@ -1193,9 +1242,9 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1 = Dofmap4Operator(FE[1],AT,operator[1])
-    xItemDofs2 = Dofmap4Operator(FE[2],AT,operator[2])
-    xItemDofs3 = Dofmap4Operator(FE[3],AT,operator[3])
+    xItemDofs1 = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
+    xItemDofs2 = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
+    xItemDofs3 = Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, operator[3]))
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = Int64(num_sources(xItemNodes))
 
