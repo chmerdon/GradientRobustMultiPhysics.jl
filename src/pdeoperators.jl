@@ -418,7 +418,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
     FE1 = A.FESX
     FE2 = A.FESY
     @assert FE1 == FE2
-    xCellDofs = FE1.CellDofs
+    xCellDofs = FE1.dofmaps[CellDofs]
     xCellRegions = FE1.xgrid[CellRegions]
     ncells = num_sources(xCellDofs)
     dof::Int = 0
