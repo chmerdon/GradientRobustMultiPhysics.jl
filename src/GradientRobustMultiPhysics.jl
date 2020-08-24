@@ -120,9 +120,12 @@ export nodevalues! # = P1interpolation, abstract averaging method that works for
 include("actions.jl")
 export AbstractAction
 export DoNotChangeAction
-export MultiplyScalarAction, MultiplyVectorAction
-export MultiplyMatrixAction, RegionWiseMultiplyScalarAction, RegionWiseMultiplyVectorAction
-export FunctionAction, XFunctionAction
+export MultiplyScalarAction, MultiplyVectorAction, MultiplyMatrixAction
+export ItemWiseMultiplyScalarAction
+export RegionWiseMultiplyScalarAction, RegionWiseMultiplyVectorAction
+export FunctionAction
+export ItemWiseFunctionAction
+export XFunctionAction
 export ItemWiseXFunctionAction, RegionWiseXFunctionAction
 
 

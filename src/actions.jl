@@ -75,8 +75,24 @@ result[j] = input[j] * value[region]
 (for j = 1 : resultdim)
 """
 struct RegionWiseMultiplyScalarAction{T <: Real} <: AbstractAction
-    value::Array{T,1} # one array for each region
+    value::Array{T,1}
     cregion::Int
+    resultdim::Int
+    bonus_quadorder::Int
+end
+
+"""
+$(TYPEDEF)
+
+action that multiplies an item-dependent scalar to the input, i.e.
+
+result[j] = input[j] * value[item]
+
+(for j = 1 : resultdim)
+"""
+struct ItemWiseMultiplyScalarAction{T <: Real} <: AbstractAction
+    value::Array{T,1}
+    citem::Int
     resultdim::Int
     bonus_quadorder::Int
 end
@@ -110,6 +126,24 @@ The quadrature order of assemblies that involve this action can be altered with 
 """
 struct FunctionAction{T <: Real} <: AbstractAction
     f!::Function # of the interface f!(result,input)
+    resultdim::Int
+    bonus_quadorder::Int
+end
+
+"""
+$(TYPEDEF)
+
+action that puts input into the specified function f! and returns its result. The function f! should have the interface
+
+    f!(result,input,item)
+        
+and result is expected to be of length resultdim.
+
+The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
+"""
+mutable struct ItemWiseFunctionAction{T <: Real} <: AbstractAction
+    f!::Function # of the interface f!(result,input,item)
+    citem::Int
     resultdim::Int
     bonus_quadorder::Int
 end
@@ -232,6 +266,19 @@ end
 
 """
 ````
+function ItemWiseMultiplyScalarAction(value4item::Array{<:Real,1}, resultdim::Int = 1)
+````
+
+creates ItemWiseMultiplyScalarAction.
+
+"""
+function ItemWiseMultiplyScalarAction(value4item::Array{<:Real,1}, resultdim::Int = 1)
+    return ItemWiseMultiplyScalarAction{eltype(value4item)}(value4item, 1, resultdim,0)
+end
+
+
+"""
+````
 function RegionWiseMultiplyVectorAction(values4region::Array{Array{<:Real,1},1}, resultdim::Int)
 ````
 
@@ -270,6 +317,18 @@ end
 
 """
 ````
+function ItemWiseFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+````
+
+creates ItemWiseFunctionAction.
+
+"""
+function ItemWiseFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+    return ItemWiseFunctionAction{Float64}(f!, 0, resultdim, bonus_quadorder)
+end
+
+"""
+````
 function ItemWiseXFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
 ````
 
@@ -296,16 +355,16 @@ end
 # update! is called on each change of item 
 ###
 
-function update!(C::AbstractAction, FEBE::FEBasisEvaluator, item::Int, region)
+function update!(C::AbstractAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
     # do nothing
 end
 
-function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
+function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
     C.cregion = region
 
     # compute global coordinates for function evaluation
-    if FEBE.L2G.citem != item 
-        update!(FEBE.L2G, item)
+    if FEBE.L2G.citem != qitem 
+        update!(FEBE.L2G, qitem)
     end
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
@@ -319,11 +378,11 @@ function update!(C::RegionWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int
 end
 
 
-function update!(C::ItemWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
-    C.citem = item
+function update!(C::ItemWiseXFunctionAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
+    C.citem = vitem
     # compute global coordinates for function evaluation
-    if FEBE.L2G.citem != item 
-        update!(FEBE.L2G, item)
+    if FEBE.L2G.citem != qitem 
+        update!(FEBE.L2G, qitem)
     end
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
@@ -336,10 +395,10 @@ function update!(C::ItemWiseXFunctionAction, FEBE::FEBasisEvaluator, item::Int, 
 
 end
 
-function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
+function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
     # compute global coordinates for function evaluation
-    if FEBE.L2G.citem != item 
-        update!(FEBE.L2G, item)
+    if FEBE.L2G.citem != qitem 
+        update!(FEBE.L2G, qitem)
     end
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
@@ -352,7 +411,11 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, item::Int, region)
 
 end
 
-function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, item::Int, region)
+function update!(C::Union{ItemWiseMultiplyScalarAction,ItemWiseFunctionAction}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
+    C.citem = vitem
+end
+
+function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
     C.cregion = region
 end
 
@@ -376,6 +439,12 @@ end
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::RegionWiseMultiplyScalarAction, i::Int = 0)
     for j = 1:length(result)
         result[j] = input[j] * C.value[C.cregion];    
+    end    
+end
+
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ItemWiseMultiplyScalarAction, i::Int = 0)
+    for j = 1:length(result)
+        result[j] = input[j] * C.value[C.citem];    
     end    
 end
 
@@ -414,4 +483,8 @@ end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ItemWiseXFunctionAction, i::Int)
     C.f!(result, input, C.x[i], C.citem);
+end
+
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ItemWiseFunctionAction, i::Int)
+    C.f!(result, input, C.citem);
 end

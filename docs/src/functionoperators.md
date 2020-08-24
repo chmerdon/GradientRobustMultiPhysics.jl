@@ -7,6 +7,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 | Function operator                          | Description                                   |
 | :----------------------------------------- | :-------------------------------------------- |
 | [`Identity`](@ref)                         | identity operator                             |
+| [`FaceJumpIdentity`](@ref)                 | jumps of identity operator over faces         |
 | [`NormalFlux`](@ref)                       | normal flux (function times normal)           | 
 | [`Gradient`](@ref)                         | gradient/Jacobian operator                    |
 | [`SymmetricGradient`](@ref)                | symmetric part of the gradient                |
