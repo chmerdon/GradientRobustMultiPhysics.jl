@@ -64,24 +64,11 @@ Creates a PDEDescription for the compressible Navier-Stokes equations of the spe
 """
 function CompressibleNavierStokesProblem(
     equation_of_state!::Function,
-    gravity!::Function,
+    gravity!,
     dimension::Int = 2;
     shear_modulus = 1.0,
     lambda = 1.0,
     nonlinear::Bool = true)
-
-
-    function gravity_function() # result = G(v) = -gravity*input
-        temp = zeros(Float64,dimension)
-        function closure(result,input,x)
-            gravity!(temp,x)
-            result[1] = 0
-            for j = 1 : dimension
-                result[1] -= temp[j]*input[j] 
-            end
-        end
-    end    
-    gravity_action = XFunctionAction(gravity_function(),1,dimension)
 
     if nonlinear == true
         name = "compressible Navier-Stokes-Problem"
@@ -107,8 +94,22 @@ function CompressibleNavierStokesProblem(
         add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, dimension, dimension))
     end
 
-    add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action))
     add_operator!(Problem, [1,3], AbstractBilinearForm("div(velocity)*pressure",Divergence,Identity,MultiplyScalarAction(-1.0)))
+
+    if gravity! != nothing
+        function gravity_function() # result = G(v) = -gravity*input
+            temp = zeros(Float64,dimension)
+            function closure(result,input,x)
+                gravity!(temp,x)
+                result[1] = 0
+                for j = 1 : dimension
+                    result[1] -= temp[j]*input[j] 
+                end
+            end
+        end    
+        gravity_action = XFunctionAction(gravity_function(),1,dimension)
+        add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action))
+    end
 
     # continuity equation
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))

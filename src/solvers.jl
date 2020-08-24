@@ -717,8 +717,11 @@ mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
     ctime::Real              # current time
     cstep::Real              # current timestep count
     last_timestep::Real      # last timestep
-    which::Array{Int,1}      # which equations shall have a time derivative?
     AM::Array{FEMatrix,1}    # heap for mass matrices for each equation package
+    which::Array{Int,1}      # which equations shall have a time derivative?
+    nonlinear_dt::Array{Bool,1} # if true mass matrix is recomputed in each iteration
+    dt_operators::Array{DataType,1} # operators associated with the time derivative
+    dt_actions::Array{<:AbstractAction,1} # actions associated with the time derivative
     A::Array{FEMatrix,1}     # heap for system matrix for each equation package
     b::Array{FEVector,1}     # heap for system rhs for each equation package
     x::Array{FEVector,1}     # heap for current solution for each equation package
@@ -729,6 +732,26 @@ mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
 end
 
 
+
+function assemble_massmatrix4subiteration!(TCS::TimeControlSolver, i::Int; verbosity::Int = 0, force::Bool = false)
+    for j = 1 : length(TCS.SC.subiterations[i])
+        if (TCS.SC.subiterations[i][j] in TCS.which) == true 
+
+            # assembly mass matrix into AM block
+            pos = findall(x->x==TCS.SC.subiterations[i][j], TCS.which)[1]
+
+            if TCS.nonlinear_dt[pos] == true || force == true
+                if verbosity > 1
+                    println("\n  Assembling mass matrix for block [$j,$j] of subiteration $i with action of type $(typeof(TCS.dt_actions[pos]))...")
+                    @time assemble!(TCS.AM[i][j,j],TCS.X,ReactionOperator(TCS.dt_actions[pos]; identity_operator = TCS.dt_operators[pos]); verbosity = verbosity - 2)
+                else
+                    assemble!(TCS.AM[i][j,j],TCS.X,ReactionOperator(TCS.dt_actions[pos]; identity_operator = TCS.dt_operators[pos]); verbosity = verbosity - 2)
+                end
+            end
+        end
+    end
+    flush!(TCS.AM[i].entries)
+end
 
 
 """
@@ -741,6 +764,9 @@ function TimeControlSolver(
     subiterations = "auto",
     start_time::Real = 0,
     verbosity::Int = 0,
+    dt_testfunction_operator = [],
+    dt_action = [],
+    nonlinear_dt::Bool = false,
     dirichlet_penalty = 1e60)
 ````
 
@@ -758,6 +784,8 @@ function TimeControlSolver(
     start_time::Real = 0,
     verbosity::Int = 0,
     dt_testfunction_operator = [],
+    dt_action = [],
+    nonlinear_dt = [],
     dirichlet_penalty = 1e60)
 
     # generate solver for time-independent problem
@@ -779,9 +807,9 @@ function TimeControlSolver(
         Base.show(SC)
     end
 
-    # initial assembly
+    # allocate matrices etc
     FEs = Array{FESpace,1}([])
-    for j=1 : length(InitialValues.FEVectorBlocks)
+    for j = 1 : length(InitialValues.FEVectorBlocks)
         push!(FEs,InitialValues.FEVectorBlocks[j].FES)
     end    
     nsubiterations = length(SC.subiterations)
@@ -802,31 +830,13 @@ function TimeControlSolver(
                 eqoffsets[i][eq] += FEs[j].ndofs
             end
         end
-        for j = 1 : length(SC.subiterations[i])
-            if (SC.subiterations[i][j] in timedependent_equations) == true
-                # assembly mass matrix into AM block
-                pos = findall(x->x==SC.subiterations[i][j], timedependent_equations)[1]
-                identity_operator = Identity
-                try
-                    identity_operator = dt_testfunction_operator[pos]
-                catch
-                end
-                if verbosity > 1
-                    println("\n  Assembling mass matrix for block [$j,$j] of subiteration $i...")
-                    @time assemble!(AM[i][j,j],InitialValues,ReactionOperator(DoNotChangeAction(get_ncomponents(eltype(FEs[SC.subiterations[i][j]])));identity_operator = identity_operator); verbosity = verbosity - 2)
-                else
-                    assemble!(AM[i][j,j],InitialValues,ReactionOperator(DoNotChangeAction(get_ncomponents(eltype(FEs[SC.subiterations[i][j]]))); identity_operator = identity_operator); verbosity = verbosity - 2)
-                end
-            end
-        end
-        flush!(AM[i].entries)
     end
 
 
     # ASSEMBLE BOUNDARY DATA
     # will be overwritten in solve if time-dependent
     fixed_dofs = []
-    for j= 1 : length(InitialValues.FEVectorBlocks)
+    for j = 1 : length(InitialValues.FEVectorBlocks)
         if verbosity > 1
             println("\n  Assembling boundary data for block [$j]...")
             @time new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j]; verbosity = verbosity - 2) .+ InitialValues[j].offset
@@ -837,8 +847,42 @@ function TimeControlSolver(
         end    
     end    
 
+    # prepare and configure mass matrices
+    for i = 1 : nsubiterations # subiterations
+        for j = 1 : length(SC.subiterations[i])
+            d = SC.subiterations[i][j] # equation of subiteration
+            if (d in timedependent_equations) == true 
+                pos = findall(x->x==d, timedependent_equations)[1] # position in timedependent_equations
+                if length(nonlinear_dt) < pos
+                    push!(nonlinear_dt, false)
+                end
+                if length(dt_action) < pos
+                    push!(dt_action, DoNotChangeAction(get_ncomponents(eltype(FEs[d]))))
+                end
+                if length(dt_testfunction_operator) < pos
+                    push!(dt_testfunction_operator, Identity)
+                end
+                # set diagonal equations block and rhs block to nonlinear
+                if nonlinear_dt[pos] == true
+                    SC.LHS_AssemblyTriggers[d,d] = AssemblyEachTimeStep
+                    SC.RHS_AssemblyTriggers[d] = AssemblyEachTimeStep
+                end
+            end
+        end
+    end
 
-    return  TimeControlSolver{TIR}(PDE,SC,start_time,0,0,timedependent_equations,AM,A,b,x,InitialValues, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
+    dt_action = Array{AbstractAction,1}(dt_action)
+    dt_testfunction_operator = Array{DataType,1}(dt_testfunction_operator)
+
+    # generate TimeControlSolver
+    TCS = TimeControlSolver{TIR}(PDE,SC,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,InitialValues, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
+
+    # trigger initial assembly of all time derivative mass matrices
+    for i = 1 : nsubiterations
+        assemble_massmatrix4subiteration!(TCS, i; force = true, verbosity = verbosity - 1)
+    end
+
+    return TCS
 end
 
 """
@@ -883,6 +927,9 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
         if SC.verbosity > 2
             println("\n\n\n  Entering subiteration $s...")
         end
+
+        # (re)assemble mass matrices if needed
+        assemble_massmatrix4subiteration!(TCS, s; verbosity = SC.verbosity - 1)
 
         # add change in mass matrix to diagonal blocks if needed
         for k = 1 : length(SC.subiterations[s])

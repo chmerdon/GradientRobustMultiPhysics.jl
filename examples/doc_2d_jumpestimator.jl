@@ -3,7 +3,11 @@
 # 2D Jump-Estimator
 ([source code](SOURCE_URL))
 
-This example calculates an error estimator for an Hdiv approximation by evaluating the jump over all faces.
+This example calculates an error estimator for an Hdiv approximation by evaluating the jump over all faces, i.e.
+```math
+\eta^2(\sigma) := \sum_{F \in \mathcal{F}} \mathrm{diam}(F) \| [[\sigma]] \|^2_{L^2(F)}
+```
+where ``\sigma`` is some finite element function. Here, we check the error of some Hdiv-conforming L2 bestapproximation.
 (In future updates adaptive mesh refinement may be possible based on these indicators)
 
 =#
@@ -53,7 +57,7 @@ function main()
     jump4face = zeros(Float64,2,nfaces)
     evaluate!(jump4face,jumpIntegrator,Solution[1]; verbosity = 3)
 
-    # set jumps on boundary faces to zero
+    ## set jumps on boundary faces to zero
     jump4face[:,xgrid[BFaces]] .= 0
 
     ## calculate L2 error and L2 divergence error

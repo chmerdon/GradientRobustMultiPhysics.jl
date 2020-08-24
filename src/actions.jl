@@ -43,7 +43,7 @@ result[j] = input[j] * value[j]
 (for j = 1 : resultdim)
 """
 struct MultiplyVectorAction{T <: Real} <: AbstractAction
-    value::Array{T,1}
+    value::AbstractArray{T,1}
     resultdim::Int
     bonus_quadorder::Int
 end
@@ -60,7 +60,7 @@ result = value * input
 
 """
 struct MultiplyMatrixAction{T <: Real} <: AbstractAction
-    value::Array{T,2}
+    value::AbstractArray{T,2}
     resultdim::Int
     bonus_quadorder::Int
 end
@@ -75,7 +75,7 @@ result[j] = input[j] * value[region]
 (for j = 1 : resultdim)
 """
 struct RegionWiseMultiplyScalarAction{T <: Real} <: AbstractAction
-    value::Array{T,1}
+    value::AbstractArray{T,1}
     cregion::Int
     resultdim::Int
     bonus_quadorder::Int
@@ -90,8 +90,8 @@ result[j] = input[j] * value[item]
 
 (for j = 1 : resultdim)
 """
-struct ItemWiseMultiplyScalarAction{T <: Real} <: AbstractAction
-    value::Array{T,1}
+mutable struct ItemWiseMultiplyScalarAction{T <: Real} <: AbstractAction
+    value::AbstractArray{T,1}
     citem::Int
     resultdim::Int
     bonus_quadorder::Int
@@ -107,7 +107,7 @@ result[j] = input[j] * value[region][j]
 (for j = 1 : resultdim)
 """
 struct RegionWiseMultiplyVectorAction{T <: Real} <: AbstractAction
-    value::Array{Array{T,1},1} # one array for each region
+    value::AbstractArray{AbstractArray{T,1},1} # one array for each region
     cregion::Int
     resultdim::Int
     bonus_quadorder::Int
@@ -236,7 +236,7 @@ function MultiplyVectorAction(values::Array{<:Real,1})
 creates MultiplyVectorAction.
 
 """
-function MultiplyVectorAction(values::Array{<:Real,1})
+function MultiplyVectorAction(values::AbstractArray{<:Real,1})
     return MultiplyVectorAction{eltype(values)}(values, length(value),0)
 end
 
@@ -260,7 +260,7 @@ function RegionWiseMultiplyScalarAction(value4region::Array{<:Real,1}, resultdim
 creates RegionWiseMultiplyScalarAction.
 
 """
-function RegionWiseMultiplyScalarAction(value4region::Array{<:Real,1}, resultdim::Int = 1)
+function RegionWiseMultiplyScalarAction(value4region::AbstractArray{<:Real,1}, resultdim::Int = 1)
     return RegionWiseMultiplyScalarAction{eltype(value4region)}(value4region, 1, resultdim,0)
 end
 
@@ -272,7 +272,7 @@ function ItemWiseMultiplyScalarAction(value4item::Array{<:Real,1}, resultdim::In
 creates ItemWiseMultiplyScalarAction.
 
 """
-function ItemWiseMultiplyScalarAction(value4item::Array{<:Real,1}, resultdim::Int = 1)
+function ItemWiseMultiplyScalarAction(value4item::AbstractArray{<:Real,1}, resultdim::Int = 1)
     return ItemWiseMultiplyScalarAction{eltype(value4item)}(value4item, 1, resultdim,0)
 end
 
@@ -412,7 +412,7 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::
 end
 
 function update!(C::Union{ItemWiseMultiplyScalarAction,ItemWiseFunctionAction}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
-    C.citem = vitem
+    C.citem = copy(vitem)
 end
 
 function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
