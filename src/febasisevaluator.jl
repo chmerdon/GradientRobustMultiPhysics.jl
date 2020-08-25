@@ -28,6 +28,7 @@ mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <
     coefficients::Array{T,2}             # coefficients
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
+    compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
 function vector_hessian(f, x)
@@ -123,8 +124,22 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
     offsets = 0:edim:(ncomponents*edim);
     offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
+
+    compressiontargets = zeros(T,0)
+    if FEOP == SymmetricGradient
+        # the following mapping tells where each entry of the full gradient lands in the reduced vector
+        if dim_element(EG) == 1
+            compressiontargets = [1,1]
+        elseif dim_element(EG) == 2
+            # 2D Voigt accumulation positions of du1/dx1, du1/dx2, du2/dx1, d2/dx2
+            compressiontargets = [1,3,3,2]
+        elseif dim_element(EG) == 3
+            # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
+            compressiontargets = [1,4,5,4,2,6,5,6,3] 
+        end
+    end
     
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, compressiontargets)
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence
@@ -197,7 +212,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     offsets2 = 0:ndofs4item2:ncomponents*ndofs4item2;
     coefficients3 = zeros(T,0,0)
     
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,[])
 end    
 
 
@@ -491,12 +506,7 @@ end
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-# symmetric gradients are saved in reduced Voigt notation
-# the following mapping tells where each entry of the full gradient lands in the reduced vector
-voigt_mapper = Array{Array{Int64,1},1}(undef,3)
-voigt_mapper[1] = [1,1]
-voigt_mapper[2] = [1,3,3,2]
-voigt_mapper[3] = [1,4,5,4,2,6,5,6,3]
+# symmetric gradients are saved in reduced Voigt notation (compression specified by FEBE.compressiontargets)
 
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: SymmetricGradient, AT <:AbstractAssemblyType}
     if FEBE.citem != item
@@ -513,8 +523,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
                     for j = 1 : FEBE.offsets[2] # edim
-                        # compute duc/dxk
-                        FEBE.cvals[voigt_mapper[dim_element(EG)][k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
+                        # compute duc/dxk and put it into the Voigt vector
+                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    

@@ -797,8 +797,8 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,cvals_resultdim) # heap for action input
     action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
-    basisevaler4dofitem1 = basisevaler[1][1][1]
-    basisevaler4dofitem2 = basisevaler[1][2][1]
+    basisevaler4dofitem1::FEBasisEvaluator = basisevaler[1][1][1]
+    basisevaler4dofitem2::FEBasisEvaluator = basisevaler[1][2][1]
     basisvals1::Array{T,3} = basisevaler4dofitem1.cvals
     basisvals2::Array{T,3} = basisevaler4dofitem2.cvals
     localmatrix::Array{T,2} = zeros(T,maxdofs1,maxdofs2)

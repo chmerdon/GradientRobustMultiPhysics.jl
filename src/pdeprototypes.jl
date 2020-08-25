@@ -148,7 +148,9 @@ function LinearElasticityProblem(
     # unknown 1 : displacement (vector-valued)
     Problem = PDEDescription("linear elasticity problem")
     add_unknown!(Problem, dimension, dimension; unknown_name = "displacement", equation_name = "displacement equation")
-    if dimension == 2
+    if dimension == 3
+        add_operator!(Problem, [1,1], HookStiffnessOperator3D(shearmodulus,lambda))
+    elseif dimension == 2
         add_operator!(Problem, [1,1], HookStiffnessOperator2D(shearmodulus,lambda))
     elseif dimension == 1
         add_operator!(Problem, [1,1], HookStiffnessOperator1D(elasticity_modulus))

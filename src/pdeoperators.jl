@@ -134,9 +134,17 @@ C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
 function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_2d(result, input)
         # compute sigma_ij = C_ijkl eps_kl
-        # where input = [eps_11,eps_12,eps_21] is the symmetric gradient in Voigt notation
-        # and result = [sigma_11,sigma_12,sigma_21] is Voigt representation of sigma_11
-        # the tensor C is just a 3x3 matrix
+        # where input = [eps_11,eps_22,eps_21] is the symmetric gradient in Voigt notation
+        # and result = [sigma_11,sigma_22,sigma_21] is Voigt representation of sigma
+        #
+        # the tensor C is represented by a 3x3 matrix
+        # C = [c11,c12,  0
+        #      c12,c11,  0
+        #        0,  0,c33]
+        #
+        # where c11 = lambda + 2*mu
+        #       c12 = lambda
+        #       c33 = mu
         result[1] = (lambda + 2*mu)*input[1] + lambda*input[2]
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
         result[3] = mu*input[3]
@@ -144,6 +152,38 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
     action = FunctionAction(tensor_apply_2d, 3, 2)
     return AbstractBilinearForm("Hookian2D",gradient_operator, gradient_operator, action; regions = regions)
 end
+
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
+C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+    
+"""
+function HookStiffnessOperator3D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
+    function tensor_apply_3d(result, input)
+        # compute sigma_ij = C_ijkl eps_kl
+        # where input = [eps_11,eps_22,eps33,eps_21,eps31,eps32] is the symmetric gradient in Voigt notation
+        # and result = [sigma_11,sigma_22,sigma_33,sigma_21,sigma_31,sigma_32] is Voigt representation of sigma
+        #
+        # the tensor C is represented by a 6x6 matrix
+        # C = [c11,c12,c12,  0,  0,  0
+        #      c12,c11,c12,  0,  0,  0
+        #      c12,c12,c11,  0,  0,  0
+        #        0,  0,  0,c44,  0,  0
+        #        0,  0,  0,  0,c44,  0
+        #        0,  0,  0,  0,  0,c44]
+        result[1] = (lambda + 2*mu)*input[1] + lambda*(input[2] + input[3])
+        result[2] = (lambda + 2*mu)*input[2] + lambda*(input[1] + input[3])
+        result[3] = (lambda + 2*mu)*input[3] + lambda*(input[1] + input[2])
+        result[4] = mu*input[4]
+        result[5] = mu*input[5]
+        result[6] = mu*input[6]
+    end   
+    action = FunctionAction(tensor_apply_3d, 6, 3)
+    return AbstractBilinearForm("Hookian3D", gradient_operator, gradient_operator, action; regions = regions)
+end
+
 
 """
 $(TYPEDEF)

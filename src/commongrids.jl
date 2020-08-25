@@ -3,9 +3,13 @@
 #####################
 
 # reference domain generated from data in shape_specs
-function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = 1)
+function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = [1,1,1])
     xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}(scale.*refcoords_for_geometry(EG)')
+    xCoordinates=Array{Float64,2}(refcoords_for_geometry(EG)')
+    for j = 1 : size(xCoordinates,1)
+        xCoordinates[j,:] .*= scale[j]
+    end
+    xgrid[Coordinates] = xCoordinates
     xCellNodes = zeros(Int32,nnodes_for_geometry(EG),1)
     xCellNodes[:] = 1:nnodes_for_geometry(EG)
     xgrid[CellNodes] = xCellNodes
@@ -27,8 +31,8 @@ function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = 1)
 end
 
 # unit cube as one cell with six boundary regions (bottom, front, right, back, left, top)
-function grid_unitcube(EG::Type{<:Hexahedron3D})
-    return reference_domain(EG)
+function grid_unitcube(EG::Type{<:Hexahedron3D}; scale = [1,1,1])
+    return reference_domain(EG; scale = scale)
 end
 
 # unit cube as six tets with six boundary regions (bottom, front, right, back, left, top)
