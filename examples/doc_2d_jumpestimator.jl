@@ -55,7 +55,7 @@ function main()
     jumpIntegrator = ItemIntegrator{Float64,ON_FACES}(FaceJumpIdentity,ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
     nfaces = num_sources(xgrid[FaceNodes])
     jump4face = zeros(Float64,2,nfaces)
-    evaluate!(jump4face,jumpIntegrator,Solution[1]; verbosity = 3)
+    evaluate!(jump4face,jumpIntegrator,Solution[1]; verbosity = 1)
 
     ## set jumps on boundary faces to zero
     jump4face[:,xgrid[BFaces]] .= 0
@@ -70,7 +70,6 @@ function main()
     nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
     nodevalues!(nodevals,Solution[1],FES)
     ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2); Plotter = PyPlot, isolines = 5)
-    quiver(xgrid[Coordinates][1,:],xgrid[Coordinates][2,:],nodevals[1,:],nodevals[2,:])
 end
 
 main()

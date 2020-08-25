@@ -182,6 +182,21 @@ function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_q
 end
 
 
+"""
+$(TYPEDEF)
+
+abstract multi-linearform of the form
+
+m(v1,v2,...,vk) = (A(O(v1),O(v2),...,O(vk-1)),Ok(vk))
+
+(so far only intended for use as RHSOperator with MLFeval)
+"""
+mutable struct AbstractMultilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
+    name::String
+    operators::Array{DataType,1}
+    action::AbstractAction
+    regions::Array{Int,1}
+end
 
 
 """
@@ -320,7 +335,7 @@ end
 """
 $(TYPEDEF)
 
-evaluation of a trilinearform where thefirst and  second argument is fixed by given FEVectorBlocks
+evaluation of a trilinearform where the first and  second argument is fixed by given FEVectorBlocks
 
 can only be applied in PDE RHS
 """
@@ -328,6 +343,20 @@ struct TLFeval <: AbstractPDEOperatorRHS
     TLF::AbstractTrilinearForm
     Data1::FEVectorBlock
     Data2::FEVectorBlock
+    factor::Real
+end
+
+
+"""
+$(TYPEDEF)
+
+evaluation of a multi-linearform where the al but the last argument are fixed by given FEVectorBlocks
+
+can only be applied in PDE RHS
+"""
+struct MLFeval <: AbstractPDEOperatorRHS
+    MLF::AbstractMultilinearForm
+    Data::Array{FEVectorBlock,1}
     factor::Real
 end
 
@@ -586,14 +615,23 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
     end
 end
 
-
-
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)
     FE1 = O.Data1.FES
     FE2 = O.Data2.FES
     FE3 = b.FES
     TLF = TrilinearForm(Float64, ON_CELLS, FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
     assemble!(b, O.Data1, O.Data2, TLF; factor = factor * O.factor, verbosity = verbosity)
+end
+
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)
+    FES = []
+    for k = 1 : length(O.Data)
+        push!(FES, O.Data[k].FES)
+    end
+    push!(FES, b.FES)
+    FES = Array{FESpace,1}(FES)
+    MLF = MultilinearForm(Float64, ON_CELLS, FES, O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
+    assemble!(b, O.Data, MLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)

@@ -135,6 +135,7 @@ export ItemIntegrator
 export LinearForm
 export BilinearForm, SymmetricBilinearForm
 export TrilinearForm
+export MultilinearForm
 export assemble!, evaluate!, evaluate
 export L2ErrorIntegrator
 
@@ -152,6 +153,7 @@ export ConvectionOperator
 export LagrangeMultiplier
 
 export AbstractTrilinearForm
+export AbstractMultilinearForm
 
 export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
@@ -159,6 +161,7 @@ export DiagonalOperator, CopyOperator
 export RhsOperator
 export BLFeval
 export TLFeval
+export MLFeval
 
 
 include("boundarydata.jl")
