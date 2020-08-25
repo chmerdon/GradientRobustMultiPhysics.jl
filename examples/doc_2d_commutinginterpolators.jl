@@ -11,16 +11,20 @@ for the ``H_1`` interpolator ``I_{\mathrm{P}_k}`` and the standard Raviart-Thoma
 In this example we verify this identity for $k=1$ and $k=2$. Note, that the ``H_1`` interpolator only does nodal interpolations at the
 vertices but not in the additional edgrees of freedom. For e.g. ``k=2`` the interpolator preserves the moments along the edges.
 
-
 !!! note
 
     In 3D a similar commuting property holds that involves the Nedelec finite element spaces,
-    that will be tested once there are implemented. Also the identities for $k > 2$ will be tested once all functionality is available.    There also is 
+    that will be tested once there are implemented. Also the identities for $k > 2$ will be tested once all functionality is available.
+
+!!! note
+
+    As this example is also used as a test case for the code, it is wrapped inside a module. To start the example after including
+    one has to run Example_2DCommutingInterpolators.main().
 =#
 
+module Example_2DCommutingInterpolators
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
-using ExtendableGrids
 
 ## define some function
 function exact_function!(result,x)
@@ -33,21 +37,24 @@ function exact_curl!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(;order::Int = 2)
 
     ## choose some grid
     xgrid = uniform_refine(reference_domain(Triangle2D),2)
 
     ## choose commuting interpolators pair
-    FE = [H1P1{1},HDIVRT0{2}]; testFE = L2P0{2}
-    #FE = [H1P2{1,2},HDIVRT1{2}]; testFE = L2P1{2}
+    if order == 1
+        FE = [H1P1{1},HDIVRT0{2}]; testFE = L2P0{2}
+    elseif order == 2
+        FE = [H1P2{1,2},HDIVRT1{2}]; testFE = L2P1{2}
+    end
 
-    ## do the P1 nodal interpolation of the function
+    ## do the H1 interpolation of the function
     FESH1 = FESpace{FE[1]}(xgrid)
     H1Interpolation = FEVector{Float64}("H1-Interpolation",FESH1)
     interpolate!(H1Interpolation[1], exact_function!; bonus_quadorder = 4)
 
-    ## do the RT0 interpolation of the Curl of the function
+    ## do the Hdiv interpolation of the Curl of the function
     ## since integrals over faces have to be computed exactly we need to tune the quadrature order
     FESHdiv = FESpace{FE[2]}(xgrid)
     HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FESHdiv)
@@ -71,7 +78,18 @@ function main()
     assemble!(error[1], H1Interpolation[1], BLF2; factor = -1)
 
     ## do some norm that recognizes a nonzero in the vector
-    println("\n error(Curl(H1(psi) - Hdiv(Curl(psi))) = $(sum(error[1][:].^2, dims = 1))")
+    error = sqrt(sum(error[1][:].^2, dims = 1)[1])
+    println("error(Curl(I_$(FE[1])(psi) - I_$(FE[2])(Curl(psi))) = $error")
+    return error
 end
 
-main()
+## test function that is called by test unit
+function test()
+    error = []
+    for order in [1,2]
+        push!(error, max(main(order = order)))
+    end
+    return maximum(error)
+end
+
+end

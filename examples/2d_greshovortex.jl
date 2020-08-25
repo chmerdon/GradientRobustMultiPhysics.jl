@@ -104,7 +104,6 @@ function main()
     Solution2[1][:] = VelocityBA[1][:]
 
 
-
     ## plot triangulation   
     xCoordinates = xgrid[Coordinates]
     nnodes = size(xCoordinates,2)
@@ -118,11 +117,11 @@ function main()
         nodevals = zeros(Float64,2,nnodes)
         nodevalues!(nodevals,Solution[1],FESpaceVelocity)
         PyPlot.figure("velocity (classical)")
-        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 5)
         fill!(nodevals,0)
         nodevalues!(nodevals,Solution2[1],FESpaceVelocity)
         PyPlot.figure("velocity (pressure-robust)")
-        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 5)
     end
 
     ## generate time-dependent solver and chance rhs data
@@ -134,8 +133,14 @@ function main()
     change2 = 0.0
     maxIterations = ceil(T / timestep)
     for iteration = 1 : maxIterations
-        change1 = advance!(TCS, timestep; reuse_matrix = [true])
-        change2 = advance!(TCS2, timestep; reuse_matrix = [true])
+        try
+            change1 = advance!(TCS, timestep; reuse_matrix = [true])
+        catch
+        end
+        try
+            change2 = advance!(TCS2, timestep; reuse_matrix = [true])
+        catch
+        end
         @printf("  iteration %4d of %d",iteration,maxIterations)
         @printf("  time = %.4e",TCS.ctime)
         @printf("  change1/change2 = %.4e/%.4e \n",change1,change2)
@@ -145,14 +150,20 @@ function main()
             if plot_velocity
                 println("  updating plots...")
                 xCoordinates = xgrid[Coordinates]
-                fill!(nodevals,0)
-                nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-                PyPlot.figure("velocity (classical)")
-                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
-                fill!(nodevals,0)
-                nodevalues!(nodevals,Solution2[1],FESpaceVelocity)
-                PyPlot.figure("velocity (pressure-robust)")
-                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
+                try
+                    fill!(nodevals,0)
+                    nodevalues!(nodevals,Solution[1],FESpaceVelocity)
+                    PyPlot.figure("velocity (classical)")
+                    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 5)
+                catch
+                end
+                try
+                    fill!(nodevals,0)
+                    nodevalues!(nodevals,Solution2[1],FESpaceVelocity)
+                    PyPlot.figure("velocity (pressure-robust)")
+                    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 5)
+                catch
+                end
             end
         end
     end

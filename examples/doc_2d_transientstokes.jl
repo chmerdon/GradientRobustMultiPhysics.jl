@@ -3,7 +3,7 @@
 # 2D Transient Stokes-Problem
 ([source code](SOURCE_URL))
 
-This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{o}`` of the incompressible Navier--Stokes problem
+This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
 ```math
 \begin{aligned}
 \mathbf{u}_t - \mu \Delta \mathbf{u} + \nabla p & = \mathbf{f}\\
