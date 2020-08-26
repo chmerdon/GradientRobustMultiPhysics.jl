@@ -98,7 +98,7 @@ function main()
         change = advance!(TCS, timestep; reuse_matrix = true)
         @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)
-        @printf("  change = %.4e \n",change)
+        @printf("  change = [%.4e,%.4e] \n",change[1],change[2])
 
         # update solution plot
         if (iteration % plot_every_nth_step == 1) || plot_every_nth_step == 1

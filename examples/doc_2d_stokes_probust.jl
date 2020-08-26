@@ -230,7 +230,7 @@ end
 function test()
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
 
-    testspaces = [[H1CR{2}, L2P0{1},ReconstructionIdentity{HDIVRT0{2}}],
+    testspaces = [[H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
                   [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
                   [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]]
     error = []

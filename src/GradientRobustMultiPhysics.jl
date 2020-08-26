@@ -91,7 +91,7 @@ export fill!, addblock!
 
 include("fematrix.jl");
 export FEMatrixBlock, FEMatrix
-export fill!, addblock!, addblock_matmul!
+export fill!, addblock!, addblock_matmul!, lrmatmul
 
 
 include("functionoperators.jl")
@@ -100,7 +100,7 @@ export Identity, ReconstructionIdentity, FaceJumpIdentity
 export NormalFlux, TangentFlux
 export Gradient, SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
-export CurlScalar, Rotation
+export CurlScalar, Curl2D, Rotation
 export Laplacian, Hessian
 export Trace, Deviator
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator
@@ -149,7 +149,7 @@ export BackwardEulerTimeDerivative
 export AbstractBilinearForm
 export StiffnessOperator, LaplaceOperator, HookStiffnessOperator2D, HookStiffnessOperator1D
 export ReactionOperator
-export ConvectionOperator
+export ConvectionOperator, ConvectionRotationFormOperator
 export LagrangeMultiplier
 
 export AbstractTrilinearForm

@@ -286,7 +286,7 @@ constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) wh
 function ConvectionOperator(beta::Int, beta_operator, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
-    # input[xdim+1:length(input)] = u
+    # input[xdim+1:end] = grad(u)
     function convection_function_fe()
         function closure(result, input)
             for j = 1 : ncomponents
@@ -300,6 +300,29 @@ function ConvectionOperator(beta::Int, beta_operator, xdim::Int, ncomponents::In
     convection_action = FunctionAction(convection_function_fe(), ncomponents)
     return AbstractTrilinearForm{ON_CELLS}("(a(=unknown $beta) * Gradient) u * v",beta_operator,Gradient,testfunction_operator,beta ,convection_action, regions, true)
 end
+
+"""
+$(TYPEDEF)
+
+constructor for AbstractBilinearForm that describes a(u,v) = (beta x curl(u),v)
+where beta is the id of some unknown vector field of the PDEDescription, u and v
+are also vector-fields and x is the cross product (so far this is only implemented in 2D)
+    
+"""
+function ConvectionRotationFormOperator(beta::Int, beta_operator, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+    # action input consists of two inputs
+    # input[1:xdim] = operator1(a)
+    # input[xdim+1:end] = curl(u)
+    function rotationform_2d()
+        function closure(result, input)
+            result[1] = input[2] * input[3]
+            result[2] = - input[1] * input[3]
+        end    
+    end    
+    convection_action = FunctionAction(rotationform_2d(), ncomponents)
+    return AbstractTrilinearForm{ON_CELLS}("(a(=unknown $beta) x Curl2D u ) * v",beta_operator,Curl2D,testfunction_operator,beta ,convection_action, regions, true)
+end
+
 
 """
 ````

@@ -61,6 +61,14 @@ $(TYPEDEF)
 evaluates the curl of some scalar function in 2D, i.e. the rotated gradient.
 """
 abstract type CurlScalar <: AbstractFunctionOperator end # only 2D: CurlScalar(v_h) = D(v_h)^\perp
+
+"""
+$(TYPEDEF)
+
+evaluates the curl of some two-dimensional vector field, i.e. Curl2D((u1,u2)) = du2/dx1 - du1/dx2
+"""
+abstract type Curl2D <: AbstractFunctionOperator end
+
 abstract type Rotation <: AbstractFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
 """
 $(TYPEDEF)
@@ -95,6 +103,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradi
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl2D}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Rotation}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
@@ -107,6 +116,7 @@ Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ceil(ncompon
 Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
+Length4Operator(::Type{Curl2D}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
@@ -117,6 +127,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Curl2D}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = -1

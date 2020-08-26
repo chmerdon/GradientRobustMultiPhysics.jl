@@ -56,7 +56,8 @@ function main()
     viscosity = 1e-6
     timestep = 5e-4
     T = 1 # final time
-    plot_every_nth_step = 5e-2/timestep # number of steps before redraw
+    use_rotationform = true
+    plot_every_nth_step = 10 #5e-2/timestep # number of steps before redraw
     
 
     ## choose one of these (inf-sup stable) finite element type pairs
@@ -93,8 +94,15 @@ function main()
     Solution2 = deepcopy(Solution)
 
     # add IMEX version of nonlinear convection term
-    add_rhsdata!(StokesProblem, 1, TLFeval(ConvectionOperator(1, Identity, 2, 2; testfunction_operator = Identity), Solution[1], Solution[1],-1))
-    add_rhsdata!(StokesProblem2, 1, TLFeval(ConvectionOperator(1,  reconstruction_operator, 2, 2; testfunction_operator =  reconstruction_operator), Solution2[1], Solution2[1],-1))
+    if use_rotationform
+        convection_classical = ConvectionRotationFormOperator(1, Identity, 2, 2; testfunction_operator = Identity)
+        convection_probust = ConvectionRotationFormOperator(1,  reconstruction_operator, 2, 2; testfunction_operator =  reconstruction_operator)
+    else
+        convection_classical = ConvectionOperator(1, Identity, 2, 2; testfunction_operator = Identity)
+        convection_probust = ConvectionOperator(1,  reconstruction_operator, 2, 2; testfunction_operator =  reconstruction_operator)
+    end
+    add_rhsdata!(StokesProblem, 1, TLFeval(convection_classical, Solution[1], Solution[1],-1))
+    add_rhsdata!(StokesProblem2, 1, TLFeval(convection_probust, Solution2[1], Solution2[1],-1))
    
 
     ## set initial solution ( = bestapproximation at time 0)
@@ -129,21 +137,22 @@ function main()
     TCS2 = TimeControlSolver(StokesProblem2, Solution2, BackwardEuler; timedependent_equations = [1], dt_testfunction_operator = [reconstruction_operator], verbosity = 1)
 
     ## time loop
-    change1 = 0.0
-    change2 = 0.0
+    change1 = [0.0,0.0]
+    change2 = [0.0,0.0]
     maxIterations = ceil(T / timestep)
     for iteration = 1 : maxIterations
-        try
+       # try
             change1 = advance!(TCS, timestep; reuse_matrix = [true])
-        catch
-        end
-        try
+       # catch
+       # end
+       # try
             change2 = advance!(TCS2, timestep; reuse_matrix = [true])
-        catch
-        end
+       # catch
+       # end
         @printf("  iteration %4d of %d",iteration,maxIterations)
         @printf("  time = %.4e",TCS.ctime)
-        @printf("  change1/change2 = %.4e/%.4e \n",change1,change2)
+        @printf("  change1 [v,p] = [%.4e,%.4e]",change1[1],change1[2])
+        @printf("  change2 [v,p] = [%.4e,%.4e] \n",change2[1],change2[2])
     
         ## update velocity plot
         if (iteration % plot_every_nth_step == 1) || plot_every_nth_step == 1

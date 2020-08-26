@@ -437,7 +437,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
 end
 
 
-# CurlScalar OPERATOR
+# CURLSCALAR OPERATOR
 # H1 ELEMENTS
 #
 # This operator can only be applied to scalar elements and produces the rotated 2D Gradient
@@ -458,8 +458,38 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 FEBE.cvals[2,dof_i,i] = 0.0;
                 for j = 1 : FEBE.offsets[2] # edim
-                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refoperatorvals[dof_i,j,i]
-                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refoperatorvals[dof_i,j,i]
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refoperatorvals[dof_i,j,i] # -du/dy
+                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refoperatorvals[dof_i,j,i] # du/dx
+                end    
+            end    
+        end  
+    end  
+    return nothing  
+end
+
+
+# CURL2D OPERATOR
+# H1 ELEMENTS
+#
+# This operator can only be applied to two-dimensional vector fields and produces the 1D curl
+# only works in 2D/Cartesian2D at the moment
+#
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: Curl2D, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # update L2G (we need the matrix)
+        update!(FEBE.L2G, item)
+
+        for i = 1 : length(FEBE.xref)
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = 0.0;
+                for j = 1 : FEBE.offsets[2] # edim
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refoperatorvals[dof_i,j,i]  # -du1/dy
+                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],j,i]  # du2/dx
                 end    
             end    
         end  

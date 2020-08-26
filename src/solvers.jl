@@ -988,7 +988,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
 
 
     nsubiterations = length(SC.subiterations)
-    change = zeros(Float64,nsubiterations)
+    change = zeros(Float64,length(X))
     d = 0
     l = 0
     for s = 1 : nsubiterations
@@ -1135,7 +1135,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
         l = 0
         for j = 1 : length(SC.subiterations[s])
             for k = 1 : length(X[SC.subiterations[s][j]])
-                change[s] += (X[SC.subiterations[s][j]][k] - x[s][j][k])^2
+                change[SC.subiterations[s][j]] += (X[SC.subiterations[s][j]][k] - x[s][j][k])^2
                 X[SC.subiterations[s][j]][k] = x[s][j][k]
             end
             l += length(X[SC.subiterations[s][j]])
@@ -1153,5 +1153,5 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
     
     TCS.last_timestep = timestep
 
-    return sqrt(sum(change))
+    return sqrt.(change)
 end

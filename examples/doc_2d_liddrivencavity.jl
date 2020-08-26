@@ -13,7 +13,8 @@ a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navi
 ```
 where ``\mathbf{u} = (1,0)`` along the top boundary of a square domain.
 
-
+The fixed point iteration benefits a lot from Anderson acceleration
+(see https://arxiv.org/pdf/1810.08494.pdf) that one can trigger by setting anderson_iterations > 0
 
 =#
 

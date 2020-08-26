@@ -183,9 +183,9 @@ function main()
         M = sum(Solution[2][:] .* xgrid[CellVolumes])
         @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)
-        @printf("  change = %.4e",change)
+        @printf("  change = [%.4e,%.4e,%.4e]",change[1],change[2],change[3])
         @printf("  M = %.4e \n",M)
-        if change < maxResidual
+        if sum(change) < maxResidual
             println("  terminated (below tolerance)")
             break;
         end

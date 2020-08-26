@@ -137,8 +137,8 @@ function main()
             change = advance!(TCS, timestep; reuse_matrix = [true])
             @printf("  iteration %4d",iteration)
             @printf("  time = %.4e",TCS.ctime)
-            @printf("  change = %.4e \n",change)
-            if change < maxResidual
+            @printf("  change = %.4e] \n",change[3])
+            if sum(change[3]) < maxResidual
                 println("  terminated (below tolerance)")
                 break;
             end
