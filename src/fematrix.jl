@@ -212,3 +212,21 @@ function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVect
     end
     return nothing
 end
+
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Computes vector'-matrix-vector product a'*B*b.
+"""
+function lrmatmul(a::AbstractArray{<:Real,1}, B::ExtendableSparseMatrix, b::AbstractArray{<:Real,1}; factor::Real = 1)
+    rows = rowvals(B.cscmatrix)
+    result = 0.0
+    for col = 1:size(B,2)
+        for r in nzrange(B.cscmatrix, col)
+            result += B.cscmatrix.nzval[r] * b[col] * factor * a[rows[r]]
+        end
+    end
+    return result
+end

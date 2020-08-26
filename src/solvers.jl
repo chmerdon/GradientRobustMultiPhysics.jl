@@ -27,6 +27,7 @@ mutable struct SolverConfig
     maxResidual::Real           # tolerance for residual
     current_time::Real          # current time in a time-dependent setting
     dirichlet_penalty::Real     # penalty for Dirichlet data
+    anderson_iterations::Int    # number of Anderson iterations (= 0 normal fixed-point iterations, > 0 Anderson iterations)
     verbosity::Int              # verbosity level (tha larger the more messaging)
 end
 
@@ -130,9 +131,9 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
                 end
             end
         end
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, 0, verbosity)
     else
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, 0, verbosity)
     end
 
 end
@@ -403,6 +404,7 @@ end
 function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
 
     verbosity = SC.verbosity
+    anderson_iterations = SC.anderson_iterations
 
     FEs = Array{FESpace,1}([])
     for j=1 : length(Target.FEVectorBlocks)
@@ -426,6 +428,25 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end    
+
+    # ANDERSON ITERATIONS
+    if anderson_iterations > 0
+        # we need to save the last iterates
+        LastAndersonIterates = Array{FEVector,1}(undef, anderson_iterations+1) # actual iterates u_k
+        LastAndersonIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
+        PDE.LHSOperators[1,1][1].store_operator = true # use the first operator to compute norm in which Anderson iterations are optimised
+        AIONormOperator = PDE.LHSOperators[1,1][1].storage
+        AIOMatrix = zeros(Float64, anderson_iterations+2, anderson_iterations+2)
+        AIORhs = zeros(Float64, anderson_iterations+2)
+        AIORhs[anderson_iterations+2] = 1 # sum of all coefficients should equal 1
+        AIOalpha = zeros(Float64, anderson_iterations+2)
+        for j = 1 : anderson_iterations+1
+            LastAndersonIterates[j] = deepcopy(Target)
+            LastAndersonIteratesTilde[j] = deepcopy(Target)
+            AIOMatrix[j,anderson_iterations+2] = 1
+            AIOMatrix[anderson_iterations+2,j] = 1
+        end
+    end
 
     residual = zeros(Float64,length(b.entries))
     resnorm::Float64 = 0.0
@@ -457,6 +478,49 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
         else
             Target.entries[:] = A.entries\b.entries
         end
+
+
+        # POSTPROCESS NEW ANDERSON ITERATE
+        if anderson_iterations > 0
+            depth = min(anderson_iterations,j-1)
+
+            # move last tilde iterates to the front in memory
+            for j = 1 : anderson_iterations
+                LastAndersonIteratesTilde[j] = deepcopy(LastAndersonIteratesTilde[j+1])
+            end
+            # save fixpoint iterate as new tilde iterate
+            LastAndersonIteratesTilde[anderson_iterations+1] = deepcopy(Target)
+
+            if depth > 0
+                # fill matrix
+                for j = 1 : depth+1, k = 1 : depth+1
+                    AIOMatrix[j,k] = lrmatmul(LastAndersonIteratesTilde[anderson_iterations+2-j][1][:] .- LastAndersonIterates[anderson_iterations+2-j][1][:],
+                    AIONormOperator, LastAndersonIteratesTilde[anderson_iterations+2-k][1][:] .- LastAndersonIterates[anderson_iterations+2-k][1][:])
+                end
+                # solve for alpha coefficients
+                ind = union(1:depth+1,anderson_iterations+2)
+                AIOalpha[ind] = AIOMatrix[ind,ind]\AIORhs[ind]
+
+                # move last iterates to the front in memory
+                for j = 1 : anderson_iterations
+                    LastAndersonIterates[j] = deepcopy(LastAndersonIterates[j+1])
+                end
+
+                #println("alpha = $(AIOalpha)")
+                # compute next iterates
+                fill!(Target[1],0.0)
+                for a = 1 : depth+1
+                    for j = 1 : FEs[1].ndofs
+                        Target[1][j] += AIOalpha[a] * LastAndersonIteratesTilde[anderson_iterations+2-a][1][j]
+                    end
+                end
+                LastAndersonIterates[anderson_iterations+1] = deepcopy(Target)
+            else
+                LastAndersonIterates[anderson_iterations+1] = deepcopy(Target)
+            end
+
+        end
+
 
         # REASSEMBLE NONLINEAR PARTS
         for j = 1:size(PDE.RHSOperators,1)
@@ -661,16 +725,21 @@ function solve!(
     time::Real = 0,
     maxResidual::Real = 1e-12,
     maxIterations::Int = 10,
+    AndersonIterations = 0, #  0 = Picard iteration, >0 Anderson iteration
     verbosity::Int = 0)
 
     SolverConfig = generate_solver(PDE; subiterations = subiterations, verbosity = verbosity)
     SolverConfig.dirichlet_penalty = dirichlet_penalty
+    SolverConfig.anderson_iterations = AndersonIterations
 
     if verbosity > 0
         println("\nSOLVING PDE")
         println("===========")
         println("  name = $(PDE.name)")
         println("  time = $(time)")
+        if AndersonIterations > 0
+            println("  anderson = $AndersonIterations")
+        end
 
         FEs = Array{FESpace,1}([])
         for j=1 : length(Target.FEVectorBlocks)

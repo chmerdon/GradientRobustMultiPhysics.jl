@@ -11,21 +11,11 @@ This example computes the solution ``\mathbf{u}`` of the linear elasticity probl
 \mathbb{C} \epsilon(\mathbf{u}) \cdot \mathbf{n} & = \mathbf{g} \quad \text{along } \Gamma_N
 \end{aligned}
 ```
-with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and the stiffness tensor
-```math
-\mathbb{C} \epsilon(\mathbf{u}) = 2 \mu \epsilon( \mathbf{u}) + \lambda \mathrm{tr}(\epsilon( \mathbf{u}))
-```
-
+with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and the stiffness tensor ``\mathbb{C}``.
 =#
 
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
-using ExtendableGrids
-using Triangulate
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
-using Printf
-
 
 ## problem data for Neumann boundary
 function neumann_force_right!(result,x)
