@@ -127,24 +127,20 @@ end
 """
 $(TYPEDEF)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 2D stiffness tensor
-C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
+    for isotropic media in Voigt notation, i.e.
+    C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+    
+    In Voigt notation C is a 3 x 3 matrix
+    C = [c11,c12,  0
+         c12,c11,  0
+           0,  0,c33]
+    
+    where c33 = shear_modulus, c12 = lambda and c11 = c33 + c12
     
 """
 function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_2d(result, input)
-        # compute sigma_ij = C_ijkl eps_kl
-        # where input = [eps_11,eps_22,eps_21] is the symmetric gradient in Voigt notation
-        # and result = [sigma_11,sigma_22,sigma_21] is Voigt representation of sigma
-        #
-        # the tensor C is represented by a 3x3 matrix
-        # C = [c11,c12,  0
-        #      c12,c11,  0
-        #        0,  0,c33]
-        #
-        # where c11 = lambda + 2*mu
-        #       c12 = lambda
-        #       c33 = mu
         result[1] = (lambda + 2*mu)*input[1] + lambda*input[2]
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
         result[3] = mu*input[3]
@@ -157,22 +153,22 @@ end
 $(TYPEDEF)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
+for isotropic media in Voigt notation, i.e.
 C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+
+In Voigt notation C is a 6 x 6 matrix
+C = [c11,c12,c12,  0,  0,  0
+     c12,c11,c12,  0,  0,  0
+     c12,c12,c11,  0,  0,  0
+       0,  0,  0,c44,  0,  0
+       0,  0,  0,  0,c44,  0
+       0,  0,  0,  0,  0,c44]
+
+where c44 = shear_modulus, c12 = lambda and c11 = c44 + c12
     
 """
 function HookStiffnessOperator3D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_3d(result, input)
-        # compute sigma_ij = C_ijkl eps_kl
-        # where input = [eps_11,eps_22,eps33,eps_21,eps31,eps32] is the symmetric gradient in Voigt notation
-        # and result = [sigma_11,sigma_22,sigma_33,sigma_21,sigma_31,sigma_32] is Voigt representation of sigma
-        #
-        # the tensor C is represented by a 6x6 matrix
-        # C = [c11,c12,c12,  0,  0,  0
-        #      c12,c11,c12,  0,  0,  0
-        #      c12,c12,c11,  0,  0,  0
-        #        0,  0,  0,c44,  0,  0
-        #        0,  0,  0,  0,c44,  0
-        #        0,  0,  0,  0,  0,c44]
         result[1] = (lambda + 2*mu)*input[1] + lambda*(input[2] + input[3])
         result[2] = (lambda + 2*mu)*input[2] + lambda*(input[1] + input[3])
         result[3] = (lambda + 2*mu)*input[3] + lambda*(input[1] + input[2])

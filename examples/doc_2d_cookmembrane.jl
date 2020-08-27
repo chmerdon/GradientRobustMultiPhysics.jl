@@ -15,6 +15,7 @@ with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and t
 ```math
 \mathbb{C} \epsilon(\mathbf{u}) = 2 \mu \epsilon( \mathbf{u}) + \lambda \mathrm{tr}(\epsilon( \mathbf{u}))
 ```
+for isotropic media.
 
 The domain will be the Cook membrane and the displacement has homogeneous boundary conditions on the left side of the domain
 and Neumann boundary conditions (i.e. a force that pulls the domain downwards) on the right side.

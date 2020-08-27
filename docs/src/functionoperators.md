@@ -13,6 +13,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`SymmetricGradient`](@ref)                | symmetric part of the gradient                |
 | [`Divergence`](@ref)                       | divergence operator                           |
 | [`CurlScalar`](@ref)                       | curl operator 1D to 2D (rotated gradient)     |
+| [`Curl2D`](@ref)                           | curl operator 2D to 1D                        |
 | [`ReconstructionIdentity{FEType}`](@ref)   | reconstruction operator into specified FEType |
 | [`ReconstructionDivergence{FEType}`](@ref) | divergence of FEType reconstruction operator  |
 |                                            |                                               |
