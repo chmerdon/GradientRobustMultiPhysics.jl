@@ -41,11 +41,11 @@ export Tangent4ElemType!
 
 include("gridstuff.jl")
 export Coordinates
-export CellNodes, CellFaces, CellEdges, CellFaceSigns, CellVolumes
+export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes
 export BFaces, BFaceCellPos, BFaceVolumes
-export unique
+export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries
 
 include("serialadjacency.jl")
 export SerialVariableTargetAdjacency

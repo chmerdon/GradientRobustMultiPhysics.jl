@@ -383,7 +383,7 @@ function get_basis_on_cell(::Type{H1BR{3}}, ::Type{<:Hexahedron3D})
                 xref[2]*a*c 0.0 0.0;
                 xref[3]*a*b 0.0 0.0;
                 xref[1]*xref[2]*c 0.0 0.0;
-                xref[1]*b*xref[3]c 0.0 0.0;
+                xref[1]*b*xref[3] 0.0 0.0;
                 a*xref[2]*xref[3] 0.0 0.0;
                 xref[1]*xref[2]*xref[3] 0.0 0.0;
                 0.0 a*b*c 0.0;

@@ -81,7 +81,7 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
             end
         end
         # assign dependencies
-        LHS_dep[j,k] = deepcopy(Base.unique(current_dep))
+        LHS_dep[j,k] = deepcopy(unique(current_dep))
     end
     RHS_ATs = Array{DataType,1}(undef,size(PDE.RHSOperators,1))
     RHS_dep = Array{Array{Int,1},1}(undef,size(PDE.RHSOperators,1))

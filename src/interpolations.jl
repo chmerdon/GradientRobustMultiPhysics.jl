@@ -40,13 +40,16 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
       regions = Array{Int32,1}(regions)    
   end
 
-  EG, ndofs4EG = Base.unique(xItemGeometries, xItemRegions, [xItemDofs], regions)
+  # setup basisevaler for each unique cell geometries
+  EG = FE.xgrid[UniqueCellGeometries]
+  ndofs4EG = Array{Int,1}(undef,length(EG))
   qf = Array{QuadratureRule,1}(undef,length(EG))
   basisevaler = Array{FEBasisEvaluator,1}(undef,length(EG))
   FEType = Base.eltype(FE)
   for j = 1 : length(EG)
       qf[j] = VertexRule(EG[j])
       basisevaler[j] = FEBasisEvaluator{T,FEType,EG[j],operator,ON_CELLS}(FE, qf[j])
+      ndofs4EG[j] = size(basisevaler[j].cvals,2)
   end    
   cvals_resultdim::Int = size(basisevaler[1].cvals,1)
   @assert size(Target,1) >= cvals_resultdim

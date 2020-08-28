@@ -166,7 +166,6 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, ::Type{ON_FAC
     xCellFaces = FES.xgrid[CellFaces]
     xFaceGeometries = FES.xgrid[FaceGeometries]
     xCellGeometries = FES.xgrid[CellGeometries]
-    println("$EGdofitems")
     function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
         dofitems[1] = xFaceCells[1,item]
         dofitems[2] = xFaceCells[2,item]

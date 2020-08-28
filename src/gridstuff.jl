@@ -30,6 +30,10 @@ abstract type CellEdges <: AbstractGridAdjacency end
 abstract type CellFaces <: AbstractGridAdjacency end
 abstract type CellFaceSigns <: AbstractGridAdjacency end
 abstract type CellVolumes <: AbstractGridFloatArray1D end
+abstract type UniqueCellGeometries <: AbstractElementGeometries end
+abstract type UniqueFaceGeometries <: AbstractElementGeometries end
+abstract type UniqueBFaceGeometries <: AbstractElementGeometries end
+abstract type UniqueEdgeGeometries <: AbstractElementGeometries end
 abstract type EdgeVolumes <: AbstractGridFloatArray1D end
 abstract type FaceVolumes <: AbstractGridFloatArray1D end
 abstract type EdgeCells <: AbstractGridAdjacency end
@@ -43,44 +47,6 @@ abstract type BFaces <: AbstractGridIntegerArray1D end
 abstract type BFaceCellPos <: AbstractGridIntegerArray1D end # position of bface in adjacent cell
 abstract type BFaceVolumes <: AbstractGridFloatArray1D end
 
-# unique functions that only selects uniques in specified regions
-function Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
-    nitems = 0
-    try
-        nitems = num_sources(xItemGeometries)
-    catch
-        nitems = length(xItemGeometries)
-    end      
-    EG::Array{DataType,1} = []
-    ndofs4EG = Array{Array{Int,1},1}(undef,length(xItemDofs))
-    for e = 1 : length(xItemDofs)
-        ndofs4EG[e] = []
-    end
-    iEG = 0
-    cellEG = Triangle2D
-    for item = 1 : nitems
-        for j = 1 : length(regions)
-            if xItemRegions[item] == regions[j] || regions[j] == 0
-                cellEG = xItemGeometries[item]
-                iEG = 0
-                for k = 1 : length(EG)
-                    if cellEG == EG[k]
-                        iEG = k
-                        break;
-                    end
-                end
-                if iEG == 0
-                    append!(EG, [xItemGeometries[item]])
-                    for e = 1 : length(xItemDofs)
-                        push!(ndofs4EG[e], num_targets(xItemDofs[e],item))
-                    end
-                end  
-                break; # rest of for loop can be skipped
-            end    
-        end
-    end    
-    return EG, ndofs4EG
-end
 
 # show function for ExtendableGrids and defined Components in its Dict
 function showmore(io::IO, xgrid::ExtendableGrid)
@@ -622,4 +588,20 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeTangents}
     end
 
     xEdgeTangents
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueCellGeometries})
+    xUniqueCellGeometries = unique(xgrid[CellGeometries])
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueFaceGeometries})
+    xUniqueCellGeometries = unique(xgrid[FaceGeometries])
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueBFaceGeometries})
+    xUniqueCellGeometries = unique(xgrid[BFaceGeometries])
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueEdgeGeometries})
+    xUniqueCellGeometries = unique(xgrid[EdgeGeometries])
 end

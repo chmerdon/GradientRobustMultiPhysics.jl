@@ -218,7 +218,6 @@ struct ItemIntegrator{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssembly
     regions::Array{Int,1}
 end
 
-
 function prepare_assembly(
     form::AbstractAssemblyPattern{T,AT},
     operator::Array{DataType,1},
@@ -232,6 +231,7 @@ function prepare_assembly(
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(FE))
+    EG = FE[1].xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
 
     # find out which operators need another assembly type
     # e.g. FaceJump operators that are assembled ON_CELLS
@@ -246,9 +246,6 @@ function prepare_assembly(
         end
     end    
 
-    # find unique ElementGeometries
-    EG, ndofs4EG = Base.unique(xItemGeometries, xItemRegions, xItemDofs, regions)
-
     # if one of the operators is a face jump operator we also need the element geometries 
     # of the neighbouring cells
     EGoffset = length(EG)
@@ -260,7 +257,10 @@ function prepare_assembly(
         for k = 1 : length(facejump_operators)
             xDofItemDofs[k] = Dofmap4AssemblyType(FE[facejump_operators[k]], dofitemAT[facejump_operators[k]])
         end
-        EGdofitem, ndofs4EGdofitem = Base.unique(xDofItemGeometries, xDofItemRegions, xDofItemDofs, regions)
+
+        # find unique ElementGeometries and coressponding ndofs
+        EGdofitem = FE[1].xgrid[GridComponentUniqueGeometries4AssemblyType(dofitemAT[facejump_operators[1]])]
+
         facejump_operator_involved = true
     end
 
@@ -278,6 +278,10 @@ function prepare_assembly(
     qf = Array{QuadratureRule,1}(undef,length(EG) + length(EGdofitem))
     basisevaler = Array{Array{Array{FEBasisEvaluator,1},1},1}(undef,length(EG)+ length(EGdofitem))
     quadorder = 0
+    ndofs4EG = Array{Array{Int,1},1}(undef,length(FE))
+    for e = 1 : length(FE)
+        ndofs4EG[e] = zeros(Int,length(EG)+length(EGdofitem))
+    end
     for j = 1 : length(EG)
         basisevaler[j] = Array{Array{FEBasisEvaluator,1},1}(undef,length(FE))
         quadorder = bonus_quadorder
@@ -297,6 +301,7 @@ function prepare_assembly(
                 else    
                     basisevaler[j][k][1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
                 end    
+                ndofs4EG[k][j] = size(basisevaler[j][k][1].cvals,2)
          #   end
         end
     end        
@@ -331,32 +336,31 @@ function prepare_assembly(
                         qf[EGoffset + j].xref[i] = xrefFACE2CELL[f](qf4face.xref[i])
                         #println("face $f : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
-                    for k = 1 : length(FE)
-                        basisevaler[EGoffset + j][k][f] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity)
-                    end    
+                    basisevaler[EGoffset + j][k][f] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity)
                 end
+                ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j][k][1].cvals,2)
             end
         end
         # append EGdofitem to EG
         EG = [EG, EGdofitem]
-        for k = 1 : length(FE)
-            ndofs4EG[k] = append!(ndofs4EG[k], ndofs4EGdofitem[k])
-        end
     end
+
 
     if verbosity > 1
         println("\nASSEMBLY PREPARATION $(typeof(form))")
         println("====================================")
+        println("      action = $(typeof(form.action))")
+        println("     regions = $regions")
+        println("  EG / ndofs = $EG / $ndofs4EG")
+        println("\n  List of arguments:")
         for k = 1 : length(FE)
-            println("      FE[$k] = $(FE[k].name), ndofs = $(FE[k].ndofs)")
-            println("operator[$k] = $(operator[k])")
+            println("        FE[$k] / operator[$k] = $(FE[k].name) / $(operator[k])")
         end    
-        println("     action = $(typeof(form.action))")
-        println("    regions = $regions")
-        println("   Base.unique = $EG")
-        for j = 1 : length(EG)
-            println("\nQuadratureRule [$j] for $(EG[j]):")
-            Base.show(qf[j])
+        if verbosity > 2
+            for j = 1 : length(EG)
+                println("\nQuadratureRule [$j] for $(EG[j]):")
+                Base.show(qf[j])
+            end
         end
     end
     return EG, ndofs4EG, qf, basisevaler, dii4op

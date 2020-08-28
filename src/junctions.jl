@@ -24,6 +24,10 @@ GridComponentGeometries4AssemblyType(::Type{ON_CELLS}) = CellGeometries
 GridComponentGeometries4AssemblyType(::Type{ON_FACES}) = FaceGeometries
 GridComponentGeometries4AssemblyType(::Type{ON_BFACES}) = BFaceGeometries
 
+GridComponentUniqueGeometries4AssemblyType(::Type{ON_CELLS}) = UniqueCellGeometries
+GridComponentUniqueGeometries4AssemblyType(::Type{ON_FACES}) = UniqueFaceGeometries
+GridComponentUniqueGeometries4AssemblyType(::Type{ON_BFACES}) = UniqueBFaceGeometries
+
 GridComponentRegions4AssemblyType(::Type{ON_CELLS}) = CellRegions
 GridComponentRegions4AssemblyType(::Type{ON_FACES}) = FaceRegions
 GridComponentRegions4AssemblyType(::Type{ON_BFACES}) = BFaceRegions

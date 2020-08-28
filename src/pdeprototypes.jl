@@ -86,7 +86,9 @@ function CompressibleNavierStokesProblem(
     add_unknown!(Problem, 1, dimension; unknown_name = "pressure", equation_name = "equation of state")
 
     # momentum equation
-    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,dimension,dimension))
+    if shear_modulus != 0
+        add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,dimension,dimension))
+    end
     if lambda != 0
         add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",Divergence,Divergence,MultiplyScalarAction(lambda,1)))
     end
