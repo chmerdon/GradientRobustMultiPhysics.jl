@@ -613,31 +613,17 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
     FE = CurrentSolution[j].FES
     O.storage = zeros(Float64,FE.ndofs)
 
-    if O.timedependent
-        function rhs_function_td() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(Float64,O.ncomponents)
-            function closure(result,input,x)
-                O.rhsfunction(temp,x,time)
-                result[1] = 0
-                for j = 1 : O.ncomponents
-                    result[1] += temp[j]*input[j] 
-                end
+    function rhs_function() # result = F(v) = f*operator(v) = f*input
+        temp = zeros(Float64,O.ncomponents)
+        function closure(result,input,x)
+            O.rhsfunction(temp,x, time)
+            result[1] = 0
+            for j = 1 : O.ncomponents
+                result[1] += temp[j]*input[j] 
             end
-        end    
-        action = XFunctionAction(rhs_function_td(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
-    else
-        function rhs_function() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(Float64,O.ncomponents)
-            function closure(result,input,x)
-                O.rhsfunction(temp,x)
-                result[1] = 0
-                for j = 1 : O.ncomponents
-                    result[1] += temp[j]*input[j] 
-                end
-            end
-        end    
-        action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
-    end
+        end
+    end    
+    action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
     RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
     assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
 end

@@ -28,6 +28,7 @@ mutable struct SolverConfig
     current_time::Real          # current time in a time-dependent setting
     dirichlet_penalty::Real     # penalty for Dirichlet data
     anderson_iterations::Int    # number of Anderson iterations (= 0 normal fixed-point iterations, > 0 Anderson iterations)
+    reuse_matrix::Array{Bool,1} # matrix of subiteration has to be assemble only once (so that LU decomposition can be reused, only used in time-dependent solving)
     verbosity::Int              # verbosity level (tha larger the more messaging)
 end
 
@@ -131,9 +132,9 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
                 end
             end
         end
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, 0, verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, 0, [false], verbosity)
     else
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, 0, verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, 0, [false], verbosity)
     end
 
 end
@@ -850,6 +851,7 @@ function TimeControlSolver(
     TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
     timedependent_equations = [],
     subiterations = "auto",
+    reuse_matrix = [],
     start_time::Real = 0,
     verbosity::Int = 0,
     dt_testfunction_operator = [],
@@ -867,6 +869,11 @@ function TimeControlSolver(
     SC.dirichlet_penalty = dirichlet_penalty
     SC.maxIterations = 1
     SC.maxResidual = 1e-16
+    if reuse_matrix == []
+        SC.reuse_matrix = zeros(Bool,length(SC.subiterations))
+    else
+        SC.reuse_matrix = reuse_matrix
+    end
 
     if verbosity > 0
 
@@ -959,11 +966,9 @@ $(TYPEDSIGNATURES)
 
 Advances a TimeControlSolver in time with the given timestep.
 """
-function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = [])
+function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
-    if reuse_matrix == []
-        reuse_matrix = zeros(Bool,length(TCS.SC.subiterations))
-    end
+    reuse_matrix = TCS.SC.reuse_matrix
 
     # update timestep counter
     TCS.cstep += 1
@@ -983,7 +988,8 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1; reuse_matrix = 
     end
 
     if (TCS.last_timestep != timestep) && any(reuse_matrix) && (TCS.cstep > 1)
-        println("   WARNING: reuse_matrix active, but timestep changed! Results may be wrong!")
+        println("   WARNING: reuse_matrix active, but timestep changed! Switching off reuse_matrix for this iteration!")
+        reuse_matrix .= false
     end
 
 

@@ -222,7 +222,7 @@ function main()
     ## we have three equations [1] for velocity, [2] for density, [3] for pressure
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
-    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; verbosity = 1, subiterations = [[1],[2],[3]], timedependent_equations = [1,2])
+    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; verbosity = 1, subiterations = [[1],[2],[3]], reuse_matrix = [true, false, true], timedependent_equations = [1,2])
 
     ## loop in pseudo-time until stationarity detected
     ## we also output M to see that the mass constraint is preserved all the way
@@ -231,7 +231,7 @@ function main()
         ## in the advance! step we can tell which matrices of which subiterations do not change
         ## and so allow for reuse of the lu factorization
         ## here only the matrix for the density update (2nd subiteration) changes in each step
-        change = advance!(TCS, timestep; reuse_matrix = [true, false, true])
+        change = advance!(TCS, timestep)
         M = sum(Solution[2][:] .* xgrid[CellVolumes])
         @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)

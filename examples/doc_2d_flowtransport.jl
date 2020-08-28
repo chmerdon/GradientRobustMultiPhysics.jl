@@ -126,18 +126,16 @@ function main()
 
     ## solve the transport by finite volumes or finite elements
     if FVtransport == true
-        ## pseudo-timestepping until stationarity detected
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], timedependent_equations = [3], verbosity = 1)
+        ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], reuse_matrix = [true], timedependent_equations = [3], verbosity = 1)
         change = 0.0
         timestep = 10000
         maxResidual = 1e-10
         for iteration = 1 : 100
-            ## in the advance! step we can tell that the matrices of which subiterations do not change
-            ## and so allow for reuse of the lu factorization
-            change = advance!(TCS, timestep; reuse_matrix = [true])
+            change = advance!(TCS, timestep)
             @printf("  iteration %4d",iteration)
             @printf("  time = %.4e",TCS.ctime)
-            @printf("  change = %.4e] \n",change[3])
+            @printf("  change = %.4e \n",change[3])
             if sum(change[3]) < maxResidual
                 println("  terminated (below tolerance)")
                 break;
