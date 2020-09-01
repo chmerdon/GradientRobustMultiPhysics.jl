@@ -135,11 +135,12 @@ $(TYPEDSIGNATURES)
 
 Custom `fill` function for `FEMatrixBlock` (only fills the block, not the complete FEMatrix).
 """
-function Base.fill!(B::FEMatrixBlock, value::Real)
-    rows = rowvals(B.entries.cscmatrix)
-    valsB = B.entries.cscmatrix.nzval
+function Base.fill!(B::FEMatrixBlock, value)
+    cscmat = B.entries.cscmatrix
+    rows::Array{Int,1} = rowvals(cscmat)
+    valsB = cscmat.nzval
     for col = B.offsetY+1:B.last_indexY
-        for r in nzrange(B.entries.cscmatrix, col)
+        for r in nzrange(cscmat, col)
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
                 valsB[r] = value
             end
@@ -153,14 +154,18 @@ $(TYPEDSIGNATURES)
 
 Adds FEMatrixBlock B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor::Real = 1)
-    rows = rowvals(B.entries.cscmatrix)
-    valsB = B.entries.cscmatrix.nzval
+function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1)
+    cscmat = B.entries.cscmatrix
+    rows::Array{Int,1} = rowvals(cscmat)
+    valsB = cscmat.nzval
+    arow::Int = 0
+    acol::Int = 0
     for col = B.offsetY+1:B.last_indexY
-        for r in nzrange(B.entries.cscmatrix, col)
+        acol = col - B.offsetY + A.offsetY
+        for r in nzrange(cscmat, col)
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-               _addnz(A,rows[r]-B.offsetX,col-B.offsetY,valsB[r],factor)
-               #A[rows[r]-B.offsetX,col-B.offsetY] += B.entries.cscmatrix.nzval[r] * factor
+                arow = rows[r] - B.offsetX + A.offsetX
+               _addnz(A.entries,arow,acol,valsB[r],factor)
             end
         end
     end
@@ -172,12 +177,17 @@ $(TYPEDSIGNATURES)
 
 Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix; factor::Real = 1)
-    rows = rowvals(B.cscmatrix)
-    valsB = B.cscmatrix.nzval
+function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix; factor = 1)
+    cscmat = B.cscmatrix
+    rows::Array{Int,1} = rowvals(cscmatrix)
+    valsB = cscmat.nzval
+    arow::Int = 0
+    acol::Int = 0
     for col = 1:size(B,2)
-        for r in nzrange(B.cscmatrix, col)
-            _addnz(A,rows[r],col,valsB[r],factor)
+        acol = col + A.offsetY
+        for r in nzrange(cscmat, col)
+            arow = rows[r] + A.offsetX
+            _addnz(A.entries,arow,acol,valsB[r],factor)
             #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
         end
     end
@@ -189,13 +199,20 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor::Real = 1)
-    rows = rowvals(B.entries.cscmatrix)
-    valsB = B.entries.cscmatrix.nzval
+function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor = 1)
+    cscmat = B.entries.cscmatrix
+    rows::Array{Int,1} = rowvals(cscmat)
+    valsB = cscmat.nzval
+    bcol::Int = 0
+    row::Int = 0
+    arow::Int = 0
     for col = B.offsetY+1:B.last_indexY
-        for r in nzrange(B.entries.cscmatrix, col)
-            if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                a[rows[r]-B.offsetX] += valsB[r] * b[col-B.offsetY] * factor 
+        bcol = col-B.offsetY+b.offset
+        for r in nzrange(cscmat, col)
+            row = rows[r]
+            if row >= B.offsetX && row <= B.last_indexX
+                arow = row - B.offsetX + a.offset
+                a.entries[arow] += valsB[r] * b.entries[bcol] * factor 
             end
         end
     end
@@ -209,12 +226,17 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVectorBlock; factor::Real = 1)
-    rows = rowvals(B.cscmatrix)
-    valsB = B.cscmatrix.nzval
+function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVectorBlock; factor = 1)
+    cscmat = B.cscmatrix
+    rows::Array{Int,1} = rowvals(cscmat)
+    valsB = cscmat.nzval
+    bcol::Int = 0
+    arow::Int = 0
     for col = 1:size(B,2)
-        for r in nzrange(B.cscmatrix, col)
-            a[rows[r]] += valsB[r] * b[col] * factor
+        bcol = col-B.offsetY+b.offset
+        for r in nzrange(cscmat, col)
+            arow = rows[r] - B.offsetX + a.offset
+            a.entries[arow] += valsB[r] * b.entries[bcol] * factor
         end
     end
     return nothing
@@ -227,7 +249,7 @@ $(TYPEDSIGNATURES)
 
 Computes vector'-matrix-vector product a'*B*b.
 """
-function lrmatmul(a::AbstractArray{<:Real,1}, B::ExtendableSparseMatrix, b::AbstractArray{<:Real,1}; factor::Real = 1)
+function lrmatmul(a::AbstractArray{<:Real,1}, B::ExtendableSparseMatrix, b::AbstractArray{<:Real,1}; factor = 1)
     rows = rowvals(B.cscmatrix)
     result = 0.0
     for col = 1:size(B,2)

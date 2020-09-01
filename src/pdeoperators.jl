@@ -614,7 +614,7 @@ end
 
 
 
-function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector, j::Int, k::Int; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector, j::Int, k::Int; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
 
     # ensure that storage is large_enough
     FE1 = CurrentSolution[j].FES
@@ -632,7 +632,7 @@ function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector,
 end
 
 
-function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
 
     # ensure that storage is large_enough
     FE = CurrentSolution[j].FES
@@ -654,7 +654,7 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
 end
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
         addblock!(A,O.storage; factor = factor)
     else
@@ -670,7 +670,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilin
 end
 
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
         addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
@@ -685,7 +685,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
     end
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; factor = 1, time::Real = 0, verbosity::Int = 0)
     FE1 = O.Data1.FES
     FE2 = O.Data2.FES
     FE3 = b.FES
@@ -693,7 +693,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; fact
     assemble!(b, O.Data1, O.Data2, TLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLFeval; factor = 1, time::Real = 0, verbosity::Int = 0)
     FES = []
     for k = 1 : length(O.Data)
         push!(FES, O.Data[k].FES)
@@ -704,7 +704,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLFeval; fact
     assemble!(b, O.Data, MLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor::Real = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor = 1, time::Real = 0, verbosity::Int = 0)
     if O.BLF.store_operator == true
         addblock_matmul!(b,O.BLF.storage,O.Data; factor = factor)
     else
@@ -736,7 +736,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
     assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; factor::Real = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
         addblock!(b, O.storage; factor = factor)
     else

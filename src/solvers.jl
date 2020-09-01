@@ -1117,29 +1117,39 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                 if (AssemblyEachTimeStep <: SC.LHS_AssemblyTriggers[d,d]) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
                     if SC.verbosity > 2
                         println("  Adding mass matrix to block [$k,$k] of subiteration $s")
+                        @time addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
+                    else
+                        addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
                     end
-                    addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
                 else
                     if (TCS.last_timestep != timestep) # if block was not reassembled, but timestep changed
                         if SC.verbosity > 2
                             println("  Adding mass matrix change to block [$k,$k] of subiteration $s")
+                            @time addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
+                        else
+                            addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
                         end
-                        addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
+                        
                     end
                 end
            # end
             if  (AssemblyEachTimeStep <: SC.RHS_AssemblyTriggers[d]) || TCS.last_timestep == 0 # if rhs block was reassembled at the end of the last iteration
                 if SC.verbosity > 2
                     println("  Adding time derivative to rhs block [$k] of subiteration $s")
+                    @time addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
+                else
+                    addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
                 end
-                addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
             else
                 if (TCS.last_timestep != timestep) # if block was not reassembled, but timestep changed
                     if SC.verbosity > 2
                         println("  Adding time derivative change to rhs block [$k] of subiteration $s")
+                        @time addblock_matmul!(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
+                        @time addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep) # add new rhs from last time step
+                    else
+                        addblock_matmul!(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
+                        addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep) # add new rhs from last time step
                     end
-                    addblock_matmul!(b[s][k],AM[s][k,k],x[s][k]; factor = -1.0/TCS.last_timestep) # subtract rhs from last time step
-                    addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep) # add new rhs from last time step
                 end
             end
         end

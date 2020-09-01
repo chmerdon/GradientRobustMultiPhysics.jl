@@ -632,7 +632,8 @@ function assemble!(
     b::Union{AbstractArray{<:Real,1},AbstractArray{<:Real,2}},
     LF::LinearForm{T,AT};
     verbosity::Int = 0,
-    factor::Real = 1) where {T<: Real, AT <: AbstractAssemblyType}
+    factor = 1,
+    offset = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
     FE = LF.FE
@@ -674,6 +675,7 @@ function assemble!(
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem = basisevaler[1][1][1]
     localb::Array{T,2} = zeros(Float64,maxndofs,action.resultdim)
+    bdof::Int = 0
 
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -718,11 +720,13 @@ function assemble!(
 
                 if onedimensional
                     for dof_i = 1 : ndofs4dofitem
-                        b[dofs[dof_i]] += factor * localb[dof_i,1] * xItemVolumes[item]
+                        bdof = dofs[dof_i] + offset
+                        b[bdof] += factor * localb[dof_i,1] * xItemVolumes[item]
                     end
                 else
                     for dof_i = 1 : ndofs4dofitem, j = 1 : action.resultdim
-                        b[dofs[dof_i],j] += factor * localb[dof_i,j] * xItemVolumes[item]
+                        bdof = dofs[dof_i] + offset
+                        b[bdof,j] += factor * localb[dof_i,j] * xItemVolumes[item]
                     end
                 end
                 fill!(localb, 0.0)
@@ -735,6 +739,15 @@ function assemble!(
     return nothing
 end
 
+function assemble!(
+    b::FEVectorBlock,
+    LF::LinearForm;
+    verbosity::Int = 0,
+    factor = 1)
+
+    assemble!(b.entries, LF; verbosity = verbosity, factor = factor, offset = b.offset)
+end
+
 
 """
 ````
@@ -743,7 +756,7 @@ assemble!(
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
     verbosity::Int = 0,
-    factor::Real = 1,
+    factor = 1,
     transposed_assembly::Bool = false,
     transpose_copy = Nothing) where {T<: Real, AT <: AbstractAssemblyType}
 ````
@@ -755,9 +768,11 @@ function assemble!(
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
     verbosity::Int = 0,
-    factor::Real = 1,
+    factor = 1,
     transposed_assembly::Bool = false,
-    transpose_copy = Nothing) where {T<: Real, AT <: AbstractAssemblyType}
+    transpose_copy = nothing,
+    offsetX = 0,
+    offsetY = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
     FE = [BLF.FE1, BLF.FE2]
@@ -807,6 +822,8 @@ function assemble!(
     basisvals2::Array{T,3} = basisevaler4dofitem2.cvals
     localmatrix::Array{T,2} = zeros(T,maxdofs1,maxdofs2)
     temp::T = 0 # some temporary variable
+    acol::Int = 0
+    arow::Int = 0
 
     for item = 1 : nitems
     for r = 1 : length(regions)
@@ -912,32 +929,44 @@ function assemble!(
 
                 # copy localmatrix into global matrix
                 if BLF.symmetric == false
-                    for dof_i = 1 : ndofs4item1, dof_j = 1 : ndofs4item2
-                        if localmatrix[dof_i,dof_j] != 0
-                            if transposed_assembly == true
-                                _addnz(A,dofs2[dof_j],dofs[dof_i],localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)
-                            else 
-                                _addnz(A,dofs[dof_i],dofs2[dof_j],localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)  
-                            end
-                            if transpose_copy != Nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
+                    for dof_i = 1 : ndofs4item1
+                        arow = dofs[dof_i] + offsetX
+                        for dof_j = 1 : ndofs4item2
+                            if localmatrix[dof_i,dof_j] != 0
+                                acol = dofs2[dof_j] + offsetY
                                 if transposed_assembly == true
-                                    _addnz(transpose_copy,dofs[dof_i],dofs2[dof_j],localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
-                                else
-                                    _addnz(transpose_copy,dofs2[dof_j],dofs[dof_i],localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
+                                    _addnz(A,acol,arow,localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)
+                                else 
+                                    _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)  
+                                end
+                                if transpose_copy != nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
+                                    if transposed_assembly == true
+                                        _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
+                                    else
+                                        _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
+                                    end
                                 end
                             end
                         end
                     end
                 else # symmetric case
-                    for dof_i = 1 : ndofs4item1, dof_j = dof_i+1 : ndofs4item2
-                        if localmatrix[dof_i,dof_j] != 0 
-                            temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
-                            _addnz(A,dofs2[dof_j],dofs[dof_i],temp,factor)
-                            _addnz(A,dofs2[dof_i],dofs[dof_j],temp,factor)
+                    for dof_i = 1 : ndofs4item1
+                        for dof_j = dof_i+1 : ndofs4item2
+                            if localmatrix[dof_i,dof_j] != 0 
+                                temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
+                                arow = dofs[dof_i] + offsetX
+                                acol = dofs2[dof_j] + offsetY
+                                _addnz(A,arow,acol,temp,factor)
+                                arow = dofs[dof_j] + offsetX
+                                acol = dofs2[dof_i] + offsetY
+                                _addnz(A,arow,acol,temp,factor)
+                            end
                         end
                     end    
                     for dof_i = 1 : ndofs4item1
-                       _addnz(A,dofs2[dof_i],dofs[dof_i],localmatrix[dof_i,dof_i] * xItemVolumes[item],factor)
+                        arow = dofs2[dof_i] + offsetX
+                        acol = dofs[dof_i] + offsetY
+                       _addnz(A,arow,acol,localmatrix[dof_i,dof_i] * xItemVolumes[item],factor)
                     end    
                 end    
                 fill!(localmatrix,0.0)
@@ -952,6 +981,24 @@ function assemble!(
 end
 
 
+## wrapper for FEMatrixBlock to avoid use of setindex! functions of FEMAtrixBlock
+function assemble!(
+    A::FEMatrixBlock,
+    BLF::BilinearForm;
+    apply_action_to::Int = 1,
+    verbosity::Int = 0,
+    factor = 1,
+    transposed_assembly::Bool = false,
+    transpose_copy = nothing)
+
+    if typeof(transpose_copy) <: FEMatrixBlock
+        assemble!(A.entries, BLF; apply_action_to = apply_action_to, verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy.entries, offsetX = A.offsetX, offsetY = A.offsetY)
+    else
+        assemble!(A.entries, BLF; apply_action_to = apply_action_to, verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy, offsetX = A.offsetX, offsetY = A.offsetY)
+    end
+end
+
+
 
 """
 ````
@@ -960,7 +1007,7 @@ assemble!(
     fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
-    factor::Real = 1,
+    factor = 1,
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 ````
 
@@ -970,11 +1017,13 @@ With apply_action_to=2 the action can be also applied to the second fixed argume
 """
 function assemble!(
     b::AbstractArray{<:Real,1},
-    fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
+    fixedFE::AbstractArray{<:Real,1},    # coefficient for fixed 2nd component
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
-    factor::Real = 1,
-    verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
+    factor = 1,
+    verbosity::Int = 0,
+    offset = 0,
+    offset2 = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
     FE = [BLF.FE1, BLF.FE2]
@@ -1027,6 +1076,8 @@ function assemble!(
     fixedval = zeros(T, cvals_resultdim2) # some temporary variable
     temp::T = 0 # some temporary variable
     localb::Array{T,1} = zeros(T,maxdofs1)
+    bdof::Int = 0
+    fdof::Int = 0
 
     for item = 1 : nitems
     for r = 1 : length(regions)
@@ -1070,7 +1121,8 @@ function assemble!(
                     dofs[j] = xItemDofs1[j,dofitem1]
                 end
                 for j=1:ndofs4item2
-                    coeffs2[j] = fixedFE[xItemDofs2[j,dofitem2]]
+                    fdof = xItemDofs2[j,dofitem2] + offset2
+                    coeffs2[j] = fixedFE[fdof]
                 end
 
                 for i in eachindex(weights)
@@ -1109,7 +1161,8 @@ function assemble!(
                 end
 
                 for dof_i = 1 : ndofs4item1
-                    b[dofs[dof_i]] += localb[dof_i] * xItemVolumes[item] * factor
+                    bdof = dofs[dof_i] + offset
+                    b[bdof] += localb[dof_i] * xItemVolumes[item] * factor
                 end
                 fill!(localb, 0.0)
             end
@@ -1121,6 +1174,19 @@ function assemble!(
     return nothing
 end
 
+
+# wrapper for FEVectorBlock to avoid setindex! functions of FEVectorBlock
+function assemble!(
+    b::FEVectorBlock,
+    fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
+    BLF::BilinearForm;
+    apply_action_to::Int = 1,
+    factor = 1,
+    verbosity::Int = 0)
+
+    assemble!(b.entries, fixedFE.entries, BLF; apply_action_to = apply_action_to, factor = factor, verbosity = verbosity, offset = b.offset, offset2 = fixedFE.offset)
+end
+
 """
 ````
 assemble!(
@@ -1130,7 +1196,7 @@ assemble!(
     TLF::TrilinearForm{T, AT};
     verbosity::Int = 0,
     transposed_assembly::Bool = false,
-    factor::Real = 1)
+    factor = 1)
 ````
 
 Assembly of a TrilinearForm TLF into given two-dimensional AbstractArray (e.g. a FEMatrixBlock).
@@ -1142,7 +1208,7 @@ function assemble!(
     TLF::TrilinearForm{T, AT};
     verbosity::Int = 0,
     transposed_assembly::Bool = false,
-    factor::Real = 1) where {T<: Real, AT <: AbstractAssemblyType}
+    factor = 1) where {T<: Real, AT <: AbstractAssemblyType}
     
     # get adjacencies
     FE = [TLF.FE1, TLF.FE2, TLF.FE3]
@@ -1305,7 +1371,7 @@ assemble!(
     FE2::FEVectorBlock.
     TLF::TrilinearForm{T, AT};
     verbosity::Int = 0,
-    factor::Real = 1)
+    factor = 1)
 ````
 
 Assembly of a TrilinearForm TLF into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
@@ -1317,7 +1383,7 @@ function assemble!(
     FE2::FEVectorBlock,
     TLF::TrilinearForm{T, AT};
     verbosity::Int = 0,
-    factor::Real = 1) where {T<: Real, AT <: AbstractAssemblyType}
+    factor = 1) where {T<: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
     FE = [TLF.FE1, TLF.FE2, TLF.FE3]
@@ -1469,18 +1535,20 @@ assemble!(
     FE::Array{FEVectorBlock,1},
     MLF::MultilinearForm{T, AT};
     verbosity::Int = 0,
-    factor::Real = 1)
+    factor = 1)
 ````
 
 Assembly of a MultilinearForm MLF into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
 Here, the all but the last arguments are fixed by the given coefficients in the components of FE.
 """
 function assemble!(
-    b::AbstractArray{<:Real,1},
-    FEB::Array{FEVectorBlock,1},
+    b::AbstractVector,
+    FEB::Array{AbstractVector,1},
     MLF::MultilinearForm{T, AT};
     verbosity::Int = 0,
-    factor::Real = 1) where {T<: Real, AT <: AbstractAssemblyType}
+    factor = 1,
+    offset = 0,
+    offsets2 = [0]) where {T<: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
     FE = MLF.FE
@@ -1535,10 +1603,11 @@ function assemble!(
     basisvals::Array{T,3} = basisevaler4dofitem.cvals
     temp::T = 0 # some temporary variable
     localb::Array{T,1} = zeros(T,maxdofs)
+    nFE::Int = length(FE)
+    bdof::Int = 0
+    fdof::Int = 0
 
     for item = 1 : nitems
-    nFE = length(FE)
-    xItemDofsLast = xItemDofs[nFE]
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
@@ -1559,7 +1628,8 @@ function assemble!(
                     # update coeffs on dofitem
                     ndofs4dofitem = ndofs4EG[FEid][EG4dofitem[di]]
                     for j=1:ndofs4dofitem
-                        coeffs[j] = FEB[FEid][xItemDofs[FEid][j,dofitem]]
+                        fdof = xItemDofs[FEid][j,dofitem] + offsets2[FEid]
+                        coeffs[j] = FEB[FEid][fdof]
                     end
 
                     for i in eachindex(weights)
@@ -1601,7 +1671,8 @@ function assemble!(
         end  
 
         for dof_i = 1 : ndofs4dofitem
-            b[xItemDofsLast[dof_i,item]] += localb[dof_i] * xItemVolumes[item] * factor
+            bdof = xItemDofs[nFE][dof_i,item] + offset
+            b[bdof] += localb[dof_i] * xItemVolumes[item] * factor
         end
         fill!(localb, 0.0)
 
@@ -1611,6 +1682,25 @@ function assemble!(
     end # item for loop
     return nothing
 end
+
+
+function assemble!(
+    b::FEVectorBlock,
+    FEB::Array{FEVectorBlock,1},
+    MLF::MultilinearForm;
+    verbosity::Int = 0,
+    factor = 1)
+
+    FEBarrays = Array{AbstractVector,1}(undef, length(FEB))
+    offsets = zeros(Int,length(FEB))
+    for j = 1 : length(FEB)
+        FEBarrays[j] = FEB[j].entries
+        offsets[j] = FEB[j].offset
+    end
+
+    assemble!(b.entries, FEBarrays, MLF; verbosity = verbosity, factor = factor, offset = b.offset, offsets2 = offsets)
+end
+
 
 
 """
