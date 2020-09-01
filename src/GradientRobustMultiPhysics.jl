@@ -6,6 +6,7 @@ using ExtendableSparse
 using SuiteSparse
 using SparseArrays
 using BenchmarkTools
+using IterativeSolvers
 using LinearAlgebra
 using ForwardDiff
 using DocStringExtensions
@@ -147,7 +148,8 @@ export AbstractPDEOperator
 export BackwardEulerTimeDerivative
 
 export AbstractBilinearForm
-export StiffnessOperator, LaplaceOperator, HookStiffnessOperator2D, HookStiffnessOperator1D
+export StiffnessOperator, LaplaceOperator
+export HookStiffnessOperator3D, HookStiffnessOperator2D, HookStiffnessOperator1D
 export ReactionOperator
 export ConvectionOperator, ConvectionRotationFormOperator
 export LagrangeMultiplier
@@ -185,6 +187,8 @@ export add_constraint!
 
 
 include("solvers.jl")
+export AbstractLinSolveType
+export DirectUMFPACK, IterativeBigStabl_LUPC
 export solve!, assemble!
 export TimeControlSolver, advance!
 

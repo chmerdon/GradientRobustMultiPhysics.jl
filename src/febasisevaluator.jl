@@ -138,7 +138,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
             compressiontargets = [1,4,5,4,2,6,5,6,3] 
         end
     end
-    
+
     return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, compressiontargets)
 end    
 
@@ -536,7 +536,10 @@ end
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-# symmetric gradients are saved in reduced Voigt notation (compression specified by FEBE.compressiontargets)
+# symmetric matrices are saved in reduced Voigt notation (compression specified by FEBE.compressiontargets)
+# in 1D: (du1/dx1)
+# in 2D: (du1/dx1, du2/dx2, du1/dx2 + du2/dx1)
+# in 3D: (du1/dx1, du2/dx2, du3/dx3, du1/dx2 + du2/dx1, du1/dx3 + du3/dx1, du2/dx3 + du3/dx2)
 
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, FEOP <: SymmetricGradient, AT <:AbstractAssemblyType}
     if FEBE.citem != item
@@ -553,7 +556,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
                     for j = 1 : FEBE.offsets[2] # edim
-                        # compute duc/dxk and put it into the Voigt vector
+                        # compute duc/dxk and put it into the right spot in the Voigt vector
                         FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
                 end    
@@ -562,6 +565,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
     end    
     return nothing
 end
+
 
 
 # GRADIENT OPERATOR

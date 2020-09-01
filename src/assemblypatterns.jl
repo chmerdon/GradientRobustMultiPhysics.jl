@@ -1486,7 +1486,7 @@ function assemble!(
     FE = MLF.FE
     operator = MLF.operators
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(FE))
     for j = 1 : length(FE)
@@ -1521,11 +1521,12 @@ function assemble!(
     end
 
     # loop over items
+    EG4item::Int = 0
     EG4dofitem::Array{Int,1} = [1,1] # EG id of the current item with respect to operator
     dofitems::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
     coefficient4dofitem::Array{Int,1} = [0,0] # coefficients for operator
-    ndofs4item::Int = 0 # number of dofs for item
+    ndofs4dofitem::Int = 0 # number of dofs for item
     dofitem::Int = 0
     coeffs::Array{T,1} = zeros(T,maxdofs)
     action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
@@ -1536,11 +1537,13 @@ function assemble!(
     localb::Array{T,1} = zeros(T,maxdofs)
 
     for item = 1 : nitems
+    nFE = length(FE)
+    xItemDofsLast = xItemDofs[nFE]
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
-        for FEid = 1 : length(FE) - 1
+        for FEid = 1 : nFE - 1
             # get dofitem informations
             EG4item = dii4op[FEid](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
 
@@ -1576,10 +1579,10 @@ function assemble!(
 
         # update action on item/dofitem
         # beware: currently last operator must not be a FaceJump operator
-        EG4item = dii4op[length(FE)](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
-        basisevaler4dofitem = basisevaler[EG4item][length(FE)][1]
+        EG4item = dii4op[nFE](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        basisevaler4dofitem = basisevaler[EG4item][nFE][1]
         basisvals = basisevaler4dofitem.cvals
-        ndofs4dofitem = ndofs4EG[length(FE)][EG4item]
+        ndofs4dofitem = ndofs4EG[nFE][EG4item]
         update!(action, basisevaler4dofitem, dofitems[1], item, regions[r])
 
         for i in eachindex(weights)
@@ -1591,14 +1594,14 @@ function assemble!(
             for dof_j = 1 : ndofs4dofitem
                 temp = 0
                 for k = 1 : action_resultdim
-                    temp += action_result[k]*basisvals[k,dof_j,i]
+                    temp += action_result[k] * basisvals[k,dof_j,i]
                 end
                 localb[dof_j] += temp * weights[i]
             end 
         end  
 
         for dof_i = 1 : ndofs4dofitem
-            b[xItemDofs[length(FE)][dof_i,item]] += localb[dof_i] * xItemVolumes[item] * factor
+            b[xItemDofsLast[dof_i,item]] += localb[dof_i] * xItemVolumes[item] * factor
         end
         fill!(localb, 0.0)
 

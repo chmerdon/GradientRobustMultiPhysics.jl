@@ -171,7 +171,7 @@ function main()
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
     ## so we can reuse the other subiteration matrices in each timestep
-    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], reuse_matrix = [true, false, true], timedependent_equations = [1,2], verbosity = 1)
+    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [1,2], verbosity = 1)
 
     ## loop in pseudo-time until stationarity detected
     ## we also output M to see that the mass constraint is preserved all the way

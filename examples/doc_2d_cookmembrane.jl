@@ -81,7 +81,7 @@ function main()
     #####################################################################################
 
     ## PDE description via prototype
-    LinElastProblem = LinearElasticityProblem(2; shearmodulus = shear_modulus, lambda = lambda)
+    LinElastProblem = LinearElasticityProblem(2; shear_modulus = shear_modulus, lambda = lambda)
 
     ## add Neumann boundary data
     add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [2], neumann_force_right!, 2, 2; on_boundary = true, bonus_quadorder = 0))

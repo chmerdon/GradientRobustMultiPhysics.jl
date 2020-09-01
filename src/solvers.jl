@@ -14,6 +14,11 @@
 #
 # also parameter to steer penalties and stopping criterarions are saved in SolverConfig
 
+abstract type AbstractLinSolveType end
+abstract type DirectUMFPACK <: AbstractLinSolveType end
+abstract type DirectPARDISO <: AbstractLinSolveType end # hopefully in future
+abstract type IterativeBigStabl_LUPC <: AbstractLinSolveType end # iterative solver with LU decomposition as preconditioner
+
 
 mutable struct SolverConfig
     is_nonlinear::Bool      # PDE is nonlinear
@@ -27,9 +32,104 @@ mutable struct SolverConfig
     maxResidual::Real           # tolerance for residual
     current_time::Real          # current time in a time-dependent setting
     dirichlet_penalty::Real     # penalty for Dirichlet data
+    linsolver::Type{<:AbstractLinSolveType} # type for linear solver
     anderson_iterations::Int    # number of Anderson iterations (= 0 normal fixed-point iterations, > 0 Anderson iterations)
-    reuse_matrix::Array{Bool,1} # matrix of subiteration has to be assemble only once (so that LU decomposition can be reused, only used in time-dependent solving)
+    maxlureuse::Array{Int,1}    # max number of solves the LU decomposition of linsolver is reused
     verbosity::Int              # verbosity level (tha larger the more messaging)
+end
+
+
+mutable struct LinearSystem{ST <: AbstractLinSolveType}
+    x::AbstractVector
+    A::ExtendableSparseMatrix
+    b::AbstractVector
+    ALU     # LU factorization or nothing
+    update_after::Int # update LU decomposition after so many solves, updater_after = -1 means never
+    ### private fields
+    nluu::Int # number of LU updates so far
+    nsolves::Int # number of solvers so far
+    nliniter::Int # number of iterations for last solve
+end
+
+function LinearSystem{DirectUMFPACK}(x,A,b; update_after::Int = 1)
+    return LinearSystem{DirectUMFPACK}(x,A,b,nothing,update_after,0,0,0)
+end
+
+
+function LinearSystem{IterativeBigStabl_LUPC}(x,A,b; update_after::Int = 3)
+    return LinearSystem{IterativeBigStabl_LUPC}(x,A,b,nothing,update_after,0,0,0)
+end
+
+
+function linsolve!(
+    LS::LinearSystem{IterativeBigStabl_LUPC};
+    force_update::Bool = false,
+    verbosity::Int = 0
+)
+
+    if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
+        flush!(LS.A)
+        LS.nluu += 1
+        if verbosity > 1
+            println("\n  Updating LU decomposition (nluu = $(LS.nluu))...")
+            @time LS.ALU = lu(LS.A.cscmatrix)
+        else
+            LS.ALU = lu(LS.A.cscmatrix)
+        end
+    end
+
+    if verbosity > 1
+        println("\n  Solving iteratively with bigstabl (LU preconditioner)...")
+        @time (sol,history) = IterativeSolvers.bicgstabl!(values(LS.x),
+                                         LS.A,
+                                         values(LS.b),
+                                         1,
+                                         Pl=LS.ALU,
+                                         tol=1e-10,
+                                         max_mv_products=20,
+                                         log=true)
+        LS.nliniter = history.iters
+        println("\n    ... iterations = $(LS.nliniter)")
+    else
+        (sol,history) = IterativeSolvers.bicgstabl!(values(LS.x),
+                                         LS.A,
+                                         values(LS.b),
+                                         1,
+                                         Pl=LS.ALU,
+                                         tol=1e-10,
+                                         max_mv_products=20,
+                                         log=true)
+        LS.nliniter = history.iters
+    end
+    LS.nsolves += 1
+end
+
+
+function linsolve!(
+    LS::LinearSystem{DirectUMFPACK};
+    force_update::Bool = false,
+    verbosity::Int = 0
+)
+
+    if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
+        flush!(LS.A)
+        LS.nluu += 1
+        if verbosity > 1
+            println("\n  Updating LU decomposition (nluu = $(LS.nluu))...")
+            @time LS.ALU = lu(LS.A.cscmatrix)
+        else
+            LS.ALU = lu(LS.A.cscmatrix)
+        end
+    end
+
+    if verbosity > 1
+        println("\n  Solving directly with UMFPACK...")
+        @time LS.x[:] = LS.ALU\LS.b
+    else
+        LS.x[:] = LS.ALU\LS.b
+    end
+    LS.nliniter = 1
+    LS.nsolves += 1
 end
 
 
@@ -132,9 +232,9 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
                 end
             end
         end
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, 0, [false], verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
     else
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, 0, [false], verbosity)
+        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
     end
 
 end
@@ -145,6 +245,7 @@ function Base.show(io::IO, SC::SolverConfig)
     println("======================")
     println("         nonlinear = $(SC.is_nonlinear)")
     println("     timedependent = $(SC.is_timedependent)")
+    println("         linsolver = $(SC.linsolver)")
 
     println("     subiterations = $(SC.subiterations)")
 
@@ -379,12 +480,8 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
     end
 
     # SOLVE
-    if verbosity > 1
-        println("\n  Solving")
-        @time Target.entries[:] = A.entries\b.entries
-    else
-        Target.entries[:] = A.entries\b.entries
-    end
+    LS =  LinearSystem{SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
+    linsolve!(LS; verbosity = verbosity - 1)
 
     if verbosity > 0
         # CHECK RESIDUAL
@@ -452,6 +549,10 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
     residual = zeros(Float64,length(b.entries))
     resnorm::Float64 = 0.0
 
+    ## INIT SOLVER
+    LS = LinearSystem{SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
+
+
     if verbosity > 0
         println("\n  starting fixpoint iterations")
     end
@@ -473,12 +574,7 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
         end
 
         # SOLVE
-        if verbosity > 1
-            println("\n  Solving")
-            @time Target.entries[:] = A.entries\b.entries
-        else
-            Target.entries[:] = A.entries\b.entries
-        end
+        linsolve!(LS; verbosity = verbosity - 1)
 
 
         # POSTPROCESS NEW ANDERSON ITERATE
@@ -611,6 +707,14 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
     end
     resnorm::Float64 = 0.0
 
+
+    ## INIT SOLVERS
+    LS = Array{LinearSystem,1}(undef,nsubiterations)
+    for s = 1 : nsubiterations
+        LS[s] = LinearSystem{SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
+    end
+
+
     if verbosity > 0
         println("\n  Starting fixpoint iterations with $(length(SC.subiterations)) subiterations")
     end
@@ -646,12 +750,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
             end
 
             # SOLVE
-            if verbosity > 1
-                println("\n  Solving")
-                @time x[s].entries[:] = A[s].entries\b[s].entries
-            else
-                x[s].entries[:] = A[s].entries\b[s].entries
-            end
+            linsolve!(LS[s]; verbosity = verbosity - 1)
 
             # WRITE INTO Target
             for j = 1 : length(SC.subiterations[s])
@@ -726,13 +825,17 @@ function solve!(
     time::Real = 0,
     maxResidual::Real = 1e-12,
     maxIterations::Int = 10,
+    linsolver = DirectUMFPACK,
+    maxlureuse = [1],
     AndersonIterations = 0, #  0 = Picard iteration, >0 Anderson iteration
     verbosity::Int = 0)
 
     SolverConfig = generate_solver(PDE; subiterations = subiterations, verbosity = verbosity)
     SolverConfig.dirichlet_penalty = dirichlet_penalty
     SolverConfig.anderson_iterations = AndersonIterations
-
+    SolverConfig.linsolver = linsolver
+    SolverConfig.maxlureuse = maxlureuse
+    
     if verbosity > 0
         println("\nSOLVING PDE")
         println("===========")
@@ -784,6 +887,7 @@ abstract type BackwardEuler <: AbstractTimeIntegrationRule end
 mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
     PDE::PDEDescription      # PDE description (operators, data etc.)
     SC::SolverConfig         # solver configurations (subiterations, penalties etc.)
+    LS::Array{LinearSystem,1} # array for linear solvers of all subiterations
     ctime::Real              # current time
     cstep::Real              # current timestep count
     last_timestep::Real      # last timestep
@@ -851,12 +955,13 @@ function TimeControlSolver(
     TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
     timedependent_equations = [],
     subiterations = "auto",
-    reuse_matrix = [],
     start_time::Real = 0,
     verbosity::Int = 0,
     dt_testfunction_operator = [],
     dt_action = [],
     nonlinear_dt = [],
+    linsolver = DirectUMFPACK,
+    maxlureuse = [1],
     dirichlet_penalty = 1e60)
 
     # generate solver for time-independent problem
@@ -869,11 +974,8 @@ function TimeControlSolver(
     SC.dirichlet_penalty = dirichlet_penalty
     SC.maxIterations = 1
     SC.maxResidual = 1e-16
-    if reuse_matrix == []
-        SC.reuse_matrix = zeros(Bool,length(SC.subiterations))
-    else
-        SC.reuse_matrix = reuse_matrix
-    end
+    SC.linsolver = linsolver
+    SC.maxlureuse = maxlureuse
 
     if verbosity > 0
 
@@ -950,13 +1052,23 @@ function TimeControlSolver(
     dt_action = Array{AbstractAction,1}(dt_action)
     dt_testfunction_operator = Array{DataType,1}(dt_testfunction_operator)
 
+    # INIT LINEAR SOLVERS
+    LS = Array{LinearSystem,1}(undef,nsubiterations)
+    for s = 1 : nsubiterations
+        if length(SC.maxlureuse) < s
+            push!(SC.maxlureuse, 1)
+        end
+        LS[s] = LinearSystem{SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
+    end
+
     # generate TimeControlSolver
-    TCS = TimeControlSolver{TIR}(PDE,SC,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,InitialValues, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
+    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,InitialValues, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
         assemble_massmatrix4subiteration!(TCS, i; force = true, verbosity = verbosity - 1)
     end
+
 
     return TCS
 end
@@ -967,8 +1079,6 @@ $(TYPEDSIGNATURES)
 Advances a TimeControlSolver in time with the given timestep.
 """
 function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
-
-    reuse_matrix = TCS.SC.reuse_matrix
 
     # update timestep counter
     TCS.cstep += 1
@@ -987,12 +1097,6 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         println("\n\n\n  Entering timestep $(TCS.cstep)...")
     end
 
-    if (TCS.last_timestep != timestep) && any(reuse_matrix) && (TCS.cstep > 1)
-        println("   WARNING: reuse_matrix active, but timestep changed! Switching off reuse_matrix for this iteration!")
-        reuse_matrix .= false
-    end
-
-
     nsubiterations = length(SC.subiterations)
     change = zeros(Float64,length(X))
     d = 0
@@ -1009,7 +1113,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         # add change in mass matrix to diagonal blocks if needed
         for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
-            if (reuse_matrix[s] == false) || (TCS.cstep == 1) ## if user claims that matrix should not change this is skipped
+           # if (reuse_matrix[s] == false) || (TCS.cstep == 1) ## if user claims that matrix should not change this is skipped
                 if (AssemblyEachTimeStep <: SC.LHS_AssemblyTriggers[d,d]) == true || TCS.last_timestep == 0 # if block was reassembled at the end of the last iteration
                     if SC.verbosity > 2
                         println("  Adding mass matrix to block [$k,$k] of subiteration $s")
@@ -1023,7 +1127,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                         addblock!(A[s][k,k],AM[s][k,k]; factor = -1.0/TCS.last_timestep + 1.0/timestep)
                     end
                 end
-            end
+           # end
             if  (AssemblyEachTimeStep <: SC.RHS_AssemblyTriggers[d]) || TCS.last_timestep == 0 # if rhs block was reassembled at the end of the last iteration
                 if SC.verbosity > 2
                     println("  Adding time derivative to rhs block [$k] of subiteration $s")
@@ -1102,15 +1206,10 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end
         end
 
-        if (reuse_matrix[s] == false) || (TCS.cstep == 1)
-            flush!(A[s].entries)
-            TCS.ALU[s] = lu(A[s].entries.cscmatrix)
-        end
-
         # SOLVE
         if SC.verbosity > 1
             println("\n  Solving equation(s) $(SC.subiterations[s])")
-            @time x[s].entries[:] = TCS.ALU[s]\b[s].entries
+            linsolve!(TCS.LS[s]; verbosity = SC.verbosity - 1)
             residual = A[s].entries*x[s].entries - b[s].entries
             for j = 1 : length(fixed_dofs)
                 for eq = 1 : length(SC.subiterations[s])
@@ -1124,7 +1223,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                 println("    ... residual = $(norm(residual))")
             end
         else
-            x[s].entries[:] = TCS.ALU[s]\b[s].entries
+            linsolve!(TCS.LS[s]; verbosity = SC.verbosity - 1)
         end
         
 

@@ -27,6 +27,7 @@ see subfolder examples, can be run by include("...")
 - ExtendableSparse.jl
 - ExtendableGrids.jl
 - ForwardDiff.jl
+- IterativeSolvers.jl
 - DocStringExtensions.jl
 - BenchmarkTools.jl
 - Triangulate.jl (for runtests.jl and grid generation in some examples)

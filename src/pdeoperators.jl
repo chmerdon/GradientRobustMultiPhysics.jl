@@ -388,8 +388,13 @@ struct BLFeval <: AbstractPDEOperatorRHS
     BLF::AbstractBilinearForm
     Data::FEVectorBlock
     factor::Real
+    nonlinear::Bool
+    timedependent::Bool
 end
 
+function BLFeval(BLF, Data, factor; nonlinear::Bool = false, timedependent::Bool = false)
+    return BLFeval(BLF, Data, factor, nonlinear, timedependent)
+end
 
 """
 $(TYPEDEF)
@@ -403,8 +408,13 @@ struct TLFeval <: AbstractPDEOperatorRHS
     Data1::FEVectorBlock
     Data2::FEVectorBlock
     factor::Real
+    nonlinear::Bool
+    timedependent::Bool
 end
 
+function TLFeval(TLF, Data1, Data2, factor; nonlinear::Bool = false, timedependent::Bool = false)
+    return TLFeval(TLF, Data1, Data2, factor, nonlinear, timedependent)
+end
 
 """
 $(TYPEDEF)
@@ -417,6 +427,12 @@ struct MLFeval <: AbstractPDEOperatorRHS
     MLF::AbstractMultilinearForm
     Data::Array{FEVectorBlock,1}
     factor::Real
+    nonlinear::Bool
+    timedependent::Bool
+end
+
+function MLFeval(MLF, Data, factor; nonlinear::Bool = false, timedependent::Bool = false)
+    return MLFeval(MLF, Data, factor, nonlinear, timedependent)
 end
 
 
@@ -485,6 +501,15 @@ function check_PDEoperator(O::FVConvectionDiffusionOperator)
 end
 function check_PDEoperator(O::CopyOperator)
     return true, true
+end
+function check_PDEoperator(O::BLFeval)
+    return O.nonlinear, O.timedependent
+end
+function check_PDEoperator(O::TLFeval)
+    return O.nonlinear, O.timedependent
+end
+function check_PDEoperator(O::MLFeval)
+    return O.nonlinear, O.timedependent
 end
 
 # check if operator also depends on arg (additional to the argument relative to position in PDEDescription)

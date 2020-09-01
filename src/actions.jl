@@ -93,6 +93,7 @@ result[j] = input[j] * value[item]
 mutable struct ItemWiseMultiplyScalarAction{T <: Real} <: AbstractAction
     value::AbstractArray{T,1}
     citem::Int
+    cvalue::T
     resultdim::Int
     bonus_quadorder::Int
 end
@@ -273,7 +274,7 @@ creates ItemWiseMultiplyScalarAction.
 
 """
 function ItemWiseMultiplyScalarAction(value4item::AbstractArray{<:Real,1}, resultdim::Int = 1)
-    return ItemWiseMultiplyScalarAction{eltype(value4item)}(value4item, 1, resultdim,0)
+    return ItemWiseMultiplyScalarAction{eltype(value4item)}(value4item, 1, 0, resultdim,0)
 end
 
 
@@ -411,8 +412,12 @@ function update!(C::XFunctionAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::
 
 end
 
-function update!(C::Union{ItemWiseMultiplyScalarAction,ItemWiseFunctionAction}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
+function update!(C::ItemWiseFunctionAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
     C.citem = copy(vitem)
+end
+
+function update!(C::ItemWiseMultiplyScalarAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
+    C.cvalue = C.value[C.citem]
 end
 
 function update!(C::Union{RegionWiseMultiplyVectorAction,RegionWiseMultiplyScalarAction}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
@@ -444,7 +449,7 @@ end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ItemWiseMultiplyScalarAction, i::Int = 0)
     for j = 1:length(result)
-        result[j] = input[j] * C.value[C.citem];    
+        result[j] = input[j] * C.cvalue;    
     end    
 end
 

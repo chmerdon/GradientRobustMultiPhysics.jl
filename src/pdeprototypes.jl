@@ -129,7 +129,7 @@ end
 function LinearElasticityProblem(
     dimension::Int = 2;
     elasticity_modulus = 1.0,
-    shearmodulus = 1.0,
+    shear_modulus = 1.0,
     lambda = 1.0)
 ````
 
@@ -143,7 +143,7 @@ Boundary and right-hand side data or other modifications have to be added afterw
 function LinearElasticityProblem(
     dimension::Int = 2;
     elasticity_modulus = 1.0,
-    shearmodulus = 1.0,
+    shear_modulus = 1.0,
     lambda = 1.0)
 
     # generate empty PDEDescription for one unknown
@@ -151,9 +151,9 @@ function LinearElasticityProblem(
     Problem = PDEDescription("linear elasticity problem")
     add_unknown!(Problem, dimension, dimension; unknown_name = "displacement", equation_name = "displacement equation")
     if dimension == 3
-        add_operator!(Problem, [1,1], HookStiffnessOperator3D(shearmodulus,lambda))
+        add_operator!(Problem, [1,1], HookStiffnessOperator3D(shear_modulus,lambda))
     elseif dimension == 2
-        add_operator!(Problem, [1,1], HookStiffnessOperator2D(shearmodulus,lambda))
+        add_operator!(Problem, [1,1], HookStiffnessOperator2D(shear_modulus,lambda))
     elseif dimension == 1
         add_operator!(Problem, [1,1], HookStiffnessOperator1D(elasticity_modulus))
     end

@@ -137,10 +137,11 @@ Custom `fill` function for `FEMatrixBlock` (only fills the block, not the comple
 """
 function Base.fill!(B::FEMatrixBlock, value::Real)
     rows = rowvals(B.entries.cscmatrix)
+    valsB = B.entries.cscmatrix.nzval
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(B.entries.cscmatrix, col)
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                B.entries.cscmatrix.nzval[r] = value
+                valsB[r] = value
             end
         end
     end
@@ -154,10 +155,12 @@ Adds FEMatrixBlock B to FEMatrixBlock A.
 """
 function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor::Real = 1)
     rows = rowvals(B.entries.cscmatrix)
+    valsB = B.entries.cscmatrix.nzval
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(B.entries.cscmatrix, col)
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                A[rows[r]-B.offsetX,col-B.offsetY] += B.entries.cscmatrix.nzval[r] * factor
+               _addnz(A,rows[r]-B.offsetX,col-B.offsetY,valsB[r],factor)
+               #A[rows[r]-B.offsetX,col-B.offsetY] += B.entries.cscmatrix.nzval[r] * factor
             end
         end
     end
@@ -171,9 +174,11 @@ Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
 function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix; factor::Real = 1)
     rows = rowvals(B.cscmatrix)
+    valsB = B.cscmatrix.nzval
     for col = 1:size(B,2)
         for r in nzrange(B.cscmatrix, col)
-            A[rows[r],col] += B.cscmatrix.nzval[r] * factor
+            _addnz(A,rows[r],col,valsB[r],factor)
+            #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
         end
     end
     return nothing
@@ -186,10 +191,11 @@ Adds matrix-vector product B times b to FEVectorBlock a.
 """
 function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor::Real = 1)
     rows = rowvals(B.entries.cscmatrix)
+    valsB = B.entries.cscmatrix.nzval
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(B.entries.cscmatrix, col)
             if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                a[rows[r]-B.offsetX] += B.entries.cscmatrix.nzval[r] * b[col-B.offsetY] * factor 
+                a[rows[r]-B.offsetX] += valsB[r] * b[col-B.offsetY] * factor 
             end
         end
     end
@@ -205,9 +211,10 @@ Adds matrix-vector product B times b to FEVectorBlock a.
 """
 function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVectorBlock; factor::Real = 1)
     rows = rowvals(B.cscmatrix)
+    valsB = B.cscmatrix.nzval
     for col = 1:size(B,2)
         for r in nzrange(B.cscmatrix, col)
-            a[rows[r]] += B.cscmatrix.nzval[r] * b[col] * factor
+            a[rows[r]] += valsB[r] * b[col] * factor
         end
     end
     return nothing

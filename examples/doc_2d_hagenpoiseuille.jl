@@ -64,13 +64,13 @@ function main()
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
-    FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
-    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
     #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     ## solver parameters for nonlinear solve
     maxIterations = 20  # termination criterion 1 for nonlinear mode
-    maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
+    maxResidual = 1e-10 # termination criterion 2 for nonlinear mode
 
     ## postprocess parameters
     plot_grid = false
@@ -127,7 +127,7 @@ function main()
         ## solve Stokes problem
         Solution = FEVector{Float64}("Stokes velocity",FESpaceVelocity)
         append!(Solution,"Stokes pressure",FESpacePressure)
-        solve!(Solution, StokesProblem; verbosity = 1, maxIterations = maxIterations, maxResidual = maxResidual)
+        solve!(Solution, StokesProblem; verbosity = 1, linsolver = IterativeBigStabl_LUPC, maxlureuse = [10], maxIterations = maxIterations, maxResidual = maxResidual)
         push!(NDofs,length(Solution.entries))
 
         ## interpolate
@@ -140,9 +140,9 @@ function main()
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)
         L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FESpacePressure)
         H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FESpaceVelocity)
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem;)
-        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem;)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem;)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem)
 
         ## compute L2 and H1 error
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))

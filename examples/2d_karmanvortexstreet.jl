@@ -70,7 +70,7 @@ function main()
     # solve Stokes problem
     Solution = FEVector{Float64}("velocity",FESpaceVelocity)
     append!(Solution,"pressure",FESpacePressure)
-    solve!(Solution, StokesProblem; verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
+    solve!(Solution, StokesProblem; linsolver = IterativeBigStabl_LUPC, maxlureuse = [1], AndersonIterations = 3, verbosity = verbosity, maxIterations = maxIterations, maxResidual = maxResidual)
 
     # plot triangulation
     if plot_grid

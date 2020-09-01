@@ -127,7 +127,7 @@ function main()
     ## solve the transport by finite volumes or finite elements
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], reuse_matrix = [true], timedependent_equations = [3], verbosity = 1)
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], maxlureuse = [-1], timedependent_equations = [3], verbosity = 1)
         change = 0.0
         timestep = 10000
         maxResidual = 1e-10
@@ -143,7 +143,7 @@ function main()
         end
     else
         ## solve directly
-        solve!(Solution, Problem; subiterations = [[3]], verbosity = 1, maxIterations = 5, maxResidual = 1e-12)
+        solve!(Solution, Problem; subiterations = [[3]], verbosity = 3, maxIterations = 5, maxResidual = 1e-12)
     end
 
 

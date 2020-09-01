@@ -86,7 +86,7 @@ function main()
         
 
     # generate time-dependent solver
-    TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity)
+    TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], dt_testfunction_operator = [testfunction_operator], maxlureuse = [-1], verbosity = verbosity)
     
     # time loop
     change = 0.0
@@ -95,7 +95,7 @@ function main()
     nnodes = size(xCoordinates,2)
     nodevals = zeros(Float64,2,nnodes)
     for iteration = 1 : maxIterations
-        change = advance!(TCS, timestep; reuse_matrix = true)
+        change = advance!(TCS, timestep)
         @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)
         @printf("  change = [%.4e,%.4e] \n",change[1],change[2])

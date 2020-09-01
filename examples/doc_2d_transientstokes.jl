@@ -150,7 +150,7 @@ function main()
         Solution[1][:] = L2VelocityBestapproximation[1][:]
 
         ## generate time-dependent solver and chance rhs data
-        TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], reuse_matrix = [true], dt_testfunction_operator = [testfunction_operator], verbosity = 1)
+        TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], maxlureuse = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = 1)
 
         ## time loop
         change = 0.0
