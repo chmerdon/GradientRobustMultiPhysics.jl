@@ -67,8 +67,8 @@ function linsolve!(
     verbosity::Int = 0
 )
 
+    flush!(LS.A)
     if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
-        flush!(LS.A)
         LS.nluu += 1
         if verbosity > 1
             println("\n  Updating LU decomposition (nluu = $(LS.nluu))...")
@@ -111,8 +111,8 @@ function linsolve!(
     verbosity::Int = 0
 )
 
+    flush!(LS.A)
     if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
-        flush!(LS.A)
         LS.nluu += 1
         if verbosity > 1
             println("\n  Updating LU decomposition (nluu = $(LS.nluu))...")
@@ -899,6 +899,7 @@ mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
     A::Array{FEMatrix,1}     # heap for system matrix for each equation package
     b::Array{FEVector,1}     # heap for system rhs for each equation package
     x::Array{FEVector,1}     # heap for current solution for each equation package
+    res::Array{FEVector,1}   # residual vector
     X::FEVector              # full solution vector
     fixed_dofs::Array{Int,1}            # fixed dof numbes (values are stored in X)
     eqoffsets::Array{Array{Int,1},1}    # offsets for subblocks of each equation package
@@ -996,11 +997,13 @@ function TimeControlSolver(
     A = Array{FEMatrix{Float64},1}(undef,nsubiterations)
     b = Array{FEVector{Float64},1}(undef,nsubiterations)
     x = Array{FEVector{Float64},1}(undef,nsubiterations)
+    res = Array{FEVector{Float64},1}(undef,nsubiterations)
     for i = 1 : nsubiterations
         A[i] = FEMatrix{Float64}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
         AM[i] = FEMatrix{Float64}("MassMatrix subiteration $i", FEs[SC.subiterations[i]])
         b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
         x[i] = FEVector{Float64}("Solution subiteration $i", FEs[SC.subiterations[i]])
+        res[i] = FEVector{Float64}("Residual subiteration $i", FEs[SC.subiterations[i]])
         assemble!(A[i],b[i],PDE,SC,InitialValues; time = start_time, equations = SC.subiterations[i], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
         eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
         for j= 1 : length(FEs), eq = 1 : length(SC.subiterations[i])
@@ -1062,7 +1065,7 @@ function TimeControlSolver(
     end
 
     # generate TimeControlSolver
-    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,InitialValues, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
+    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,res,InitialValues, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
@@ -1091,6 +1094,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     AM = TCS.AM
     b = TCS.b
     x = TCS.x
+    res = TCS.res
     X = TCS.X
 
     if SC.verbosity > 2
@@ -1098,7 +1102,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     end
 
     nsubiterations = length(SC.subiterations)
-    change = zeros(Float64,length(X))
+    statistics = zeros(Float64,length(X),2)
     d = 0
     l = 0
     for s = 1 : nsubiterations
@@ -1220,20 +1224,25 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         if SC.verbosity > 1
             println("\n  Solving equation(s) $(SC.subiterations[s])")
             linsolve!(TCS.LS[s]; verbosity = SC.verbosity - 1)
-            residual = A[s].entries*x[s].entries - b[s].entries
-            for j = 1 : length(fixed_dofs)
-                for eq = 1 : length(SC.subiterations[s])
-                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
-                        eqdof = fixed_dofs[j] - eqoffsets[s][eq]
-                        residual[eqdof] = 0
-                    end
-                end
-            end
-            if SC.verbosity > 1
-                println("    ... residual = $(norm(residual))")
-            end
         else
             linsolve!(TCS.LS[s]; verbosity = SC.verbosity - 1)
+        end
+
+        # CHECK RESIDUAL
+        res[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
+        for j = 1 : length(fixed_dofs)
+            for eq = 1 : length(SC.subiterations[s])
+                if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
+                    eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+                    res[s][eq][eqdof] = 0
+                end
+            end
+        end
+        for j = 1 : length(SC.subiterations[s])
+            statistics[SC.subiterations[s][j],1] += sum(res[s][j][:].^2)
+        end
+        if SC.verbosity > 1
+            println("    ... residual = $(norm(res[s].entries))")
         end
         
 
@@ -1250,14 +1259,14 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         l = 0
         for j = 1 : length(SC.subiterations[s])
             for k = 1 : length(X[SC.subiterations[s][j]])
-                change[SC.subiterations[s][j]] += (X[SC.subiterations[s][j]][k] - x[s][j][k])^2
+                statistics[SC.subiterations[s][j],2] += (X[SC.subiterations[s][j]][k] - x[s][j][k])^2
                 X[SC.subiterations[s][j]][k] = x[s][j][k]
             end
             l += length(X[SC.subiterations[s][j]])
         end
         #change[s] /= l^4*timestep^2
         if SC.verbosity > 1
-            println("    ... change = $(sqrt(change[s]))")
+            println("    ... change = $(sqrt(statistics[s]))")
         end
 
 
@@ -1268,5 +1277,5 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     
     TCS.last_timestep = timestep
 
-    return sqrt.(change)
+    return sqrt.(statistics)
 end
