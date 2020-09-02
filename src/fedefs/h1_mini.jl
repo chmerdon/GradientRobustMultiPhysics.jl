@@ -17,7 +17,7 @@ get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Edge1D}) = 1
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Triangle2D}) = 3;
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Quadrilateral2D}) = 4;
 
-function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1MINI}
+function init!(FES::FESpace{FEType}) where {FEType <: H1MINI}
     ncomponents = get_ncomponents(FEType)
     name = "P1"
     for n = 1 : ncomponents-1

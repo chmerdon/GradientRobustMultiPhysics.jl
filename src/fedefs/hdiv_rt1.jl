@@ -14,7 +14,7 @@ get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry1D}) =
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry2D}) = 2;
 
 
-function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIVRT1}
+function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT1}
     ncomponents = get_ncomponents(FEType)
     FES.name = "RT1 (H1, $(ncomponents)d)"
 
@@ -22,9 +22,6 @@ function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIV
     nfaces = num_sources(FES.xgrid[FaceNodes])
     ncells = num_sources(FES.xgrid[CellNodes])
     FES.ndofs = 2*(nfaces + ncells)
-
-    # register coefficients
-    FES.xCellFaceSigns = FES.xgrid[CellFaceSigns]
 end
 
 function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HDIVRT1}
@@ -172,10 +169,15 @@ function get_basis_on_cell(::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
 end
 
 
-function get_coefficients_on_cell!(coefficients, FE::FESpace{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry}, cell::Int)
-    # multiplication with normal vector signs
-    fill!(coefficients,1)
-    for j = 1 : nfaces_for_geometry(EG),  k = 1 : size(coefficients,1)
-        coefficients[k,2*j-1] = FE.xCellFaceSigns[j,cell];
+function get_coefficients_on_cell!(FE::FESpace{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry})
+    xCellFaceSigns = FE.xgrid[CellFaceSigns]
+    nfaces = nfaces_for_geometry(EG)
+    function closure(coefficients, cell)
+        fill!(coefficients,1.0)
+        # multiplication with normal vector signs
+        for j = 1 : nfaces,  k = 1 : size(coefficients,1)
+            coefficients[k,2*j-1] = xCellFaceSigns[j,cell];
+        end
+        return nothing
     end
 end    

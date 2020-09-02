@@ -25,9 +25,11 @@ mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
     citem::Int                           # current item
     cvals::Array{T,3}                    # current operator vals on item
-    coefficients::Array{T,2}             # coefficients
+    coefficients::Array{T,2}             # coefficients for finite element
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
+    coeffs_handler                       # function to call to get coefficients for finite element
+    reconstcoeffs_handler                # function to call to get reconstruction coefficients
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
@@ -103,8 +105,14 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     xref = copy(qf.xref)
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
+        if AT == ON_CELLS
+            coeff_handler = get_coefficients_on_cell!(FE, EG)
+        elseif AT <: Union{ON_BFACES,ON_FACES}
+            coeff_handler = get_coefficients_on_face!(FE, EG)
+        end
     else
         coefficients = zeros(T,0,0)
+        coeff_handler = nothing
     end    
     coefficients2 = zeros(T,0,0)
     coefficients3 = zeros(T,0,0)
@@ -139,7 +147,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         end
     end
 
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, compressiontargets)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, coeff_handler, nothing, compressiontargets)
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence
@@ -197,7 +205,17 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
 
     xref = copy(qf.xref)
-    coefficients = zeros(T,ncomponents,ndofs4item2)
+    if FETypeReconst <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
+        coefficients = zeros(T,ncomponents,ndofs4item2)
+        if AT == ON_CELLS
+            coeff_handler = get_coefficients_on_cell!(FE2, EG)
+        elseif AT <: Union{ON_BFACES,ON_FACES}
+            coeff_handler = get_coefficients_on_face!(FE2, EG)
+        end
+    else
+        coefficients = zeros(T,0,0)
+        coeff_handler = nothing
+    end    
     coefficients2 = zeros(T,ndofs4item,ndofs4item2)
     if FEOP <: ReconstructionIdentity
         refoperatorvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
@@ -211,8 +229,10 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     offsets = 0:edim:(ncomponents*edim);
     offsets2 = 0:ndofs4item2:ncomponents*ndofs4item2;
     coefficients3 = zeros(T,0,0)
+
+    rcoeff_handler = get_reconstruction_coefficients_on_cell!(FE, FE2, EG)
     
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,[])
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,[])
 end    
 
 
@@ -240,7 +260,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
     
         # cell update transformation
         update!(FEBE.L2G, item)
-        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on Hdiv basis
         # and save it in refoperatorvals
@@ -262,7 +282,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         # get local reconstruction coefficients
         # and accumulate
-        get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
+        # get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
+        FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
@@ -287,7 +308,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,FaceJumpIde
     
         # cell update transformation
         update!(FEBE.L2G, item)
-        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
@@ -318,12 +339,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
         FEBE.citem = item
         
         # get coefficients
-        if AT <: Union{ON_BFACES,ON_FACES}
-            get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
-        else
-            get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
-        end    
-
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
@@ -373,7 +389,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) w
         end
         
         # get coefficients
-        get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
@@ -583,11 +599,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         update!(FEBE.L2G, item)
 
         # get coefficients
-        if AT <: Union{ON_BFACES,ON_FACES}
-            get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
-        else
-            get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
-        end    
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         for i = 1 : length(FEBE.xref)
             if FEBE.L2G.nonlinear || i == 1
@@ -649,11 +661,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence,AT}, item::Int) w
         update!(FEBE.L2G, item)
 
         # get coefficients
-        if AT <: Union{ON_BFACES,ON_FACES}
-            get_coefficients_on_face!(FEBE.coefficients, FEBE.FE, EG, item)
-        else
-            get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
-        end    
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         for i = 1 : length(FEBE.xref)
             if FEBE.L2G.nonlinear || i == 1
@@ -684,7 +692,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
     
         # cell update transformation
         update!(FEBE.L2G, item)
-        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE2, EG, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # get local reconstruction coefficients
         get_reconstruction_coefficients_on_cell!(FEBE.coefficients2, FEBE.FE, FEBE.FE2, EG, item)
@@ -722,7 +730,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
         
         # cell update transformation
         update!(FEBE.L2G, item)
-        get_coefficients_on_cell!(FEBE.coefficients, FEBE.FE, EG, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)

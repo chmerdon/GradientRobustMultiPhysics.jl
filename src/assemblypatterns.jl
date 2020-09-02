@@ -535,7 +535,7 @@ function evaluate(
     cvals_resultdim::Int = size(basisevaler[1][1][1].cvals,1)
 
     # loop over items
-    EG4item = 0
+    EG4item::Int = 0
     EG4dofitem = [1,1] # type of the current item
     ndofs4dofitem = 0 # number of dofs for item
     dofitems = [0,0] # itemnr where the dof numbers can be found
@@ -601,7 +601,8 @@ function evaluate(
             # apply action to FEVector
             apply_action!(action_result, action_input[i], action, i)
             for j = 1 : action.resultdim
-                result[j] += action_result[j] * weights[i] * xItemVolumes[item]
+                action_result[j] *= weights[i] * xItemVolumes[item]
+                result[j] += action_result[j]
             end
         end  
 
@@ -927,6 +928,8 @@ function assemble!(
                     end
                 end
 
+                localmatrix .*= xItemVolumes[item] * factor
+
                 # copy localmatrix into global matrix
                 if BLF.symmetric == false
                     for dof_i = 1 : ndofs4item1
@@ -935,15 +938,15 @@ function assemble!(
                             if localmatrix[dof_i,dof_j] != 0
                                 acol = dofs2[dof_j] + offsetY
                                 if transposed_assembly == true
-                                    _addnz(A,acol,arow,localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)
+                                    _addnz(A,acol,arow,localmatrix[dof_i,dof_j],1)
                                 else 
-                                    _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * xItemVolumes[item],factor)  
+                                    _addnz(A,arow,acol,localmatrix[dof_i,dof_j],1)  
                                 end
                                 if transpose_copy != nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
                                     if transposed_assembly == true
-                                        _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
+                                        _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j],-1)
                                     else
-                                        _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j] * xItemVolumes[item],-factor)
+                                        _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j],-1)
                                     end
                                 end
                             end
@@ -953,20 +956,19 @@ function assemble!(
                     for dof_i = 1 : ndofs4item1
                         for dof_j = dof_i+1 : ndofs4item2
                             if localmatrix[dof_i,dof_j] != 0 
-                                temp = localmatrix[dof_i,dof_j] * xItemVolumes[item]
                                 arow = dofs[dof_i] + offsetX
                                 acol = dofs2[dof_j] + offsetY
-                                _addnz(A,arow,acol,temp,factor)
+                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j],1)
                                 arow = dofs[dof_j] + offsetX
                                 acol = dofs2[dof_i] + offsetY
-                                _addnz(A,arow,acol,temp,factor)
+                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j],1)
                             end
                         end
                     end    
                     for dof_i = 1 : ndofs4item1
                         arow = dofs2[dof_i] + offsetX
                         acol = dofs[dof_i] + offsetY
-                       _addnz(A,arow,acol,localmatrix[dof_i,dof_i] * xItemVolumes[item],factor)
+                       _addnz(A,arow,acol,localmatrix[dof_i,dof_i],1)
                     end    
                 end    
                 fill!(localmatrix,0.0)

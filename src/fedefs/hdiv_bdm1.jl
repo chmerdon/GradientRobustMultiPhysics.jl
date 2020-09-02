@@ -15,17 +15,13 @@ get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Quadrilateral2D}) = 2;
 
 
-function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIVBDM1}
+function init!(FES::FESpace{FEType}) where {FEType <: HDIVBDM1}
     ncomponents = get_ncomponents(FEType)
     FES.name = "BDM1 (H1, $(ncomponents)d)"
 
     # count number of dofs
     nfaces = num_sources(FES.xgrid[FaceNodes])
     FES.ndofs = 2*nfaces
-
-    # register coefficients
-    FES.xCellFaceSigns = FES.xgrid[CellFaceSigns]
-
 end
 
 function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HDIVBDM1}
@@ -137,11 +133,15 @@ function get_basis_on_cell(::Type{HDIVBDM1{2}}, ::Type{<:Quadrilateral2D})
 end
 
 
-
-function get_coefficients_on_cell!(coefficients, FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}, cell::Int)
-    # multiplication with normal vector signs
-    fill!(coefficients,1.0)
-    for j = 1 : nfaces_for_geometry(EG),  k = 1 : size(coefficients,1)
-        coefficients[k,2*j-1] = FE.xCellFaceSigns[j,cell];
+function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry})
+    xCellFaceSigns = FE.xgrid[CellFaceSigns]
+    nfaces = nfaces_for_geometry(EG)
+    function closure(coefficients, cell)
+        fill!(coefficients,1.0)
+        # multiplication with normal vector signs
+        for j = 1 : nfaces,  k = 1 : size(coefficients,1)
+            coefficients[k,2*j-1] = xCellFaceSigns[j,cell];
+        end
+        return nothing
     end
-end    
+end  

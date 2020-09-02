@@ -13,7 +13,7 @@ get_ncomponents(FEType::Type{<:L2P0}) = FEType.parameters[1]
 get_polynomialorder(::Type{<:L2P0}, ::Type{<:AbstractElementGeometry}) = 0;
 
 
-function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: L2P0}
+function init!(FES::FESpace{FEType}) where {FEType <: L2P0}
     ncomponents = get_ncomponents(FEType)
     name = "P0"
     for n = 1 : ncomponents-1

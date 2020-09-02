@@ -57,7 +57,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
         oldBFaceNodes = source_grid[BFaceNodes]
         oldBFaceRegions = source_grid[BFaceRegions]
         newFaceNodes = xgrid[FaceNodes]
-        nfaces = num_sources(newFaceNodes)
+        nfaces = num_sources(newFaceNodes) 
         nbfaces = num_sources(oldBFaceNodes)
         
         newBFaceNodes = []

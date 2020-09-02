@@ -35,6 +35,13 @@ function L2GTransformer{T,EG,CS}(grid::ExtendableGrid, AT::Type{<:AbstractAssemb
 end
 
 
+function L2GTransformer{T,EG,CS}(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType})  where {T <: Real, EG <: Union{<: Tetrahedron3D, <: Parallelepiped3D}, CS <: AbstractCoordinateSystem}
+    A = zeros(T,size(grid[Coordinates],1),dim_element(EG))
+    b = zeros(T,size(grid[Coordinates],1))
+    return L2GTransformer{T,EG,CS}(0,false,grid[Coordinates],grid[GridComponentNodes4AssemblyType(AT)],grid[GridComponentVolumes4AssemblyType(AT)],A,b,zeros(T,3,3),0)
+end
+
+
 
 function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian1D}, item::Int)
     if T.citem != item
@@ -130,22 +137,6 @@ function update!(T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}, item::In
         T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
         T.A[3,2] = T.Coords[3,T.Nodes[3,item]] - T.b[3]
         T.A[3,3] = T.Coords[3,T.Nodes[4,item]] - T.b[3]
-
-        # also cache the adjugate matrix = T.determinant of subblocks (for faster map_deriv!)
-        if T.C == zeros(0,0)
-            T.C = zeros(eltype(T.C),3,3)
-        end
-
-        T.C[1,1] =   T.A[2,2]*T.A[3,3] - T.A[2,3] * T.A[3,2]
-        T.C[1,2] = -(T.A[2,1]*T.A[3,3] - T.A[2,3] * T.A[3,1])
-        T.C[1,3] =   T.A[2,1]*T.A[3,2] - T.A[2,2] * T.A[3,1]
-        T.C[2,1] = -(T.A[1,2]*T.A[3,3] - T.A[1,3] * T.A[3,2])
-        T.C[2,2] =   T.A[1,1]*T.A[3,3] - T.A[1,3] * T.A[3,1]
-        T.C[2,3] = -(T.A[1,1]*T.A[3,2] - T.A[1,2] * T.A[3,1])
-        T.C[3,1] =   T.A[1,2]*T.A[2,3] - T.A[1,3] * T.A[2,2]
-        T.C[3,2] = -(T.A[1,1]*T.A[2,3] - T.A[1,3] * T.A[2,1])
-        T.C[3,3] =   T.A[1,1]*T.A[2,2] - T.A[1,2] * T.A[2,1]
-
     end    
     return nothing
 end
@@ -165,22 +156,6 @@ function update!(T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, item:
         T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
         T.A[3,2] = T.Coords[3,T.Nodes[4,item]] - T.b[3]
         T.A[3,3] = T.Coords[3,T.Nodes[5,item]] - T.b[3]
-
-        # also cache the adjugate matrix = T.determinant of subblocks (for faster map_deriv!)
-        if T.C == zeros(0,0)
-            T.C = zeros(eltype(T.C),3,3)
-        end
-
-        T.C[1,1] =   T.A[2,2]*T.A[3,3] - T.A[2,3] * T.A[3,2]
-        T.C[1,2] = -(T.A[2,1]*T.A[3,3] - T.A[2,3] * T.A[3,1])
-        T.C[1,3] =   T.A[2,1]*T.A[3,2] - T.A[2,2] * T.A[3,1]
-        T.C[2,1] = -(T.A[1,2]*T.A[3,3] - T.A[1,3] * T.A[3,2])
-        T.C[2,2] =   T.A[1,1]*T.A[3,3] - T.A[1,3] * T.A[3,1]
-        T.C[2,3] = -(T.A[1,1]*T.A[3,2] - T.A[1,2] * T.A[3,1])
-        T.C[3,1] =   T.A[1,2]*T.A[2,3] - T.A[1,3] * T.A[2,2]
-        T.C[3,2] = -(T.A[1,1]*T.A[2,3] - T.A[1,3] * T.A[2,1])
-        T.C[3,3] =   T.A[1,1]*T.A[2,2] - T.A[1,2] * T.A[2,1]
-
     end    
     return nothing
 end
@@ -261,6 +236,17 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesi
 end
 
 function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}, xref)
+    # adjugate matrix = T.determinant of subblocks (for faster map_deriv!)
+    T.C[1,1] =   T.A[2,2]*T.A[3,3] - T.A[2,3] * T.A[3,2]
+    T.C[1,2] = -(T.A[2,1]*T.A[3,3] - T.A[2,3] * T.A[3,1])
+    T.C[1,3] =   T.A[2,1]*T.A[3,2] - T.A[2,2] * T.A[3,1]
+    T.C[2,1] = -(T.A[1,2]*T.A[3,3] - T.A[1,3] * T.A[3,2])
+    T.C[2,2] =   T.A[1,1]*T.A[3,3] - T.A[1,3] * T.A[3,1]
+    T.C[2,3] = -(T.A[1,1]*T.A[3,2] - T.A[1,2] * T.A[3,1])
+    T.C[3,1] =   T.A[1,2]*T.A[2,3] - T.A[1,3] * T.A[2,2]
+    T.C[3,2] = -(T.A[1,1]*T.A[2,3] - T.A[1,3] * T.A[2,1])
+    T.C[3,3] =   T.A[1,1]*T.A[2,2] - T.A[1,2] * T.A[2,1]
+
     # transposed inverse of A
     T.det = 6*T.ItemVolumes[T.citem]
     for j = 1 : 3, k = 1 : 3
@@ -270,6 +256,18 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian
 end
 
 function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, xref)
+
+    # adjugate matrix = T.determinant of subblocks (for faster map_deriv!)
+    T.C[1,1] =   T.A[2,2]*T.A[3,3] - T.A[2,3] * T.A[3,2]
+    T.C[1,2] = -(T.A[2,1]*T.A[3,3] - T.A[2,3] * T.A[3,1])
+    T.C[1,3] =   T.A[2,1]*T.A[3,2] - T.A[2,2] * T.A[3,1]
+    T.C[2,1] = -(T.A[1,2]*T.A[3,3] - T.A[1,3] * T.A[3,2])
+    T.C[2,2] =   T.A[1,1]*T.A[3,3] - T.A[1,3] * T.A[3,1]
+    T.C[2,3] = -(T.A[1,1]*T.A[3,2] - T.A[1,2] * T.A[3,1])
+    T.C[3,1] =   T.A[1,2]*T.A[2,3] - T.A[1,3] * T.A[2,2]
+    T.C[3,2] = -(T.A[1,1]*T.A[2,3] - T.A[1,3] * T.A[2,1])
+    T.C[3,3] =   T.A[1,1]*T.A[2,2] - T.A[1,2] * T.A[2,1]
+
     # transposed inverse of A
     T.det = T.ItemVolumes[T.citem]
     for j = 1 : 3, k = 1 : 3

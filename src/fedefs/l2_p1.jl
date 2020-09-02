@@ -20,7 +20,7 @@ get_polynomialorder(::Type{<:L2P1}, ::Type{<:Tetrahedron3D}) = 1;
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Hexahedron3D}) = 3;
 
 
-function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: L2P1}
+function init!(FES::FESpace{FEType}) where {FEType <: L2P1}
     ncomponents = get_ncomponents(FEType)
     name = "P1"
     for n = 1 : ncomponents-1

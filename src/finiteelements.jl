@@ -43,16 +43,12 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     ndofs::Int                            # total number of dofs
     xgrid::ExtendableGrid                 # link to xgrid 
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
-    xFaceNormals::Array{Float64,2}        # link to coefficient values
-    xFaceVolumes::Array{Float64,1}        # link to coefficient values
-    xCellFaces::VariableTargetAdjacency   # link to coefficient indices
-    xCellFaceSigns::VariableTargetAdjacency   # place to save cell signumscell coefficients
 end
 
 function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = [CellDofs, FaceDofs, BFaceDofs], verbosity = 0 ) where {FEType <:AbstractFiniteElement}
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)
-    FES = FESpace{FEType}(name,0,xgrid,Dict{Type{<:AbstractGridComponent},Any}(),Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
+    FES = FESpace{FEType}(name,0,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
 
     if verbosity > 0
         println("  Initialising FESpace $FEType...")
@@ -73,12 +69,6 @@ function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = [Cel
     return FES
 end
 
-function FESpace(name::String, length::Int)
-    # first generate some empty FESpace
-    dummyVTA = VariableTargetAdjacency(Int32)
-    FES = FESpace{AbstractFiniteElement}(name,length,ExtendableGrid{Float64,Int32}(),dummyVTA,dummyVTA,dummyVTA,Array{Float64,2}(undef,0,0),Array{Float64,1}(undef,0),dummyVTA,dummyVTA)
-    return FES
-end
 
 """
 $(TYPEDSIGNATURES)

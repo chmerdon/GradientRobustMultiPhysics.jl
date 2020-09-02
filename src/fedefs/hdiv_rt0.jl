@@ -19,16 +19,13 @@ get_polynomialorder(::Type{<:HDIVRT0{3}}, ::Type{<:AbstractElementGeometry2D}) =
 get_polynomialorder(::Type{<:HDIVRT0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
 
 
-function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: HDIVRT0}
+function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT0}
     ncomponents = get_ncomponents(FEType)
     FES.name = "RT0 (H1, $(ncomponents)d)"
 
     # count number of dofs
     nfaces = num_sources(FES.xgrid[FaceNodes])
     FES.ndofs = nfaces
-
-    # register coefficients
-    FES.xCellFaceSigns = FES.xgrid[CellFaceSigns]
 
 end
 
@@ -135,9 +132,14 @@ function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
 end
 
 
-function get_coefficients_on_cell!(coefficients, FE::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}, cell::Int)
-    # multiplication with normal vector signs
-    for j = 1 : nfaces_for_geometry(EG),  k = 1 : size(coefficients,1)
-        coefficients[k,j] = FE.xCellFaceSigns[j,cell];
+function get_coefficients_on_cell!(FE::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry})
+    xCellFaceSigns = FE.xgrid[CellFaceSigns]
+    nfaces = nfaces_for_geometry(EG)
+    function closure(coefficients, cell)
+        # multiplication with normal vector signs
+        for j = 1 : nfaces,  k = 1 : size(coefficients,1)
+            coefficients[k,j] = xCellFaceSigns[j,cell];
+        end
+        return nothing
     end
 end    

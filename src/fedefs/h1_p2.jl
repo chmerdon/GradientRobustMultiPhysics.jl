@@ -18,7 +18,7 @@ get_polynomialorder(::Type{<:H1P2}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Triangle2D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = 3;
 
-function init!(FES::FESpace{FEType}; dofmap_needed = true) where {FEType <: H1P2}
+function init!(FES::FESpace{FEType}) where {FEType <: H1P2}
     ncomponents = get_ncomponents(FEType)
     edim = get_edim(FEType)
     name = "P2"
