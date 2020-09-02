@@ -17,7 +17,7 @@ refcoords_for_geometry(::Type{<:AbstractElementGeometry1D}) = [0; 1]
 nnodes_for_geometry(::Type{<:AbstractElementGeometry1D}) = 2
 nfaces_for_geometry(::Type{<:AbstractElementGeometry1D}) = 2
 nedges_for_geometry(::Type{<:AbstractElementGeometry1D}) = 0
-face_enum_rule(::Type{<:AbstractElementGeometry1D}) = [1; 2]
+face_enum_rule(::Type{<:AbstractElementGeometry1D}) = reshape([1; 2],2,1)
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 
