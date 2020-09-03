@@ -179,7 +179,7 @@ Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
 function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix; factor = 1)
     cscmat = B.cscmatrix
-    rows::Array{Int,1} = rowvals(cscmatrix)
+    rows::Array{Int,1} = rowvals(cscmat)
     valsB = cscmat.nzval
     arow::Int = 0
     acol::Int = 0

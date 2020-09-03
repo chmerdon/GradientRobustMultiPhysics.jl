@@ -14,12 +14,14 @@ a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navi
 where ``\mathbf{u} = (1,0)`` along the top boundary of a square domain.
 
 The fixed point iteration benefits a lot from Anderson acceleration
-(see https://arxiv.org/pdf/1810.08494.pdf) that one can trigger by setting anderson_iterations > 0
+(see https://arxiv.org/pdf/1810.08494.pdf) that one can trigger by setting anderson_iterations > 0 and newton = false.
+For smaller viscosity parameters thew Newton method may not converge but Anderson iteration does.
 
 =#
 
 push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
+using ExtendableGrids
 using Triangulate
 ENV["MPLBACKEND"]="qt5agg"
 using PyPlot
@@ -53,12 +55,13 @@ function main()
     xgrid = grid_square(1e-3)
 
     ## problem parameters
-    viscosity = 1e-3
+    viscosity = 1e-2
     nonlinear = true
     barycentric_refinement = false # do not change
     maxIterations = 50  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-10 # termination criterion 2 for nonlinear mode
-    anderson_iterations = 5 # number of Anderson iterations
+    newton = true # use Newton iteration for nonlinearity
+    anderson_iterations = 5 # number of Anderson iterations (ignored if newton = true)
 
     ## choose one of these (inf-sup stable) finite element type pairs
     ReconstructionOperator = Identity
@@ -79,13 +82,8 @@ function main()
 
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
-    if nonlinear
-        ## store matrix of Laplace operator for nonlinear solver
-        StokesProblem.LHSOperators[1,1][1].store_operator = true   
-    end
     add_boundarydata!(StokesProblem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = boundary_data_top!, bonus_quadorder = 0)
-    Base.show(StokesProblem)
 
     ## uniform mesh refinement
     ## in case of Scott-Vogelius we use barycentric refinement
@@ -96,10 +94,22 @@ function main()
     ## generate FESpaces
     FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
     FESpacePressure = FESpace{FETypes[2]}(xgrid)
-
-    ## solve Stokes problem
     Solution = FEVector{Float64}("Stokes velocity",FESpaceVelocity)
     append!(Solution,"Stokes pressure",FESpacePressure)
+
+    ## set nonlinear options and Newton terms
+    if nonlinear
+        ## store matrix of Laplace operator for nonlinear solver
+        StokesProblem.LHSOperators[1,1][1].store_operator = true   
+        if newton
+            anderson_iterations = 0
+            add_operator!(StokesProblem, [1,1], ConvectionOperator(1, Identity, 2,2; fixed_argument = 2))
+            add_rhsdata!(StokesProblem, 1, TLFeval(ConvectionOperator(1, Identity, 2,2), Solution[1], Solution[1], 1; nonlinear = true))
+        end
+    end
+    Base.show(StokesProblem)
+
+    ## solve Stokes problem
     solve!(Solution, StokesProblem; verbosity = 1, AndersonIterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
 
     

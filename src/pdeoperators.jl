@@ -265,10 +265,11 @@ can only be applied in PDE LHS
 """
 mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
-    operator1::Type{<:AbstractFunctionOperator}
-    operator2::Type{<:AbstractFunctionOperator}
-    operator3::Type{<:AbstractFunctionOperator}
-    a_from::Int
+    operator1::Type{<:AbstractFunctionOperator} # operator for argument 1
+    operator2::Type{<:AbstractFunctionOperator} # operator for argument 1
+    operator3::Type{<:AbstractFunctionOperator} # operator for argument 1
+    a_from::Int     # unknown id where fixed argument takes its values from
+    a_to::Int       # position of fixed argument
     action::AbstractAction # is applied to argument 1 and 2, i.e input consists of operator1(a),operator2(u)
     regions::Array{Int,1}
     transposed_assembly::Bool
@@ -276,10 +277,12 @@ end
 """
 $(TYPEDEF)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) where beta is the id of some unknown of the PDEDescription
+constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) where beta is the id of some unknown of the PDEDescription.
+With fixed_argument = 2 beta and u can siwtch their places.
+
     
 """
-function ConvectionOperator(beta::Int, beta_operator, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+function ConvectionOperator(a_from::Int, beta_operator, xdim::Int, ncomponents::Int; fixed_argument::Int = 1, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = grad(u)
@@ -294,7 +297,17 @@ function ConvectionOperator(beta::Int, beta_operator, xdim::Int, ncomponents::In
         end    
     end    
     convection_action = FunctionAction(convection_function_fe(), ncomponents)
-    return AbstractTrilinearForm{ON_CELLS}("(a(=unknown $beta) * Gradient) u * v",beta_operator,Gradient,testfunction_operator,beta ,convection_action, regions, true)
+    a_to = fixed_argument
+    if a_to == 1
+        name = "(a(=unknown $(a_from)) * Gradient) u * v"
+    elseif a_to == 2
+        name = "(u * Gradient) a(=unknown $(a_from)) * v"
+    elseif a_to == 3
+        name = "(u * Gradient) v * a(=unknown $(a_from))"
+    end
+    
+    return AbstractTrilinearForm{ON_CELLS}(name,beta_operator,Gradient,testfunction_operator,a_from,a_to,convection_action, regions, true)
+
 end
 
 """
@@ -316,7 +329,7 @@ function ConvectionRotationFormOperator(beta::Int, beta_operator, xdim::Int, nco
         end    
     end    
     convection_action = FunctionAction(rotationform_2d(), ncomponents)
-    return AbstractTrilinearForm{ON_CELLS}("(a(=unknown $beta) x Curl2D u ) * v",beta_operator,Curl2D,testfunction_operator,beta ,convection_action, regions, true)
+    return AbstractTrilinearForm{ON_CELLS}("(a(=unknown $beta) x Curl2D u ) * v",beta_operator,Curl2D,testfunction_operator,beta, 1, convection_action, regions, true)
 end
 
 
@@ -412,7 +425,7 @@ struct TLFeval <: AbstractPDEOperatorRHS
     timedependent::Bool
 end
 
-function TLFeval(TLF, Data1, Data2, factor; nonlinear::Bool = false, timedependent::Bool = false)
+function TLFeval(TLF, Data1, Data2, factor::Real = 1; nonlinear::Bool = false, timedependent::Bool = false)
     return TLFeval(TLF, Data1, Data2, factor, nonlinear, timedependent)
 end
 
@@ -724,7 +737,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrili
     FE2 = A.FESX
     FE3 = A.FESY
     TLF = TrilinearForm(Float64, ON_CELLS, FE1, FE2, FE3, O.operator1, O.operator2, O.operator3, O.action; regions = O.regions)  
-    assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, transposed_assembly = O.transposed_assembly)
+    assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, fixed_argument = O.a_to, transposed_assembly = O.transposed_assembly)
 end
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; time::Real = 0, verbosity::Int = 0, At::FEMatrixBlock)
