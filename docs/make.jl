@@ -3,7 +3,6 @@ using Literate
 using ExtendableSparse
 using ExtendableGrids
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 
 
@@ -102,5 +101,5 @@ end
 make_all()
 
 #deploydocs(
-#    repo = "github.com/chmerdon/juliaFE",
+#    repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",
 #)
