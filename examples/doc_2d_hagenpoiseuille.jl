@@ -18,7 +18,6 @@ After that the errors of the Stokes solution, interpolations and bestapproximati
 (Note that second order schemes are exact in this example and that the mesh is structured.)
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 #using VTKView

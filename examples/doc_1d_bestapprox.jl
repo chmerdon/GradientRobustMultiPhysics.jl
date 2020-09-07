@@ -8,7 +8,6 @@ Afterwards the L2 error is computed and the solution is plotted (using PyPlot)
 
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"

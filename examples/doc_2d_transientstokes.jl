@@ -27,7 +27,6 @@ converging errors close to the best-approximations, a non pressure-robust discre
 Compare e.g. Bernardi--Raugel and bernardi--Raugel pressure-robust by (un)commenting the responsible lines in this example.
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 #using VTKView

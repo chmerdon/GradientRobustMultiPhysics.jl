@@ -33,7 +33,6 @@ discretisation solves ``\mathbf{u} = 0`` exactly in test problem 1 and gives muc
 
 
 module Example_2DPressureRobustness
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using Printf
 

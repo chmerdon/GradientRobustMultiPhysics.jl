@@ -28,7 +28,6 @@ Note, that the transport equation is very convection-dominated and no stabilisat
 Also note, that only the finite volume discretisation perfectly obeys the maximum principle for the concentration but the isolines do no stay parallel until the outlet is reached, possibly due to articifial diffusion.
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using Triangulate

@@ -23,7 +23,6 @@ and Neumann boundary conditions (i.e. a force that pulls the domain downwards) o
 After solving the solution is plotted on the displaced mesh and also the absolute value of the stress is plotted.
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using Triangulate

@@ -15,7 +15,6 @@ with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and t
 for isotropic media.
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 
 ## problem data for Neumann boundary

@@ -19,7 +19,6 @@ For smaller viscosity parameters thew Newton method may not converge but Anderso
 
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using Triangulate

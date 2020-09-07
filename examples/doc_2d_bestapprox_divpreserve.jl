@@ -9,7 +9,6 @@ Afterwards the L2 error (also of the divergence error) is computed and the solut
 
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"

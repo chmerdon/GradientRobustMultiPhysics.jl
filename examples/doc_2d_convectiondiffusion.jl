@@ -15,7 +15,6 @@ We also compare with the error of a simple nodal interpolation and plot the solu
 
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"

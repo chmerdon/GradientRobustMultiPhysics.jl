@@ -23,7 +23,6 @@ vertices but not in the additional edgrees of freedom. For e.g. ``k=2`` the inte
 =#
 
 module Example_2DCommutingInterpolators
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 
 ## define some function

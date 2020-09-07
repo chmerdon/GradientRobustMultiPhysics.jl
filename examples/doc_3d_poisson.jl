@@ -13,7 +13,6 @@ with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series o
 
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using Printf
 

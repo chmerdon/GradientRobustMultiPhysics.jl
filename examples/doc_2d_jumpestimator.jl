@@ -12,7 +12,6 @@ where ``\sigma`` is some finite element function. Here, we check the error of so
 
 =#
 
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
 using ExtendableGrids
 ENV["MPLBACKEND"]="qt5agg"
