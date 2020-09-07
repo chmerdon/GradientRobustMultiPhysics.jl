@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/github/chmerdon/GradientRobustMultiPhysics.jl/master.svg?label=Linux+MacOSX+Windows)](https://travis-ci.com/github/chmerdon/GradientRobustMultiPhysics.jl
+[![Build Status](https://travis-ci.com/github/chmerdon/GradientRobustMultiPhysics.jl/master.svg?label=Linux+MacOSX+Windows)](https://travis-ci.com/github/chmerdon/GradientRobustMultiPhysics.jl)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://chmerdon.github.io/GradientRobustMultiPhysics.jl)
 
 # GradientRobustMultiPhysics.jl
