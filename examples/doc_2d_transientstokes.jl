@@ -153,13 +153,13 @@ function main()
         TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], maxlureuse = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = 1)
 
         ## time loop
-        change = 0.0
         maxIterations = ceil(T / timestep)
         for iteration = 1 : maxIterations
-            change = advance!(TCS, timestep)
+            statistics = advance!(TCS, timestep)
             @printf("  iteration %4d",iteration)
             @printf("  time = %.4e",TCS.ctime)
-            @printf("  change = %.4e \n",change[1])
+            @printf("  linresidual = %.4e",statistics[1,1])
+            @printf("  change = %.4e \n",statistics[1,2])
         end
 
         ## interpolate exact solution at final time for comparison

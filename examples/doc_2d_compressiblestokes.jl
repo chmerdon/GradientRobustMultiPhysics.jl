@@ -90,7 +90,7 @@ function main()
     ## generate mesh
     #xgrid = grid_unitsquare(Triangle2D); # uncomment this line for a structured grid
     xgrid = grid_unitsquare_mixedgeometries(); # not so structured
-    xgrid = uniform_refine(xgrid,3)
+    xgrid = uniform_refine(xgrid,4)
 
     ## problem data
     c = 10 # coefficient in equation of state
@@ -108,7 +108,7 @@ function main()
     reconstruct = true # use pressure-robust discretisation of the finite element method?
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
     maxIterations = 300  # termination criterion 1
-    maxResidual = 1e-10 # termination criterion 2
+    target_change = 1e-10 # stopf when change is below this treshold
 
     ## postprocess parameters
     plot_grid = false
@@ -175,16 +175,18 @@ function main()
 
     ## loop in pseudo-time until stationarity detected
     ## we also output M to see that the mass constraint is preserved all the way
-    change = 0.0
     for iteration = 1 : maxIterations
-        change = advance!(TCS, timestep)
+        statistics = advance!(TCS, timestep)
         M = sum(Solution[2][:] .* xgrid[CellVolumes])
         @printf("  iteration %4d",iteration)
         @printf("  time = %.4e",TCS.ctime)
-        @printf("  change = [%.4e,%.4e,%.4e]",change[1],change[2],change[3])
         @printf("  M = %.4e \n",M)
-        if sum(change) < maxResidual
-            println("  terminated (below tolerance)")
+        ## first row of statistics is the linear residual for each equation
+        @printf("      linresidual = [%.4e,%.4e,%.4e]\n",statistics[1,1],statistics[2,1],statistics[3,1])
+        ## second row of statistics is the change in each unknown
+        @printf("      change = [%.4e,%.4e,%.4e]\n",statistics[1,2],statistics[2,2],statistics[3,2])
+        if sum(statistics[:,2]) < target_change
+            println("  terminated (change below tolerance)")
             break;
         end
     end

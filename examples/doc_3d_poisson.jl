@@ -21,14 +21,17 @@ using Printf
 ## problem data
 function exact_function!(result,x)
     result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
+    return nothing
 end
 function exact_gradient!(result,x)
     result[1] = x[3] - x[2]
     result[2] = - x[1] + 2*x[2]
     result[3] = x[1]
+    return nothing
 end
 function rhs!(result,x)
     result[1] = - 2
+    return nothing
 end
 
 ## everything is wrapped in a main function
@@ -80,7 +83,8 @@ function main()
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
 
         if write_vtk
-            writeVTK!("data_poisson3d_level$(level).vtk", Solution)
+            mkpath("data/example_poisson3d/")
+            writeVTK!("data/example_poisson3d/results_level$(level).vtk", Solution)
         end
 
     end

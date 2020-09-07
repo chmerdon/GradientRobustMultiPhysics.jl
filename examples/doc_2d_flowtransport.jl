@@ -128,15 +128,15 @@ function main()
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
         TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], maxlureuse = [-1], timedependent_equations = [3], verbosity = 1)
-        change = 0.0
         timestep = 10000
         maxResidual = 1e-10
         for iteration = 1 : 100
-            change = advance!(TCS, timestep)
+            statistics = advance!(TCS, timestep)
             @printf("  iteration %4d",iteration)
             @printf("  time = %.4e",TCS.ctime)
-            @printf("  change = %.4e \n",change[3])
-            if sum(change[3]) < maxResidual
+            @printf("  linresidual = %.4e",statistics[3,1])
+            @printf("  change = %.4e \n",statistics[3,2])
+            if sum(statistics[3,2]) < maxResidual
                 println("  terminated (below tolerance)")
                 break;
             end
@@ -186,7 +186,8 @@ function main()
     end
 
     if write_vtk
-        writeVTK!("data_flowtransport.vtk", Solution)
+        mkpath("data/example_flowtransport/")
+        writeVTK!("data/example_flowtransport/results.vtk", Solution)
     end
 end
 

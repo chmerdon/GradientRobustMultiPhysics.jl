@@ -233,9 +233,9 @@ function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix, b::FEVect
     bcol::Int = 0
     arow::Int = 0
     for col = 1:size(B,2)
-        bcol = col-B.offsetY+b.offset
+        bcol = col+b.offset
         for r in nzrange(cscmat, col)
-            arow = rows[r] - B.offsetX + a.offset
+            arow = rows[r] + a.offset
             a.entries[arow] += valsB[r] * b.entries[bcol] * factor
         end
     end

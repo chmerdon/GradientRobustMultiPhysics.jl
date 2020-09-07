@@ -64,10 +64,11 @@ function main()
 
     ## solve PDE
     Solution = FEVector{Float64}("displacement",FES)
-    solve!(Solution, LinElastProblem; verbosity = 3)
+    solve!(Solution, LinElastProblem; verbosity = 1)
 
     ## write to vtk
-    writeVTK!("data/data_elasticity3d.vtk", Solution)
+    mkpath("data/example_3delasticity/")
+    writeVTK!("data/example_3delasticity/results.vtk", Solution)
 
 end
 

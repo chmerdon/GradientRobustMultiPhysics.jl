@@ -99,6 +99,23 @@ function Base.show(io::IO, FES::FESpace{FEType}) where {FEType<:AbstractFiniteEl
 end
 
 
+# default coefficient function that can be overwritten by finite element that has non-default coeffcients
+# ( see e.g. h1v_br.jl )
+function get_coefficients_on_face!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
+    function closure(coefficients, face)
+        fill!(coefficients,1.0)
+    end
+end    
+
+# default coefficient function that can be overwritten by finite element that has non-default coeffcients
+# ( see e.g. h1v_br.jl or hdiv_***.jl )
+function get_coefficients_on_cell!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
+    function closure(coefficients, cell)
+        fill!(coefficients,1.0)
+    end
+end    
+
+
 ###########################
 # Finite Element Subtypes #
 ###########################
