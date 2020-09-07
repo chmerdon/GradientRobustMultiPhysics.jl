@@ -100,6 +100,6 @@ end
 
 make_all()
 
-#deploydocs(
-#    repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",
-#)
+deploydocs(
+    repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",
+)

@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.com/github/chmerdon/GradientRobustMultiPhysics.jl/master.svg?label=Linux+MacOSX+Windows)](https://travis-ci.com/github/chmerdon/GradientRobustMultiPhysics.jl
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://chmerdon.github.io/GradientRobustMultiPhysics.jl)
+
 # GradientRobustMultiPhysics.jl
 
 finite element module for Julia focussing on gradient-robust finite element methods and multiphysics applications
