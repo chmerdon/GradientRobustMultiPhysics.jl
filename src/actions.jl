@@ -493,3 +493,11 @@ end
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::ItemWiseFunctionAction, i::Int)
     C.f!(result, input, C.citem);
 end
+
+
+
+## apply! function for action in nonlinear assemblies
+
+function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::FunctionAction, i::Int)
+    C.f!(result, input_last, input_ansatz);
+end

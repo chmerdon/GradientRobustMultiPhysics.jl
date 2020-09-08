@@ -238,6 +238,86 @@ end
 """
 $(TYPEDEF)
 
+abstract nonlinearform operator 
+
+can only be applied in PDE LHS
+"""
+mutable struct AbstractNonlinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
+    name::String
+    operator1::Array{DataType,1}
+    coeff_from::Array{Int,1}     # unknown id where coefficient for each operator in operator1 are taken from
+    operator2::Type{<:AbstractFunctionOperator}
+    action::AbstractAction
+    action_rhs
+    regions::Array{Int,1}
+    ADnewton::Bool
+    transposed_assembly::Bool
+end
+
+function generate_newton_action_from_nlaction(nlaction::Function, size)
+    return closure
+end
+
+function GenerateNonlinearForm(
+    name::String,
+    operator1::Array{DataType,1},
+    coeff_from::Array{Int,1},
+    operator2::Type{<:AbstractFunctionOperator},
+    action_kernel::Function,
+    argsizes::Array{Int,1},
+    dim::Int;
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    ADnewton::Bool = false,
+    action_kernel_rhs = nothing,
+    regions = [0])
+
+    if ADnewton
+        name = name * " [AD-Newton]"
+        # the action for the LHS is calculated by automatic differentiation (AD)
+        # from the given action_kernel
+        result_temp = Vector{Float64}(undef,argsizes[1])
+        input_temp = Vector{Float64}(undef,argsizes[2])
+        jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[2])
+        Dresult = DiffResults.DiffResult(result_temp,jac_temp)
+        jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+        cfg =ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
+        function newton_kernel(result, input_current, input_ansatz)
+            ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
+            jac = DiffResults.jacobian(Dresult)
+            for j = 1 : argsizes[1]
+                result[j] = 0
+                for k = 1 : argsizes[2]
+                    result[j] += jac[j,k] * input_ansatz[k]
+                end
+            end
+            return nothing
+        end
+        action = FunctionAction(newton_kernel, argsizes[1], dim)
+
+        # the action for the RHS just evaluates the action_kernel at input_current
+        function rhs_kernel(result, input_current, input_ansatz)
+            action_kernel(result, input_current)
+            return nothing
+        end
+        action_rhs = FunctionAction(rhs_kernel, argsizes[1], dim)
+    else
+        action = FunctionAction(action_kernel, argsizes[1], dim)
+        if action_kernel_rhs != nothing
+            action_rhs = FunctionAction(action_kernel_rhs, argsizes[1], dim)
+        else
+            action_rhs = nothing
+        end
+    end
+
+    return AbstractNonlinearForm{AT}(name, operator1, coeff_from, operator2, action, action_rhs, regions, ADnewton, true)
+end
+
+
+
+
+"""
+$(TYPEDEF)
+
 considers the second argument to be a Lagrange multiplier for operator(first argument) = 0,
 automatically triggers copy of transposed operator in transposed block, hence only needs to be assigned and assembled once!
 
@@ -524,6 +604,9 @@ end
 function check_PDEoperator(O::MLFeval)
     return O.nonlinear, O.timedependent
 end
+function check_PDEoperator(O::AbstractNonlinearForm)
+    return true, false
+end
 
 # check if operator also depends on arg (additional to the argument relative to position in PDEDescription)
 function check_dependency(O::AbstractPDEOperator, arg::Int)
@@ -537,6 +620,18 @@ end
 function check_dependency(O::AbstractTrilinearForm, arg::Int)
     return O.a_from == arg
 end
+function check_dependency(O::AbstractNonlinearForm, arg::Int)
+    return arg in O.coeff_from
+end
+
+# check if operator on the LHS also needs to modify the RHS
+function LHSoperator_also_modifies_RHS(O::AbstractPDEOperator)
+    return false
+end
+function LHSoperator_also_modifies_RHS(O::AbstractNonlinearForm)
+    return O.action_rhs != nothing
+end
+
 
 
 
@@ -775,4 +870,27 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::CopyOperator;
     for j = 1 : length(b)
         b[j] = CurrentSolution[O.copy_from][j] * O.factor
     end
+end
+
+
+
+
+function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractNonlinearForm; time::Real = 0, verbosity::Int = 0)
+    FE = Array{FESpace,1}(undef, length(O.coeff_from))
+    for j = 1 : length(O.coeff_from)
+        FE[j] = CurrentSolution[O.coeff_from[j]].FES
+    end
+    FE2 = A.FESY
+    NLF = NonlinearForm(Float64, ON_CELLS, FE, FE2, O.operator1, O.operator2, O.action; regions = O.regions)  
+    assemble!(A, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity, transposed_assembly = O.transposed_assembly)
+end
+
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractNonlinearForm; time::Real = 0, verbosity::Int = 0)
+    FE = Array{FESpace,1}(undef, length(O.coeff_from))
+    for j = 1 : length(O.coeff_from)
+        FE[j] = CurrentSolution[O.coeff_from[j]].FES
+    end
+    FE2 = b.FES
+    NLF = NonlinearForm(Float64, ON_CELLS, FE, FE2, O.operator1, O.operator2, O.action_rhs; regions = O.regions)  
+    assemble!(b, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity)
 end

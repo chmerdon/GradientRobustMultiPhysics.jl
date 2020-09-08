@@ -130,14 +130,18 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDE
     if equation_name != ""
         PDE.equation_names[position[1]] = equation_name
     end
+    if LHSoperator_also_modifies_RHS(O)
+        push!(PDE.RHSOperators[position[1]],O)
+    end
 end
+
 
 """
 $(TYPEDSIGNATURES)
 
 Adds the given PDEOperator to the right-hand side of the PDEDescription at the specified position.
 """
-function add_rhsdata!(PDE::PDEDescription,position::Int,O::AbstractPDEOperatorRHS)
+function add_rhsdata!(PDE::PDEDescription,position::Int,O::AbstractPDEOperator)
     push!(PDE.RHSOperators[position],O)
 end
 
@@ -206,7 +210,7 @@ function Base.show(io::IO, PDE::PDEDescription)
             print("     [$j]    | ")
             for o = 1 : length(PDE.RHSOperators[j])
                 try
-                    print("$(typeof(PDE.RHSOperators[j][o])) (regions = $(PDE.RHSOperators[j][o].regions))")
+                    print("$(PDE.RHSOperators[j][o].name) (regions = $(PDE.RHSOperators[j][o].regions))")
                 catch
                     print("$(typeof(PDE.RHSOperators[j][o])) (regions = [0])")
                 end

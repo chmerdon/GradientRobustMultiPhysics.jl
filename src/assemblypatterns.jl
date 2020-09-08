@@ -96,6 +96,60 @@ function BilinearForm(
     return BilinearForm{T,AT}(FE1,FE2,operator1,operator2,action,regions,false)
 end
 
+
+"""
+$(TYPEDEF)
+
+assembly pattern nonlinear form with two arguments (ansatz and testfunction) where
+te first argument can depend on more than one operator
+"""
+struct NonlinearForm{T <: Real, AT <: AbstractAssemblyType} <: AbstractAssemblyPattern{T, AT}
+    FE1::Array{FESpace,1}    # finite element spaces for each operator of the ansatz function
+    FE2::FESpace             # finite element space for testfunction
+    operator1::Array{DataType,1}   # operators that should be evaluated for the ansatz function
+    operator2::Type{<:AbstractFunctionOperator}   # operator that is evaluated for the test function
+    action::AbstractAction  # is applied to all operators of ansatz functions (to allow for Newton)
+                            # in Newton mode also the evaluation of all operators in current solution are
+                            # passed to the action
+    regions::Array{Int,1}
+    use_newton::Bool        # performs automatic Newton derivatives of the action
+                            # (all operators are expected to depend linearly on the coefficients)
+end   
+
+
+"""
+````
+function NonlinearForm(
+    T::Type{<:Real},
+    FE1::Array{FESpace,1},          # finite element spaces for each operator of the ansatz function
+    FE2::FESpace,                   # finite element space for testfunction
+    operator1::Array{DataType,1},   # operators that should be evaluated for the ansatz function
+    operator2::Type{<:AbstractFunctionOperator},   # operator that is evaluated for the test function
+    action::AbstractAction;        # is applied to all operators of ansatz functions (to allow for Newton)
+                                   # in Newton mode also the evaluation of all operators in current solution are
+                                   # passed to the action
+    ADnewton::Bool = false,        # perform AD to obtain additional Newton terms
+    regions::Array{Int,1} = [0])
+````
+
+Creates a NonlinearForm.
+"""
+function NonlinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE1::Array{FESpace,1},    # finite element spaces for each operator of the ansatz function
+    FE2::FESpace,             # finite element space for testfunction
+    operator1::Array{DataType,1},   # operators that should be evaluated for the ansatz function
+    operator2::Type{<:AbstractFunctionOperator},   # operator that is evaluated for the test function
+    action::AbstractAction;  # is applied to all operators of ansatz functions (to allow for Newton)
+                             # in Newton mode also the evaluation of all operators in current solution are
+                             # passed to the action
+    ADnewton::Bool = false,  # perform AD to obtain additional Newton terms
+    regions::Array{Int,1} = [0])
+    return NonlinearForm{T,AT}(FE1,FE2,operator1,operator2,action,regions,false)
+end
+
+
 """
 ````
 function SymmetricBilinearForm(
@@ -1561,8 +1615,8 @@ end
 ````
 assemble!(
     assemble!(
-    b::AbstractArray{<:Real,1},
-    FE::Array{FEVectorBlock,1},
+    b::AbstractVector,
+    FE::Array{<:FEVectorBlock,1},
     MLF::MultilinearForm{T, AT};
     verbosity::Int = 0,
     factor = 1)
@@ -1716,7 +1770,7 @@ end
 
 function assemble!(
     b::FEVectorBlock,
-    FEB::Array{FEVectorBlock,1},
+    FEB::Array{<:FEVectorBlock,1},
     MLF::MultilinearForm;
     verbosity::Int = 0,
     factor = 1)
@@ -1730,6 +1784,463 @@ function assemble!(
 
     assemble!(b.entries, FEBarrays, MLF; verbosity = verbosity, factor = factor, offset = b.offset, offsets2 = offsets)
 end
+
+
+
+
+"""
+````
+assemble!(
+    A::AbstractArray{<:Real,2},
+    NLF::NonlinearForm{T, AT},
+    FEB::Array{<:FEVectorBlock,1};         # coefficients for each operator
+    verbosity::Int = 0,
+    factor = 1,
+    transposed_assembly::Bool = false
+````
+
+Assembly of a NonlinearForm NLF into given two-dimensional AbstractArray (e.g. FEMatrixBlock).
+"""
+function assemble!(
+    A::AbstractArray{<:Real,2},
+    NLF::NonlinearForm{T, AT},
+    FEB::Array{<:FEVectorBlock,1};
+    verbosity::Int = 0,
+    factor = 1,
+    transposed_assembly::Bool = false,
+    offsetX = 0,
+    offsetY = 0) where {T<: Real, AT <: AbstractAssemblyType}
+
+    # extract finite element spaces and operators
+    FE = NLF.FE1
+    push!(FE, NLF.FE2)
+    nFE::Int = length(FE)
+    operators = NLF.operator1
+    push!(operators, NLF.operator2)
+    
+    # get adjacencies
+    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
+    xItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(FE))
+    for j = 1 : nFE
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
+    end
+    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = Int64(num_sources(xItemNodes))
+
+    # prepare assembly
+    action = NLF.action
+    regions = parse_regions(NLF.regions, xItemRegions)
+    EG, ndofs4EG, qf, basisevaler, dii4op = prepare_assembly(NLF, operators, FE, regions, nFE, action.bonus_quadorder, verbosity - 1)
+ 
+ 
+    # get size informations
+    ncomponents = zeros(Int,length(FE))
+    offsets = zeros(Int,length(FE)+1)
+    maxdofs = 0
+    for j = 1 : nFE
+        ncomponents[j] = get_ncomponents(eltype(FE[j]))
+        maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
+        offsets[j+1] = offsets[j] + size(basisevaler[1][j][1].cvals,1)
+    end
+    action_resultdim::Int = action.resultdim
+    maxdofs2 = max_num_targets_per_source(xItemDofs[end])
+
+ 
+    maxnweights = 0
+    for j = 1 : length(qf)
+        maxnweights = max(maxnweights, length(qf[j].w))
+    end
+    action_input = Array{Array{T,1},1}(undef,maxnweights)
+    for j = 1 : maxnweights
+        action_input[j] = zeros(T,offsets[end-1]) # heap for action input
+    end
+    action_input2 = zeros(T,offsets[end-1])
+
+    # loop over items
+    EG4item::Int = 0
+    EG4dofitem1::Array{Int,1} = [1,1] # EG id of the current item with respect to operator
+    EG4dofitem2::Array{Int,1} = [1,1] # EG id of the current item with respect to operator
+    dofitems1::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
+    dofitems2::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
+    itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem
+    itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem
+    coefficient4dofitem1::Array{Int,1} = [0,0] # coefficients for operator
+    coefficient4dofitem2::Array{Int,1} = [0,0] # coefficients for operator
+    ndofs4dofitem::Int = 0 # number of dofs for item
+    dofitem::Int = 0
+    coeffs::Array{T,1} = zeros(T,maxdofs)
+    dofs::Array{Int,1} = zeros(Int,maxdofs)
+    dofs2::Array{Int,1} = zeros(Int,maxdofs2)
+    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+    basisevaler4dofitem = basisevaler[1][1][1]
+    basisevaler4dofitem1 = Array{Any,1}(undef,nFE)
+    for j = 1 : nFE
+        basisevaler4dofitem1[j] = basisevaler[1][j][1]
+    end
+    basisevaler4dofitem2 = basisevaler[1][end][1]
+    basisvals::Array{T,3} = basisevaler4dofitem.cvals
+    temp::T = 0 # some temporary variable
+    localmatrix::Array{T,2} = zeros(T,maxdofs,maxdofs2)
+    acol::Int = 0
+    arow::Int = 0
+
+
+    # note: at the moment we expect that all FE[1:end-1] are the same !
+    # otherweise more than one MatrixBlock has to be assembled and we need more offset information
+    # hence, this only can handle nonlinearities at the moment that depend on one unknown of the PDEsystem
+
+    for item = 1 : nitems
+    for r = 1 : length(regions)
+    # check if item region is in regions
+    if xItemRegions[item] == regions[r]
+
+        # get dofitem informations for ansatz function
+        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
+
+        # get quadrature weights for integration domain
+        weights = qf[EG4dofitem1[1]].w
+
+        # fill action input with evluation of current solution
+        # given by coefficient vectors
+        for FEid = 1 : nFE - 1
+
+            # get information on dofitems
+            weights = qf[EG4item].w
+            for di = 1 : length(dofitems1)
+                dofitem = dofitems1[di]
+                if dofitem != 0
+                    # update FEbasisevaler on dofitem
+                    basisevaler4dofitem = basisevaler[EG4dofitem1[di]][FEid][itempos4dofitem1[di]]
+                    update!(basisevaler4dofitem, dofitem)
+
+                    # update coeffs on dofitem
+                    ndofs4dofitem = ndofs4EG[FEid][EG4dofitem1[di]]
+                    for j=1:ndofs4dofitem
+                        fdof = xItemDofs[FEid][j,dofitem]
+                        coeffs[j] = FEB[FEid][fdof]
+                    end
+
+                    for i in eachindex(weights)
+                        if di == 1
+                            if FEid == 1
+                                fill!(action_input[i], 0)
+                            end
+                            eval!(action_input[i], basisevaler4dofitem, coeffs, i; offset = offsets[FEid], factor = coefficient4dofitem1[di])
+                        else
+                            # on other side quadrature points are reversed
+                            eval!(action_input[length(weights)+1-i], basisevaler4dofitem, coeffs, i; offset = offsets[FEid], factor = coefficient4dofitem1[di])
+                        end
+                    end  
+                end
+            end
+        end
+
+        # at this point the action_input at each quadrature point contains information on the last solution
+        # also no jump operators for the test function are allowed currently
+
+        # get dof information for test function
+        dii4op[end](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
+        di = 1
+        dj = 1
+        dofitem1 = dofitems1[di]
+        dofitem2 = dofitems2[dj]
+        ndofs4item1 = ndofs4EG[1][EG4dofitem1[di]]
+        ndofs4item2 = ndofs4EG[2][EG4dofitem2[dj]]
+
+        # update FEbasisevalers for ansatz function
+        for FEid = 1 : nFE - 1
+            basisevaler4dofitem1[FEid] = basisevaler[EG4dofitem1[di]][FEid][itempos4dofitem1[di]]
+            update!(basisevaler4dofitem1[FEid],dofitem1)
+        end
+
+        # update FEbasisevalers for test function
+        basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj]][end][itempos4dofitem2[dj]]
+        basisvals = basisevaler4dofitem2.cvals
+        update!(basisevaler4dofitem2,dofitem2)
+
+        # update action on dofitem
+        update!(action, basisevaler4dofitem1[1], dofitem1, item, regions[r])
+
+        # update dofs
+        for j=1:ndofs4item1
+            dofs[j] = xItemDofs[1][j,dofitem1]
+        end
+        for j=1:ndofs4item2
+            dofs2[j] = xItemDofs[end][j,dofitem2]
+        end
+
+        for i in eachindex(weights)
+            for dof_i = 1 : ndofs4item1
+
+                for FEid = 1 : nFE - 1
+                    eval!(action_input2, basisevaler4dofitem1[FEid], dof_i, i; offset = offsets[FEid])
+                end
+
+                apply_action!(action_result, action_input[i], action_input2, action, i)
+                action_result .*= weights[i]
+
+                for dof_j = 1 : ndofs4item2
+                    temp = 0
+                    for k = 1 : action_resultdim
+                        temp += action_result[k] * basisvals[k,dof_j,i]
+                    end
+                    temp *= coefficient4dofitem2[dj]
+                    localmatrix[dof_i,dof_j] += temp
+                end
+            end 
+        end
+
+        localmatrix .*= xItemVolumes[item] * factor
+
+        # copy localmatrix into global matrix
+        for dof_i = 1 : ndofs4item1
+            arow = dofs[dof_i] + offsetX
+            for dof_j = 1 : ndofs4item2
+                if localmatrix[dof_i,dof_j] != 0
+                    acol = dofs2[dof_j] + offsetY
+                    if transposed_assembly == true
+                        _addnz(A,acol,arow,localmatrix[dof_i,dof_j],1)
+                    else 
+                        _addnz(A,arow,acol,localmatrix[dof_i,dof_j],1)  
+                    end
+                end
+            end
+        end
+        
+        fill!(localmatrix,0.0)
+        break; # region for loop
+    end # if in region    
+    end # region for loop
+    end # item for loop
+
+    return nothing
+end
+
+
+## wrapper for FEMatrixBlock to avoid use of setindex! functions of FEMAtrixBlock
+function assemble!(
+    A::FEMatrixBlock,
+    NLF::NonlinearForm,
+    FEB::Array{<:FEVectorBlock,1};
+    verbosity::Int = 0,
+    factor = 1,
+    transposed_assembly::Bool = false)
+
+    assemble!(A.entries, NLF, FEB; verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, offsetX = A.offsetX, offsetY = A.offsetY)
+end
+
+
+
+
+"""
+````
+assemble!(
+    b::AbstractVector,
+    NLF::NonlinearForm{T, AT},
+    FEB::Array{<:FEVectorBlock,1};         # coefficients for each operator
+    verbosity::Int = 0,
+    factor = 1,
+    transposed_assembly::Bool = false
+````
+
+Assembly of a NonlinearForm NLF into given AbstractVector (e.g. FEMatrixBlock).
+"""
+function assemble!(
+    b::AbstractVector,
+    NLF::NonlinearForm{T, AT},
+    FEB::Array{<:FEVectorBlock,1};
+    verbosity::Int = 0,
+    factor = 1,
+    transposed_assembly::Bool = false,
+    offset = 0) where {T<: Real, AT <: AbstractAssemblyType}
+
+    # extract finite element spaces and operators
+    FE = NLF.FE1
+    push!(FE, NLF.FE2)
+    nFE::Int = length(FE)
+    operators = NLF.operator1
+    push!(operators, NLF.operator2)
+    
+    # get adjacencies
+    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
+    xItemDofs = Array{Union{VariableTargetAdjacency,SerialVariableTargetAdjacency},1}(undef,length(FE))
+    for j = 1 : nFE
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
+    end
+    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = Int64(num_sources(xItemNodes))
+
+    # prepare assembly
+    action = NLF.action
+    regions = parse_regions(NLF.regions, xItemRegions)
+    EG, ndofs4EG, qf, basisevaler, dii4op = prepare_assembly(NLF, operators, FE, regions, nFE, action.bonus_quadorder, verbosity - 1)
+ 
+ 
+    # get size informations
+    ncomponents = zeros(Int,length(FE))
+    offsets = zeros(Int,length(FE)+1)
+    maxdofs = 0
+    for j = 1 : nFE
+        ncomponents[j] = get_ncomponents(eltype(FE[j]))
+        maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
+        offsets[j+1] = offsets[j] + size(basisevaler[1][j][1].cvals,1)
+    end
+    action_resultdim::Int = action.resultdim
+    maxdofs2 = max_num_targets_per_source(xItemDofs[end])
+
+ 
+    maxnweights = 0
+    for j = 1 : length(qf)
+        maxnweights = max(maxnweights, length(qf[j].w))
+    end
+    action_input = Array{Array{T,1},1}(undef,maxnweights)
+    for j = 1 : maxnweights
+        action_input[j] = zeros(T,offsets[end-1]) # heap for action input
+    end
+
+    # loop over items
+    EG4item::Int = 0
+    EG4dofitem::Array{Int,1} = [1,1] # EG id of the current item with respect to operator
+    dofitems::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
+    itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
+    coefficient4dofitem::Array{Int,1} = [0,0] # coefficients for operator
+    ndofs4dofitem::Int = 0 # number of dofs for item
+    dofitem::Int = 0
+    coeffs::Array{T,1} = zeros(T,maxdofs)
+    dofs::Array{Int,1} = zeros(Int,maxdofs)
+    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
+    basisevaler4dofitem = basisevaler[1][1][1]
+    basisevaler4dofitem1 = Array{Any,1}(undef,nFE)
+    for j = 1 : nFE
+        basisevaler4dofitem1[j] = basisevaler[1][j][1]
+    end
+    basisvals::Array{T,3} = basisevaler4dofitem.cvals
+    temp::T = 0 # some temporary variable
+    localb = zeros(T,maxdofs)
+    bdof::Int = 0
+
+
+    # note: at the moment we expect that all FE[1:end-1] are the same !
+    # otherweise more than one MatrixBlock has to be assembled and we need more offset information
+    # hence, this only can handle nonlinearities at the moment that depend on one unknown of the PDEsystem
+
+    for item = 1 : nitems
+    for r = 1 : length(regions)
+    # check if item region is in regions
+    if xItemRegions[item] == regions[r]
+
+        # get dofitem informations for ansatz function
+        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+
+        # get quadrature weights for integration domain
+        weights = qf[EG4dofitem[1]].w
+
+        # fill action input with evluation of current solution
+        # given by coefficient vectors
+        for FEid = 1 : nFE - 1
+
+            # get information on dofitems
+            weights = qf[EG4item].w
+            for di = 1 : length(dofitems)
+                dofitem = dofitems[di]
+                if dofitem != 0
+                    # update FEbasisevaler on dofitem
+                    basisevaler4dofitem = basisevaler[EG4dofitem[di]][FEid][itempos4dofitem[di]]
+                    update!(basisevaler4dofitem, dofitem)
+
+                    # update coeffs on dofitem
+                    ndofs4dofitem = ndofs4EG[FEid][EG4dofitem[di]]
+                    for j=1:ndofs4dofitem
+                        fdof = xItemDofs[FEid][j,dofitem]
+                        coeffs[j] = FEB[FEid][fdof]
+                    end
+
+                    for i in eachindex(weights)
+                        if di == 1
+                            if FEid == 1
+                                fill!(action_input[i], 0)
+                            end
+                            eval!(action_input[i], basisevaler4dofitem, coeffs, i; offset = offsets[FEid], factor = coefficient4dofitem[di])
+                        else
+                            # on other side quadrature points are reversed
+                            eval!(action_input[length(weights)+1-i], basisevaler4dofitem, coeffs, i; offset = offsets[FEid], factor = coefficient4dofitem[di])
+                        end
+                    end  
+                end
+            end
+        end
+
+        # at this point the action_input at each quadrature point contains information on the last solution
+        # also no jump operators for the test function are allowed currently
+
+        di = 1
+        dofitem = dofitems[di]
+        ndofs4item = ndofs4EG[1][EG4dofitem[di]]
+
+        # update FEbasisevalers for test function
+        basisevaler4dofitem = basisevaler[EG4dofitem[di]][end][itempos4dofitem[di]]
+        basisvals = basisevaler4dofitem.cvals
+        update!(basisevaler4dofitem,dofitem)
+
+        # update action on dofitem
+        update!(action, basisevaler4dofitem, dofitem, item, regions[r])
+
+        # update dofs
+        for j=1:ndofs4item
+            dofs[j] = xItemDofs[1][j,dofitem]
+        end
+
+        for i in eachindex(weights)
+            apply_action!(action_result, action_input[i], action_input[i], action, i)
+            action_result .*= weights[i]
+
+            for dof_j = 1 : ndofs4item
+                temp = 0
+                for k = 1 : action_resultdim
+                    temp += action_result[k] * basisvals[k,dof_j,i]
+                end
+                temp *= coefficient4dofitem[di]
+                localb[dof_j] += temp
+            end
+        end
+
+        localb .*= xItemVolumes[item] * factor
+
+        # copy localmatrix into global matrix
+        for dof_i = 1 : ndofs4item
+            bdof = dofs[dof_i] + offset
+            b[bdof] += localb[dof_i]          
+        end
+        
+        fill!(localb,0.0)
+        break; # region for loop
+    end # if in region    
+    end # region for loop
+    end # item for loop
+
+    return nothing
+end
+
+
+## wrapper for FEVectorBlock to avoid use of setindex! functions of FEMAtrixBlock
+function assemble!(
+    b::FEVectorBlock,
+    NLF::NonlinearForm,
+    FEB::Array{<:FEVectorBlock,1};
+    verbosity::Int = 0,
+    factor = 1,
+    transposed_assembly::Bool = false)
+
+    assemble!(b.entries, NLF, FEB; verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, offset = b.offset)
+end
+
+
 
 
 

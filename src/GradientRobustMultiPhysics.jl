@@ -7,6 +7,7 @@ using SuiteSparse
 using SparseArrays
 using BenchmarkTools
 using IterativeSolvers
+using DiffResults
 using LinearAlgebra
 using ForwardDiff
 using DocStringExtensions
@@ -137,6 +138,7 @@ export LinearForm
 export BilinearForm, SymmetricBilinearForm
 export TrilinearForm
 export MultilinearForm
+export NonlinearForm
 export assemble!, evaluate!, evaluate
 export L2ErrorIntegrator
 
@@ -156,6 +158,7 @@ export LagrangeMultiplier
 
 export AbstractTrilinearForm
 export AbstractMultilinearForm
+export AbstractNonlinearForm, GenerateNonlinearForm
 
 export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
@@ -164,6 +167,8 @@ export RhsOperator
 export BLFeval
 export TLFeval
 export MLFeval
+
+export LHSoperator_also_modifies_RHS
 
 
 include("boundarydata.jl")
