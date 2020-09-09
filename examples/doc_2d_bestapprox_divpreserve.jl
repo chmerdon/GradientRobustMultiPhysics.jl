@@ -5,15 +5,14 @@
 
 This example computes the L2-bestapproximation of some given vector-valued function into the lowest-order Raviart-Thomas space. It also
 preserves the divergence of the functions in the sense that the divergence of the approximation equals the piecewise integral mean of the exact divergence.
-Afterwards the L2 error (also of the divergence error) is computed and the solution is plotted (using PyPlot)
+Afterwards the L2 error (also of the divergence error) is computed and the solution is plotted.
 
 =#
 
+module Example_2DBestapproxDivpreserve
+
 using GradientRobustMultiPhysics
 using ExtendableGrids
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
-
 
 ## define some vector field that should be approximated
 function exact_function!(result,x)
@@ -26,7 +25,7 @@ function exact_divergence!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1, Plotter = nothing)
 
     ## generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
@@ -36,8 +35,7 @@ function main()
     Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 3)
 
     ## add a new unknown (Lagrange multiplier that handles the divergence constraint)
-    ## here 1 is the number of components (it is scalar-valued)
-    ## and 2 is the dimension (it lives in 2D)
+    ## here 1 is the number of components (it is scalar-valued) and 2 is the space dimension
     add_unknown!(Problem,1,2; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
@@ -52,26 +50,23 @@ function main()
 
     ## create a solution vector and solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
-    solve!(Solution, Problem; verbosity = 1)
+    solve!(Solution, Problem; verbosity = verbosity)
 
     ## calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2; bonus_quadorder = 3)
     L2DivergenceErrorEvaluator = L2ErrorIntegrator(exact_divergence!, Divergence, 2, 1; bonus_quadorder = 2)
     println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
     println("L2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
-        
-    ## plot the vector field
-    PyPlot.figure("|u|")
-    nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
-    nodevalues!(nodevals,Solution[1],FES[1])
-    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2); Plotter = PyPlot, isolines = 5)
-    quiver(xgrid[Coordinates][1,:],xgrid[Coordinates][2,:],nodevals[1,:],nodevals[2,:])
+       
+    ## plot
+    if Plotter != nothing
+        nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
+        nodevalues!(nodevals,Solution[1])
+        ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|u|")
 
-    ## plot the divergence
-    PyPlot.figure("divergence(u)")
-    nodevals = zeros(Float64,4,size(xgrid[Coordinates],2))
-    nodevalues!(nodevals,Solution[1],FES[1],Divergence)
-    ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
+        nodevalues!(nodevals,Solution[1],Divergence)
+        ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "div(u)")
+    end
 end
 
-main()
+end

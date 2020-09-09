@@ -27,11 +27,10 @@ converging errors close to the best-approximations, a non pressure-robust discre
 Compare e.g. Bernardi--Raugel and bernardi--Raugel pressure-robust by (un)commenting the responsible lines in this example.
 =#
 
+
+module Example_2DTransientStokes
+
 using GradientRobustMultiPhysics
-using ExtendableGrids
-#using VTKView
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
 using Printf
 using Triangulate
 
@@ -223,5 +222,4 @@ function main()
     end    
 end
 
-
-main()
+end

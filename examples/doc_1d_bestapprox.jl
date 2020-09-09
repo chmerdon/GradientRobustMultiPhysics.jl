@@ -4,15 +4,14 @@
 ([source code](SOURCE_URL))
 
 This example computes the L2-bestapproximation of some given scalar-valued function into the piecewise quadratic continuous polynomials.
-Afterwards the L2 error is computed and the solution is plotted (using PyPlot)
+Afterwards the L2 error is computed and the solution is plotted.
 
 =#
 
+module Example_1DBestapprox
+
 using GradientRobustMultiPhysics
 using ExtendableGrids
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
-
 
 ## define some (vector-valued) function (to be L2-bestapproximated in this example)
 ## a user-defined (time-independent) function should always have this interface
@@ -21,7 +20,7 @@ function exact_function!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(; Plotter = nothing, verbosity = 1)
 
     ## generate mesh and uniform refine twice
     xgrid = simplexgrid([0.0,1//3,2//3,1.0])
@@ -41,30 +40,30 @@ function main()
     ## (the verbosity argument that many functions have steers the talkativity,
     ##  the larger the number, the more details)
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
-    solve!(Solution, Problem; verbosity = 1)
+    solve!(Solution, Problem; verbosity = verbosity)
     
     ## calculate the L2 error
     L2error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
     println("\nL2error(BestApprox) = $L2error")
-        
-    ## evaluate/interpolate function at nodes and plot
-    PyPlot.figure("plot of solution") 
-    nodevals = zeros(Float64,1,size(xgrid[Coordinates],2))
-    nodevalues!(nodevals,Solution[1],FES)
-    ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot, label = "coarse approximation")
 
     ## to compare our discrete solution with a finer one, we interpolate the exact function
     ## again on some more refined mesh and also compute the L2 error on this one
-    xgrid = uniform_refine(xgrid,3)
-    FES = FESpace{FEType}(xgrid)
-    Interpolation = FEVector{Float64}("fine-grid interpolation",FES)
+    xgrid_fine = uniform_refine(xgrid,3)
+    FES_fine = FESpace{FEType}(xgrid_fine)
+    Interpolation = FEVector{Float64}("fine-grid interpolation",FES_fine)
     interpolate!(Interpolation[1], exact_function!)
     println("L2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
+        
+    ## evaluate/interpolate function at nodes and plot
+    if Plotter != nothing
+        nodevals = zeros(Float64,1,size(xgrid[Coordinates],2))
+        nodevalues!(nodevals,Solution[1],FES)
+        p = ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = Plotter, label = "coarse approximation")
 
-    nodevals_fine = zeros(Float64,1,size(xgrid[Coordinates],2))
-    nodevalues!(nodevals_fine,Interpolation[1],FES)
-    ExtendableGrids.plot(xgrid, nodevals_fine[1,:]; Plotter = PyPlot, clear = false, color = (1,0,0), label = "fine interpolation")
-    PyPlot.legend()
+        nodevals_fine = zeros(Float64,1,size(xgrid_fine[Coordinates],2))
+        nodevalues!(nodevals_fine,Interpolation[1],FES_fine)
+        ExtendableGrids.plot(xgrid_fine, nodevals_fine[1,:]; Plotter = Plotter, clear = false, p = p, color = (1,0,0), label = "fine interpolation")
+    end
 end
 
-main()
+end

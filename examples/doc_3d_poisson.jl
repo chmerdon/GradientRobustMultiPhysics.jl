@@ -13,9 +13,10 @@ with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series o
 
 =#
 
+module Example_3DPoisson
+
 using GradientRobustMultiPhysics
 using Printf
-
 
 ## problem data
 function exact_function!(result,x)
@@ -34,7 +35,7 @@ function rhs!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1)
 
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
@@ -75,7 +76,7 @@ function main()
         ## solve the problem
         Solution = FEVector{Float64}("Solution",FES)
         push!(NDofs,length(Solution.entries))
-        solve!(Solution, Problem; verbosity = 1)
+        solve!(Solution, Problem; verbosity = verbosity)
 
         ## calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
@@ -97,4 +98,4 @@ function main()
     end
 end
 
-main()
+end

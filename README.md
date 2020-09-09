@@ -30,8 +30,8 @@ see subfolder examples, most can be run by include("...")
 - ExtendableSparse.jl
 - ExtendableGrids.jl
 - ForwardDiff.jl
+- DiffResults.jl
 - IterativeSolvers.jl
 - DocStringExtensions.jl
 - BenchmarkTools.jl
 - Triangulate.jl (for runtests.jl and grid generation in some examples)
-- PyPlot.jl (to run most of the examples with plots)

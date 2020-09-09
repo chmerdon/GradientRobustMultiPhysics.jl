@@ -12,11 +12,9 @@ where ``\sigma`` is some finite element function. Here, we check the error of so
 
 =#
 
-using GradientRobustMultiPhysics
-using ExtendableGrids
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
+module Example_2DJumpEstimator
 
+using GradientRobustMultiPhysics
 
 ## define some vector field that should be approximated
 function exact_function!(result,x)
@@ -25,7 +23,7 @@ function exact_function!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1)
 
     ## generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
@@ -40,7 +38,7 @@ function main()
 
     ## create a solution vector and solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)
-    solve!(Solution, Problem; verbosity = 1)
+    solve!(Solution, Problem; verbosity = verbosity)
 
     ## calculate estimator by evaluating the jumps on faces
     xFaceVolumes = xgrid[FaceVolumes]
@@ -59,16 +57,10 @@ function main()
     ## set jumps on boundary faces to zero
     jump4face[:,xgrid[BFaces]] .= 0
 
-    ## calculate L2 error and L2 divergence error
+    ## calculate L2 error and print results
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2)
     println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
     println("\nEstimator = $(sqrt(sum(jump4face[:])))")
-        
-    ## plot the vector field
-    PyPlot.figure("|u|")
-    nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
-    nodevalues!(nodevals,Solution[1],FES)
-    ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2); Plotter = PyPlot, isolines = 5)
 end
 
-main()
+end

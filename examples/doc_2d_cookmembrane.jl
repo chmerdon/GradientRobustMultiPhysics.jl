@@ -23,11 +23,11 @@ and Neumann boundary conditions (i.e. a force that pulls the domain downwards) o
 After solving the solution is plotted on the displaced mesh and also the absolute value of the stress is plotted.
 =#
 
+module Example_2DCookMembrane
+
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using Triangulate
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
 using Printf
 
 
@@ -51,14 +51,14 @@ function neumann_force_right!(result,x)
 end    
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1, Plotter = nothing)
 
     #####################################################################################
     #####################################################################################
 
     ## meshing parameters
-    maxarea = 0.1
-    xgrid = grid_cookmembrane(maxarea) 
+    xgrid = grid_cookmembrane(5e-2) 
+    factor_plotdisplacement = 4 # discplacement_factor in plots
 
     ## problem parameters
     elasticity_modulus = 1000 # elasticity modulus
@@ -69,12 +69,6 @@ function main()
     ## choose finite element type
     FEType = H1P1{2} # P1-Courant
     #FEType = H1P2{2,2} # P2
-
-    ## postprocess parameters
-    plot_grid = false
-    plot_stress = true
-    factor_plotdisplacement = 4
-    plot_displacement = true
 
     #####################################################################################    
     #####################################################################################
@@ -96,35 +90,17 @@ function main()
 
     ## solve PDE
     Solution = FEVector{Float64}("displacement",FES)
-    solve!(Solution, LinElastProblem; verbosity = 1)
-
-    ## plot triangulation
-    if plot_grid
-        PyPlot.figure("grid")
-        ExtendableGrids.plot(xgrid, Plotter = PyPlot)
-    end
+    solve!(Solution, LinElastProblem; verbosity = verbosity)
 
     ## plot stress
-    if plot_stress
-        PyPlot.figure("|eps(u)|")
+    if Plotter != nothing
         nnodes = size(xgrid[Coordinates],2)
         nodevals = zeros(Float64,4,nnodes)
-        nodevalues!(nodevals,Solution[1],FES,SymmetricGradient)
-        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2 + nodevals[3,:].^2 + nodevals[4,:].^2); Plotter = PyPlot)
+        nodevalues!(nodevals,Solution[1])
+        xgrid[Coordinates] += factor_plotdisplacement*nodevals[[1,2],:]
+        nodevalues!(nodevals,Solution[1],Gradient)
+        ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|grad(u)|")
     end
-
-    ## plot displacement
-    if plot_displacement
-        PyPlot.figure("|u| on displaced grid")
-        nnodes = size(xgrid[Coordinates],2)
-        nodevals = zeros(Float64,2,nnodes)
-        nodevalues!(nodevals,Solution[1],FES)
-        xgrid[Coordinates] = xgrid[Coordinates] + factor_plotdisplacement*nodevals[[1,2],:]
-        xCoordinates = xgrid[Coordinates]
-        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
-    end
-
 end
 
-
-main()
+end

@@ -15,6 +15,9 @@ with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and t
 for isotropic media.
 =#
 
+
+module Example_3DElasticity
+
 using GradientRobustMultiPhysics
 
 ## problem data for Neumann boundary
@@ -25,16 +28,15 @@ function neumann_force_right!(result,x)
 end    
 
 ## everything is wrapped in a main function
-function main()
-
+function main(; verbosity = 1)
     #####################################################################################
     #####################################################################################
 
-    ## mesh
-    xgrid = uniform_refine(grid_unitcube(Parallelepiped3D; scale = [4//3,3//4,1//4]),3)
+    ## mesh = scaled unit cube and 3 uniform refinements
+    xgrid = uniform_refine(grid_unitcube(Parallelepiped3D; scale = [4//3,3//4,1//4]), 3)
     #xgrid = split_grid_into(xgrid, Tetrahedron3D)
 
-    ## elasticity parameters for istropic stiffness tensor
+    ## parameters for isotropic elasticity tensor
     elasticity_modulus = 1000 # elasticity modulus
     poisson_number = 1//3 # Poisson number
     shear_modulus = (1/(2+2*poisson_number))*elasticity_modulus
@@ -63,7 +65,7 @@ function main()
 
     ## solve PDE
     Solution = FEVector{Float64}("displacement",FES)
-    solve!(Solution, LinElastProblem; verbosity = 1)
+    solve!(Solution, LinElastProblem; verbosity = verbosity)
 
     ## write to vtk
     mkpath("data/example_3delasticity/")
@@ -71,5 +73,4 @@ function main()
 
 end
 
-
-main()
+end

@@ -23,16 +23,11 @@ are considered:
 In both test problems the errors of non-pressure-robust discretisations scale with  ``1/\mu``, while the pressure-robust
 discretisation solves ``\mathbf{u} = 0`` exactly in test problem 1 and gives much better results in test problem 2.
 
-!!! note
-
-    As this example is also used as a test case for the code, it is wrapped inside a module. To start the example after including
-    one has to run Example_2DPressureRobustness.main() where one also can select the test problem and the discretisation.
-    
-
 =#
 
 
 module Example_2DPressureRobustness
+
 using GradientRobustMultiPhysics
 using Printf
 

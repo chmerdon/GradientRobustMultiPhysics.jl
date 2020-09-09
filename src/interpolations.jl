@@ -23,7 +23,13 @@ $(TYPEDSIGNATURES)
 Evaluates the finite element function with the specified coefficient vector Source (interpeted as an element of the finite element space FE)
 and the specified FunctionOperator at all the nodes of the grids and writes them into Target. Discontinuous quantities are averaged.
 """
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], continuous::Bool = false)
+function nodevalues!(Target::AbstractArray{<:Real,2},
+    Source::AbstractArray{<:Real,1},
+    FE::FESpace,
+    operator::Type{<:AbstractFunctionOperator} = Identity;
+    regions::Array{Int,1} = [0],
+    source_offset::Int = 0,
+    continuous::Bool = false)
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]
   xItemDofs = FE.dofmaps[CellDofs]
@@ -66,6 +72,8 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
   node::Int = 0
   dof::Int = 0
   flag4node = zeros(Bool,nnodes)
+
+  fill!(Target, 0.0)
   for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -91,7 +99,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
                 for k = 1 :  size(basisvals,1)
                     for dof_i = 1 : ndofs4EG[iEG]
                         dof = xItemDofs[dof_i,item]
-                        Target[k,node] += Source[dof] * basisvals[k,dof_i,i]
+                        Target[k,node] += Source[source_offset + dof] * basisvals[k,dof_i,i]
                     end
                 end  
             end
@@ -106,4 +114,17 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
             Target[k,node] /= nneighbours[node]
         end
     end
+
+    return nothing
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Evaluates the finite element function with the specified coefficient vector Source (a FEVectorBlock)
+and the specified FunctionOperator at all the nodes of the grids and writes them into Target. Discontinuous quantities are averaged.
+"""
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], continuous::Bool = false)
+    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset)
 end

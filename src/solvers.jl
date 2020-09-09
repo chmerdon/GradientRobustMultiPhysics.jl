@@ -250,6 +250,9 @@ function Base.show(io::IO, SC::SolverConfig)
     println("     subiterations = $(SC.subiterations)")
     println("     maxIterations = $(SC.maxIterations)")
     println("       maxResidual = $(SC.maxResidual)")
+    if SC.anderson_iterations > 0
+        println("       AndersonIts = $(SC.anderson_iterations)")
+    end
 
     println("  AssemblyTriggers = ")
     for j = 1 : size(SC.LHS_AssemblyTriggers,1)
@@ -483,7 +486,7 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
 
     # SOLVE
     LS =  LinearSystem{SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
-    linsolve!(LS; verbosity = verbosity - 1)
+    linsolve!(LS; verbosity = verbosity)
 
     if verbosity > 0
         # CHECK RESIDUAL
@@ -576,7 +579,7 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
         end
 
         # SOLVE
-        linsolve!(LS; verbosity = verbosity - 1)
+        linsolve!(LS; verbosity = verbosity)
 
 
         # POSTPROCESS NEW ANDERSON ITERATE
@@ -839,22 +842,31 @@ function solve!(
     SolverConfig.maxlureuse = maxlureuse
     
     if verbosity > 0
-        println("\nSOLVING PDE")
-        println("===========")
-        println("  name = $(PDE.name)")
-        println("  time = $(time)")
-        if AndersonIterations > 0
-            println("  anderson = $AndersonIterations")
-        end
+        println("\nSOLVER")
+        println("======")
+        print("  system name = $(PDE.name)")
+        println("  @time = $(time)")
 
         FEs = Array{FESpace,1}([])
         for j=1 : length(Target.FEVectorBlocks)
             push!(FEs,Target.FEVectorBlocks[j].FES)
         end    
         if verbosity > 0
-            print("   FEs = ")
+            print("\n  FEs = ")
             for j = 1 : length(Target)
-                print("$(Target[j].FES.name) (ndofs = $(Target[j].FES.ndofs))\n         ");
+                print("$(Target[j].FES.name) (ndofs = $(Target[j].FES.ndofs))\n        ");
+            end
+        end
+        println("\n  subiteration | equations that are solved together")
+        for j=1:length(SolverConfig.subiterations)
+            print("       [$j]     | ")
+            for o = 1 : length(SolverConfig.subiterations[j])
+                print("$(PDE.equation_names[SolverConfig.subiterations[j][o]])")
+                if o == length(SolverConfig.subiterations[j])
+                    println("")
+                else
+                    print("\n               | ")
+                end
             end
         end
     end
@@ -971,7 +983,7 @@ function TimeControlSolver(
     dirichlet_penalty = 1e60)
 
     # generate solver for time-independent problem
-    SC = generate_solver(PDE; subiterations = subiterations, verbosity = verbosity)
+    SC = generate_solver(PDE; subiterations = subiterations, verbosity = verbosity - 1)
     for j = 1 : length(InitialValues.FEVectorBlocks)
         if (SC.RHS_AssemblyTriggers[j] <: AssemblyEachTimeStep)
             SC.RHS_AssemblyTriggers[j] = AssemblyEachTimeStep
@@ -985,10 +997,38 @@ function TimeControlSolver(
 
     if verbosity > 0
 
-        println("\nPREPARING TIME-DEPENDENT SOLVER FOR PDE")
-        println("=======================================")
-        println("    name = $(PDE.name)")
-        Base.show(SC)
+        println("\nPREPARING TIME-DEPENDENT SOLVER")
+        println("===============================")
+        print("  system name = $(PDE.name)")
+        println("  @starttime = $(start_time)")
+
+        FEs = Array{FESpace,1}([])
+        for j=1 : length(InitialValues.FEVectorBlocks)
+            push!(FEs,InitialValues.FEVectorBlocks[j].FES)
+        end    
+        if verbosity > 0
+            print("\n  FEs = ")
+            for j = 1 : length(InitialValues)
+                print("$(InitialValues[j].FES.name) (ndofs = $(InitialValues[j].FES.ndofs))\n        ");
+            end
+        end
+        println("\n  subiteration | equations that are solved together")
+        for j=1:length(SC.subiterations)
+            print("       [$j]     | ")
+            for o = 1 : length(SC.subiterations[j])
+                print("$(PDE.equation_names[SC.subiterations[j][o]])")
+                if o == length(SC.subiterations[j])
+                    println("")
+                else
+                    print("\n               | ")
+                end
+            end
+        end
+        if verbosity > 1
+            Base.show(SC)
+        else
+            println("")
+        end
     end
 
     # allocate matrices etc

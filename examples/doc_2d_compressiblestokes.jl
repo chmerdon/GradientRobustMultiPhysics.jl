@@ -42,10 +42,10 @@ Also, on a uniform mesh the gradient-robust method is perfect!
 =#
 
 
+module Example_2DCompressibleStokes
+
 using GradientRobustMultiPhysics
 using ExtendableGrids
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
 using Printf
 
 
@@ -81,15 +81,14 @@ function rhs_gravity!(gamma,c)
 end   
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
 
     #####################################################################################
     #####################################################################################
 
     ## generate mesh
-    #xgrid = grid_unitsquare(Triangle2D); # uncomment this line for a structured grid
-    xgrid = grid_unitsquare_mixedgeometries(); # not so structured
-    xgrid = uniform_refine(xgrid,4)
+    #xgrid = uniform_refine(grid_unitsquare(Triangle2D),4); # uncomment this line for a structured grid
+    xgrid = uniform_refine(grid_unitsquare_mixedgeometries(),4); # unstructured mesh
 
     ## problem data
     c = 10 # coefficient in equation of state
@@ -103,17 +102,10 @@ function main()
     #FETypes = [H1CR{2}, L2P0{1}, L2P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
 
     ## solver parameters
-    timestep = shear_modulus / (2*c)
-    reconstruct = true # use pressure-robust discretisation of the finite element method?
+    timestep = 2 * shear_modulus / (2*c)
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
     maxIterations = 300  # termination criterion 1
     target_change = 1e-10 # stopf when change is below this treshold
-
-    ## postprocess parameters
-    plot_grid = false
-    plot_pressure = false
-    plot_density = true
-    plot_velocity = true
 
     #####################################################################################    
     #####################################################################################
@@ -170,7 +162,7 @@ function main()
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
     ## so we can reuse the other subiteration matrices in each timestep
-    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [1,2], verbosity = 1)
+    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [1,2], verbosity = verbosity)
 
     ## loop in pseudo-time until stationarity detected
     ## we also output M to see that the mass constraint is preserved all the way
@@ -198,36 +190,22 @@ function main()
     
     ## plots
     ## split grid into triangles for plotter
-    xgrid = split_grid_into(xgrid,Triangle2D)
-    nnodes = size(xgrid[Coordinates],2)
 
-    if plot_grid
-        PyPlot.figure("grid")
-        ExtendableGrids.plot(xgrid, Plotter = PyPlot)
-    end
+    if Plotter != nothing
+        ## split grid into triangles for plotter
+        xgrid = split_grid_into(xgrid,Triangle2D)
+        nnodes = size(xgrid[Coordinates],2)
+        nodevals = zeros(Float64,2,nnodes)    
 
-    if plot_pressure
-        nodevals = zeros(Float64,1,nnodes)
-        PyPlot.figure("pressure")
         nodevalues!(nodevals,Solution[3],FESpacePD)
-        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-    end
+        ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "p")
 
-    if plot_density
-        nodevals = zeros(Float64,1,nnodes)
-        PyPlot.figure("density")
         nodevalues!(nodevals,Solution[2],FESpacePD)
-        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-    end
+        ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "rho")
 
-    if plot_velocity
-        xCoordinates = xgrid[Coordinates]
-        nodevals = zeros(Float64,2,nnodes)
         nodevalues!(nodevals,Solution[1],FESpaceV)
-        PyPlot.figure("velocity")
-        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
-        quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+        ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|u|")
     end
 end
 
-main()
+end

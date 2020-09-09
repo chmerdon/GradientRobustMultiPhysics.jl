@@ -28,11 +28,12 @@ Note, that the transport equation is very convection-dominated and no stabilisat
 Also note, that only the finite volume discretisation perfectly obeys the maximum principle for the concentration but the isolines do no stay parallel until the outlet is reached, possibly due to articifial diffusion.
 =#
 
+
+module Example_2DFlowTransport
+
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using Triangulate
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
 using Printf
 
 
@@ -59,7 +60,7 @@ function grid_pipe(maxarea::Float64)
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk = true)
     #####################################################################################
     #####################################################################################
 
@@ -68,7 +69,6 @@ function main()
 
     ## problem parameters
     viscosity = 1 # coefficient for Stokes equation
-    diffusion_FE = 1e-7 # diffusion coefficient for transport equation
 
     ## choose one of these (inf-sup stable) finite element type pairs for the flow
     #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
@@ -76,18 +76,6 @@ function main()
     FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
     #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
     
-    ## choose discretisation for the transport equation
-    #FETypeTransport = H1P1{1}; FVtransport = false
-    FETypeTransport = L2P0{1}; FVtransport = true # note: ignores postprocess_operator, since FV operator does the same on triangles
-
-    ## postprocess parameters
-    plot_grid = false
-    plot_pressure = false
-    plot_velocity = true
-    plot_divergence = false
-    plot_concentration = true
-    write_vtk = true
-
     #####################################################################################    
     #####################################################################################
 
@@ -102,9 +90,12 @@ function main()
     add_unknown!(Problem, 2, 1; unknown_name = "concentration", equation_name = "transport equation")
     if FVtransport == true
         ## finite volume upwind discretisation
+        FETypeTransport = L2P0{1}
         add_operator!(Problem, [3,3], FVConvectionDiffusionOperator(1))
     else
         ## finite element convection and diffusion (very small) operators
+        FETypeTransport = H1P1{1}
+        diffusion_FE = 1e-7 # diffusion coefficient for transport equation
         add_operator!(Problem, [3,3], LaplaceOperator(diffusion_FE,2,1))
         add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
     end
@@ -121,12 +112,12 @@ function main()
     Solution = FEVector{Float64}("velocity",FESpaceVelocity)
     append!(Solution,"pressure",FESpacePressure)
     append!(Solution,"species concentration",FESpaceConcentration)
-    solve!(Solution, Problem; subiterations = [[1,2]], verbosity = 1, maxIterations = 5, maxResidual = 1e-12)
+    solve!(Solution, Problem; subiterations = [[1,2]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
 
     ## solve the transport by finite volumes or finite elements
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], maxlureuse = [-1], timedependent_equations = [3], verbosity = 1)
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], maxlureuse = [-1], timedependent_equations = [3], verbosity = verbosity)
         timestep = 10000
         maxResidual = 1e-10
         for iteration = 1 : 100
@@ -142,46 +133,19 @@ function main()
         end
     else
         ## solve directly
-        solve!(Solution, Problem; subiterations = [[3]], verbosity = 3, maxIterations = 5, maxResidual = 1e-12)
+        solve!(Solution, Problem; subiterations = [[3]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
     end
-
-
 
     ## print minimal and maximal concentration
     ## (maximum principle says it should be [0,1])
-    println("[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
+    println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
-    ## plots
-    nnodes = size(xgrid[Coordinates],2)
-    if plot_grid
-        PyPlot.figure("grid")
-        ExtendableGrids.plot(xgrid, Plotter = PyPlot)
-    end
-    if plot_pressure
+    ## possibilities
+    if Plotter != nothing
+        nnodes = size(xgrid[Coordinates],2)
         nodevals = zeros(Float64,1,nnodes)
-        PyPlot.figure("pressure")
-        nodevalues!(nodevals,Solution[2],FESpacePressure)
-        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-    end
-    if plot_velocity
-        xCoordinates = xgrid[Coordinates]
-        nodevals = zeros(Float64,2,nnodes)
-        nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-        PyPlot.figure("velocity")
-        ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
-        quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
-    end
-    if plot_divergence
-        nodevals = zeros(Float64,2,nnodes)
-        PyPlot.figure("divergence")
-        nodevalues!(nodevals,Solution[1],FESpaceVelocity,Divergence)
-        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot, cmap = "cool")
-    end
-    if plot_concentration
-        nodevals = zeros(Float64,1,nnodes)
-        PyPlot.figure("species concentration")
-        nodevalues!(nodevals,Solution[3],FESpaceConcentration)
-        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot, cmap = "cool")
+        nodevalues!(nodevals,Solution[3])
+        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = Plotter, cmap = "cool")
     end
 
     if write_vtk
@@ -190,4 +154,4 @@ function main()
     end
 end
 
-main()
+end

@@ -15,10 +15,10 @@ We also compare with the error of a simple nodal interpolation and plot the solu
 
 =#
 
+module Example_2DConvectionDiffusion
+
 using GradientRobustMultiPhysics
 using ExtendableGrids
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
 using Printf
 
 
@@ -44,7 +44,7 @@ function exact_solution_rhs!(diffusion)
 end    
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1, Plotter = nothing)
 
     #####################################################################################
     #####################################################################################
@@ -62,11 +62,6 @@ function main()
     #FEType = H1P1{1} # P1-Courant
     FEType = H1P2{1,2} # P2
     #FEType = H1CR{1} # Crouzeix-Raviart
-
-    ## postprocess parameters
-    plot_grid = false
-    plot_solution = true
-    plot_gradient = true
 
     #####################################################################################    
     #####################################################################################
@@ -106,12 +101,12 @@ function main()
 
         ## solve PDE
         Solution = FEVector{Float64}("Problem solution",FES)
-        solve!(Solution, ConvectionDiffusionProblem; verbosity = 1)
+        solve!(Solution, ConvectionDiffusionProblem; verbosity = verbosity)
         push!(NDofs,length(Solution.entries))
 
         ## interpolate
         Interpolation = FEVector{Float64}("Interpolation",FES)
-        interpolate!(Interpolation[1], exact_solution!)
+        interpolate!(Interpolation[1], exact_solution!; bonus_quadorder = 4, verbosity = verbosity)
 
         ## compute L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
@@ -137,33 +132,19 @@ function main()
             end
 
             ## split grid into triangles for the plotter (that only can handle triangles atm)
-            xgrid = split_grid_into(xgrid,Triangle2D)
-
-            if plot_grid
-                ## plot triangulation
-                PyPlot.figure("grid")
-                ExtendableGrids.plot(xgrid, Plotter = PyPlot)
-            end
-
-            if plot_solution
-                ## plot solution
-                PyPlot.figure("solution")
-                nnodes = size(xgrid[Coordinates],2)
-                nodevals = zeros(Float64,1,nnodes)
-                nodevalues!(nodevals,Solution[1],FES)
-                ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-            end
-
-            if plot_gradient
-                ## plot gradient
-                PyPlot.figure("|grad(u)|")
+            if Plotter != nothing
+                xgrid = split_grid_into(xgrid,Triangle2D)
                 nnodes = size(xgrid[Coordinates],2)
                 nodevals = zeros(Float64,2,nnodes)
+
+                nodevalues!(nodevals,Solution[1],FES)
+                ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "u")
+
                 nodevalues!(nodevals,Solution[1],FES, Gradient)
-                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2 + nodevals[:2,:].^2); Plotter = PyPlot)
+                ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|grad(u)|")
             end
         end    
     end    
 end
 
-main()
+end

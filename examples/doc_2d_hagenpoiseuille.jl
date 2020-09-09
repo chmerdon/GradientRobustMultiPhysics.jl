@@ -18,11 +18,10 @@ After that the errors of the Stokes solution, interpolations and bestapproximati
 (Note that second order schemes are exact in this example and that the mesh is structured.)
 =#
 
+module Example_2DHagenPoiseuille
+
 using GradientRobustMultiPhysics
 using ExtendableGrids
-#using VTKView
-ENV["MPLBACKEND"]="qt5agg"
-using PyPlot
 using Printf
 
 
@@ -44,19 +43,18 @@ function exact_velocity_gradient!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
     #####################################################################################
     #####################################################################################
 
     ## initial grid
     ## replace Parallelogrm2D by Triangle2D if you like
-    xgrid = grid_unitsquare(Parallelogram2D);
+    xgrid = uniform_refine(grid_unitsquare(Parallelogram2D));
     initgrid = deepcopy(xgrid)
 
     ## problem parameters
     viscosity = 1.0
-    nonlinear = true
-    nlevels = 7 # maximal number of refinement levels
+    nlevels = 6 # maximal number of refinement levels
     barycentric_refinement = false # do not change
 
     ## choose one of these (inf-sup stable) finite element type pairs
@@ -70,11 +68,6 @@ function main()
     ## solver parameters for nonlinear solve
     maxIterations = 20  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-10 # termination criterion 2 for nonlinear mode
-
-    ## postprocess parameters
-    plot_grid = false
-    plot_pressure = true
-    plot_velocity = true
 
     #####################################################################################    
     #####################################################################################
@@ -126,7 +119,7 @@ function main()
         ## solve Stokes problem
         Solution = FEVector{Float64}("Stokes velocity",FESpaceVelocity)
         append!(Solution,"Stokes pressure",FESpacePressure)
-        solve!(Solution, StokesProblem; verbosity = 1, linsolver = IterativeBigStabl_LUPC, maxlureuse = [10], maxIterations = maxIterations, maxResidual = maxResidual)
+        solve!(Solution, StokesProblem; verbosity = verbosity, linsolver = IterativeBigStabl_LUPC, maxlureuse = [10], maxIterations = maxIterations, maxResidual = maxResidual)
         push!(NDofs,length(Solution.entries))
 
         ## interpolate
@@ -189,36 +182,15 @@ function main()
             println("PRES-INTERP : interpolation of exact pressure")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
 
-            ## split grid into triangles for plotter
-            xgrid = split_grid_into(xgrid,Triangle2D)
-
-            ## plot triangulation
-            if plot_grid
-                PyPlot.figure("grid")
-                ExtendableGrids.plot(xgrid, Plotter = PyPlot)
-            end
-
-            ## plot pressure
-            if plot_pressure
-                nnodes = size(xgrid[Coordinates],2)
-                nodevals = zeros(Float64,1,nnodes)
-                PyPlot.figure("pressure")
-                nodevalues!(nodevals,Solution[2],FESpacePressure)
-                ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = PyPlot)
-            end
-
-            ## plot velocity (speed + quiver)
-            if plot_velocity
-                xCoordinates = xgrid[Coordinates]
-                nodevals = zeros(Float64,2,nnodes)
+            ## plot
+            if Plotter != nothing
+                xgrid = split_grid_into(xgrid,Triangle2D)
+                nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
                 nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-                PyPlot.figure("velocity")
-                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = PyPlot, isolines = 3)
-                quiver(xCoordinates[1,:],xCoordinates[2,:],nodevals[1,:],nodevals[2,:])
+                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = Plotter, label = "|u|")
             end
         end    
     end    
 end
 
-
-main()
+end
