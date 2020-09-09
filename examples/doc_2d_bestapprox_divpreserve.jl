@@ -59,14 +59,7 @@ function main(; verbosity = 1, Plotter = nothing)
     println("L2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
        
     ## plot
-    if Plotter != nothing
-        nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
-        nodevalues!(nodevals,Solution[1])
-        ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|u|")
-
-        nodevalues!(nodevals,Solution[1],Divergence)
-        ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "div(u)")
-    end
+    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Divergence]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
 end
 
 end

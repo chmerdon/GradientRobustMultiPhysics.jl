@@ -217,5 +217,8 @@ export grid_unitsquare, grid_unitsquare_mixedgeometries
 include("writevtk.jl")
 export writeVTK!
 
+include("plots.jl")
+export plot
+
 
 end #module

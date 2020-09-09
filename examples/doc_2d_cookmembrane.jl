@@ -20,7 +20,6 @@ for isotropic media.
 The domain will be the Cook membrane and the displacement has homogeneous boundary conditions on the left side of the domain
 and Neumann boundary conditions (i.e. a force that pulls the domain downwards) on the right side.
 
-After solving the solution is plotted on the displaced mesh and also the absolute value of the stress is plotted.
 =#
 
 module Example_2DCookMembrane
@@ -53,12 +52,8 @@ end
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing)
 
-    #####################################################################################
-    #####################################################################################
-
     ## meshing parameters
     xgrid = grid_cookmembrane(5e-2) 
-    factor_plotdisplacement = 4 # discplacement_factor in plots
 
     ## problem parameters
     elasticity_modulus = 1000 # elasticity modulus
@@ -93,14 +88,8 @@ function main(; verbosity = 1, Plotter = nothing)
     solve!(Solution, LinElastProblem; verbosity = verbosity)
 
     ## plot stress
-    if Plotter != nothing
-        nnodes = size(xgrid[Coordinates],2)
-        nodevals = zeros(Float64,4,nnodes)
-        nodevalues!(nodevals,Solution[1])
-        xgrid[Coordinates] += factor_plotdisplacement*nodevals[[1,2],:]
-        nodevalues!(nodevals,Solution[1],Gradient)
-        ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|grad(u)|")
-    end
+    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+
 end
 
 end

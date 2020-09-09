@@ -45,9 +45,6 @@ end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing)
-
-    #####################################################################################
-    #####################################################################################
     
     ## load a mesh of the unit square (this one has triangles and quads in it)
     ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
@@ -131,18 +128,8 @@ function main(; verbosity = 1, Plotter = nothing)
                 @printf(" %.5e\n",H1errorInterpolation[j])
             end
 
-            ## split grid into triangles for the plotter (that only can handle triangles atm)
-            if Plotter != nothing
-                xgrid = split_grid_into(xgrid,Triangle2D)
-                nnodes = size(xgrid[Coordinates],2)
-                nodevals = zeros(Float64,2,nnodes)
-
-                nodevalues!(nodevals,Solution[1],FES)
-                ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "u")
-
-                nodevalues!(nodevals,Solution[1],FES, Gradient)
-                ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|grad(u)|")
-            end
+            ## plot
+            GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
         end    
     end    
 end

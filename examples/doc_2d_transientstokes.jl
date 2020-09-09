@@ -70,9 +70,7 @@ end
 
 
 ## everything is wrapped in a main function
-function main()
-    #####################################################################################
-    #####################################################################################
+function main(; verbosity = 1)
 
     ## problem parameters
     viscosity = 1e-6
@@ -148,7 +146,7 @@ function main()
         Solution[1][:] = L2VelocityBestapproximation[1][:]
 
         ## generate time-dependent solver and chance rhs data
-        TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], maxlureuse = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = 1)
+        TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], maxlureuse = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity)
 
         ## time loop
         maxIterations = ceil(T / timestep)

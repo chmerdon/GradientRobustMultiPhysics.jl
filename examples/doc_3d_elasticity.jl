@@ -29,8 +29,6 @@ end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 1)
-    #####################################################################################
-    #####################################################################################
 
     ## mesh = scaled unit cube and 3 uniform refinements
     xgrid = uniform_refine(grid_unitcube(Parallelepiped3D; scale = [4//3,3//4,1//4]), 3)

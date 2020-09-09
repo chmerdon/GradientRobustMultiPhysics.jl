@@ -44,8 +44,6 @@ end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
-    #####################################################################################
-    #####################################################################################
 
     ## initial grid
     ## replace Parallelogrm2D by Triangle2D if you like
@@ -183,12 +181,8 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
 
             ## plot
-            if Plotter != nothing
-                xgrid = split_grid_into(xgrid,Triangle2D)
-                nodevals = zeros(Float64,2,size(xgrid[Coordinates],2))
-                nodevalues!(nodevals,Solution[1],FESpaceVelocity)
-                ExtendableGrids.plot(xgrid, sqrt.(nodevals[1,:].^2+nodevals[2,:].^2); Plotter = Plotter, label = "|u|")
-            end
+            GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+            
         end    
     end    
 end

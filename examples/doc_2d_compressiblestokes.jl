@@ -83,9 +83,6 @@ end
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
 
-    #####################################################################################
-    #####################################################################################
-
     ## generate mesh
     #xgrid = uniform_refine(grid_unitsquare(Triangle2D),4); # uncomment this line for a structured grid
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries(),4); # unstructured mesh
@@ -189,23 +186,8 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
     println("L2error(Density) = $L2error")
     
     ## plots
-    ## split grid into triangles for plotter
-
-    if Plotter != nothing
-        ## split grid into triangles for plotter
-        xgrid = split_grid_into(xgrid,Triangle2D)
-        nnodes = size(xgrid[Coordinates],2)
-        nodevals = zeros(Float64,2,nnodes)    
-
-        nodevalues!(nodevals,Solution[3],FESpacePD)
-        ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "p")
-
-        nodevalues!(nodevals,Solution[2],FESpacePD)
-        ExtendableGrids.plot(xgrid, view(nodevals,1,:); Plotter = Plotter, label = "rho")
-
-        nodevalues!(nodevals,Solution[1],FESpaceV)
-        ExtendableGrids.plot(xgrid, view(sqrt.(sum(nodevals.^2, dims = 1)),:); Plotter = Plotter, label = "|u|")
-    end
+    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+    
 end
 
 end

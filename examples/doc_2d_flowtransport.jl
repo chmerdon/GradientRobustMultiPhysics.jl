@@ -61,8 +61,6 @@ end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk = true)
-    #####################################################################################
-    #####################################################################################
 
     ## grid
     xgrid = grid_pipe(1e-3);
@@ -140,13 +138,8 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     ## (maximum principle says it should be [0,1])
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
-    ## possibilities
-    if Plotter != nothing
-        nnodes = size(xgrid[Coordinates],2)
-        nodevals = zeros(Float64,1,nnodes)
-        nodevalues!(nodevals,Solution[3])
-        ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = Plotter, cmap = "cool")
-    end
+    ## plot
+    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
 
     if write_vtk
         mkpath("data/example_flowtransport/")

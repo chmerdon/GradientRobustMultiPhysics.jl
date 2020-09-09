@@ -6,7 +6,7 @@ Plotting is possible e.g. via calculation of nodal values and the plot routines 
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["interpolations.jl"]
+Pages = ["plots.jl"]
 Order   = [:type, :function]
 ```
 
