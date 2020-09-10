@@ -247,7 +247,7 @@ end
 
 # IDENTITYCOMPONENT OPERATOR
 # H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,IdentityComponent,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:IdentityComponent,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
     return nothing
 end

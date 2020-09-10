@@ -492,7 +492,14 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
         # CHECK RESIDUAL
         residual = (A.entries*Target.entries - b.entries).^2
         residual[fixed_dofs] .= 0
-        println("\n  residual = $(sqrt(sum(residual, dims = 1)[1]))")
+        residuals = zeros(Float64, length(Target.FEVectorBlocks))
+        for j = 1 : length(Target.FEVectorBlocks)
+            for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
+                residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
+            end
+        end
+        residuals = sqrt.(residuals)
+        println("\n  residuals = $residuals")
     end
 
     # REALIZE GLOBAL GLOBALCONSTRAINTS 

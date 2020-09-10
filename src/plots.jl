@@ -82,6 +82,9 @@ function plot(
                 Z[:] = view(nodevals,offsets[j]+1,:)
                 title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
             end
+            if minimum(Z) == maximum(Z)
+                Z[1] += 1e-16
+            end
             if verbosity > 0
                 println("   plotting data into plot $j : " * title)
             end
