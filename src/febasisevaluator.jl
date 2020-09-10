@@ -123,6 +123,8 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
             current_eval = zeros(T,1,ndofs4item,length(qf.w));
         elseif FEOP == Identity    
             current_eval = deepcopy(refbasisvals) 
+        elseif FEOP == IdentityComponent
+            current_eval = deepcopy(refbasisvals[[FEOP.parameters[1]],:,:]) 
         end
     else
         if FEOP == TangentialGradient
@@ -243,7 +245,14 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
     return nothing
 end
 
-# IDENTITY OPERATOR
+# IDENTITYCOMPONENT OPERATOR
+# H1 ELEMENTS (nothing has to be done)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,IdentityComponent,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+    FEBE.citem = item
+    return nothing
+end
+
+# FACEJUMPIDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FaceJumpIdentity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
@@ -346,6 +355,55 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
                 for k = 1 : FEBE.offsets[2] # ncomponents
                     FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] * FEBE.coefficients[k,dof_i];
                 end    
+            end
+        end
+    end
+    return nothing
+end
+
+
+# IDENTITYCOMPONENT OPERATOR
+# H1 ELEMENTS WITH COEFFICIENTS
+# (no transformation needed, just multiply coefficients)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, FEOP <: IdentityComponent, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+        
+        # get coefficients
+        FEBE.coeffs_handler(FEBE.coefficients, item)
+
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = FEBE.refbasisvals[FEOP.parameters[1],dof_i,i] * FEBE.coefficients[FEOP.parameters[1],dof_i];
+            end
+        end
+    end
+    return nothing
+end
+
+
+# IDENTITYCOMPONENT OPERATOR
+# Hdiv ELEMENTS (Piola trafo)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, FEOP <: IdentityComponent, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+    
+        # cell update transformation
+        update!(FEBE.L2G, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
+
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = 0.0;
+                for l = 1 : FEBE.offsets[2] # ncomponents
+                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[FEOP.parameters[1],l]*FEBE.refbasisvals[l,dof_i,i];
+                end    
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[FEOP.parameters[1],dof_i] / FEBE.iteminfo[1]
             end
         end
     end

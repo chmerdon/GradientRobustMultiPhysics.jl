@@ -10,6 +10,7 @@ function plot(
     operators::Array{DataType,1};
     Plotter = nothing,
     use_subplots = false,
+    subplots_per_column = 2,
     colorlevels=51,
     isolines=11,
     aspect=1,
@@ -60,8 +61,13 @@ function plot(
 
         ## plot
         if use_subplots
+            layout = [1]
+            while length(blockids) >= layout[end]
+                push!(layout, layout[end] + subplots_per_column)
+            end
+            layout_aspect = length(layout) / subplots_per_column
             if ExtendableGrids.ispyplot(Plotter)
-                fig = Plotter.figure("Subplots",figsize=(fsize/length(blockids),fsize))
+                fig = Plotter.figure("Subplots",figsize=(layout_aspect*fsize,fsize))
                 if clear
                     Plotter.clf()
                 end
@@ -71,19 +77,20 @@ function plot(
         for j = 1 : length(blockids)
             if offsets[j+1] - offsets[j] > 1
                 Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
-                title = "| $(operators[j])(" * Source[blockids[j]].name * ") |"
+                title = "| $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ") |"
             else
                 Z[:] = view(nodevals,offsets[j]+1,:)
-                title = "$(operators[j])(" * Source[blockids[j]].name * ")"
+                title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
             end
             if verbosity > 0
                 println("   plotting data into plot $j : " * title)
             end
             if use_subplots
                 if ExtendableGrids.ispyplot(Plotter)
-                    Plotter.subplot(length(blockids),1,j)
+                    Plotter.subplot(subplots_per_column,length(layout)-1,j)
                     Plotter.title(title)
                     ExtendableGrids.plot(xgrid, Z; Plotter = Plotter, cmap = cmap, clear = false, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+
                 end
             else
                 if ExtendableGrids.ispyplot(Plotter)

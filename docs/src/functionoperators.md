@@ -6,12 +6,13 @@ FunctionOperators are building blocks for the weak form and define the operation
 
 | Function operator                          | Description                                   |
 | :----------------------------------------- | :-------------------------------------------- |
-| [`Identity`](@ref)                         | identity operator                             |
-| [`FaceJumpIdentity`](@ref)                 | jumps of identity operator over faces         |
+| [`Identity`](@ref)                         | identity                                      |
+| [`IdentityComponent{c}`](@ref)             | identity of c-th component                    |
+| [`FaceJumpIdentity`](@ref)                 | jumps of identity over faces                  |
 | [`NormalFlux`](@ref)                       | normal flux (function times normal)           | 
-| [`Gradient`](@ref)                         | gradient/Jacobian operator                    |
+| [`Gradient`](@ref)                         | gradient/Jacobian                             |
 | [`SymmetricGradient`](@ref)                | symmetric part of the gradient                |
-| [`Divergence`](@ref)                       | divergence operator                           |
+| [`Divergence`](@ref)                       | divergence                                    |
 | [`CurlScalar`](@ref)                       | curl operator 1D to 2D (rotated gradient)     |
 | [`Curl2D`](@ref)                           | curl operator 2D to 1D                        |
 | [`ReconstructionIdentity{FEType}`](@ref)   | reconstruction operator into specified FEType |

@@ -13,6 +13,12 @@ abstract type Identity <: AbstractFunctionOperator end # 1*v_h
 """
 $(TYPEDEF)
 
+identity operator: evaluates only the c-th component of the finite element function.
+"""
+abstract type IdentityComponent{c} <: AbstractFunctionOperator where {c<:Int} end # 1*v_h(c)
+"""
+$(TYPEDEF)
+
 identity jump operator: evaluates face jumps of finite element function
 """
 abstract type FaceJumpIdentity <: Identity end # [[v_h]]
@@ -95,6 +101,7 @@ DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHdivFiniteElement}) = Norma
 DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHcurlFiniteElement}) = TangentFlux
 
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 0
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:IdentityComponent}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = 1
@@ -109,8 +116,27 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) 
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
+DefaultName4Operator(::Type{Identity}) = "id"
+DefaultName4Operator(::Type{ReconstructionIdentity}) = "id R"
+DefaultName4Operator(IC::Type{<:IdentityComponent}) = "id_$(IC.parameters[1])"
+DefaultName4Operator(::Type{NormalFlux}) = "NormalFlux"
+DefaultName4Operator(::Type{TangentFlux}) = "TangentFlux"
+DefaultName4Operator(::Type{Gradient}) = "grad"
+DefaultName4Operator(::Type{SymmetricGradient}) = "symgrad"
+DefaultName4Operator(::Type{TangentialGradient}) = "TangentialGradient"
+DefaultName4Operator(::Type{Laplacian}) = "Laplace"
+DefaultName4Operator(::Type{Hessian}) = "Hessian"
+DefaultName4Operator(::Type{CurlScalar}) = "Curl"
+DefaultName4Operator(::Type{Curl2D}) = "Curl"
+DefaultName4Operator(::Type{Rotation}) = "Curl"
+DefaultName4Operator(::Type{Divergence}) = "div"
+DefaultName4Operator(::Type{ReconstructionDivergence}) = "div R"
+DefaultName4Operator(::Type{Trace}) = "tr"
+DefaultName4Operator(::Type{Deviator}) = "dev"
+
 # length for operator result
 Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents
+Length4Operator(::Type{<:IdentityComponent}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{NormalFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/(xdim-1))
 Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
@@ -123,6 +149,7 @@ Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 0
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:IdentityComponent}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1

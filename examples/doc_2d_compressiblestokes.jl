@@ -46,6 +46,7 @@ module Example_2DCompressibleStokes
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using Triangulate
 using Printf
 
 
@@ -80,29 +81,41 @@ function rhs_gravity!(gamma,c)
     end
 end   
 
+
+## grid generator for a unit square with mountain range cut-out
+function grid_mountainrange(maxarea::Float64)
+    triin=Triangulate.TriangulateIO()
+    triin.pointlist=Matrix{Cdouble}([0 0; 0.2 0; 0.3 0.1; 0.4 0.0; 0.5 0.2; 0.6 0.0; 0.7 0.15; 0.8 0.0; 1 0; 1 1; 0 1]');
+    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5; 5 6; 6 7; 7 8; 8 9; 9 10; 10 11; 11 1 ]')
+    triin.segmentmarkerlist=Vector{Int32}([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
+    xgrid[CellRegions] = ones(Int32,num_sources(xgrid[CellNodes]))
+    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
+    return xgrid
+end
+
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
 
     ## generate mesh
-    #xgrid = uniform_refine(grid_unitsquare(Triangle2D),4); # uncomment this line for a structured grid
-    xgrid = uniform_refine(grid_unitsquare_mixedgeometries(),4); # unstructured mesh
+    xgrid = grid_mountainrange(2e-3); 
 
     ## problem data
     c = 10 # coefficient in equation of state
     gamma = 1.4 # power in gamma law in equations of state
     M = 1  # mass constraint for density
-    shear_modulus = 1
+    shear_modulus = 1e-6
     lambda = - 1//3 * shear_modulus
 
     ## choose finite element type [velocity, density,  pressure]
     FETypes = [H1BR{2}, L2P0{1}, L2P0{1}] # Bernardi--Raugel
     #FETypes = [H1CR{2}, L2P0{1}, L2P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
 
-    ## solver parameters
-    timestep = 2 * shear_modulus / (2*c)
+    ## solver parametersExample_
+    timestep = shear_modulus / (2*c)
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
-    maxIterations = 300  # termination criterion 1
-    target_change = 1e-10 # stopf when change is below this treshold
+    maxIterations = 1000  # termination criterion 1
+    target_change = 1e-13/shear_modulus # stopf when change is below this treshold
 
     #####################################################################################    
     #####################################################################################
@@ -123,8 +136,10 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
         TestFunctionOperatorIdentity = Identity
         TestFunctionOperatorDivergence = Divergence
     end
-    CStokesProblem.LHSOperators[1,1][2].operator1 = TestFunctionOperatorDivergence
-    CStokesProblem.LHSOperators[1,1][2].operator2 = TestFunctionOperatorDivergence
+    if lambda != 0
+        CStokesProblem.LHSOperators[1,1][2].operator1 = TestFunctionOperatorDivergence
+        CStokesProblem.LHSOperators[1,1][2].operator2 = TestFunctionOperatorDivergence
+    end
     CStokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperatorIdentity
 
     ## store matrix of velo-pressure and velo-gravity operator
@@ -159,7 +174,7 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
     ## so we can reuse the other subiteration matrices in each timestep
-    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [1,2], verbosity = verbosity)
+    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [2], verbosity = verbosity)
 
     ## loop in pseudo-time until stationarity detected
     ## we also output M to see that the mass constraint is preserved all the way

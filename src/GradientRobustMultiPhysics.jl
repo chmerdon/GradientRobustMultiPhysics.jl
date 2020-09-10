@@ -98,7 +98,9 @@ export fill!, addblock!, addblock_matmul!, lrmatmul
 
 include("functionoperators.jl")
 export AbstractFunctionOperator
-export Identity, ReconstructionIdentity, FaceJumpIdentity
+export Identity, IdentityComponent
+export ReconstructionIdentity
+export FaceJumpIdentity
 export NormalFlux, TangentFlux
 export Gradient, SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
@@ -108,6 +110,7 @@ export Trace, Deviator
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator
 export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
+export DefaultName4Operator
 
 
 include("febasisevaluator.jl")

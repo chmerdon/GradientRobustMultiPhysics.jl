@@ -71,6 +71,7 @@ function make_all()
         end
     end
     generated_examples=joinpath.("examples",readdir(example_md_dir))
+    pushfirst!(generated_examples, "examples_intro.md")
 
     makedocs(
         modules=[GradientRobustMultiPhysics],
