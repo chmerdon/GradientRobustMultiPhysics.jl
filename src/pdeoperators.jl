@@ -271,10 +271,12 @@ function GenerateNonlinearForm(
     action_kernel_rhs = nothing,
     regions = [0])
 
+    ### Newton scheme for a nonlinear operator G(u) is
+    ## seek u_next such that : DG u_next = DG u - G(u)
     if ADnewton
         name = name * " [AD-Newton]"
-        # the action for the LHS is calculated by automatic differentiation (AD)
-        # from the given action_kernel
+        # the action for the derivative matrix DG is calculated by automatic differentiation (AD)
+        # from the given action_kernel of the operator G
         result_temp = Vector{Float64}(undef,argsizes[1])
         input_temp = Vector{Float64}(undef,argsizes[2])
         jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[2])
@@ -294,9 +296,15 @@ function GenerateNonlinearForm(
         end
         action = FunctionAction(newton_kernel, argsizes[1], dim)
 
-        # the action for the RHS just evaluates the action_kernel at input_current
+        # the action for the RHS just evaluates DG and G at input_current
+        temp = zeros(Float64, argsizes[1])
         function rhs_kernel(result, input_current, input_ansatz)
-            action_kernel(result, input_current)
+            fill!(result,0)
+            newton_kernel(result, input_current, input_current)
+            action_kernel(temp, input_current)
+            for j = 1 : argsizes[1]
+                result[j] -= temp[j]
+            end
             return nothing
         end
         action_rhs = FunctionAction(rhs_kernel, argsizes[1], dim)

@@ -19,9 +19,9 @@ get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Quadrilateral2D}) = 4;
 
 function init!(FES::FESpace{FEType}) where {FEType <: H1MINI}
     ncomponents = get_ncomponents(FEType)
-    name = "P1"
+    name = "MINI"
     for n = 1 : ncomponents-1
-        name = name * "xP1"
+        name = name * "xMINI"
     end
     FES.name = name * " (H1)"   
 
