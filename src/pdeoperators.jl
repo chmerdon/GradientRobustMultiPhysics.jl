@@ -72,15 +72,6 @@ function CopyOperator(copy_from, factor)
     return CopyOperator("CopyOperator",copy_from, factor)
 end
 
-"""
-$(TYPEDEF)
-
-abstract bilinearform operator that assembles
-- b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
-- b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
-
-can only be applied in PDE LHS
-"""
 mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
     operator1::Type{<:AbstractFunctionOperator}
@@ -92,7 +83,31 @@ mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOper
     store_operator::Bool                    # should the matrix repsentation of the operator be stored?
     storage::AbstractArray{Float64,2}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
-function AbstractBilinearForm(name, operator1,operator2, action; apply_action_to = 1, regions::Array{Int,1} = [0], transposed_assembly::Bool = false)
+
+"""
+````
+function AbstractBilinearForm(name,
+    operator1::Type{<:AbstractFunctionOperator},
+    operator2::Type{<:AbstractFunctionOperator},
+    action::AbstractAction;
+    apply_action_to = 1,
+    regions::Array{Int,1} = [0],
+    transposed_assembly::Bool = false)
+````
+
+abstract bilinearform operator that assembles
+- b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
+- b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
+
+can only be applied in PDE LHS
+"""
+function AbstractBilinearForm(name,
+    operator1::Type{<:AbstractFunctionOperator},
+    operator2::Type{<:AbstractFunctionOperator},
+    action::AbstractAction;
+    apply_action_to = 1,
+    regions::Array{Int,1} = [0],
+    transposed_assembly::Bool = false)
     return AbstractBilinearForm{ON_CELLS}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,false,zeros(Float64,0,0))
 end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
@@ -109,7 +124,7 @@ function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int 
 end
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (C grad(u), grad(v)) where C is the 1D stiffness tensor
 C grad(u) = mu grad(u)
@@ -125,11 +140,11 @@ function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient
 end
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
-    for isotropic media in Voigt notation, i.e.
-    C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+for isotropic media in Voigt notation, i.e.
+C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
     
     In Voigt notation C is a 3 x 3 matrix
     C = [c11,c12,  0
@@ -150,21 +165,20 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
 end
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
-for isotropic media in Voigt notation, i.e.
-C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+for isotropic media in Voigt notation, i.e. C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
 
-In Voigt notation C is a 6 x 6 matrix
-C = [c11,c12,c12,  0,  0,  0
-     c12,c11,c12,  0,  0,  0
-     c12,c12,c11,  0,  0,  0
-       0,  0,  0,c44,  0,  0
-       0,  0,  0,  0,c44,  0
-       0,  0,  0,  0,  0,c44]
+    In Voigt notation C is a 6 x 6 matrix
+    C = [c11,c12,c12,  0,  0,  0
+         c12,c11,c12,  0,  0,  0
+         c12,c12,c11,  0,  0,  0
+           0,  0,  0,c44,  0,  0
+           0,  0,  0,  0,c44,  0
+           0,  0,  0,  0,  0,c44]   
 
-where c44 = shear_modulus, c12 = lambda and c11 = c44 + c12
+    where c44 = shear_modulus, c12 = lambda and c11 = c44 + c12
     
 """
 function HookStiffnessOperator3D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
@@ -182,7 +196,7 @@ end
 
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
     
@@ -192,7 +206,7 @@ function ReactionOperator(action::AbstractAction; apply_action_to = 1, identity_
 end
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) with some user-specified function beta with the
 interface beta(result,x) (so it writes its result into result and returns nothing)
@@ -219,13 +233,20 @@ end
 
 
 """
-$(TYPEDEF)
+````
+mutable struct AbstractMultilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
+    name::String
+    operators::Array{DataType,1}
+    action::AbstractAction
+    regions::Array{Int,1}
+end
+````
 
-abstract multi-linearform of the form
+abstract multi-linearform with arbitrary many argument of the form
 
 m(v1,v2,...,vk) = (A(O(v1),O(v2),...,O(vk-1)),Ok(vk))
 
-(so far only intended for use as RHSOperator with MLFeval)
+(so far only intended for use as RHSOperator together with MLFeval)
 """
 mutable struct AbstractMultilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
@@ -235,13 +256,6 @@ mutable struct AbstractMultilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEO
 end
 
 
-"""
-$(TYPEDEF)
-
-abstract nonlinearform operator 
-
-can only be applied in PDE LHS
-"""
 mutable struct AbstractNonlinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
     operator1::Array{DataType,1}
@@ -254,10 +268,46 @@ mutable struct AbstractNonlinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOpe
     transposed_assembly::Bool
 end
 
-function generate_newton_action_from_nlaction(nlaction::Function, size)
-    return closure
-end
+"""
+````
+function GenerateNonlinearForm(
+    name::String,
+    operator1::Array{DataType,1},
+    coeff_from::Array{Int,1},
+    operator2::Type{<:AbstractFunctionOperator},
+    action_kernel::Function,
+    argsizes::Array{Int,1},
+    dim::Int;
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    ADnewton::Bool = false,
+    action_kernel_rhs = nothing,
+    regions = [0])
+````
 
+generates an abstract nonlinearform operator G. 
+The array coeff_from stores the ids of the unknowns that should be used to evaluate the operators. The array argsizes is a vector with two entries where the first one
+is the length of the expected result vector and the second one is the length of the input vector.
+
+If ADnewton == true, the specified action_kernel is automatically differentiated to assemble the Jacobian DG
+and setup a Newton iteration. The action_kernel has to be a function of the interface 
+
+    function name(result,input)
+
+where input is a vector of the operators of the solution and result is what then is multiplied with operator2 of the testfunction.
+Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
+
+If ADnewton == false, the user is epected to prescribe a linearisation of the nonlinear operator. In this case the action_kernel has to satisfy the interface
+
+    function name(result, input_current, input_ansatz)
+
+where input_current is a vector of the operators of the solution and input_ansatz is a vecor with the operators evaluated at one of the basis functions.
+If necessary, also a right-hand side action in the same format can be prescribed in action_kernel_rhs.
+
+
+Note: this is a highly experimental feature at the moment and will possibly only work when all operators are associated with the same unknown.
+
+can only be applied in PDE LHS
+"""
 function GenerateNonlinearForm(
     name::String,
     operator1::Array{DataType,1},
@@ -342,12 +392,25 @@ end
 
 
 """
-$(TYPEDEF)
+````
+mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
+    name::String
+    operator1::Type{<:AbstractFunctionOperator} # operator for argument 1
+    operator2::Type{<:AbstractFunctionOperator} # operator for argument 1
+    operator3::Type{<:AbstractFunctionOperator} # operator for argument 1
+    a_from::Int     # unknown id where fixed argument takes its values from
+    a_to::Int       # position of fixed argument
+    action::AbstractAction # is applied to argument 1 and 2
+    regions::Array{Int,1}
+    transposed_assembly::Bool
+end
+````
 
 abstract trilinearform operator that assembles
-- c(a,u,v) = int_regions action(operator1(a) * operator2(u))*operator3(v)
+- c(a,u,v) = int_regions action(operator1(a) * operator2(u))*operator3(v)   (if a_to = 1)
+- c(u,a,v) = int_regions action(operator1(u) * operator2(a))*operator3(v)   (if a_to = 2)
 
-where a is one of the other unknowns of the PDEsystem
+where a_from is the id of one of the unknowns of the PDEsystem
 
 can only be applied in PDE LHS
 """
@@ -358,17 +421,17 @@ mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOpe
     operator3::Type{<:AbstractFunctionOperator} # operator for argument 1
     a_from::Int     # unknown id where fixed argument takes its values from
     a_to::Int       # position of fixed argument
-    action::AbstractAction # is applied to argument 1 and 2, i.e input consists of operator1(a),operator2(u)
+    action::AbstractAction # is applied to argument 1 and 2
     regions::Array{Int,1}
     transposed_assembly::Bool
 end
+
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) where beta is the id of some unknown of the PDEDescription.
 With fixed_argument = 2 beta and u can siwtch their places.
 
-    
 """
 function ConvectionOperator(a_from::Int, beta_operator, xdim::Int, ncomponents::Int; fixed_argument::Int = 1, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
@@ -399,14 +462,14 @@ function ConvectionOperator(a_from::Int, beta_operator, xdim::Int, ncomponents::
 end
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (beta x curl(u),v)
 where beta is the id of some unknown vector field of the PDEDescription, u and v
 are also vector-fields and x is the cross product (so far this is only implemented in 2D)
     
 """
-function ConvectionRotationFormOperator(beta::Int, beta_operator, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+function ConvectionRotationFormOperator(beta::Int, beta_operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = curl(u)
@@ -479,9 +542,19 @@ end
 
 
 """
-$(TYPEDEF)
+````
+struct BLFeval <: AbstractPDEOperatorRHS
+    BLF::AbstractBilinearForm
+    Data::FEVectorBlock
+    factor::Real
+    nonlinear::Bool
+    timedependent::Bool
+end
+````
 
-evaluation of a bilinearform where the second argument is fixed by given FEVectorBlock
+evaluation of a AbstractBilinearForm BLF (multiplied by a factor) where the second argument is fixed by given FEVectorBlock Data.
+
+The operator can be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
 
 can only be applied in PDE RHS
 """
@@ -497,10 +570,22 @@ function BLFeval(BLF, Data, factor; nonlinear::Bool = false, timedependent::Bool
     return BLFeval(BLF, Data, factor, nonlinear, timedependent)
 end
 
-"""
-$(TYPEDEF)
 
-evaluation of a trilinearform where the first and  second argument is fixed by given FEVectorBlocks
+"""
+````
+struct TLFeval <: AbstractPDEOperatorRHS
+    TLF::AbstractTrilinearForm
+    Data1::FEVectorBlock
+    Data2::FEVectorBlock
+    factor::Real
+    nonlinear::Bool
+    timedependent::Bool
+end
+````
+
+evaluation of a AbstractTrilinearForm TLF (multiplied by a factor) where the first and second argument are fixed by given FEVectorBlocks Data1 and Data2.
+
+The operator can be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
 
 can only be applied in PDE RHS
 """
@@ -517,10 +602,21 @@ function TLFeval(TLF, Data1, Data2, factor::Real = 1; nonlinear::Bool = false, t
     return TLFeval(TLF, Data1, Data2, factor, nonlinear, timedependent)
 end
 
-"""
-$(TYPEDEF)
 
-evaluation of a multi-linearform where the al but the last argument are fixed by given FEVectorBlocks
+"""
+````
+struct MLFeval <: AbstractPDEOperatorRHS
+    MLF::AbstractMultilinearForm
+    Data::Array{FEVectorBlock,1}
+    factor::Real
+    nonlinear::Bool
+    timedependent::Bool
+end
+````
+
+evaluation of a AbstractMultilinearForm MLF (multiplied by a factor) where all but the last argument are fixed by given FEVectorBlocks in the array Data.
+
+The operator can be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
 
 can only be applied in PDE RHS
 """

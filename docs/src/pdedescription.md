@@ -32,25 +32,50 @@ Order   = [:type, :function]
 The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE. The following table lists all available operators and physics-motivated constructors for them. Click on them to find out more details.
 
 
-| PDEOperator subtype                 | Special constructors                 | Mathematically                                                         |
-| :---------------------------------- | :----------------------------------- | :--------------------------------------------------------------------- |
-| [`AbstractBilinearForm`](@ref)      |                                      | ``(\mathrm{A}(\mathrm{FO}_1(u)),\mathrm{FO}_2(v))``                    |
-|                                     | [`LaplaceOperator`](@ref)            | ``(\kappa \nabla u,\nabla v)``                                         |
-|                                     | [`ReactionOperator`](@ref)           | ``(\alpha u, v)``                                                      |
-|                                     | [`ConvectionOperator`](@ref)         | ``(\beta \cdot \nabla u, v)`` (beta is function)                       |
-|                                     | [`HookStiffnessOperator2D`](@ref)    | ``(\mathbb{C} \epsilon(u),\epsilon(v))``                               |
-| [`AbstractTrilinearForm`](@ref)     |                                      | ``(\mathrm{A}(\mathrm{FO}_1(a),\mathrm{FO}_2(u)),\mathrm{FO}_3(v))``   |
-|                                     | [`ConvectionOperator`](@ref)         | ``(a \cdot \nabla u, v)`` (a is registered unknown)                    |
-| [`RhsOperator`](@ref)               |                                      | ``(f \cdot \mathrm{FO}(v))``                                           |
+| PDEOperator subtype                 | Special constructors                     | Mathematically                                                         |
+| :---------------------------------- | :--------------------------------------- | :--------------------------------------------------------------------- |
+| [`AbstractBilinearForm`](@ref)      |                                          | ``(\mathrm{A}(\mathrm{FO}_1(u)),\mathrm{FO}_2(v))``                    |
+|                                     | [`LaplaceOperator`](@ref)                | ``(\kappa \nabla u,\nabla v)``                                         |
+|                                     | [`ReactionOperator`](@ref)               | ``(\alpha u, v)``                                                      |
+|                                     | [`ConvectionOperator`](@ref)             | ``(\beta \cdot \nabla u, v)`` (beta is function)                       |
+|                                     | [`HookStiffnessOperator2D`](@ref)        | ``(\mathbb{C} \epsilon(u),\epsilon(v))``                               |
+| [`AbstractTrilinearForm`](@ref)     |                                          | ``(\mathrm{A}(\mathrm{FO}_1(a),\mathrm{FO}_2(u)),\mathrm{FO}_3(v))``   |
+|                                     | [`ConvectionOperator`](@ref)             | ``(a \cdot \nabla u, v)`` (a is registered unknown)                    |
+|                                     | [`ConvectionRotationFormOperator`](@ref) | ``(a x curl(u),v)`` (a is registered unknown, only 2D for now)         |
+| [`AbstractMultilinearForm`](@ref)   |                                          |                                                                        |
+| [`GenerateNonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u)),\mathrm{FO}_3(v))``                   |
+| [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))``                                           |
 
-Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for [Abstract Actions](@ref).
+Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Abstract Actions](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Abstract Actions](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
 
 
-```@autodocs
-Modules = [GradientRobustMultiPhysics]
-Pages = ["pdeoperators.jl"]
-Order   = [:type, :function]
+### Linear Operators
+
+```@docs
+AbstractBilinearForm
+AbstractTrilinearForm
+AbstractMultilinearForm
+LaplaceOperator
+ReactionOperator
+ConvectionOperator
+ConvectionRotationFormOperator
+HookStiffnessOperator1D
+HookStiffnessOperator2D
+HookStiffnessOperator3D
+BLFeval
+TLFeval
+MLFeval
+RhsOperator
 ```
+
+## Nonlinear Operators
+
+It is possible to assign nonlinear operators in such a way that its Jacobian can be computed by automatic differentation to setup a Newton scheme, see below for details.
+
+```@docs
+GenerateNonlinearForm
+```
+
 
 ## Global Constraints
 
@@ -62,18 +87,33 @@ Pages = ["globalconstraints.jl"]
 Order   = [:type, :function]
 ```
 
+```@docs
+add_constraint!
+```
 
-## Boundary Data
+
+## Dirichlet Boundary Data
 
 BoundaryOperators carry the boundary data for each unknown. Each regions can have a different AbstractBoundaryType and an associated data function that satisfies the interface function data!(result,x) or function data!(result,x,t) if it is also time-dependent.
 
-So far only DirichletBoundaryData is possible, as most other types can be implemented differently:
-- NeumannBoundary can be implemented as a RhsOperator with on_boundary = true
-- PeriodicBoundarycan be implemented as a CombineDofs <: AbstractGlobalConstraint
-- SymmetryBoundary can be implemented as a RHS AbstractBilinearForm on BFaces and specified regions with operator NormalFlux + MultiplyScalarAction(penalty).
 
-```@autodocs
-Modules = [GradientRobustMultiPhysics]
-Pages = ["boundarydata.jl"]
-Order   = [:type, :function]
+| AbstractBoundaryType                | Subtypes                                 | causes                                                                  |
+| :---------------------------------- | :--------------------------------------- | :---------------------------------------------------------------------- |
+| [`DirichletBoundary`](@ref)         |                                          |                                                                         |
+|                                     | [`BestapproxDirichletBoundary`](@ref)    | computation of Dirichlet data by bestapproximation along boundary faces |
+|                                     | [`InterpolateDirichletBoundary`](@ref)   | computation of Dirichlet data by interpolation along boundary faces     |
+|                                     | [`HomogeneousDirichletBoundary`](@ref)   | zero Dirichlet data on all dofs                                         |
+
+
+```@docs
+BoundaryOperator
+add_boundarydata!
 ```
+
+## Other Boundary Data
+
+NeumannBoundary can be implemented as a RhsOperator with on_boundary = true
+
+PeriodicBoundary can be implemented as a CombineDofs <: AbstractGlobalConstraint
+
+SymmetryBoundary can be implemented by penalisation as a AbstractBilinearForm on BFaces and specified boundary regions with operator NormalFlux + MultiplyScalarAction(penalty).

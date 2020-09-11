@@ -41,6 +41,7 @@ Recently gradient-robustness was also connected to the design of well-balanced s
 [Triangulate.jl](https://github.com/JuliaGeometry/Triangulate.jl)\
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
+[DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
 [BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)
 
 

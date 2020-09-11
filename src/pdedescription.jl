@@ -148,7 +148,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds the given boundary data to the at specified position in the BoundaryOperator of the PDEDescription.
+Adds the given boundary data with the specified AbstractBoundaryType at the specified position in the BoundaryOperator of the PDEDescription.
 
 If timedependent == true, that data function depends also on time t and is reassembled in any advance! step of a TimeControlSolver.
 """

@@ -17,7 +17,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
     - Hcurl elements (in future)
 - based on ExtendableGrids.jl, allowing mixed element geometries in the grid (simplices and quads only atm)
 - PDEDescription module and problem prototypes for easy problem description and discretisation setup
-- PDEDescription recognizes nonlinear problem and automatically devises a fixpoint algorithm
+- PDEDescription recognizes nonlinear operators and automatically devises fixed-point or Newton algorithms (experimental)
 - time-dependent solvers (very preliminary stage, only backward Euler for now)
 - generic quadrature rules (on intervals, triangles, parallelograms, parallelepiped)
 - reconstruction operators for gradient-robust Stokes discretisation (BR>RT0 or CR>RT0 in 2D and 3D, more in progress)
@@ -25,15 +25,15 @@ finite element module for Julia focussing on gradient-robust finite element meth
 
 
 ### EXAMPLES 
-see subfolder examples, most can be run by include("...")
+see documentation
 
 
 ### Dependencies on other Julia packages:
-- ExtendableSparse.jl
-- ExtendableGrids.jl
-- ForwardDiff.jl
-- DiffResults.jl
-- IterativeSolvers.jl
-- DocStringExtensions.jl
-- BenchmarkTools.jl
-- Triangulate.jl (for runtests.jl and grid generation in some examples)
+
+[ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)\
+[ExtendableSparse.jl](https://github.com/j-fu/ExtendableSparse.jl)\
+[Triangulate.jl](https://github.com/JuliaGeometry/Triangulate.jl)\
+[DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
+[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
+[DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
+[BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)
