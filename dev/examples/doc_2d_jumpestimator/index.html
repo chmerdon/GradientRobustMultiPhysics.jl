@@ -14,7 +14,7 @@ function main(; verbosity = 1)
 
     # generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
-    xgrid = uniform_refine(xgrid,3)
+    xgrid = uniform_refine(xgrid, 5)
 
     # setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 3)
@@ -36,18 +36,12 @@ function main(; verbosity = 1)
         end
         return nothing
     end
-    jumpIntegrator = ItemIntegrator{Float64,ON_FACES}(FaceJumpIdentity,ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
-    nfaces = num_sources(xgrid[FaceNodes])
-    jump4face = zeros(Float64,2,nfaces)
-    evaluate!(jump4face,jumpIntegrator,Solution[1]; verbosity = 1)
-
-    # set jumps on boundary faces to zero
-    jump4face[:,xgrid[BFaces]] .= 0
+    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(FaceJumpIdentity,ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
+    println(&quot;\nEstimator = $(sqrt(sum(evaluate(jumpIntegrator,[Solution[1]]))))&quot;)
 
     # calculate L2 error and print results
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2)
-    println(&quot;\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
-    println(&quot;\nEstimator = $(sqrt(sum(jump4face[:])))&quot;)
+    println(&quot;L2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,[Solution[1]])))&quot;)
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_hagenpoiseuille/">« 2D Hagen-Poiseuille (Navier–Stokes)</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 16 September 2020 14:51">Wednesday 16 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_hagenpoiseuille/">« 2D Hagen-Poiseuille (Navier–Stokes)</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 16 September 2020 16:20">Wednesday 16 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
