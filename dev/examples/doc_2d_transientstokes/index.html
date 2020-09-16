@@ -5,10 +5,11 @@
 \end{aligned}\]</div><p>with (possibly time-dependent) exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>In this example we solve an analytical toy problem with prescribed solution</p><div>\[\begin{aligned}
 \mathbf{u}(\mathbf{x},t) &amp; = (1+t)(\cos(x_2), \sin(x_1))^T\\
 p(\mathbf{x}) &amp;= \sin(x_1+x_2) - 2\sin(1) + \sin(2)
-\end{aligned}\]</div><p>with time-dependent right-hand side and inhomogeneous Dirichlet boundary data. The example showcases the benefits of pressure-robustness in time-dependent linear Stokes problem in presence of complicated pressures and small viscosities. The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution, an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence! Compare e.g. Bernardi–Raugel and bernardi–Raugel pressure-robust by (un)commenting the responsible lines in this example.</p><pre><code class="language-julia">module Example_2DTransientStokes
+\end{aligned}\]</div><p>with time-dependent right-hand side and inhomogeneous Dirichlet boundary data. The example showcases the benefits of pressure-robustness in time-dependent linear Stokes problem in presence of complicated pressures and small viscosities. The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution, an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence! Compare e.g. Bernardi–Raugel and Bernardi–Raugel pressure-robust by (un)commenting the responsible lines in this example.</p><pre><code class="language-julia">module Example_2DTransientStokes
 
 using GradientRobustMultiPhysics
 using Printf
+using ExtendableGrids
 using Triangulate
 
 
@@ -47,15 +48,19 @@ end
 
 
 # everything is wrapped in a main function
-function main(; verbosity = 1)
+function main(; verbosity = 1, Plotter = nothing)
 
     # problem parameters
     viscosity = 1e-6
     timestep = 1e-3
     T = 1e-2 # final time
-    initial_h = 1/4 # initial mesh width of subtriangles
     nlevels = 4 # maximal number of refinement levels
-    barycentric_refinement = false; reconstruct = false # do not change
+    reconstruct = false # do not change
+    graddiv = 0
+
+    # initial grid
+    #xgrid = grid_unitsquare(Triangle2D);
+    xgrid = grid_unitsquare_unstructured(0.25)
 
     # choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -65,7 +70,6 @@ function main(; verbosity = 1)
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
     #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
     FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
-    #FETypes = [H1P2{2,2}, L2P1{1}]; initial_h *= 2; barycentric_refinement = true # Scott-Vogelius
 
     #####################################################################################
     #####################################################################################
@@ -74,7 +78,7 @@ function main(; verbosity = 1)
     # (pressure-robustness chooses a reconstruction that can exploit the L2-orthogonality onto gradients)
     # (Scott-Vogelius is divergence-free and is pressure-robust without modifications)
     if reconstruct
-        testfunction_operator = ReconstructionIdentity{HDIVRT0{2}}
+        testfunction_operator = ReconstructionIdentity{HDIVBDM1{2}}
     else
         testfunction_operator = Identity
     end
@@ -84,28 +88,28 @@ function main(; verbosity = 1)
     add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 5)
     add_rhsdata!(StokesProblem, 1, RhsOperator(testfunction_operator, [1], exact_rhs!(viscosity), 2, 2; bonus_quadorder = 5))
 
+    # add grad-div stabilisation
+    if graddiv &gt; 0
+        add_operator!(StokesProblem, [1,1], AbstractBilinearForm(&quot;graddiv-stabilisation (div x div)&quot;, Divergence, Divergence, MultiplyScalarAction(graddiv)))
+    end
+
     # define bestapproximation problems
     L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 5)
     L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5)
     H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5, bonus_quadorder_boundary = 5)
 
-
     # define ItemIntegrators for L2/H1 error computation and arrays to store them
     L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 5, time = T)
     L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 5)
     H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 5, time = T)
-    L2error_velocity = []; L2error_pressure = []; L2errorInterpolation_velocity = []; NDofs = []
-    L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
-    H1error_velocity = []; H1errorInterpolation_velocity = []; H1errorBestApproximation_velocity = []
+    L2error_velocity = []; L2error_pressure = []; NDofs = []
+    L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
+    H1error_velocity = []; H1errorBestApproximation_velocity = []
 
     # loop over levels
     for level = 1 : nlevels
 
-        xgrid = grid_unitsquare_unstructured((initial_h/2^(level-1))^2)
-        # in case of Scott-Vogelius we use barycentric refinement
-        if barycentric_refinement == true
-            xgrid = barycentric_refine(xgrid)
-        end
+        xgrid = uniform_refine(xgrid)
 
         # generate FESpaces
         FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
@@ -115,7 +119,6 @@ function main(; verbosity = 1)
         Solution = FEVector{Float64}(&quot;Stokes velocity&quot;,FESpaceVelocity)
         append!(Solution,&quot;Stokes pressure&quot;,FESpacePressure)
         push!(NDofs,length(Solution.entries))
-        Base.show(Solution)
 
         # set initial solution ( = bestapproximation at time 0)
         L2VelocityBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation velocity&quot;,FESpaceVelocity)
@@ -135,12 +138,6 @@ function main(; verbosity = 1)
             @printf(&quot;  change = %.4e \n&quot;,statistics[1,2])
         end
 
-        # interpolate exact solution at final time for comparison
-        Interpolation = FEVector{Float64}(&quot;Interpolation velocity&quot;,FESpaceVelocity)
-        append!(Interpolation,&quot;Interpolation pressure&quot;,FESpacePressure)
-        interpolate!(Interpolation[1], exact_velocity!; bonus_quadorder = 2, time = T)
-        interpolate!(Interpolation[2], exact_pressure!; bonus_quadorder = 1)
-
         # solve bestapproximation problems at final time for comparison
         L2PressureBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation pressure&quot;,FESpacePressure)
         H1VelocityBestapproximation = FEVector{Float64}(&quot;H1-Bestapproximation velocity&quot;,FESpaceVelocity)
@@ -150,51 +147,79 @@ function main(; verbosity = 1)
 
         # compute L2 and H1 error of all solutions
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
-        append!(L2errorInterpolation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Interpolation[1])))
         append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1])))
         append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
-        append!(L2errorInterpolation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Interpolation[2])))
         append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1])))
         append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
-        append!(H1errorInterpolation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Interpolation[1])))
         append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1])))
 
         # ouput errors
         if (level == nlevels)
-            println(&quot;\n         |   L2ERROR   |   L2ERROR   |   L2ERROR&quot;)
-            println(&quot;   NDOF  | VELO-STOKES | VELO-INTERP | VELO-L2BEST&quot;);
+            println(&quot;\n         |   L2ERROR      order   |   L2ERROR      order   &quot;)
+            println(&quot;   NDOF  | VELO-STOKES            | VELO-L2BEST            &quot;);
+            order = 0
             for j=1:nlevels
+                if j &gt; 1
+                    order = log(L2error_velocity[j-1]/L2error_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
                 @printf(&quot;  %6d |&quot;,NDofs[j]);
-                @printf(&quot; %.5e |&quot;,L2error_velocity[j])
-                @printf(&quot; %.5e |&quot;,L2errorInterpolation_velocity[j])
-                @printf(&quot; %.5e\n&quot;,L2errorBestApproximation_velocity[j])
+                @printf(&quot; %.5e &quot;,L2error_velocity[j])
+                @printf(&quot;   %.3f   |&quot;,order)
+                if j &gt; 1
+                    order = log(L2errorBestApproximation_velocity[j-1]/L2errorBestApproximation_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
+                @printf(&quot; %.5e &quot;,L2errorBestApproximation_velocity[j])
+                @printf(&quot;   %.3f\n&quot;,order)
             end
-            println(&quot;\n         |   H1ERROR   |   H1ERROR   |   H1ERROR&quot;)
-            println(&quot;   NDOF  | VELO-STOKES | VELO-INTERP | VELO-H1BEST&quot;);
+            println(&quot;\n         |   H1ERROR      order   |   H1ERROR      order   &quot;)
+            println(&quot;   NDOF  | VELO-STOKES            | VELO-H1BEST            &quot;);
+            order = 0
             for j=1:nlevels
+                if j &gt; 1
+                    order = log(H1error_velocity[j-1]/H1error_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
                 @printf(&quot;  %6d |&quot;,NDofs[j]);
-                @printf(&quot; %.5e |&quot;,H1error_velocity[j])
-                @printf(&quot; %.5e |&quot;,H1errorInterpolation_velocity[j])
-                @printf(&quot; %.5e\n&quot;,H1errorBestApproximation_velocity[j])
+                @printf(&quot; %.5e &quot;,H1error_velocity[j])
+                @printf(&quot;   %.3f   |&quot;,order)
+                if j &gt; 1
+                    order = log(H1errorBestApproximation_velocity[j-1]/H1errorBestApproximation_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
+                @printf(&quot; %.5e &quot;,H1errorBestApproximation_velocity[j])
+                @printf(&quot;   %.3f\n&quot;,order)
             end
-            println(&quot;\n         |   L2ERROR   |   L2ERROR   |   L2ERROR&quot;)
-            println(&quot;   NDOF  | PRES-STOKES | PRES-INTERP | PRES-L2BEST&quot;);
+            println(&quot;\n         |   L2ERROR      order   |   L2ERROR      order   &quot;)
+            println(&quot;   NDOF  | PRES-STOKES            | PRES-L2BEST            &quot;);
+            order = 0
             for j=1:nlevels
+                if j &gt; 1
+                    order = log(L2error_pressure[j-1]/L2error_pressure[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
                 @printf(&quot;  %6d |&quot;,NDofs[j]);
-                @printf(&quot; %.5e |&quot;,L2error_pressure[j])
-                @printf(&quot; %.5e |&quot;,L2errorInterpolation_pressure[j])
-                @printf(&quot; %.5e\n&quot;,L2errorBestApproximation_pressure[j])
+                @printf(&quot; %.5e &quot;,L2error_pressure[j])
+                @printf(&quot;   %.3f   |&quot;,order)
+                if j &gt; 1
+                    order = log(L2errorBestApproximation_pressure[j-1]/L2errorBestApproximation_pressure[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
+                @printf(&quot; %.5e &quot;,L2errorBestApproximation_pressure[j])
+                @printf(&quot;   %.3f\n&quot;,order)
             end
             println(&quot;\nLEGEND\n======&quot;)
             println(&quot;VELO-STOKES : discrete Stokes velocity solution ($(FESpaceVelocity.name))&quot;)
-            println(&quot;VELO-INTERP : interpolation of exact velocity&quot;)
             println(&quot;VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)&quot;)
             println(&quot;VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)&quot;)
             println(&quot;PRES-STOKES : discrete Stokes pressure solution ($(FESpacePressure.name))&quot;)
-            println(&quot;PRES-INTERP : interpolation of exact pressure&quot;)
             println(&quot;PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)&quot;)
+
+            if Plotter != nothing
+                # plot grid
+                xgrid = split_grid_into(xgrid, Triangle2D)
+                ExtendableGrids.plot(xgrid; Plotter = Plotter)
+
+                # plot
+                GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+            end
         end
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_elasticity/">3D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 11 September 2020 16:10">Friday 11 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_elasticity/">3D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 16 September 2020 14:51">Wednesday 16 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
