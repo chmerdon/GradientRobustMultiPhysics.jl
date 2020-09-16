@@ -27,7 +27,7 @@ function main(; verbosity = 1)
 
     ## generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
-    xgrid = uniform_refine(xgrid,3)
+    xgrid = uniform_refine(xgrid, 5)
     
     ## setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(exact_function!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 3)
@@ -49,18 +49,12 @@ function main(; verbosity = 1)
         end
         return nothing
     end
-    jumpIntegrator = ItemIntegrator{Float64,ON_FACES}(FaceJumpIdentity,ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
-    nfaces = num_sources(xgrid[FaceNodes])
-    jump4face = zeros(Float64,2,nfaces)
-    evaluate!(jump4face,jumpIntegrator,Solution[1]; verbosity = 1)
-
-    ## set jumps on boundary faces to zero
-    jump4face[:,xgrid[BFaces]] .= 0
+    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(FaceJumpIdentity,ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
+    println("\nEstimator = $(sqrt(sum(evaluate(jumpIntegrator,[Solution[1]]))))")
 
     ## calculate L2 error and print results
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2)
-    println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-    println("\nEstimator = $(sqrt(sum(jump4face[:])))")
+    println("L2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,[Solution[1]])))")
 end
 
 end

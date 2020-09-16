@@ -13,7 +13,7 @@ abstract type H1CR{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:I
 
 get_ncomponents(FEType::Type{<:H1CR}) = FEType.parameters[1]
 
-get_polynomialorder(::Type{<:H1CR}, ::Type{<:Edge1D}) = 1;
+get_polynomialorder(::Type{<:H1CR}, ::Type{<:Edge1D}) = 1; # 0 on continuous edges, but = 1 on edges with jumps
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Quadrilateral2D}) = 2;
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Tetrahedron3D}) = 1;

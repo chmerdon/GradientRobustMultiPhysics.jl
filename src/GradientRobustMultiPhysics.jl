@@ -133,6 +133,8 @@ export ItemWiseFunctionAction
 export XFunctionAction
 export ItemWiseXFunctionAction, RegionWiseXFunctionAction
 
+include("accumvector.jl")
+export AccumulatingVector
 
 include("assemblypatterns.jl")
 export AbstractAssemblyPattern
