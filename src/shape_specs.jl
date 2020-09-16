@@ -89,6 +89,11 @@ facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
 edge_enum_rule(::Type{<:Tetrahedron3D}) = [1 2; 1 3; 1 4; 2 3; 2 4; 3 4]
 celledges_for_cellface(::Type{<:Tetrahedron3D}) = [2 4 1; 1 5 3; 4 6 5; 2 3 6]
 
+xrefFACE2xrefCELL(::Type{<:Tetrahedron3D}) = [ (xref4FACE) -> [xref4FACE[1],xref4FACE[2],0],
+                                               (xref4FACE) -> [xref4FACE[1],0, xref4FACE[2]], 
+                                               (xref4FACE) -> [1-xref4FACE[1]-xref4FACE[2], xref4FACE[1], xref4FACE[2]], 
+                                               (xref4FACE) -> [0, 1-xref4FACE[1], xref4FACE[2]]]
+
 #                         
 #                         [8]--------[7]
 #                        / |        / |          [1] = (0,0,0)

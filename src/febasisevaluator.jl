@@ -51,7 +51,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     # pre-allocate memory for basis functions
     ncomponents = get_ncomponents(FEType)
-    if AT <: Union{ON_BFACES,ON_FACES}
+    if AT <: Union{ON_BFACES,<:ON_FACES}
         if FEType <: AbstractHdivFiniteElement
             refbasis = get_basis_normalflux_on_face(FEType, EG)
             ncomponents = 1
@@ -107,7 +107,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coefficients = zeros(T,ncomponents,ndofs4item)
         if AT == ON_CELLS
             coeff_handler = get_coefficients_on_cell!(FE, EG)
-        elseif AT <: Union{ON_BFACES,ON_FACES}
+        elseif AT <: Union{ON_BFACES,<:ON_FACES}
             coeff_handler = get_coefficients_on_face!(FE, EG)
         end
     else
@@ -121,7 +121,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         if FEOP == NormalFlux
             coefficients3 = FE.xgrid[FaceNormals]
             current_eval = zeros(T,1,ndofs4item,length(qf.w));
-        elseif FEOP == Identity    
+        elseif FEOP == Identity || FEOP == FaceJumpIdentity
             current_eval = deepcopy(refbasisvals) 
         elseif FEOP == IdentityComponent
             current_eval = deepcopy(refbasisvals[[FEOP.parameters[1]],:,:]) 
@@ -211,7 +211,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coefficients = zeros(T,ncomponents,ndofs4item2)
         if AT == ON_CELLS
             coeff_handler = get_coefficients_on_cell!(FE2, EG)
-        elseif AT <: Union{ON_BFACES,ON_FACES}
+        elseif AT <: Union{ON_BFACES,<:ON_FACES}
             coeff_handler = get_coefficients_on_face!(FE2, EG)
         end
     else

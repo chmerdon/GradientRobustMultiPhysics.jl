@@ -295,7 +295,7 @@ function prepare_assembly(
     for j=1:length(FE)
         dofitemAT[j] = DofitemAT4Operator(AT, operator[j])
         xItemDofs[j] = Dofmap4AssemblyType(FE[j],dofitemAT[j])
-        if (dofitemAT[j] == ON_CELLS) && (AT == ON_FACES)
+        if (dofitemAT[j] == ON_CELLS) && (AT <: ON_FACES)
             push!(facejump_operators,j)
         end
     end    
@@ -852,14 +852,15 @@ function assemble!(
     action_resultdim::Int = action.resultdim
  
     # loop over items
-    EG4dofitem1 = [1,1] # EG id of the current item with respect to operator 1
-    EG4dofitem2 = [1,1] # EG id of the current item with respect to operator 2
-    dofitems1 = [0,0] # itemnr where the dof numbers can be found (operator 1)
-    dofitems2 = [0,0] # itemnr where the dof numbers can be found (operator 2)
-    itempos4dofitem1 = [1,1] # local item position in dofitem1
-    itempos4dofitem2 = [1,1] # local item position in dofitem2
-    coefficient4dofitem1 = [0,0] # coefficients for operator 1
-    coefficient4dofitem2 = [0,0] # coefficients for operator 2
+    EG4item::Int = 1
+    EG4dofitem1::Array{Int,1} = [1,1] # EG id of the current item with respect to operator 1
+    EG4dofitem2::Array{Int,1} = [1,1] # EG id of the current item with respect to operator 2
+    dofitems1::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found (operator 1)
+    dofitems2::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found (operator 2)
+    itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem1
+    itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem2
+    coefficient4dofitem1::Array{Float64,1} = [0.0,0.0] # coefficients for operator 1
+    coefficient4dofitem2::Array{Float64,1} = [0.0,0.0] # coefficients for operator 2
     ndofs4item1::Int = 0 # number of dofs for item
     ndofs4item2::Int = 0 # number of dofs for item
     dofitem1 = 0
@@ -879,18 +880,21 @@ function assemble!(
     temp::T = 0 # some temporary variable
     acol::Int = 0
     arow::Int = 0
+    is_locally_symmetric::Bool = BLF.symmetric
+    
 
+    
     for item = 1 : nitems
     for r = 1 : length(regions)
     # check if item region is in regions
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
+        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
         dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
 
         # get quadrature weights for integration domain
-        weights = qf[EG4dofitem1[1]].w
+        weights = qf[EG4item].w
 
         # loop over associated dofitems (maximal 2 for jump calculations)
         # di, dj == 2 is only performed if one of the operators jumps
@@ -898,6 +902,9 @@ function assemble!(
             dofitem1 = dofitems1[di]
             dofitem2 = dofitems2[dj]
             if dofitem1 > 0 && dofitem2 > 0
+
+                # even if global matrix is symmeric, local matrix might be not in case of JumpOperators
+                is_locally_symmetric = BLF.symmetric * (dofitem1 == dofitem2)
 
                 # get number of dofs on this dofitem
                 ndofs4item1 = ndofs4EG[1][EG4dofitem1[di]]
@@ -929,44 +936,61 @@ function assemble!(
                 for i in eachindex(weights)
                     if apply_action_to == 1
                         for dof_i = 1 : ndofs4item1
-                            eval!(action_input, basisevaler4dofitem1, dof_i, i)
-                            apply_action!(action_result, action_input, action, i)
-                            action_result .*= weights[i] * coefficient4dofitem1[di]
+                            if di == 2
+                                eval!(action_input, basisevaler4dofitem1, dof_i, length(weights)+1-i)
+                                apply_action!(action_result, action_input, action, length(weights)+1-i)
+                            else
+                                eval!(action_input, basisevaler4dofitem1, dof_i, i)
+                                apply_action!(action_result, action_input, action, i)
+                            end
+                            action_result .*= coefficient4dofitem1[di]
 
-                            if BLF.symmetric == false
+                            if is_locally_symmetric == false
                                 for dof_j = 1 : ndofs4item2
                                     temp = 0
-                                    for k = 1 : action_resultdim
-                                        temp += action_result[k] * basisvals2[k,dof_j,i]
+                                    if dj == 2
+                                        for k = 1 : action_resultdim
+                                            temp += action_result[k] * basisvals2[k,dof_j,length(weights)+1-i]
+                                        end
+                                    else
+                                        for k = 1 : action_resultdim
+                                            temp += action_result[k] * basisvals2[k,dof_j,i]
+                                        end
                                     end
                                     temp *= coefficient4dofitem2[dj]
-                                    localmatrix[dof_i,dof_j] += temp
+                                    localmatrix[dof_i,dof_j] += weights[i] * temp
                                 end
                             else # symmetric case
                                 for dof_j = dof_i : ndofs4item2
                                     temp = 0
-                                    for k = 1 : action_resultdim
-                                        temp += action_result[k] * basisvals2[k,dof_j,i]
+                                    if dj == 2
+                                        for k = 1 : action_resultdim
+                                            temp += action_result[k] * basisvals2[k,dof_j,length(weights)+1-i]
+                                        end
+                                    else
+                                        for k = 1 : action_resultdim
+                                            temp += action_result[k] * basisvals2[k,dof_j,i]
+                                        end
                                     end
-                                    temp *= coefficient4dofitem1[di]
-                                    localmatrix[dof_i,dof_j] += temp
+                                    temp *= coefficient4dofitem2[dj]
+                                    localmatrix[dof_i,dof_j] += weights[i] * temp
                                 end
                             end
                         end 
-                    else
+                    else # todo: update for jumos
                         for dof_j = 1 : ndofs4item2
                             eval!(action_input, basisevaler4dofitem2, dof_j, i)
                             apply_action!(action_result, action_input, action, i)
-                            action_result .*= weights[i] * coefficient4dofitem2[dj]
+                            action_result .*= coefficient4dofitem2[dj]
 
-                            if BLF.symmetric == false
+                            if is_locally_symmetric == false
                                 for dof_i = 1 : ndofs4item1
                                     temp = 0
                                     for k = 1 : action_resultdim
                                         temp += action_result[k] * basisvals1[k,dof_j,i]
                                     end
                                     temp *= coefficient4dofitem1[di]
-                                    localmatrix[dof_i,dof_j] += temp 
+                                    localmatrix[dof_i,dof_j] += weights[i] * temp 
                                 end
                             else # symmetric case
                                 for dof_i = dof_j : ndofs4item1
@@ -975,7 +999,7 @@ function assemble!(
                                         temp += action_result[k] * basisvals1[k,dof_j,i]
                                     end
                                     temp *= coefficient4dofitem1[di]
-                                    localmatrix[dof_i,dof_j] += temp
+                                    localmatrix[dof_i,dof_j] += weights[i] * temp
                                 end
                             end
                         end 
@@ -985,7 +1009,7 @@ function assemble!(
                 localmatrix .*= xItemVolumes[item] * factor
 
                 # copy localmatrix into global matrix
-                if BLF.symmetric == false
+                if is_locally_symmetric == false
                     for dof_i = 1 : ndofs4item1
                         arow = dofs[dof_i] + offsetX
                         for dof_j = 1 : ndofs4item2
@@ -1032,7 +1056,6 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
-
     return nothing
 end
 

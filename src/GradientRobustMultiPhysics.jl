@@ -16,7 +16,7 @@ using Printf
 
 include("junctions.jl");
 export AbstractAssemblyType
-export ON_CELLS, ON_FACES, ON_BFACES
+export ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES
 export GridComponentNodes4AssemblyType
 export GridComponentVolumes4AssemblyType
 export GridComponentGeometries4AssemblyType

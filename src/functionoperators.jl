@@ -162,7 +162,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian})
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
 Dofmap4AssemblyType(FES::FESpace, ::Type{ON_CELLS}) = FES.dofmaps[CellDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_FACES}) = FES.dofmaps[FaceDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_FACES}) = FES.dofmaps[FaceDofs]
 Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES.dofmaps[BFaceDofs]
 
 # default junctions
@@ -188,7 +188,7 @@ end
 
 # special junctions for jump operators
 DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, ::Type{FaceJumpIdentity}) = ON_CELLS
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, ::Type{ON_FACES}, ::Type{FaceJumpIdentity})
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_FACES}, ::Type{FaceJumpIdentity})
     xFaceCells = FES.xgrid[FaceCells]
     xCellFaces = FES.xgrid[CellFaces]
     xFaceGeometries = FES.xgrid[FaceGeometries]
@@ -207,22 +207,21 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, ::Type{ON_FAC
                     itempos4dofitem[2] = k
                 end
             end
+        elseif AT == ON_IFACES
+            # if assembly is only on only interior faces, ignore boundary faces by setting dofitems to zero
+            dofitems[1] = 0
         end
         coefficient4dofitem[1] = 1
         coefficient4dofitem[2] = -1
 
         # find EG index for geometry
-        for j=1:length(EGdofitems)
-            if xCellGeometries[dofitems[1]] == EGdofitems[j]
-                EG4dofitem[1] = length(EG) + j
-                break;
-            end
-        end
-        if dofitems[2] > 0
-            for j=1:length(EGdofitems)
-                if xCellGeometries[dofitems[2]] == EGdofitems[j]
-                    EG4dofitem[2] = length(EG) + j
-                    break;
+        for k = 1 : 2
+            if dofitems[k] > 0
+                for j=1:length(EGdofitems)
+                    if xCellGeometries[dofitems[k]] == EGdofitems[j]
+                        EG4dofitem[k] = length(EG) + j
+                        break;
+                    end
                 end
             end
         end

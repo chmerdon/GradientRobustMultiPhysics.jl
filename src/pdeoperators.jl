@@ -105,10 +105,11 @@ function AbstractBilinearForm(name,
     operator1::Type{<:AbstractFunctionOperator},
     operator2::Type{<:AbstractFunctionOperator},
     action::AbstractAction;
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     apply_action_to = 1,
     regions::Array{Int,1} = [0],
     transposed_assembly::Bool = false)
-    return AbstractBilinearForm{ON_CELLS}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,false,zeros(Float64,0,0))
+    return AbstractBilinearForm{AT}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,false,zeros(Float64,0,0))
 end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
     return AbstractBilinearForm("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
@@ -151,7 +152,7 @@ C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
          c12,c11,  0
            0,  0,c33]
     
-    where c33 = shear_modulus, c12 = lambda and c11 = c33 + c12
+    where c33 = shear_modulus, c12 = lambda and c11 = 2*c33 + c12
     
 """
 function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
@@ -178,7 +179,7 @@ for isotropic media in Voigt notation, i.e. C eps(u) = 2 mu eps(u) + lambda tr(e
            0,  0,  0,  0,c44,  0
            0,  0,  0,  0,  0,c44]   
 
-    where c44 = shear_modulus, c12 = lambda and c11 = c44 + c12
+    where c44 = shear_modulus, c12 = lambda and c11 = 2*c44 + c12
     
 """
 function HookStiffnessOperator3D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)

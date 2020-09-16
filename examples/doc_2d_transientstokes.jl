@@ -24,7 +24,7 @@ benefits of pressure-robustness in time-dependent linear Stokes problem in prese
 The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution,
 an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally
 converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence!
-Compare e.g. Bernardi--Raugel and bernardi--Raugel pressure-robust by (un)commenting the responsible lines in this example.
+Compare e.g. Bernardi--Raugel and Bernardi--Raugel pressure-robust by (un)commenting the responsible lines in this example.
 =#
 
 
@@ -32,6 +32,7 @@ module Example_2DTransientStokes
 
 using GradientRobustMultiPhysics
 using Printf
+using ExtendableGrids
 using Triangulate
 
 
@@ -70,15 +71,19 @@ end
 
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1)
+function main(; verbosity = 1, Plotter = nothing)
 
     ## problem parameters
     viscosity = 1e-6
     timestep = 1e-3
     T = 1e-2 # final time
-    initial_h = 1/4 # initial mesh width of subtriangles
     nlevels = 4 # maximal number of refinement levels
-    barycentric_refinement = false; reconstruct = false # do not change
+    reconstruct = false # do not change
+    graddiv = 0
+
+    ## initial grid
+    #xgrid = grid_unitsquare(Triangle2D);
+    xgrid = grid_unitsquare_unstructured(0.25)
 
     ## choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -88,7 +93,6 @@ function main(; verbosity = 1)
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
     #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
     FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
-    #FETypes = [H1P2{2,2}, L2P1{1}]; initial_h *= 2; barycentric_refinement = true # Scott-Vogelius 
 
     #####################################################################################    
     #####################################################################################
@@ -97,7 +101,7 @@ function main(; verbosity = 1)
     ## (pressure-robustness chooses a reconstruction that can exploit the L2-orthogonality onto gradients)
     ## (Scott-Vogelius is divergence-free and is pressure-robust without modifications)
     if reconstruct
-        testfunction_operator = ReconstructionIdentity{HDIVRT0{2}}
+        testfunction_operator = ReconstructionIdentity{HDIVBDM1{2}}
     else
         testfunction_operator = Identity
     end
@@ -107,28 +111,28 @@ function main(; verbosity = 1)
     add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 5)
     add_rhsdata!(StokesProblem, 1, RhsOperator(testfunction_operator, [1], exact_rhs!(viscosity), 2, 2; bonus_quadorder = 5))
 
+    ## add grad-div stabilisation
+    if graddiv > 0
+        add_operator!(StokesProblem, [1,1], AbstractBilinearForm("graddiv-stabilisation (div x div)", Divergence, Divergence, MultiplyScalarAction(graddiv)))
+    end
+
     ## define bestapproximation problems
     L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 5)
     L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5)
     H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5, bonus_quadorder_boundary = 5)
 
-
     ## define ItemIntegrators for L2/H1 error computation and arrays to store them
     L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 5, time = T)
     L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 5)
     H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 5, time = T)
-    L2error_velocity = []; L2error_pressure = []; L2errorInterpolation_velocity = []; NDofs = []
-    L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
-    H1error_velocity = []; H1errorInterpolation_velocity = []; H1errorBestApproximation_velocity = []
+    L2error_velocity = []; L2error_pressure = []; NDofs = []
+    L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
+    H1error_velocity = []; H1errorBestApproximation_velocity = []
     
     ## loop over levels
     for level = 1 : nlevels
 
-        xgrid = grid_unitsquare_unstructured((initial_h/2^(level-1))^2)
-        ## in case of Scott-Vogelius we use barycentric refinement
-        if barycentric_refinement == true
-            xgrid = barycentric_refine(xgrid)
-        end
+        xgrid = uniform_refine(xgrid)
 
         ## generate FESpaces
         FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
@@ -138,7 +142,6 @@ function main(; verbosity = 1)
         Solution = FEVector{Float64}("Stokes velocity",FESpaceVelocity)
         append!(Solution,"Stokes pressure",FESpacePressure)
         push!(NDofs,length(Solution.entries))
-        Base.show(Solution)
 
         ## set initial solution ( = bestapproximation at time 0)
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)
@@ -158,12 +161,6 @@ function main(; verbosity = 1)
             @printf("  change = %.4e \n",statistics[1,2])
         end
 
-        ## interpolate exact solution at final time for comparison
-        Interpolation = FEVector{Float64}("Interpolation velocity",FESpaceVelocity)
-        append!(Interpolation,"Interpolation pressure",FESpacePressure)
-        interpolate!(Interpolation[1], exact_velocity!; bonus_quadorder = 2, time = T)
-        interpolate!(Interpolation[2], exact_pressure!; bonus_quadorder = 1)
-
         ## solve bestapproximation problems at final time for comparison
         L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FESpacePressure)
         H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FESpaceVelocity)
@@ -173,49 +170,77 @@ function main(; verbosity = 1)
 
         ## compute L2 and H1 error of all solutions
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
-        append!(L2errorInterpolation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Interpolation[1])))
         append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1])))
         append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
-        append!(L2errorInterpolation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Interpolation[2])))
         append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1])))
         append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
-        append!(H1errorInterpolation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Interpolation[1])))
         append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1])))
         
         ## ouput errors
         if (level == nlevels)
-            println("\n         |   L2ERROR   |   L2ERROR   |   L2ERROR")
-            println("   NDOF  | VELO-STOKES | VELO-INTERP | VELO-L2BEST");
+            println("\n         |   L2ERROR      order   |   L2ERROR      order   ")
+            println("   NDOF  | VELO-STOKES            | VELO-L2BEST            ");
+            order = 0
             for j=1:nlevels
+                if j > 1
+                    order = log(L2error_velocity[j-1]/L2error_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
                 @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e |",L2error_velocity[j])
-                @printf(" %.5e |",L2errorInterpolation_velocity[j])
-                @printf(" %.5e\n",L2errorBestApproximation_velocity[j])
+                @printf(" %.5e ",L2error_velocity[j])
+                @printf("   %.3f   |",order)
+                if j > 1
+                    order = log(L2errorBestApproximation_velocity[j-1]/L2errorBestApproximation_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
+                @printf(" %.5e ",L2errorBestApproximation_velocity[j])
+                @printf("   %.3f\n",order)
             end
-            println("\n         |   H1ERROR   |   H1ERROR   |   H1ERROR")
-            println("   NDOF  | VELO-STOKES | VELO-INTERP | VELO-H1BEST");
+            println("\n         |   H1ERROR      order   |   H1ERROR      order   ")
+            println("   NDOF  | VELO-STOKES            | VELO-H1BEST            ");
+            order = 0
             for j=1:nlevels
+                if j > 1
+                    order = log(H1error_velocity[j-1]/H1error_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
                 @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e |",H1error_velocity[j])
-                @printf(" %.5e |",H1errorInterpolation_velocity[j])
-                @printf(" %.5e\n",H1errorBestApproximation_velocity[j])
+                @printf(" %.5e ",H1error_velocity[j])
+                @printf("   %.3f   |",order)
+                if j > 1
+                    order = log(H1errorBestApproximation_velocity[j-1]/H1errorBestApproximation_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
+                @printf(" %.5e ",H1errorBestApproximation_velocity[j])
+                @printf("   %.3f\n",order)
             end
-            println("\n         |   L2ERROR   |   L2ERROR   |   L2ERROR")
-            println("   NDOF  | PRES-STOKES | PRES-INTERP | PRES-L2BEST");
+            println("\n         |   L2ERROR      order   |   L2ERROR      order   ")
+            println("   NDOF  | PRES-STOKES            | PRES-L2BEST            ");
+            order = 0
             for j=1:nlevels
+                if j > 1
+                    order = log(L2error_pressure[j-1]/L2error_pressure[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
                 @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e |",L2error_pressure[j])
-                @printf(" %.5e |",L2errorInterpolation_pressure[j])
-                @printf(" %.5e\n",L2errorBestApproximation_pressure[j])
+                @printf(" %.5e ",L2error_pressure[j])
+                @printf("   %.3f   |",order)
+                if j > 1
+                    order = log(L2errorBestApproximation_pressure[j-1]/L2errorBestApproximation_pressure[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+                end
+                @printf(" %.5e ",L2errorBestApproximation_pressure[j])
+                @printf("   %.3f\n",order)
             end
             println("\nLEGEND\n======")
             println("VELO-STOKES : discrete Stokes velocity solution ($(FESpaceVelocity.name))")
-            println("VELO-INTERP : interpolation of exact velocity")
             println("VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)")
             println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)")
             println("PRES-STOKES : discrete Stokes pressure solution ($(FESpacePressure.name))")
-            println("PRES-INTERP : interpolation of exact pressure")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
+
+            if Plotter != nothing
+                ## plot grid
+                xgrid = split_grid_into(xgrid, Triangle2D)
+                ExtendableGrids.plot(xgrid; Plotter = Plotter)
+        
+                ## plot
+                GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+            end
         end    
     end    
 end
