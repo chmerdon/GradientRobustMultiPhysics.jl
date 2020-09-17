@@ -789,7 +789,7 @@ function assemble!(
  
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE[1]))
-    cvals_resultdim::Int = size(basisevaler[1][apply_action_to][1].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[end][apply_action_to][1].cvals,1)
     action_resultdim::Int = action.resultdim
  
     # loop over items

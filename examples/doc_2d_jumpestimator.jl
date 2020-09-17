@@ -46,7 +46,7 @@ function main(; verbosity = 1)
     function L2jump_integrand(result, input, item)
         # input = [IdentityDisc{Jump}]
         for j = 1 : length(input)
-            result[j] = input[j]^2 * xFaceVolumes[j]
+            result[j] = input[j]^2 * xFaceVolumes[item]
         end
         return nothing
     end

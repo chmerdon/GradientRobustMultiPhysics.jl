@@ -13,6 +13,9 @@ with some diffusion coefficient  ``\nu``, some vector-valued function  ``\mathbf
 We prescribe an analytic solution and check the L2 and H1 error convergence of the method on a series of uniformly refined meshes.
 We also compare with the error of a simple nodal interpolation and plot the solution and the norm of its gradient.
 
+For small ``\nu``, the convection term dominates and pollutes the accuracy of the method. For demonstration some
+simple gradient jump (interior penalty) stabilisation is added to improve things.
+
 =#
 
 module Example_2DConvectionDiffusion
@@ -44,41 +47,44 @@ function exact_solution_rhs!(diffusion)
 end    
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
     
     ## load a mesh of the unit square (this one has triangles and quads in it)
     ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
     ## used below to prescribe the boundary data
     xgrid = grid_unitsquare_mixedgeometries(); # initial grid
-    
-    ## set problem parameters
-    diffusion = 1
-    nlevels = 7 # number of refinement levels
 
-    ## choose a finite element type
-    #FEType = H1P1{1} # P1-Courant
-    FEType = H1P2{1,2} # P2
-    #FEType = H1CR{1} # Crouzeix-Raviart
-
-    #####################################################################################    
-    #####################################################################################
+    ## choose a finite element type, here we choose a second order H1-conforming one
+    FEType = H1P2{1,2}
 
     ## create PDE description = start with Poisson problem and add convection operator to block [1,1] and change equation name
-    ConvectionDiffusionProblem = PoissonProblem(2; diffusion = diffusion)
-    add_operator!(ConvectionDiffusionProblem, [1,1], ConvectionOperator(beta!,2,1); equation_name = "convection diffusion equation")
+    Problem = PoissonProblem(2; diffusion = diffusion)
+    add_operator!(Problem, [1,1], ConvectionOperator(beta!,2,1); equation_name = "convection diffusion equation")
 
     ## add right-hand side data to equation 1 (there is only one in this example)
-    add_rhsdata!(ConvectionDiffusionProblem, 1, RhsOperator(Identity, [0], exact_solution_rhs!(diffusion), 2, 1; bonus_quadorder = 3))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], exact_solution_rhs!(diffusion), 2, 1; bonus_quadorder = 3))
 
     ## add boundary data to unknown 1 (there is only one in this example)
     ## on boundary regions where the solution is linear only need to be interpolated
     ## on boundary regions where the solution is zero only homoegeneous boundary conditions are needed
-    add_boundarydata!(ConvectionDiffusionProblem, 1, [1,3], BestapproxDirichletBoundary; data = exact_solution!, bonus_quadorder = 2)
-    add_boundarydata!(ConvectionDiffusionProblem, 1, [2], InterpolateDirichletBoundary; data = exact_solution!)
-    add_boundarydata!(ConvectionDiffusionProblem, 1, [4], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = exact_solution!, bonus_quadorder = 2)
+    add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = exact_solution!)
+    add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
+
+    # add a gradient jump (interior penalty) stabilisation for dominant convection
+    if stabilisation > 0
+        xFaceVolumes = xgrid[FaceVolumes]
+        function stabilisation_kernel(result, input, item)
+            for j = 1 : length(input)
+                result[j] = input[j] * stabilisation * xFaceVolumes[item]^2
+            end
+        end
+        JumpStabilisation = AbstractBilinearForm("[grad(u)] [grad(v)]", GradientDisc{Jump}, GradientDisc{Jump}, ItemWiseFunctionAction(stabilisation_kernel,2); AT = ON_IFACES)
+        add_operator!(Problem, [1,1], JumpStabilisation)
+    end
 
     ## finally we have a look at the problem
-    show(ConvectionDiffusionProblem)
+    show(Problem)
 
     ## define ItemIntegrators for L2/H1 error computation and some arrays to store the errors
     L2ErrorEvaluator = L2ErrorIntegrator(exact_solution!, Identity, 2, 1; bonus_quadorder = 4)
@@ -95,10 +101,11 @@ function main(; verbosity = 1, Plotter = nothing)
 
         ## generate FESpace
         FES = FESpace{FEType}(xgrid)
+        xFaceVolumes = xgrid[FaceVolumes] # update xFaceVolumes used in stabilisation definition
 
         ## solve PDE
         Solution = FEVector{Float64}("Problem solution",FES)
-        solve!(Solution, ConvectionDiffusionProblem; verbosity = verbosity)
+        solve!(Solution, Problem; verbosity = verbosity)
         push!(NDofs,length(Solution.entries))
 
         ## interpolate
@@ -111,8 +118,8 @@ function main(; verbosity = 1, Plotter = nothing)
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
         append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Interpolation[1])))
         
-        ## plot final solution and print error history
         if (level == nlevels)
+            # print error history
             println("\n         |   L2ERROR   |   L2ERROR")
             println("   NDOF  |   SOLUTION  |   INTERPOL");
             for j=1:nlevels
