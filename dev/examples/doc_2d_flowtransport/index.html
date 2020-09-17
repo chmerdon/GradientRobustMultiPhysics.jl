@@ -90,19 +90,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     if FVtransport == true
         # pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
         TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], maxlureuse = [-1], timedependent_equations = [3], verbosity = verbosity)
-        timestep = 10000
-        maxResidual = 1e-10
-        for iteration = 1 : 100
-            statistics = advance!(TCS, timestep)
-            @printf(&quot;  iteration %4d&quot;,iteration)
-            @printf(&quot;  time = %.4e&quot;,TCS.ctime)
-            @printf(&quot;  linresidual = %.4e&quot;,statistics[3,1])
-            @printf(&quot;  change = %.4e \n&quot;,statistics[3,2])
-            if sum(statistics[3,2]) &lt; maxResidual
-                println(&quot;  terminated (below tolerance)&quot;)
-                break;
-            end
-        end
+        advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
     else
         # solve directly
         solve!(Solution, Problem; subiterations = [[3]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
@@ -121,4 +109,4 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_cookmembrane/">« 2D Linear Elasticity</a><a class="docs-footer-nextpage" href="../doc_2d_hagenpoiseuille/">2D Hagen-Poiseuille (Navier–Stokes) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 16 September 2020 16:20">Wednesday 16 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_cookmembrane/">« 2D Linear Elasticity</a><a class="docs-footer-nextpage" href="../doc_2d_hagenpoiseuille/">2D Hagen-Poiseuille (Navier–Stokes) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 17 September 2020 13:43">Thursday 17 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
