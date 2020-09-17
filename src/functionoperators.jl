@@ -1,3 +1,11 @@
+
+# this type steers how an operator is evaluated on an item where it is discontinuous
+abstract type DiscontinuityTreatment end
+abstract type Average <: DiscontinuityTreatment end # avrage the values on both sides of the face
+abstract type Jump <: DiscontinuityTreatment end # calculate the jump between both sides of the face
+
+
+
 """
 $(TYPEDEF)
 
@@ -21,7 +29,7 @@ $(TYPEDEF)
 
 identity jump operator: evaluates face jumps of finite element function
 """
-abstract type FaceJumpIdentity <: Identity end # [[v_h]]
+abstract type IdentityDisc{DT<:DiscontinuityTreatment} <: Identity end # [[v_h]]
 """
 $(TYPEDEF)
 
@@ -45,7 +53,8 @@ $(TYPEDEF)
 
 evaluates the gradient of the finite element function.
 """
-abstract type Gradient <: AbstractFunctionOperator end # D_geom(v_h)
+abstract type Gradient <: AbstractFunctionOperator end # 1*v_h
+abstract type GradientDisc{DT<:DiscontinuityTreatment} <: Gradient end # 1*v_h
 """
 $(TYPEDEF)
 
@@ -104,7 +113,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:IdentityComponent}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Gradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
@@ -117,11 +126,13 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 
 DefaultName4Operator(::Type{Identity}) = "id"
+DefaultName4Operator(::Type{IdentityDisc{Jump}}) = "[[id]]"
+DefaultName4Operator(::Type{IdentityDisc{Average}}) = "{{id}}"
 DefaultName4Operator(::Type{ReconstructionIdentity}) = "id R"
 DefaultName4Operator(IC::Type{<:IdentityComponent}) = "id_$(IC.parameters[1])"
 DefaultName4Operator(::Type{NormalFlux}) = "NormalFlux"
 DefaultName4Operator(::Type{TangentFlux}) = "TangentFlux"
-DefaultName4Operator(::Type{Gradient}) = "grad"
+DefaultName4Operator(::Type{<:Gradient}) = "grad"
 DefaultName4Operator(::Type{SymmetricGradient}) = "symgrad"
 DefaultName4Operator(::Type{TangentialGradient}) = "TangentialGradient"
 DefaultName4Operator(::Type{Laplacian}) = "Laplace"
@@ -143,7 +154,7 @@ Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncompo
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
 Length4Operator(::Type{Curl2D}, xdim::Int, ncomponents::Int) = 1
-Length4Operator(::Type{Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
+Length4Operator(::Type{<:Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
@@ -152,7 +163,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:IdentityComponent}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Gradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Gradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Curl2D}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = -1
@@ -166,9 +177,40 @@ Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_FACES}) = FES.dofmaps[FaceDofs]
 Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES.dofmaps[BFaceDofs]
 
 # default junctions
-DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFunctionOperator}) = AT
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:AbstractAssemblyType}, ::Type{<:AbstractFunctionOperator})
+function DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
+    # check if operator is discontinuous for this AT
+    for j = 1 : length(FO.parameters)
+        if FO.parameters[j] <: DiscontinuityTreatment
+            return ON_CELLS
+        end
+    end
+    return AT
+end
+
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
+    # check if operator is discontinuous for this AT
+    discontinuous = false
+    posdt = 0
+    for j = 1 : length(FO.parameters)
+        if FO.parameters[j] <: DiscontinuityTreatment
+            discontinuous = true
+            posdt = j
+            break;
+        end
+    end
+    if discontinuous
+        # call discontinuity handlers
+        DofitemInformation4Operator(FES, EG, EGdofitem, AT, FO.parameters[posdt])
+    else
+        # call standard handlers
+        DofitemInformation4Operator(FES, EG, EGdofitem, AT)
+    end
+end
+
+# default handlers
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:AbstractAssemblyType})
     xItemGeometries = FES.xgrid[GridComponentGeometries4AssemblyType(AT)]
+    # operator is assumed to be continuous, hence only needs to be evaluated on one dofitem = item
     function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
         dofitems[1] = item
         dofitems[2] = 0
@@ -186,13 +228,13 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:Abs
     return closure
 end
 
-# special junctions for jump operators
-DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, ::Type{FaceJumpIdentity}) = ON_CELLS
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_FACES}, ::Type{FaceJumpIdentity})
+# special handlers for jump operators
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_FACES}, ::Type{Jump})
     xFaceCells = FES.xgrid[FaceCells]
     xCellFaces = FES.xgrid[CellFaces]
     xFaceGeometries = FES.xgrid[FaceGeometries]
     xCellGeometries = FES.xgrid[CellGeometries]
+    # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
     function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
         dofitems[1] = xFaceCells[1,item]
         dofitems[2] = xFaceCells[2,item]
@@ -208,7 +250,7 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON
                 end
             end
         elseif AT == ON_IFACES
-            # if assembly is only on only interior faces, ignore boundary faces by setting dofitems to zero
+            # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
             dofitems[1] = 0
         end
         coefficient4dofitem[1] = 1

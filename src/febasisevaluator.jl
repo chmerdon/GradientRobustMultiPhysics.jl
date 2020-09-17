@@ -121,7 +121,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         if FEOP == NormalFlux
             coefficients3 = FE.xgrid[FaceNormals]
             current_eval = zeros(T,1,ndofs4item,length(qf.w));
-        elseif FEOP == Identity || FEOP == FaceJumpIdentity
+        elseif FEOP == Identity || FEOP == IdentityDisc{Jump}
             current_eval = deepcopy(refbasisvals) 
         elseif FEOP == IdentityComponent
             current_eval = deepcopy(refbasisvals[[FEOP.parameters[1]],:,:]) 
@@ -240,7 +240,7 @@ end
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Identity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
     return nothing
 end
@@ -248,13 +248,6 @@ end
 # IDENTITYCOMPONENT OPERATOR
 # H1 ELEMENTS (nothing has to be done)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:IdentityComponent,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
-    FEBE.citem = item
-    return nothing
-end
-
-# FACEJUMPIDENTITY OPERATOR
-# H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FaceJumpIdentity,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     FEBE.citem = item
     return nothing
 end
@@ -311,7 +304,7 @@ end
 
 # IDENTITY OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,FaceJumpIdentity},AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,IdentityDisc{Jump}},AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
     

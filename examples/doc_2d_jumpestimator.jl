@@ -44,17 +44,19 @@ function main(; verbosity = 1)
     xFaceVolumes = xgrid[FaceVolumes]
     xFaceCells = xgrid[FaceCells]
     function L2jump_integrand(result, input, item)
+        # input = [IdentityDisc{Jump}]
         for j = 1 : length(input)
             result[j] = input[j]^2 * xFaceVolumes[j]
         end
         return nothing
     end
-    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(FaceJumpIdentity,ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
+    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(IdentityDisc{Jump},ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
     println("\nEstimator = $(sqrt(sum(evaluate(jumpIntegrator,[Solution[1]]))))")
 
     ## calculate L2 error and print results
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 2)
     println("L2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,[Solution[1]])))")
+    
 end
 
 end

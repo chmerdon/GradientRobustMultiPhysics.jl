@@ -100,7 +100,6 @@ include("functionoperators.jl")
 export AbstractFunctionOperator
 export Identity, IdentityComponent
 export ReconstructionIdentity
-export FaceJumpIdentity
 export NormalFlux, TangentFlux
 export Gradient, SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
@@ -111,6 +110,9 @@ export NeededDerivatives4Operator, QuadratureOrderShift4Operator
 export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 export DefaultName4Operator
+
+export DiscontinuityTreatment, Jump, Average
+export IdentityDisc, GradientDisc
 
 
 include("febasisevaluator.jl")
