@@ -39,7 +39,7 @@ function run_basis_tests()
         function gradient(result,x)
             result[1] = polyorder * x[1]^(polyorder-1)
         end
-        exact_integral = [1 // (polyorder+1) + 1]
+        exact_integral = 1 // (polyorder+1) + 1
         return closure, exact_integral, gradient
     end
 

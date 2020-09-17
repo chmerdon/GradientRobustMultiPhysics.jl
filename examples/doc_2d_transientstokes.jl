@@ -150,16 +150,7 @@ function main(; verbosity = 1, Plotter = nothing)
 
         ## generate time-dependent solver and chance rhs data
         TCS = TimeControlSolver(StokesProblem, Solution, BackwardEuler; timedependent_equations = [1], maxlureuse = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity)
-
-        ## time loop
-        maxIterations = ceil(T / timestep)
-        for iteration = 1 : maxIterations
-            statistics = advance!(TCS, timestep)
-            @printf("  iteration %4d",iteration)
-            @printf("  time = %.4e",TCS.ctime)
-            @printf("  linresidual = %.4e",statistics[1,1])
-            @printf("  change = %.4e \n",statistics[1,2])
-        end
+        advance_until_time!(TCS, timestep, T)
 
         ## solve bestapproximation problems at final time for comparison
         L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FESpacePressure)

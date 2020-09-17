@@ -60,9 +60,9 @@ function equation_of_state!(c,gamma)
 end
 
 ## the exact density (used for initial value of density if configured so)
-function exact_density!(c)
+function exact_density!(M,c)
     function closure(result,x)
-        result[1] = 1.0 - (x[2] - 0.5)/c
+        result[1] = M*(1.0 - (x[2] - 0.5)/c)
     end
 end 
 
@@ -95,16 +95,16 @@ function grid_mountainrange(maxarea::Float64)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
+function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area = 2e-3)
 
     ## generate mesh
-    xgrid = grid_mountainrange(2e-3); 
+    xgrid = grid_mountainrange(area); 
 
     ## problem data
     c = 10 # coefficient in equation of state
     gamma = 1.4 # power in gamma law in equations of state
-    M = 1  # mass constraint for density
-    shear_modulus = 1e-6
+    M = 1  # average mass for density
+    shear_modulus = 1e-1
     lambda = - 1//3 * shear_modulus
 
     ## choose finite element type [velocity, density,  pressure]
@@ -114,8 +114,8 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
     ## solver parametersExample_
     timestep = shear_modulus / (2*c)
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
-    maxIterations = 1000  # termination criterion 1
-    target_change = 1e-13/shear_modulus # stopf when change is below this treshold
+    maxTimeSteps = 1000  # termination criterion 1
+    stationarity_threshold = 1e-13/shear_modulus # stop when change is below this treshold
 
     #####################################################################################    
     #####################################################################################
@@ -126,7 +126,7 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
 
     ## error intergrators for velocity and density
     L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 0)
-    L2DensityErrorEvaluator = L2ErrorIntegrator(exact_density!(c), Identity, 2, 1; bonus_quadorder = 1)
+    L2DensityErrorEvaluator = L2ErrorIntegrator(exact_density!(M,c), Identity, 2, 1; bonus_quadorder = 1)
 
     ## modify testfunction in operators
     if reconstruct
@@ -156,7 +156,7 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
 
     ## initial values for density (bestapproximation or constant)
     if initial_density_bestapprox 
-        L2DensityBestapproximationProblem = L2BestapproximationProblem(exact_density!(c), 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 2)
+        L2DensityBestapproximationProblem = L2BestapproximationProblem(exact_density!(M,c), 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 2)
         InitialDensity = FEVector{Float64}("L2-Bestapproximation density",FESpacePD)
         solve!(InitialDensity, L2DensityBestapproximationProblem)
         Solution[2][:] = InitialDensity[1][:]
@@ -168,6 +168,7 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
 
     ## initial values for pressure obtained from equation of state
     equation_of_state!(c,gamma)(Solution[3],Solution[2])
+    Minit= M * sum(Solution[2][:] .* xgrid[CellVolumes])
 
     ## generate time-dependent solver
     ## we have three equations [1] for velocity, [2] for density, [3] for pressure
@@ -175,24 +176,10 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true)
     ## only the density equation is made time-dependent via the timedependent_equations argument
     ## so we can reuse the other subiteration matrices in each timestep
     TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [2], verbosity = verbosity)
+    advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 
-    ## loop in pseudo-time until stationarity detected
-    ## we also output M to see that the mass constraint is preserved all the way
-    for iteration = 1 : maxIterations
-        statistics = advance!(TCS, timestep)
-        M = sum(Solution[2][:] .* xgrid[CellVolumes])
-        @printf("  iteration %4d",iteration)
-        @printf("  time = %.4e",TCS.ctime)
-        @printf("  M = %.4e \n",M)
-        ## first row of statistics is the linear residual for each equation
-        @printf("      linresidual = [%.4e,%.4e,%.4e]\n",statistics[1,1],statistics[2,1],statistics[3,1])
-        ## second row of statistics is the change in each unknown
-        @printf("      change = [%.4e,%.4e,%.4e]\n",statistics[1,2],statistics[2,2],statistics[3,2])
-        if sum(statistics[:,2]) < target_change
-            println("  terminated (change below tolerance)")
-            break;
-        end
-    end
+    Md = sum(Solution[2][:] .* xgrid[CellVolumes])
+    @printf("  mass_error = %.4e - %.4e = %.4e \n",Minit, Md, abs(Minit-Md))
 
     ## compute L2 error for velocity and density
     L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))

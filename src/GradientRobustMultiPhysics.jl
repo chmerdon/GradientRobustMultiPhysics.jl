@@ -200,7 +200,7 @@ include("solvers.jl")
 export AbstractLinSolveType
 export DirectUMFPACK, IterativeBigStabl_LUPC
 export solve!, assemble!
-export TimeControlSolver, advance!
+export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_time!
 
 export AbstractTimeIntegrationRule
 export BackwardEuler

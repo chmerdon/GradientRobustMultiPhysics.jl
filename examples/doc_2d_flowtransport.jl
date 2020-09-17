@@ -116,19 +116,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
         TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], maxlureuse = [-1], timedependent_equations = [3], verbosity = verbosity)
-        timestep = 10000
-        maxResidual = 1e-10
-        for iteration = 1 : 100
-            statistics = advance!(TCS, timestep)
-            @printf("  iteration %4d",iteration)
-            @printf("  time = %.4e",TCS.ctime)
-            @printf("  linresidual = %.4e",statistics[3,1])
-            @printf("  change = %.4e \n",statistics[3,2])
-            if sum(statistics[3,2]) < maxResidual
-                println("  terminated (below tolerance)")
-                break;
-            end
-        end
+        advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
     else
         ## solve directly
         solve!(Solution, Problem; subiterations = [[3]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)

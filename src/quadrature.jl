@@ -354,7 +354,7 @@ function integrate!(
     result = zeros(NumberType, resultdim)
     itemET = xItemGeometries[1]
     iEG = 1
-    if resultdim == 1
+    if typeof(integral4items) <: AbstractArray{<:Real,1}
         for item = 1 : nitems
             integral4items[item+index_offset] = 0
 
@@ -370,11 +370,9 @@ function integrate!(
                 integral4items[item+index_offset] += result[1] * qf[iEG].w[i] * xItemVolumes[item];
             end  
         end
-    else
+    else # <: AbstractArray{<:Real,2}
+        fill!(integral4items,0)
         for item = 1 : nitems
-            for j = 1 : resultdim
-                integral4items[j,item] = 0
-            end
 
             # find index for CellType
             itemET = xItemGeometries[item]
@@ -398,54 +396,24 @@ $(TYPEDSIGNATURES)
 
 Integration that returns total integral.
 """
-function integrate(grid::ExtendableGrid, AT::Type{<:AbstractAssemblyType}, integrand!::Function, order::Int, resultdim::Int; verbosity::Int = 0)
-    xCoords = grid[Coordinates]
-    dim = size(xCoords,1)
-    xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
-    nitems = num_sources(xItemNodes)
-    NumberType = eltype(xCoords)
-    
-    # find proper quadrature rules
-    EG = Base.unique(xItemGeometries)
-    qf = Array{QuadratureRule,1}(undef,length(EG))
-    local2global = Array{L2GTransformer,1}(undef,length(EG))
-    for j = 1 : length(EG)
-        qf[j] = QuadratureRule{NumberType,EG[j]}(order);
-        local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid,AT)
-    end    
-    if verbosity > 0
-        println("INTEGRATE")
-        println("=========")
-        println("nitems = $nitems")
-        for j = 1 : length(EG)
-            println("QuadratureRule [$j] for $(EG[j]):")
-            show(qf[j])
-        end
+function integrate(
+    grid::ExtendableGrid,
+    AT::Type{<:AbstractAssemblyType},
+    integrand!::Function,
+    order::Int,
+    resultdim::Int;
+    verbosity::Int = 0,
+    item_dependent_integrand::Bool = false)
+
+    # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
+    # and use the itemwise integration above
+    AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
+
+    integrate!(AV, grid, AT, integrand!, order, resultdim; verbosity = verbosity, item_dependent_integrand = item_dependent_integrand)
+
+    if resultdim == 1
+        return AV.entries[1]
+    else
+        return AV.entries
     end
-
-    # loop over items
-    x = zeros(NumberType, dim)
-    result = zeros(NumberType, resultdim)
-    itemET = xItemGeometries[1]
-    iEG = 1
-    integral = zeros(NumberType, resultdim)
-    for item = 1 : nitems
-        # find index for CellType
-        itemET = xItemGeometries[item]
-        iEG = findfirst(isequal(itemET), EG)
-
-        update!(local2global[iEG],item)
-
-        for i in eachindex(qf[iEG].w)
-            eval!(x, local2global[iEG], qf[iEG].xref[i])
-            integrand!(result,x)
-            for j = 1 : resultdim
-                integral[j] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
-            end
-        end  
-    end
-
-    return integral
 end

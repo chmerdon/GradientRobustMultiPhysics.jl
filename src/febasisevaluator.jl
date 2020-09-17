@@ -145,7 +145,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
             compressiontargets = [1,3,3,2]
         elseif dim_element(EG) == 3
             # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
-            compressiontargets = [1,4,5,4,2,6,5,6,3] 
+            compressiontargets = [1,6,5,6,2,4,5,4,3] 
         end
     end
 

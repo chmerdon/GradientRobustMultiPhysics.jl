@@ -790,7 +790,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVConvectionD
     c = O.beta_from
     fill!(O.fluxes,0)
     fluxIntegrator = ItemIntegrator{Float64,ON_FACES}(NormalFlux, DoNotChangeAction(1), [0])
-    evaluate!(O.fluxes,fluxIntegrator,CurrentSolution[c]; verbosity = verbosity - 1)
+    evaluate!(O.fluxes,fluxIntegrator,[CurrentSolution[c]]; verbosity = verbosity - 1)
 
     nfaces4cell = 0
     face = 0
