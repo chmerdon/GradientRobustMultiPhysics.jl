@@ -38,6 +38,7 @@ reconstruction identity operator: evaluates a reconstructed version of the finit
 FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
 """
 abstract type ReconstructionIdentity{FEreconst<:AbstractFiniteElement} <: Identity end # 1*R(v_h)
+abstract type ReconstructionIdentityDisc{FEreconst<:AbstractFiniteElement, DT<:DiscontinuityTreatment} <: ReconstructionIdentity{FEreconst} end # 1*R(v_h)
 """
 $(TYPEDEF)
 
@@ -55,6 +56,15 @@ evaluates the gradient of the finite element function.
 """
 abstract type Gradient <: AbstractFunctionOperator end # 1*v_h
 abstract type GradientDisc{DT<:DiscontinuityTreatment} <: Gradient end # 1*v_h
+"""
+$(TYPEDEF)
+
+reconstruction gradient operator: evaluates the gradient of a reconstructed version of the finite element function.
+
+FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
+"""
+abstract type ReconstructionGradient{FEreconst<:AbstractFiniteElement} <: Gradient end # 1*R(v_h)
+abstract type ReconstructionGradientDisc{FEreconst<:AbstractFiniteElement, DT<:DiscontinuityTreatment} <: ReconstructionGradient{FEreconst} end # 1*R(v_h)
 """
 $(TYPEDEF)
 

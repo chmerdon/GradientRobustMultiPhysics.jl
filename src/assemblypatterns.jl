@@ -1281,7 +1281,7 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,offsets[3]) # heap for action input
     action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
-    basisevaler4dofitem = [basisevaler[1][1][1], basisevaler[1][2][1], basisevaler[1][3][1]]
+    basisevaler4dofitem::Array{FEBasisEvaluator,1} = [basisevaler[1][1][1], basisevaler[1][2][1], basisevaler[1][3][1]]
     basisvals_testfunction::Array{T,3} = basisevaler4dofitem[3].cvals
     evalfixedFE::Array{T,1} = zeros(T,size(basisevaler[1][fixed_argument][1].cvals,1)) # evaluation of argument 1
     temp::T = 0 # some temporary variable

@@ -99,9 +99,12 @@ export fill!, addblock!, addblock_matmul!, lrmatmul
 include("functionoperators.jl")
 export AbstractFunctionOperator
 export Identity, IdentityComponent
-export ReconstructionIdentity
+export ReconstructionIdentity, ReconstructionIdentityDisc
+export ReconstructionGradient, ReconstructionGradientDisc
+export ReconstructionDivergence
 export NormalFlux, TangentFlux
-export Gradient, SymmetricGradient, TangentialGradient
+export Gradient, GradientDisc
+export SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
 export CurlScalar, Curl2D, Rotation
 export Laplacian, Hessian

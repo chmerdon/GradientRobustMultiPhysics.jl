@@ -18,12 +18,13 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`Curl2D`](@ref)                           | curl operator 2D to 1D                        |
 | [`ReconstructionIdentity{FEType}`](@ref)   | reconstruction operator into specified FEType |
 | [`ReconstructionDivergence{FEType}`](@ref) | divergence of FEType reconstruction operator  |
+| [`ReconstructionGradient{FEType}`](@ref)   | gradient of FEType reconstruction operator    |
 |                                            |                                               |
 
 
 !!! note
 
-    Especially note the operators ReconstructionIdentity{FEType} and ReconstructionDivergence{FEType} that allow to evaluate some
+    Especially note the operators Reconstruction...{FEType} operators that allow to evaluate operators of some
     reconstructed version of a vector-valued testfunction that maps its discrete divergence to the divergence and so allows e.g. gradient-robust discretisations with classical non divergence-conforming ansatz spaces. So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
 
 

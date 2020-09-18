@@ -19,6 +19,7 @@ function plot(
     cbar=true,
     verbosity::Int = 0,
     cmap = "hot",
+    maintitle = "",
     fsize = 10)
 
     if Plotter != nothing
@@ -67,7 +68,7 @@ function plot(
             end
             layout_aspect = length(layout) / subplots_per_column
             if ExtendableGrids.ispyplot(Plotter)
-                fig = Plotter.figure("Subplots",figsize=(layout_aspect*fsize,fsize))
+                fig = Plotter.figure(maintitle,figsize=(layout_aspect*fsize,fsize))
                 if clear
                     Plotter.clf()
                 end
@@ -81,6 +82,9 @@ function plot(
             else
                 Z[:] = view(nodevals,offsets[j]+1,:)
                 title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
+            end
+            if use_subplots == false
+                title = maintitle * " " * title
             end
             if minimum(Z) == maximum(Z)
                 Z[1] += 1e-16

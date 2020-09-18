@@ -499,6 +499,45 @@ end
 ###########################
 
 
+function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D})
+    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xCellFaces = FE.xgrid[CellFaces]
+    function closure(coefficients, face::Int) 
+
+        coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
+        coefficients[2,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
+        coefficients[3,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
+        coefficients[4,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
+        coefficients[5,1] = 2 // 3 * xFaceVolumes[face]
+        return nothing
+    end
+end
+
+
+function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Edge1D})
+    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xCellFaces = FE.xgrid[CellFaces]
+    function closure(coefficients, face::Int) 
+
+        coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
+        coefficients[1,2] = 1 // 6 * xFaceVolumes[face] * xFaceNormals[1, face]
+        
+        coefficients[2,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
+        coefficients[2,2] = -1 // 6 * xFaceVolumes[face] * xFaceNormals[1, face]
+
+        coefficients[3,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
+        coefficients[3,2] = 1 // 6 * xFaceVolumes[face] * xFaceNormals[2, face]
+        
+        coefficients[4,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
+        coefficients[4,2] = -1 // 6 * xFaceVolumes[face] * xFaceNormals[2, face]
+
+        coefficients[3,1] = 2 // 3 * xFaceVolumes[face]
+        return nothing
+    end
+end
+
 function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Triangle2D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]

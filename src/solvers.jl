@@ -505,7 +505,7 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
     for j = 1 : length(PDE.GlobalConstraints)
-        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 1)
+        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 end
 
@@ -576,7 +576,7 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
         # PREPARE GLOBALCONSTRAINTS
         flush!(A.entries)
         for j = 1 : length(PDE.GlobalConstraints)
-            additional_fixed_dofs = apply_constraint!(A,b,PDE.GlobalConstraints[j],Target; verbosity = verbosity - 1)
+            additional_fixed_dofs = apply_constraint!(A,b,PDE.GlobalConstraints[j],Target; verbosity = verbosity - 2)
             append!(fixed_dofs,additional_fixed_dofs)
         end
 
@@ -653,7 +653,7 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
         end #elapsed
 
         if verbosity > 1
-            @printf("\n       %d   ", j)
+            @printf("\n     %4d  ", j)
             @printf(" | %e", linresnorm)
             @printf(" | %e", resnorm)
             @printf(" | %.2e/%.2e/%.2e",time_reassembly,time_solver, time_total)
@@ -677,7 +677,7 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
     for j = 1 : length(PDE.GlobalConstraints)
-        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 1)
+        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 
 end
@@ -757,7 +757,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
             # are missing in the subiteration
             for j = 1 : length(PDE.GlobalConstraints)
                 if PDE.GlobalConstraints[j].component in SC.subiterations[s]
-                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; verbosity = SC.verbosity - 1)
+                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; verbosity = SC.verbosity - 2)
                    append!(fixed_dofs, additional_fixed_dofs)
                 end
             end
@@ -833,7 +833,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
     for j = 1 : length(PDE.GlobalConstraints)
-        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 1)
+        realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 
 end
@@ -1205,15 +1205,9 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         assemble_massmatrix4subiteration!(TCS, s; verbosity = SC.verbosity - 1)
 
         for iteration = 1 : SC.maxIterations
-
-            
+    
             # REASSEMBLE NONLINEARITIES IN CURRENT EQUATION IF NONLINEAR ITERATIONS > 1
             if SC.maxIterations > 1
-
-                # reset statistics
-                for j = 1 : length(SC.subiterations[s])
-                    fill!(statistics, 0.0)
-                end
 
                 # in the first iteration all operators that change in time step are assembled
                 # afterwards only those (nonlinear) with AssemblyAlways are assembled
@@ -1223,7 +1217,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                 else
                     IterationAssemblyTrigger = AssemblyAlways
                 end
-                if SC.verbosity > 1
+                if SC.verbosity > 2
                     println("    nonlinear iteration = $iteration...")
                 end
                 if iteration > 1
@@ -1357,6 +1351,9 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                         end
                     end
                 end
+
+                # reset nonlinear statistics
+                statistics[SC.subiterations[s][:],3] .= 0
                 for j = 1 : length(SC.subiterations[s])
                     statistics[SC.subiterations[s][j],3] += sum(res[s][j][:].^2)
                 end
@@ -1390,6 +1387,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                     end
                 end
             end
+            statistics[SC.subiterations[s][:],1] .= 0
             for j = 1 : length(SC.subiterations[s])
                 statistics[SC.subiterations[s][j],1] += sum(res[s][j][:].^2)
             end
@@ -1441,13 +1439,21 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
         @printf("\n  advancing in time until stationarity...\n")
     end
     if TCS.SC.verbosity > 1
-        @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
-        @printf("\n                          (total)   |")
+        if TCS.SC.maxIterations > 1
+            @printf("\n    STEP  |    TIME    | LSRESIDUAL | NLRESIDUAL |   CHANGE ")
+            @printf("\n          |            |  (total)   |  (total)   |")
+        else
+            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            @printf("\n          |            |  (total)   |")
+        end
         for j = 1 : size(statistics,1)
             @printf("  %s  ",TCS.PDE.unknown_names[j])
         end
         @printf("\n  ----------------------------------------------")
-        for j = 1 : size(statistics,1)
+        for j = 1 : size(statistics,1) + 
+            @printf("---------")
+        end
+        if TCS.SC.maxIterations > 1
             @printf("---------")
         end
     end
@@ -1457,6 +1463,9 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             @printf("\n    %4d  ",iteration)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
+            if TCS.SC.maxIterations > 1
+                @printf(" %.4e |",sqrt(sum(statistics[:,3].^2)))
+            end
             for j = 1 : size(statistics,1)
                 @printf(" %.4e ",statistics[j,2])
             end
@@ -1478,13 +1487,21 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
         @printf("\n  advancing in time until T = %.4e...\n",finaltime)
     end
     if TCS.SC.verbosity > 1
-        @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
-        @printf("\n                          (total)   |")
+        if TCS.SC.maxIterations > 1
+            @printf("\n    STEP  |    TIME    | LSRESIDUAL | NLRESIDUAL |   CHANGE ")
+            @printf("\n          |            |  (total)   |  (total)   |")
+        else
+            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            @printf("\n          |            |  (total)   |")
+        end
         for j = 1 : size(statistics,1)
             @printf("  %s  ",TCS.PDE.unknown_names[j])
         end
         @printf("\n  ----------------------------------------------")
         for j = 1 : size(statistics,1)
+            @printf("---------")
+        end
+        if TCS.SC.maxIterations > 1
             @printf("---------")
         end
     end
@@ -1494,6 +1511,9 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             @printf("\n    %4d  ",TCS.cstep)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
+            if TCS.SC.maxIterations > 1
+                @printf(" %.4e |",sqrt(sum(statistics[:,3].^2)))
+            end
             for j = 1 : size(statistics,1)
                 @printf(" %.4e ",statistics[j,2])
             end
