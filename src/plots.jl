@@ -49,8 +49,6 @@ function plot(
             offsets[j+1] = offsets[j] + Length4Operator(operators[j], spacedim, get_ncomponents(FEType))
         end
 
-
-
         nodevals = zeros(Float64,offsets[end],nnodes)
         for j = 1 : length(blockids)
             ## evaluate operator
@@ -61,52 +59,60 @@ function plot(
         end
 
         ## plot
-        if use_subplots
-            layout = [1]
-            while length(blockids) >= layout[end]
-                push!(layout, layout[end] + subplots_per_column)
-            end
-            layout_aspect = length(layout) / subplots_per_column
-            if ExtendableGrids.ispyplot(Plotter)
-                fig = Plotter.figure(maintitle,figsize=(layout_aspect*fsize,fsize))
-                if clear
-                    Plotter.clf()
-                end
-            end
-        end
-        Z = zeros(Float64,nnodes)
-        for j = 1 : length(blockids)
-            if offsets[j+1] - offsets[j] > 1
-                Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
-                title = "| $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ") |"
-            else
-                Z[:] = view(nodevals,offsets[j]+1,:)
-                title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
-            end
-            if use_subplots == false
-                title = maintitle * " " * title
-            end
-            if minimum(Z) == maximum(Z)
-                Z[1] += 1e-16
-            end
-            if verbosity > 0
-                println("   plotting data into plot $j : " * title)
-            end
+        if plottertype(Plotter) == PyPlotType
             if use_subplots
+                # prepare plots
+                layout = [1]
+                while length(blockids) >= layout[end]
+                    push!(layout, layout[end] + subplots_per_column)
+                end
+                layout_aspect = length(layout) / subplots_per_column
                 if ExtendableGrids.ispyplot(Plotter)
-                    Plotter.subplot(subplots_per_column,length(layout)-1,j)
-                    Plotter.title(title)
-                    ExtendableGrids.plot(xgrid, Z; Plotter = Plotter, cmap = cmap, clear = false, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
-
+                    if clear
+                        Plotter.clf()
+                    end
+                end
+                fig = Plotter.figure(maintitle,figsize=(layout_aspect*fsize,fsize))
+                ctx = Array{PlotterContext,1}(undef, length(blockids))
+                for j = 1 : length(blockids)
+                    subplot = subplots_per_column * 100 + (length(layout)-1) * 10 + j
+                    ctx[j] = PlotterContext(Plotter, figure=fig, clear=false, legend=false, subplot=subplot, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
                 end
             else
-                if ExtendableGrids.ispyplot(Plotter)
-                    Plotter.figure(title)
-                    ExtendableGrids.plot(xgrid, Z; Plotter = Plotter, cmap = cmap, clear = clear, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                ctx = Array{PlotterContext,1}(undef, length(blockids))
+                for j = 1 : length(blockids)
+                    ctx[j] = PlotterContext(Plotter, fignumber=j, clear=true, legend=false, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
                 end
             end
-            
+
+            # fill plots
+            Z = zeros(Float64,nnodes)
+            for j = 1 : length(blockids)
+                if offsets[j+1] - offsets[j] > 1
+                    Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
+                    title = "| $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ") |"
+                else
+                    Z[:] = view(nodevals,offsets[j]+1,:)
+                    title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
+                end
+                if use_subplots == false
+                    title = maintitle * " " * title
+                end
+                if minimum(Z) == maximum(Z)
+                    Z[1] += 1e-16
+                end
+                if verbosity > 0
+                    println("   plotting data into plot $j : " * title)
+                end
+                ExtendableGrids.plot!(ctx[j], xgrid, Z) 
+                Plotter.title(title)
+            end
         end
+
+
+
+
+        
     end
 
 end
