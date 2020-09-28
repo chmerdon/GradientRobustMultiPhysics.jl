@@ -13,7 +13,6 @@ p &amp;= eos(\varrho) := c \varrho^\gamma
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Triangulate
 using Printf
 
 
@@ -48,24 +47,12 @@ function rhs_gravity!(gamma,c)
     end
 end
 
-
-# grid generator for a unit square with mountain range cut-out
-function grid_mountainrange(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([0 0; 0.2 0; 0.3 0.1; 0.4 0.0; 0.5 0.2; 0.6 0.0; 0.7 0.15; 0.8 0.0; 1 0; 1 1; 0 1]&#39;);
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5; 5 6; 6 7; 7 8; 8 9; 9 10; 10 11; 11 1 ]&#39;)
-    triin.segmentmarkerlist=Vector{Int32}([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-    xgrid = simplexgrid(&quot;pALVa$(@sprintf(&quot;%.15f&quot;,maxarea))&quot;, triin)
-    xgrid[CellRegions] = ones(Int32,num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
-
 # everything is wrapped in a main function
 function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area = 2e-3)
 
-    # generate mesh
-    xgrid = grid_mountainrange(area);
+    # load mesh and refine
+    xgrid = simplexgrid(IOStream;file = &quot;assets/2d_grid_mountainrange.sg&quot;)
+    xgrid = uniform_refine(xgrid,1)
 
     # problem data
     c = 10 # coefficient in equation of state
@@ -159,4 +146,4 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area
 
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« 2D Commuting Interpolators</a><a class="docs-footer-nextpage" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 18 September 2020 15:17">Friday 18 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« 2D Commuting Interpolators</a><a class="docs-footer-nextpage" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 28 September 2020 09:44">Monday 28 September 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

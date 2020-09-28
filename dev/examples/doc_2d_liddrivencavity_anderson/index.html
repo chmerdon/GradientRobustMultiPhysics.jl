@@ -6,7 +6,6 @@
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Triangulate
 using Printf
 
 # data
@@ -15,23 +14,11 @@ function boundary_data_top!(result,x)
     result[2] = 0.0;
 end
 
-# grid generator that generates  unstructured simplex mesh
-function grid_square(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([-1 -1; 1 -1; 1 1; -1 1]&#39;);
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]&#39;)
-    triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
-    xgrid = simplexgrid(&quot;pALVa$(@sprintf(&quot;%.15f&quot;,maxarea))&quot;, triin)
-    xgrid[CellRegions] = VectorOfConstants(Int32(1),num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
-
 # everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, viscosity = 1e-3, anderson_iterations = 5)
+function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_iterations = 5)
 
     # grid
-    xgrid = grid_square(1e-3)
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
 
     # problem parameters
     maxIterations = 50  # termination criterion 1 for nonlinear mode
@@ -71,11 +58,11 @@ function main(; verbosity = 1, Plotter = nothing, viscosity = 1e-3, anderson_ite
     Base.show(StokesProblem)
 
     # solve Stokes problem
-    solve!(Solution, StokesProblem; verbosity = 1, AndersonIterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
+    solve!(Solution, StokesProblem; verbosity = verbosity, AndersonIterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
 
     # plot
     GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
 
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_jumpestimator/">« 2D Jump-Estimator</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_autonewton/">2D Lid-driven cavity (AD-Newton) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 18 September 2020 15:17">Friday 18 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_jumpestimator/">« 2D Jump-Estimator</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_autonewton/">2D Lid-driven cavity (AD-Newton) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 28 September 2020 09:44">Monday 28 September 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

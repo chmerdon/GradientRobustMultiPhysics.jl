@@ -8,9 +8,8 @@ p(\mathbf{x}) &amp;= \sin(x_1+x_2) - 2\sin(1) + \sin(2)
 \end{aligned}\]</div><p>with time-dependent right-hand side and inhomogeneous Dirichlet boundary data. The example showcases the benefits of pressure-robustness in time-dependent linear Stokes problem in presence of complicated pressures and small viscosities. The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution, an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence! Compare e.g. Bernardi–Raugel and Bernardi–Raugel pressure-robust by (un)commenting the responsible lines in this example.</p><pre><code class="language-julia">module Example_2DTransientStokes
 
 using GradientRobustMultiPhysics
-using Printf
 using ExtendableGrids
-using Triangulate
+using Printf
 
 
 # problem data
@@ -34,21 +33,8 @@ function exact_rhs!(viscosity)
     end
 end
 
-# grid generator that generates  unstructured simplex mesh
-function grid_unitsquare_unstructured(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]&#39;);
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]&#39;)
-    triin.segmentmarkerlist=Vector{Int32}([4, 1, 2, 3])
-    xgrid = simplexgrid(&quot;pALVa$(@sprintf(&quot;%.15f&quot;,maxarea))&quot;, triin)
-    xgrid[CellRegions] = VectorOfConstants(Int32(1),num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
-
-
 # everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main(; verbosity = 2, Plotter = nothing)
 
     # problem parameters
     viscosity = 1e-6
@@ -59,8 +45,7 @@ function main(; verbosity = 1, Plotter = nothing)
     graddiv = 0
 
     # initial grid
-    #xgrid = grid_unitsquare(Triangle2D);
-    xgrid = grid_unitsquare_unstructured(0.25)
+    xgrid = grid_unitsquare(Triangle2D);
 
     # choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -68,8 +53,8 @@ function main(; verbosity = 1, Plotter = nothing)
     #FETypes = [H1CR{2}, L2P0{1}]; reconstruct = true # Crouzeix-Raviart gradient-robust
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
-    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    #FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
 
     #####################################################################################
     #####################################################################################
@@ -213,4 +198,4 @@ function main(; verbosity = 1, Plotter = nothing)
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_elasticity/">3D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 18 September 2020 15:17">Friday 18 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_elasticity/">3D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 28 September 2020 09:44">Monday 28 September 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
