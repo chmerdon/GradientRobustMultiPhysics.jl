@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Commuting Interpolators · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.11.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../abstractactions/">AbstractActions</a></li><li><a class="tocitem" href="../../assemblypatterns/">AbstractAssemblyPatterns</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_divpreserve/">2D Divergence-Preserving L2-Bestapproximation</a></li><li class="is-active"><a class="tocitem" href>2D Commuting Interpolators</a></li><li><a class="tocitem" href="../doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_hagenpoiseuille/">2D Hagen-Poiseuille (Navier–Stokes)</a></li><li><a class="tocitem" href="../doc_2d_jumpestimator/">2D Jump-Estimator</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration)</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_autonewton/">2D Lid-driven cavity (AD-Newton)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_elasticity/">3D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>2D Commuting Interpolators</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Commuting Interpolators</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_commutinginterpolators.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Commuting-Interpolators"><a class="docs-heading-anchor" href="#D-Commuting-Interpolators">2D Commuting Interpolators</a><a id="D-Commuting-Interpolators-1"></a><a class="docs-heading-anchor-permalink" href="#D-Commuting-Interpolators" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_commutinginterpolators.jl">source code</a>)</p><p>This example verifies a structural property of the H1 and Hdiv finite element spaces and their interpolators which is</p><div>\[\mathrm{Curl}(I_{\mathrm{P}_k}\psi) = I_{\mathrm{RT}_{k-1}}(\mathrm{Curl}(\psi))\]</div><p>for the <span>$H_1$</span> interpolator <span>$I_{\mathrm{P}_k}$</span> and the standard Raviart-Thomas interpolator <span>$I_{\mathrm{RT}_{k-1}}$</span> for <span>$k &gt; 0$</span>. In this example we verify this identity for <span>$k=1$</span> and <span>$k=2$</span>. Note, that the <span>$H_1$</span> interpolator only does nodal interpolations at the vertices but not in the additional edgrees of freedom. For e.g. <span>$k=2$</span> the interpolator preserves the moments along the edges.</p><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>In 3D a similar commuting property holds that involves the Nedelec finite element spaces, that will be tested once there are implemented. Also the identities for <span>$k &gt; 2$</span> will be tested once all functionality is available.</p></div></div><pre><code class="language-julia">module Example_2DCommutingInterpolators
+using GradientRobustMultiPhysics
+
+# define some function
+function exact_function!(result,x)
+    result[1] = x[1]^2-x[2]^4 + 1
+end
+# and its CurlScalar = (-dy,dx)
+function exact_curl!(result,x)
+    result[1] = 4*x[2]^3
+    result[2] = 2*x[1]
+end
+
+# everything is wrapped in a main function
+function main(;order::Int = 2)
+
+    # choose some grid
+    xgrid = uniform_refine(reference_domain(Triangle2D),2)
+
+    # choose commuting interpolators pair
+    if order == 1
+        FE = [H1P1{1},HDIVRT0{2}]; testFE = L2P0{2}
+    elseif order == 2
+        FE = [H1P2{1,2},HDIVRT1{2}]; testFE = L2P1{2}
+    end
+
+    # do the H1 interpolation of the function
+    FESH1 = FESpace{FE[1]}(xgrid)
+    H1Interpolation = FEVector{Float64}(&quot;H1-Interpolation&quot;,FESH1)
+    interpolate!(H1Interpolation[1], exact_function!; bonus_quadorder = 4)
+
+    # do the Hdiv interpolation of the Curl of the function
+    # since integrals over faces have to be computed exactly we need to tune the quadrature order
+    FESHdiv = FESpace{FE[2]}(xgrid)
+    HdivCurlInterpolation = FEVector{Float64}(&quot;Hdiv-Interpolation&quot;,FESHdiv)
+    interpolate!(HdivCurlInterpolation[1], exact_curl!; bonus_quadorder = 3)
+
+    # Checking the identity:
+    # Both sides of the identity are finite element function of FEtype testFE
+    # Hence, we evaluate the error by testing the identity by all basisfunctions of this type
+
+    # first: generate the test space and some matching FEVector
+    FEStest = FESpace{testFE}(xgrid)
+    error = FEVector{Float64}(&quot;ErrorVector&quot;,FEStest)
+
+    # Define bilinear forms that represents testing each side of the identity with the testspace functions
+    BLF1 = BilinearForm(Float64, ON_CELLS, FEStest, FESHdiv, Identity, Identity, DoNotChangeAction(2))
+    BLF2 = BilinearForm(Float64, ON_CELLS, FEStest, FESH1, Identity, CurlScalar, DoNotChangeAction(2))
+
+    # evaluate the bilinear forms in the respective interpolations and subtract them from each other
+    # note that in these calls always the second argument of the bilinearform is fixed by the given FEVectorBlock
+    assemble!(error[1], HdivCurlInterpolation[1], BLF1)
+    assemble!(error[1], H1Interpolation[1], BLF2; factor = -1)
+
+    # do some norm that recognizes a nonzero in the vector
+    error = sqrt(sum(error[1][:].^2, dims = 1)[1])
+    println(&quot;error(Curl(I_$(FE[1])(psi) - I_$(FE[2])(Curl(psi))) = $error&quot;)
+    return error
+end
+
+# test function that is called by test unit
+function test()
+    error = []
+    for order in [1,2]
+        push!(error, max(main(order = order)))
+    end
+    return maximum(error)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_bestapprox_divpreserve/">« 2D Divergence-Preserving L2-Bestapproximation</a><a class="docs-footer-nextpage" href="../doc_2d_compressiblestokes/">2D Compressible Stokes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 28 September 2020 12:21">Monday 28 September 2020</span>. Using Julia version 1.5.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
