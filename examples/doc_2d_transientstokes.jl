@@ -31,9 +31,8 @@ Compare e.g. Bernardi--Raugel and Bernardi--Raugel pressure-robust by (un)commen
 module Example_2DTransientStokes
 
 using GradientRobustMultiPhysics
-using Printf
 using ExtendableGrids
-using Triangulate
+using Printf
 
 
 ## problem data
@@ -57,21 +56,8 @@ function exact_rhs!(viscosity)
     end
 end
 
-## grid generator that generates  unstructured simplex mesh
-function grid_unitsquare_unstructured(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([4, 1, 2, 3])
-    xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
-    xgrid[CellRegions] = VectorOfConstants(Int32(1),num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
-
-
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main(; verbosity = 2, Plotter = nothing)
 
     ## problem parameters
     viscosity = 1e-6
@@ -82,8 +68,7 @@ function main(; verbosity = 1, Plotter = nothing)
     graddiv = 0
 
     ## initial grid
-    #xgrid = grid_unitsquare(Triangle2D);
-    xgrid = grid_unitsquare_unstructured(0.25)
+    xgrid = grid_unitsquare(Triangle2D);
 
     ## choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -91,8 +76,8 @@ function main(; verbosity = 1, Plotter = nothing)
     #FETypes = [H1CR{2}, L2P0{1}]; reconstruct = true # Crouzeix-Raviart gradient-robust
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
-    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    #FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
 
     #####################################################################################    
     #####################################################################################

@@ -22,7 +22,6 @@ module Example_2DLidDrivenCavityAnderson
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Triangulate
 using Printf
 
 ## data
@@ -31,23 +30,11 @@ function boundary_data_top!(result,x)
     result[2] = 0.0;
 end
 
-## grid generator that generates  unstructured simplex mesh
-function grid_square(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([-1 -1; 1 -1; 1 1; -1 1]');
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
-    xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
-    xgrid[CellRegions] = VectorOfConstants(Int32(1),num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
-
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, viscosity = 1e-3, anderson_iterations = 5)
+function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_iterations = 5)
 
     ## grid
-    xgrid = grid_square(1e-3)
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
 
     ## problem parameters
     maxIterations = 50  # termination criterion 1 for nonlinear mode
@@ -87,7 +74,7 @@ function main(; verbosity = 1, Plotter = nothing, viscosity = 1e-3, anderson_ite
     Base.show(StokesProblem)
 
     ## solve Stokes problem
-    solve!(Solution, StokesProblem; verbosity = 1, AndersonIterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
+    solve!(Solution, StokesProblem; verbosity = verbosity, AndersonIterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
 
     ## plot
     GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)

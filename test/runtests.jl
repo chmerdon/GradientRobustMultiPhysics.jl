@@ -1,25 +1,11 @@
 using Test
 using ExtendableGrids
-using Triangulate
-
-push!(LOAD_PATH, "../src")
 using GradientRobustMultiPhysics
-
 
 function run_basis_tests()
 
     function testgrid(::Type{Edge1D})
         return uniform_refine(simplexgrid([0.0,1//4,2//3,1.0]))
-    end
-    function testgrid(::Type{Triangle2D})
-        triin=Triangulate.TriangulateIO()
-        triin.pointlist=Matrix{Cdouble}([0 0; 1 0; 1 1; 0 1]');
-        triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
-        triin.segmentmarkerlist=Vector{Int32}([1, 2, 3, 4])
-        xgrid = simplexgrid("pALVa0.1", triin)
-        xgrid[CellRegions] = VectorOfConstants(Int32(1),num_sources(xgrid[CellNodes]))
-        xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-        return xgrid
     end
     function testgrid(EG::Type{<:AbstractElementGeometry2D})
         return grid_unitsquare(EG)

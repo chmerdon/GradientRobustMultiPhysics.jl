@@ -26,22 +26,7 @@ module Example_2DCookMembrane
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Triangulate
 using Printf
-
-
-## grid generator for the Cook membrane via Triangulate.jl/ExtendableGrids.jl
-## generates triangles and four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
-function grid_cookmembrane(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([0 0; 0 -44; 48 0; 48 16]');
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([4, 1, 2, 3])
-    xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
-    xgrid[CellRegions] = ones(Int32,num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
 
 ## problem data for Neumann boundary
 function neumann_force_right!(result,x)
@@ -52,8 +37,9 @@ end
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing)
 
-    ## meshing parameters
-    xgrid = grid_cookmembrane(5e-2) 
+    ## load mesh and refine
+    xgrid = simplexgrid(IOStream;file = "assets/2d_grid_cookmembrane.sg")
+    xgrid = uniform_refine(xgrid,2)
 
     ## problem parameters
     elasticity_modulus = 1000 # elasticity modulus

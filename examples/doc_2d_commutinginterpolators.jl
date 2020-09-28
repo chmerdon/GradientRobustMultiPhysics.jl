@@ -16,10 +16,6 @@ vertices but not in the additional edgrees of freedom. For e.g. ``k=2`` the inte
     In 3D a similar commuting property holds that involves the Nedelec finite element spaces,
     that will be tested once there are implemented. Also the identities for $k > 2$ will be tested once all functionality is available.
 
-!!! note
-
-    As this example is also used as a test case for the code, it is wrapped inside a module. To start the example after including
-    one has to run Example_2DCommutingInterpolators.main().
 =#
 
 module Example_2DCommutingInterpolators

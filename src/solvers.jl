@@ -1450,7 +1450,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             @printf("  %s  ",TCS.PDE.unknown_names[j])
         end
         @printf("\n  ----------------------------------------------")
-        for j = 1 : size(statistics,1) + 
+        for j = 1 : size(statistics,1)
             @printf("---------")
         end
         if TCS.SC.maxIterations > 1

@@ -67,7 +67,7 @@ function grid_unitsquare(::Type{<:Triangle2D})
     xgrid[CellNodes]=Array{Int32,2}([1 2 3; 1 3 4]')
     xgrid[CellGeometries]=VectorOfConstants(Triangle2D,2)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,2)
-    xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
+    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4])
     xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 1]')
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,4)
     xgrid[CoordinateSystem]=Cartesian2D

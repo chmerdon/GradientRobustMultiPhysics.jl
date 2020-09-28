@@ -46,7 +46,6 @@ module Example_2DCompressibleStokes
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Triangulate
 using Printf
 
 
@@ -81,24 +80,12 @@ function rhs_gravity!(gamma,c)
     end
 end   
 
-
-## grid generator for a unit square with mountain range cut-out
-function grid_mountainrange(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([0 0; 0.2 0; 0.3 0.1; 0.4 0.0; 0.5 0.2; 0.6 0.0; 0.7 0.15; 0.8 0.0; 1 0; 1 1; 0 1]');
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5; 5 6; 6 7; 7 8; 8 9; 9 10; 10 11; 11 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-    xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
-    xgrid[CellRegions] = ones(Int32,num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
-
 ## everything is wrapped in a main function
 function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area = 2e-3)
 
-    ## generate mesh
-    xgrid = grid_mountainrange(area); 
+    ## load mesh and refine
+    xgrid = simplexgrid(IOStream;file = "assets/2d_grid_mountainrange.sg")
+    xgrid = uniform_refine(xgrid,1)
 
     ## problem data
     c = 10 # coefficient in equation of state

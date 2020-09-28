@@ -33,7 +33,6 @@ module Example_2DFlowTransport
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Triangulate
 using Printf
 
 
@@ -46,24 +45,12 @@ function inlet_concentration!(result,x)
     result[1] = 1-x[2];
 end
 
-## grid generator for the bended pipe via Triangulate.jl/ExtendableGrids.jl
-## generates triangles and three boundary regions (1 = boundary, 2 = outlet 3 = inlet)
-function grid_pipe(maxarea::Float64)
-    triin=Triangulate.TriangulateIO()
-    triin.pointlist=Matrix{Cdouble}([0 0; 3 0; 3 -3; 7 -3; 7 0; 10 0; 10 1; 6 1; 6 -2; 4 -2; 4 1; 0 1]');
-    triin.segmentlist=Matrix{Cint}([1 2 ; 2 3 ; 3 4 ; 4 5; 5 6; 6 7; 7 8; 8 9; 9 10; 10 11; 11 12; 12 1 ]')
-    triin.segmentmarkerlist=Vector{Int32}([1,1,1,1,1,2,1,1,1,1,1,4])
-    xgrid = simplexgrid("pALVa$(@sprintf("%.15f",maxarea))", triin)
-    xgrid[CellRegions] = ones(Int32,num_sources(xgrid[CellNodes]))
-    xgrid[CellGeometries] = VectorOfConstants(Triangle2D,num_sources(xgrid[CellNodes]))
-    return xgrid
-end
-
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk = true)
 
-    ## grid
-    xgrid = grid_pipe(1e-3);
+    ## load mesh and refine
+    xgrid = simplexgrid(IOStream;file = "assets/2d_grid_upipe.sg")
+    xgrid = uniform_refine(xgrid,4)
 
     ## problem parameters
     viscosity = 1 # coefficient for Stokes equation

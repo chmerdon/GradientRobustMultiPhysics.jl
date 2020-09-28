@@ -44,7 +44,7 @@ function main(; verbosity = 1)
     xFaceVolumes = xgrid[FaceVolumes]
     xFaceCells = xgrid[FaceCells]
     function L2jump_integrand(result, input, item)
-        # input = [IdentityDisc{Jump}]
+        ## input = [IdentityDisc{Jump}]
         for j = 1 : length(input)
             result[j] = input[j]^2 * xFaceVolumes[item]
         end

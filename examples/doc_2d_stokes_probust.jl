@@ -81,7 +81,7 @@ function PotentialFlowTestProblem()
 end
 
 
-function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true)
+function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1)
 
     ## load problem data and set solver parameters
     exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = Problem()
@@ -106,36 +106,38 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
     L2errorInterpolation_velocity = []; L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
     H1error_velocity = []; H1error_velocity2 = []; H1errorBestApproximation_velocity = []; NDofs = []
     
+
+    ## setup classical (StokesProblem) and pressure-robust scheme (StokesProblem2)
+    StokesProblem2 = deepcopy(StokesProblem)
+    StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = 2)
+    ReconstructionOperator = FETypes[3]
+    StokesProblem2.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!, 2, 2; bonus_quadorder = 2)
+    if nonlinear
+        StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
+        StokesProblem2.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
+        StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, Identity, 2, 2)
+        StokesProblem2.LHSOperators[1,1][2] = ConvectionOperator(1, ReconstructionOperator, 2, 2; testfunction_operator = ReconstructionOperator)
+    end
+    
     ## loop over refinement levels
     for level = 1 : nlevels
 
         ## uniform mesh refinement
         xgrid = uniform_refine(xgrid)
+        xFaceVolumes = xgrid[FaceVolumes]
 
         ## get FESpaces
         FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
         FESpacePressure = FESpace{FETypes[2]}(xgrid)
-        ReconstructionOperator = FETypes[3]
 
-        ## solve Stokes problem with classical right-hand side/convection term
-        StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = 2)
-        if nonlinear
-            StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
-            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, Identity, 2, 2)
-        end
         Solution = FEVector{Float64}("Stokes velocity classical",FESpaceVelocity)
         append!(Solution,"Stokes pressure (classical)",FESpacePressure)
-        solve!(Solution, StokesProblem; maxIterations = maxIterations, maxResidual = maxResidual)
+        solve!(Solution, StokesProblem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity)
         push!(NDofs,length(Solution.entries))
 
-        ## solve Stokes problem with pressure-robust right-hand side/convection term
-        StokesProblem.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!, 2, 2; bonus_quadorder = 2)
-        if nonlinear
-            StokesProblem.LHSOperators[1,1][2] = ConvectionOperator(1, ReconstructionOperator, 2, 2; testfunction_operator = ReconstructionOperator)
-        end
         Solution2 = FEVector{Float64}("Stokes velocity p-robust",FESpaceVelocity)
         append!(Solution2,"Stokes pressure (p-robust)",FESpacePressure)
-        solve!(Solution2, StokesProblem; maxIterations = maxIterations, maxResidual = maxResidual)
+        solve!(Solution2, StokesProblem2; maxIterations = maxIterations, maxResidual = maxResidual)
 
         ## solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)
@@ -199,29 +201,27 @@ end
 
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 0, nlevels = 4, viscosity = 1e-2)
     ## set problem to solve
-    Problem = HydrostaticTestProblem
-    #Problem = PotentialFlowTestProblem
+    #Problem = HydrostaticTestProblem
+    Problem = PotentialFlowTestProblem
 
     ## set grid and problem parameters
     xgrid = grid_unitsquare_mixedgeometries() # initial grid
-    nlevels = 5 # number of refinement levels
-    viscosity = 1e-2
 
     ## choose finite element discretisation
     #FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
-    #FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
-    FETypes = [H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
+    FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
+    #FETypes = [H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
 
     ## run
-    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels)
+    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, verbosity = verbosity)
 end
 
 
 ## test function that is called by test unit
 ## tests if hydrostatic problem is solved exactly by pressure-robust methods
-function test()
+function test(; verbosity = 0)
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
 
     testspaces = [[H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
@@ -229,7 +229,7 @@ function test()
                   [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]]
     error = []
     for FETypes in testspaces
-        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false))
+        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false, verbosity = verbosity))
         println("FETypes = $FETypes   error = $(error[end])")
     end
     return maximum(error)
