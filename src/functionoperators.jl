@@ -1,7 +1,7 @@
 
 # this type steers how an operator is evaluated on an item where it is discontinuous
 abstract type DiscontinuityTreatment end
-abstract type Average <: DiscontinuityTreatment end # avrage the values on both sides of the face
+abstract type Average <: DiscontinuityTreatment end # average the values on both sides of the face
 abstract type Jump <: DiscontinuityTreatment end # calculate the jump between both sides of the face
 
 
@@ -238,12 +238,23 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:Abs
     return closure
 end
 
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
+    return DofitemInformation4Operator(FES, EG, EGdofitems, AT)
+end
+
 # special handlers for jump operators
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_FACES}, ::Type{Jump})
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_FACES}, DiscType::Type{<:Union{Jump, Average}})
     xFaceCells = FES.xgrid[FaceCells]
     xCellFaces = FES.xgrid[CellFaces]
     xFaceGeometries = FES.xgrid[FaceGeometries]
     xCellGeometries = FES.xgrid[CellGeometries]
+    if DiscType == Jump
+        coeff_left = 1
+        coeff_right = -1
+    elseif DiscType == Average
+        coeff_left = 0.5
+        coeff_right = 0.5
+    end
     # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
     function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
         dofitems[1] = xFaceCells[1,item]
@@ -263,8 +274,8 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON
             # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
             dofitems[1] = 0
         end
-        coefficient4dofitem[1] = 1
-        coefficient4dofitem[2] = -1
+        coefficient4dofitem[1] = coeff_left
+        coefficient4dofitem[2] = coeff_right
 
         # find EG index for geometry
         for k = 1 : 2

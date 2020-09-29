@@ -41,6 +41,10 @@ xrefFACE2xrefCELL(::Type{<:Triangle2D}) = [ (xref4FACE) -> [xref4FACE[1],0],
                                             (xref4FACE) -> [1-xref4FACE[1],xref4FACE[1]], 
                                             (xref4FACE) -> [0,1-xref4FACE[1]] ]
 
+xrefFACE2xrefOTHERCELL(::Type{<:Triangle2D}) = [ (xref4FACE) -> [1 - xref4FACE[1],0],
+                                                 (xref4FACE) -> [xref4FACE[1],1-xref4FACE[1]], 
+                                                 (xref4FACE) -> [0,xref4FACE[1]] ]
+
 #                        [4]--------[3]               
 #                         |          |             [1] = (0,0)
 ###################       |          |             [2] = (1,0)

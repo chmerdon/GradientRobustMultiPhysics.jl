@@ -337,6 +337,7 @@ function GenerateNonlinearForm(
         function newton_kernel(result, input_current, input_ansatz)
             ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
             jac = DiffResults.jacobian(Dresult)
+            
             for j = 1 : argsizes[1]
                 result[j] = 0
                 for k = 1 : argsizes[2]
@@ -349,7 +350,7 @@ function GenerateNonlinearForm(
 
         # the action for the RHS just evaluates DG and G at input_current
         temp = zeros(Float64, argsizes[1])
-        function rhs_kernel(result, input_current, input_ansatz)
+        function rhs_kernel(result, input_current)
             fill!(result,0)
             newton_kernel(result, input_current, input_current)
             action_kernel(temp, input_current)
@@ -425,6 +426,18 @@ mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOpe
     action::AbstractAction # is applied to argument 1 and 2
     regions::Array{Int,1}
     transposed_assembly::Bool
+end
+function AbstractTrilinearForm(name,
+    operator1::Type{<:AbstractFunctionOperator},
+    operator2::Type{<:AbstractFunctionOperator},
+    operator3::Type{<:AbstractFunctionOperator},
+    a_from::Int,
+    a_to::Int,
+    action::AbstractAction;
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    regions::Array{Int,1} = [0],
+    transposed_assembly::Bool = false)
+    return AbstractTrilinearForm{AT}(name, operator1, operator2, operator3, a_from, a_to, action, regions,transposed_assembly)
 end
 
 """
@@ -829,6 +842,10 @@ end
 
 function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector, j::Int, k::Int; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
 
+    if verbosity > 0
+        println("  Updating storage of operator $(O.name)")
+    end
+
     # ensure that storage is large_enough
     FE1 = CurrentSolution[j].FES
     FE2 = CurrentSolution[k].FES
@@ -846,6 +863,10 @@ end
 
 
 function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+
+    if verbosity > 0
+        println("  Updating storage of RhsOperator")
+    end
 
     # ensure that storage is large_enough
     FE = CurrentSolution[j].FES
@@ -902,7 +923,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; fact
     FE1 = O.Data1.FES
     FE2 = O.Data2.FES
     FE3 = b.FES
-    TLF = TrilinearForm(Float64, ON_CELLS, FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
+    TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
     assemble!(b, O.Data1, O.Data2, TLF; factor = factor * O.factor, verbosity = verbosity)
 end
 

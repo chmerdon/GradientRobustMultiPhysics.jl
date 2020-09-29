@@ -324,11 +324,7 @@ function assemble!(
                 for o = 1 : length(PDE.LHSOperators[equations[j],k])
                     PDEoperator = PDE.LHSOperators[equations[j],k][o]
                     try
-                        if PDEoperator.store_operator == true
-                            if verbosity > 0
-                                println("  Updating storage of operator $(PDEoperator.name)")
-                            end
-                        else
+                        if PDEoperator.store_operator == false
                             break
                         end
                     catch
@@ -342,11 +338,7 @@ function assemble!(
             for o = 1 : length(PDE.RHSOperators[equations[j]])
                 PDEoperator = PDE.RHSOperators[equations[j]][o]
                 try
-                    if PDEoperator.store_operator == true
-                        if verbosity > 0
-                            println("  Updating storage of operator $(PDEoperator.name)")
-                        end
-                    else
+                    if PDEoperator.store_operator == false
                         break
                     end
                 catch
@@ -514,6 +506,7 @@ end
 function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
 
     verbosity = SC.verbosity
+
     anderson_iterations = SC.anderson_iterations
 
     FEs = Array{FESpace,1}([])

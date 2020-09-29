@@ -272,9 +272,9 @@ function boundarydata!(
             if verbosity > 0
                 println("    ...solving")
                 try
-                    @time Target[sparsedof2dof] = A.entries\smallb
-                catch
                     @time Target[sparsedof2dof] = SparseArrays.SparseMatrixCSC{Float64,Int64}(A.entries)\smallb
+                catch
+                    @time Target[sparsedof2dof] = A.entries\smallb
                 end
             else
                 try

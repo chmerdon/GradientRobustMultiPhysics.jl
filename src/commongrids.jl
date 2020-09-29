@@ -3,10 +3,11 @@
 #####################
 
 # reference domain generated from data in shape_specs
-function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = [1,1,1])
+function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = [1,1,1], shift = [0,0,0])
     xgrid=ExtendableGrid{Float64,Int32}()
     xCoordinates=Array{Float64,2}(refcoords_for_geometry(EG)')
     for j = 1 : size(xCoordinates,1)
+        xCoordinates[j,:] .+= shift[j]
         xCoordinates[j,:] .*= scale[j]
     end
     xgrid[Coordinates] = xCoordinates
@@ -31,8 +32,8 @@ function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = [1,1,1])
 end
 
 # unit cube as one cell with six boundary regions (bottom, front, right, back, left, top)
-function grid_unitcube(EG::Type{<:Hexahedron3D}; scale = [1,1,1])
-    return reference_domain(EG; scale = scale)
+function grid_unitcube(EG::Type{<:Hexahedron3D}; scale = [1,1,1], shift = [0,0,0])
+    return reference_domain(EG; scale = scale, shift = shift)
 end
 
 # unit cube as six tets with six boundary regions (bottom, front, right, back, left, top)
@@ -56,14 +57,19 @@ end
 
 
 # unit square as one cell with four boundary regions (bottom, right, top, left)
-function grid_unitsquare(EG::Type{<:Quadrilateral2D})
-    return reference_domain(EG)
+function grid_unitsquare(EG::Type{<:Quadrilateral2D}; scale = [1,1], shift = [0,0])
+    return reference_domain(EG; scale = scale, shift = shift)
 end
 
 # unit square as two triangles with four boundary regions (bottom, right, top, left)
-function grid_unitsquare(::Type{<:Triangle2D})
+function grid_unitsquare(::Type{<:Triangle2D}; scale = [1,1], shift = [0,0])
     xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}([0 0; 1 0; 1 1; 0 1]')
+    xCoordinates=Array{Float64,2}([0 0; 1 0; 1 1; 0 1]')
+    for j = 1 : size(xCoordinates,1)
+        xCoordinates[j,:] .+= shift[j]
+        xCoordinates[j,:] .*= scale[j]
+    end
+    xgrid[Coordinates] = xCoordinates
     xgrid[CellNodes]=Array{Int32,2}([1 2 3; 1 3 4]')
     xgrid[CellGeometries]=VectorOfConstants(Triangle2D,2)
     xgrid[CellRegions]=VectorOfConstants{Int32}(1,2)
