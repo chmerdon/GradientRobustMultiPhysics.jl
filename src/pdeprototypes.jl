@@ -15,6 +15,7 @@ function IncompressibleNavierStokesProblem(
     dimension::Int = 2;
     viscosity = 1.0,
     nonlinear::Bool = true,
+    newton::Bool = true, # Newton 
     no_pressure_constraint::Bool = false,
     pmean = 0)
 

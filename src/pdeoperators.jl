@@ -136,7 +136,7 @@ function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient
         # just Hook law like a spring where mu is the elasticity modulus
         result[1] = mu*input[1]
     end   
-    action = FunctionAction(tensor_apply_1d, 1, 1)
+    action = FunctionAction(tensor_apply_1d, [1,1])
     return AbstractBilinearForm("Hookian1D",gradient_operator, gradient_operator, action; regions = regions)
 end
 
@@ -161,7 +161,7 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
         result[3] = mu*input[3]
     end   
-    action = FunctionAction(tensor_apply_2d, 3, 2)
+    action = FunctionAction(tensor_apply_2d, [3,3])
     return AbstractBilinearForm("Hookian2D",gradient_operator, gradient_operator, action; regions = regions)
 end
 
@@ -191,7 +191,7 @@ function HookStiffnessOperator3D(mu::Real, lambda::Real; regions::Array{Int,1} =
         result[5] = mu*input[5]
         result[6] = mu*input[6]
     end   
-    action = FunctionAction(tensor_apply_3d, 6, 3)
+    action = FunctionAction(tensor_apply_3d, [6,6])
     return AbstractBilinearForm("Hookian3D", gradient_operator, gradient_operator, action; regions = regions)
 end
 
@@ -228,7 +228,7 @@ function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_q
             end
         end    
     end    
-    convection_action = XFunctionAction(convection_function_func(), ncomponents, xdim; bonus_quadorder = bonus_quadorder)
+    convection_action = XFunctionAction(convection_function_func(), [ncomponents, ncomponents*xdim], xdim; bonus_quadorder = bonus_quadorder)
     return AbstractBilinearForm("(a(=XFunction) * Gradient) u * v", Gradient,testfunction_operator, convection_action; regions = regions, transposed_assembly = true)
 end
 
@@ -346,7 +346,7 @@ function GenerateNonlinearForm(
             end
             return nothing
         end
-        action = FunctionAction(newton_kernel, argsizes[1], dim)
+        action = FunctionAction(newton_kernel, argsizes)
 
         # the action for the RHS just evaluates DG and G at input_current
         temp = zeros(Float64, argsizes[1])
@@ -359,11 +359,11 @@ function GenerateNonlinearForm(
             end
             return nothing
         end
-        action_rhs = FunctionAction(rhs_kernel, argsizes[1], dim)
+        action_rhs = FunctionAction(rhs_kernel, argsizes)
     else
-        action = FunctionAction(action_kernel, argsizes[1], dim)
+        action = FunctionAction(action_kernel, argsizes)
         if action_kernel_rhs != nothing
-            action_rhs = FunctionAction(action_kernel_rhs, argsizes[1], dim)
+            action_rhs = FunctionAction(action_kernel_rhs, argsizes)
         else
             action_rhs = nothing
         end
@@ -461,7 +461,7 @@ function ConvectionOperator(a_from::Int, beta_operator, xdim::Int, ncomponents::
             end
         end    
     end    
-    convection_action = FunctionAction(convection_function_fe(), ncomponents)
+    convection_action = FunctionAction(convection_function_fe(), [ncomponents, xdim + ncomponents*xdim])
     a_to = fixed_argument
     if a_to == 1
         name = "(a(=unknown $(a_from)) * Gradient) u * v"
@@ -957,7 +957,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrili
     FE1 = CurrentSolution[O.a_from].FES
     FE2 = A.FESX
     FE3 = A.FESY
-    TLF = TrilinearForm(Float64, ON_CELLS, FE1, FE2, FE3, O.operator1, O.operator2, O.operator3, O.action; regions = O.regions)  
+    TLF = TrilinearForm(Float64, typeof(O).parameters[1], FE1, FE2, FE3, O.operator1, O.operator2, O.operator3, O.action; regions = O.regions)  
     assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, fixed_argument = O.a_to, transposed_assembly = O.transposed_assembly)
 end
 
@@ -966,7 +966,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
     FE2 = A.FESY
     @assert At.FESX == FE2
     @assert At.FESY == FE1
-    DivPressure = BilinearForm(Float64, ON_CELLS, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
+    DivPressure = BilinearForm(Float64, ON_CELLS, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,[1,1]))   
     assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
 end
 
@@ -985,7 +985,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{A
                 end
             end
         end    
-        action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+        action = XFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
         RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
         assemble!(b, RHS; factor = factor, verbosity = verbosity)
     end

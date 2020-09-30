@@ -63,6 +63,11 @@ xrefFACE2xrefCELL(::Type{<:Quadrilateral2D}) = [ (xref4FACE) -> [xref4FACE[1],0]
                                                  (xref4FACE) -> [1-xref4FACE[1],1], 
                                                  (xref4FACE) -> [0,1-xref4FACE[1]] ]
 
+xrefFACE2xrefOTHERCELL(::Type{<:Quadrilateral2D}) = [ (xref4FACE) -> [1-xref4FACE[1],0],
+                                                      (xref4FACE) -> [1,1-xref4FACE[1]], 
+                                                      (xref4FACE) -> [xref4FACE[1],1], 
+                                                      (xref4FACE) -> [0,xref4FACE[1]] ]
+
 #############################      
 # AbstractElementGeometry2D #    
 #############################   

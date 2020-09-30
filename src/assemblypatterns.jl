@@ -501,7 +501,7 @@ function evaluate!(
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
         offsets[j+1] = offsets[j] + size(basisevaler[end,j,1,1].cvals,1)
     end
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
     maxdofs2 = max_num_targets_per_source(xItemDofs[end])
 
     maxnweights = 0
@@ -512,7 +512,7 @@ function evaluate!(
     for j = 1 : maxnweights
         action_input[j] = zeros(T,offsets[end]) # heap for action input
     end
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     # loop over items
     EG4item = 0
@@ -573,7 +573,7 @@ function evaluate!(
         for i in eachindex(weights)
             # apply action to FEVector
             apply_action!(action_result, action_input[i], action, i)
-            for j = 1 : action.resultdim
+            for j = 1 : action_resultdim
                 b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
             end
         end  
@@ -603,7 +603,7 @@ function evaluate(
 
     # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
     # and use the itemwise evaluation above
-    resultdim = form.action.resultdim
+    resultdim = form.action.argsizes[1]
     AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
 
     try
@@ -656,9 +656,10 @@ function assemble!(
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE))
     cvals_resultdim::Int = size(basisevaler[1,1,1,1].cvals,1)
+    action_resultdim::Int = action.argsizes[1]
 
     if typeof(b) <: AbstractArray{<:Real,1}
-        @assert action.resultdim == 1
+        @assert action_resultdim == 1
         onedimensional = true
     else
         onedimensional = false
@@ -674,10 +675,10 @@ function assemble!(
     maxndofs = max_num_targets_per_source(xItemDofs)
     dofs = zeros(Int32,maxndofs)
     action_input::Array{T,1} = zeros(T,cvals_resultdim) # heap for action input
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem = basisevaler[1]
-    localb::Array{T,2} = zeros(Float64,maxndofs,action.resultdim)
+    localb::Array{T,2} = zeros(Float64,maxndofs,action_resultdim)
     bdof::Int = 0
 
     nregions::Int = length(regions)
@@ -715,7 +716,7 @@ function assemble!(
                         # apply action
                         eval!(action_input, basisevaler4dofitem , dof_i, i)
                         apply_action!(action_result, action_input, action, i)
-                        for j = 1 : action.resultdim
+                        for j = 1 : action_resultdim
                             localb[dof_i,j] += action_result[j] * weights[i]
                         end
                     end 
@@ -727,7 +728,7 @@ function assemble!(
                         b[bdof] += factor * localb[dof_i,1] * xItemVolumes[item]
                     end
                 else
-                    for dof_i = 1 : ndofs4dofitem, j = 1 : action.resultdim
+                    for dof_i = 1 : ndofs4dofitem, j = 1 : action_resultdim
                         bdof = dofs[dof_i] + offset
                         b[bdof,j] += factor * localb[dof_i,j] * xItemVolumes[item]
                     end
@@ -797,7 +798,7 @@ function assemble!(
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE[1]))
     cvals_resultdim::Int = size(basisevaler[end,apply_action_to,1,1].cvals,1)
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
  
     # loop over items
     EG4item::Int = 1
@@ -818,7 +819,7 @@ function assemble!(
     dofs = zeros(Int,maxdofs1)
     dofs2 = zeros(Int,maxdofs2)
     action_input::Array{T,1} = zeros(T,cvals_resultdim) # heap for action input
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem1::FEBasisEvaluator = basisevaler[1,1,1,1]
     basisevaler4dofitem2::FEBasisEvaluator = basisevaler[1,2,1,1]
@@ -843,19 +844,19 @@ function assemble!(
         weights = qf[EG4item].w
 
         # check that quadrature points on both sides match
-        if dofitems1[2] > 0
-            bleft = basisevaler[EG4dofitem1[1],1,itempos4dofitem1[1],1]
-            bright = basisevaler[EG4dofitem1[2],1,itempos4dofitem1[2],2]
-            update!(bleft.L2G,dofitems1[1])
-            update!(bright.L2G,dofitems1[2])
-            xleft = [0.0,0.0,0.0]
-            xright = [0.0,0.0,0.0]
-            for i = 1 : length(bleft.xref)
-                eval!(xleft, bleft.L2G, bleft.xref[i])
-                eval!(xright, bright.L2G, bright.xref[i])
-                println("xleft = $xleft right = $xright")
-            end
-        end
+        #if dofitems1[2] > 0
+        #    bleft = basisevaler[EG4dofitem1[1],1,itempos4dofitem1[1],1]
+        #    bright = basisevaler[EG4dofitem1[2],1,itempos4dofitem1[2],2]
+        #    update!(bleft.L2G,dofitems1[1])
+        #    update!(bright.L2G,dofitems1[2])
+        #    xleft = [0.0,0.0,0.0]
+        #    xright = [0.0,0.0,0.0]
+        #    for i = 1 : length(bleft.xref)
+        #        eval!(xleft, bleft.L2G, bleft.xref[i])
+        #        eval!(xright, bright.L2G, bright.xref[i])
+        #        println("xleft = $xleft right = $xright")
+        #    end
+        #end
 
         # loop over associated dofitems (maximal 2 for jump calculations)
         # di, dj == 2 is only performed if one of the operators jumps
@@ -1070,7 +1071,7 @@ function assemble!(
     ncomponents2::Int = get_ncomponents(eltype(FE[2]))
     cvals_resultdim::Int = size(basisevaler[1,apply_action_to,1,1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1,2,1,1].cvals,1)
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
 
     # loop over items
     EG4dofitem1 = [1,1] # EG id of the current item with respect to operator 1
@@ -1090,7 +1091,7 @@ function assemble!(
     dofs = zeros(Int,maxdofs1)
     coeffs2 = zeros(T,maxdofs2)
     action_input::Array{T,1} = zeros(T,cvals_resultdim) # heap for action input
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem1 = basisevaler[1,1,1,1]
     basisevaler4dofitem2 = basisevaler[1,2,1,1]
@@ -1261,7 +1262,7 @@ function assemble!(
         ncomponents[j] = get_ncomponents(eltype(FE[j]))
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
     end
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
 
     # loop over items
     EG4item::Int = 1
@@ -1282,8 +1283,8 @@ function assemble!(
     dofitem2::Int = 0
     dofitem3::Int = 0
     offsets = [0, size(basisevaler[1,1,1,1].cvals,1), size(basisevaler[1,1,1,1].cvals,1) + size(basisevaler[1,2,1,1].cvals,1)]
-    action_input::Array{T,1} = zeros(T,offsets[3]) # heap for action input
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem::Array{FEBasisEvaluator,1} = [basisevaler[1,1,1,1], basisevaler[1,2,1,1], basisevaler[1,3,1,1]]
     basisvals_testfunction::Array{T,3} = basisevaler4dofitem[3].cvals
@@ -1483,7 +1484,7 @@ function assemble!(
     ncomponents2::Int = get_ncomponents(eltype(FE[2]))
     cvals_resultdim::Int = size(basisevaler[1,1,1,1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1,2,1,1].cvals,1)
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
 
     # loop over items
     EG4item::Int = 1
@@ -1511,8 +1512,8 @@ function assemble!(
     coeffs1::Array{T,1} = zeros(T,maxdofs1)
     coeffs2::Array{T,1} = zeros(T,maxdofs2)
     dofs3::Array{Int,1} = zeros(Int,maxdofs3)
-    action_input::Array{T,1} = zeros(T,cvals_resultdim + cvals_resultdim2) # heap for action input
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem1 = basisevaler[1,1,1,1]
     basisevaler4dofitem2 = basisevaler[1,2,1,1]
@@ -1520,7 +1521,6 @@ function assemble!(
     basisvals3::Array{T,3} = basisevaler4dofitem3.cvals
     temp::T = 0 # some temporary variable
     localb::Array{T,1} = zeros(T,maxdofs3)
-
 
     for item = 1 : nitems
     for r = 1 : length(regions)
@@ -1659,7 +1659,7 @@ function assemble!(
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
         offsets[j+1] = offsets[j] + size(basisevaler[1,j,1,1].cvals,1)
     end
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
 
     maxnweights = 0
     for j = 1 : length(qf)
@@ -1679,7 +1679,7 @@ function assemble!(
     ndofs4dofitem::Int = 0 # number of dofs for item
     dofitem::Int = 0
     coeffs::Array{T,1} = zeros(T,maxdofs)
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem = basisevaler[1,1,1,1]
     basisvals::Array{T,3} = basisevaler4dofitem.cvals
@@ -1837,7 +1837,7 @@ function assemble!(
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
         offsets[j+1] = offsets[j] + size(basisevaler[1,j,1,1].cvals,1)
     end
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
     maxdofs2 = max_num_targets_per_source(xItemDofs[end])
 
  
@@ -1866,7 +1866,7 @@ function assemble!(
     coeffs::Array{T,1} = zeros(T,maxdofs)
     dofs::Array{Int,1} = zeros(Int,maxdofs)
     dofs2::Array{Int,1} = zeros(Int,maxdofs2)
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem = basisevaler[1,1,1,1]
     basisevaler4dofitem1 = Array{Any,1}(undef,nFE)
@@ -2078,7 +2078,7 @@ function assemble!(
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
         offsets[j+1] = offsets[j] + size(basisevaler[1,j,1,1].cvals,1)
     end
-    action_resultdim::Int = action.resultdim
+    action_resultdim::Int = action.argsizes[1]
     maxdofs2 = max_num_targets_per_source(xItemDofs[end])
 
  
@@ -2101,7 +2101,7 @@ function assemble!(
     dofitem::Int = 0
     coeffs::Array{T,1} = zeros(T,maxdofs)
     dofs::Array{Int,1} = zeros(Int,maxdofs)
-    action_result::Array{T,1} = zeros(T,action.resultdim) # heap for action output
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem = basisevaler[1,1,1,1]
     basisevaler4dofitem1 = Array{Any,1}(undef,nFE)
@@ -2258,10 +2258,10 @@ function L2ErrorIntegrator(
     function L2error_function(result,input,x)
         exact_func!(temp,x,time)
         result[1] = 0.0
-        for j=1:length(temp)
+        for j=1:ncomponents
             result[1] += (temp[j] - input[j])^2
         end    
     end    
-    L2error_action = XFunctionAction(L2error_function,1,xdim; bonus_quadorder = bonus_quadorder)
+    L2error_action = XFunctionAction(L2error_function,[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
     return ItemIntegrator{Float64,AT}([operator], L2error_action, [0])
 end

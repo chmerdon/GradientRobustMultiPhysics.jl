@@ -79,7 +79,7 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
                 result[j] = input[j] * stabilisation * xFaceVolumes[item]^2
             end
         end
-        JumpStabilisation = AbstractBilinearForm("[grad(u)] [grad(v)]", GradientDisc{Jump}, GradientDisc{Jump}, ItemWiseFunctionAction(stabilisation_kernel,2); AT = ON_IFACES)
+        JumpStabilisation = AbstractBilinearForm("[grad(u)] [grad(v)]", GradientDisc{Jump}, GradientDisc{Jump}, ItemWiseFunctionAction(stabilisation_kernel,[2, 2]); AT = ON_IFACES)
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 

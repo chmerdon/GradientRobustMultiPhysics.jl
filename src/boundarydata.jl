@@ -203,7 +203,7 @@ function boundarydata!(
                     end 
                 end   
             end   
-            action = RegionWiseXFunctionAction(bnd_rhs_function_h1(),1,xdim; bonus_quadorder = bonus_quadorder)
+            action = RegionWiseXFunctionAction(bnd_rhs_function_h1(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
             RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
@@ -222,7 +222,7 @@ function boundarydata!(
                     result[1] *= input[1] 
                 end   
             end   
-            action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),1,xdim; bonus_quadorder = bonus_quadorder)
+            action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
             RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    

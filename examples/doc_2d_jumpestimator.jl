@@ -50,7 +50,7 @@ function main(; verbosity = 1)
         end
         return nothing
     end
-    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(IdentityDisc{Jump},ItemWiseFunctionAction(L2jump_integrand, 2; bonus_quadorder = 2), [0])
+    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(IdentityDisc{Jump},ItemWiseFunctionAction(L2jump_integrand, [2,2]; bonus_quadorder = 2), [0])
     println("\nEstimator = $(sqrt(sum(evaluate(jumpIntegrator,[Solution[1]]))))")
 
     ## calculate L2 error and print results

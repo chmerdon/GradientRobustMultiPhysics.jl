@@ -10,11 +10,11 @@ action that does nothing to the input, i.e.
 
 result[j] = input[j]
 
-(for j = 1 : resultdim)
+(for j = 1 : argsizes[1])
 
 """
 struct DoNotChangeAction <: AbstractAction
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -25,11 +25,11 @@ action that multiplies a scalar to the input, i.e.
 
 result[j] = input[j] * value
 
-(for j = 1 : resultdim)
+(for j = 1 : argsizes[1])
 """
 struct MultiplyScalarAction{T <: Real} <: AbstractAction
     value::T
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -40,11 +40,11 @@ action that multiplies a different scalar to each component of the input, i.e.
 
 result[j] = input[j] * value[j]
 
-(for j = 1 : resultdim)
+(for j = 1 : argsizes[1])
 """
 struct MultiplyVectorAction{T <: Real} <: AbstractAction
     value::AbstractArray{T,1}
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -56,12 +56,12 @@ action that multiplies input vector with a matrix, i.e.
 
 result = value * input
 
-(resultdim = size(value,1))
+(resultdim = argsizes[1])
 
 """
 struct MultiplyMatrixAction{T <: Real} <: AbstractAction
     value::AbstractArray{T,2}
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -72,12 +72,12 @@ action that multiplies a region-dependent scalar to the input, i.e.
 
 result[j] = input[j] * value[region]
 
-(for j = 1 : resultdim)
+(for j = 1 : argsizes[1])
 """
 struct RegionWiseMultiplyScalarAction{T <: Real} <: AbstractAction
     value::AbstractArray{T,1}
     cregion::Int
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -88,13 +88,13 @@ action that multiplies an item-dependent scalar to the input, i.e.
 
 result[j] = input[j] * value[item]
 
-(for j = 1 : resultdim)
+(for j = 1 : argsizes[1])
 """
 mutable struct ItemWiseMultiplyScalarAction{T <: Real} <: AbstractAction
     value::AbstractArray{T,1}
     citem::Int
     cvalue::T
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -105,12 +105,12 @@ action that multiplies a different region-dependent scalar to each component of 
 
 result[j] = input[j] * value[region][j]
 
-(for j = 1 : resultdim)
+(for j = 1 : argsizes[1])
 """
 struct RegionWiseMultiplyVectorAction{T <: Real} <: AbstractAction
     value::AbstractArray{AbstractArray{T,1},1} # one array for each region
     cregion::Int
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -121,13 +121,13 @@ action that puts input into the specified function f! and returns its result. Th
 
     f!(result,input)
 
-and result is expected to be of length resultdim.
+and result is expected to be of length argsizes[1], input of length argsizes[2].
 
 The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
 """
 struct FunctionAction{T <: Real} <: AbstractAction
     f!::Function # of the interface f!(result,input)
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -138,14 +138,14 @@ action that puts input into the specified function f! and returns its result. Th
 
     f!(result,input,item)
         
-and result is expected to be of length resultdim.
+and result is expected to be of length argsizes[1], input of length argsizes[2].
 
 The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
 """
 mutable struct ItemWiseFunctionAction{T <: Real} <: AbstractAction
     f!::Function # of the interface f!(result,input,item)
     citem::Int
-    resultdim::Int
+    argsizes::Array{Int,1}
     bonus_quadorder::Int
 end
 
@@ -156,13 +156,13 @@ action that puts input into the specified function f! and returns its result. Th
 
     f!(result,input,x)
         
-and result is expected to be of length resultdim.
+and result is expected to be of length argsizes[1], input of length argsizes[2].
 
 The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
 """
 struct XFunctionAction{T <: Real} <: AbstractAction
     f!::Function # of the interface f!(result,input,x)
-    resultdim::Int
+    argsizes::Array{Int,1}
     x::Array{Array{T,1},1}
     bonus_quadorder::Int
 end
@@ -174,14 +174,14 @@ action that puts input into the specified function f! and returns its result. Th
 
     f!(result,input,x,item)
         
-and result is expected to be of length resultdim.
+and result is expected to be of length argsizes[1], input of length argsizes[2].
 
 The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
 """
 mutable struct ItemWiseXFunctionAction{T <: Real} <: AbstractAction
     f!::Function # of the interface f!(result,input,x,item)
     citem::Int
-    resultdim::Int
+    argsizes::Array{Int,1}
     x::Array{Array{T,1},1}
     bonus_quadorder::Int
 end
@@ -193,163 +193,167 @@ action that puts input into the specified function f! and returns its result. Th
 
     f!(result,input,x,region)
         
-and result is expected to be of length resultdim.
+and result is expected to be of length argsizes[1], input of length argsizes[2].
 
 The quadrature order of assemblies that involve this action can be altered with bonus_quadorder.
 """
 mutable struct RegionWiseXFunctionAction{T <: Real} <: AbstractAction
     f!::Function # of the interface f!(result,input,x,region)
     cregion::Int
-    resultdim::Int
+    argsizes::Array{Int,1}
     x::Array{Array{T,1},1}
     bonus_quadorder::Int
 end
 
 """
 ````
-function DoNotChangeAction(resultdim::Int)
+function DoNotChangeAction(ncomponents::Int)
 ````
 
-creates DoNotChangeAction with specified resultdim.
+creates DoNotChangeAction with specified argsizes = (ncomponents, ncomponents).
 
 """
-function DoNotChangeAction(resultdim::Int)
-    return DoNotChangeAction(resultdim,0)
-end
-
-"""
-````
-function MultiplyScalarAction(value::Real, resultdim::Int = 1)
-````
-
-creates MultiplyScalarAction.
-
-"""
-function MultiplyScalarAction(value::Real, resultdim::Int = 1)
-    return MultiplyScalarAction{eltype(value)}(value, resultdim, 0)
-end
-
-"""
-````
-function MultiplyVectorAction(values::Array{<:Real,1})
-````
-
-creates MultiplyVectorAction.
-
-"""
-function MultiplyVectorAction(values::AbstractArray{<:Real,1})
-    return MultiplyVectorAction{eltype(values)}(values, length(value),0)
-end
-
-"""
-````
-function MultiplyMatrixAction(matrix::Array{<:Real,2})
-````
-
-creates MultiplyMatrixAction.
-
-"""
-function MultiplyMatrixAction(matrix::Array{<:Real,2})
-    return MultiplyMatrixAction{eltype(matrix)}(matrix, size(matrix,1),0)
-end
-
-"""
-````
-function RegionWiseMultiplyScalarAction(value4region::Array{<:Real,1}, resultdim::Int = 1)
-````
-
-creates RegionWiseMultiplyScalarAction.
-
-"""
-function RegionWiseMultiplyScalarAction(value4region::AbstractArray{<:Real,1}, resultdim::Int = 1)
-    return RegionWiseMultiplyScalarAction{eltype(value4region)}(value4region, 1, resultdim,0)
-end
-
-"""
-````
-function ItemWiseMultiplyScalarAction(value4item::Array{<:Real,1}, resultdim::Int = 1)
-````
-
-creates ItemWiseMultiplyScalarAction.
-
-"""
-function ItemWiseMultiplyScalarAction(value4item::AbstractArray{<:Real,1}, resultdim::Int = 1)
-    return ItemWiseMultiplyScalarAction{eltype(value4item)}(value4item, 1, 0, resultdim,0)
+function DoNotChangeAction(ncomponents::Int)
+    return DoNotChangeAction([ncomponents, ncomponents],0)
 end
 
 
 """
 ````
-function RegionWiseMultiplyVectorAction(values4region::Array{Array{<:Real,1},1}, resultdim::Int)
+function MultiplyScalarAction(value::Real, argsizes::Array{Int,1})
 ````
 
-creates RegionWiseMultiplyVectorAction.
+creates MultiplyScalarAction with specified argsizes = (length(result), length(input)).
 
 """
-function RegionWiseMultiplyVectorAction(values4region::Array{Array{<:Real,1},1}, resultdim::Int)
-    return RegionWiseMultiplyVectorAction{eltype(values4region[1])}(values4region, 1, length(values4region[1]),0)
+function MultiplyScalarAction(value::Real, argsizes::Array{Int,1})
+    return MultiplyScalarAction{eltype(value)}(value, argsizes, 0)
+end
+function MultiplyScalarAction(value::Real, argsizes::Int)
+    return MultiplyScalarAction{eltype(value)}(value, [argsizes, argsizes], 0)
 end
 
 """
 ````
-function FunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+function MultiplyVectorAction(values::Array{<:Real,1}, argsizes::Array{Int,1})
+````
+
+creates MultiplyVectorAction with specified argsizes = (length(result), length(input)).
+
+"""
+function MultiplyVectorAction(values::AbstractArray{<:Real,1}, argsizes::Array{Int,1})
+    return MultiplyVectorAction{eltype(values)}(values, argsizes, 0)
+end
+
+"""
+````
+function MultiplyMatrixAction(matrix::Array{<:Real,2}, argsizes::Array{Int,1})
+````
+
+creates MultiplyMatrixAction with specified argsizes = (length(result), length(input)).
+
+"""
+function MultiplyMatrixAction(matrix::Array{<:Real,2}, argsizes::Array{Int,1})
+    return MultiplyMatrixAction{eltype(matrix)}(matrix, argsizes, 0)
+end
+
+"""
+````
+function RegionWiseMultiplyScalarAction(value4region::Array{<:Real,1}, argsizes::Array{Int,1})
+````
+
+creates RegionWiseMultiplyScalarAction with specified argsizes = (length(result), length(input)).
+
+"""
+function RegionWiseMultiplyScalarAction(value4region::AbstractArray{<:Real,1}, argsizes::Array{Int,1})
+    return RegionWiseMultiplyScalarAction{eltype(value4region)}(value4region, 1, argsizes,0)
+end
+
+"""
+````
+function ItemWiseMultiplyScalarAction(value4item::Array{<:Real,1}, argsizes::Array{Int,1})
+````
+
+creates ItemWiseMultiplyScalarAction with specified argsizes = (length(result), length(input)).
+
+"""
+function ItemWiseMultiplyScalarAction(value4item::AbstractArray{<:Real,1}, argsizes::Array{Int,1})
+    return ItemWiseMultiplyScalarAction{eltype(value4item)}(value4item, 1, 0, argsizes, 0)
+end
+
+
+"""
+````
+function RegionWiseMultiplyVectorAction(values4region::Array{Array{<:Real,1},1}, argsizes::Array{Int,1})
+````
+
+creates RegionWiseMultiplyVectorAction with specified argsizes = (length(result), length(input)).
+
+"""
+function RegionWiseMultiplyVectorAction(values4region::Array{Array{<:Real,1},1}, argsizes::Array{Int,1})
+    return RegionWiseMultiplyVectorAction{eltype(values4region[1])}(values4region, 1, argsizes,0)
+end
+
+"""
+````
+function FunctionAction(f!::Function, argsizes::Array{Int,1}; bonus_quadorder::Int = 0)
 ````
 
 creates FunctionAction.
 
 """
-function FunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return FunctionAction{Float64}(f!, resultdim, bonus_quadorder)
+function FunctionAction(f!::Function, argsizes::Array{Int,1}; bonus_quadorder::Int = 0)
+    return FunctionAction{Float64}(f!, argsizes, bonus_quadorder)
 end
 
 
 """
 ````
-function XFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+function XFunctionAction(f!::Function, argsizes::Array{Int,1}, xdim::Int; bonus_quadorder::Int = 0)
 ````
 
 creates XFunctionAction.
 
 """
-function XFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return XFunctionAction{Float64}(f!, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
+function XFunctionAction(f!::Function, argsizes::Array{Int,1}, xdim::Int; bonus_quadorder::Int = 0)
+    return XFunctionAction{Float64}(f!, argsizes, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
 
 """
 ````
-function ItemWiseFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+function ItemWiseFunctionAction(f!::Function, argsizes::Array{Int,1}; bonus_quadorder::Int = 0)
 ````
 
 creates ItemWiseFunctionAction.
 
 """
-function ItemWiseFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return ItemWiseFunctionAction{Float64}(f!, 0, resultdim, bonus_quadorder)
+function ItemWiseFunctionAction(f!::Function, argsizes::Array{Int,1}; bonus_quadorder::Int = 0)
+    return ItemWiseFunctionAction{Float64}(f!, 0, argsizes, bonus_quadorder)
 end
 
 """
 ````
-function ItemWiseXFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+function ItemWiseXFunctionAction(f!::Function, argsizes::Array{Int,1}, xdim::Int; bonus_quadorder::Int = 0)
 ````
 
 creates ItemWiseXFunctionAction.
 
 """
-function ItemWiseXFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return ItemWiseXFunctionAction{Float64}(f!, 0, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
+function ItemWiseXFunctionAction(f!::Function, argsizes::Array{Int,1}, xdim::Int; bonus_quadorder::Int = 0)
+    return ItemWiseXFunctionAction{Float64}(f!, 0, argsizes, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
 """
 ````
-function RegionWiseXFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
+function RegionWiseXFunctionAction(f!::Function, argsizes::Array{Int,1}, xdim::Int; bonus_quadorder::Int = 0)
 ````
 
 creates RegionWiseXFunctionAction.
 
 """
-function RegionWiseXFunctionAction(f!::Function, resultdim::Int = 1, xdim::Int = 2; bonus_quadorder::Int = 0)
-    return RegionWiseXFunctionAction{Float64}(f!, 1, resultdim, [zeros(Float64,xdim)], bonus_quadorder)
+function RegionWiseXFunctionAction(f!::Function, argsizes::Array{Int,1}, xdim::Int; bonus_quadorder::Int = 0)
+    return RegionWiseXFunctionAction{Float64}(f!, 1, argsizes, [zeros(Float64,xdim)], bonus_quadorder)
 end
 
 ###
