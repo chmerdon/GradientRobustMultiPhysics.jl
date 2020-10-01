@@ -858,14 +858,14 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                 FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
                 mapderiv!(FEBE.L2GM2,FEBE.L2G,FEBE.xref[i])
             end
-            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+            for dof_i = 1 : size(FEBE.cvals,2) # ndofs4item
                 for dof_j = 1 : FEBE.offsets2[2] # ndofs4item (Hdiv)
                     if FEBE.coefficients2[dof_i,dof_j] != 0
                         for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
                             # compute duc/dxk
                             for j = 1 : FEBE.offsets[2] # ncomponents
                                 for m = 1 : FEBE.offsets[2]
-                                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[j],m,i] * FEBE.coefficients[c,dof_j] / FEBE.iteminfo[1];
+                                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refoperatorvals[dof_j + FEBE.offsets2[j],m,i] * FEBE.coefficients[c,dof_j] / FEBE.iteminfo[1];
                                 end
                             end    
                         end

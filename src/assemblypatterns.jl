@@ -392,7 +392,7 @@ function prepare_assembly(
 
             # generate new quadrature rules on neighbouring cells
             # where quadrature points of face are mapped to quadrature points of cells
-            qf[EGoffset + j] = QuadratureRule{Float64,EGdofitem[j]}("cellface quadrature rule",Array{Array{Float64,1},1}(undef,length(qf4face.xref)),qf4face.w)
+            qf[EGoffset + j] = QuadratureRule{Float64,EGdofitem[j]}(qf4face.name * " (shape faces)",Array{Array{Float64,1},1}(undef,length(qf4face.xref)),qf4face.w)
             for k in facejump_operators
                 xrefFACE2CELL = xrefFACE2xrefCELL(EGdofitem[j])
                 xrefFACE2OTHERCELL = xrefFACE2xrefOTHERCELL(EGdofitem[j])
@@ -427,12 +427,12 @@ function prepare_assembly(
         for k = 1 : length(FE)
             println("        FE[$k] / operator[$k] = $(FE[k].name) / $(operator[k])")
         end    
-        if verbosity > 2
+       # if verbosity > 2
             for j = 1 : length(EG)
                 println("\nQuadratureRule [$j] for $(EG[j]):")
                 Base.show(qf[j])
             end
-        end
+       # end
     end
     return EG, ndofs4EG, qf, basisevaler, dii4op
 end
@@ -1352,30 +1352,18 @@ function assemble!(
     
                         # evaluate fixed argument into action
                         fill!(action_input, 0.0)
-                        if di == 2
-                            eval!(action_input, basisevaler4dofitem[fixed_argument], coeffs, length(weights)+1-i; offset = offsets[fixed_argument], factor = coefficient4dofitem1[di])
-                        else
-                            eval!(action_input, basisevaler4dofitem[fixed_argument], coeffs, i; offset = offsets[fixed_argument], factor = coefficient4dofitem1[di])
-                        end
+                        eval!(action_input, basisevaler4dofitem[fixed_argument], coeffs, i; offset = offsets[fixed_argument], factor = coefficient4dofitem1[di])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            if dj == 2
-                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, length(weights)+1-i, offset = offsets[nonfixed_ids[1]], factor = coefficient4dofitem2[dj])
-                            else
-                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i, offset = offsets[nonfixed_ids[1]], factor = coefficient4dofitem2[dj])
-                            end
+                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i, offset = offsets[nonfixed_ids[1]], factor = coefficient4dofitem2[dj])
                             
                             apply_action!(action_result, action_input, action, i)
             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                                 temp = 0
                                 for k = 1 : action_resultdim
-                                    if dk == 2
-                                        temp += action_result[k] * basisvals_testfunction[k,dof_j,length(weights)+1-i]
-                                    else
-                                        temp += action_result[k] * basisvals_testfunction[k,dof_j,i]
-                                    end
+                                    temp += action_result[k] * basisvals_testfunction[k,dof_j,i]
                                 end
                                 localmatrix[dof_i,dof_j] += temp * weights[i] * coefficient4dofitem3[dk]
                             end
@@ -1386,26 +1374,14 @@ function assemble!(
     
                         # evaluate fixed argument into separate vector
                         fill!(evalfixedFE, 0.0)
-                        if dk == 2
-                            eval!(evalfixedFE, basisevaler4dofitem[fixed_argument], coeffs, length(weights)+1-i; factor = coefficient4dofitem3[di])
-                        else
-                            eval!(evalfixedFE, basisevaler4dofitem[fixed_argument], coeffs, i; factor = coefficient4dofitem3[di])
-                        end
+                        eval!(evalfixedFE, basisevaler4dofitem[fixed_argument], coeffs, i; factor = coefficient4dofitem3[di])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            if di == 2
-                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, length(weights)+1-i; factor = coefficient4dofitem1[di])
-                            else
-                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i; factor = coefficient4dofitem1[di])
-                            end
+                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i; factor = coefficient4dofitem1[di])
                             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
-                                if dj == 2
-                                    eval!(action_input, basisevaler4dofitem[nonfixed_ids[2]], dof_j, length(weights)+1-i; offset = offsets[2], factor = coefficient4dofitem2[dj])
-                                else
-                                    eval!(action_input, basisevaler4dofitem[nonfixed_ids[2]], dof_j, i; offset = offsets[2], factor = coefficient4dofitem2[dj])
-                                end
+                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[2]], dof_j, i; offset = offsets[2], factor = coefficient4dofitem2[dj])
                                 apply_action!(action_result, action_input, action, i)
             
                                 temp = 0
