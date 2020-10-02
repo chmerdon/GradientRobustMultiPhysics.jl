@@ -1391,16 +1391,6 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
         end
 
-        # REALIZE GLOBAL GLOBALCONSTRAINTS 
-        # known bug: this will only work if no components in front of the constrained component(s)
-        # are missing in the subiteration
-        for j = 1 : length(PDE.GlobalConstraints)
-            if PDE.GlobalConstraints[j].component in SC.subiterations[s]
-                realize_constraint!(x[s],PDE.GlobalConstraints[j]; verbosity = SC.verbosity - 2)
-            end
-        end
-
-
         # WRITE INTO X and COMPUTE CHANGE
         l = 0
         for j = 1 : length(SC.subiterations[s])
@@ -1410,6 +1400,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end
             l += length(X[SC.subiterations[s][j]])
         end
+
         #change[s] /= l^4*timestep^2
         if SC.verbosity > 2
             println("    ... change = $(sqrt(statistics[s]))")
@@ -1420,13 +1411,21 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         next_eq = (s == nsubiterations) ? 1 : s+1
         assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 2, time = TCS.ctime + timestep)
     end
+
+    # REALIZE GLOBAL GLOBALCONSTRAINTS 
+    # known bug: this will only work if no components in front of the constrained component(s)
+    # are missing in the subiteration
+    for j = 1 : length(PDE.GlobalConstraints)
+        realize_constraint!(X,PDE.GlobalConstraints[j]; verbosity = SC.verbosity - 2)
+    end
+
     
     TCS.last_timestep = timestep
 
     return sqrt.(statistics)
 end
 
-function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100)
+function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
     if TCS.SC.verbosity > 0
         @printf("\n  advancing in time until stationarity...\n")
@@ -1463,6 +1462,9 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
                 @printf(" %.4e ",statistics[j,2])
             end
         end
+        if do_after_each_timestep != nothing
+            do_after_each_timestep
+        end
         if sum(statistics[3,2]) < stationarity_threshold
             println("\n  stationarity detected after $iteration timesteps")
             break;
@@ -1474,7 +1476,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
 end
 
 
-function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15)
+function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
     if TCS.SC.verbosity > 0
         @printf("\n  advancing in time until T = %.4e...\n",finaltime)
@@ -1511,8 +1513,11 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
                 @printf(" %.4e ",statistics[j,2])
             end
         end
+        if do_after_each_timestep != nothing
+            do_after_each_timestep()
+        end
     end
     if TCS.SC.verbosity >1
-        @printf("\n\n  arived at time T = %.4e...\n",TCS.ctime)
+        @printf("\n\n  arrived at time T = %.4e...\n",TCS.ctime)
     end
 end

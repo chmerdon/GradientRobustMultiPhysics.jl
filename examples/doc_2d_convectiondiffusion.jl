@@ -119,7 +119,7 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
         append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Interpolation[1])))
         
         if (level == nlevels)
-            # print error history
+            ## print error history
             println("\n         |   L2ERROR   |   L2ERROR")
             println("   NDOF  |   SOLUTION  |   INTERPOL");
             for j=1:nlevels

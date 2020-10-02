@@ -882,7 +882,7 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
             end
         end
     end    
-    action = XFunctionAction(rhs_function(),1,O.xdim; bonus_quadorder = O.bonus_quadorder)
+    action = XFunctionAction(rhs_function(),[1,O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
     RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
     assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
 end
