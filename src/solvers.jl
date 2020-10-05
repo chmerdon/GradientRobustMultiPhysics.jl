@@ -1292,14 +1292,16 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end  
 
             # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA at current (already updated) time ctime
+            # needs to be done after adding the time derivative, since it overwrittes Data from last timestep
+            # if SC.maxiterations > 1 (because X = LastIterate in this case)
             for k = 1 : length(SC.subiterations[s])
                 d = SC.subiterations[s][k]
                 if any(PDE.BoundaryOperators[d].timedependent) == true
                     if SC.verbosity > 2
                         println("\n  Assembling boundary data for block [$d] at time $(TCS.ctime)...")
-                        @time boundarydata!(LastIterate[d],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
+                        @time boundarydata!(X[d],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
                     else
-                        boundarydata!(LastIterate[d],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
+                        boundarydata!(X[d],PDE.BoundaryOperators[d]; time = TCS.ctime, verbosity = SC.verbosity - 2)
                     end    
                 else
                     # nothing todo as all boundary data for block d is time-independent
@@ -1351,8 +1353,8 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                     statistics[SC.subiterations[s][j],3] += sum(res[s][j][:].^2)
                 end
                 nlresnorm = norm(res[s].entries)
-                if SC.verbosity > 2
-                    println("    ... nonlinear residual = $nlresnorm")
+                if SC.verbosity > 1
+                    @printf("\n              (NI %3d) | %.4e | %.4e |", iteration-1, resnorm, nlresnorm)
                 end
 
                 # leave nonlinear iterations if below target residual
@@ -1385,10 +1387,6 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                 statistics[SC.subiterations[s][j],1] += sum(res[s][j][:].^2)
             end
             resnorm = norm(res[s].entries)
-            if SC.verbosity > 2
-                println("    ... linresidual = $resnorm")
-            end
-
         end
 
         # WRITE INTO X and COMPUTE CHANGE
@@ -1427,10 +1425,10 @@ end
 
 function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
-    if TCS.SC.verbosity > 0
+    if TCS.SC.verbosity > 1
         @printf("\n  advancing in time until stationarity...\n")
     end
-    if TCS.SC.verbosity > 1
+    if TCS.SC.verbosity > 0
         if TCS.SC.maxIterations > 1
             @printf("\n    STEP  |    TIME    | LSRESIDUAL | NLRESIDUAL |   CHANGE ")
             @printf("\n          |            |  (total)   |  (total)   |")
@@ -1451,7 +1449,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
     end
     for iteration = 1 : maxTimeSteps
         statistics = advance!(TCS, timestep)
-        if TCS.SC.verbosity > 1
+        if TCS.SC.verbosity > 0
             @printf("\n    %4d  ",iteration)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
@@ -1478,10 +1476,10 @@ end
 
 function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
-    if TCS.SC.verbosity > 0
+    if TCS.SC.verbosity > 1
         @printf("\n  advancing in time until T = %.4e...\n",finaltime)
     end
-    if TCS.SC.verbosity > 1
+    if TCS.SC.verbosity > 0
         if TCS.SC.maxIterations > 1
             @printf("\n    STEP  |    TIME    | LSRESIDUAL | NLRESIDUAL |   CHANGE ")
             @printf("\n          |            |  (total)   |  (total)   |")
@@ -1502,7 +1500,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
     end
     while TCS.ctime < finaltime - finaltime_tolerance
         statistics = advance!(TCS, timestep)
-        if TCS.SC.verbosity > 1
+        if TCS.SC.verbosity > 0
             @printf("\n    %4d  ",TCS.cstep)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
@@ -1517,7 +1515,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             do_after_each_timestep()
         end
     end
-    if TCS.SC.verbosity >1
+    if TCS.SC.verbosity > 0
         @printf("\n\n  arrived at time T = %.4e...\n",TCS.ctime)
     end
 end

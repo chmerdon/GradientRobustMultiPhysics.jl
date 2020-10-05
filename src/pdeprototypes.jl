@@ -97,7 +97,7 @@ function CompressibleNavierStokesProblem(
         add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, dimension, dimension))
     end
 
-    add_operator!(Problem, [1,3], AbstractBilinearForm("div(velocity)*pressure",Divergence,Identity,MultiplyScalarAction(-1.0)))
+    add_operator!(Problem, [1,3], AbstractBilinearForm("div(velocity)*pressure",Divergence,Identity,MultiplyScalarAction(-1.0, 1)))
 
     if gravity! != nothing
         function gravity_function() # result = G(v) = -gravity*input
@@ -110,7 +110,7 @@ function CompressibleNavierStokesProblem(
                 end
             end
         end    
-        gravity_action = XFunctionAction(gravity_function(),1,dimension)
+        gravity_action = XFunctionAction(gravity_function(),[1, 1],dimension)
         add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action))
     end
 
@@ -118,7 +118,7 @@ function CompressibleNavierStokesProblem(
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
 
     # equation of state
-    eos_action = FunctionAction(equation_of_state!,1,dimension)
+    eos_action = FunctionAction(equation_of_state!,[1,1])
     add_operator!(Problem, [3,2], ReactionOperator(eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], ReactionOperator(MultiplyScalarAction(-1.0,1)))
 

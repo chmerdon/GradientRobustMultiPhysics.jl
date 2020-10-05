@@ -177,7 +177,7 @@ $(TYPEDSIGNATURES)
 
 Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti} where {Tv, Ti <: Integer}; factor = 1)
+function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv, Ti} = B.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
@@ -226,10 +226,10 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix{Tv,Ti} where {Tv, Ti <: Integer}, b::FEVectorBlock; factor = 1)
+function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix{Tv,Ti}, b::FEVectorBlock; factor = 1) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv,Ti} = B.cscmatrix
     rows::Array{Ti,1} = rowvals(cscmat)
-    valsB::Array{Float64,1} = cscmat.nzval
+    valsB::Array{Tv,1} = cscmat.nzval
     bcol::Int = 0
     arow::Int = 0
     for col = 1:size(B,2)
@@ -249,10 +249,10 @@ $(TYPEDSIGNATURES)
 
 Computes vector'-matrix-vector product a'*B*b.
 """
-function lrmatmul(a::AbstractArray{<:Real,1}, B::ExtendableSparseMatrix{Tv,Ti} where {Tv, Ti <: Integer}, b::AbstractArray{<:Real,1}; factor = 1)
+function lrmatmul(a::AbstractArray{<:Real,1}, B::ExtendableSparseMatrix{Tv,Ti}, b::AbstractArray{<:Real,1}; factor = 1) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv,Ti} = B.cscmatrix
-    valsB::Array{Float64,1} = cscmat.nzval
-    rows = rowvals(cscmat)
+    valsB::Array{Tv,1} = cscmat.nzval
+    rows::Array{Ti,1} = rowvals(cscmat)
     result = 0.0
     for col = 1:size(B,2)
         for r in nzrange(B.cscmatrix, col)

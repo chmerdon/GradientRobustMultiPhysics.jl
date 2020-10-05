@@ -138,7 +138,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
 DefaultName4Operator(::Type{Identity}) = "id"
 DefaultName4Operator(::Type{IdentityDisc{Jump}}) = "[[id]]"
 DefaultName4Operator(::Type{IdentityDisc{Average}}) = "{{id}}"
-DefaultName4Operator(::Type{ReconstructionIdentity}) = "id R"
+DefaultName4Operator(::Type{<:ReconstructionIdentity}) = "id R"
 DefaultName4Operator(IC::Type{<:IdentityComponent}) = "id_$(IC.parameters[1])"
 DefaultName4Operator(::Type{NormalFlux}) = "NormalFlux"
 DefaultName4Operator(::Type{TangentFlux}) = "TangentFlux"
@@ -151,7 +151,8 @@ DefaultName4Operator(::Type{CurlScalar}) = "Curl"
 DefaultName4Operator(::Type{Curl2D}) = "Curl"
 DefaultName4Operator(::Type{Rotation}) = "Curl"
 DefaultName4Operator(::Type{Divergence}) = "div"
-DefaultName4Operator(::Type{ReconstructionDivergence}) = "div R"
+DefaultName4Operator(::Type{<:ReconstructionDivergence}) = "div R"
+DefaultName4Operator(::Type{<:ReconstructionGradient}) = "grad R"
 DefaultName4Operator(::Type{Trace}) = "tr"
 DefaultName4Operator(::Type{Deviator}) = "dev"
 
@@ -190,8 +191,10 @@ Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES.dofmaps[BFaceDofs]
 function DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
     # check if operator is discontinuous for this AT
     for j = 1 : length(FO.parameters)
-        if FO.parameters[j] <: DiscontinuityTreatment
-            return ON_CELLS
+        if typeof(FO.parameters[j]) != Int64
+            if FO.parameters[j] <: DiscontinuityTreatment
+                return ON_CELLS
+            end
         end
     end
     return AT
