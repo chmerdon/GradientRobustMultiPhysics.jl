@@ -17,6 +17,9 @@ get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Edge1D}) = 1
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Triangle2D}) = 3;
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Quadrilateral2D}) = 4;
 
+get_polynomialorder(::Type{<:H1MINI{3,3}}, ::Type{<:Triangle2D}) = 1;
+get_polynomialorder(::Type{<:H1MINI{3,3}}, ::Type{<:Tetrahedron3D}) = 4;
+
 function init!(FES::FESpace{FEType}) where {FEType <: H1MINI}
     ncomponents = get_ncomponents(FEType)
     name = "MINI"
@@ -211,6 +214,21 @@ function get_basis_on_face(::Type{H1MINI{2,2}}, ::Type{<:Edge1D})
     end
 end
 
+function get_basis_on_face(::Type{H1MINI{3,3}}, ::Type{<:Triangle2D})
+    function closure(xref)
+        temp = 1 - xref[1] - xref[2];
+        return [temp 0.0 0.0;
+                xref[1] 0.0 0.0;
+                xref[2] 0.0 0.0;
+                0.0 temp 0.0;
+                0.0 xref[1] 0.0;
+                0.0 xref[2] 0.0;
+                0.0 0.0 temp;
+                0.0 0.0 xref[1];
+                0.0 0.0 xref[2]]
+    end
+end
+
 function get_basis_on_cell(::Type{H1MINI{1,2}}, ::Type{<:Triangle2D})
     function closure(xref)
         temp = 1-xref[1]-xref[2]
@@ -224,7 +242,7 @@ end
 function get_basis_on_cell(::Type{H1MINI{2,2}}, ::Type{<:Triangle2D})
     function closure(xref)
         temp = 1-xref[1]-xref[2]
-        cb = 9*temp*xref[1]*xref[2]
+        cb = 27*temp*xref[1]*xref[2]
         return [temp 0.0;
                 xref[1] 0.0;
                 xref[2] 0.0;
@@ -263,6 +281,29 @@ function get_basis_on_cell(::Type{H1MINI{2,2}}, ::Type{<:Quadrilateral2D})
                 0.0 xref[2]*a;
                 cb 0.0;
                 0.0 cb]
+    end
+end
+
+
+function get_basis_on_cell(::Type{H1MINI{3,3}}, ::Type{<:Tetrahedron3D})
+    function closure(xref)
+        temp = 1 - xref[1] - xref[2] - xref[3];
+        cb = 81*temp*xref[1]*xref[2]*xref[3]
+        return [temp 0.0 0.0;
+                xref[1] 0.0 0.0;
+                xref[2] 0.0 0.0;
+                xref[3] 0.0 0.0;
+                0.0 temp 0.0;
+                0.0 xref[1] 0.0;
+                0.0 xref[2] 0.0;
+                0.0 xref[3] 0.0;
+                0.0 0.0 temp;
+                0.0 0.0 xref[1];
+                0.0 0.0 xref[2];
+                0.0 0.0 xref[3];
+                cb 0 0;
+                0 cb 0;
+                0 0 cb]
     end
 end
 

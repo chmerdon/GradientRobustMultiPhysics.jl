@@ -472,7 +472,7 @@ function run_basis_tests()
             if polyorder_pressure > 0
                 result[1] += polyorder_pressure * x[1]^(polyorder_pressure-1)
                 result[2] += polyorder_pressure * x[2]^(polyorder_pressure-1)
-                result[2] += polyorder_pressure * x[3]^(polyorder_pressure-1)
+                result[3] += polyorder_pressure * x[3]^(polyorder_pressure-1)
             end
         end
         return exact_velocity!, exact_pressure!, velo_gradient!, rhs!
@@ -486,9 +486,11 @@ function run_basis_tests()
                     [H1P2{2,2},H1P1{1}]]
     ExpectedOrders2D = [[1,0],[1,1],[1,0],[2,1]]
     TestCatalog3D = [
-                    #[H1BR{3},L2P0{1}]
+                    [H1BR{3},L2P0{1}],
+                    [H1CR{3},L2P0{1}],
+                    [H1MINI{3,3},H1P1{1}]
                     ]
-    ExpectedOrders3D = [[1,0]]
+    ExpectedOrders3D = [[1,0],[1,0],[1,1]]
 
     @testset "Stokes-FEM" begin
         println("\n")
@@ -511,7 +513,7 @@ function run_basis_tests()
             FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
 
             # solve
-            Solution = FEVector{Float64}("H1-Bestapproximation",FES)
+            Solution = FEVector{Float64}("Stokes-Solution",FES)
             solve!(Solution, StokesProblem)
 
             # check error
@@ -524,12 +526,12 @@ function run_basis_tests()
         println("=============================")
         println("Testing Stokes elements in 3D")
         println("=============================")
-        xgrid = testgrid(Parallelepiped3D)
+        xgrid = testgrid(Tetrahedron3D)
         for n = 1 : length(TestCatalog3D)
             exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders3D[n][2])
 
             # Define Stokes problem via PDETooles_PDEProtoTypes
-            StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
+            StokesProblem = IncompressibleNavierStokesProblem(3; nonlinear = false)
             add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders3D[n][1])
             add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs!, 3, 3; bonus_quadorder = max(0,ExpectedOrders3D[n][2]-1)))
             L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
@@ -540,7 +542,7 @@ function run_basis_tests()
             FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
 
             # solve
-            Solution = FEVector{Float64}("H1-Bestapproximation",FES)
+            Solution = FEVector{Float64}("Stokes-Solution",FES)
             solve!(Solution, StokesProblem)
 
             # check error
