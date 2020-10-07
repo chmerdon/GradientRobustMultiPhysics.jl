@@ -5,16 +5,20 @@ using GradientRobustMultiPhysics
 function run_basis_tests()
 
     function testgrid(::Type{Edge1D})
-        return uniform_refine(simplexgrid([0.0,1//4,2//3,1.0]))
+        return uniform_refine(simplexgrid([0.0,1//4,2//3,1.0]),1)
     end
     function testgrid(EG::Type{<:AbstractElementGeometry2D})
-        return grid_unitsquare(EG)
+        return uniform_refine(grid_unitsquare(EG),1)
     end
     function testgrid(EG::Type{<:AbstractElementGeometry3D})
-        return grid_unitcube(EG)
+        return uniform_refine(grid_unitcube(EG),1)
+    end
+    function testgrid(::Type{Tetrahedron3D})
+        return split_grid_into(uniform_refine(grid_unitcube(Parallelepiped3D),1), Tetrahedron3D)
+
     end
     function testgrid(::Type{Triangle2D},::Type{Parallelogram2D})
-        return grid_unitsquare_mixedgeometries()
+        return uniform_refine(grid_unitsquare_mixedgeometries(),1)
     end
 
 
@@ -488,9 +492,10 @@ function run_basis_tests()
     TestCatalog3D = [
                     [H1BR{3},L2P0{1}],
                     [H1CR{3},L2P0{1}],
-                    [H1MINI{3,3},H1P1{1}]
+                    [H1MINI{3,3},H1P1{1}],
+                    [H1P2{3,3},H1P1{1}]
                     ]
-    ExpectedOrders3D = [[1,0],[1,0],[1,1]]
+    ExpectedOrders3D = [[1,0],[1,0],[1,1],[2,1]]
 
     @testset "Stokes-FEM" begin
         println("\n")

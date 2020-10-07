@@ -64,15 +64,15 @@ end
 # unit square as two triangles with four boundary regions (bottom, right, top, left)
 function grid_unitsquare(::Type{<:Triangle2D}; scale = [1,1], shift = [0,0])
     xgrid=ExtendableGrid{Float64,Int32}()
-    xCoordinates=Array{Float64,2}([0 0; 1 0; 1 1; 0 1]')
+    xCoordinates=Array{Float64,2}([0 0; 1 0; 1 1; 0 1; 0.5 0.5]')
     for j = 1 : size(xCoordinates,1)
         xCoordinates[j,:] .+= shift[j]
         xCoordinates[j,:] .*= scale[j]
     end
     xgrid[Coordinates] = xCoordinates
-    xgrid[CellNodes]=Array{Int32,2}([1 2 3; 1 3 4]')
-    xgrid[CellGeometries]=VectorOfConstants(Triangle2D,2)
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,2)
+    xgrid[CellNodes]=Array{Int32,2}([1 2 5; 2 3 5; 3 4 5; 4 1 5]')
+    xgrid[CellGeometries]=VectorOfConstants(Triangle2D,4)
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,4)
     xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4])
     xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 1]')
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,4)

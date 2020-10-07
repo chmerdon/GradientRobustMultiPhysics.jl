@@ -17,6 +17,7 @@ get_edim(FEType::Type{<:H1P2}) = FEType.parameters[2]
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Triangle2D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = 3;
+get_polynomialorder(::Type{<:H1P2}, ::Type{<:Tetrahedron3D}) = 2;
 
 function init!(FES::FESpace{FEType}) where {FEType <: H1P2}
     ncomponents = get_ncomponents(FEType)
@@ -124,11 +125,11 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H
         ndofs4component = nnodes + nfaces
     elseif edim == 3
         nedges = num_sources(FES.xgrid[EdgeNodes])
-        xCellEdges = FES.xgrid[CellEdges]
-        #TDOO: dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+FACEDGES))
+        xFaceEdges = FES.xgrid[FaceEdges]
+        maxfaceedges = max_num_targets_per_source(xFaceEdges)
+        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+maxfaceedges))
         ndofs4component = nnodes + nedges
     end    
-    dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+1))
     nnodes4item = 0
     nextra4item = 0
     for face = 1 : nfaces
@@ -142,7 +143,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H
             nextra4item = 1
             dofs4item[nnodes4item+1] = nnodes + face
         elseif edim == 3 # in 3D also edge midpoints are dofs
-            # TODO
+            nextra4item = num_targets(xFaceEdges,face)
+            for k = 1 : nextra4item
+                dofs4item[nnodes4item+k] = nnodes + xFaceEdges[k,face]
+            end
         end
         ndofs4item = nnodes4item + nextra4item
         for n = 1 : ncomponents-1, k = 1:ndofs4item
@@ -174,11 +178,11 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: 
         ndofs4component = nnodes + nfaces
     elseif edim == 3
         nedges = num_sources(FES.xgrid[EdgeNodes])
-        xCellEdges = FES.xgrid[CellEdges]
-        #TDOO: dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xFaceNodes)+FACEDGES))
+        xFaceEdges = FES.xgrid[FaceEdges]
+        maxfaceedges = max_num_targets_per_source(xFaceEdges)
+        dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xBFaceNodes)+maxfaceedges))
         ndofs4component = nnodes + nedges
     end    
-    dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xBFaceNodes)+1))
     nnodes4item = 0
     nextra4item = 0
     for bface = 1: nbfaces
@@ -192,7 +196,10 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: 
             nextra4item = 1
             dofs4item[nnodes4item+1] = nnodes + xBFaces[bface]
         elseif edim == 3 # in 3D also edge midpoints are dofs
-            # TODO
+            nextra4item = num_targets(xFaceEdges,xBFaces[bface])
+            for k = 1 : nextra4item
+                dofs4item[nnodes4item+k] = nnodes + xFaceEdges[k,xBFaces[bface]]
+            end
         end
         ndofs4item = nnodes4item + nextra4item
         for n = 1 : ncomponents-1, k = 1:ndofs4item
@@ -380,6 +387,28 @@ function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Triangle2D})
             refbasis[6*k-2,k] = 4*temp*xref[1]                  # face 1
             refbasis[6*k-1,k] = 4*xref[1]*xref[2]               # face 2
             refbasis[6*k,k] = 4*xref[2]*temp                    # face 3
+        end
+        return refbasis
+    end
+end
+
+
+function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D})
+    function closure(xref)
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents*10,ncomponents)
+        temp = 1 - xref[1] - xref[2] - xref[3]
+        for k = 1 : ncomponents
+            refbasis[10*k-9,k] = 2*temp*(temp - 1//2)            # node 1
+            refbasis[10*k-8,k] = 2*xref[1]*(xref[1] - 1//2)      # node 2
+            refbasis[10*k-7,k] = 2*xref[2]*(xref[2] - 1//2)      # node 3
+            refbasis[10*k-6,k] = 2*xref[3]*(xref[3] - 1//2)      # node 4
+            refbasis[10*k-5,k] = 4*temp*xref[1]                  # edge 1
+            refbasis[10*k-4,k] = 4*temp*xref[2]                  # edge 2
+            refbasis[10*k-3,k] = 4*temp*xref[3]                  # edge 3
+            refbasis[10*k-2,k] = 4*xref[1]*xref[2]               # edge 4
+            refbasis[10*k-1,k] = 4*xref[1]*xref[3]               # edge 5
+            refbasis[10*k  ,k] = 4*xref[2]*xref[3]               # edge 6
         end
         return refbasis
     end
