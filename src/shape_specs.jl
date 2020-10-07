@@ -50,7 +50,6 @@ xrefFACE2xrefOTHERCELL(::Type{<:Triangle2D}) = [ (xref4FACE) -> [1 - xref4FACE[1
 ###################       |          |             [2] = (1,0)
 # Quadrilateral2D #       |          |             [3] = (1,1)
 ###################       |          |             [4] = (0,1)
-#                         |          |
 #                        [1]--------[2]
 
 refcoords_for_geometry(::Type{<:Quadrilateral2D}) = [0 0; 1 0; 1 1; 0 1]

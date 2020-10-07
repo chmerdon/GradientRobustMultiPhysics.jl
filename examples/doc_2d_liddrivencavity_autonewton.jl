@@ -13,7 +13,9 @@ a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navi
 ```
 where ``\mathbf{u} = (1,0)`` along the top boundary of a square domain.
 
-This examples highlights the use of automatic differentation to obtain Newton derivatives of nonlinear PDEOperators.
+This examples highlights the use of automatic differentation to obtain Newton derivatives of nonlinear PDEOperators. The user can 
+switch between a Newton obtained by automatic differentation (ADnewton = true) and a 'manual' Newton scheme (ADnewton = false). The runtime
+of the manual newton is slightly faster.
 
 =#
 
@@ -30,14 +32,13 @@ function boundary_data_top!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 2, Plotter = nothing)
+function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
 
     ## grid
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
 
     ## problem parameters
     viscosity = 1e-2
-    ADnewton = true # use automatic differentation to setup Newton (otherwise hardcoded Newton terms)
     maxIterations = 50  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
 
@@ -98,7 +99,7 @@ function main(; verbosity = 2, Plotter = nothing)
             return nothing
         end
         ## and a similar kernel function for the RHS
-        function ugradu_kernel_rhs(result, input_current, input_ansatz)
+        function ugradu_kernel_rhs(result, input_current)
             ## input_current = [current, grad(current)]
             ## input_ansatz = [ansatz, grad(ansatz)]
             ## compute (current * grad) current

@@ -13,7 +13,8 @@ $(TYPEDSIGNATURES)
 generates a new ExtendableGrid by splitting each cell into subcells of the specified targetgeometry
 
 split rules exist for
-    - Quadrilateral2D into Triangle2D
+- Quadrilateral2D into Triangle2D
+- Hexahedron3D into Tetrahedron3D
 """
 function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{<:AbstractElementGeometry}) where {T,K}
     xgrid=ExtendableGrid{T,K}()
@@ -157,11 +158,11 @@ $(TYPEDSIGNATURES)
 generates a new ExtendableGrid by uniform refinement of each cell in the given grid
 
 uniform refinement rules are available for these AbstractElementGeometries:
-    - Line1D (bisection into two subsegments)
-    - Triangle2D (red refinement into four subtriangles)
-    - Quadrilateral2D (into four subquadrilaterals)
-    - Tetrahedron (into eight subtetrahedrons)
-    - Hexahedron (into eight subhexahedrons)
+- Line1D (bisection into two subsegments)
+- Triangle2D (red refinement into four subtriangles)
+- Quadrilateral2D (into four subquadrilaterals)
+- Tetrahedron (into eight subtetrahedrons, but seems buggy)
+- Hexahedron (into eight subhexahedrons)
 
 if multiple geometries are in the mesh uniform refinement will only work
 if all refinement rules refine faces and edges (in 3D) equally
@@ -437,9 +438,9 @@ $(TYPEDSIGNATURES)
 
 generates a new ExtendableGrid by barycentric refinement of each cell in the source grid
 
-barcentric refinement is available for these ElementGeometries
-    - Quadrilateral2D (first split into Triangle2D)
-    - Triangle2D
+barycentric refinement is available for these ElementGeometries
+- Quadrilateral2D (first split into Triangle2D)
+- Triangle2D
 """
 function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     # split first into triangles

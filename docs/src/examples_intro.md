@@ -4,7 +4,7 @@
 Note that all examples are written inside their own modules. To start an example you usually have to include the file and then run the main() function from the example module. Some examples have optional argument, e.g. Plotter = PyPlot, produces some plots with PyPlot (using PyPlot reuqired beforehand). Other Plotters are not yet supported.
 
 
-Here is an example how to start the example in "examples/doc_2d_compressiblestokes.jl":
+Here is an example how to start the example in "examples/doc\_2d\_compressiblestokes.jl":
 ```@example
 # include example file, e.g.:
 include("examples/doc_2d_compressiblestokes.jl")
