@@ -11,7 +11,7 @@ Writes the specified FEVector into a vtk datafile with the given filename. Each 
 (or the subset specified by blocks) is saved separately. Vector-valued quantities also generate a data field
 that represents the absolute value of the vector field at each grid point.
 """
-function writeVTK!(filename::String, Data::FEVector; blocks = [], names = [], vectorabs::Bool = true)
+function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = [], names = [], vectorabs::Bool = true)
     if blocks == []
         blocks = 1:length(Data)
     end
@@ -74,7 +74,12 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], names = [], ve
     ncomponents = 0
     maxcomponents = 0
     nfields = 0
-    for block in blocks
+    block = 0
+    for j = 1 : length(blocks)
+        block = blocks[j]
+        while length(operators) < j
+            push!(operators, Identity)
+        end
         ncomponents = get_ncomponents(eltype(Data[block].FES))
         if ncomponents > maxcomponents
             maxcomponents = ncomponents
@@ -94,7 +99,7 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], names = [], ve
         block = blocks[b]
         ncomponents = get_ncomponents(eltype(Data[block].FES))
         # get node values
-        nodevalues!(nodedata, Data[block], Data[block].FES)
+        nodevalues!(nodedata, Data[block], Data[block].FES, operators[b])
         for c = 1 : ncomponents
             if length(names) >= b
                 fieldname = names[b]
@@ -102,11 +107,11 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], names = [], ve
                 if ncomponents == 1
                     fieldname = Data[block].name[1:min(30,length(Data[block].name))]
                     fieldname = replace(String(fieldname), " " => "_")
-                    fieldname = "$(block)_$fieldname"
+                    fieldname = "$(b)_$fieldname"
                 else
                     fieldname = Data[block].name[1:min(28,length(Data[block].name))]
                     fieldname = replace(String(fieldname), " " => "_")
-                    fieldname = "$(block)_$fieldname.$c"
+                    fieldname = "$(b)_$fieldname.$c"
                 end
             end    
             @printf(io, "%s 1 %d float\n", fieldname, nnodes)
@@ -120,7 +125,7 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], names = [], ve
             nfields += 1
             fieldname = Data[block].name[1:min(28,length(Data[block].name))]
             fieldname = replace(String(fieldname), " " => "_")
-            fieldname = "$(block)_$fieldname.a"
+            fieldname = "$(b)_$fieldname.a"
             @printf(io, "%s 1 %d float\n", fieldname, nnodes)
             for node = 1 : nnodes
                 absval = 0

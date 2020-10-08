@@ -18,7 +18,7 @@ with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and t
 for isotropic media.
 
 The domain will be the Cook membrane and the displacement has homogeneous boundary conditions on the left side of the domain
-and Neumann boundary conditions (i.e. a force that pulls the domain downwards) on the right side.
+and Neumann boundary conditions (i.e. a force that pulls the domain upwards) on the right side.
 
 =#
 

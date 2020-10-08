@@ -1455,7 +1455,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             end
         end
         if do_after_each_timestep != nothing
-            do_after_each_timestep
+            do_after_each_timestep(statistics)
         end
         if sum(statistics[3,2]) < stationarity_threshold
             println("\n  stationarity detected after $iteration timesteps")
@@ -1506,7 +1506,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             end
         end
         if do_after_each_timestep != nothing
-            do_after_each_timestep()
+            do_after_each_timestep(statistics)
         end
     end
     if TCS.SC.verbosity > 0

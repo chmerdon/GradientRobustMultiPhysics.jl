@@ -339,6 +339,9 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     elseif edim == 2
         nfaces = num_sources(FE.xgrid[FaceNodes])
         offset4component = 0:(nnodes+nfaces):ncomponents*(nnodes+nfaces)
+    elseif edim == 3
+        nedges = num_sources(FE.xgrid[EdgeNodes])
+        offset4component = 0:(nnodes+nedges):ncomponents*(nnodes+nedges)
     end
     for node = 1 : nnodes
         for c = 1 : ncomponents

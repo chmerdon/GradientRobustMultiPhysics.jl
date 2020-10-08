@@ -14,7 +14,7 @@ vertices but not in the additional edgrees of freedom. For e.g. ``k=2`` the inte
 !!! note
 
     In 3D a similar commuting property holds that involves the Nedelec finite element spaces,
-    that will be tested once there are implemented. Also the identities for $k > 2$ will be tested once all functionality is available.
+    that will be tested once they are implemented. Also the identities for $k > 2$ will be tested once all functionality is available.
 
 =#
 
