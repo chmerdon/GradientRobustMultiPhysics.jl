@@ -330,7 +330,7 @@ function assemble!(
                     catch
                         break
                     end
-                    update_storage!(PDEoperator, CurrentSolution, j, k ; time = time, verbosity = verbosity)
+                    update_storage!(PDEoperator, CurrentSolution, equations[j], k ; time = time, verbosity = verbosity)
                 end
             end
         end
@@ -344,7 +344,7 @@ function assemble!(
                 catch
                     break
                 end
-                update_storage!(PDEoperator, CurrentSolution, j ; time = time, verbosity = verbosity)
+                update_storage!(PDEoperator, CurrentSolution, equations[j] ; time = time, verbosity = verbosity)
             end
         end
     end
@@ -1398,12 +1398,6 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end
             l += length(X[SC.subiterations[s][j]])
         end
-
-        #change[s] /= l^4*timestep^2
-        if SC.verbosity > 2
-            println("    ... change = $(sqrt(statistics[s]))")
-        end
-
 
         # REASSEMBLE PARTS FOR NEXT SUBITERATION
         next_eq = (s == nsubiterations) ? 1 : s+1

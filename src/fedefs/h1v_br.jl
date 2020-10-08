@@ -163,13 +163,13 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR}, exac
         for j in dofs 
             item = mod(j-1,nnodes)+1
             c = Int(ceil(j/nnodes))
-            if item <= nnodes
+            if j <= ncomponents*nnodes
                 for k=1:xdim
                     x[k] = xCoords[k,item]
                 end    
                 exact_function!(result,x)
                 Target[j] = result[c]
-            elseif c > ncomponents
+            else
                 face = j - ncomponents*nnodes
                 nnodes4item = num_targets(xFaceNodes,face)
                 for k=1:xdim

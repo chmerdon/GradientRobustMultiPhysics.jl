@@ -521,6 +521,7 @@ mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
     rhsfunction::Function
     testfunction_operator::Type{<:AbstractFunctionOperator}
     timedependent::Bool
+    itemdependent::Bool
     regions::Array{Int,1}
     xdim:: Int
     ncomponents:: Int
@@ -535,22 +536,33 @@ function RhsOperator(
     rhsfunction!::Function,
     xdim::Int,
     ncomponents::Int = 1;
+    itemdependent::Bool = false,
     bonus_quadorder::Int = 0,
     on_boundary::Bool = false)
 
     # check if function is time-dependent
-    if applicable(rhsfunction!,[0],0,0)
-        timedependent = true
-        rhsfunc = rhsfunction!
+    if itemdependent == false
+        if applicable(rhsfunction!,[0],0,0)
+            timedependent = true
+            rhsfunc = rhsfunction!
+        else
+            timedependent = false
+            rhsfunc = (result,x,t) -> rhsfunction!(result,x)
+        end
     else
-        timedependent = false
-        rhsfunc(result,x,t) = rhsfunction!(result,x)
+        if applicable(rhsfunction!,[0],0,0,0)
+            timedependent = true
+            rhsfunc = rhsfunction!
+        else
+            timedependent = false
+            rhsfunc = (result,x,t,item) -> rhsfunction!(result,x,item)
+        end
     end
 
     if on_boundary == true
-        return RhsOperator{ON_BFACES}(rhsfunc, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
+        return RhsOperator{ON_BFACES}(rhsfunc, operator, timedependent, itemdependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
     else
-        return RhsOperator{ON_CELLS}(rhsfunc, operator, timedependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
+        return RhsOperator{ON_CELLS}(rhsfunc, operator, timedependent, itemdependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
     end
 end
 
@@ -819,19 +831,20 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVConvectionD
             end
             flux = O.fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
             if (other_cell > 0) 
-                flux *= 1 // 2
+                flux *= 1 // 2 # because it will be accumulated on two cells
             end       
-            if flux > 0
+            if flux > 0 # flow from cell to other_cell
                 A[cell,cell] += flux
                 if other_cell > 0
                     A[other_cell,cell] -= flux
+                    # otherwise flow goes out of domain
                 end    
-            else   
-                if other_cell > 0
+            else # flow from other_cell into cell
+                if other_cell > 0 # flow comes from neighbour cell
                     A[other_cell,other_cell] -= flux
                     A[cell,other_cell] += flux
-                else
-                    A[cell,cell] += flux
+                else # flow comes from outside domain
+                   #  A[cell,cell] += flux
                 end 
             end
         end
@@ -874,15 +887,29 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
 
     function rhs_function() # result = F(v) = f*operator(v) = f*input
         temp = zeros(Float64,O.ncomponents)
-        function closure(result,input,x)
-            O.rhsfunction(temp,x, time)
-            result[1] = 0
-            for j = 1 : O.ncomponents
-                result[1] += temp[j]*input[j] 
+        if O.itemdependent == false
+            function closure(result,input,x)
+                O.rhsfunction(temp,x, time)
+                result[1] = 0
+                for j = 1 : O.ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
+            end
+        else
+            function closure2(result,input,x,item)
+                O.rhsfunction(temp,x, time, item)
+                result[1] = 0
+                for j = 1 : O.ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
             end
         end
     end    
-    action = XFunctionAction(rhs_function(),[1,O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
+    if O.itemdependent
+        action = ItemWiseXFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
+    else
+        action = XFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
+    end
     RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
     assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
 end
@@ -977,15 +1004,29 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{A
         FE = b.FES
         function rhs_function() # result = F(v) = f*operator(v) = f*input
             temp = zeros(Float64,O.ncomponents)
-            function closure(result,input,x)
-                O.rhsfunction(temp,x,time)
-                result[1] = 0
-                for j = 1 : O.ncomponents
-                    result[1] += temp[j]*input[j] 
+            if O.itemdependent == false
+                function closure(result,input,x)
+                    O.rhsfunction(temp,x, time)
+                    result[1] = 0
+                    for j = 1 : O.ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
+                end
+            else
+                function closure2(result,input,x,item)
+                    O.rhsfunction(temp,x, time, item)
+                    result[1] = 0
+                    for j = 1 : O.ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
                 end
             end
-        end    
-        action = XFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
+        end
+        if O.itemdependent
+            action = ItemWiseXFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
+        else
+            action = XFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
+        end
         RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
         assemble!(b, RHS; factor = factor, verbosity = verbosity)
     end

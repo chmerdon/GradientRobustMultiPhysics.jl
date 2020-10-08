@@ -171,15 +171,15 @@ end
 
 function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
     # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
+    d12 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
+    d14 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
     return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2) / 2;
 end
 
 function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelogram2D}, ::Type{Cartesian3D})
     # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
+    d12 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
+    d14 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
     return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2);
 end
 
@@ -212,30 +212,39 @@ end
 
 function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
     # rotate tangent
-    normal[1] = Coords[2, Nodes[2,item]] - Coords[2,Nodes[1,item]]
-    normal[2] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
+    normal[1] = Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]
+    normal[2] = Coords[1, Nodes[1,item]] - Coords[1, Nodes[2,item]]
     # divide by length
     normal ./= sqrt(normal[1]^2+normal[2]^2)
 end
 
 function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{Cartesian3D})
     # cross(p(1)-p(2), p(1)-p(4)) / length
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
-    normal[1] = d12[2]*d14[3]-d12[3]*d14[2]
-    normal[2] = d12[3]*d14[1]-d12[1]*d14[3]
-    normal[3] = d12[1]*d14[2]-d12[2]*d14[1]
+    normal[1]  = (Coords[2, Nodes[1, item]] - Coords[2, Nodes[2, item]]) * (Coords[3, Nodes[1, item]] - Coords[3, Nodes[4, item]])
+    normal[1] -= (Coords[3, Nodes[1, item]] - Coords[3, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[4, item]])
+    normal[2]  = (Coords[3, Nodes[1, item]] - Coords[3, Nodes[2, item]]) * (Coords[1, Nodes[1, item]] - Coords[1, Nodes[4, item]])
+    normal[2] -= (Coords[1, Nodes[1, item]] - Coords[1, Nodes[2, item]]) * (Coords[3, Nodes[1, item]] - Coords[3, Nodes[4, item]])
+    normal[3]  = (Coords[1, Nodes[1, item]] - Coords[1, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[4, item]])
+    normal[3] -= (Coords[2, Nodes[1, item]] - Coords[2, Nodes[2, item]]) * (Coords[1, Nodes[1, item]] - Coords[1, Nodes[4, item]])
     # divide by length
     normal ./= sqrt(normal[1]^2+normal[2]^2+normal[3]^2)
+
+    ## old version
+    #d12 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
+    #d14 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
+    #normal[1] = d12[2]*d14[3]-d12[3]*d14[2]
+    #normal[2] = d12[3]*d14[1]-d12[1]*d14[3]
+    #normal[3] = d12[1]*d14[2]-d12[2]*d14[1]
 end
 
 function Normal4ElemType!(normal, Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
     # cross(p(1)-p(2), p(1)-p(3)) / length
-    d12 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d13 = Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
-    normal[1] = d12[2]*d13[3]-d12[3]*d13[2]
-    normal[2] = d12[3]*d13[1]-d12[1]*d13[3]
-    normal[3] = d12[1]*d13[2]-d12[2]*d13[1]
+    normal[1]  = (Coords[2, Nodes[1, item]] - Coords[2, Nodes[2, item]]) * (Coords[3, Nodes[1, item]] - Coords[3, Nodes[3, item]])
+    normal[1] -= (Coords[3, Nodes[1, item]] - Coords[3, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[3, item]])
+    normal[2]  = (Coords[3, Nodes[1, item]] - Coords[3, Nodes[2, item]]) * (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]])
+    normal[2] -= (Coords[1, Nodes[1, item]] - Coords[1, Nodes[2, item]]) * (Coords[3, Nodes[1, item]] - Coords[3, Nodes[3, item]])
+    normal[3]  = (Coords[1, Nodes[1, item]] - Coords[1, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[3, item]])
+    normal[3] -= (Coords[2, Nodes[1, item]] - Coords[2, Nodes[2, item]]) * (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]])
     # divide by length
     normal ./= sqrt(normal[1]^2+normal[2]^2+normal[3]^2)
 end
