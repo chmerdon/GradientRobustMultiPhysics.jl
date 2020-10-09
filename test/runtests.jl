@@ -226,9 +226,13 @@ function run_basis_tests()
     ExpectedOrders2D = [0,1,0,1,1,1,1,1,2]
     TestCatalog3D = [
                     HDIVRT0{3},
+                    H1MINI{3,3},
+                    H1BR{3},
+                    H1CR{3},
                     H1P1{3},
-                    L2P1{3}]
-    ExpectedOrders3D = [0,1,1]
+                    L2P1{3},
+                    H1P2{3,3}]
+    ExpectedOrders3D = [0,1,1,1,1,1,2]
 
     @testset "L2-Bestapproximations" begin
         println("\n")
@@ -327,8 +331,13 @@ function run_basis_tests()
                     H1P2{2,2}]
     ExpectedOrders2D = [1,1,1,1,2]
     TestCatalog3D = [
-                    H1P1{3}]
-    ExpectedOrders3D = [1]
+                    H1P1{3},
+                    H1MINI{3,3},
+                    H1CR{3},
+                    H1BR{3},
+                    H1P2{3,3}]
+    ExpectedOrders3D = [1,1,1,1,2]
+    EG3D = [Tetrahedron3D]
 
     @testset "H1-Bestapproximations" begin
         println("\n")
@@ -561,6 +570,81 @@ function run_basis_tests()
         end
         println("")
     end
+
+    ####################################
+    # TESTSET p-robust Stokes elements #
+    ####################################
+
+    # list of FETypes that should be tested
+    TestCatalog2D = [
+            [H1CR{2}, L2P0{1}, HDIVRT0{2}],
+            [H1BR{2}, L2P0{1}, HDIVRT0{2}],
+            [H1BR{2}, L2P0{1}, HDIVBDM1{2}]]
+    ExpectedOrders2D = [[0,3],[0,3],[1,3]]
+    TestCatalog3D = [
+            [H1CR{3}, L2P0{1}, HDIVRT0{3}],
+            [H1BR{3}, L2P0{1}, HDIVRT0{3}]]
+    ExpectedOrders3D = [[0,3],[0,3]]
+
+    @testset "Reconstruction-Operators" begin
+    println("\n")
+    println("======================================")
+    println("Testing Reconstruction operators in 2D")
+    println("======================================")
+    xgrid = testgrid(Triangle2D, Parallelogram2D)
+    for n = 1 : length(TestCatalog2D)
+        exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
+
+        # Define Stokes problem via PDETooles_PDEProtoTypes with reconstruction operator in rhs
+        FETypes = TestCatalog2D[n]
+        Rop = ReconstructionIdentity{FETypes[3]}
+        StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
+        add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders2D[n][1])
+        add_rhsdata!(StokesProblem, 1, RhsOperator(Rop, [0], rhs!, 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
+        
+        # choose FE and generate FESpace
+        FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
+
+        # solve
+        Solution = FEVector{Float64}("Stokes-Solution",FES)
+        solve!(Solution, StokesProblem)
+
+        # check error of reconstruction
+        L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
+        errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
+        println("EG = Triangle2D/Parallelogram2D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
+        @test errorV < 1e-12
+    end
+    println("\n")
+    println("======================================")
+    println("Testing Reconstruction operators in 3D")
+    println("======================================")
+    xgrid = testgrid(Tetrahedron3D)
+    for n = 1 : length(TestCatalog3D)
+        exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders2D[n][2])
+
+        # Define Stokes problem via PDETooles_PDEProtoTypes with reconstruction operator in rhs
+        FETypes = TestCatalog3D[n]
+        Rop = ReconstructionIdentity{FETypes[3]}
+        StokesProblem = IncompressibleNavierStokesProblem(3; nonlinear = false)
+        add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders3D[n][1])
+        add_rhsdata!(StokesProblem, 1, RhsOperator(Rop, [0], rhs!, 3, 3; bonus_quadorder = max(0,ExpectedOrders3D[n][2]-1)))
+        
+        # choose FE and generate FESpace
+        FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
+
+        # solve
+        Solution = FEVector{Float64}("Stokes-Solution",FES)
+        solve!(Solution, StokesProblem)
+
+        # check error of reconstruction
+        L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
+        errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
+        println("EG = Triangle2D/Parallelogram2D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
+        @test errorV < 1e-12
+    end
+    println("")
+    end
 end
 
 
@@ -575,6 +659,7 @@ function run_examples()
         include("../examples/doc_2d_commutinginterpolators.jl")
         @test eval(Meta.parse("Example_2DCommutingInterpolators.test()")) < 1e-15
         
+        # tests the same reconstruction operator tests above, but let's keep it for now...
         println("\n2D PRESSURE_ROBUSTNESS")
         include("../examples/doc_2d_stokes_probust.jl")
         @test eval(Meta.parse("Example_2DPressureRobustness.test()")) < 1e-15
