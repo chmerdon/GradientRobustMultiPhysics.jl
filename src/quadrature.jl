@@ -114,7 +114,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
 
 Constructs quadrature rule on Triangle2D of specified order.
 """
-function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
+function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) where {T<:Real, ET <: Triangle2D}
   if order <= 1
       name = "midpoint rule"
       xref = Vector{Array{T,1}}(undef,1);
@@ -127,6 +127,10 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Triangle2D}
       xref[2] = [0//1,1//2];
       xref[3] = [1//2,0//1];
       w = [1//3; 1//3; 1//3]     
+  elseif order == 8 || (force_symmetric_rule && order <=8) # symmetric rule
+      xref, w, name = get_symmetric_rule(ET, order)
+  elseif (order >= 12 && order <= 14) || (force_symmetric_rule && order <=14) # symmetric rule
+      xref, w, name = get_symmetric_rule(ET, order)
   else
       name = "generic Stroud rule of order $order"
       xref, w = get_generic_quadrature_Stroud(order)
@@ -205,7 +209,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
 
 Constructs quadrature rule on Tetrahedron3D of specified order.
 """
-function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
+function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) where {T<:Real, ET <: Tetrahedron3D}
   if order <= 1
       name = "midpoint rule"
       xref = Vector{Array{T,1}}(undef,1);
@@ -219,12 +223,12 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
       xref[3] = [0.1381966011250105,0.5854101966249685,0.1381966011250105]
       xref[4] = [0.1381966011250105,0.1381966011250105,0.5854101966249685]
       w = ones(T,4) * 1 // 4
-  elseif order > 2 # up to order 4 exact
-    # Refs
-    # P Keast, Moderate degree tetrahedral quadrature formulas, CMAME 55: 339-348 (1986)
-    # O. C. Zienkiewicz, The Finite Element Method,  Sixth Edition,
+  elseif order <= 4 # up to order 4 exact
+      # Ref
+      # P Keast, Moderate degree tetrahedral quadrature formulas, CMAME 55: 339-348 (1986)
+      # O. C. Zienkiewicz, The Finite Element Method,  Sixth Edition,
 
-    name = "order 4 rule"
+      name = "order 4 rule"
       xref = Vector{Array{T,1}}(undef,11);
       xref[1]  = [0.2500000000000000, 0.2500000000000000, 0.2500000000000000 ]
       xref[2]  = [0.7857142857142857, 0.0714285714285714, 0.0714285714285714 ]
@@ -239,11 +243,191 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Tetrahedron3D}
       xref[11] = [0.1005964238332008, 0.1005964238332008, 0.3994035761667992 ]
       w = [-0.0789333333333333, 0.0457333333333333, 0.0457333333333333, 0.0457333333333333, 0.0457333333333333, 0.1493333333333333, 0.1493333333333333, 0.1493333333333333, 0.1493333333333333, 0.1493333333333333, 0.1493333333333333]
 
+  elseif order <= 8  # symmetric rule
+      xref, w, name = get_symmetric_rule(ET, order)
   else
       # no generic rule implemented yet
   end
   return QuadratureRule{T, ET}(name, xref, w)
 end
+
+
+## recipe taken from:
+## "A SET OF SYMMETRIC QUADRATURE RULESON TRIANGLES AND TETRAHEDRA"
+## Zhang/Cui/Lia
+## Journal of Computational Mathematics, Vol.27, No.1, 2009,89–96
+function get_symmetric_rule(::Type{Triangle2D}, order::Int)
+
+    # define abscissas and weights for orbits
+    if order <= 1
+        weights_S3 = 1.0
+        npoints = 1
+        name = "symmetric rule order 1"
+    elseif order <= 8
+        weights_S3 = .1443156076777871682510911104890646
+        abscissas_S21 = [.1705693077517602066222935014914645,
+                         .0505472283170309754584235505965989,
+                         .4592925882927231560288155144941693]
+        weights_S21 = [.1032173705347182502817915502921290,
+                       .0324584976231980803109259283417806,
+                       .0950916342672846247938961043885843]
+        abscissas_S111 = [[.2631128296346381134217857862846436, .0083947774099576053372138345392944]]
+        weights_S111 = [.0272303141744349942648446900739089]
+        npoints = 16
+        name = "symmetric rule order 8"
+    elseif order <= 14
+        weights_S3 = .0585962852260285941278938063477560
+        abscissas_S21 = [.0099797608064584324152935295820524,
+                         .4799778935211883898105528650883899,
+                         .1538119591769669000000000000000000,
+                         .0740234771169878100000000000000000,
+                         .1303546825033300000000000000000000,
+                         .2306172260266531342996053700983831,
+                         .4223320834191478241144087137913939]
+        weights_S21 = [.0017351512297252675680618638808094,
+                       .0261637825586145217778288591819783,
+                       .0039197292424018290965208275701454,
+                       .0122473597569408660972869899262505,
+                       .0281996285032579601073663071515657,
+                       .0508870871859594852960348275454540,
+                       .0504534399016035991910208971341189]
+        abscissas_S111 = [[.7862373859346610033296221140330900,.1906163600319009042461432828653034],
+                          [.6305521436606074416224090755688129,.3623231377435471446183267343597729],
+                          [.6265773298563063142335123137534265,.2907712058836674150248168174816732],
+                          [.9142099849296254122399670993850469,.0711657108777507625475924502924336]]
+        weights_S111 = [.0170636442122334512900253993849472,
+                        .0096834664255066004075209630934194,
+                        .0363857559284850056220113277642717,
+                        .0069646633735184124253997225042413]
+        npoints = 46
+        name = "symmetric rule order 14"
+    end
+
+    # collect quadrature points and weights
+    xref = Vector{Array{Float64,1}}(undef,npoints);
+    w = zeros(Float64,npoints)
+    xref[1] = [1//3, 1//3]
+    w[1] = weights_S3
+
+    # each abscissa in orbit S21 generates three points
+    if length(weights_S21) > 0
+        for j = 1 : length(weights_S21)
+            xref[1 + (j-1)*3 + 1] = [abscissas_S21[j],abscissas_S21[j]]
+            xref[1 + (j-1)*3 + 2] = [abscissas_S21[j],1-2*abscissas_S21[j]]
+            xref[1 + (j-1)*3 + 3] = [1-2*abscissas_S21[j],abscissas_S21[j]]
+            for k = 1 : 3
+                w[1+(j-1)*3 + k] = weights_S21[j]
+            end
+        end
+    end
+
+    # each abscissa in orbit S111 generates six points
+    if length(weights_S111) > 0
+        offset = 1 + length(weights_S21)*3
+        for j = 1 : length(weights_S111)
+            xref[offset + (j-1)*6 + 1] = [abscissas_S111[j][1],abscissas_S111[j][2]]
+            xref[offset + (j-1)*6 + 2] = [abscissas_S111[j][2],abscissas_S111[j][1]]
+            xref[offset + (j-1)*6 + 3] = [abscissas_S111[j][1],1-abscissas_S111[j][1]-abscissas_S111[j][2]]
+            xref[offset + (j-1)*6 + 4] = [abscissas_S111[j][2],1-abscissas_S111[j][1]-abscissas_S111[j][2]]
+            xref[offset + (j-1)*6 + 5] = [1-abscissas_S111[j][1]-abscissas_S111[j][2],abscissas_S111[j][1]]
+            xref[offset + (j-1)*6 + 6] = [1-abscissas_S111[j][1]-abscissas_S111[j][2],abscissas_S111[j][2]]
+            for k = 1 : 6
+                w[offset + (j-1)*6 + k] = weights_S111[j]
+            end
+        end
+    end
+
+    return xref, w, name
+end
+
+
+## recipe taken from:
+## "A SET OF SYMMETRIC QUADRATURE RULESON TRIANGLES AND TETRAHEDRA"
+## Zhang/Cui/Lia
+## Journal of Computational Mathematics, Vol.27, No.1, 2009,89–96
+function get_symmetric_rule(::Type{Tetrahedron3D}, order::Int)
+
+    # define abscissas and weights for orbits
+    if order <= 8
+        abscissas_S31 = [.0396754230703899012650713295393895,
+                         .3144878006980963137841605626971483,
+                         .1019866930627033000000000000000000,
+                         .1842036969491915122759464173489092]
+        weights_S31 = [.0063971477799023213214514203351730,
+                       .0401904480209661724881611584798178,
+                       .0243079755047703211748691087719226,
+                       .0548588924136974404669241239903914]
+        abscissas_S22 = [.0634362877545398924051412387018983]
+        weights_S22 = [.0357196122340991824649509689966176]
+        abscissas_S211 = [[.0216901620677280048026624826249302,.7199319220394659358894349533527348],
+                          [.2044800806367957142413355748727453,.5805771901288092241753981713906204]]
+        weights_S211 = [.0071831906978525394094511052198038,
+                        .0163721819453191175409381397561191]
+        npoints = 46
+        name = "symmetric rule order 8"
+    end
+
+    # collect quadrature points and weights
+    xref = Vector{Array{Float64,1}}(undef,npoints);
+    w = zeros(Float64,npoints)
+
+    # each abscissa in orbit S31 generates four points
+    if length(weights_S31) > 0
+        for j = 1 : length(weights_S31)
+            xref[(j-1)*4 + 1] = [abscissas_S31[j],abscissas_S31[j],abscissas_S31[j]]
+            xref[(j-1)*4 + 2] = [abscissas_S31[j],abscissas_S31[j],1-3*abscissas_S31[j]]
+            xref[(j-1)*4 + 3] = [abscissas_S31[j],1-3*abscissas_S31[j],abscissas_S31[j]]
+            xref[(j-1)*4 + 4] = [1-3*abscissas_S31[j],abscissas_S31[j],abscissas_S31[j]]
+            for k = 1 : 4
+                w[(j-1)*4 + k] = weights_S31[j]
+            end
+        end
+    end
+
+    # each abscissa in orbit S22 generates six points
+    if length(weights_S22) > 0
+        offset = length(weights_S31)*4
+        for j = 1 : length(weights_S22)
+            xref[offset + (j-1)*6 + 1] = [abscissas_S22[j],abscissas_S22[j],1//2 - abscissas_S22[j]]
+            xref[offset + (j-1)*6 + 2] = [abscissas_S22[j],1//2 - abscissas_S22[j],abscissas_S22[j]]
+            xref[offset + (j-1)*6 + 3] = [1//2 - abscissas_S22[j],abscissas_S22[j],abscissas_S22[j]]
+            xref[offset + (j-1)*6 + 4] = [1//2 - abscissas_S22[j],abscissas_S22[j],1//2-abscissas_S22[j]]
+            xref[offset + (j-1)*6 + 5] = [1//2 - abscissas_S22[j],1//2-abscissas_S22[j],abscissas_S22[j]]
+            xref[offset + (j-1)*6 + 6] = [abscissas_S22[j],1//2 - abscissas_S22[j],1//2-abscissas_S22[j]]
+            for k = 1 : 6
+                w[offset + (j-1)*6 + k] = weights_S22[j]
+            end
+        end
+    end
+
+    # each abscissa in orbit S211 generates twelve points
+    if length(weights_S211) > 0
+        offset = length(weights_S31)*4 + length(weights_S22)*6
+        for j = 1 : length(weights_S211)
+            a = abscissas_S211[j][1]
+            b = abscissas_S211[j][2]
+            c = 1 - 2*a - b
+            xref[offset + (j-1)*12 + 1] = [a,a,b]
+            xref[offset + (j-1)*12 + 2] = [a,b,a]
+            xref[offset + (j-1)*12 + 3] = [b,a,a]
+            xref[offset + (j-1)*12 + 4] = [a,a,c]
+            xref[offset + (j-1)*12 + 5] = [a,c,a]
+            xref[offset + (j-1)*12 + 6] = [c,a,a]
+            xref[offset + (j-1)*12 + 7] = [a,b,c]
+            xref[offset + (j-1)*12 + 8] = [a,c,b]
+            xref[offset + (j-1)*12 + 9] = [c,a,b]
+            xref[offset + (j-1)*12 + 10] = [b,a,c]
+            xref[offset + (j-1)*12 + 11] = [b,c,a]
+            xref[offset + (j-1)*12 + 12] = [c,b,a]
+            for k = 1 : 12
+                w[offset + (j-1)*12 + k] = weights_S211[j]
+            end
+        end
+    end
+
+    return xref, w, name
+end
+
 
 
 function get_generic_quadrature_Gauss(order::Int)
@@ -319,7 +503,8 @@ function integrate!(
     resultdim::Int;
     verbosity::Int = 0,
     index_offset::Int = 0,
-    item_dependent_integrand::Bool = false)
+    item_dependent_integrand::Bool = false,
+    force_quadrature_rule = nothing)
     
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
@@ -330,11 +515,15 @@ function integrate!(
     NumberType = eltype(integral4items)
     
     # find proper quadrature rules
-    EG = Base.unique(xItemGeometries)
+    EG = grid[GridComponentUniqueGeometries4AssemblyType(AT)]
     qf = Array{QuadratureRule,1}(undef,length(EG))
     local2global = Array{L2GTransformer,1}(undef,length(EG))
     for j = 1 : length(EG)
-        qf[j] = QuadratureRule{NumberType,EG[j]}(order);
+        if force_quadrature_rule != nothing
+            qf[j] = force_quadrature_rule;
+        else
+            qf[j] = QuadratureRule{NumberType,EG[j]}(order);
+        end
         local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid,AT)
     end    
     if verbosity > 0
@@ -403,13 +592,14 @@ function integrate(
     order::Int,
     resultdim::Int;
     verbosity::Int = 0,
-    item_dependent_integrand::Bool = false)
+    item_dependent_integrand::Bool = false,
+    force_quadrature_rule = nothing)
 
     # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
     # and use the itemwise integration above
     AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
 
-    integrate!(AV, grid, AT, integrand!, order, resultdim; verbosity = verbosity, item_dependent_integrand = item_dependent_integrand)
+    integrate!(AV, grid, AT, integrand!, order, resultdim; verbosity = verbosity, item_dependent_integrand = item_dependent_integrand, force_quadrature_rule = force_quadrature_rule)
 
     if resultdim == 1
         return AV.entries[1]

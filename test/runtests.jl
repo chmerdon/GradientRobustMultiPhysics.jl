@@ -73,9 +73,9 @@ function run_basis_tests()
     ############################
     maxorder1D = 12
     EG2D = [Triangle2D,Parallelogram2D]
-    maxorder2D = [12,12]
+    maxorder2D = [20,20]
     EG3D = [Parallelepiped3D,Tetrahedron3D]
-    maxorder3D = [12,4]
+    maxorder3D = [12,8]
 
     @testset "QuadratureRules" begin
         println("\n")
@@ -85,8 +85,9 @@ function run_basis_tests()
         xgrid = testgrid(Edge1D)
         for order = 1 : maxorder1D
             integrand!, exactvalue = exact_function1D(order)
-            quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue))
-            println("EG = Edge1D | order = $order | error = $(quadvalue - exactvalue)")
+            qf = QuadratureRule{Float64,Edge1D}(order)
+            quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue); force_quadrature_rule = qf)
+            println("EG = Edge1D | order = $order ($(qf.name), $(length(qf.w)) points) | error = $(quadvalue - exactvalue)")
             @test isapprox(quadvalue,exactvalue)
         end
         println("\n")
@@ -98,8 +99,9 @@ function run_basis_tests()
             xgrid = testgrid(EG)
             for order = 1 : maxorder2D[j]
                 integrand!, exactvalue = exact_function2D(order)
-                quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue))
-                println("EG = $EG | order = $order | error = $(quadvalue - exactvalue)")
+                qf = QuadratureRule{Float64,EG}(order)
+                quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue); force_quadrature_rule = qf)
+                println("EG = $EG | order = $order ($(qf.name), $(length(qf.w)) points) | error = $(quadvalue - exactvalue)")
                 @test isapprox(quadvalue,exactvalue)
             end
         end
@@ -112,8 +114,9 @@ function run_basis_tests()
             xgrid = testgrid(EG)
             for order = 1 : maxorder3D[j]
                 integrand!, exactvalue = exact_function3D(order)
-                quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue))
-                println("EG = $EG | order = $order | error = $(quadvalue - exactvalue)")
+                qf = QuadratureRule{Float64,EG}(order)
+                quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue); force_quadrature_rule = qf)
+                println("EG = $EG | order = $order ($(qf.name), $(length(qf.w)) points) | error = $(quadvalue - exactvalue)")
                 @test isapprox(quadvalue,exactvalue)
             end
         end
