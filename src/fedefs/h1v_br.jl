@@ -43,6 +43,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: H
     xCellDofs = VariableTargetAdjacency(Int32)
     nnodes = num_sources(FES.xgrid[Coordinates])
     nnodes4item = 0
+    nfaces4item = 0
     for cell = 1 : ncells
         nnodes4item = num_targets(xCellNodes,cell)
         for k = 1 : nnodes4item
@@ -51,11 +52,11 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: H
                 dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
             end    
         end
-        nnodes4item = num_targets(xCellFaces,cell)
-        for k = 1 : nnodes4item
+        nfaces4item = num_targets(xCellFaces,cell)
+        for k = 1 : nfaces4item
             dofs4item[ncomponents*nnodes4item+k] = ncomponents*nnodes + xCellFaces[k,cell]
         end
-        append!(xCellDofs,dofs4item[1:(ncomponents+1)*nnodes4item])
+        append!(xCellDofs,dofs4item[1:ncomponents*nnodes4item+nfaces4item])
     end
     # save dofmap
     FES.dofmaps[CellDofs] = xCellDofs
@@ -749,6 +750,12 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FES
     function closure(coefficients, cell::Int) 
         # reconstruction coefficients for P1 basis functions on reference element
         # fill!(coefficients,0.0)
+        
+        faces[1] = xCellFaces[1,cell]
+        faces[2] = xCellFaces[2,cell]
+        faces[3] = xCellFaces[3,cell]
+        faces[4] = xCellFaces[4,cell]
+
         for k = 1 : 3
             # node 1
             coefficients[4*k-3,4] = 1 // 3 * xFaceVolumes[faces[4]] * xFaceNormals[k, faces[4]]
@@ -772,10 +779,10 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FES
         end
 
         # reconstruction coefficients for face bubbles on reference element
-        coefficients[13,1] = 3 // 20 * FE.xFaceVolumes[faces[1]]
-        coefficients[14,2] = 3 // 20 * FE.xFaceVolumes[faces[2]]
-        coefficients[15,3] = 3 // 20 * FE.xFaceVolumes[faces[3]]
-        coefficients[16,4] = 3 // 20 * FE.xFaceVolumes[faces[4]]
+        coefficients[13,1] = 3 // 20 * xFaceVolumes[faces[1]]
+        coefficients[14,2] = 3 // 20 * xFaceVolumes[faces[2]]
+        coefficients[15,3] = 3 // 20 * xFaceVolumes[faces[3]]
+        coefficients[16,4] = 3 // 20 * xFaceVolumes[faces[4]]
         return nothing
     end
 end

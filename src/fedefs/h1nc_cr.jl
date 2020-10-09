@@ -231,7 +231,7 @@ end
 
 
 
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1CR{2}}, FER::FESpace{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
+function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1CR{3}}, FER::FESpace{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaceSigns = FER.xgrid[CellFaceSigns]

@@ -62,6 +62,11 @@ function VertexRule(ET::Type{Tetrahedron3D})
     w = [1//4, 1//4, 1//4, 1//4]
     return QuadratureRule{Float64, ET}("vertex rule tetrahedron", xref, w)
 end
+function VertexRule(ET::Type{Parallelepiped3D})
+    xref = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
+    w = [1//4, 1//4, 1//4, 1//4, 1//4, 1//4, 1//4, 1//4]
+    return QuadratureRule{Float64, ET}("vertex rule parallelepiped", xref, w)
+end
 
 
 """
@@ -246,6 +251,7 @@ function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) wh
   elseif order <= 8  # symmetric rule
       xref, w, name = get_symmetric_rule(ET, order)
   else
+      println("no quadrature rule with that order available")  
       # no generic rule implemented yet
   end
   return QuadratureRule{T, ET}(name, xref, w)
