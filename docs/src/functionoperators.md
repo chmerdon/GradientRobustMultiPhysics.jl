@@ -10,7 +10,8 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`IdentityDisc{Jump}`](@ref)                         | jumps of identity (only over faces)                     |
 | [`IdentityDisc{Average}`](@ref)                      | average of identity (only over faces)                   |
 | [`IdentityComponent{c}`](@ref)                       | identity of c-th component                              |
-| [`NormalFlux`](@ref)                                 | normal flux (function times normal)                     | 
+| [`NormalFlux`](@ref)                                 | normal flux (function times normal)                     |
+| [`TangentFlux`](@ref)                                | tangent flux (function times tangent)                   | 
 | [`Gradient`](@ref)                                   | gradient/Jacobian                                       |
 | [`GradientDisc{Jump}`](@ref)                         | jumps of gradient/Jacobian (only over faces)            |
 | [`GradientDisc{Average}`](@ref)                      | average of gradient/Jacobian (only over faces)          |

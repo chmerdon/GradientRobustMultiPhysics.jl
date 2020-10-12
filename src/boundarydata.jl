@@ -227,6 +227,23 @@ function boundarydata!(
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+        elseif Dboperator == TangentFlux # on 2D domains
+            xFaceNormals = FE.xgrid[FaceNormals]
+            xBFaces = FE.xgrid[BFaces]
+            function bnd_rhs_function_hcurl()
+                temp = zeros(Float64,ncomponents)
+                function closure(result, input, x, bface)
+                    O.data4bregion[xBFaceRegions[bface]](temp,x,time)
+                    result[1] = -temp[1] * xFaceNormals[2,xBFaces[bface]]
+                    result[1] += temp[2] * xFaceNormals[1,xBFaces[bface]]
+                    result[1] *= input[1] 
+                end   
+            end   
+            action = ItemWiseXFunctionAction(bnd_rhs_function_hcurl(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
+            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         end    
 
         # fix already set dofs by other boundary conditions

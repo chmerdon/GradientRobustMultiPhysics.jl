@@ -159,8 +159,8 @@ DefaultName4Operator(::Type{Deviator}) = "dev"
 # length for operator result
 Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents
 Length4Operator(::Type{<:IdentityComponent}, xdim::Int, ncomponents::Int) = 1
-Length4Operator(::Type{NormalFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
-Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ceil(ncomponents/(xdim-1))
+Length4Operator(::Type{NormalFlux}, xdim::Int, ncomponents::Int) = ncomponents
+Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = ncomponents
 Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))

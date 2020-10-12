@@ -14,7 +14,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
     - H1 elements (so far P1, P2, MINI, CR, BR)
     - Hdiv elements (so far RT0, BDM1, RT1)
     - L2 elements (so far P0, P1)
-    - Hcurl elements (in future)
+    - Hcurl elements (so far N0)
 - based on [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl), allowing mixed element geometries in the grid (simplices and quads atm)
 - PDEDescription module and problem prototypes for easy problem description and discretisation setup
 - PDEDescription recognizes nonlinear operators and automatically devises fixed-point or Newton algorithms (experimental)

@@ -143,7 +143,7 @@ include("fedefs/l2_p0.jl"); # currently masked as H1 element
 include("fedefs/l2_p1.jl"); # currently masked as H1 element
 
 # Hcurl-conforming elements
-# TODO
+include("fedefs/hcurl_n0.jl");
 
 
 

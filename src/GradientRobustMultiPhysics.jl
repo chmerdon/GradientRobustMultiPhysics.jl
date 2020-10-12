@@ -81,6 +81,7 @@ export AbstractHdivFiniteElement
 export HDIVRT0, HDIVBDM1, HDIVRT1
 
 export AbstractHcurlFiniteElement
+export HCURLN0
 
 export get_ncomponents
 export reconstruct!

@@ -13,7 +13,7 @@
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
-    ItemDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency}    # link to ItemDofs
+    ItemDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency,Array{Int32,2}}    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
@@ -58,6 +58,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         if FEType <: AbstractHdivFiniteElement
             refbasis = get_basis_normalflux_on_face(FEType, EG)
             ncomponents = 1
+        elseif FEType <: AbstractHcurlFiniteElement
+                refbasis = get_basis_tangentflux_on_edge(FEType, EG)
+                ncomponents = 1
         else
             refbasis = get_basis_on_face(FEType, EG)
         end
@@ -105,7 +108,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     current_eval = zeros(T,Int(Length4Operator(FEOP,edim,ncomponents)),ndofs4item,length(qf.w))
 
     xref = copy(qf.xref)
-    if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
+    if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
         if AT == ON_CELLS
             coeff_handler = get_coefficients_on_cell!(FE, EG)
@@ -330,6 +333,36 @@ end
 
 
 # IDENTITY OPERATOR
+# Hcurl ELEMENTS (covariant Piola trafo)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,IdentityDisc{Jump}},AT}, item::Int) where {T <: Real, FEType <: AbstractHcurlFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+    
+        # cell update transformation
+        update!(FEBE.L2G, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
+
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                for k = 1 : FEBE.offsets[2] # ncomponents
+                    FEBE.cvals[k,dof_i,i] = 0.0;
+                    for l = 1 : FEBE.offsets[2] # ncomponents
+                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                    end    
+                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]
+                end
+            end
+        end
+    end
+    return nothing
+end
+
+# IDENTITY OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,IdentityDisc{Jump}},AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
     if FEBE.citem != item
@@ -485,6 +518,23 @@ end
 # NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
 function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHdivFiniteElement, EG <: AbstractElementGeometry, FEOP <: NormalFlux, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+    
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.ncomponents
+                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+            end
+        end
+    end
+    return nothing
+end
+
+
+# TANGENTLFLUX OPERATOR
+# Hdiv ELEMENTS (just divide by face volume)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractHcurlFiniteElement, EG <: AbstractElementGeometry, FEOP <: TangentFlux, AT <:AbstractAssemblyType}
     if FEBE.citem != item
         FEBE.citem = item
     
@@ -906,6 +956,36 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
     end  
     return nothing
 end
+
+
+
+# CURL2D OPERATOR
+# HCURL ELEMENTS on 2D domains
+# covariant Piola transformation preserves curl2D (up to a factor 1/det(A))
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Curl2D}, item::Int) where {T <: Real, FEType <: AbstractHcurlFiniteElement, EG <: AbstractElementGeometry2D, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+        
+        # cell update transformation
+        update!(FEBE.L2G, item)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
+
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = FEBE.refoperatorvals[dof_i + FEBE.offsets2[1],2,i]
+                FEBE.cvals[1,dof_i,i] -= FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],1,i]
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.iteminfo[1];
+            end
+        end    
+    end  
+    return nothing
+end
+
 
 # use basisevaluator to evaluate j-th basis function at quadrature point i
 function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i; offset::Int = 0, factor = 1)

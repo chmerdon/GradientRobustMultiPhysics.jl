@@ -4,8 +4,8 @@
 ([source code](SOURCE_URL))
 
 This example computes the L2-bestapproximation of some given vector-valued function into the lowest-order Raviart-Thomas space. It also
-preserves the divergence of the functions in the sense that the divergence of the approximation equals the piecewise integral mean of the exact divergence.
-Afterwards the L2 error (also of the divergence error) is computed and the solution is plotted.
+preserves the divergence of the function in the sense that the divergence of the approximation equals the piecewise integral mean of the exact divergence.
+Afterwards the L2 error (also of the divergence) is computed and the solution is plotted.
 
 =#
 

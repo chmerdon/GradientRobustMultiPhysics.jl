@@ -289,7 +289,7 @@ function prepare_assembly(
 
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}},1}(undef,length(FE))
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     EG = FE[1].xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
 
     # note: EG are the element geometries related to AT (the real integration domains)
@@ -314,7 +314,7 @@ function prepare_assembly(
     if length(facejump_operators) > 0
         xDofItemGeometries = FE[facejump_operators[1]].xgrid[GridComponentGeometries4AssemblyType(dofitemAT[facejump_operators[1]])]
         xDofItemRegions = FE[facejump_operators[1]].xgrid[GridComponentRegions4AssemblyType(dofitemAT[facejump_operators[1]])]
-        xDofItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}},1}(undef,length(facejump_operators))
+        xDofItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(facejump_operators))
         for k = 1 : length(facejump_operators)
             xDofItemDofs[k] = Dofmap4AssemblyType(FE[facejump_operators[k]], dofitemAT[facejump_operators[k]])
         end
@@ -476,7 +476,7 @@ function evaluate!(
     @assert length(FEB) == length(form.operators)
     nFE = length(FEB)
     FE = Array{FESpace,1}(undef, nFE)
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}},1}(undef, nFE)
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef, nFE)
     for j = 1 : nFE
         FE[j] = FEB[j].FES
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
@@ -1445,9 +1445,9 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
-    xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
-    xItemDofs3::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}} = Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, operator[3]))
+    xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
+    xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
+    xItemDofs3::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, operator[3]))
     xItemRegions::Array{Int,1} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems::Int = num_sources(xItemNodes)
 
@@ -1633,7 +1633,7 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}},1}(undef,length(FE))
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : length(FE)
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operator[j]))
     end
@@ -1810,7 +1810,7 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}},1}(undef,length(FE))
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : nFE
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
     end
@@ -2051,7 +2051,7 @@ function assemble!(
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32}},1}(undef,length(FE))
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : nFE
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
     end

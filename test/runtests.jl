@@ -136,6 +136,7 @@ function run_basis_tests()
                     H1P2{1,1}]
     ExpectedOrders1D = [0,1,1,2]
     TestCatalog2D = [
+                    HCURLN0{2},
                     HDIVRT0{2},
                     HDIVBDM1{2},
                     L2P0{2},
@@ -145,7 +146,7 @@ function run_basis_tests()
                     H1BR{2},
                     L2P1{2},
                     H1P2{2,2}]
-    ExpectedOrders2D = [0,1,0,1,1,1,1,1,2]
+    ExpectedOrders2D = [0,0,1,0,1,1,1,1,1,2]
 
 
     @testset "Interpolations" begin
@@ -214,6 +215,7 @@ function run_basis_tests()
                     H1P2{1,1}]
     ExpectedOrders1D = [0,1,1,2]
     TestCatalog2D = [
+                    HCURLN0{2},
                     HDIVRT0{2},
                     HDIVBDM1{2},
                     L2P0{2},
@@ -223,7 +225,7 @@ function run_basis_tests()
                     H1BR{2},
                     L2P1{2},
                     H1P2{2,2}]
-    ExpectedOrders2D = [0,1,0,1,1,1,1,1,2]
+    ExpectedOrders2D = [0,0,1,0,1,1,1,1,1,2]
     TestCatalog3D = [
                     HDIVRT0{3},
                     H1MINI{3,3},
