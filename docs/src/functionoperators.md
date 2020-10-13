@@ -19,6 +19,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`Divergence`](@ref)                                 | divergence                                              |
 | [`CurlScalar`](@ref)                                 | curl operator 1D to 2D (rotated gradient)               |
 | [`Curl2D`](@ref)                                     | curl operator 2D to 1D                                  |
+| [`Curl3D`](@ref)                                     | curl operator 3D to 3D                                  |
 | [`ReconstructionIdentity{FEType}`](@ref)             | reconstruction operator into specified FEType           |
 | [`ReconstructionIdentityDisc{FEType,Jump}`](@ref)    | jump of reconstruction operator (over faces)            |
 | [`ReconstructionIdentityDisc{FEType,Average}`](@ref) | average of reconstruction operator (over faces)         |

@@ -3,7 +3,7 @@
 # 3D Commuting Interpolators
 ([source code](SOURCE_URL))
 
-This example verifies a structural property of the H1 and Hdiv finite element spaces and their interpolators which is
+This example verifies a structural property of the Hcurl and Hdiv finite element spaces and their interpolators which is
 ```math
 \mathrm{Curl}(I_{\mathrm{N}_{k-1}}\psi) = I_{\mathrm{RT}_{k-1}}(\mathrm{Curl}(\psi))
 ```

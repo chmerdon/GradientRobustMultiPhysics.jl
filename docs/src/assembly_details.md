@@ -9,13 +9,14 @@ function operators and action for the ansatz and test functions and does the qua
 
 The following assembly patterns are available.
 
-| Assembly Type    | Description                                   |
-| :--------------- | :-------------------------------------------- |
-| ON_CELLS         | assembles over the cells of the mesh          |
-| ON_FACES         | assembles over all faces of the mesh          |
-| ON_IFACES (*)    | assembles over the interior faces of the mesh |
-| ON_BFACES        | assembles over the boundary faces of the mesh |
-| ON_EDGES (*)     | assembles over all edges of the mesh (in 3D)  |
+| Assembly Type    | Description                                           |
+| :--------------- | :---------------------------------------------------- |
+| ON_CELLS         | assembles over the cells of the mesh                  |
+| ON_FACES         | assembles over all faces of the mesh                  |
+| ON_IFACES (*)    | assembles over the interior faces of the mesh         |
+| ON_BFACES        | assembles over the boundary faces of the mesh         |
+| ON_EDGES (*)     | assembles over all edges of the mesh (in 3D)          |
+| ON_BEDGES (*)    | assembles over the boundary edges of the mesh (in 3D) |
 
 !!! note
     (*) = still experimental, might have some issues
