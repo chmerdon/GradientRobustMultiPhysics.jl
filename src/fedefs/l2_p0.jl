@@ -111,17 +111,14 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis_on_cell(::Type{L2P0{1}}, ::Type{<:AbstractElementGeometry})
+function get_basis_on_cell(FEType::Type{<:L2P0}, ::Type{<:AbstractElementGeometry})
     function closure(xref)
-        return [1.0]
-    end
-end
-
-
-function get_basis_on_cell(::Type{L2P0{2}}, ::Type{<:AbstractElementGeometry})
-    function closure(xref)
-        return [1.0 0.0;
-                0.0 1.0]
+        ncomponents = get_ncomponents(FEType)
+        refbasis = zeros(eltype(xref),ncomponents,ncomponents)
+        for k = 1 : ncomponents
+            refbasis[k,k] = 1.0
+        end
+        return refbasis
     end
 end
 

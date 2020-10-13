@@ -54,7 +54,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     # pre-allocate memory for basis functions
     ncomponents = get_ncomponents(FEType)
-    if AT <: Union{ON_BFACES,<:ON_FACES}
+    if AT <: Union{ON_BFACES,<:ON_FACES,<:ON_EDGES,ON_BEDGES}
         if FEType <: AbstractHdivFiniteElement
             refbasis = get_basis_normalflux_on_face(FEType, EG)
             ncomponents = 1
@@ -108,23 +108,27 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     current_eval = zeros(T,Int(Length4Operator(FEOP,edim,ncomponents)),ndofs4item,length(qf.w))
 
     xref = copy(qf.xref)
+    coefficients = zeros(T,0,0)
+    coeff_handler = nothing
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
         if AT == ON_CELLS
             coeff_handler = get_coefficients_on_cell!(FE, EG)
         elseif AT <: Union{ON_BFACES,<:ON_FACES}
             coeff_handler = get_coefficients_on_face!(FE, EG)
+        elseif AT <: Union{ON_BEDGES,<:ON_EDGES}
+            coeff_handler = get_coefficients_on_edge!(FE, EG)
         end
-    else
-        coefficients = zeros(T,0,0)
-        coeff_handler = nothing
     end    
     coefficients2 = zeros(T,0,0)
     coefficients3 = zeros(T,0,0)
     if derivorder == 0
         refoperatorvals = zeros(T,0,0,0);
-        if FEOP == NormalFlux
+        if FEOP == NormalFlux || (FEOP == TangentFlux && edim == 2)
             coefficients3 = FE.xgrid[FaceNormals]
+            current_eval = zeros(T,1,ndofs4item,length(qf.w));
+        elseif FEOP == TangentFlux && edim == 3
+            coefficients3 = FE.xgrid[EdgeTangents]
             current_eval = zeros(T,1,ndofs4item,length(qf.w));
         elseif FEOP == Identity || FEOP == IdentityDisc{Jump}
             current_eval = deepcopy(refbasisvals) 
@@ -980,6 +984,41 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Curl2D}, item::Int) where {T
                 FEBE.cvals[1,dof_i,i] = FEBE.refoperatorvals[dof_i + FEBE.offsets2[1],2,i]
                 FEBE.cvals[1,dof_i,i] -= FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],1,i]
                 FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.iteminfo[1];
+            end
+        end    
+    end  
+    return nothing
+end
+
+
+# CURL3D OPERATOR
+# HCURL ELEMENTS on 3D domains
+# covariant Piola transformation preserves curl3D (up to a factor 1/det(A))
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Curl3D}, item::Int) where {T <: Real, FEType <: AbstractHcurlFiniteElement, EG <: AbstractElementGeometry3D, AT <:AbstractAssemblyType}
+    if FEBE.citem != item
+        FEBE.citem = item
+        
+        # cell update transformation
+        update!(FEBE.L2G, item)
+        fill!(FEBE.cvals,0.0)
+        FEBE.coeffs_handler(FEBE.coefficients, item)
+
+        # use Piola transformation on basisvals
+        for i = 1 : length(FEBE.xref)
+            # evaluate Piola matrix at quadrature point
+            if FEBE.L2G.nonlinear || i == 1
+                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+            end
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                for k = 1 : 3
+                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,1] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[3],2,i] # du3/dx2
+                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,1] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],3,i] # - du2/dx3
+                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,2] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[1],3,i] # du3/dx1
+                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,2] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[3],1,i] # - du1/dx3
+                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,3] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],1,i] # du2/dx1
+                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,3] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[1],2,i] # - du1/dx2
+                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]/FEBE.iteminfo[1];
+                end
             end
         end    
     end  

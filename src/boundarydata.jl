@@ -227,10 +227,10 @@ function boundarydata!(
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
-        elseif Dboperator == TangentFlux # on 2D domains
+        elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
             xFaceNormals = FE.xgrid[FaceNormals]
             xBFaces = FE.xgrid[BFaces]
-            function bnd_rhs_function_hcurl()
+            function bnd_rhs_function_hcurl2d()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, bface)
                     O.data4bregion[xBFaceRegions[bface]](temp,x,time)
@@ -239,10 +239,35 @@ function boundarydata!(
                     result[1] *= input[1] 
                 end   
             end   
-            action = ItemWiseXFunctionAction(bnd_rhs_function_hcurl(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
+            action = ItemWiseXFunctionAction(bnd_rhs_function_hcurl2d(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
             RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
+            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+        elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains
+            xEdgeTangents = FE.xgrid[EdgeTangents]
+            xBEdgeRegions = FE.xgrid[BEdgeRegions]
+            xBEdges = FE.xgrid[BEdges]
+
+            function bnd_rhs_function_hcurl3d()
+                temp = zeros(Float64,ncomponents)
+                region::Int = 1
+                function closure(result, input, x, bedge)
+                    region = xBEdgeRegions[bedge]
+                    if region == 0
+                        region = 1
+                    end
+                    O.data4bregion[region](temp,x,time)
+                    result[1] = temp[1] * xEdgeTangents[1,xBEdges[bedge]]
+                    result[1] += temp[2] * xEdgeTangents[2,xBEdges[bedge]]
+                    result[1] += temp[3] * xEdgeTangents[3,xBEdges[bedge]]
+                    result[1] *= input[1]
+                end   
+            end   
+            action = ItemWiseXFunctionAction(bnd_rhs_function_hcurl3d(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, ON_BEDGES, FE, Dboperator, action; regions = [0])
+            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, FE, Dboperator, DoNotChangeAction(1); regions = [0])    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         end    
 

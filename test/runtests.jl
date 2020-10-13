@@ -661,6 +661,10 @@ function run_examples()
         println("\n2D COMMUTING INTERPOLATORS")
         include("../examples/doc_2d_commutinginterpolators.jl")
         @test eval(Meta.parse("Example_2DCommutingInterpolators.test()")) < 1e-15
+
+        println("\n2D COMMUTING INTERPOLATORS")
+        include("../examples/doc_3d_commutinginterpolators.jl")
+        @test eval(Meta.parse("Example_3DCommutingInterpolators.test()")) < 1e-15
         
         # tests the same reconstruction operator tests above, but let's keep it for now...
         println("\n2D PRESSURE_ROBUSTNESS")

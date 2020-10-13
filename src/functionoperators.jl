@@ -94,7 +94,12 @@ evaluates the curl of some two-dimensional vector field, i.e. Curl2D((u1,u2)) = 
 """
 abstract type Curl2D <: AbstractFunctionOperator end
 
-abstract type Rotation <: AbstractFunctionOperator end # only 3D: Rot(v_h) = D \times v_h
+"""
+$(TYPEDEF)
+
+evaluates the curl of some three-dimensional vector field, i.e. Curl3D(u) = \nabla \times u
+"""
+abstract type Curl3D <: AbstractFunctionOperator end # only 3D: Curl3D(v_h) = D \times v_h
 """
 $(TYPEDEF)
 
@@ -130,7 +135,7 @@ NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl2D}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Rotation}) = 1
+NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl3D}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = 1
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
@@ -149,7 +154,7 @@ DefaultName4Operator(::Type{Laplacian}) = "Laplace"
 DefaultName4Operator(::Type{Hessian}) = "Hessian"
 DefaultName4Operator(::Type{CurlScalar}) = "Curl"
 DefaultName4Operator(::Type{Curl2D}) = "Curl"
-DefaultName4Operator(::Type{Rotation}) = "Curl"
+DefaultName4Operator(::Type{Curl3D}) = "Curl"
 DefaultName4Operator(::Type{Divergence}) = "div"
 DefaultName4Operator(::Type{<:ReconstructionDivergence}) = "div R"
 DefaultName4Operator(::Type{<:ReconstructionGradient}) = "grad R"
@@ -165,6 +170,7 @@ Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncompo
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
 Length4Operator(::Type{Curl2D}, xdim::Int, ncomponents::Int) = 1
+Length4Operator(::Type{Curl3D}, xdim::Int, ncomponents::Int) = 3
 Length4Operator(::Type{<:Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
@@ -177,6 +183,7 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Gradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Curl2D}) = -1
+QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Curl3D}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = -1
@@ -186,6 +193,8 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) =
 Dofmap4AssemblyType(FES::FESpace, ::Type{ON_CELLS}) = FES.dofmaps[CellDofs]
 Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_FACES}) = FES.dofmaps[FaceDofs]
 Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES.dofmaps[BFaceDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_EDGES}) = FES.dofmaps[EdgeDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BEDGES}) = FES.dofmaps[BEdgeDofs]
 
 # default junctions
 function DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})

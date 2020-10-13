@@ -53,6 +53,14 @@ abstract type EdgeRegions <: AbstractElementRegions end
 abstract type EdgeGeometries <: AbstractElementGeometries end
 abstract type UniqueEdgeGeometries <: AbstractElementGeometries end
 
+abstract type BEdgeNodes <: AbstractGridAdjacency end
+abstract type BEdges <: AbstractGridIntegerArray1D end
+#abstract type BEdgeCellPos <: AbstractGridIntegerArray1D end # position of bface in adjacent cell
+abstract type BEdgeVolumes <: AbstractGridFloatArray1D end
+abstract type BEdgeRegions <: AbstractElementRegions end
+abstract type BEdgeGeometries <: AbstractElementGeometries end
+abstract type UniqueBEdgeGeometries <: AbstractElementGeometries end
+
 
 # show function for ExtendableGrids and defined Components in its Dict
 function showmore(io::IO, xgrid::ExtendableGrid)
@@ -762,6 +770,26 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeVolumes})
 end
 
 
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdgeVolumes})
+
+    # get links to other stuff
+    xCoordinates = xgrid[Coordinates]
+    xBEdgeNodes = xgrid[BEdgeNodes]
+    nbedges = num_sources(xBEdgeNodes)
+    xBEdgeGeometries = xgrid[BEdgeGeometries]
+    xCoordinateSystem = xgrid[CoordinateSystem]
+
+    # init EdgeVolumes
+    xBEdgeVolumes = zeros(Real,nbedges)
+
+    for bedge = 1 : nbedges
+        xBEdgeVolumes[bedge] = Volume4ElemType(xCoordinates,xBEdgeNodes,bedge,xBEdgeGeometries[bedge],xCoordinateSystem)
+    end
+
+    xBEdgeVolumes
+end
+
+
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     # get links to other stuff
     xCoordinates = xgrid[Coordinates]
@@ -835,16 +863,53 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
 end
 
 
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdgeNodes})
+    xBFaces = xgrid[BFaces]
+    xEdgeNodes = xgrid[EdgeNodes]
+    xFaceEdges = xgrid[FaceEdges]
+    xBFaceGeometries = xgrid[BFaceGeometries]
+    nbfaces = length(xBFaces)
+    xBEdges = zeros(Int32,0)
+
+    EG = Triangle2D
+    edge::Int = 0
+    face::Int = 0
+    nfaceedges::Int = 0
+
+    for bface = 1 : nbfaces
+        EG = xBFaceGeometries[bface]
+        nfaceedges = nedges_for_geometry(EG)
+        face = xBFaces[bface]
+        for k = 1 : nfaceedges
+            edge = xFaceEdges[k,face]
+            if !(edge in xBEdges)
+                push!(xBEdges, edge)
+            end
+
+        end
+    end
+
+    nbedges = length(xBEdges)
+    xBEdgeNodes = zeros(Int32,2,nbedges)
+    for bedge = 1 : nbedges, k = 1 : 2
+        xBEdgeNodes[k,bedge] = xEdgeNodes[k,xBEdges[bedge]]
+    end
+
+    xgrid[BEdges] = xBEdges
+    xBEdgeNodes
+end
+
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdges})
+    ExtendableGrids.instantiate(xgrid, BEdgeNodes)
+    xgrid[BEdges]
+end
+
+
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceCells})
     ExtendableGrids.instantiate(xgrid, FaceNodes)
     xgrid[FaceCells]
 end
-
-function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellEdges})
-    ExtendableGrids.instantiate(xgrid, EdgeNodes)
-    xgrid[CellEdges]
-end
-
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceRegions})
     return VectorOfConstants(Int32(0),num_sources(xgrid[FaceNodes]))
@@ -853,6 +918,15 @@ end
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeRegions})
     return VectorOfConstants(Int32(0),num_sources(xgrid[EdgeNodes]))
 end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdgeRegions})
+    return VectorOfConstants(Int32(0),num_sources(xgrid[BEdgeNodes]))
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdgeGeometries})
+    return VectorOfConstants(Edge1D,num_sources(xgrid[BEdgeNodes]))
+end
+
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceCellPos})
@@ -939,4 +1013,8 @@ end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueEdgeGeometries})
     xUniqueCellGeometries = unique(xgrid[EdgeGeometries])
+end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueBEdgeGeometries})
+    xUniqueCellGeometries = unique(xgrid[BEdgeGeometries])
 end

@@ -16,7 +16,7 @@ using Printf
 
 include("junctions.jl");
 export AbstractAssemblyType
-export ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES
+export ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
 export GridComponentNodes4AssemblyType
 export GridComponentVolumes4AssemblyType
 export GridComponentGeometries4AssemblyType
@@ -47,7 +47,8 @@ export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceEdges, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTangents
 export BFaces, BFaceCellPos, BFaceVolumes
-export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries
+export BEdgeNodes, BEdges, BEdgeVolumes, BEdgeGeometries
+export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries, UniqueBEdgeGeometries
 
 include("serialadjacency.jl")
 export SerialVariableTargetAdjacency
@@ -66,7 +67,7 @@ export integrate!, integrate
 
 
 include("finiteelements.jl")
-export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs
+export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
 export AbstractFiniteElement
 export FESpace
 
@@ -107,7 +108,7 @@ export NormalFlux, TangentFlux
 export Gradient, GradientDisc
 export SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
-export CurlScalar, Curl2D, Rotation
+export CurlScalar, Curl2D, Curl3D
 export Laplacian, Hessian
 export Trace, Deviator
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator

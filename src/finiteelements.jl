@@ -31,6 +31,7 @@ abstract type CellDofs <: DofMap end
 abstract type FaceDofs <: DofMap end
 abstract type EdgeDofs <: DofMap end
 abstract type BFaceDofs <: DofMap end
+abstract type BEdgeDofs <: DofMap end
 
 
 """
@@ -45,7 +46,7 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
 end
 
-function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = [CellDofs, FaceDofs, BFaceDofs], verbosity = 0 ) where {FEType <:AbstractFiniteElement}
+function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = "auto", verbosity = 0 ) where {FEType <:AbstractFiniteElement}
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)
     FES = FESpace{FEType}(name,0,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
@@ -55,6 +56,14 @@ function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = [Cel
     end
     # then update data according to init specifications in FEdefinition files
     init!(FES)
+
+    if dofmaps_needed == "auto"
+        dofmaps_needed = [CellDofs, FaceDofs, BFaceDofs]
+        if FEType <: AbstractHcurlFiniteElement && get_ncomponents(FEType) == 3
+            push!(dofmaps_needed, EdgeDofs)
+            push!(dofmaps_needed, BEdgeDofs)
+        end
+    end
 
     # generate required dof maps
     for j = 1 : length(dofmaps_needed)
@@ -98,17 +107,13 @@ function Base.show(io::IO, FES::FESpace{FEType}) where {FEType<:AbstractFiniteEl
     end
 end
 
-
-# default coefficient function that can be overwritten by finite element that has non-default coeffcients
+# default coefficient functions that can be overwritten by finite element that has non-default coeffcients
 # ( see e.g. h1v_br.jl )
 function get_coefficients_on_face!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
     function closure(coefficients, face)
         fill!(coefficients,1.0)
     end
 end    
-
-# default coefficient function that can be overwritten by finite element that has non-default coeffcients
-# ( see e.g. h1v_br.jl or hdiv_***.jl )
 function get_coefficients_on_cell!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
     function closure(coefficients, cell)
         fill!(coefficients,1.0)

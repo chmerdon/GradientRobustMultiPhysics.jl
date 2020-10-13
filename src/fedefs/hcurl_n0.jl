@@ -57,6 +57,18 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H
     end
 end
 
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{EdgeDofs}) where {FEType <: HCURLN0}
+    nedges = num_sources(FES.xgrid[EdgeNodes])
+    xEdgeDofs = VariableTargetAdjacency(Int32)
+    for edge = 1 : nedges
+        append!(xEdgeDofs,[edge])
+    end
+    # save dofmap
+    FES.dofmaps[EdgeDofs] = xEdgeDofs
+end
+
+
 function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: HCURLN0}
     edim = get_ncomponents(FEType)
     if edim == 2
@@ -79,6 +91,18 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: 
         # save dofmap
         FES.dofmaps[BFaceDofs] = xBFaceDofs
     end
+end
+
+
+function init_dofmap!(FES::FESpace{FEType}, ::Type{BEdgeDofs}) where {FEType <: HCURLN0}
+    nedges = num_sources(FES.xgrid[BEdgeNodes])
+    xBEdgeDofs = VariableTargetAdjacency(Int32)
+    xBEdges = FES.xgrid[BEdges]
+    for bedge = 1 : nedges
+        append!(xBEdgeDofs,[xBEdges[bedge]])
+    end
+    # save dofmap
+    FES.dofmaps[BEdgeDofs] = xBEdgeDofs
 end
 
 
@@ -147,6 +171,13 @@ function get_basis_on_cell(::Type{HCURLN0{3}}, ::Type{<:Tetrahedron3D})
                 0 -xref[3] xref[2]]
     end
 end
+
+function get_coefficients_on_edge!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry1D})
+    function closure(coefficients, edge)
+        fill!(coefficient, 1.0)
+        return nothing
+    end
+end  
 
 function get_coefficients_on_cell!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry2D})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
