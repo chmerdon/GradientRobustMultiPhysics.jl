@@ -15,6 +15,7 @@ The following assembly patterns are available.
 | ON_FACES         | assembles over all faces of the mesh          |
 | ON_IFACES (*)    | assembles over the interior faces of the mesh |
 | ON_BFACES        | assembles over the boundary faces of the mesh |
+| ON_EDGES (*)     | assembles over all edges of the mesh (in 3D)  |
 
 !!! note
     (*) = still experimental, might have some issues

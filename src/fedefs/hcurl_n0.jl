@@ -6,6 +6,7 @@ Hcurl-conforming vector-valued (ncomponents = edim) lowest-order Nedelec space
 allowed ElementGeometries:
 - Triangle2D
 - Quadrilateral2D
+- Tetrahedron3D
 """
 abstract type HCURLN0{edim} <: AbstractHcurlFiniteElement where {edim<:Int} end
 
@@ -13,6 +14,8 @@ get_ncomponents(FEType::Type{<:HCURLN0}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry1D}) = 0;
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry2D}) = 1;
+get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry1D}) = 0;
+get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
 
 
 function init!(FES::FESpace{FEType}) where {FEType <: HCURLN0}
@@ -85,7 +88,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exac
     if edim == 2
         ncomponents = get_ncomponents(eltype(FE))
         xFaceNormals = FE.xgrid[FaceNormals]
-        function tangentflux_eval()
+        function tangentflux_eval2d()
             temp = zeros(Float64,ncomponents)
             function closure(result, x, face, xref)
                 exact_function!(temp,x) 
@@ -93,9 +96,20 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exac
                 result[1] += temp[2] * xFaceNormals[1,face]
             end   
         end   
-        integrate!(Target, FE.xgrid, ON_FACES, tangentflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
+        integrate!(Target, FE.xgrid, ON_FACES, tangentflux_eval2d(), bonus_quadorder, 1; item_dependent_integrand = true)
     elseif edim == 3
-        # todo: integrate tangential fluxes over edges
+        ncomponents = get_ncomponents(eltype(FE))
+        xEdgeTangents = FE.xgrid[EdgeTangents]
+        function tangentflux_eval3d()
+            temp = zeros(Float64,ncomponents)
+            function closure(result, x, edge, xref)
+                exact_function!(temp,x) 
+                result[1] = temp[1] * xEdgeTangents[1,edge]
+                result[1] += temp[2] * xEdgeTangents[2,edge]
+                result[1] += temp[3] * xEdgeTangents[3,edge]
+            end   
+        end   
+        integrate!(Target, FE.xgrid, ON_EDGES, tangentflux_eval3d(), bonus_quadorder, 1; item_dependent_integrand = true)
     end
 end
 
@@ -123,6 +137,16 @@ function get_basis_on_cell(::Type{HCURLN0{2}}, ::Type{<:Quadrilateral2D})
     end
 end
 
+function get_basis_on_cell(::Type{HCURLN0{3}}, ::Type{<:Tetrahedron3D})
+    function closure(xref)
+        return [1.0-xref[2]-xref[3] xref[1] xref[1]; # edge 1 = [1,2]
+                xref[2] 1-xref[3]-xref[1] xref[2]; # edge 2 = [1,3]
+                xref[3] xref[3] 1-xref[1]-xref[2];
+                -xref[2] xref[1] 0;
+                -xref[3] 0 xref[1];
+                0 -xref[3] xref[2]]
+    end
+end
 
 function get_coefficients_on_cell!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry2D})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
@@ -134,4 +158,16 @@ function get_coefficients_on_cell!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractEl
         end
         return nothing
     end
-end    
+end   
+
+function get_coefficients_on_cell!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry3D})
+    xCellEdgeSigns = FE.xgrid[CellEdgeSigns]
+    nedges = nedges_for_geometry(EG)
+    function closure(coefficients, cell)
+        # multiplication with normal vector signs
+        for j = 1 : nedges,  k = 1 : size(coefficients,1)
+            coefficients[k,j] = xCellEdgeSigns[j,cell];
+        end
+        return nothing
+    end
+end     

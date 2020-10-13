@@ -152,6 +152,10 @@ function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian
     return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2)
 end
 
+function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian3D})
+    return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2  + (Coords[3, Nodes[2,item]] - Coords[3, Nodes[1,item]]).^2)
+end
+
 function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian2D})
     return 1 // 2 * ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
                   +   Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
@@ -255,16 +259,16 @@ end
 ################
 
 function Tangent4ElemType!(tangent, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
-    tangent[1] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
-    tangent[2] = Coords[2,Nodes[1,item]] - Coords[2, Nodes[2,item]]
+    tangent[1] = Coords[1,Nodes[2,item]] - Coords[1, Nodes[1,item]]
+    tangent[2] = Coords[2,Nodes[2,item]] - Coords[2, Nodes[1,item]]
     # divide by length
     tangent ./= sqrt(tangent[1]^2+tangent[2]^2)
 end
 
 function Tangent4ElemType!(tangent, Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian3D})
-    tangent[1] = Coords[1,Nodes[1,item]] - Coords[1, Nodes[2,item]]
-    tangent[2] = Coords[2,Nodes[1,item]] - Coords[2, Nodes[2,item]]
-    tangent[3] = Coords[3,Nodes[1,item]] - Coords[3, Nodes[2,item]]
+    tangent[1] = Coords[1,Nodes[2,item]] - Coords[1, Nodes[1,item]]
+    tangent[2] = Coords[2,Nodes[2,item]] - Coords[2, Nodes[1,item]]
+    tangent[3] = Coords[3,Nodes[2,item]] - Coords[3, Nodes[1,item]]
     # divide by length
     tangent ./= sqrt(tangent[1]^2+tangent[2]^2+tangent[3]^2)
 end

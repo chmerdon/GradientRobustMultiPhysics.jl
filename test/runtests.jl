@@ -227,6 +227,7 @@ function run_basis_tests()
                     H1P2{2,2}]
     ExpectedOrders2D = [0,0,1,0,1,1,1,1,1,2]
     TestCatalog3D = [
+                    HCURLN0{3},
                     HDIVRT0{3},
                     H1MINI{3,3},
                     H1BR{3},
@@ -234,7 +235,7 @@ function run_basis_tests()
                     H1P1{3},
                     L2P1{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,1,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,1,1,1,1,2]
 
     @testset "L2-Bestapproximations" begin
         println("\n")
