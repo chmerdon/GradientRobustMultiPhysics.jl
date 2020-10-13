@@ -832,10 +832,33 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
 end
 
 """
-$(TYPEDSIGNATURES)
+````
+function solve!(
+    Target::FEVector,
+    PDE::PDEDescription;
+    subiterations = "auto",
+    dirichlet_penalty::Real = 1e60,
+    time::Real = 0,
+    maxResidual::Real = 1e-12,
+    maxIterations::Int = 10,
+    linsolver = DirectUMFPACK,
+    maxlureuse = [1],
+    AndersonIterations = 0, #  0 = Picard iteration, >0 Anderson iteration (experimental feature)
+    verbosity::Int = 0)
+````
 
 Solves a given PDE (provided as a PDEDescription) and writes the solution into the FEVector Target. The ansatz spaces are taken from the of this vector.
-The field subiterations specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once, but also might resort to a fixed-point iteration if a nonlinearity is detected.
+
+Further optional arguments:
+- subiterations :  specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once
+- dirichlet_penalty : Dirichlet data is enforced by penalties on the diagonal of the matrix.
+- time : If time-dependent data is involved, the time can be fixed to some value here.
+- linsolver : specifies the linear solver that is used to solver the linear system of equation in each fixpoint iteration
+- maxlureuse : specifies after how much iterations the lu decomposition should be recomputed (-1 = only once if e.g. the matrix stays the same for each fixpoint iteration)
+
+Depending on the subiterations and detected/configured nonlinearties the whole system is either solved directly in one step
+or via a fixed-point iteration.
+
 """
 function solve!(
     Target::FEVector,
@@ -976,13 +999,19 @@ function TimeControlSolver(
 ````
 
 Creates a time-dependent solver that can be advanced in time with advance!.
-The FEVector Solution stores the initial state but also the solutions of each timestep.
-The field timedependent_equations contains the equation numbers (=rows in PDEDescription) that are time-dependent.
-The field subiterations specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once.
+The FEVector Solution stores the initial state but also the solutions of each timestep that are computed via any of the advance! methods.
+The argument TIR carries the time integration rule (currently there is only BackwardEuler).
+
+Further optional arguments (that are not listed in the description of solve!):
+- timedependent_equations : contains the equation numbers (=rows in PDEDescription) that are time-dependent and should get a time derivative (currently only time derivatives of order 1)
+- start_time : initial time
+- dt_test_function_operator : operator applied to testfunctions in time derivative
+- dt_action : additional actions that are applied to the ansatz function in the time derivative (to include parameters etc.)
+
 """
 function TimeControlSolver(
     PDE::PDEDescription,
-    InitialValues::FEVector,    # contains initial values and stores solution of advance method below
+    InitialValues::FEVector,    # contains initial values and stores solution of advance! methods
     TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
     timedependent_equations = [],
     subiterations = "auto",
@@ -1146,9 +1175,12 @@ function TimeControlSolver(
 end
 
 """
-$(TYPEDSIGNATURES)
+````
+function TimeControlSolver(
+    advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
+````
 
-Advances a TimeControlSolver in time with the given timestep.
+Advances a TimeControlSolver one step in time with the given timestep.
 """
 function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
@@ -1417,6 +1449,14 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     return sqrt.(statistics)
 end
 
+"""
+````
+advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
+````
+
+Advances a TimeControlSolver in time with the given (initial) timestep until stationarity is detected (change of variables below threshold) or a maximal number of time steps is exceeded.
+The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
+"""
 function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
     if TCS.SC.verbosity > 1
@@ -1468,6 +1508,14 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
 end
 
 
+"""
+````
+advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
+````
+
+Advances a TimeControlSolver in time with the given (initial) timestep until the specified finaltime is reached (up to the specified tolerance).
+The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
+"""
 function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
     if TCS.SC.verbosity > 1

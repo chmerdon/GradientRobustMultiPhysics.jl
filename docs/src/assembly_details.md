@@ -7,9 +7,9 @@ function operators and action for the ansatz and test functions and does the qua
 
 ## Assembly Types
 
-The following assembly patterns are available.
+The following assembly types are available.
 
-| Assembly Type    | Description                                           |
+| AssemblyType     | Description                                           |
 | :--------------- | :---------------------------------------------------- |
 | ON_CELLS         | assembles over the cells of the mesh                  |
 | ON_FACES         | assembles over all faces of the mesh                  |
@@ -26,7 +26,7 @@ The following assembly patterns are available.
 
 Each Pattern comes with a number of arguments/quantities with associated [Function Operators](@ref) as well as one of the [Assembly Types](@ref) that states whether the form is evaluated over CELLS, FACES order BFACES (see above). Moreover, patterns can have [Abstract Actions](@ref) that allow to make the evaluations parameter-, region- and/or function-dependent. Each pattern then has two implementation that writes into FEMatrix or FEVector (where e.g. a subset of arguments is fixed).
 
-The patterns are used by the assembly of the PDE operators defined in a [PDE Description](@ref). However, it is also possible for the user to use them directly, see e.g. the example [2D Commuting Interpolators](@ref).
+The patterns are used by the assembly of the PDE operators defined in a [PDE Description](@ref). However, it is also possible for the user to use them directly, see e.g. the example [Commuting Interpolators (2D)](@ref).
 
 
 ```@autodocs

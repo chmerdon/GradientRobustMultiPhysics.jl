@@ -1,6 +1,6 @@
 #= 
 
-# 3D Commuting Interpolators
+# Commuting Interpolators (3D)
 ([source code](SOURCE_URL))
 
 This example verifies a structural property of the Hcurl and Hdiv finite element spaces and their interpolators which is

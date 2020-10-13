@@ -1,6 +1,6 @@
 #= 
 
-# 2D Commuting Interpolators
+# Commuting Interpolators (2D)
 ([source code](SOURCE_URL))
 
 This example verifies a structural property of the H1 and Hdiv finite element spaces and their interpolators which is
