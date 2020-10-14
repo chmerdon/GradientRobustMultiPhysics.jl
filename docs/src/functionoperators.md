@@ -35,6 +35,13 @@ FunctionOperators are building blocks for the weak form and define the operation
     Especially note the operators Reconstruction...{FEType} operators that allow to evaluate operators of some
     reconstructed version of a vector-valued testfunction that maps its discrete divergence to the divergence and so allows e.g. gradient-robust discretisations with classical non divergence-conforming ansatz spaces. So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
 
+!!! note
+
+    As each finite element type is transformed differently from the reference domain to the general domain,
+    the evaluation of each function operator has to be implemented for each finite element class.
+    Currently, not every function operator works in any dimension and for any finite element. More evaluations
+    are added as soon as they are needed (and possibly upon request).
+
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]

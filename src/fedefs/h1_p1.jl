@@ -14,6 +14,8 @@ allowed ElementGeometries:
 abstract type H1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 get_ncomponents(FEType::Type{<:H1P1}) = FEType.parameters[1] # is this okay?
+get_ndofs_on_face(FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs_on_cell(FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Triangle2D}) = 1;
@@ -152,25 +154,22 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
 end
 
 function get_basis_on_cell(FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})
-    function closure(xref)
-        ncomponents = get_ncomponents(FEType)
+    ncomponents = get_ncomponents(FEType)
+    function closure(refbasis, xref)
         edim = dim_element(ET)
-        refbasis = zeros(eltype(xref),ncomponents*(edim+1),ncomponents)
-        temp = 1 - sum(xref[1:edim])
         for k = 1 : ncomponents
-            refbasis[(edim+1)*k-edim,k] = temp
+            refbasis[(edim+1)*k-edim,k] = 1
             for j = 1 : edim
+                refbasis[(edim+1)*k-edim,k] -= xref[j]
                 refbasis[(edim+1)*k-edim+j,k] = xref[j]
             end
         end
-        return refbasis
     end
 end
 
 function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        ncomponents = get_ncomponents(FEType)
-        refbasis = zeros(eltype(xref),ncomponents*4,ncomponents)
+    ncomponents = get_ncomponents(FEType)
+    function closure(refbasis, xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
         for k = 1 : ncomponents
@@ -179,15 +178,13 @@ function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
             refbasis[4*k-1,k] = xref[1]*xref[2]
             refbasis[4*k,k]   = xref[2]*a
         end
-        return refbasis
     end
 end
 
 
 function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
-    function closure(xref)
-        ncomponents = get_ncomponents(FEType)
-        refbasis = zeros(eltype(xref),ncomponents*8,ncomponents)
+    ncomponents = get_ncomponents(FEType)
+    function closure(refbasis, xref)
         a = 1 - xref[1]
         b = 1 - xref[2]
         c = 1 - xref[3]
@@ -201,12 +198,12 @@ function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
             refbasis[8*k-1,k] = xref[1]*xref[2]*xref[3]
             refbasis[8*k,k] = a*xref[2]*xref[3]
         end
-        return refbasis
     end
 end
 
 function get_basis_on_face(FE::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry})
-    function closure(xref)
-        return get_basis_on_cell(FE, EG)(xref)
+    cell_basis = get_basis_on_cell(FE, EG)
+    function closure(refbasis,xref)
+        return cell_basis(refbasis,xref)
     end    
 end

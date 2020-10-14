@@ -12,6 +12,9 @@ allowed ElementGeometries:
 abstract type L2P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 get_ncomponents(FEType::Type{<:L2P1}) = FEType.parameters[1]
+get_ndofs_on_face(FEType::Type{<:L2P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs_on_cell(FEType::Type{<:L2P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
+
 
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:L2P1}, ::Type{<:Triangle2D}) = 1;

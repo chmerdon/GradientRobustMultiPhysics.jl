@@ -662,7 +662,7 @@ function run_examples()
         include("../examples/doc_2d_commutinginterpolators.jl")
         @test eval(Meta.parse("Example_2DCommutingInterpolators.test()")) < 1e-15
 
-        println("\n2D COMMUTING INTERPOLATORS")
+        println("\n3D COMMUTING INTERPOLATORS")
         include("../examples/doc_3d_commutinginterpolators.jl")
         @test eval(Meta.parse("Example_3DCommutingInterpolators.test()")) < 1e-15
         

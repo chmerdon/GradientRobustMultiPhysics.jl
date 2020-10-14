@@ -9,6 +9,8 @@ abstract type L2P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:I
 
 
 get_ncomponents(FEType::Type{<:L2P0}) = FEType.parameters[1]
+get_ndofs_on_face(FEType::Type{<:L2P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
+get_ndofs_on_cell(FEType::Type{<:L2P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:L2P0}, ::Type{<:AbstractElementGeometry}) = 0;
 
@@ -112,19 +114,18 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
 end
 
 function get_basis_on_cell(FEType::Type{<:L2P0}, ::Type{<:AbstractElementGeometry})
-    function closure(xref)
-        ncomponents = get_ncomponents(FEType)
-        refbasis = zeros(eltype(xref),ncomponents,ncomponents)
+    ncomponents = get_ncomponents(FEType)
+    function closure(refbasis, xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 1.0
         end
-        return refbasis
     end
 end
 
 function get_basis_on_face(FE::Type{<:L2P0}, EG::Type{<:AbstractElementGeometry})
-    function closure(xref)
-        return get_basis_on_cell(FE, EG)(xref[1:end-1])
+    refbasis_cell = get_basis_on_cell(FE, EG)
+    function closure(refbasis, xref)
+        return refbasis_cell(refbasis, xref[1:end-1])
     end    
 end
 

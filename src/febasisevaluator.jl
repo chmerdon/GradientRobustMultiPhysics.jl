@@ -19,8 +19,11 @@ mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{Array{T,1},1}            # xref of quadrature formula
-    refbasisvals::Array{T,3}             # basis evaluation on EG reference cell 
-    refoperatorvals::Array{T,3}          # additional values to evaluate operator
+    refbasisvals::Array{Array{T,2},1}    # basis evaluation on EG reference cell 
+    refbasisderivvals::Array{T,3}        # additional values to evaluate operator
+    derivorder::Int                      # order of derivatives that are needed
+    Dresult                              # DiffResults for ForwardDiff handling
+    Dcfg                                 # config for ForwardDiff handling
     ncomponents::Int                     # number of FE components
     offsets::Array{Int,1}                # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
@@ -52,62 +55,36 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         println("  ...constructing FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP")
     end
 
-    # pre-allocate memory for basis functions
-    ncomponents = get_ncomponents(FEType)
+    # collect basis function information
+    ncomponents::Int = get_ncomponents(FEType)
+    ndofs4item::Int = 0
     if AT <: Union{ON_BFACES,<:ON_FACES,<:ON_EDGES,ON_BEDGES}
         if FEType <: AbstractHdivFiniteElement
             refbasis = get_basis_normalflux_on_face(FEType, EG)
+            ndofs4item = get_ndofs_on_face(FEType, EG)
             ncomponents = 1
         elseif FEType <: AbstractHcurlFiniteElement
                 refbasis = get_basis_tangentflux_on_edge(FEType, EG)
+                ndofs4item = get_ndofs_on_edge(FEType, EG)
                 ncomponents = 1
         else
             refbasis = get_basis_on_face(FEType, EG)
+            ndofs4item = get_ndofs_on_face(FEType, EG)
         end
     else
         refbasis = get_basis_on_cell(FEType, EG)
+        ndofs4item = get_ndofs_on_cell(FEType, EG)
     end    
-    
-    # probe for ndofs4item
-    ndofs4item::Int = 0
-    try
-        test = refbasis(qf.xref[1]')'
-        ndofs4item = ceil(length(test[:])/ncomponents)
-    catch
-    end
 
-    refbasisvals = zeros(T,ncomponents,ndofs4item,length(qf.w));
+    # evaluate basis on reference domain
+    refbasisvals = Array{Array{T,2},1}(undef,length(qf.w));
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        if ncomponents == 1
-            refbasisvals[:,:,i] = reshape(refbasis(qf.xref[i]),1,:)
-        else
-            refbasisvals[:,:,i] = refbasis(qf.xref[i]')'
-        end    
+        refbasisvals[i] = zeros(T,ndofs4item,ncomponents)
+        refbasis(refbasisvals[i], qf.xref[i])
     end    
 
-    derivorder = NeededDerivative4Operator(FEType,FEOP)
-    edim = dim_element(EG)
-    xdim = size(FE.xgrid[Coordinates],1)
-    if derivorder == 1
-        refoperatorvals = zeros(T,ndofs4item*ncomponents,edim,length(qf.w));
-       # current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
-        for i in eachindex(qf.w)
-            # evaluate gradients of basis function
-            # = list of vectors [du_k/dx_1; du_k,dx_2]
-            refoperatorvals[:,:,i] = ForwardDiff.jacobian(refbasis,qf.xref[i]);
-        end 
-    elseif derivorder == 2
-        refoperatorvals = zeros(T,ndofs4item*ncomponents*edim,edim,length(qf.w));
-        #current_eval = zeros(T,ncomponents*edim*edim,ndofs4item,length(qf.w));
-        for i in eachindex(qf.w)
-            # evaluate gradients of basis function
-            refoperatorvals[:,:,i] = vector_hessian(refbasis,qf.xref[i])
-        end   
-    end
-    current_eval = zeros(T,Int(Length4Operator(FEOP,edim,ncomponents)),ndofs4item,length(qf.w))
-
-    xref = copy(qf.xref)
+    # set coefficient handlers needed for basis evaluation
     coefficients = zeros(T,0,0)
     coeff_handler = nothing
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
@@ -120,118 +97,152 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
             coeff_handler = get_coefficients_on_edge!(FE, EG)
         end
     end    
+
+    # compute refbasisderivvals and further coefficients needed for operator eval
+    derivorder = NeededDerivative4Operator(FEType,FEOP)
+    edim = dim_element(EG)
+    xdim = size(FE.xgrid[Coordinates],1)
+    xref = copy(qf.xref)
+    resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
     coefficients2 = zeros(T,0,0)
     coefficients3 = zeros(T,0,0)
-    if derivorder == 0
-        refoperatorvals = zeros(T,0,0,0);
-        if FEOP == NormalFlux || (FEOP == TangentFlux && edim == 2)
-            coefficients3 = FE.xgrid[FaceNormals]
-            current_eval = zeros(T,1,ndofs4item,length(qf.w));
-        elseif FEOP == TangentFlux && edim == 3
-            coefficients3 = FE.xgrid[EdgeTangents]
-            current_eval = zeros(T,1,ndofs4item,length(qf.w));
-        elseif FEOP == Identity || FEOP == IdentityDisc{Jump}
-            current_eval = deepcopy(refbasisvals) 
-        elseif FEOP == IdentityComponent
-            current_eval = deepcopy(refbasisvals[[FEOP.parameters[1]],:,:]) 
-        end
-    else
-        if FEOP == TangentialGradient
-            coefficients3 = FE.xgrid[FaceNormals]
-            current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
-        end
-    end
     offsets = 0:edim:(ncomponents*edim);
     offsets2 = 0:ndofs4item:ncomponents*ndofs4item;
-
     compressiontargets = zeros(T,0)
-    if FEOP == SymmetricGradient
-        # the following mapping tells where each entry of the full gradient lands in the reduced vector
-        if dim_element(EG) == 1
-            compressiontargets = [1,1]
-        elseif dim_element(EG) == 2
-            # 2D Voigt accumulation positions of du1/dx1, du1/dx2, du2/dx1, d2/dx2
-            compressiontargets = [1,3,3,2]
-        elseif dim_element(EG) == 3
-            # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
-            compressiontargets = [1,6,5,6,2,4,5,4,3] 
+    Dcfg = nothing
+    Dresult = nothing
+    current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
+    if derivorder == 0
+        refbasisderivvals = zeros(T,0,0,0);
+        if FEOP == NormalFlux || (FEOP == TangentFlux && edim == 2)
+            coefficients3 = FE.xgrid[FaceNormals]
+            # current_eval = zeros(T,1,ndofs4item,length(qf.w));
+        elseif FEOP == TangentFlux && edim == 3
+            coefficients3 = FE.xgrid[EdgeTangents]
+            # current_eval = zeros(T,1,ndofs4item,length(qf.w));
+        elseif FEOP == Identity || FEOP == IdentityDisc{Jump}
+            # current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
+            for i in eachindex(qf.w), j = 1 : ndofs4item, k = 1 : ncomponents
+                current_eval[k,j,i] = refbasisvals[i][j,k]
+            end
+        elseif FEOP == IdentityComponent
+            for i in eachindex(qf.w), j = 1 : ndofs4item
+                current_eval[1,j,i] = refbasisvals[i][j,FEOP.parameters[1]]
+            end
         end
+    elseif derivorder == 1
+        if FEOP == TangentialGradient
+            coefficients3 = FE.xgrid[FaceNormals]
+        end
+
+        # derivatives of the basis on the reference domain are computed
+        # by ForwardDiff, to minimise memory allocations and be able
+        # to rebase the quadrature points later (e.g. when evaluating cuts through cells)
+        # we use DiffResults and JacobianConfig of ForwardDiff and save these in the struct
+        result_temp = zeros(Float64,ndofs4item,ncomponents)
+        result_temp2 = zeros(Real,ndofs4item,ncomponents)
+        input_temp = Vector{Float64}(undef,edim)
+        jac_temp = Matrix{Float64}(undef,ndofs4item*ncomponents,edim)
+        Dresult = DiffResults.DiffResult(result_temp,jac_temp)
+        jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+        Dcfg = ForwardDiff.JacobianConfig(refbasis, result_temp, input_temp)
+
+        refbasisderivvals = zeros(T,ndofs4item*ncomponents,edim,length(qf.w));
+       # current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
+        for i in eachindex(qf.w)
+            # evaluate gradients of basis function
+            # = list of vectors [du_k/dx_1; du_k,dx_2]
+            fill!(result_temp,0.0)
+            ForwardDiff.jacobian!(Dresult, refbasis, result_temp, qf.xref[i], Dcfg)
+            jac = DiffResults.jacobian(Dresult)
+
+            for j = 1 : ndofs4item*ncomponents, k = 1 : edim
+                refbasisderivvals[j,k,i] = jac[j,k];
+            end
+        end
+
+        # specifications for compressed operator (Voigt notation)
+        if FEOP == SymmetricGradient
+            # the following mapping tells where each entry of the full gradient lands in the reduced vector
+            if edim == 1
+                compressiontargets = [1,1]
+            elseif edim == 2
+                # 2D Voigt accumulation positions of du1/dx1, du1/dx2, du2/dx1, d2/dx2
+                compressiontargets = [1,3,3,2]
+            elseif edim == 3
+                # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
+                compressiontargets = [1,6,5,6,2,4,5,4,3] 
+            end
+        end
+
+   # elseif derivorder == 2
+   #     refbasisderivvals = zeros(T,ndofs4item*ncomponents*edim,edim,length(qf.w));
+   #     #current_eval = zeros(T,ncomponents*edim*edim,ndofs4item,length(qf.w));
+   #     for i in eachindex(qf.w)
+   #         # evaluate gradients of basis function
+   #         refbasisderivvals[:,:,i] = vector_hessian(refbasis,qf.xref[i])
+   #     end   
     end
+
     if verbosity > 0
         println("     size(cvals) = $(size(current_eval))")
     end
 
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, coeff_handler, nothing, compressiontargets)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, coeff_handler, nothing, compressiontargets)
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence
 function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
-    # generate reconstruction space
-    # avoid computation of full dofmap
-    # we will just use local basis functions
-
+    
     if verbosity > 0
         println("  ...constructing FEBasisEvaluator for $FEOP operator of $FEType on $EG")
     end
 
+    # generate reconstruction space
+    # avoid computation of full dofmap
+    # we will just use local basis functions
     FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmaps_needed = [])
-    
     ItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, FEOP))
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)
 
-    # pre-allocate memory for reconstruction basis functions
-    ncomponents = get_ncomponents(FEType)
-    ncomponents2 = get_ncomponents(FETypeReconst)
+    # collect basis function information
+    ncomponents::Int = get_ncomponents(FEType)
+    ncomponents2::Int = get_ncomponents(FETypeReconst)
+    ndofs4item::Int = 0
+    ndofs4item2::Int = 0
     if AT <: Union{ON_BFACES,<:ON_FACES}
         if FETypeReconst <: AbstractHdivFiniteElement
             refbasis = get_basis_on_face(FEType, EG)
             refbasis_reconst = get_basis_normalflux_on_face(FETypeReconst, EG)
             ncomponents2 = 1
+            ndofs4item = get_ndofs_on_face(FEType, EG)
+            ndofs4item2 = get_ndofs_on_face(FETypeReconst, EG)
         else
             refbasis = get_basis_on_face(FEType, EG)
             refbasis_reconst = get_basis_on_face(FETypeReconst, EG)
+            ndofs4item = get_ndofs_on_face(FEType, EG)
+            ndofs4item2 = get_ndofs_on_face(FETypeReconst, EG)
         end
     else
         refbasis = get_basis_on_cell(FEType, EG)
         refbasis_reconst = get_basis_on_cell(FETypeReconst, EG)
+        ndofs4item = get_ndofs_on_cell(FEType, EG)
+        ndofs4item2 = get_ndofs_on_cell(FETypeReconst, EG)
     end    
-    
-    # probe for ndofs4item
-    ndofs4item::Int = 0
-    ndofs4item2::Int = 0
-    try
-        test = refbasis(qf.xref[1]')'
-        ndofs4item = ceil(length(test[:])/ncomponents)
-        test = refbasis_reconst(qf.xref[1]')'
-        ndofs4item2 = ceil(length(test[:])/ncomponents2)
-    catch
-    end
 
-    refbasisvals = zeros(T,ncomponents2,ndofs4item2,length(qf.w));
+    # evaluate reconstruction basis
+    refbasisvals = Array{Array{T,2},1}(undef,length(qf.w));
     for i in eachindex(qf.w)
         # evaluate basis functions at quadrature point
-        if ncomponents2 == 1
-            refbasisvals[:,:,i] = reshape(refbasis_reconst(qf.xref[i]),1,:)
-        else
-            refbasisvals[:,:,i] = refbasis_reconst(qf.xref[i]')'
-        end    
+        refbasisvals[i] = zeros(T,ndofs4item2,ncomponents2)
+        refbasis_reconst(refbasisvals[i], qf.xref[i])
     end    
 
-    derivorder = NeededDerivative4Operator(FEType,FEOP)
-    edim = dim_element(EG)
-    xdim = size(FE.xgrid[Coordinates],1)
-    if derivorder > 0
-        refoperatorvals = zeros(T,ndofs4item2*ncomponents2,edim,length(qf.w));
-        for i in eachindex(qf.w)
-            # evaluate gradients of basis function
-            # = list of vectors [du_k/dx_1; du_k,dx_2]
-            refoperatorvals[:,:,i] = ForwardDiff.jacobian(refbasis_reconst,qf.xref[i]);
-        end 
-    end
 
-    xref = copy(qf.xref)
+
+    # set coefficient handlers needed for basis evaluation (for both FEType and FETypereconst)
     if FETypeReconst <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item2)
         if AT == ON_CELLS
@@ -244,31 +255,64 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coeff_handler = nothing
     end    
     coefficients2 = zeros(T,ndofs4item,ndofs4item2)
-    if FEOP <: ReconstructionIdentity
-        refoperatorvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
-        current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
-    elseif FEOP <: ReconstructionGradient
-        current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
-    elseif FEOP <: ReconstructionDivergence
-        current_eval = zeros(T,1,ndofs4item,length(qf.w));
-    else
-        refoperatorvals = zeros(T,1,ndofs4item2,length(qf.w));
-        current_eval = zeros(T,1,ndofs4item,length(qf.w));
-    end
+
+    # compute refbasisderivvals and further coefficients needed for operator eval
+    xref = copy(qf.xref)
+    edim = dim_element(EG)
+    xdim = size(FE.xgrid[Coordinates],1)
     offsets = 0:edim:(ncomponents*edim);
     offsets2 = 0:ndofs4item2:ncomponents*ndofs4item2;
     coefficients3 = zeros(T,0,0)
+    Dcfg = nothing
+    Dresult = nothing
+    resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
+    current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
+    derivorder = NeededDerivative4Operator(FEType,FEOP)
+    if derivorder == 0
+        # refbasisderivvals are used as a cache fpr the reconstruction basis
+        refbasisderivvals = zeros(T,ncomponents,ndofs4item2,length(qf.w));
+        current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
+    elseif derivorder == 1
 
+        # derivatives of the reconstruction basis on the reference domain are computed
+        # by ForwardDiff, to minimise memory allocations and be able
+        # to rebase the quadrature points later (e.g. when evaluating cuts through cells)
+        # we use DiffResults and JacobianConfig of ForwardDiff and save these in the struct
+        result_temp = zeros(Float64,ndofs4item2,ncomponents2)
+        result_temp2 = zeros(Real,ndofs4item2,ncomponents2)
+        input_temp = Vector{Float64}(undef,edim)
+        jac_temp = Matrix{Float64}(undef,ndofs4item2*ncomponents2,edim)
+        Dresult = DiffResults.DiffResult(result_temp,jac_temp)
+        jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+        Dcfg = ForwardDiff.JacobianConfig(refbasis_reconst, result_temp, input_temp)
+
+        refbasisderivvals = zeros(T,ndofs4item2*ncomponents2,edim,length(qf.w));
+        # current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
+        for i in eachindex(qf.w)
+            # evaluate gradients of basis function
+            # = list of vectors [du_k/dx_1; du_k,dx_2]
+            fill!(result_temp,0.0)
+            ForwardDiff.jacobian!(Dresult, refbasis_reconst, result_temp, qf.xref[i], Dcfg)
+            jac = DiffResults.jacobian(Dresult)
+
+            for j = 1 : ndofs4item*ncomponents, k = 1 : edim
+                refbasisderivvals[j,k,i] = jac[j,k];
+            end
+        end
+    end
+
+    # get reconstruction coefficient handlers
     if AT <: Union{ON_BFACES,<:ON_FACES}
         rcoeff_handler = get_reconstruction_coefficients_on_face!(FE, FE2, EG)
     else
         rcoeff_handler = get_reconstruction_coefficients_on_cell!(FE, FE2, EG)
     end
+
     if verbosity > 0
         println("     size(cvals) = $(size(current_eval))")
     end
     
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refoperatorvals,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,[])
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,[])
 end    
 
 
@@ -299,19 +343,19 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on Hdiv basis
-        # and save it in refoperatorvals
+        # and save it in refbasisderivvals
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
                 FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
-            for dof_i = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
+            for dof_i = 1 : size(FEBE.refbasisderivvals,2) # ndofs4item (Hdiv)
                 for k = 1 : FEBE.offsets[2] # ncomponents
-                    FEBE.refoperatorvals[k,dof_i,i] = 0.0;
+                    FEBE.refbasisderivvals[k,dof_i,i] = 0.0;
                     for l = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.refoperatorvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                        FEBE.refbasisderivvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][dof_i,l];
                     end    
-                    FEBE.refoperatorvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.iteminfo[1]
+                    FEBE.refbasisderivvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.iteminfo[1]
                 end
             end
         end
@@ -323,10 +367,10 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
-            for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.refoperatorvals,2) # ndofs4item (Hdiv)
+            for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.refbasisderivvals,2) # ndofs4item (Hdiv)
                 if FEBE.coefficients2[dof_i,dof_j] != 0
                     for k = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refoperatorvals[k,dof_j,i]; 
+                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[k,dof_j,i]; 
                     end
                 end
             end
@@ -356,7 +400,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,IdentityDis
                 for k = 1 : FEBE.offsets[2] # ncomponents
                     FEBE.cvals[k,dof_i,i] = 0.0;
                     for l = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][dof_i,l];
                     end    
                     FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]
                 end
@@ -386,7 +430,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,IdentityDis
                 for k = 1 : FEBE.offsets[2] # ncomponents
                     FEBE.cvals[k,dof_i,i] = 0.0;
                     for l = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[l,dof_i,i];
+                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][dof_i,l];
                     end    
                     FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.iteminfo[1]
                 end
@@ -411,7 +455,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Identity,AT}, item::Int) whe
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 for k = 1 : FEBE.offsets[2] # ncomponents
-                    FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] * FEBE.coefficients[k,dof_i];
+                    FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] * FEBE.coefficients[k,dof_i];
                 end    
             end
         end
@@ -432,7 +476,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-                FEBE.cvals[1,dof_i,i] = FEBE.refbasisvals[FEOP.parameters[1],dof_i,i] * FEBE.coefficients[FEOP.parameters[1],dof_i];
+                FEBE.cvals[1,dof_i,i] = FEBE.refbasisvals[i,dof_i,FEOP.parameters[1]] * FEBE.coefficients[FEOP.parameters[1],dof_i];
             end
         end
     end
@@ -459,7 +503,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for l = 1 : FEBE.offsets[2] # ncomponents
-                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[FEOP.parameters[1],l]*FEBE.refbasisvals[l,dof_i,i];
+                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[FEOP.parameters[1],l]*FEBE.refbasisvals[i][dof_i,l];
                 end    
                 FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[FEOP.parameters[1],dof_i] / FEBE.iteminfo[1]
             end
@@ -485,7 +529,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) w
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0
                 for k = 1 : size(FEBE.coefficients3,1) # ncomponents of normal
-                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[k,dof_i,i] * FEBE.iteminfo[k];
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.iteminfo[k];
                 end    
             end
         end
@@ -511,7 +555,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) w
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0
                 for k = 1 : size(FEBE.coefficients3,1) # ncomponents of normal
-                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[k,dof_i,i] * FEBE.coefficients[k,dof_i] * FEBE.iteminfo[k];
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.coefficients[k,dof_i] * FEBE.iteminfo[k];
                 end    
             end
         end
@@ -528,7 +572,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.ncomponents
-                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] / FEBE.L2G.ItemVolumes[item]
             end
         end
     end
@@ -545,7 +589,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.ncomponents
-                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[k,dof_i,i] / FEBE.L2G.ItemVolumes[item]
+                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] / FEBE.L2G.ItemVolumes[item]
             end
         end
     end
@@ -576,7 +620,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk
-                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    
@@ -611,7 +655,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Gradient,AT}, item::Int) w
                     # compute duc/dxk
                     for j = 1 : FEBE.offsets[2] # ncomponents
                         for m = 1 : FEBE.offsets[2]
-                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[j],m,i];
+                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[j],m,i];
                         end
                     end    
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] *= FEBE.coefficients[c,dof_i] / FEBE.iteminfo[1]
@@ -644,8 +688,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 FEBE.cvals[2,dof_i,i] = 0.0;
                 for j = 1 : FEBE.offsets[2] # edim
-                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refoperatorvals[dof_i,j,i] # -du/dy
-                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refoperatorvals[dof_i,j,i] # du/dx
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[dof_i,j,i] # -du/dy
+                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[dof_i,j,i] # du/dx
                 end    
             end    
         end  
@@ -674,8 +718,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for j = 1 : FEBE.offsets[2] # edim
-                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refoperatorvals[dof_i,j,i]  # -du1/dy
-                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],j,i]  # du2/dx
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[dof_i,j,i]  # -du1/dy
+                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],j,i]  # du2/dx
                 end    
             end    
         end  
@@ -708,7 +752,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i] * FEBE.iteminfo[c]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i] * FEBE.iteminfo[c]
                     end    
                 end    
             end    
@@ -743,7 +787,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                 for c = 1 : FEBE.ncomponents, k = 1 : FEBE.offsets[2] # edim
                     for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk and put it into the right spot in the Voigt vector
-                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    
@@ -780,7 +824,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : FEBE.offsets[2] # edim
                         # compute duc/dxk
-                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i]
                     end    
                     FEBE.cvals[k + FEBE.offsets[c], dof_i,i] *= FEBE.coefficients[c, dof_i]
                 end    
@@ -810,7 +854,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
                 for k = 1 : FEBE.offsets[2] # edim
                     for j = 1 : FEBE.offsets[2] # edim
                         # compute duk/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[k],j,i]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[k],j,i]
                     end    
                 end    
             end    
@@ -842,7 +886,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence,AT}, item::Int) w
                 for k = 1 : FEBE.offsets[2] # edim
                     for j = 1 : FEBE.offsets[2] # edim
                         # compute duk/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refoperatorvals[dof_i + FEBE.offsets2[k],j,i] * FEBE.coefficients[k, dof_i]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[k],j,i] * FEBE.coefficients[k, dof_i]
                     end    
                 end    
             end    
@@ -879,7 +923,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                 for dof_j = 1 : FEBE.offsets2[2] # ndofs4item (Hdiv)
                     if FEBE.coefficients2[dof_i,dof_j] != 0
                         for j = 1 : FEBE.offsets[2] # edim
-                            FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refoperatorvals[dof_j + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]/FEBE.iteminfo[1]
+                            FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[dof_j + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]/FEBE.iteminfo[1]
                         end  
                     end
                 end
@@ -919,7 +963,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                             # compute duc/dxk
                             for j = 1 : FEBE.offsets[2] # ncomponents
                                 for m = 1 : FEBE.offsets[2]
-                                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refoperatorvals[dof_j + FEBE.offsets2[j],m,i] * FEBE.coefficients[c,dof_j] / FEBE.iteminfo[1];
+                                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refbasisderivvals[dof_j + FEBE.offsets2[j],m,i] * FEBE.coefficients[c,dof_j] / FEBE.iteminfo[1];
                                 end
                             end    
                         end
@@ -952,7 +996,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for j = 1 : FEBE.offsets[2] # edim
-                    FEBE.cvals[1,dof_i,i] += FEBE.refoperatorvals[dof_i + FEBE.offsets2[j],j,i]
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisderivvals[dof_i + FEBE.offsets2[j],j,i]
                 end  
                 FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.iteminfo[1];
             end
@@ -981,8 +1025,8 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Curl2D}, item::Int) where {T
                 FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-                FEBE.cvals[1,dof_i,i] = FEBE.refoperatorvals[dof_i + FEBE.offsets2[1],2,i]
-                FEBE.cvals[1,dof_i,i] -= FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],1,i]
+                FEBE.cvals[1,dof_i,i] = FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i]
+                FEBE.cvals[1,dof_i,i] -= FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i]
                 FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.iteminfo[1];
             end
         end    
@@ -1011,12 +1055,12 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Curl3D}, item::Int) where {T
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 for k = 1 : 3
-                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,1] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[3],2,i] # du3/dx2
-                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,1] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],3,i] # - du2/dx3
-                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,2] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[1],3,i] # du3/dx1
-                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,2] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[3],1,i] # - du1/dx3
-                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,3] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[2],1,i] # du2/dx1
-                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,3] * FEBE.refoperatorvals[dof_i + FEBE.offsets2[1],2,i] # - du1/dx2
+                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,1] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],2,i] # du3/dx2
+                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,1] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],3,i] # - du2/dx3
+                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,2] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],3,i] # du3/dx1
+                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,2] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],1,i] # - du1/dx3
+                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i] # du2/dx1
+                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i] # - du1/dx2
                     FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]/FEBE.iteminfo[1];
                 end
             end

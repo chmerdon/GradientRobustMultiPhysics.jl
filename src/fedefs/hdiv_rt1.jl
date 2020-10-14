@@ -9,6 +9,8 @@ allowed ElementGeometries:
 abstract type HDIVRT1{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:HDIVRT1}) = FEType.parameters[1]
+get_ndofs_on_face(FEType::Type{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry1D}) = 2
+get_ndofs_on_cell(FEType::Type{<:HDIVRT1}, EG::Type{<:Triangle2D}) = 2*nfaces_for_geometry(EG) + 2
 
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry1D}) = 1;
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry2D}) = 2;
@@ -145,26 +147,26 @@ end
 
 
 function get_basis_normalflux_on_face(::Type{<:HDIVRT1}, ::Type{<:AbstractElementGeometry})
-    function closure(xref)
-        return [1.0 # normal-flux of RT0 function on single face
-                -12*(xref[1]-0.5)]; # linear normal-flux of RT1 function
+    function closure(refbasis,xref)
+        refbasis[1,1] = 1                 # normal-flux of RT0 function on single face
+        refbasis[2,1] = -12*(xref[1]-0.5) # linear normal-flux of RT1 function
     end
 end
 
 function get_basis_on_cell(::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
-    function closure(xref)
+    function closure(refbasis,xref)
         temp = 0.5 - xref[1] - xref[2]
-        a = [xref[1] xref[2]-1.0];
-        b = [xref[1] xref[2]];
-        c = [xref[1]-1.0 xref[2]];
-        return [a;
-                (12*temp).*a;
-                b;
-                (12*(xref[1] - 0.5)).*b;
-                c;
-                (12*(xref[2] - 0.5)).*c;
-                12*xref[2].*a
-                12*xref[1].*c]
+        # RT0 basis
+        refbasis[1,:] .= [xref[1], xref[2]-1.0];
+        refbasis[3,:] .= [xref[1], xref[2]];
+        refbasis[5,:] .= [xref[1]-1.0, xref[2]];
+        # additional face basis functions
+        refbasis[2,:] .= 12*temp .* refbasis[1,:];
+        refbasis[4,:] .= (12*(xref[1] - 1//2)) .* refbasis[3,:];
+        refbasis[6,:] .= (12*(xref[2] - 1//2)) .* refbasis[5,:];
+        # interior functions
+        refbasis[7,:] .= 12*xref[2] .* refbasis[1,:];
+        refbasis[8,:] .= 12*xref[1] .* refbasis[5,:];
     end
 end
 

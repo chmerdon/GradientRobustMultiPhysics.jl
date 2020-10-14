@@ -13,6 +13,9 @@ allowed ElementGeometries:
 abstract type H1BR{edim} <: AbstractH1FiniteElementWithCoefficients where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:H1BR}) = FEType.parameters[1]
+get_ndofs_on_face(FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = 1 + nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs_on_cell(FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) + nnodes_for_geometry(EG) * FEType.parameters[1]
+
 
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Triangle2D}) = 2;
@@ -209,56 +212,46 @@ end
 # 2D basis #
 ############
 
-function get_basis_on_face(::Type{H1BR{2}}, ::Type{<:Edge1D})
-    function closure(xref)
-        temp = 1 - xref[1];
-        bf = 4 * xref[1] * temp;
-        return [temp 0.0;
-                xref[1] 0.0;
-                0.0 temp;
-                0.0 xref[1];
-                bf bf]
+function get_basis_on_face(FEType::Type{H1BR{2}}, EG::Type{<:Edge1D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_face(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_face(H1P1{ncomponents}, EG)
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add face bubble to P1 basis
+        refbasis[offset+1,:] .= 4 * xref[1] * refbasis[1,1]
     end
 end
 
-function get_basis_on_cell(::Type{H1BR{2}}, ::Type{<:Triangle2D})
-    function closure(xref)
-        temp = 1 - xref[1] - xref[2];
-        bf1 = 4 * xref[1] * temp;
-        bf2 = 4 * xref[2] * xref[1];
-        bf3 = 4 * temp * xref[2];
-        return [temp 0.0;
-                xref[1] 0.0;
-                xref[2] 0.0;
-                0.0 temp;
-                0.0 xref[1];
-                0.0 xref[2];
-                bf1 bf1;
-                bf2 bf2;
-                bf3 bf3]
+function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Triangle2D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add face bubbles to P1 basis
+        refbasis[offset+1,:] .= 4 * xref[1] * refbasis[1,1]
+        refbasis[offset+2,:] .= 4 * xref[2] * xref[1]
+        refbasis[offset+3,:] .= 4 * refbasis[1,1] * xref[2]
     end
 end
 
-function get_basis_on_cell(::Type{H1BR{2}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
+
+function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Quadrilateral2D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    a = 0.0
+    b = 0.0
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add face bubbles to Q1 basis
         a = 1 - xref[1]
         b = 1 - xref[2]
-        fb1 = 4*xref[1]*a*b
-        fb2 = 4*xref[2]*xref[1]*b
-        fb3 = 4*xref[1]*xref[2]*a
-        fb4 = 4*xref[2]*a*b
-        return [a*b 0.0;
-                xref[1]*b 0.0;
-                xref[1]*xref[2] 0.0;
-                xref[2]*a 0.0;
-                0.0 a*b;
-                0.0 xref[1]*b;
-                0.0 xref[1]*xref[2];
-                0.0 xref[2]*a;
-                fb1 fb1;
-                fb2 fb2;
-                fb3 fb3;
-                fb4 fb4]
+        refbasis[offset+1,:] .= 4*xref[1]*a*b
+        refbasis[offset+2,:] .= 4*xref[2]*xref[1]*b
+        refbasis[offset+3,:] .= 4*xref[1]*xref[2]*a
+        refbasis[offset+4,:] .= 4*xref[2]*a*b
     end
 end
 
@@ -292,7 +285,6 @@ function get_coefficients_on_cell!(FE::FESpace{H1BR{2}}, ::Type{<:Quadrilateral2
     end
 end
 
-
 function get_coefficients_on_face!(FE::FESpace{H1BR{2}}, ::Type{<:Edge1D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     function closure(coefficients, face)
@@ -308,115 +300,63 @@ end
 # 3D basis #
 ############
 
-function get_basis_on_face(::Type{H1BR{3}}, ::Type{<:Triangle2D})
-    function closure(xref)
-        temp = 1 - xref[1] - xref[2];
-        bf = 9 * xref[1] * temp * xref[2];
-        return [temp 0.0 0.0;
-                xref[1] 0.0 0.0;
-                xref[2] 0.0 0.0;
-                0.0 temp 0.0;
-                0.0 xref[1] 0.0;
-                0.0 xref[2] 0.0;
-                0.0 0.0 temp;
-                0.0 0.0 xref[1];
-                0.0 0.0 xref[2];
-                bf bf bf]
+function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Triangle2D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_face(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_face(H1P1{ncomponents}, EG)
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add face bubbles to P1 basis
+        refbasis[offset+1,:] .= 9 * xref[1] * refbasis[1,1] * xref[2]
     end
 end
 
-function get_basis_on_face(::Type{H1BR{3}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        bf = 16 * xref[1] * a * b * xref[2];
-        return [a*b 0.0 0.0;
-                xref[1]*b 0.0 0.0;
-                xref[1]*xref[2] 0.0 0.0;
-                xref[2]*a 0.0 0.0;
-                0.0 a*b 0.0;
-                0.0 xref[1]*b 0.0;
-                0.0 xref[1]*xref[2] 0.0;
-                0.0 xref[2]*a 0.0;
-                0.0 0.0 a*b;
-                0.0 0.0 xref[1]*b;
-                0.0 0.0 xref[1]*xref[2];
-                0.0 0.0 xref[2]*a;
-                bf bf bf]
+function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_face(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_face(H1P1{ncomponents}, EG)
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add face bubbles to P1 basis
+        refbasis[offset+1,:] .= 16 * xref[1] * (1 - xref[1]) * (1 - xref[2]) * xref[2]
     end
 end
 
-function get_basis_on_cell(::Type{H1BR{3}}, ::Type{<:Tetrahedron3D})
-    function closure(xref)
-        temp = 1 - xref[1] - xref[2] - xref[3];
-        bf1 = 9 * xref[1] * temp * xref[2];
-        bf2 = 9 * temp * xref[1] * xref[3];
-        bf3 = 9 * xref[1] * xref[2] * xref[3];
-        bf4 = 9 * temp * xref[2] * xref[3];
-        return [temp 0.0 0.0;
-                xref[1] 0.0 0.0;
-                xref[2] 0.0 0.0;
-                xref[3] 0.0 0.0;
-                0.0 temp 0.0;
-                0.0 xref[1] 0.0;
-                0.0 xref[2] 0.0;
-                0.0 xref[3] 0.0;
-                0.0 0.0 temp;
-                0.0 0.0 xref[1];
-                0.0 0.0 xref[2];
-                0.0 0.0 xref[3];
-                bf1 bf1 bf1;
-                bf2 bf2 bf2;
-                bf3 bf3 bf3;
-                bf4 bf4 bf4]
+function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add face bubbles to P1 basis
+        refbasis[offset+1,:] .= 9 * xref[1] * refbasis[1,1] * xref[2]
+        refbasis[offset+2,:] .= 9 * refbasis[1,1] * xref[1] * xref[3]
+        refbasis[offset+3,:] .= 9 * xref[1] * xref[2] * xref[3]
+        refbasis[offset+4,:] .= 9 * refbasis[1,1] * xref[2] * xref[3]
     end
 end
 
-
-function get_basis_on_cell(::Type{H1BR{3}}, ::Type{<:Hexahedron3D})
-    function closure(xref)
+function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    a = 0.0
+    b = 0.0
+    c = 0.0
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add face bubbles to Q1 basis
         a = 1 - xref[1]
         b = 1 - xref[2]
         c = 1 - xref[3]
-        fb1 = 16*a*b*xref[1]*xref[2]*c # bottom
-        fb2 = 16*a*xref[1]*c*xref[3]*b # front
-        fb3 = 16*a*b*c*xref[2]*xref[3] # left
-        fb4 = 16*a*xref[1]*c*xref[3]*xref[2] # back
-        fb5 = 16*xref[1]*b*c*xref[2]*xref[3] # right
-        fb6 = 16*a*b*xref[1]*xref[2]*xref[3] # top
-        return [a*b*c 0.0 0.0;
-                xref[1]*b*c 0.0 0.0;
-                xref[2]*a*c 0.0 0.0;
-                xref[3]*a*b 0.0 0.0;
-                xref[1]*xref[2]*c 0.0 0.0;
-                xref[1]*b*xref[3] 0.0 0.0;
-                a*xref[2]*xref[3] 0.0 0.0;
-                xref[1]*xref[2]*xref[3] 0.0 0.0;
-                0.0 a*b*c 0.0;
-                0.0 xref[1]*b*c 0.0;
-                0.0 xref[2]*a*c 0.0;
-                0.0 xref[3]*a*b 0.0;
-                0.0 xref[1]*xref[2]*c 0.0;
-                0.0 xref[1]*b*xref[3] 0.0;
-                0.0 a*xref[2]*xref[3] 0.0;
-                0.0 xref[1]*xref[2]*xref[3] 0.0;
-                0.0 0.0 a*b*c;
-                0.0 0.0 xref[1]*b*c;
-                0.0 0.0 xref[2]*a*c;
-                0.0 0.0 xref[3]*a*b;
-                0.0 0.0 xref[1]*xref[2]*c;
-                0.0 0.0 xref[1]*b*xref[3];
-                0.0 0.0 a*xref[2]*xref[3];
-                0.0 0.0 xref[1]*xref[2]*xref[3];
-                fb1 fb1 fb1;
-                fb2 fb2 fb2;
-                fb3 fb3 fb3;
-                fb4 fb4 fb4;
-                fb5 fb5 fb5;
-                fb6 fb6 fb6]
+        refbasis[offset+1,:] .= 16*a*b*xref[1]*xref[2]*c # bottom
+        refbasis[offset+2,:] .= 16*a*xref[1]*c*xref[3]*b # front
+        refbasis[offset+3,:] .= 16*a*b*c*xref[2]*xref[3] # left
+        refbasis[offset+4,:] .= 16*a*xref[1]*c*xref[3]*xref[2] # back
+        refbasis[offset+5,:] .= 16*xref[1]*b*c*xref[2]*xref[3] # right
+        refbasis[offset+6,:] .= 16*a*b*xref[1]*xref[2]*xref[3] # top
     end
 end
-
 
 
 function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Tetrahedron3D})

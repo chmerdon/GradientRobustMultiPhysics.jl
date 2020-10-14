@@ -10,6 +10,9 @@ allowed ElementGeometries:
 abstract type HDIVBDM1{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:HDIVBDM1}) = FEType.parameters[1]
+get_ndofs_on_face(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry}) = 2
+get_ndofs_on_cell(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry}) = 2*nfaces_for_geometry(EG)
+
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Quadrilateral2D}) = 2;
@@ -102,33 +105,33 @@ end
 
 
 function get_basis_normalflux_on_face(::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry})
-    function closure(xref)
-        return [1;
-                6*(xref[1]- 1//2)]; # linear normal-flux of BDM1 function
+    function closure(refbasis,xref)
+        refbasis[1,1] = 1
+        refbasis[2,1] = 6*(xref[1]- 1//2) # linear normal-flux of BDM1 function
     end
 end
 
 function get_basis_on_cell(::Type{HDIVBDM1{2}}, ::Type{<:Triangle2D})
-    function closure(xref)
-        return [[xref[1] xref[2]-1.0];
-                [3*xref[1] 3-6*xref[1]-3*xref[2]];
-                [xref[1] xref[2]];
-                [-3*xref[1] 3*xref[2]];
-                [xref[1]-1.0 xref[2]];
-                [-3+3*xref[1]+6*xref[2] -3*xref[2]]]
+    function closure(refbasis, xref)
+        refbasis[1,:] .= [xref[1], xref[2]-1.0]
+        refbasis[2,:] .= [3*xref[1], 3-6*xref[1]-3*xref[2]]
+        refbasis[3,:] .= [xref[1], xref[2]]
+        refbasis[4,:] .= [-3*xref[1], 3*xref[2]]
+        refbasis[5,:] .= [xref[1]-1.0, xref[2]]
+        refbasis[6,:] .= [-3+3*xref[1]+6*xref[2], -3*xref[2]]
     end
 end
 
 function get_basis_on_cell(::Type{HDIVBDM1{2}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        return [[0.0 xref[2]-1.0];
-                -[3.0*xref[1]*xref[1]-3.0*xref[1] -6.0*xref[1]*xref[2]+6.0*xref[1]+3.0*xref[2]-3.0];
-                [xref[1] 0.0];
-                -[-6.0*xref[1]*xref[2]+3.0*xref[1]  3.0*xref[2]*xref[2]-3.0*xref[2]];
-                [0.0 xref[2]];
-                -[-3.0*xref[1]*xref[1]+3.0*xref[1] 6.0*xref[1]*xref[2]-3.0*xref[2]];
-                [xref[1]-1.0 0.0];
-                -[6.0*xref[1]*xref[2]-3.0*xref[1]-6*xref[2]+3.0 -3.0*xref[2]*xref[2]+3.0*xref[2]]]
+    function closure(refbasis, xref)
+        refbasis[1,:] .= [0.0, xref[2]-1.0]
+        refbasis[2,:] .= -[3.0*xref[1]*xref[1]-3.0*xref[1], -6.0*xref[1]*xref[2]+6.0*xref[1]+3.0*xref[2]-3.0]
+        refbasis[3,:] .= [xref[1], 0.0]
+        refbasis[4,:] .= -[-6.0*xref[1]*xref[2]+3.0*xref[1], 3.0*xref[2]*xref[2]-3.0*xref[2]]
+        refbasis[5,:] .= [0.0, xref[2]]
+        refbasis[6,:] .= -[-3.0*xref[1]*xref[1]+3.0*xref[1], 6.0*xref[1]*xref[2]-3.0*xref[2]]
+        refbasis[7,:] .= [xref[1]-1.0, 0.0]
+        refbasis[8,:] .= -[6.0*xref[1]*xref[2]-3.0*xref[1]-6*xref[2]+3.0, -3.0*xref[2]*xref[2]+3.0*xref[2]]
     end
 end
 

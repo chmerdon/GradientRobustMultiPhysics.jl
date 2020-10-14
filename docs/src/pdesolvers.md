@@ -14,7 +14,7 @@ solve!
 
 ## Time-Dependent Solvers
 
-The structure TimeControlSolver can be used to setup a time-dependent solver that can be configured in a similar manner as the time-independent ones (subiterations, nonlinear iterations, linear solvers). As a TimeIntegrationRule so far only BackwardEuler is implemented. It detects automatically when the timestep changes and when the time derivative has to be reimplemented. Also non-standard and parameter-dependent time derivatives are possible.
+The structure TimeControlSolver can be used to setup a time-dependent solver that can be configured in a similar manner as the time-independent ones (subiterations, nonlinear iterations, linear solvers). As a TimeIntegrationRule so far only BackwardEuler is implemented. 
 
 Note that, the time-derivative is added by the TimeControlSolver and is in general not part of the PDEDescription (this is debatable and might change in the future).
 

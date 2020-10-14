@@ -13,6 +13,8 @@ abstract type H1MINI{ncomponents,edim} <: AbstractH1FiniteElement where {ncompon
 
 get_ncomponents(FEType::Type{<:H1MINI}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1MINI}) = FEType.parameters[2]
+get_ndofs_on_face(FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry}) = (1+nnodes_for_geometry(EG)) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Edge1D}) = 1
 get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Triangle2D}) = 3;
@@ -197,114 +199,53 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
 end
 
 
-function get_basis_on_face(::Type{H1MINI{1,2}}, ::Type{<:Edge1D})
-    function closure(xref)
-        return [1 - xref[1];
-                xref[1]]
+function get_basis_on_face(FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry})
+    ncomponents = get_ncomponents(FEType)
+    # same as P1
+    return get_basis_on_face(H1P1{ncomponents}, EG)
+end
+
+function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Triangle2D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    cb = 0.0
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add cell bubbles to P1 basis
+        cb = 27*(1-xref[1]-xref[2])*xref[1]*xref[2]
+        for k = 1 : ncomponents
+            refbasis[offset+k,k] = cb
+        end
     end
 end
 
-
-function get_basis_on_face(::Type{H1MINI{2,2}}, ::Type{<:Edge1D})
-    function closure(xref)
-        temp = 1 - xref[1];
-        return [temp 0.0;
-                xref[1] 0.0;
-                0.0 temp;
-                0.0 xref[1]]
+function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Quadrilateral2D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    cb = 0.0
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add cell bubbles to P1 basis
+        cb = 16*(1-xref[1])*(1-xref[2])*xref[1]*xref[2]
+        for k = 1 : ncomponents
+            refbasis[offset+k,k] = cb
+        end
     end
 end
 
-function get_basis_on_face(::Type{H1MINI{3,3}}, ::Type{<:Triangle2D})
-    function closure(xref)
-        temp = 1 - xref[1] - xref[2];
-        return [temp 0.0 0.0;
-                xref[1] 0.0 0.0;
-                xref[2] 0.0 0.0;
-                0.0 temp 0.0;
-                0.0 xref[1] 0.0;
-                0.0 xref[2] 0.0;
-                0.0 0.0 temp;
-                0.0 0.0 xref[1];
-                0.0 0.0 xref[2]]
+function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Tetrahedron3D})
+    ncomponents = get_ncomponents(FEType)
+    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
+    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    cb = 0.0
+    function closure(refbasis, xref)
+        refbasis_P1(refbasis, xref)
+        # add cell bubbles to P1 basis
+        cb = 81*(1-xref[1]-xref[2]-xref[3])*xref[1]*xref[2]*xref[3]
+        for k = 1 : ncomponents
+            refbasis[offset+k,k] = cb
+        end
     end
 end
-
-function get_basis_on_cell(::Type{H1MINI{1,2}}, ::Type{<:Triangle2D})
-    function closure(xref)
-        temp = 1-xref[1]-xref[2]
-        return [temp;
-                xref[1];
-                xref[2];
-                9*temp*xref[1]*xref[2]]
-    end
-end
-
-function get_basis_on_cell(::Type{H1MINI{2,2}}, ::Type{<:Triangle2D})
-    function closure(xref)
-        temp = 1-xref[1]-xref[2]
-        cb = 27*temp*xref[1]*xref[2]
-        return [temp 0.0;
-                xref[1] 0.0;
-                xref[2] 0.0;
-                0.0 temp;
-                0.0 xref[1];
-                0.0 xref[2];
-                cb 0.0;
-                0.0 cb]
-    end
-end
-
-function get_basis_on_cell(::Type{H1MINI{1,2}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        return [a*b;
-                xref[1]*b;
-                xref[1]*xref[2];
-                xref[2]*a;
-                16*a*b*xref[1]*xref[2]]
-    end
-end
-
-function get_basis_on_cell(::Type{H1MINI{2,2}}, ::Type{<:Quadrilateral2D})
-    function closure(xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        cb = 16*a*b*xref[1]*xref[2]
-        return [a*b 0.0;
-                xref[1]*b 0.0;
-                xref[1]*xref[2] 0.0;
-                xref[2]*a 0.0
-                0.0 a*b;
-                0.0 xref[1]*b;
-                0.0 xref[1]*xref[2];
-                0.0 xref[2]*a;
-                cb 0.0;
-                0.0 cb]
-    end
-end
-
-
-function get_basis_on_cell(::Type{H1MINI{3,3}}, ::Type{<:Tetrahedron3D})
-    function closure(xref)
-        temp = 1 - xref[1] - xref[2] - xref[3];
-        cb = 81*temp*xref[1]*xref[2]*xref[3]
-        return [temp 0.0 0.0;
-                xref[1] 0.0 0.0;
-                xref[2] 0.0 0.0;
-                xref[3] 0.0 0.0;
-                0.0 temp 0.0;
-                0.0 xref[1] 0.0;
-                0.0 xref[2] 0.0;
-                0.0 xref[3] 0.0;
-                0.0 0.0 temp;
-                0.0 0.0 xref[1];
-                0.0 0.0 xref[2];
-                0.0 0.0 xref[3];
-                cb 0 0;
-                0 cb 0;
-                0 0 cb]
-    end
-end
-
