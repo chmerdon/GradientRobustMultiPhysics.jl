@@ -1163,7 +1163,7 @@ function TimeControlSolver(
     end
 
     # generate TimeControlSolver
-    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int32},1}(undef,length(SC.subiterations)))
+    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(SC.subiterations)))
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations

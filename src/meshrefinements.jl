@@ -524,6 +524,5 @@ function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid[BFaceRegions]=source_grid[BFaceRegions]
     xgrid[BFaceGeometries]=source_grid[BFaceGeometries]
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
-    Base.show()
     return xgrid
 end

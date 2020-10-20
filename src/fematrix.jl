@@ -15,10 +15,10 @@ struct FEMatrixBlock{T} <: AbstractArray{T,2}
     name::String
     FESX::FESpace
     FESY::FESpace
-    offsetX::Int32
-    offsetY::Int32
-    last_indexX::Int32
-    last_indexY::Int32
+    offsetX::Int64
+    offsetY::Int64
+    last_indexX::Int64
+    last_indexY::Int64
     entries::AbstractMatrix # shares with parent object
 end
 
@@ -83,7 +83,7 @@ FEMatrix{T}(name::String, FES::FESpace) where T <: Real
 Creates FEMatrix with one square block (FES,FES).
 """
 function FEMatrix{T}(name::String, FES::FESpace) where T <: Real
-    entries = ExtendableSparseMatrix{T,Int32}(FES.ndofs,FES.ndofs)
+    entries = ExtendableSparseMatrix{T,Int64}(FES.ndofs,FES.ndofs)
     Block = FEMatrixBlock{T}(name, FES, FES, 0 , 0, FES.ndofs, FES.ndofs, entries)
     return FEMatrix{T}([Block], 1, entries)
 end
@@ -96,7 +96,7 @@ FEMatrix{T}(name::String, FESX::FESpace, FESY::FESpace) where T <: Real
 Creates FEMatrix with one rectangular block (FESX,FESY).
 """
 function FEMatrix{T}(name::String, FESX::FESpace, FESY::FESpace) where T <: Real
-    entries = ExtendableSparseMatrix{T,Int32}(FESX.ndofs,FESY.ndofs)
+    entries = ExtendableSparseMatrix{T,Int64}(FESX.ndofs,FESY.ndofs)
     Block = FEMatrixBlock{T}(name, FESX, FESY, 0 , 0, FESX.ndofs, FESY.ndofs, entries)
     return FEMatrix{T}([Block], 2, entries)
 end
@@ -113,7 +113,7 @@ function FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
     for j=1:length(FES)
         ndofs += FES[j].ndofs
     end
-    entries = ExtendableSparseMatrix{T,Int32}(ndofs,ndofs)
+    entries = ExtendableSparseMatrix{T,Int64}(ndofs,ndofs)
 
     Blocks = Array{FEMatrixBlock{T},1}(undef,length(FES)^2)
     offsetX = 0
@@ -136,7 +136,7 @@ $(TYPEDSIGNATURES)
 Custom `fill` function for `FEMatrixBlock` (only fills the block, not the complete FEMatrix).
 """
 function Base.fill!(B::FEMatrixBlock, value)
-    cscmat::SparseMatrixCSC{Float64,Int32} = B.entries.cscmatrix
+    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
     for col = B.offsetY+1:B.last_indexY
@@ -155,7 +155,7 @@ $(TYPEDSIGNATURES)
 Adds FEMatrixBlock B to FEMatrixBlock A.
 """
 function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1)
-    cscmat::SparseMatrixCSC{Float64,Int32} = B.entries.cscmatrix
+    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
     arow::Int = 0
@@ -200,8 +200,8 @@ $(TYPEDSIGNATURES)
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
 function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor = 1)
-    cscmat::SparseMatrixCSC{Float64,Int32} = B.entries.cscmatrix
-    rows::Array{Int32,1} = rowvals(cscmat)
+    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
+    rows::Array{Int64,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
     bcol::Int = 0
     row::Int = 0
