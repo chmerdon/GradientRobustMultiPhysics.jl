@@ -295,7 +295,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
             ForwardDiff.jacobian!(Dresult, refbasis_reconst, result_temp, qf.xref[i], Dcfg)
             jac = DiffResults.jacobian(Dresult)
 
-            for j = 1 : ndofs4item*ncomponents, k = 1 : edim
+            for j = 1 : ndofs4item2*ncomponents2, k = 1 : edim
                 refbasisderivvals[j,k,i] = jac[j,k];
             end
         end
@@ -516,7 +516,8 @@ end
 
 # NORMALFLUX OPERATOR
 # H1 ELEMENTS
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+# ON_FACES
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:ON_FACES}
     if FEBE.citem != item
         FEBE.citem = item
 
@@ -537,15 +538,69 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) w
     return nothing
 end
 
+
+# NORMALFLUX OPERATOR
+# H1 ELEMENTS
+# ON_BFACES
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:ON_BFACES}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # fetch normal of item
+        for k = 1 : size(FEBE.coefficients3,1) # ncomponents of normal
+            FEBE.iteminfo[k] = FEBE.coefficients3[k,FEBE.FE.xgrid[BFaces][item]]
+        end
+
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = 0.0
+                for k = 1 : size(FEBE.coefficients3,1) # ncomponents of normal
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.iteminfo[k];
+                end    
+            end
+        end
+    end
+    return nothing
+end
+
 # NORMALFLUX OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
-function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType}
+# ON_FACES
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:ON_FACES}
     if FEBE.citem != item
         FEBE.citem = item
 
         # fetch normal of item
         for k = 1 : size(FEBE.coefficients3,1) # ncomponents of normal
             FEBE.iteminfo[k] = FEBE.coefficients3[k,item]
+        end
+        
+        # get coefficients
+        FEBE.coeffs_handler(FEBE.coefficients, item)
+
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
+                FEBE.cvals[1,dof_i,i] = 0.0
+                for k = 1 : size(FEBE.coefficients3,1) # ncomponents of normal
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.coefficients[k,dof_i] * FEBE.iteminfo[k];
+                end    
+            end
+        end
+    end
+    return nothing
+end
+
+
+# NORMALFLUX OPERATOR
+# H1 ELEMENTS WITH COEFFICIENTS
+# ON_BFACES
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,NormalFlux,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElementWithCoefficients, EG <: AbstractElementGeometry, AT <:ON_BFACES}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # fetch normal of item
+        for k = 1 : size(FEBE.coefficients3,1) # ncomponents of normal
+            FEBE.iteminfo[k] = FEBE.coefficients3[k,FEBE.FE.xgrid[BFaces][item]]
         end
         
         # get coefficients
