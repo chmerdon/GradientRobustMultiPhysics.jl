@@ -80,7 +80,7 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
         while length(operators) < j
             push!(operators, Identity)
         end
-        ncomponents = get_ncomponents(eltype(Data[block].FES))
+        ncomponents = Length4Operator(operators[j], xdim, get_ncomponents(eltype(Data[block].FES))) 
         if ncomponents > maxcomponents
             maxcomponents = ncomponents
         end
@@ -97,19 +97,20 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
     absval = 0
     for b = 1 : length(blocks)
         block = blocks[b]
-        ncomponents = get_ncomponents(eltype(Data[block].FES))
+        ncomponents = Length4Operator(operators[b], xdim, get_ncomponents(eltype(Data[block].FES))) 
         # get node values
         nodevalues!(nodedata, Data[block], Data[block].FES, operators[b])
         for c = 1 : ncomponents
             if length(names) >= b
                 fieldname = names[b]
             else
+                fieldname = DefaultName4Operator(operators[b]) * "(" * Data[block].name * ")"
                 if ncomponents == 1
-                    fieldname = Data[block].name[1:min(30,length(Data[block].name))]
+                    fieldname = fieldname[1:min(30,length(fieldname))]
                     fieldname = replace(String(fieldname), " " => "_")
                     fieldname = "$(b)_$fieldname"
                 else
-                    fieldname = Data[block].name[1:min(28,length(Data[block].name))]
+                    fieldname = fieldname[1:min(28,length(fieldname))]
                     fieldname = replace(String(fieldname), " " => "_")
                     fieldname = "$(b)_$fieldname.$c"
                 end
@@ -123,7 +124,8 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
         # add data for absolute value of vector quantity
         if vectorabs && ncomponents > 1
             nfields += 1
-            fieldname = Data[block].name[1:min(28,length(Data[block].name))]
+            fieldname = DefaultName4Operator(operators[b]) * "(" * Data[block].name * ")"
+            fieldname = fieldname[1:min(28,length(fieldname))]
             fieldname = replace(String(fieldname), " " => "_")
             fieldname = "$(b)_$fieldname.a"
             @printf(io, "%s 1 %d float\n", fieldname, nnodes)

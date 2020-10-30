@@ -56,13 +56,19 @@ function apply_constraint!(
     b::FEVector,
     Constraint::FixedIntegralMean,
     Target::FEVector;
+    current_equations = "all",
     verbosity::Int = 0)
     c = Constraint.component
     if verbosity > 0
         println("\n  Ensuring fixed integral mean for component $c...")
     end
 
-    # fix the first dof
+    if current_equations != "all"
+        c = findfirst(isequal(c), current_equations)
+    end
+
+    # chose the the first dof in block coresspnding to component c
+    # that will be fixed (and later moved such that desired mean is reached)
     dof = A[c,c].offsetX+1
     #Target[c][1] = 0
     return [dof]
@@ -74,6 +80,7 @@ function apply_constraint!(
     b::FEVector,
     Constraint::CombineDofs,
     Target::FEVector;
+    current_equations = "all",
     verbosity::Int = 0)
 
     fixed_dofs = []
@@ -133,6 +140,7 @@ function realize_constraint!(
     if verbosity > 0
         println("\n  Moving integral mean for component $c to value $(Constraint.value)")
     end
+
     # move integral mean
     pmeanIntegrator = ItemIntegrator{Float64,ON_CELLS}(Identity, DoNotChangeAction(1), [0])
     meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)

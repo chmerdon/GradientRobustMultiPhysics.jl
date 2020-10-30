@@ -320,6 +320,7 @@ function GenerateNonlinearForm(
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     ADnewton::Bool = false,
     action_kernel_rhs = nothing,
+    bonus_quadorder::Int = 0,
     regions = [0])
 
     ### Newton scheme for a nonlinear operator G(u) is
@@ -346,7 +347,7 @@ function GenerateNonlinearForm(
             end
             return nothing
         end
-        action = FunctionAction(newton_kernel, argsizes)
+        action = FunctionAction(newton_kernel, argsizes; bonus_quadorder = bonus_quadorder)
 
         # the action for the RHS just evaluates DG and G at input_current
         temp = zeros(Float64, argsizes[1])
@@ -359,11 +360,11 @@ function GenerateNonlinearForm(
             end
             return nothing
         end
-        action_rhs = FunctionAction(rhs_kernel, argsizes)
+        action_rhs = FunctionAction(rhs_kernel, argsizes; bonus_quadorder = bonus_quadorder)
     else
-        action = FunctionAction(action_kernel, argsizes)
+        action = FunctionAction(action_kernel, argsizes; bonus_quadorder = bonus_quadorder)
         if action_kernel_rhs != nothing
-            action_rhs = FunctionAction(action_kernel_rhs, argsizes)
+            action_rhs = FunctionAction(action_kernel_rhs, argsizes; bonus_quadorder = bonus_quadorder)
         else
             action_rhs = nothing
         end
@@ -419,8 +420,8 @@ can only be applied in PDE LHS
 mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
     operator1::Type{<:AbstractFunctionOperator} # operator for argument 1
-    operator2::Type{<:AbstractFunctionOperator} # operator for argument 1
-    operator3::Type{<:AbstractFunctionOperator} # operator for argument 1
+    operator2::Type{<:AbstractFunctionOperator} # operator for argument 2
+    operator3::Type{<:AbstractFunctionOperator} # operator for argument 3
     a_from::Int     # unknown id where fixed argument takes its values from
     a_to::Int       # position of fixed argument
     action::AbstractAction # is applied to argument 1 and 2

@@ -750,7 +750,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
             # are missing in the subiteration
             for j = 1 : length(PDE.GlobalConstraints)
                 if PDE.GlobalConstraints[j].component in SC.subiterations[s]
-                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; verbosity = SC.verbosity - 2)
+                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; current_equations = SC.subiterations[s], verbosity = SC.verbosity - 2)
                    append!(fixed_dofs, additional_fixed_dofs)
                 end
             end
@@ -1497,7 +1497,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
         if do_after_each_timestep != nothing
             do_after_each_timestep(statistics)
         end
-        if sum(statistics[3,2]) < stationarity_threshold
+        if sum(statistics[:,2]) < stationarity_threshold
             println("\n  stationarity detected after $iteration timesteps")
             break;
         end

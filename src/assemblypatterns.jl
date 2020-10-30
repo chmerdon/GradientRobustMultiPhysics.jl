@@ -606,9 +606,9 @@ function evaluate(
     resultdim = form.action.argsizes[1]
     AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
 
-    try
+    if typeof(FEB) <: Array{<:FEVectorBlock,1}
         evaluate!(AV, form, FEB; verbosity = verbosity)
-    catch
+    else
         evaluate!(AV, form, [FEB]; verbosity = verbosity)
     end
 

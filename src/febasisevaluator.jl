@@ -120,12 +120,12 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         elseif FEOP == TangentFlux && edim == 3
             coefficients3 = FE.xgrid[EdgeTangents]
             # current_eval = zeros(T,1,ndofs4item,length(qf.w));
-        elseif FEOP == Identity || FEOP == IdentityDisc{Jump}
+        elseif FEOP <: Identity || FEOP <: IdentityDisc
             # current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
             for i in eachindex(qf.w), j = 1 : ndofs4item, k = 1 : ncomponents
                 current_eval[k,j,i] = refbasisvals[i][j,k]
             end
-        elseif FEOP == IdentityComponent
+        elseif FEOP <: IdentityComponent
             for i in eachindex(qf.w), j = 1 : ndofs4item
                 current_eval[1,j,i] = refbasisvals[i][j,FEOP.parameters[1]]
             end
