@@ -77,8 +77,17 @@ $(TYPEDEF)
 evaluates the gradient of the tangential part of some vector-valued finite element function.
 """
 abstract type TangentialGradient <: AbstractFunctionOperator end # D_geom(v_h x n) = only gradient of tangential part of vector-valued function
+"""
+$(TYPEDEF)
 
+evaluates the Laplacian of some (possibly vector-valued) finite element function.
+"""
 abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
+"""
+$(TYPEDEF)
+
+evaluates the full Hessian of some (possibly vector-valued) finite element function.
+"""
 abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
 """
 $(TYPEDEF)
@@ -175,6 +184,7 @@ Length4Operator(::Type{<:Gradient}, xdim::Int, ncomponents::Int) = xdim*ncompone
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
+Length4Operator(::Type{Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
 
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 0
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:IdentityComponent}) = 0

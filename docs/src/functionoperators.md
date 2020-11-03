@@ -12,7 +12,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`IdentityComponent{c}`](@ref)                       | identity of c-th component                              |
 | [`NormalFlux`](@ref)                                 | normal flux (function times normal)                     |
 | [`TangentFlux`](@ref)                                | tangent flux (function times tangent)                   | 
-| [`Gradient`](@ref)                                   | gradient/Jacobian                                       |
+| [`Gradient`](@ref)                                   | gradient/Jacobian (as a vector)                         |
 | [`GradientDisc{Jump}`](@ref)                         | jumps of gradient/Jacobian (only over faces)            |
 | [`GradientDisc{Average}`](@ref)                      | average of gradient/Jacobian (only over faces)          |
 | [`SymmetricGradient`](@ref)                          | symmetric part of the gradient                          |
@@ -20,6 +20,8 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`CurlScalar`](@ref)                                 | curl operator 1D to 2D (rotated gradient)               |
 | [`Curl2D`](@ref)                                     | curl operator 2D to 1D                                  |
 | [`Curl3D`](@ref)                                     | curl operator 3D to 3D                                  |
+| [`Hessian`](@ref)                                    | Hesse matrix = all 2nd order derivatives (as a vector)  |
+| [`Laplacian`](@ref)                                  | Laplace Operator                                        |
 | [`ReconstructionIdentity{FEType}`](@ref)             | reconstruction operator into specified FEType           |
 | [`ReconstructionIdentityDisc{FEType,Jump}`](@ref)    | jump of reconstruction operator (over faces)            |
 | [`ReconstructionIdentityDisc{FEType,Average}`](@ref) | average of reconstruction operator (over faces)         |
