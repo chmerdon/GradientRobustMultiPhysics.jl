@@ -80,6 +80,26 @@ function grid_unitsquare(::Type{<:Triangle2D}; scale = [1,1], shift = [0,0])
     return xgrid
 end
 
+
+# unit square as two triangles with four boundary regions (bottom, right, top, left)
+function grid_lshape(::Type{<:Triangle2D}; scale = [1,1], shift = [0,0])
+    xgrid=ExtendableGrid{Float64,Int32}()
+    xCoordinates=Array{Float64,2}([0 0; 1 0; 1 1; 0 1; -1 1; -1 0; -1 -1; 0 -1]')
+    for j = 1 : size(xCoordinates,1)
+        xCoordinates[j,:] .+= shift[j]
+        xCoordinates[j,:] .*= scale[j]
+    end
+    xgrid[Coordinates] = xCoordinates
+    xgrid[CellNodes]=Array{Int32,2}([4 2 3; 2 4 1; 6 4 5; 4 6 1; 6 8 1; 8 6 7]')
+    xgrid[CellGeometries]=VectorOfConstants(Triangle2D,46)
+    xgrid[CellRegions]=VectorOfConstants{Int32}(1,6)
+    xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4,5,6,7,8])
+    xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8; 8 1]')
+    xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,8)
+    xgrid[CoordinateSystem]=Cartesian2D
+    return xgrid
+end
+
 # unit suqare as mixed triangles and squares with four boundary regions (bottom, right, top, left)
 function grid_unitsquare_mixedgeometries()
 

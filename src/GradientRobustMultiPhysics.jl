@@ -59,6 +59,9 @@ export split_grid_into
 export uniform_refine
 export barycentric_refine
 
+include("adaptive_meshrefinements.jl")
+export RGB_refine
+
 
 include("quadrature.jl")
 export QuadratureRule
@@ -224,6 +227,7 @@ export H1BestapproximationProblem
 include("commongrids.jl")
 export reference_domain
 export grid_unitcube
+export grid_lshape
 export grid_unitsquare, grid_unitsquare_mixedgeometries
 
 include("writevtk.jl")

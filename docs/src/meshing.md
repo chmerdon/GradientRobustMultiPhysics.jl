@@ -7,7 +7,7 @@ Grid generators for simplex grids can be found e.g. in the external module [Simp
 Cells, faces and edges of the mesh are associated to AbstractElementGeometries (defined by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)) that are used to dispatch functionality (local/global transformation, enumeration rules, set of basis functions, volume calculation, refinements etc.). See below for a list of recognized element geometries.
 
 
-## Available Mesh Manipulations
+## Available Global Mesh Manipulations
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]

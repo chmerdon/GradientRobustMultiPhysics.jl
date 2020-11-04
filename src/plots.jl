@@ -45,17 +45,21 @@ function plot(
         # collect data
         offsets = zeros(Int, length(blockids)+1)
         for j = 1 : length(blockids)
-            FEType = eltype(Source[blockids[j]].FES)
-            offsets[j+1] = offsets[j] + Length4Operator(operators[j], spacedim, get_ncomponents(FEType))
+            if blockids[j] > 0
+                FEType = eltype(Source[blockids[j]].FES)
+                offsets[j+1] = offsets[j] + Length4Operator(operators[j], spacedim, get_ncomponents(FEType))
+            end
         end
 
         nodevals = zeros(Float64,offsets[end],nnodes)
         for j = 1 : length(blockids)
             ## evaluate operator
-            if verbosity > 0
-                println("   collecting data for plot $j : " * "$(operators[j])(" * Source[blockids[j]].name * ")")
+            if blockids[j] > 0
+                if verbosity > 0
+                    println("   collecting data for plot $j : " * "$(operators[j])(" * Source[blockids[j]].name * ")")
+                end
+                nodevalues!(nodevals, Source[blockids[j]], operators[j]; target_offset = offsets[j], zero_target = false)
             end
-            nodevalues!(nodevals, Source[blockids[j]], operators[j]; target_offset = offsets[j], zero_target = false)
         end
 
         ## plot
@@ -88,24 +92,32 @@ function plot(
             # fill plots
             Z = zeros(Float64,nnodes)
             for j = 1 : length(blockids)
-                if offsets[j+1] - offsets[j] > 1
-                    Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
-                    title = "| $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ") |"
+                if blockids[j] == 0
+                    if verbosity > 0
+                        println("   plotting grid into plot $j")
+                    end
+                    ExtendableGrids.plot!(ctx[j], xgrid) 
+                    Plotter.title("grid")
                 else
-                    Z[:] = view(nodevals,offsets[j]+1,:)
-                    title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
+                    if offsets[j+1] - offsets[j] > 1
+                        Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
+                        title = "| $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ") |"
+                    else
+                        Z[:] = view(nodevals,offsets[j]+1,:)
+                        title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
+                    end
+                    if use_subplots == false
+                        title = maintitle * " " * title
+                    end
+                    if minimum(Z) == maximum(Z)
+                        Z[1] += 1e-16
+                    end
+                    if verbosity > 0
+                        println("   plotting data into plot $j : " * title)
+                    end
+                    ExtendableGrids.plot!(ctx[j], xgrid, Z) 
+                    Plotter.title(title)
                 end
-                if use_subplots == false
-                    title = maintitle * " " * title
-                end
-                if minimum(Z) == maximum(Z)
-                    Z[1] += 1e-16
-                end
-                if verbosity > 0
-                    println("   plotting data into plot $j : " * title)
-                end
-                ExtendableGrids.plot!(ctx[j], xgrid, Z) 
-                Plotter.title(title)
             end
         end
 

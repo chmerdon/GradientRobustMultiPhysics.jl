@@ -697,7 +697,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                         FEBE.cvals[(c-1)*FEBE.offsets[2]^2 + (k-1)*FEBE.offsets[2] + l,dof_i,i] = 0.0
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : FEBE.offsets[2], xj = 1 : FEBE.offsets[2]
-                            FEBE.cvals[(c-1)*FEBE.offsets[2]^2 + (k-1)*FEBE.offsets[2] + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[xi] + (c-1)*size(FEBE.cvals,2),xj,i]
+                            FEBE.cvals[(c-1)*FEBE.offsets[2]^2 + (k-1)*FEBE.offsets[2] + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c] + (xi-1)*size(FEBE.cvals,2),xj,i]
                         end
                     end    
                 end    
@@ -730,7 +730,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, item::Int) where {T <
                     for k = 1 : FEBE.offsets[2]
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : FEBE.offsets[2], xj = 1 : FEBE.offsets[2]
-                            FEBE.cvals[c,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[k,xj]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[xi] + (c-1)*size(FEBE.cvals,2),xj,i]
+                            FEBE.cvals[c,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[k,xj]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c] + (xi-1)*size(FEBE.cvals,2),xj,i]
                         end
                     end   
                 end    
