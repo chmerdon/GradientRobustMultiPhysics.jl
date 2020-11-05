@@ -19,8 +19,7 @@ abstract type DirectUMFPACK <: AbstractLinSolveType end
 abstract type DirectPARDISO <: AbstractLinSolveType end # hopefully in future
 abstract type IterativeBigStabl_LUPC <: AbstractLinSolveType end # iterative solver with LU decomposition as preconditioner
 
-
-mutable struct SolverConfig
+mutable struct SolverConfig{T <: Real}
     is_nonlinear::Bool      # PDE is nonlinear
     is_timedependent::Bool  # PDE is time_dependent
     LHS_AssemblyTriggers::Array{DataType,2} # assembly triggers for blocks in LHS
@@ -39,10 +38,10 @@ mutable struct SolverConfig
 end
 
 
-mutable struct LinearSystem{ST <: AbstractLinSolveType}
-    x::AbstractVector
-    A::ExtendableSparseMatrix
-    b::AbstractVector
+mutable struct LinearSystem{T <: Real, ST <: AbstractLinSolveType}
+    x::AbstractVector{T}
+    A::AbstractMatrix{T}
+    b::AbstractVector{T}
     ALU     # LU factorization or nothing
     update_after::Int # update LU decomposition after so many solves, updater_after = -1 means never
     ### private fields
@@ -51,21 +50,21 @@ mutable struct LinearSystem{ST <: AbstractLinSolveType}
     nliniter::Int # number of iterations for last solve
 end
 
-function LinearSystem{DirectUMFPACK}(x,A,b; update_after::Int = 1)
-    return LinearSystem{DirectUMFPACK}(x,A,b,nothing,update_after,0,0,0)
+function LinearSystem{T,DirectUMFPACK}(x,A,b; update_after::Int = 1) where {T<: Real}
+    return LinearSystem{T,DirectUMFPACK}(x,A,b,nothing,update_after,0,0,0)
 end
 
 
-function LinearSystem{IterativeBigStabl_LUPC}(x,A,b; update_after::Int = 3)
-    return LinearSystem{IterativeBigStabl_LUPC}(x,A,b,nothing,update_after,0,0,0)
+function LinearSystem{T,IterativeBigStabl_LUPC}(x,A,b; update_after::Int = 3) where {T<: Real}
+    return LinearSystem{T,IterativeBigStabl_LUPC}(x,A,b,nothing,update_after,0,0,0)
 end
 
 
 function linsolve!(
-    LS::LinearSystem{IterativeBigStabl_LUPC};
+    LS::LinearSystem{T,IterativeBigStabl_LUPC};
     force_update::Bool = false,
     verbosity::Int = 0
-)
+) where {T<: Real}
 
     flush!(LS.A)
     if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
@@ -106,10 +105,10 @@ end
 
 
 function linsolve!(
-    LS::LinearSystem{DirectUMFPACK};
+    LS::LinearSystem{T,DirectUMFPACK};
     force_update::Bool = false,
     verbosity::Int = 0
-)
+) where {T<: Real}
 
     flush!(LS.A)
     if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
@@ -136,7 +135,7 @@ end
 
 # check if PDE is nonlinear or time-dependent and which blocks require recalculation
 # and devise some initial solver strategy
-function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity = 0)
+function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiterations = "auto", verbosity = 0)
     nonlinear::Bool = false
     timedependent::Bool = false
     block_nonlinear::Bool = false
@@ -232,9 +231,9 @@ function generate_solver(PDE::PDEDescription; subiterations = "auto", verbosity 
                 end
             end
         end
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
     else
-        return SolverConfig(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
     end
 
 end
@@ -243,6 +242,7 @@ function Base.show(io::IO, SC::SolverConfig)
 
     println("\nSOLVER-CONFIGURATION")
     println("======================")
+    println("              type = $(SC.parameters[1])")
     println("         nonlinear = $(SC.is_nonlinear)")
     println("     timedependent = $(SC.is_timedependent)")
     println("         linsolver = $(SC.linsolver)")
@@ -250,6 +250,7 @@ function Base.show(io::IO, SC::SolverConfig)
     println("     subiterations = $(SC.subiterations)")
     println("     maxIterations = $(SC.maxIterations)")
     println("       maxResidual = $(SC.maxResidual)")
+
     if SC.anderson_iterations > 0
         println("       AndersonIts = $(SC.anderson_iterations)")
     end
@@ -291,16 +292,16 @@ end
 
 
 function assemble!(
-    A::FEMatrix,
-    b::FEVector,
+    A::FEMatrix{T},
+    b::FEVector{T},
     PDE::PDEDescription,
-    SC::SolverConfig,
+    SC::SolverConfig{T},
     CurrentSolution::FEVector;
     time::Real = 0,
     equations = [],
     if_depends_on = [], # block is only assembled if it depends on these components
     min_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyAlways,
-    verbosity::Int = 0)
+    verbosity::Int = 0) where {T <: Real}
 
     if length(equations) == 0
         equations = 1:size(PDE.LHSOperators,1)
@@ -434,7 +435,7 @@ function assemble!(
 end
 
 # for linear, stationary PDEs that can be solved in one step
-function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
+function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0) where {T <: Real}
 
     verbosity = SC.verbosity
 
@@ -444,8 +445,8 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
     end    
 
     # ASSEMBLE SYSTEM
-    A = FEMatrix{Float64}("SystemMatrix", FEs)
-    b = FEVector{Float64}("SystemRhs", FEs)
+    A = FEMatrix{T}("SystemMatrix", FEs)
+    b = FEVector{T}("SystemRhs", FEs)
     assemble!(A,b,PDE,SC,Target; equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial, time = time, verbosity = verbosity - 2)
 
     # ASSEMBLE BOUNDARY DATA
@@ -477,14 +478,14 @@ function solve_direct!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; 
     end
 
     # SOLVE
-    LS =  LinearSystem{SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
+    LS =  LinearSystem{T, SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
     linsolve!(LS; verbosity = verbosity - 1)
 
     if verbosity > 0
         # CHECK RESIDUAL
         residual = (A.entries*Target.entries - b.entries).^2
         residual[fixed_dofs] .= 0
-        residuals = zeros(Float64, length(Target.FEVectorBlocks))
+        residuals = zeros(T, length(Target.FEVectorBlocks))
         for j = 1 : length(Target.FEVectorBlocks)
             for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
                 residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
@@ -503,7 +504,7 @@ end
 
 
 # solve full system iteratively until fixpoint is reached
-function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
+function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0) where {T <: Real}
 
     verbosity = SC.verbosity
 
@@ -515,8 +516,8 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
     end    
 
     # ASSEMBLE SYSTEM INIT
-    A = FEMatrix{Float64}("SystemMatrix", FEs)
-    b = FEVector{Float64}("SystemRhs", FEs)
+    A = FEMatrix{T}("SystemMatrix", FEs)
+    b = FEVector{T}("SystemRhs", FEs)
     assembly_time = @elapsed assemble!(A,b,PDE,SC,Target; time = time, equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial, verbosity = verbosity - 2)
 
     # ASSEMBLE BOUNDARY DATA
@@ -539,10 +540,10 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
         LastAndersonIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
         PDE.LHSOperators[1,1][1].store_operator = true # use the first operator to compute norm in which Anderson iterations are optimised
         AIONormOperator = PDE.LHSOperators[1,1][1].storage
-        AIOMatrix = zeros(Float64, anderson_iterations+2, anderson_iterations+2)
-        AIORhs = zeros(Float64, anderson_iterations+2)
+        AIOMatrix = zeros(T, anderson_iterations+2, anderson_iterations+2)
+        AIORhs = zeros(T, anderson_iterations+2)
         AIORhs[anderson_iterations+2] = 1 # sum of all coefficients should equal 1
-        AIOalpha = zeros(Float64, anderson_iterations+2)
+        AIOalpha = zeros(T, anderson_iterations+2)
         for j = 1 : anderson_iterations+1
             LastAndersonIterates[j] = deepcopy(Target)
             LastAndersonIteratesTilde[j] = deepcopy(Target)
@@ -551,12 +552,12 @@ function solve_fixpoint_full!(Target::FEVector, PDE::PDEDescription, SC::SolverC
         end
     end
 
-    residual = zeros(Float64,length(b.entries))
-    linresnorm::Float64 = 0.0
-    resnorm::Float64 = 0.0
+    residual = zeros(T,length(b.entries))
+    linresnorm::T = 0.0
+    resnorm::T = 0.0
 
     ## INIT SOLVER
-    LS = LinearSystem{SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
+    LS = LinearSystem{T,SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
 
     if verbosity > 1
         @printf("\n  initial assembly time = %.2e (s)\n",assembly_time)
@@ -678,7 +679,7 @@ end
 
 # solve system iteratively until fixpoint is reached
 # by solving each equation on its own
-function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC::SolverConfig; time::Real = 0)
+function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time = 0) where {T <: Real}
 
     verbosity = SC.verbosity
 
@@ -691,13 +692,13 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
     # ASSEMBLE SYSTEM INIT
     nsubiterations = length(SC.subiterations)
     eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
-    A = Array{FEMatrix{Float64},1}(undef,nsubiterations)
-    b = Array{FEVector{Float64},1}(undef,nsubiterations)
-    x = Array{FEVector{Float64},1}(undef,nsubiterations)
+    A = Array{FEMatrix{T},1}(undef,nsubiterations)
+    b = Array{FEVector{T},1}(undef,nsubiterations)
+    x = Array{FEVector{T},1}(undef,nsubiterations)
     for i = 1 : nsubiterations
-        A[i] = FEMatrix{Float64}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
-        b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
-        x[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
+        A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
+        b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
+        x[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
         assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = SC.subiterations[i], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
         eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
         for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(SC.subiterations[i])
@@ -721,17 +722,17 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
         end    
     end    
     
-    residual = Array{FEVector{Float64},1}(undef,nsubiterations)
+    residual = Array{FEVector{T},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        residual[s] = FEVector{Float64}("residual subiteration $s", FEs[SC.subiterations[s]])
+        residual[s] = FEVector{T}("residual subiteration $s", FEs[SC.subiterations[s]])
     end
-    resnorm::Float64 = 0.0
+    resnorm::T = 0.0
 
 
     ## INIT SOLVERS
     LS = Array{LinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        LS[s] = LinearSystem{SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
+        LS[s] = LinearSystem{T,SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
     end
 
 
@@ -823,7 +824,7 @@ function solve_fixpoint_subiterations!(Target::FEVector, PDE::PDEDescription, SC
 
     end
 
-    # REALIZE GLOBAL GLOBALCONSTRAINTS 
+    # REALIZE GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
     for j = 1 : length(PDE.GlobalConstraints)
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
@@ -861,7 +862,7 @@ or via a fixed-point iteration.
 
 """
 function solve!(
-    Target::FEVector,
+    Target::FEVector{T},
     PDE::PDEDescription;
     subiterations = "auto",
     dirichlet_penalty::Real = 1e60,
@@ -871,9 +872,9 @@ function solve!(
     linsolver = DirectUMFPACK,
     maxlureuse = [1],
     AndersonIterations = 0, #  0 = Picard iteration, >0 Anderson iteration
-    verbosity::Int = 0)
+    verbosity::Int = 0) where {T <: Real}
 
-    SolverConfig = generate_solver(PDE; subiterations = subiterations, verbosity = verbosity)
+    SolverConfig = generate_solver(PDE, T; subiterations = subiterations, verbosity = verbosity)
     SolverConfig.dirichlet_penalty = dirichlet_penalty
     SolverConfig.anderson_iterations = AndersonIterations
     SolverConfig.linsolver = linsolver
@@ -1150,7 +1151,7 @@ function TimeControlSolver(
         if length(SC.maxlureuse) < s
             push!(SC.maxlureuse, 1)
         end
-        LS[s] = LinearSystem{SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
+        LS[s] = LinearSystem{Float64,SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
     end
 
     # if nonlinear iterations are performed we need to remember the iterate from last timestep
@@ -1347,7 +1348,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             # are missing in the subiteration
             for j = 1 : length(PDE.GlobalConstraints)
                 if PDE.GlobalConstraints[j].component in SC.subiterations[s]
-                    additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],X; verbosity = SC.verbosity - 2)
+                    additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],X; current_equations = SC.subiterations[s], verbosity = SC.verbosity - 2)
                     append!(fixed_dofs, additional_fixed_dofs)
                 end
             end

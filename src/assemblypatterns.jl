@@ -392,7 +392,7 @@ function prepare_assembly(
 
             # generate new quadrature rules on neighbouring cells
             # where quadrature points of face are mapped to quadrature points of cells
-            qf[EGoffset + j] = QuadratureRule{Float64,EGdofitem[j]}(qf4face.name * " (shape faces)",Array{Array{Float64,1},1}(undef,length(qf4face.xref)),qf4face.w)
+            qf[EGoffset + j] = QuadratureRule{T,EGdofitem[j]}(qf4face.name * " (shape faces)",Array{Array{T,1},1}(undef,length(qf4face.xref)),qf4face.w)
             for k in facejump_operators
                 xrefFACE2CELL = xrefFACE2xrefCELL(EGdofitem[j])
                 xrefFACE2OTHERCELL = xrefFACE2xrefOTHERCELL(EGdofitem[j])
@@ -457,7 +457,7 @@ end
 """
 ````
 function evaluate!(
-    b::AbstractArray{<:Real,2},
+    b::AbstractArray{T,2},
     form::ItemIntegrator{T,AT},
     FEB::FEVectorBlock;
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
@@ -466,7 +466,7 @@ function evaluate!(
 Evaluation of an ItemIntegrator form with given FEVectorBlock FEB into given two-dimensional Array b.
 """
 function evaluate!(
-    b::AbstractArray{<:Real,2},
+    b::AbstractArray{T,2},
     form::ItemIntegrator{T,AT},
     FEB::Array{<:FEVectorBlock,1};
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
@@ -482,7 +482,7 @@ function evaluate!(
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
     end
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
@@ -520,9 +520,9 @@ function evaluate!(
     ndofs4dofitem = 0 # number of dofs for item
     dofitems = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem = [1,1] # local item position in dofitem
-    coefficient4dofitem::Array{Float64,1} = [0.0,0.0]
+    coefficient4dofitem::Array{T,1} = [0.0,0.0]
     dofitem = 0
-    coeffs = zeros(Float64,maxdofs)
+    coeffs = zeros(T,maxdofs)
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem::FEBasisEvaluator = basisevaler[1,1,1,1]
 
@@ -604,7 +604,7 @@ function evaluate(
     # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
     # and use the itemwise evaluation above
     resultdim = form.action.argsizes[1]
-    AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
+    AV = AccumulatingVector{T}(zeros(T,resultdim), 0)
 
     if typeof(FEB) <: Array{<:FEVectorBlock,1}
         evaluate!(AV, form, FEB; verbosity = verbosity)
@@ -623,26 +623,26 @@ end
 """
 ````
 assemble!(
-    b::AbstractArray{<:Real,2},
+    b::Union{AbstractArray{T,1},AbstractArray{T,2}},
     LF::LinearForm{T,AT};
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 
 ````
 
-Assembly of a LinearForm LF into given two-dimensional Array b.
+Assembly of a LinearForm LF into given one- or two-dimensional Array b.
 """
 function assemble!(
-    b::Union{AbstractArray{<:Real,1},AbstractArray{<:Real,2}},
+    b::Union{AbstractArray{T,1},AbstractArray{T,2}},
     LF::LinearForm{T,AT};
     verbosity::Int = 0,
     factor = 1,
-    offset = 0) where {T<: Real, AT <: AbstractAssemblyType}
+    offset = 0) where {T <: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
     FE = LF.FE
     operator = LF.operator
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operator))
     xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
@@ -658,7 +658,7 @@ function assemble!(
     cvals_resultdim::Int = size(basisevaler[1,1,1,1].cvals,1)
     action_resultdim::Int = action.argsizes[1]
 
-    if typeof(b) <: AbstractArray{<:Real,1}
+    if typeof(b) <: AbstractArray{T,1}
         @assert action_resultdim == 1
         onedimensional = true
     else
@@ -678,7 +678,7 @@ function assemble!(
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem = basisevaler[1]
-    localb::Array{T,2} = zeros(Float64,maxndofs,action_resultdim)
+    localb::Array{T,2} = zeros(T,maxndofs,action_resultdim)
     bdof::Int = 0
 
     nregions::Int = length(regions)
@@ -756,7 +756,7 @@ end
 """
 ````
 assemble!(
-    A::AbstractArray{<:Real,2},
+    A::AbstractArray{T,2},
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
     verbosity::Int = 0,
@@ -768,7 +768,7 @@ assemble!(
 Assembly of a BilinearForm BLF into given two-dimensional AbstractArray (e.g. FEMatrixBlock).
 """
 function assemble!(
-    A::AbstractArray{<:Real,2},
+    A::AbstractArray{T,2},
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
     verbosity::Int = 0,
@@ -782,7 +782,7 @@ function assemble!(
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs1 = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
     xItemDofs2 = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
@@ -808,8 +808,8 @@ function assemble!(
     dofitems2::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found (operator 2)
     itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem1
     itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem2
-    coefficient4dofitem1::Array{Float64,1} = [0.0,0.0] # coefficients for operator 1
-    coefficient4dofitem2::Array{Float64,1} = [0.0,0.0] # coefficients for operator 2
+    coefficient4dofitem1::Array{T,1} = [0.0,0.0] # coefficients for operator 1
+    coefficient4dofitem2::Array{T,1} = [0.0,0.0] # coefficients for operator 2
     ndofs4item1::Int = 0 # number of dofs for item
     ndofs4item2::Int = 0 # number of dofs for item
     dofitem1 = 0
@@ -1027,7 +1027,7 @@ end
 """
 ````
 assemble!(
-    b::AbstractArray{<:Real,1},
+    b::AbstractArray{T,1},
     fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
@@ -1040,8 +1040,8 @@ Here, the second argument is fixed by the given coefficients in fixedFE.
 With apply_action_to=2 the action can be also applied to the second fixed argument instead of the first one (default).
 """
 function assemble!(
-    b::AbstractArray{<:Real,1},
-    fixedFE::AbstractArray{<:Real,1},    # coefficient for fixed 2nd component
+    b::AbstractArray{T,1},
+    fixedFE::AbstractArray{T,1},    # coefficient for fixed 2nd component
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
     factor = 1,
@@ -1053,7 +1053,7 @@ function assemble!(
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs1 = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
     xItemDofs2 = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
@@ -1215,7 +1215,7 @@ end
 ````
 assemble!(
     assemble!(
-    A::AbstractArray{<:Real,2},
+    A::AbstractArray{T,2},
     FE1::FEVectorBlock,
     TLF::TrilinearForm{T, AT};
     verbosity::Int = 0,
@@ -1228,7 +1228,7 @@ Assembly of a TrilinearForm TLF into given two-dimensional AbstractArray (e.g. a
 Here, the first argument is fixed by the given coefficients in FE1.
 """
 function assemble!(
-    A::AbstractArray{<:Real,2},
+    A::AbstractArray{T,2},
     FE1::FEVectorBlock,
     TLF::TrilinearForm{T, AT};
     verbosity::Int = 0,
@@ -1241,7 +1241,7 @@ function assemble!(
     FE = [TLF.FE1, TLF.FE2, TLF.FE3]
     operator = [TLF.operator1, TLF.operator2, TLF.operator3]
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = [Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1])),
                  Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2])),
@@ -1275,9 +1275,9 @@ function assemble!(
     itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem1
     itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem2
     itempos4dofitem3::Array{Int,1} = [1,1] # local item position in dofitem3
-    coefficient4dofitem1::Array{Float64,1} = [0.0,0.0] # coefficients for operator 1
-    coefficient4dofitem2::Array{Float64,1} = [0.0,0.0] # coefficients for operator 2
-    coefficient4dofitem3::Array{Float64,1} = [0.0,0.0] # coefficients for operator 3
+    coefficient4dofitem1::Array{T,1} = [0.0,0.0] # coefficients for operator 1
+    coefficient4dofitem2::Array{T,1} = [0.0,0.0] # coefficients for operator 2
+    coefficient4dofitem3::Array{T,1} = [0.0,0.0] # coefficients for operator 3
     ndofs4item::Array{Int, 1} = [0,0,0]
     dofitem1::Int = 0
     dofitem2::Int = 0
@@ -1419,7 +1419,7 @@ end
 ````
 assemble!(
     assemble!(
-    b::AbstractArray{<:Real,1},
+    b::AbstractVector,
     FE1::FEVectorBlock,
     FE2::FEVectorBlock.
     TLF::TrilinearForm{T, AT};
@@ -1443,7 +1443,7 @@ function assemble!(
     FE = [TLF.FE1, TLF.FE2, TLF.FE3]
     operator = [TLF.operator1, TLF.operator2, TLF.operator3]
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
     xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
@@ -1779,7 +1779,7 @@ end
 """
 ````
 assemble!(
-    A::AbstractArray{<:Real,2},
+    A::AbstractArray{T,2},
     NLF::NonlinearForm{T, AT},
     FEB::Array{<:FEVectorBlock,1};         # coefficients for each operator
     verbosity::Int = 0,
@@ -1790,7 +1790,7 @@ assemble!(
 Assembly of a NonlinearForm NLF into given two-dimensional AbstractArray (e.g. FEMatrixBlock).
 """
 function assemble!(
-    A::AbstractArray{<:Real,2},
+    A::AbstractArray{T,2},
     NLF::NonlinearForm{T, AT},
     FEB::Array{<:FEVectorBlock,1};
     verbosity::Int = 0,
@@ -1808,7 +1808,7 @@ function assemble!(
     
     # get adjacencies
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : nFE
@@ -2049,7 +2049,7 @@ function assemble!(
     
     # get adjacencies
     xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{Float64,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : nFE

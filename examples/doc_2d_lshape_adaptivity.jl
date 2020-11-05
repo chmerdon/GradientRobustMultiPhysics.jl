@@ -91,8 +91,12 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
         ## create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
         Solution = FEVector{Float64}("Discrete Solution",FES)
-        solve!(Solution, Problem; verbosity = verbosity)
+        solve!(Solution, Problem; verbosity = verbosity - 1)
         NDofs[level] = length(Solution[1])
+        if verbosity > 0
+            println("\n  SOLVE LEVEL $level")
+            println("    ndofs = $(NDofs[level])")
+        end
 
         ## error estimator jump term 
         ## complete error estimator
@@ -108,6 +112,11 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
         Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
+        if verbosity > 0
+            println("  ESTIMATE")
+            println("    estim H1 error = $(Results[level,3])")
+            println("    exact H1 error = $(Results[level,2])")
+        end
 
         ## mesh refinement
         if theta >= 1
@@ -138,7 +147,7 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
             end
 
             ## refine by red-green-blue refinement (incl. closuring)
-            xgrid = RGB_refine(xgrid, facemarker)
+            xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
         end
     end
     

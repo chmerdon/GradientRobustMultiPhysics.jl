@@ -3,9 +3,9 @@
 #####################
 
 # reference domain generated from data in shape_specs
-function reference_domain(EG::Type{<:AbstractElementGeometry}; scale = [1,1,1], shift = [0,0,0])
-    xgrid=ExtendableGrid{Float64,Int32}()
-    xCoordinates=Array{Float64,2}(refcoords_for_geometry(EG)')
+function reference_domain(EG::Type{<:AbstractElementGeometry}, T::Type{<:Real} = Float64; scale = [1,1,1], shift = [0,0,0])
+    xgrid=ExtendableGrid{T,Int32}()
+    xCoordinates=Array{T,2}(refcoords_for_geometry(EG)')
     for j = 1 : size(xCoordinates,1)
         xCoordinates[j,:] .+= shift[j]
         xCoordinates[j,:] .*= scale[j]

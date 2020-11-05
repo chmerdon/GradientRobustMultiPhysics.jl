@@ -41,7 +41,7 @@ The bool array facemarkers determines which faces should be bisected. Note, that
 such that the first face in every triangle with a marked face is also refined.
 """
 # 
-function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}) where {T,K}
+function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}; verbosity = 0) where {T,K}
     
     xgrid = ExtendableGrid{T,K}()
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
@@ -64,6 +64,10 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     ncells = num_sources(oldCellNodes)
 
     # closuring
+    if verbosity > 0
+        println("  RGB-REFINEMENT")
+        print("    bisected faces before/after closuring = $(sum(facemarkers))")
+    end
     is_refined = true
     closure_finished = false
     while closure_finished == false
@@ -83,6 +87,10 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
             end
         end
     end
+    if verbosity > 0
+        println(" / $(sum(facemarkers))")
+    end
+
 
     # determine number of new vertices
     oldvertices = size(oldCoordinates,2)

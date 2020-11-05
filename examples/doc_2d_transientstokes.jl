@@ -76,8 +76,8 @@ function main(; verbosity = 2, Plotter = nothing)
     #FETypes = [H1CR{2}, L2P0{1}]; reconstruct = true # Crouzeix-Raviart gradient-robust
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
-    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
+    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
 
     #####################################################################################    
     #####################################################################################
