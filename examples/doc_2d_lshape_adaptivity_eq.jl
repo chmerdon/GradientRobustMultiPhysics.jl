@@ -1,19 +1,28 @@
 #= 
 
-# 2D Adaptive Mesh Refinement (L-shape)
+# 2D Equilibration Error Estimation (L-shape)
 ([source code](SOURCE_URL))
 
-This example computes the standard-residual error estimator for the $H^1$ error of some $H^1$-conforming
+This example computes a global equilibration error estimator for the $H^1$ error of some $H^1$-conforming
 approximation ``u_h`` to the solution ``u`` of some vector Poisson problem ``-\Delta u = f`` on the L-shaped domain, i.e.
 ```math
-\eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
-+ \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \mathbf{n}]] \|^2_{L^2(F)}
+\eta^2(u_h) := \| \sigma_h - \nabla u_h \|^2_{L^2(T)}
+\quad \text{where} \quad
+\sigma_h \text{ solves the dual mixed problem with some Hdiv-conforming element}
 ```
-This example script showcases the evaluation of 2nd order derivatives like the Laplacian and adaptive mesh refinement.
+
+!!! note
+
+    Equilibration error estimators yield guaranteed upper bounds (efficiency index above 1) for the H1 error
+    possibly with some additional term that weighs in the oscillations of $f$, which are zero in this example,
+    and some additional terms that quantifies the Dirichlet boundary error, which is neglected here.
+
+    Also, there are local designs for equilibrated fluxes in the literature which are computable with much less
+    numerical costs.
 
 =#
 
-module Example_Lshape
+module Example_EQLshape
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -43,49 +52,46 @@ function exact_function_gradient!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
+function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
 
     ## initial grid
     xgrid = grid_lshape(Triangle2D)
 
-    ## choose some finite element
-    FEType = H1P2{1,2}
+    ## choose some finite elements for primal and dual problem
+    FEType = H1P1{1}
+    FETypeDual = [HDIVBDM1{2},L2P0{1}]
     
     ## setup Poisson problem
     Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
     add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 8)
     add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
 
+    ## setup dual mixed Poisson problem
+    DualProblem = PDEDescription("dual mixed formulation")
+    add_unknown!(DualProblem, 2, 2; unknown_name = "Stress", equation_name = "stress equation")
+    add_operator!(DualProblem, [1,1], ReactionOperator(DoNotChangeAction(2)))
+    add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], exact_function!, 2, 1; on_boundary = true, bonus_quadorder = 10))
+    add_unknown!(DualProblem,1,2; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
+    add_operator!(DualProblem, [1,2], LagrangeMultiplier(Divergence))
+
     ## setup exact error evaluations
     L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 1; bonus_quadorder = 10)
     H1ErrorEvaluator = L2ErrorIntegrator(exact_function_gradient!, Gradient, 2, 2; bonus_quadorder = 8)
+    L2ErrorEvaluatorDual = L2ErrorIntegrator(exact_function_gradient!, Identity, 2, 2; bonus_quadorder = 8)
 
-    ## define error estimator
-    ## kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)
-    xFaceVolumes = xgrid[FaceVolumes]
-    xFaceNormals = xgrid[FaceNormals]
-    xCellVolumes = xgrid[CellVolumes]
-    function L2jump_integrand(result, input, item)
-        result[1] = (input[1]*xFaceNormals[1,item])^2 + (input[2]*xFaceNormals[2,item])^2
-        result .*= xFaceVolumes[item]
+    ## define error estimator : || sigma_h - nabla u_h ||^2_{L^2(T)}
+    function eqestimator_kernel(result, input, item)
+        result[1] = (input[1] - input[3])^2 + (input[2] - input[4])^2
         return nothing
     end
-    ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
-    ## note: f = 0 here, but integrand can depend on x to allow for non-homogeneous rhs
-    function L2vol_integrand(result, input, x, item)
-        for j = 1 : length(input)
-            input[j] += result[j]
-            result[j] = input[j]^2 * xCellVolumes[item]
-        end
-        return nothing
-    end
-    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(GradientDisc{Jump},ItemWiseFunctionAction(L2jump_integrand, [1,2]; bonus_quadorder = 2), [0])
-    volIntegrator = ItemIntegrator{Float64,ON_CELLS}(Laplacian,ItemWiseXFunctionAction(L2vol_integrand, [1,1], 2; bonus_quadorder = 2), [0])
+    EQIntegrator = ItemIntegrator{Float64,ON_CELLS}([Identity, Gradient],ItemWiseFunctionAction(eqestimator_kernel, [1,4]; bonus_quadorder = 2), [0])
           
     ## refinement loop (only uniform for now)
     NDofs = zeros(Int, nlevels)
-    Results = zeros(Float64, nlevels, 3)
+    NDofsDual = zeros(Int, nlevels)
+    Results = zeros(Float64, nlevels, 4)
     Solution = nothing
+    DualSolution = nothing
     for level = 1 : nlevels
 
         ## create a solution vector and solve the problem
@@ -93,29 +99,33 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
         Solution = FEVector{Float64}("Discrete Solution",FES)
         solve!(Solution, Problem; verbosity = verbosity - 1)
         NDofs[level] = length(Solution[1])
+
+        ## solve the dual problem
+        FESDual = [FESpace{FETypeDual[1]}(xgrid),FESpace{FETypeDual[2]}(xgrid)]
+        DualSolution = FEVector{Float64}("Discrete Dual Solution",FESDual)
+        NDofsDual[level] = length(DualSolution.entries)
+        solve!(DualSolution, DualProblem; verbosity = verbosity - 1)
+
         if verbosity > 0
             println("\n  SOLVE LEVEL $level")
             println("    ndofs = $(NDofs[level])")
+            println("    ndofsDual = $(NDofsDual[level])")
         end
 
-        ## error estimator jump term 
-        ## complete error estimator
-        xFaceVolumes = xgrid[FaceVolumes]
-        xFaceNormals = xgrid[FaceNormals]
-        xCellVolumes = xgrid[CellVolumes]
-        vol_error = zeros(Float64,2,num_sources(xgrid[CellNodes]))
-        jump_error = zeros(Float64,2,num_sources(xgrid[FaceNodes]))
-        evaluate!(vol_error,volIntegrator,[Solution[1]])
-        evaluate!(jump_error,jumpIntegrator,[Solution[1]])
+        ## evaluate eqilibration error estimator
+        error4cell = zeros(Float64,1,num_sources(xgrid[CellNodes]))
+        evaluate!(error4cell, EQIntegrator,[DualSolution[1], Solution[1]])
 
-        ## calculate L2 error, H1 error, estimator and H2 error Results and write to results
+        ## calculate L2 error, H1 error, estimator, dual L2 error and write to results
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
-        Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
+        Results[level,3] = sqrt(sum(error4cell))
+        Results[level,4] = sqrt(evaluate(L2ErrorEvaluatorDual,[DualSolution[1]]))
         if verbosity > 0
             println("  ESTIMATE")
             println("    estim H1 error = $(Results[level,3])")
             println("    exact H1 error = $(Results[level,2])")
+            println("     dual L2 error = $(Results[level,4])")
         end
 
         ## mesh refinement
@@ -126,23 +136,23 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
             ## adaptive mesh refinement
             ## mark faces with largest errors
             nfaces = num_sources(xgrid[FaceNodes])
-            refinement_indicators = sum(jump_error, dims = 1)
+            refinement_indicators = zeros(Float64,nfaces)
             xFaceCells = xgrid[FaceCells]
             cell::Int = 0
             for face = 1 : nfaces, k = 1 : 2
                 cell = xFaceCells[k,face]
                 if cell > 0
-                    refinement_indicators[face] += vol_error[1,cell] + vol_error[2,cell]
+                    refinement_indicators[face] += error4cell[1,cell]
                 end
             end
-            p = Base.sortperm(refinement_indicators[1,:], rev = true)
+            p = Base.sortperm(refinement_indicators[:], rev = true)
             totalsum = sum(refinement_indicators)
             csum = 0
             j = 0
             facemarker = zeros(Bool,nfaces)
             while csum <= theta*totalsum
                 j += 1
-                csum += refinement_indicators[1,p[j]]
+                csum += refinement_indicators[p[j]]
                 facemarker[p[j]] = true
             end
 
@@ -155,8 +165,8 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
     GradientRobustMultiPhysics.plot(Solution, [0,1], [Identity,Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = false)
     
     ## print results
-    @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   ")
-    @printf("\n=========|========================|========================|========================\n")
+    @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   ")
+    @printf("\n=========|========================|========================|========================================\n")
     order = 0
     for j=1:nlevels
         @printf("  %6d |",NDofs[j]);
@@ -165,7 +175,11 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
                 order = log(Results[j-1,k]/Results[j,k]) / (log(NDofs[j]/NDofs[j-1])/2)
             end
             @printf(" %.5e ",Results[j,k])
-            @printf("   %.3f   |",order)
+            if k == 3
+                @printf("   %.3f       %.3f",order,Results[j,k]/Results[j,k-1])
+            else
+                @printf("   %.3f   |",order)
+            end
         end
         @printf("\n")
     end

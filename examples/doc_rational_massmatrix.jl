@@ -1,6 +1,6 @@
 #= 
 
-# Ration Mass Matrix
+# Rational Mass Matrix
 ([source code](SOURCE_URL))
 
 This example demonstrates the usage of rational numbers to calculate e.g. exact mass matrices on reference domains

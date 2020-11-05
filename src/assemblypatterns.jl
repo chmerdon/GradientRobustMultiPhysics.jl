@@ -341,6 +341,7 @@ function prepare_assembly(
     for e = 1 : length(FE)
         ndofs4EG[e] = zeros(Int,length(EG)+length(EGdofitem))
     end
+
     maxfaces = 0
     for j = 1 : length(EGdofitem)        
         maxfaces = max(maxfaces,nfaces_for_geometry(EGdofitem[j]))
@@ -361,7 +362,7 @@ function prepare_assembly(
                 elseif k > 2 && FE[k] == FE[2] && operator[k] == operator[2]
                     basisevaler[j,k,1,1] = basisevaler[j,2,1,1]
                 else    
-                    basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity)
+                    basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity - 1)
                 end    
                 ndofs4EG[k][j] = size(basisevaler[j,k,1,1].cvals,2)
          #   end
@@ -401,12 +402,12 @@ function prepare_assembly(
                         qf[EGoffset + j].xref[i] = xrefFACE2CELL[f](qf4face.xref[i])
                         #println("face $f : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
-                    basisevaler[EGoffset + j,k,f,1] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity)
+                    basisevaler[EGoffset + j,k,f,1] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity - 1)
                     for i = 1 : length(qf4face.xref)
                         qf[EGoffset + j].xref[i] = xrefFACE2OTHERCELL[f](qf4face.xref[i])
                         #println("face $f : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
-                    basisevaler[EGoffset + j,k,f,2] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity)
+                    basisevaler[EGoffset + j,k,f,2] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity - 1)
                 end
                 ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j,k,1,1].cvals,2)
             end
@@ -417,23 +418,25 @@ function prepare_assembly(
     end
 
 
-    if verbosity > 1
+
+    if verbosity > 0
         println("\nASSEMBLY PREPARATION $(typeof(form))")
         println("====================================")
         println("      action = $(typeof(form.action))")
         println("     regions = $regions")
-        println("  EG / ndofs = $EG / $ndofs4EG")
-        println("\n  List of arguments:")
+        println("          EG = $EG")
+        println("\n  List of arguments FEType / operator / ndofs4EG:")
         for k = 1 : length(FE)
-            println("        FE[$k] / operator[$k] = $(FE[k].name) / $(operator[k])")
+            println("      ($k) $(FE[k].name) / $(operator[k]) / $(ndofs4EG[k])")
         end    
-       # if verbosity > 2
+        if verbosity > 1
             for j = 1 : length(EG)
                 println("\nQuadratureRule [$j] for $(EG[j]):")
                 Base.show(qf[j])
             end
-       # end
+        end
     end
+
     return EG, ndofs4EG, qf, basisevaler, dii4op
 end
 
