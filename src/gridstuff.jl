@@ -671,6 +671,11 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaces})
     xgrid[CellFaces]
 end
 
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceGeometries})
+    ExtendableGrids.instantiate(xgrid, FaceNodes)
+    xgrid[FaceGeometries]
+end
+
 # CellEdges = edges for each cell
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellEdges})
     ExtendableGrids.instantiate(xgrid, EdgeNodes)
@@ -1004,17 +1009,17 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueCellGeo
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueFaceGeometries})
-    xUniqueCellGeometries = unique(xgrid[FaceGeometries])
+    xUniqueFaceGeometries = unique(xgrid[FaceGeometries])
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueBFaceGeometries})
-    xUniqueCellGeometries = unique(xgrid[BFaceGeometries])
+    xUniqueBFaceGeometries = unique(xgrid[BFaceGeometries])
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueEdgeGeometries})
-    xUniqueCellGeometries = unique(xgrid[EdgeGeometries])
+    xUniqueEdgeGeometries = unique(xgrid[EdgeGeometries])
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{UniqueBEdgeGeometries})
-    xUniqueCellGeometries = unique(xgrid[BEdgeGeometries])
+    xUniqueBEdgeGeometries = unique(xgrid[BEdgeGeometries])
 end

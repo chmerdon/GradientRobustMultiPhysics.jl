@@ -242,7 +242,7 @@ function Base.show(io::IO, SC::SolverConfig)
 
     println("\nSOLVER-CONFIGURATION")
     println("======================")
-    println("              type = $(SC.parameters[1])")
+    #println("              type = $(SC.parameters[1])")
     println("         nonlinear = $(SC.is_nonlinear)")
     println("     timedependent = $(SC.is_timedependent)")
     println("         linsolver = $(SC.linsolver)")

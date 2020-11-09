@@ -38,77 +38,9 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1MINI}
 
 end
 
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: H1MINI}
-    xCellNodes = FES.xgrid[CellNodes]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    ncomponents = get_ncomponents(FEType)
-    dofs4item = zeros(Int32,ncomponents*(max_num_targets_per_source(xCellNodes)+1))
-    ncells = num_sources(xCellNodes)
-    xCellDofs = VariableTargetAdjacency(Int32)
-    nnodes4item = 0
-    for cell = 1 : ncells
-        nnodes4item = num_targets(xCellNodes,cell)
-        for k = 1 : nnodes4item
-            dofs4item[k] = xCellNodes[k,cell]
-            for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-            end    
-        end
-        for k = 1 : ncomponents
-            dofs4item[ncomponents*nnodes4item+k] = ncomponents*nnodes + (k-1)*ncells + cell
-        end
-        append!(xCellDofs,dofs4item[1:ncomponents*(nnodes4item+1)])
-    end
-    # save dofmap
-    FES.dofmaps[CellDofs] = xCellDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H1MINI}
-    xFaceNodes = FES.xgrid[FaceNodes]
-    xBFaces = FES.xgrid[BFaces]
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    nfaces = num_sources(xFaceNodes)
-    xFaceDofs = VariableTargetAdjacency(Int32)
-    ncomponents = get_ncomponents(FEType)
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xFaceNodes))
-    nnodes4item = 0
-    for face = 1 : nfaces
-        nnodes4item = num_targets(xFaceNodes,face)
-        for k = 1 : nnodes4item
-            dofs4item[k] = xFaceNodes[k,face]
-            for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-            end    
-        end
-        append!(xFaceDofs,dofs4item[1:ncomponents*nnodes4item])
-    end
-    # save dofmap
-    FES.dofmaps[FaceDofs] = xFaceDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: H1MINI}
-    xBFaceNodes = FES.xgrid[BFaceNodes]
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    nbfaces = num_sources(xBFaceNodes)
-    xBFaceDofs = VariableTargetAdjacency(Int32)
-    ncomponents = get_ncomponents(FEType)
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xBFaceNodes))
-    nnodes4item = 0
-    for bface = 1: nbfaces
-        nnodes4item = num_targets(xBFaceNodes,bface)
-        for k = 1 : nnodes4item
-            dofs4item[k] = xBFaceNodes[k,bface]
-            for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-            end    
-        end
-        append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item])
-    end
-    # save dofmap
-    FES.dofmaps[BFaceDofs] = xBFaceDofs
-end
+get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "N1I1"
+get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
+get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
 
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
@@ -130,7 +62,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI}, ex
             end    
             exact_function!(result,x)
             for c = 1 : ncomponents
-                Target[j+(c-1)*nnodes] = result[c]
+                Target[j+(c-1)*(nnodes+ncells)] = result[c]
             end
         end
 
@@ -147,26 +79,23 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI}, ex
             for c = 1 : ncomponents
                 linpart = 0.0
                 for k=1:nnodes4item
-                    linpart += Target[xCellNodes[k,cell]+(c-1)*nnodes]
+                    linpart += Target[xCellNodes[k,cell]+(c-1)*(nnodes+ncells)]
                 end
-                Target[(c-1)*ncells+ncomponents*nnodes+cell] = result[c] - linpart / nnodes4item
+                Target[(c-1)*(nnodes+ncells)+nnodes+cell] = result[c] - linpart / nnodes4item
             end
         end
     else
         item = 0
         for j in dofs 
-            if j <= ncomponents*nnodes
-                item = mod(j-1,nnodes)+1
-                c = Int(ceil(j/nnodes))
+            item = mod(j-1,nnodes+ncells)+1
+            c = Int(ceil(j/(nnodes+ncells)))
+            if item <= nnodes
                 for k=1:xdim
                     x[k] = xCoords[k,item]
                 end    
                 exact_function!(result,x)
                 Target[j] = result[c]
             else # cell bubble
-                j = j - ncomponents*nnodes
-                cell = mod(j-1,ncells)+1
-                c = Int(ceil(j/ncells))
                 nnodes4item = num_targets(xCellNodes,cell)
                 fill!(x,0.0)
                 for j=1:xdim
@@ -178,9 +107,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI}, ex
                 exact_function!(result,x)
                 linpart = 0.0
                 for k=1:nnodes4item
-                    linpart += Target[xCellNodes[k,cell]+(c-1)*nnodes]
+                    linpart += Target[xCellNodes[k,cell]+(c-1)*(nnodes+ncells)]
                 end
-                Target[(c-1)*ncells+ncomponents*nnodes+cell] = result[c] - linpart / nnodes4item    
+                Target[(c-1)*(nnodes+ncells)+nnodes+cell] = result[c] - linpart / nnodes4item    
             end    
         end    
     end    
@@ -188,9 +117,10 @@ end
 
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI})
     nnodes = num_sources(FE.xgrid[Coordinates])
+    ncells = num_sources(FE.xgrid[CellNodes])
     FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
-    offset4component = 0:nnodes:ncomponents*nnodes
+    offset4component = 0:(nnodes+ncells):ncomponents*(nnodes+ncells)
     for node = 1 : nnodes
         for c = 1 : ncomponents
             Target[c,node] = Source[offset4component[c]+node]
@@ -207,45 +137,42 @@ end
 
 function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
-    cb = 0.0
+    refbasis_P1 = get_basis_on_cell(H1P1{1}, EG)
+    offset = get_ndofs_on_cell(H1P1{1}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add cell bubbles to P1 basis
-        cb = 27*(1-xref[1]-xref[2])*xref[1]*xref[2]
-        for k = 1 : ncomponents
-            refbasis[offset+k,k] = cb
+        refbasis[offset,1] = 27*(1-xref[1]-xref[2])*xref[1]*xref[2]
+        for k = 1 : ncomponents-1, j = 1 : offset
+            refbasis[k*offset+j,k+1] = refbasis[j,1]
         end
     end
 end
 
 function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
-    cb = 0.0
+    refbasis_P1 = get_basis_on_cell(H1P1{1}, EG)
+    offset = get_ndofs_on_cell(H1P1{1}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add cell bubbles to P1 basis
-        cb = 16*(1-xref[1])*(1-xref[2])*xref[1]*xref[2]
-        for k = 1 : ncomponents
-            refbasis[offset+k,k] = cb
+        refbasis[offset,1] = 16*(1-xref[1])*(1-xref[2])*xref[1]*xref[2]
+        for k = 1 : ncomponents-1, j = 1 : offset
+            refbasis[k*offset+j,k+1] = refbasis[j,1]
         end
     end
 end
 
 function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Tetrahedron3D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
-    cb = 0.0
+    refbasis_P1 = get_basis_on_cell(H1P1{1}, EG)
+    offset = get_ndofs_on_cell(H1P1{1}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add cell bubbles to P1 basis
-        cb = 81*(1-xref[1]-xref[2]-xref[3])*xref[1]*xref[2]*xref[3]
-        for k = 1 : ncomponents
-            refbasis[offset+k,k] = cb
+        refbasis[offset,1] = 81*(1-xref[1]-xref[2]-xref[3])*xref[1]*xref[2]*xref[3]
+        for k = 1 : ncomponents-1, j = 1 : offset
+            refbasis[k*offset+j,k+1] = refbasis[j,1]
         end
     end
 end

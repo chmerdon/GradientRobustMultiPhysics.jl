@@ -20,56 +20,19 @@ get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:AbstractElementGeometry2D}) =
 get_polynomialorder(::Type{<:HDIVRT0{3}}, ::Type{<:AbstractElementGeometry2D}) = 0;
 get_polynomialorder(::Type{<:HDIVRT0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
 
+get_dofmap_pattern(FEType::Type{<:HDIVRT0}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "f1"
+get_dofmap_pattern(FEType::Type{<:HDIVRT0}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i1"
+get_dofmap_pattern(FEType::Type{<:HDIVRT0}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i1"
 
 function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT0}
     ncomponents = get_ncomponents(FEType)
-    FES.name = "RT0 (H1, $(ncomponents)d)"
+    FES.name = "RT0 (Hdiv, $(ncomponents)d)"
 
     # count number of dofs
     nfaces = num_sources(FES.xgrid[FaceNodes])
     FES.ndofs = nfaces
 
 end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HDIVRT0}
-    xCellFaces = FES.xgrid[CellFaces]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    dofs4item = zeros(Int32,max_num_targets_per_source(xCellFaces))
-    ncells = num_sources(xCellFaces)
-    xCellDofs = VariableTargetAdjacency(Int32)
-    nfaces4item = 0
-    for cell = 1 : ncells
-        nfaces4item = num_targets(xCellFaces,cell)
-        for k = 1 : nfaces4item
-            dofs4item[k] = xCellFaces[k,cell]
-        end
-        append!(xCellDofs,dofs4item[1:nfaces4item])
-    end
-    # save dofmap
-    FES.dofmaps[CellDofs] = xCellDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: HDIVRT0}
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    xFaceDofs = VariableTargetAdjacency(Int32)
-    for face = 1 : nfaces
-        append!(xFaceDofs,[face])
-    end
-    # save dofmap
-    FES.dofmaps[FaceDofs] = xFaceDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: HDIVRT0}
-    xBFaces = FES.xgrid[BFaces]
-    nbfaces = length(xBFaces)
-    xBFaceDofs = VariableTargetAdjacency(Int32)
-    for bface = 1: nbfaces
-        append!(xBFaceDofs,[xBFaces[bface]])
-    end
-    # save dofmap
-    FES.dofmaps[BFaceDofs] = xBFaceDofs
-end
-
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT0}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 1)
     # integrate normal flux of exact_function over edges

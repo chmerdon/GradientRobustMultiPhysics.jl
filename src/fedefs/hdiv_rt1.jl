@@ -15,61 +15,18 @@ get_ndofs_on_cell(FEType::Type{<:HDIVRT1}, EG::Type{<:Triangle2D}) = 2*nfaces_fo
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry1D}) = 1;
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry2D}) = 2;
 
+get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "f2i2"
+get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i2"
+get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i2"
 
 function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT1}
     ncomponents = get_ncomponents(FEType)
-    FES.name = "RT1 (H1, $(ncomponents)d)"
+    FES.name = "RT1 (Hdiv, $(ncomponents)d)"
 
     # count number of dofs
     nfaces = num_sources(FES.xgrid[FaceNodes])
     ncells = num_sources(FES.xgrid[CellNodes])
     FES.ndofs = 2*(nfaces + ncells)
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HDIVRT1}
-    xCellFaces = FES.xgrid[CellFaces]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    dofs4item = zeros(Int32,2+2*max_num_targets_per_source(xCellFaces))
-    ncells = num_sources(xCellFaces)
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    xCellDofs = VariableTargetAdjacency(Int32)
-    nfaces4item = 0
-    for cell = 1 : ncells
-        nfaces4item = num_targets(xCellFaces,cell)
-        # face functions
-        for k = 1 : nfaces4item
-            dofs4item[2*k-1] = xCellFaces[k,cell]
-            dofs4item[2*k] = xCellFaces[k,cell] + nfaces
-        end
-        # interior cell functions
-        dofs4item[2*nfaces4item+1] = 2*nfaces + 2*cell-1
-        dofs4item[2*nfaces4item+2] = 2*nfaces + 2*cell
-        append!(xCellDofs,dofs4item[1:(2+2*nfaces4item)])
-    end
-    # save dofmap
-    FES.dofmaps[CellDofs] = xCellDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: HDIVRT1}
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    xFaceDofs = VariableTargetAdjacency(Int32)
-    for face = 1 : nfaces
-        append!(xFaceDofs,face.+ [0 nfaces])
-    end
-    # save dofmap
-    FES.dofmaps[FaceDofs] = xFaceDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: HDIVRT1}
-    xBFaces = FES.xgrid[BFaces]
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    nbfaces = length(xBFaces)
-    xBFaceDofs = VariableTargetAdjacency(Int32)
-    for bface = 1: nbfaces
-        append!(xBFaceDofs,xBFaces[bface] .+ [0 nfaces])
-    end
-    # save dofmap
-    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 

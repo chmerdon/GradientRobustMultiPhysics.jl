@@ -22,9 +22,19 @@ get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry1D}) =
 get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
 
 
+get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "F1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
+
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry3D}) = "E1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "E1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "E1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BEdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
+
 function init!(FES::FESpace{FEType}) where {FEType <: HCURLN0}
     ncomponents = get_ncomponents(FEType)
-    FES.name = "N0 (H1, $(ncomponents)d)"
+    FES.name = "N0 (Hcurl, $(ncomponents)d)"
 
     # count number of dofs
     edim = get_ncomponents(FEType)
@@ -35,78 +45,6 @@ function init!(FES::FESpace{FEType}) where {FEType <: HCURLN0}
         nedges = num_sources(FES.xgrid[EdgeNodes])
         FES.ndofs = nedges
     end
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HCURLN0}
-    edim = get_ncomponents(FEType)
-    if edim == 2
-        FES.dofmaps[CellDofs] = FES.xgrid[CellFaces]
-    elseif edim == 3
-        FES.dofmaps[CellDofs] = FES.xgrid[CellEdges]
-    end
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: HCURLN0}
-    edim = get_ncomponents(FEType)
-    if edim == 2
-        nfaces = num_sources(FES.xgrid[FaceNodes])
-        xFaceDofs = VariableTargetAdjacency(Int32)
-        for face = 1 : nfaces
-            append!(xFaceDofs,[face])
-        end
-        # save dofmap
-        FES.dofmaps[FaceDofs] = xFaceDofs
-    elseif edim == 3
-        FES.dofmaps[FaceDofs] = FES.xgrid[FaceEdges]
-    end
-end
-
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{EdgeDofs}) where {FEType <: HCURLN0}
-    nedges = num_sources(FES.xgrid[EdgeNodes])
-    xEdgeDofs = VariableTargetAdjacency(Int32)
-    for edge = 1 : nedges
-        append!(xEdgeDofs,[edge])
-    end
-    # save dofmap
-    FES.dofmaps[EdgeDofs] = xEdgeDofs
-end
-
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: HCURLN0}
-    edim = get_ncomponents(FEType)
-    if edim == 2
-        xBFaces = FES.xgrid[BFaces]
-        nbfaces = length(xBFaces)
-        xBFaceDofs = VariableTargetAdjacency(Int32)
-        for bface = 1: nbfaces
-            append!(xBFaceDofs,[xBFaces[bface]])
-        end
-        # save dofmap
-        FES.dofmaps[BFaceDofs] = xBFaceDofs
-    elseif edim == 3
-        xFaceEdges = FES.xgrid[FaceEdges]
-        xBFaces = FES.xgrid[BFaces]
-        nbfaces = length(xBFaces)
-        xBFaceDofs = VariableTargetAdjacency(Int32)
-        for bface = 1: nbfaces
-            append!(xBFaceDofs,xFaceEdges[:,xBFaces[bface]])
-        end
-        # save dofmap
-        FES.dofmaps[BFaceDofs] = xBFaceDofs
-    end
-end
-
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{BEdgeDofs}) where {FEType <: HCURLN0}
-    nedges = num_sources(FES.xgrid[BEdgeNodes])
-    xBEdgeDofs = VariableTargetAdjacency(Int32)
-    xBEdges = FES.xgrid[BEdges]
-    for bedge = 1 : nedges
-        append!(xBEdgeDofs,[xBEdges[bedge]])
-    end
-    # save dofmap
-    FES.dofmaps[BEdgeDofs] = xBEdgeDofs
 end
 
 

@@ -6,10 +6,16 @@
 This example computes a global equilibration error estimator for the $H^1$ error of some $H^1$-conforming
 approximation ``u_h`` to the solution ``u`` of some vector Poisson problem ``-\Delta u = f`` on the L-shaped domain, i.e.
 ```math
-\eta^2(u_h) := \| \sigma_h - \nabla u_h \|^2_{L^2(T)}
-\quad \text{where} \quad
-\sigma_h \text{ solves the dual mixed problem with some Hdiv-conforming element}
+\eta^2(\sigma_h) := \| \sigma_h - \nabla u_h \|^2_{L^2(T)}
 ```
+where ``\sigma_h`` discretisates the exact ``\sigma`` int the dual mixed problem
+```math
+\sigma - \nabla u = 0
+\quad \text{and} \quad
+\mathrm{div}(\sigma) + f = 0
+```
+with some Hdiv-conforming element.
+
 
 !!! note
 

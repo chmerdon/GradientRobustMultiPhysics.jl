@@ -23,6 +23,9 @@ get_polynomialorder(::Type{<:H1P1}, ::Type{<:Tetrahedron3D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Quadrilateral2D}) = 2;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Hexahedron3D}) = 3;
 
+get_dofmap_pattern(FEType::Type{<:H1P1}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "N1"
+get_dofmap_pattern(FEType::Type{<:H1P1}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1"
+get_dofmap_pattern(FEType::Type{<:H1P1}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1"
 
 function init!(FES::FESpace{FEType}) where {FEType <: H1P1}
     ncomponents = get_ncomponents(FEType)
@@ -36,75 +39,6 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1P1}
     nnodes = num_sources(FES.xgrid[Coordinates]) 
     FES.ndofs = nnodes * ncomponents
 end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: H1P1}
-    xCellNodes = FES.xgrid[CellNodes]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    ncomponents = get_ncomponents(FEType)
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xCellNodes))
-    ncells = num_sources(xCellNodes)
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    xCellDofs = VariableTargetAdjacency(Int32)
-    nnodes4item = 0
-    for cell = 1 : ncells
-        nnodes4item = num_targets(xCellNodes,cell)
-        for k = 1 : nnodes4item
-            dofs4item[k] = xCellNodes[k,cell]
-            for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-            end    
-        end
-        append!(xCellDofs,dofs4item[1:ncomponents*nnodes4item])
-    end
-    # save dofmap
-    FES.dofmaps[CellDofs] = xCellDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: H1P1}
-    xFaceNodes = FES.xgrid[FaceNodes]
-    xBFaces = FES.xgrid[BFaces]
-    nfaces = num_sources(xFaceNodes)
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    xFaceDofs = VariableTargetAdjacency(Int32)
-    ncomponents = get_ncomponents(FEType)
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xFaceNodes))
-    nnodes4item = 0
-    for face = 1 : nfaces
-        nnodes4item = num_targets(xFaceNodes,face)
-        for k = 1 : nnodes4item
-            dofs4item[k] = xFaceNodes[k,face]
-            for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-            end    
-        end
-        append!(xFaceDofs,dofs4item[1:ncomponents*nnodes4item])
-    end
-    # save dofmap
-    FES.dofmaps[FaceDofs] = xFaceDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: H1P1}
-    xBFaceNodes = FES.xgrid[BFaceNodes]
-    nbfaces = num_sources(xBFaceNodes)
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    xBFaceDofs = VariableTargetAdjacency(Int32)
-    ncomponents = get_ncomponents(FEType)
-    dofs4item = zeros(Int32,ncomponents*max_num_targets_per_source(xBFaceNodes))
-    nnodes4item = 0
-    for bface = 1: nbfaces
-        nnodes4item = num_targets(xBFaceNodes,bface)
-        for k = 1 : nnodes4item
-            dofs4item[k] = xBFaceNodes[k,bface]
-            for n = 1 : ncomponents-1
-                dofs4item[k+n*nnodes4item] = n*nnodes + dofs4item[k]
-            end    
-        end
-        append!(xBFaceDofs,dofs4item[1:ncomponents*nnodes4item])
-    end
-    # save dofmap
-    FES.dofmaps[BFaceDofs] = xBFaceDofs
-end
-
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
     xCoords = FE.xgrid[Coordinates]

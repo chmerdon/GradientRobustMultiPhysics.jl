@@ -17,56 +17,18 @@ get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Triangle2D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Quadrilateral2D}) = 2;
 
+get_dofmap_pattern(FEType::Type{<:HDIVBDM1{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "f2"
+get_dofmap_pattern(FEType::Type{<:HDIVBDM1{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i2"
+get_dofmap_pattern(FEType::Type{<:HDIVBDM1{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i2"
+
 
 function init!(FES::FESpace{FEType}) where {FEType <: HDIVBDM1}
     ncomponents = get_ncomponents(FEType)
-    FES.name = "BDM1 (H1, $(ncomponents)d)"
+    FES.name = "BDM1 (Hdiv, $(ncomponents)d)"
 
     # count number of dofs
     nfaces = num_sources(FES.xgrid[FaceNodes])
     FES.ndofs = 2*nfaces
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{CellDofs}) where {FEType <: HDIVBDM1}
-    xCellFaces = FES.xgrid[CellFaces]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    dofs4item = zeros(Int32,2*max_num_targets_per_source(xCellFaces))
-    ncells = num_sources(xCellFaces)
-    xCellDofs = VariableTargetAdjacency(Int32)
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    nfaces4item = 0
-    for cell = 1 : ncells
-        nfaces4item = num_targets(xCellFaces,cell)
-        for k = 1 : nfaces4item
-            dofs4item[2*k-1] = xCellFaces[k,cell]
-            dofs4item[2*k] = xCellFaces[k,cell] + nfaces
-        end
-        append!(xCellDofs,dofs4item[1:2*nfaces4item])
-    end
-    # save dofmap
-    FES.dofmaps[CellDofs] = xCellDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{FaceDofs}) where {FEType <: HDIVBDM1}
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    xFaceDofs = VariableTargetAdjacency(Int32)
-    for face = 1 : nfaces
-        append!(xFaceDofs,[face nfaces+face])
-    end
-    # save dofmap
-    FES.dofmaps[FaceDofs] = xFaceDofs
-end
-
-function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: HDIVBDM1}
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    xBFaces = FES.xgrid[BFaces]
-    nbfaces = length(xBFaces)
-    xBFaceDofs = VariableTargetAdjacency(Int32)
-    for bface = 1: nbfaces
-        append!(xBFaceDofs,[xBFaces[bface] nfaces + xBFaces[bface]])
-    end
-    # save dofmap
-    FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
 
