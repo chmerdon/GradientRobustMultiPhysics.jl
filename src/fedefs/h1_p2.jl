@@ -15,8 +15,8 @@ abstract type H1P2{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponen
 get_ncomponents(FEType::Type{<:H1P2}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1P2}) = FEType.parameters[2]
 
-get_ndofs_on_face(FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = (FEType.parameters[2])*(FEType.parameters[2]+1)/2*FEType.parameters[1]
-get_ndofs_on_cell(FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = (FEType.parameters[2]+1)*(FEType.parameters[2]+2)/2*FEType.parameters[1]
+get_ndofs_on_face(FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2])*(FEType.parameters[2]+1)/2*FEType.parameters[1])
+get_ndofs_on_cell(FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2]+1)*(FEType.parameters[2]+2)/2*FEType.parameters[1])
 get_ndofs_on_cell(FEType::Type{<:H1P2}, EG::Type{<:Quadrilateral2D}) = 8*FEType.parameters[1]
 
 

@@ -75,7 +75,7 @@ export AbstractFiniteElement
 export FESpace
 
 export AbstractH1FiniteElement
-export H1P1, H1P2, H1MINI, H1CR
+export H1P1, H1P2, H1P2B, H1MINI, H1CR
 export L2P0, L2P1 # will be AbstractL2FiniteElement one day
 
 export AbstractH1FiniteElementWithCoefficients
