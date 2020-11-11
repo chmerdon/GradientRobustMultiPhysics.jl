@@ -20,6 +20,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     xgrid=ExtendableGrid{T,K}()
     xgrid[Coordinates]=source_grid[Coordinates]
     oldCellGeometries = source_grid[CellGeometries]
+    oldCellRegions = source_grid[CellRegions]
     EG = Base.unique(oldCellGeometries)
     
     split_rules = Array{Array{Int,2},1}(undef,length(EG))
@@ -27,6 +28,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
         split_rules[j] = split_rule(EG[j],targetgeometry)
     end
     xCellNodes=[]
+    xCellRegions = zeros(Int32,0)
     oldCellNodes=source_grid[CellNodes]
     nnodes4item = 0
     ncells = 0
@@ -39,12 +41,19 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
         for j = 1 : size(split_rules[iEG],1), k = 1 : size(split_rules[iEG],2)
             append!(xCellNodes,oldCellNodes[split_rules[iEG][j,k],cell])
         end    
+        for j = 1 : size(split_rules[iEG],1)
+            push!(xCellRegions,oldCellRegions[cell])
+        end
         ncells += size(split_rules[iEG],1)
     end
     xCellNodes = reshape(xCellNodes,nnodes_for_geometry(targetgeometry),ncells)
     xgrid[CellNodes] = Array{Int32,2}(xCellNodes)
     xgrid[CellGeometries] = VectorOfConstants(targetgeometry,ncells)
-    xgrid[CellRegions]=ones(Int32,ncells)
+    if typeof(oldCellRegions) <: VectorOfConstants
+        xgrid[CellRegions] = VectorOfConstants{Int32}(1,ncells)
+    else
+        xgrid[CellRegions] = xCellRegions
+    end
 
     # find new boundary faces (easy in 2D, not so easy in 3D)
     if dim_element(targetgeometry) == 2 # BFaces are Edge1D wich stay the same
@@ -175,6 +184,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     # unpack stuff from source grid
     oldCoordinates = source_grid[Coordinates]
     oldCellGeometries = source_grid[CellGeometries]
+    oldCellRegions = source_grid[CellRegions]
     EG = Base.unique(oldCellGeometries)
 
     # get dimension of CellGeometries
@@ -189,6 +199,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     end
     xCellNodes = VariableTargetAdjacency(Int32)
     xCellGeometries = []
+    xCellRegions = zeros(Int32,0)
     oldCellNodes = source_grid[CellNodes]
     oldCellFaces = source_grid[CellFaces]
     oldCellEdges = []
@@ -316,6 +327,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
             end    
             append!(xCellNodes,subitemnodes[1:size(refine_rules[iEG],2)])
             push!(xCellGeometries,itemEG)
+            push!(xCellRegions, oldCellRegions[cell])
         end    
         ncells += size(refine_rules[iEG],1)
     end
@@ -328,7 +340,11 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     else
         xgrid[CellNodes] = xCellNodes
     end
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    if typeof(oldCellRegions) <: VectorOfConstants
+        xgrid[CellRegions] = VectorOfConstants{Int32}(1,ncells)
+    else
+        xgrid[CellRegions] = xCellRegions
+    end
     xgrid[CellGeometries] = Array{DataType,1}(xCellGeometries)
 
 
@@ -449,6 +465,7 @@ function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     xgrid = ExtendableGrid{T,K}()
     oldCoordinates = source_grid[Coordinates]
     oldCellGeometries = source_grid[CellGeometries]
+    oldCellRegions = source_grid[CellRegions]
     EG = Base.unique(oldCellGeometries)
     
     refine_rules = Array{Array{Int,2},1}(undef,length(EG))
@@ -457,6 +474,7 @@ function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     end
     xCellNodes = VariableTargetAdjacency(Int32)
     xCellGeometries = []
+    xCellRegions = zeros(Int32,0)
 
     oldCellNodes = source_grid[CellNodes]
     oldCellFaces = source_grid[CellFaces]
@@ -518,7 +536,11 @@ function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     else
         xgrid[CellNodes] = xCellNodes
     end
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    if typeof(oldCellRegions) <: VectorOfConstants
+        xgrid[CellRegions] = VectorOfConstants{Int32}(1,ncells)
+    else
+        xgrid[CellRegions] = xCellRegions
+    end
     xgrid[CellGeometries] = Array{DataType,1}(xCellGeometries)
     xgrid[BFaceNodes]=source_grid[BFaceNodes]
     xgrid[BFaceRegions]=source_grid[BFaceRegions]
