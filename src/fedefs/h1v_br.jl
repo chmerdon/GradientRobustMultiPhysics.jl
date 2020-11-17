@@ -91,12 +91,12 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON
             value += (facemeans[c,item] - P1flux)*xFaceNormals[c,item]
         end
         # set face bubble value
-        Target[offset+item] = 3//2 * value / xItemVolumes[item]
+        Target[offset+item] = value / xItemVolumes[item]
     end
 end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1BR}
-    # delegate cell faces to node interpolation
+    # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
 end
@@ -127,7 +127,7 @@ function get_basis_on_face(FEType::Type{H1BR{2}}, EG::Type{<:Edge1D})
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubble to P1 basis
-        refbasis[offset+1,:] .= 4 * xref[1] * refbasis[1,1]
+        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
     end
 end
 
@@ -138,9 +138,9 @@ function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Triangle2D})
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 4 * xref[1] * refbasis[1,1]
-        refbasis[offset+2,:] .= 4 * xref[2] * xref[1]
-        refbasis[offset+3,:] .= 4 * refbasis[1,1] * xref[2]
+        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+2,:] .= 6 * xref[2] * xref[1]
+        refbasis[offset+3,:] .= 6 * refbasis[1,1] * xref[2]
     end
 end
 
@@ -156,10 +156,10 @@ function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Quadrilateral2D})
         # add face bubbles to Q1 basis
         a = 1 - xref[1]
         b = 1 - xref[2]
-        refbasis[offset+1,:] .= 4*xref[1]*a*b
-        refbasis[offset+2,:] .= 4*xref[2]*xref[1]*b
-        refbasis[offset+3,:] .= 4*xref[1]*xref[2]*a
-        refbasis[offset+4,:] .= 4*xref[2]*a*b
+        refbasis[offset+1,:] .= 6*xref[1]*a*b
+        refbasis[offset+2,:] .= 6*xref[2]*xref[1]*b
+        refbasis[offset+3,:] .= 6*xref[1]*xref[2]*a
+        refbasis[offset+4,:] .= 6*xref[2]*a*b
     end
 end
 
@@ -215,7 +215,7 @@ function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Triangle2D})
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 9 * xref[1] * refbasis[1,1] * xref[2]
+        refbasis[offset+1,:] .= 60 * xref[1] * refbasis[1,1] * xref[2]
     end
 end
 
@@ -226,7 +226,7 @@ function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 16 * xref[1] * (1 - xref[1]) * (1 - xref[2]) * xref[2]
+        refbasis[offset+1,:] .= 36 * xref[1] * (1 - xref[1]) * (1 - xref[2]) * xref[2]
     end
 end
 
@@ -237,10 +237,10 @@ function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D})
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 9 * xref[1] * refbasis[1,1] * xref[2]
-        refbasis[offset+2,:] .= 9 * refbasis[1,1] * xref[1] * xref[3]
-        refbasis[offset+3,:] .= 9 * xref[1] * xref[2] * xref[3]
-        refbasis[offset+4,:] .= 9 * refbasis[1,1] * xref[2] * xref[3]
+        refbasis[offset+1,:] .= 60 * xref[1] * refbasis[1,1] * xref[2]
+        refbasis[offset+2,:] .= 60 * refbasis[1,1] * xref[1] * xref[3]
+        refbasis[offset+3,:] .= 60 * xref[1] * xref[2] * xref[3]
+        refbasis[offset+4,:] .= 60 * refbasis[1,1] * xref[2] * xref[3]
     end
 end
 
@@ -257,12 +257,12 @@ function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
         a = 1 - xref[1]
         b = 1 - xref[2]
         c = 1 - xref[3]
-        refbasis[offset+1,:] .= 16*a*b*xref[1]*xref[2]*c # bottom
-        refbasis[offset+2,:] .= 16*a*xref[1]*c*xref[3]*b # front
-        refbasis[offset+3,:] .= 16*a*b*c*xref[2]*xref[3] # left
-        refbasis[offset+4,:] .= 16*a*xref[1]*c*xref[3]*xref[2] # back
-        refbasis[offset+5,:] .= 16*xref[1]*b*c*xref[2]*xref[3] # right
-        refbasis[offset+6,:] .= 16*a*b*xref[1]*xref[2]*xref[3] # top
+        refbasis[offset+1,:] .= 36*a*b*xref[1]*xref[2]*c # bottom
+        refbasis[offset+2,:] .= 36*a*xref[1]*c*xref[3]*b # front
+        refbasis[offset+3,:] .= 36*a*b*c*xref[2]*xref[3] # left
+        refbasis[offset+4,:] .= 36*a*xref[1]*c*xref[3]*xref[2] # back
+        refbasis[offset+5,:] .= 36*xref[1]*b*c*xref[2]*xref[3] # right
+        refbasis[offset+6,:] .= 36*a*b*xref[1]*xref[2]*xref[3] # top
     end
 end
 
@@ -359,7 +359,7 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FES
         coefficients[2,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
         coefficients[3,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
         coefficients[4,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
-        coefficients[5,1] = 2 // 3 * xFaceVolumes[face]
+        coefficients[5,1] = xFaceVolumes[face]
         return nothing
     end
 end
@@ -383,7 +383,7 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FES
         coefficients[4,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
         coefficients[4,2] = -1 // 6 * xFaceVolumes[face] * xFaceNormals[2, face]
 
-        coefficients[3,1] = 2 // 3 * xFaceVolumes[face]
+        coefficients[3,1] = xFaceVolumes[face]
         return nothing
     end
 end
@@ -419,9 +419,9 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FES
         coefficients[6,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
     
         # reconstruction coefficients for face bubbles on reference element (same as RT0, BDM1 coefficients are zero)
-        coefficients[7,1] = 2 // 3 * xFaceVolumes[faces[1]]
-        coefficients[8,2] = 2 // 3 * xFaceVolumes[faces[2]]
-        coefficients[9,3] = 2 // 3 * xFaceVolumes[faces[3]]
+        coefficients[7,1] = xFaceVolumes[faces[1]]
+        coefficients[8,2] = xFaceVolumes[faces[2]]
+        coefficients[9,3] = xFaceVolumes[faces[3]]
         return nothing
     end
 end
@@ -474,9 +474,9 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FES
         coefficients[6,6] = -1 // 6 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]] * xCellFaceSigns[3,cell]
     
         # reconstruction coefficients for face bubbles on reference element (same as RT0, BDM1 coefficients are zero)
-        coefficients[7,1] = 2 // 3 * xFaceVolumes[faces[1]]
-        coefficients[8,3] = 2 // 3 * xFaceVolumes[faces[2]]
-        coefficients[9,5] = 2 // 3 * xFaceVolumes[faces[3]]
+        coefficients[7,1] = xFaceVolumes[faces[1]]
+        coefficients[8,3] = xFaceVolumes[faces[2]]
+        coefficients[9,5] = xFaceVolumes[faces[3]]
         return nothing
     end
 end
@@ -517,10 +517,10 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FES
         coefficients[8,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
         coefficients[8,4] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]]
 
-        coefficients[ 9,1] = 2 // 3 * xFaceVolumes[faces[1]]
-        coefficients[10,2] = 2 // 3 * xFaceVolumes[faces[2]]
-        coefficients[11,3] = 2 // 3 * xFaceVolumes[faces[3]]
-        coefficients[12,4] = 2 // 3 * xFaceVolumes[faces[4]]
+        coefficients[ 9,1] = xFaceVolumes[faces[1]]
+        coefficients[10,2] = xFaceVolumes[faces[2]]
+        coefficients[11,3] = xFaceVolumes[faces[3]]
+        coefficients[12,4] = xFaceVolumes[faces[4]]
         return nothing
     end
 end
@@ -562,10 +562,10 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FES
         coefficients[8,7] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]]
 
         # face bubbles (only RT0)
-        coefficients[ 9,1] = 2 // 3 * xFaceVolumes[faces[1]]
-        coefficients[10,3] = 2 // 3 * xFaceVolumes[faces[2]]
-        coefficients[11,5] = 2 // 3 * xFaceVolumes[faces[3]]
-        coefficients[12,7] = 2 // 3 * xFaceVolumes[faces[4]]
+        coefficients[ 9,1] = xFaceVolumes[faces[1]]
+        coefficients[10,3] = xFaceVolumes[faces[2]]
+        coefficients[11,5] = xFaceVolumes[faces[3]]
+        coefficients[12,7] = xFaceVolumes[faces[4]]
 
         # higher-order BDM1
         coefficients[1,8] =  1 // 6 * xFaceVolumes[faces[4]] * xFaceNormals[1, faces[4]] * xCellFaceSigns[4,cell]
@@ -627,10 +627,10 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FES
         end
 
         # reconstruction coefficients for face bubbles on reference element
-        coefficients[13,1] = 3 // 20 * xFaceVolumes[faces[1]]
-        coefficients[14,2] = 3 // 20 * xFaceVolumes[faces[2]]
-        coefficients[15,3] = 3 // 20 * xFaceVolumes[faces[3]]
-        coefficients[16,4] = 3 // 20 * xFaceVolumes[faces[4]]
+        coefficients[13,1] = xFaceVolumes[faces[1]]
+        coefficients[14,2] = xFaceVolumes[faces[2]]
+        coefficients[15,3] = xFaceVolumes[faces[3]]
+        coefficients[16,4] = xFaceVolumes[faces[4]]
         return nothing
     end
 end

@@ -679,7 +679,7 @@ function run_basis_tests()
         # check error of reconstruction
         L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
         errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
-        println("EG = Triangle2D/Parallelogram2D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
+        println("EG = Tetrahedron3D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
         @test errorV < tolerance
     end
     println("")
