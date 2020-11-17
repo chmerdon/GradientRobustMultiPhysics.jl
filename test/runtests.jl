@@ -21,6 +21,7 @@ function run_basis_tests()
         return uniform_refine(grid_unitsquare_mixedgeometries(),1)
     end
 
+    tolerance = 2e-12
 
     function exact_function1D(polyorder)
         function closure(result,x)
@@ -172,7 +173,7 @@ function run_basis_tests()
             # check error
             error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
             println("FEType = $FEType | order = $(ExpectedOrders1D[n]) | error = $error")
-            @test error < 1e-12
+            @test error < tolerance
         end
         println("\n")
         println("============================")
@@ -197,7 +198,7 @@ function run_basis_tests()
                 # check error
                 error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
                 println("EG = $EG | FEType = $FEType | order = $(ExpectedOrders2D[n]) | error = $error")
-                @test error < 1e-12
+                @test error < tolerance
             end
         end
         println("")
@@ -261,7 +262,7 @@ function run_basis_tests()
             # check error
             error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
             println("EG = Edge1D | FEType = $FEType | order = $(ExpectedOrders1D[n]) | error = $error")
-            @test error < 1e-12
+            @test error < tolerance
         end
         println("\n")
         println("===================================")
@@ -286,7 +287,7 @@ function run_basis_tests()
             # check error
             error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
             println("EG = Triangle2D/Parallelogram2D | FEType = $FEType | order = $(ExpectedOrders2D[n]) | error = $error")
-            @test error < 1e-12
+            @test error < tolerance
         end
         println("\n")
         println("===================================")
@@ -311,7 +312,7 @@ function run_basis_tests()
             # check error
             error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
             println("EG = Tetrahedron3D | FEType = $FEType | order = $(ExpectedOrders3D[n]) | error = $error")
-            @test error < 1e-12
+            @test error < tolerance
         end
         println("")
     end
@@ -366,7 +367,7 @@ function run_basis_tests()
             # check error
             error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
             println("EG = Edge1D | FEType = $FEType | order = $(ExpectedOrders1D[n]) | error = $error")
-            @test error < 1e-12
+            @test error < tolerance
         end
         println("\n")
         println("===================================")
@@ -391,7 +392,7 @@ function run_basis_tests()
             # check error
             error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
             println("EG = Triangle2D/Parallelogram2D | FEType = $FEType | order = $(ExpectedOrders2D[n]) | error = $error")
-            @test error < 1e-12
+            @test error < tolerance
         end
         println("\n")
         println("===================================")
@@ -417,7 +418,7 @@ function run_basis_tests()
                 # check error
                 error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
                 println("EG = $EG | FEType = $FEType | order = $(ExpectedOrders3D[n]) | error = $error")
-                @test error < 1e-12
+                @test error < tolerance
             end
         end
         println("")
@@ -498,12 +499,18 @@ function run_basis_tests()
     end
 
     # list of FETypes that should be tested
-    TestCatalog2D = [
+    TestCatalogTriangle2D = [
                     [H1CR{2},L2P0{1}],
-                    [H1MINI{2,2},H1CR{1}], # taking here a stable variant that also works on quads
+                    [H1MINI{2,2},H1P1{1}],
+                    [H1BR{2},L2P0{1}],
+                    [H1P2{2,2},H1P1{1}],
+                    [H1P2B{2,2},L2P1{1}]]
+    TestCatalogParallelogram2D = [
+                    [H1CR{2},L2P0{1}],
+                    [H1MINI{2,2},H1CR{1}],
                     [H1BR{2},L2P0{1}],
                     [H1P2{2,2},H1P1{1}]]
-    ExpectedOrders2D = [[1,0],[1,1],[1,0],[2,1]]
+    ExpectedOrders2D = [[1,0],[1,1],[1,0],[2,1],[2,1]]
     TestCatalog3D = [
                     [H1BR{3},L2P0{1}],
                     [H1CR{3},L2P0{1}],
@@ -514,11 +521,11 @@ function run_basis_tests()
 
     @testset "Stokes-FEM" begin
         println("\n")
-        println("=============================")
-        println("Testing Stokes elements in 2D")
-        println("=============================")
-        xgrid = testgrid(Triangle2D, Parallelogram2D)
-        for n = 1 : length(TestCatalog2D)
+        println("=====================================")
+        println("Testing Stokes elements on Triangle2D")
+        println("=====================================")
+        xgrid = testgrid(Triangle2D)
+        for n = 1 : length(TestCatalogTriangle2D)
             exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
 
             # Define Stokes problem via PDETooles_PDEProtoTypes
@@ -529,7 +536,7 @@ function run_basis_tests()
             L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = ExpectedOrders2D[n][2])
 
             # choose FE and generate FESpace
-            FETypes = TestCatalog2D[n]
+            FETypes = TestCatalogTriangle2D[n]
             FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
 
             # solve
@@ -539,8 +546,37 @@ function run_basis_tests()
             # check error
             errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
             errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
-            println("EG = Triangle2D/Parallelogram2D | FETypes = $(FETypes) | orders = $(ExpectedOrders2D[n]) | errorV = $errorV | errorP = $errorP")
-            @test max(errorV,errorP) < 1e-12
+            println("EG = Triangle2D | FETypes = $(FETypes) | orders = $(ExpectedOrders2D[n]) | errorV = $errorV | errorP = $errorP")
+            @test max(errorV,errorP) < tolerance
+        end
+        println("\n")
+        println("==========================================")
+        println("Testing Stokes elements on Parallelogram2D")
+        println("==========================================")
+        xgrid = uniform_refine(testgrid(Parallelogram2D),1)
+        for n = 1 : length(TestCatalogParallelogram2D)
+            exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
+
+            # Define Stokes problem via PDETooles_PDEProtoTypes
+            StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
+            add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders2D[n][1])
+            add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
+            L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
+            L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = ExpectedOrders2D[n][2])
+
+            # choose FE and generate FESpace
+            FETypes = TestCatalogParallelogram2D[n]
+            FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
+
+            # solve
+            Solution = FEVector{Float64}("Stokes-Solution",FES)
+            solve!(Solution, StokesProblem)
+
+            # check error
+            errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
+            errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
+            println("EG = Parallelogram2D | FETypes = $(FETypes) | orders = $(ExpectedOrders2D[n]) | errorV = $errorV | errorP = $errorP")
+            @test max(errorV,errorP) < tolerance
         end
         println("\n")
         println("=============================")
@@ -569,7 +605,7 @@ function run_basis_tests()
             errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
             errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
             println("EG = Tetrahedron3D | FETypes = $(FETypes) | orders = $(ExpectedOrders3D[n]) | errorV = $errorV | errorP = $errorP")
-            @test max(errorV,errorP) < 1e-12
+            @test max(errorV,errorP) < tolerance
         end
         println("")
     end
@@ -616,7 +652,7 @@ function run_basis_tests()
         L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
         errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
         println("EG = Triangle2D/Parallelogram2D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
-        @test errorV < 1e-12
+        @test errorV < tolerance
     end
     println("\n")
     println("======================================")
@@ -644,7 +680,7 @@ function run_basis_tests()
         L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
         errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
         println("EG = Triangle2D/Parallelogram2D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
-        @test errorV < 1e-12
+        @test errorV < tolerance
     end
     println("")
     end

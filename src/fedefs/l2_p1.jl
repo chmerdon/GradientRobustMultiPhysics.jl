@@ -101,37 +101,38 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: 
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:L2P1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: L2P1}
     xCoords = FE.xgrid[Coordinates]
     xdim = size(xCoords,1)
-    x = zeros(Float64,xdim)
-    nnodes = num_sources(xCoords)
-    xCellNodes = FE.xgrid[CellNodes]
-    ncells = num_sources(xCellNodes)
-    nnodes4item::Int = 0
-    FEType = eltype(FE)
+
+    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemDofs = Dofmap4AssemblyType(FE, AT)
+    xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
+    if items == []
+        items = 1 : nitems
+    end
     ncomponents::Int = get_ncomponents(FEType)
     result = zeros(Float64,ncomponents)
+    x = zeros(Float64,xdim)
+    itemEG = Triangle2D
+    nnodes4item::Int = 0
     node::Int = 0
-    if length(dofs) == 0 # interpolate at all dofs
-        dof::Int = 0
-        for cell = 1 : ncells
-            nnodes4item = num_targets(xCellNodes,cell)
-            for k = 1 : nnodes4item
-                node = xCellNodes[k,cell]
-                for d=1:xdim
-                    x[d] = xCoords[d,node]
-                end    
-                exact_function!(result,x)
-                for c = 1 : ncomponents
-                    Target[dof+(c-1)*nnodes4item+k] = result[c]
-                end
+    for item in items
+        offset = xItemDofs[1,item]-1
+        itemEG = xItemGeometries[item]
+        nnodes4item = num_targets(xItemNodes,item)
+        for k = 1 : nnodes4item
+            node = xItemNodes[k,item]
+            for d = 1 : xdim
+                x[d] = xCoords[d,node]
+            end    
+            exact_function!(result,x)
+            for c = 1 : ncomponents
+                Target[offset+(c-1)*nnodes4item+k] = result[c]
             end
-            dof += nnodes4item*ncomponents
         end
-    else
-        #TODO 
-    end    
+    end
 end
 
 

@@ -41,84 +41,64 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1BR}
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
-    xCoords = FE.xgrid[Coordinates]
-    xFaceNodes = FE.xgrid[FaceNodes]
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1BR}
+    nnodes = size(FE.xgrid[Coordinates],2)
+    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes)
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1BR}
+    # delegate edge nodes to node interpolation
+    subitems = slice(FE.xgrid[EdgeNodes], items)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+end
+
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {T<:Real, FEType <: H1BR}
+    # delegate face nodes to node interpolation
+    subitems = slice(FE.xgrid[FaceNodes], items)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+
+    # preserve face means in normal direction
+    xItemVolumes = FE.xgrid[FaceVolumes]
+    xItemNodes = FE.xgrid[FaceNodes]
+    xItemGeometries = FE.xgrid[FaceGeometries]
     xFaceNormals = FE.xgrid[FaceNormals]
-    FEType = eltype(FE)
+    xItemDofs = FE.dofmaps[FaceDofs]
+    nnodes = size(FE.xgrid[Coordinates],2)
+    nitems = num_sources(xItemNodes)
     ncomponents = get_ncomponents(FEType)
-    result = zeros(Float64,ncomponents)
-    xdim = size(xCoords,1)
-    nnodes = num_sources(xCoords)
-    nfaces = num_sources(xFaceNodes)
-    x = zeros(Float64,xdim)
-    if length(dofs) == 0 # interpolate at all dofs
-        for j = 1 : num_sources(xCoords)
-            for k=1:xdim
-                x[k] = xCoords[k,j]
-            end    
-            exact_function!(result,x)
-            for n = 1 : ncomponents
-                Target[j+(n-1)*nnodes] = result[n]
-            end    
-        end
-        # interpolate at face midpoints
-        linpart = zeros(Float64,ncomponents)
-        node = 0
-        for face = 1 : nfaces
-            nnodes4item = num_targets(xFaceNodes,face)
-            # compute midpoint
-            for k=1:xdim
-                x[k] = 0
-                for n=1:nnodes4item
-                    node = xFaceNodes[n,face]
-                    x[k] += xCoords[k,node]
-                end
-                x[k] /= nnodes4item    
-            end    
-            # compute linear part
-            fill!(linpart,0)
-            for n=1:nnodes4item
-                node = xFaceNodes[n,face]
-                for c=1:ncomponents
-                    linpart[c] += Target[node+(c-1)*nnodes] / nnodes4item
-                end
+    offset = ncomponents*nnodes
+    if items == []
+        items = 1 : nitems
+    end
+
+    # compute exact face means
+    facemeans = zeros(Float64,ncomponents,nitems)
+    integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!, bonus_quadorder, ncomponents; items = items)
+    P1flux::T = 0
+    value::T = 0
+    itemEG = Edge1D
+    nitemnodes::Int = 0
+    for item in items
+        itemEG = xItemGeometries[item]
+        nitemnodes = nnodes_for_geometry(itemEG)
+        # compute normal flux (minus linear part)
+        value = 0
+        for c = 1 : ncomponents
+            P1flux = 0
+            for dof = 1 : nitemnodes
+                P1flux += Target[xItemDofs[(c-1)*nitemnodes + dof,item]] * xItemVolumes[item] / nitemnodes
             end
-            exact_function!(result,x)
-            Target[ncomponents*nnodes+face] = 0.0
-            for k = 1 : ncomponents
-                Target[ncomponents*nnodes+face] = (result[k] - linpart[k]) * xFaceNormals[k,face]
-            end    
+            value += (facemeans[c,item] - P1flux)*xFaceNormals[c,item]
         end
-    else
-        item = 0
-        for j in dofs 
-            item = mod(j-1,nnodes)+1
-            c = Int(ceil(j/nnodes))
-            if j <= ncomponents*nnodes
-                for k=1:xdim
-                    x[k] = xCoords[k,item]
-                end    
-                exact_function!(result,x)
-                Target[j] = result[c]
-            else
-                face = j - ncomponents*nnodes
-                nnodes4item = num_targets(xFaceNodes,face)
-                for k=1:xdim
-                    x[k] = 0
-                    for n=1:nnodes4item
-                        x[k] += xCoords[k,xFaceNodes[n,face]]
-                    end
-                    x[k] /= nnodes4item    
-                end 
-                exact_function!(result,x)
-                Target[ncomponents*nnodes+face] = 0.0
-                for k = 1 : ncomponents
-                    Target[ncomponents*nnodes+face] = result[k]*xFaceNormals[k,face]
-                end    
-            end
-        end    
-    end    
+        # set face bubble value
+        Target[offset+item] = 3//2 * value / xItemVolumes[item]
+    end
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1BR}
+    # delegate cell faces to node interpolation
+    subitems = slice(FE.xgrid[CellFaces], items)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
 end
 
 

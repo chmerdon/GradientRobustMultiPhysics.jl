@@ -16,12 +16,10 @@ get_edim(FEType::Type{<:H1MINI}) = FEType.parameters[2]
 get_ndofs_on_face(FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
 get_ndofs_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry}) = (1+nnodes_for_geometry(EG)) * FEType.parameters[1]
 
-get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Edge1D}) = 1
-get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Triangle2D}) = 3;
-get_polynomialorder(::Type{<:H1MINI{2,2}}, ::Type{<:Quadrilateral2D}) = 4;
-
-get_polynomialorder(::Type{<:H1MINI{3,3}}, ::Type{<:Triangle2D}) = 1;
-get_polynomialorder(::Type{<:H1MINI{3,3}}, ::Type{<:Tetrahedron3D}) = 4;
+get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Edge1D}) = FEType.parameters[2] == 1 ? 2 : 1
+get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Triangle2D}) = FEType.parameters[2] == 2 ? 3 : 1;
+get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = FEType.parameters[2] == 2 ? 4 : 2;
+get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Tetrahedron3D}) = 4;
 
 function init!(FES::FESpace{FEType}) where {FEType <: H1MINI}
     ncomponents = get_ncomponents(FEType)
@@ -43,77 +41,69 @@ get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{FaceDofs}, EG::Type{<:Abstract
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
-    xCoords = FE.xgrid[Coordinates]
-    xdim = size(xCoords,1)
-    x = zeros(Float64,xdim)
-    nnodes = num_sources(xCoords)
-    xCellNodes = FE.xgrid[CellNodes]
-    ncells = num_sources(xCellNodes)
-    nnodes4item::Int = 0
-    FEType = eltype(FE)
-    ncomponents = get_ncomponents(FEType)
-    result = zeros(Float64,ncomponents)
-    linpart = 0.0
-    if length(dofs) == 0 # interpolate at all dofs
-        for j = 1 : num_sources(xCoords)
-            for k=1:xdim
-                x[k] = xCoords[k,j]
-            end    
-            exact_function!(result,x)
-            for c = 1 : ncomponents
-                Target[j+(c-1)*(nnodes+ncells)] = result[c]
-            end
-        end
 
-        for cell=1:ncells
-            nnodes4item = num_targets(xCellNodes,cell)
-            fill!(x,0.0)
-            for j=1:xdim
-                for k=1:nnodes4item
-                    x[j] += xCoords[j,xCellNodes[k,cell]]
-                end
-                x[j] /= nnodes4item
+function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+
+    xgrid = FE.xgrid
+    xItemVolumes = xgrid[CellVolumes]
+    xItemNodes = xgrid[CellNodes]
+    xItemDofs = FE.dofmaps[CellDofs]
+    xCellGeometries = xgrid[CellGeometries]
+    ncells = num_sources(xItemNodes)
+    nnodes = size(xgrid[Coordinates],2)
+    ncomponents = get_ncomponents(FEType)
+    offset4component = 0:(nnodes+ncells):ncomponents*(nnodes+ncells)
+    if items == []
+        items = 1 : ncells
+    end
+
+    # compute exact cell integrals
+    cellintegrals = zeros(Float64,ncomponents,ncells)
+    integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!, bonus_quadorder, ncomponents; items = items)
+    cellEG = Triangle2D
+    nitemnodes::Int = 0
+    for item in items
+        cellEG = xCellGeometries[item]
+        nitemnodes = nnodes_for_geometry(cellEG)
+        for c = 1 : ncomponents
+            # subtract integral of P1 part
+            for dof = 1 : nitemnodes
+                cellintegrals[c,item] -= Target[xItemDofs[(c-1)*(nitemnodes+1) + dof,item]] * xItemVolumes[item] / nitemnodes
             end
-            exact_function!(result,x)
-            for c = 1 : ncomponents
-                linpart = 0.0
-                for k=1:nnodes4item
-                    linpart += Target[xCellNodes[k,cell]+(c-1)*(nnodes+ncells)]
-                end
-                Target[(c-1)*(nnodes+ncells)+nnodes+cell] = result[c] - linpart / nnodes4item
-            end
+            # set cell bubble such that cell mean is preserved
+            Target[offset4component[c]+nnodes+item] = cellintegrals[c,item] / xItemVolumes[item]
         end
-    else
-        item = 0
-        for j in dofs 
-            item = mod(j-1,nnodes+ncells)+1
-            c = Int(ceil(j/(nnodes+ncells)))
-            if item <= nnodes
-                for k=1:xdim
-                    x[k] = xCoords[k,item]
-                end    
-                exact_function!(result,x)
-                Target[j] = result[c]
-            else # cell bubble
-                nnodes4item = num_targets(xCellNodes,cell)
-                fill!(x,0.0)
-                for j=1:xdim
-                    for k=1:nnodes4item
-                        x[j] += xCoords[j,xCellNodes[k,cell]]
-                    end
-                    x[j] /= nnodes4item
-                end
-                exact_function!(result,x)
-                linpart = 0.0
-                for k=1:nnodes4item
-                    linpart += Target[xCellNodes[k,cell]+(c-1)*(nnodes+ncells)]
-                end
-                Target[(c-1)*(nnodes+ncells)+nnodes+cell] = result[c] - linpart / nnodes4item    
-            end    
-        end    
-    end    
+    end
 end
+
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+    nnodes = size(FE.xgrid[Coordinates],2)
+    ncells = num_sources(FE.xgrid[CellNodes])
+    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes + ncells)
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+    # delegate edge nodes to node interpolation
+    subitems = slice(FE.xgrid[EdgeNodes], items)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+    # delegate face nodes to node interpolation
+    subitems = slice(FE.xgrid[FaceNodes], items)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+    # delegate cell nodes to node interpolation
+    subitems = slice(FE.xgrid[CellNodes], items)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+
+    # fix cell bubble value by preserving integral mean
+    ensure_cell_moments!(Target, FE, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
+end
+
 
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI})
     nnodes = num_sources(FE.xgrid[Coordinates])
@@ -141,8 +131,8 @@ function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Triangle2D})
     offset = get_ndofs_on_cell(H1P1{1}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
-        # add cell bubbles to P1 basis
-        refbasis[offset,1] = 27*(1-xref[1]-xref[2])*xref[1]*xref[2]
+        # add cell bubbles to P1 basis (scaled to have unit integral)
+        refbasis[offset,1] = 60*(1-xref[1]-xref[2])*xref[1]*xref[2]
         for k = 1 : ncomponents-1, j = 1 : offset
             refbasis[k*offset+j,k+1] = refbasis[j,1]
         end
@@ -155,8 +145,8 @@ function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Quadrilateral2D})
     offset = get_ndofs_on_cell(H1P1{1}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
-        # add cell bubbles to P1 basis
-        refbasis[offset,1] = 16*(1-xref[1])*(1-xref[2])*xref[1]*xref[2]
+        # add cell bubbles to P1 basis (scaled to have unit integral)
+        refbasis[offset,1] = 36 *(1-xref[1])*(1-xref[2])*xref[1]*xref[2]
         for k = 1 : ncomponents-1, j = 1 : offset
             refbasis[k*offset+j,k+1] = refbasis[j,1]
         end
@@ -169,8 +159,8 @@ function get_basis_on_cell(FEType::Type{<:H1MINI}, EG::Type{<:Tetrahedron3D})
     offset = get_ndofs_on_cell(H1P1{1}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
-        # add cell bubbles to P1 basis
-        refbasis[offset,1] = 81*(1-xref[1]-xref[2]-xref[3])*xref[1]*xref[2]*xref[3]
+        # add cell bubbles to P1 basis (scaled to have unit integral)
+        refbasis[offset,1] = 840*(1-xref[1]-xref[2]-xref[3])*xref[1]*xref[2]*xref[3]
         for k = 1 : ncomponents-1, j = 1 : offset
             refbasis[k*offset+j,k+1] = refbasis[j,1]
         end

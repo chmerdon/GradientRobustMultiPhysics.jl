@@ -9,7 +9,7 @@ blueR_refinement(::Type{<:Triangle2D}) = [3 1 4; 4 2 5; 3 4 5]
 blueL_refinement(::Type{<:Triangle2D}) = [1 4 6; 2 3 4; 4 3 6]
 green_refinement(::Type{<:Triangle2D}) = [3 1 4; 2 3 4]
 
-function adaptive_refinement_rule(EG::Type{<:Triangle2D}, marked_faces::Array{Bool,1})
+function RGB_refinement_rule(EG::Type{<:Triangle2D}, marked_faces::Array{Bool,1})
     if any(marked_faces) == true
         @assert marked_faces[1] = true # closure should always mark reference face
         if marked_faces[2] == true && marked_faces[3] == true
@@ -49,6 +49,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     # unpack stuff from source grid
     oldCoordinates = source_grid[Coordinates]
     oldCellGeometries = source_grid[CellGeometries]
+    oldCellRegions = source_grid[CellRegions]
     EG = Base.unique(oldCellGeometries)
 
     # get dimension of CellGeometries
@@ -57,6 +58,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     
     xCellNodes = VariableTargetAdjacency(Int32)
     xCellGeometries = []
+    xCellRegions = zeros(Int32,0)
     oldCellNodes = source_grid[CellNodes]
     oldCellFaces = source_grid[CellFaces]
     oldFaceNodes = source_grid[FaceNodes]
@@ -141,7 +143,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
             #    @assert newnode4facemidpoint[oldCellFaces[f,cell]] > 0
             #end
         end
-        refine_rule = adaptive_refinement_rule(Triangle2D,localmarked_faces)
+        refine_rule = RGB_refinement_rule(Triangle2D,localmarked_faces)
         for j = 1 : size(refine_rule,1)
             for k = 1 : size(refine_rule,2)
                 m = refine_rule[j,k]
@@ -153,6 +155,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
             end    
             append!(xCellNodes,subitemnodes[1:size(refine_rule,2)])
             push!(xCellGeometries,Triangle2D)
+            push!(xCellRegions,oldCellRegions[cell])
         end    
         ncells += size(refine_rule,1)
     end
@@ -165,7 +168,11 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     else
         xgrid[CellNodes] = xCellNodes
     end
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    if typeof(oldCellRegions) <: VectorOfConstants
+        xgrid[CellRegions] = VectorOfConstants{Int32}(1,ncells)
+    else
+        xgrid[CellRegions] = xCellRegions
+    end
     xgrid[CellGeometries] = Array{DataType,1}(xCellGeometries)
 
 

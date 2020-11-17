@@ -80,12 +80,12 @@ function plot(
                 ctx = Array{PlotterContext,1}(undef, length(blockids))
                 for j = 1 : length(blockids)
                     subplot = subplots_per_column * 100 + (length(layout)-1) * 10 + j
-                    ctx[j] = PlotterContext(Plotter, figure=fig, clear=false, legend=false, subplot=subplot, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                    ctx[j] = PlotterContext(Plotter, figure=fig, clear=false, legend=false, edges=true, subplot=subplot, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
                 end
             else
                 ctx = Array{PlotterContext,1}(undef, length(blockids))
                 for j = 1 : length(blockids)
-                    ctx[j] = PlotterContext(Plotter, fignumber=j, clear=true, legend=false, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                    ctx[j] = PlotterContext(Plotter, fignumber=j, clear=true, legend=false, edges=true, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
                 end
             end
 

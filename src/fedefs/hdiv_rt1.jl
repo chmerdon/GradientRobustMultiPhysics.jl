@@ -30,36 +30,48 @@ function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT1}
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
-     # integrate normal flux of exact_function over edges
-    ncomponents = get_ncomponents(eltype(FE))
-    xFaceNormals = FE.xgrid[FaceNormals]
-    nfaces = num_sources(xFaceNormals)
-    function normalflux_eval()
-        temp = zeros(Float64,ncomponents)
-        function closure(result, x, face, xref)
-            exact_function!(temp,x)
-            result[1] = 0.0
-            for j = 1 : ncomponents
-                result[1] += temp[j] * xFaceNormals[j,face]
-            end 
-        end   
-    end   
-    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
-    
-    # integrate first moment of normal flux of exact_function over edges
-    function normalflux2_eval()
-        temp = zeros(Float64,ncomponents)
-        function closure(result, x, face, xref)
-            exact_function!(temp,x)
-            result[1] = 0.0
-            for j = 1 : ncomponents
-                result[1] += temp[j] * xFaceNormals[j,face]
-            end
-            result[1] *= -(xref[1] - 1//2)
-        end   
-    end   
-    integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; item_dependent_integrand = true, index_offset = nfaces)
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT1}
+    ncomponents = get_ncomponents(FEType)
+    if items == []
+        items = 1 : num_sources(FE.xgrid[FaceNodes])
+    end
+
+   # integrate normal flux of exact_function over edges
+   xFaceNormals = FE.xgrid[FaceNormals]
+   nfaces = num_sources(xFaceNormals)
+   function normalflux_eval()
+       temp = zeros(Float64,ncomponents)
+       function closure(result, x, face, xref)
+           exact_function!(temp,x)
+           result[1] = 0.0
+           for j = 1 : ncomponents
+               result[1] += temp[j] * xFaceNormals[j,face]
+           end 
+       end   
+   end   
+   integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+   
+   # integrate first moment of normal flux of exact_function over edges
+   function normalflux2_eval()
+       temp = zeros(Float64,ncomponents)
+       function closure(result, x, face, xref)
+           exact_function!(temp,x)
+           result[1] = 0.0
+           for j = 1 : ncomponents
+               result[1] += temp[j] * xFaceNormals[j,face]
+           end
+           result[1] *= -(xref[1] - 1//2)
+       end   
+   end   
+   integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; items = items, item_dependent_integrand = true, index_offset = nfaces)
+
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT1}
+    # delegate cell faces to face interpolation
+    subitems = slice(FE.xgrid[CellFaces], items)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
 
     # set values of interior RT1 functions by integrating over cell
     # they are chosen such that integral mean of exact function is preserved on each cell
@@ -70,11 +82,14 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT1}, e
     integrate!(means, FE.xgrid, ON_CELLS, exact_function!, bonus_quadorder, 2)
     qf = QuadratureRule{Float64,Triangle2D}(2)
     FEB = FEBasisEvaluator{Float64,eltype(FE),Triangle2D,Identity,ON_CELLS}(FE, qf)
+    if items == []
+        items = 1 : ncells
+    end
 
     basisval = zeros(Float64,2)
     IMM = zeros(Float64,2,2)
     interiordofs = [xCellDofs[7,1],xCellDofs[8,1]]
-    for cell = 1 : ncells
+    for cell in items
         update!(FEB,cell)
         # compute mean value of facial RT1 dofs
         for dof = 1 : 6
@@ -98,9 +113,8 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT1}, e
         end
         Target[interiordofs] = IMM\means[:,cell]
     end
-
-
 end
+
 
 
 function get_basis_normalflux_on_face(::Type{<:HDIVRT1}, ::Type{<:AbstractElementGeometry})

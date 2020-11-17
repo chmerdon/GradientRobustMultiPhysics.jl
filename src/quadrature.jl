@@ -509,6 +509,7 @@ function integrate!(
     resultdim::Int;
     verbosity::Int = 0,
     index_offset::Int = 0,
+    items = [],
     item_dependent_integrand::Bool = false,
     force_quadrature_rule = nothing)
     
@@ -545,12 +546,16 @@ function integrate!(
     item_integrand!(result,x,item,xref) = item_dependent_integrand ? integrand!(result,x,item,xref) : integrand!(result,x)
 
     # loop over items
+    if items == []
+        items = 1 : nitems
+    end
     x = zeros(NumberType, dim)
     result = zeros(NumberType, resultdim)
     itemET = xItemGeometries[1]
     iEG = 1
     if typeof(integral4items) <: AbstractArray{<:Real,1}
-        for item = 1 : nitems
+        for it = 1 : length(items)
+            item = items[it]
             integral4items[item+index_offset] = 0
 
             # find index for CellType
@@ -567,8 +572,8 @@ function integrate!(
         end
     else # <: AbstractArray{<:Real,2}
         fill!(integral4items,0)
-        for item = 1 : nitems
-
+        for it = 1 : length(items)
+            item = items[it]
             # find index for CellType
             itemET = xItemGeometries[item]
             iEG = findfirst(isequal(itemET), EG)
@@ -598,6 +603,7 @@ function integrate(
     order::Int,
     resultdim::Int;
     verbosity::Int = 0,
+    items = [],
     item_dependent_integrand::Bool = false,
     force_quadrature_rule = nothing)
 
@@ -605,7 +611,7 @@ function integrate(
     # and use the itemwise integration above
     AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
 
-    integrate!(AV, grid, AT, integrand!, order, resultdim; verbosity = verbosity, item_dependent_integrand = item_dependent_integrand, force_quadrature_rule = force_quadrature_rule)
+    integrate!(AV, grid, AT, integrand!, order, resultdim; verbosity = verbosity, items = items, item_dependent_integrand = item_dependent_integrand, force_quadrature_rule = force_quadrature_rule)
 
     if resultdim == 1
         return AV.entries[1]

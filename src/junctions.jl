@@ -5,13 +5,14 @@
 # this type is used to steer where certain things live and assemble on
 # mainly if it lives on CELLs, FACEs or BFACEs
 
-abstract type AbstractAssemblyType end
-abstract type ON_CELLS <: AbstractAssemblyType end  # celldofs on all cells 
-abstract type ON_FACES <: AbstractAssemblyType end  # facedofs on all faces
-abstract type ON_IFACES <: ON_FACES end  # facedofs on interior faces
-abstract type ON_BFACES <: AbstractAssemblyType end # facedofs on boundary faces
-abstract type ON_EDGES <: AbstractAssemblyType end  # edgedofs on all edges
-abstract type ON_BEDGES <: AbstractAssemblyType end # edgedofs on boundary edges
+abstract type AbstractAssemblyType end 
+abstract type AT_NODES <: AbstractAssemblyType end  # at nodes (only available for H1 conforming interpolation)
+abstract type ON_CELLS <: AbstractAssemblyType end  # on all cells 
+abstract type ON_FACES <: AbstractAssemblyType end  # on all faces
+abstract type ON_IFACES <: ON_FACES end  # on interior faces
+abstract type ON_BFACES <: AbstractAssemblyType end # on boundary faces
+abstract type ON_EDGES <: AbstractAssemblyType end  # on all edges
+abstract type ON_BEDGES <: AbstractAssemblyType end # on boundary edges
 
 GridComponentNodes4AssemblyType(::Type{ON_CELLS}) = CellNodes
 GridComponentNodes4AssemblyType(::Type{<:ON_FACES}) = FaceNodes

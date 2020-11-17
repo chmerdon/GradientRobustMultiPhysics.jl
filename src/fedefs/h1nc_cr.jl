@@ -39,51 +39,33 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1CR}
     FES.ndofs = nfaces * ncomponents
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1CR}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
-    xCoords = FE.xgrid[Coordinates]
-    xdim = size(xCoords,1)
-    x = zeros(Float64,xdim)
-    xFaceNodes = FE.xgrid[FaceNodes]
-    nfaces = num_sources(xFaceNodes)
-    nnodes4item::Int = 0
-    FEType = eltype(FE)
-    ncomponents::Int = get_ncomponents(FEType)
-    result = zeros(Float64,ncomponents)
-    if length(dofs) == 0 # interpolate at all dofs
-        for face = 1 : nfaces
-            #compute face midpoints
-            fill!(x,0.0)
-            nnodes4item = num_targets(xFaceNodes,face)
-            for j=1:xdim
-                for k=1:nnodes4item
-                    x[j] += xCoords[j,xFaceNodes[k,face]]
-                end
-                x[j] /= nnodes4item
-            end
-            exact_function!(result,x)
-            for c = 1 : ncomponents
-                Target[face+(c-1)*nfaces] = result[c]
-            end
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1CR}
+    # preserve face means
+    xItemVolumes = FE.xgrid[FaceVolumes]
+    xItemNodes = FE.xgrid[FaceNodes]
+    nitems = num_sources(xItemNodes)
+    ncomponents = get_ncomponents(FEType)
+    offset4component = 0:nitems:ncomponents*nitems
+    if items == []
+        items = 1 : nitems
+    end
+
+    # compute exact face means
+    facemeans = zeros(Float64,ncomponents,nitems)
+    integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!, bonus_quadorder, ncomponents; items = items)
+    for item in items
+        for c = 1 : ncomponents
+            Target[offset4component[c]+item] = facemeans[c,item] / xItemVolumes[item]
         end
-    else
-        face = 0
-        for j in dofs 
-            face = mod(j-1,nfaces)+1
-            c = Int(ceil(j/nfaces))
-            #compute face midpoints
-            fill!(x,0.0)
-            nnodes4item = num_targets(xFaceNodes,face)
-            for j=1:xdim
-                for k=1:nnodes4item
-                    x[j] += xCoords[j,xFaceNodes[k,face]]
-                end
-                x[j] /= nnodes4item
-            end
-            exact_function!(result,x)
-            Target[j] = result[c]
-        end    
-    end    
+    end
 end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1CR}
+    # delegate cell faces to face interpolation
+    subitems = slice(FE.xgrid[CellFaces], items)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+end
+
 
 # BEWARE
 #

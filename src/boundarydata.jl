@@ -98,6 +98,7 @@ function boundarydata!(
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     xBFaceDofs = FE.dofmaps[BFaceDofs]
+    xBFaces = FE.xgrid[BFaces]
     nbfaces = num_sources(xBFaceDofs)
     xBFaceRegions = FE.xgrid[BFaceRegions]
 
@@ -112,23 +113,25 @@ function boundarydata!(
         # find Dirichlet dofs
         for r = 1 : length(InterDirichletBoundaryRegions)
             bregiondofs = []
+            ibfaces = []
             for bface = 1 : nbfaces
                 if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
+                    append!(ibfaces,xBFaces[bface])
                     append!(bregiondofs,xBFaceDofs[:,bface])
                 end
             end    
             bregiondofs = Base.unique(bregiondofs)
             bregion = InterDirichletBoundaryRegions[r]
-            if O.timedependent[bregion] == true
-                    function bregion_data_at_time(result, input)
-                        O.data4bregion[bregion](temp,x,time)
-                    end   
-                interpolate!(Target, bregion_data_at_time; dofs = bregiondofs)
-            else
-                interpolate!(Target, O.data4bregion[bregion]; dofs = bregiondofs)
-            end
             append!(fixed_dofs,bregiondofs)
-            bregiondofs = []
+            if O.timedependent[bregion] == true
+                function bregion_data_at_time(result, input)
+                    O.data4bregion[bregion](temp,x,time)
+                end   
+                interpolate!(Target, ON_FACES, bregion_data_at_time; items = ibfaces)
+            else
+                interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ibfaces)
+            end
+
         end   
 
         if verbosity > 0
@@ -210,7 +213,6 @@ function boundarydata!(
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         elseif Dboperator == NormalFlux
             xFaceNormals = FE.xgrid[FaceNormals]
-            xBFaces = FE.xgrid[BFaces]
             function bnd_rhs_function_hdiv()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, bface)
@@ -229,7 +231,6 @@ function boundarydata!(
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
             xFaceNormals = FE.xgrid[FaceNormals]
-            xBFaces = FE.xgrid[BFaces]
             function bnd_rhs_function_hcurl2d()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, bface)

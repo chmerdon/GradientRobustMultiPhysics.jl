@@ -32,10 +32,14 @@ function init!(FES::FESpace{FEType}) where {FEType <: HDIVBDM1}
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVBDM1}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 1)
-   
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVBDM1}
+    ncomponents = get_ncomponents(FEType)
+    if items == []
+        items = 1 : num_sources(FE.xgrid[FaceNodes])
+    end
+
     # integrate normal flux of exact_function over edges
-    ncomponents = get_ncomponents(eltype(FE))
     xFaceNormals = FE.xgrid[FaceNormals]
     nfaces = num_sources(xFaceNormals)
     function normalflux_eval()
@@ -49,8 +53,8 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVBDM1}, 
         end   
     end   
 
-    indicesRT0 = Array{Int32,1}(1:2:2*nfaces)
-    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
+    # integrate normal flux with linear weight 2*(x - 1//2) of exact_function over edges
+    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
     function normalflux2_eval()
         temp = zeros(Float64,ncomponents)
         function closure(result, x, face, xref)
@@ -62,7 +66,13 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVBDM1}, 
             result[1] *= 2*(xref[1] - 1//2)
         end   
     end   
-    integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; item_dependent_integrand = true, index_offset = nfaces)
+    integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; items = items, item_dependent_integrand = true, index_offset = nfaces)
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVBDM1}
+    # delegate cell faces to face interpolation
+    subitems = slice(FE.xgrid[CellFaces], items)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
 end
 
 

@@ -1,4 +1,3 @@
-
 # this method calls the interpolate! method specified by the finite element if available
 function interpolate!(Target::FEVectorBlock, source_function!::Function; dofs = [], verbosity::Int = 0, bonus_quadorder::Int = 0, time = 0)
     if verbosity > 0
@@ -10,9 +9,27 @@ function interpolate!(Target::FEVectorBlock, source_function!::Function; dofs = 
     # check if function is time-dependent
     if applicable(source_function!,[0],0,0)
         source_function_fixt!(result,x) = source_function!(result,x,time)
-        interpolate!(Target, Target.FES, source_function_fixt!; dofs = dofs, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, Target.FES, ON_CELLS, source_function_fixt!; bonus_quadorder = bonus_quadorder)
     else
-        interpolate!(Target, Target.FES, source_function!; dofs = dofs, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, Target.FES, ON_CELLS, source_function!; bonus_quadorder = bonus_quadorder)
+    end
+end
+
+# this method calls the interpolate! method specified by the finite element if available
+function interpolate!(Target::FEVectorBlock, AT::Type{<:AbstractAssemblyType}, source_function!::Function; items = [], verbosity::Int = 0, bonus_quadorder::Int = 0, time = 0)
+    if verbosity > 0
+        println("\nINTERPOLATING")
+        println("=============")
+        println("     target = $(Target.name)")
+        println("         AT = $AT")
+        println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
+    end
+    # check if function is time-dependent
+    if applicable(source_function!,[0],0,0)
+        source_function_fixt!(result,x) = source_function!(result,x,time)
+        interpolate!(Target, Target.FES, AT, source_function_fixt!; items = items, bonus_quadorder = bonus_quadorder)
+    else
+        interpolate!(Target, Target.FES, AT, source_function!; items = items, bonus_quadorder = bonus_quadorder)
     end
 end
 

@@ -34,9 +34,13 @@ function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT0}
 
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT0}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 1)
-    # integrate normal flux of exact_function over edges
-    ncomponents = get_ncomponents(eltype(FE))
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT0}
+    ncomponents = get_ncomponents(FEType)
+    if items == []
+        items = 1 : num_sources(FE.xgrid[FaceNodes])
+    end
+
+    # compute exact face means
     xFaceNormals = FE.xgrid[FaceNormals]
     function normalflux_eval()
         temp = zeros(Float64,ncomponents)
@@ -48,7 +52,14 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:HDIVRT0}, e
             end 
         end   
     end   
-    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; item_dependent_integrand = true)
+    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT0}
+    # delegate cell faces to node interpolation
+    subitems = slice(FE.xgrid[CellFaces], items)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
 end
 
 

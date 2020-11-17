@@ -15,7 +15,7 @@ function reference_domain(EG::Type{<:AbstractElementGeometry}, T::Type{<:Real} =
     xCellNodes[:] = 1:nnodes_for_geometry(EG)
     xgrid[CellNodes] = xCellNodes
     xgrid[CellGeometries] = VectorOfConstants(EG,1);
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,1)
+    xgrid[CellRegions]=ones(Int32,1)
     xgrid[BFaceRegions]=Array{Int32,1}(1:nfaces_for_geometry(EG))
     xgrid[BFaceNodes]=Array{Int32,2}(face_enum_rule(EG)')
     xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(EG, 1), nfaces_for_geometry(EG))
@@ -45,7 +45,7 @@ function grid_unitcube(::Type{Tetrahedron3D})
     xgrid[CellNodes] = xCellNodes
     xgrid[CellGeometries] = VectorOfConstants(Tetrahedron3D,6);
     ncells = num_sources(xCellNodes)
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    xgrid[CellRegions]=ones(Int32,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4,5,5,6,6])
     xBFaceNodes=Array{Int32,2}([1 3 2; 1 4 3; 1 2 6;1 6 5;2 3 7;2 7 6;3 4 7;7 4 8;8 4 1;1 5 8; 5 6 7; 5 7 8]')
     xgrid[BFaceNodes]=xBFaceNodes
@@ -72,7 +72,7 @@ function grid_unitsquare(::Type{<:Triangle2D}; scale = [1,1], shift = [0,0])
     xgrid[Coordinates] = xCoordinates
     xgrid[CellNodes]=Array{Int32,2}([1 2 5; 2 3 5; 3 4 5; 4 1 5]')
     xgrid[CellGeometries]=VectorOfConstants(Triangle2D,4)
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,4)
+    xgrid[CellRegions]=ones(Int32,4)
     xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4])
     xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 1]')
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,4)
@@ -91,8 +91,8 @@ function grid_lshape(::Type{<:Triangle2D}; scale = [1,1], shift = [0,0])
     end
     xgrid[Coordinates] = xCoordinates
     xgrid[CellNodes]=Array{Int32,2}([4 2 3; 2 4 1; 6 4 5; 4 6 1; 6 8 1; 8 6 7]')
-    xgrid[CellGeometries]=VectorOfConstants(Triangle2D,46)
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,6)
+    xgrid[CellGeometries]=VectorOfConstants(Triangle2D,6)
+    xgrid[CellRegions]=Array{Int32,1}([1,1,1,1,1,1])
     xgrid[BFaceRegions]=Array{Int32,1}([1,2,3,4,5,6,7,8])
     xgrid[BFaceNodes]=Array{Int32,2}([1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8; 8 1]')
     xgrid[BFaceGeometries]=VectorOfConstants(Edge1D,8)
@@ -118,7 +118,7 @@ function grid_unitsquare_mixedgeometries()
     xgrid[CellNodes] = xCellNodes
     xgrid[CellGeometries] = xCellGeometries
     ncells = num_sources(xCellNodes)
-    xgrid[CellRegions]=VectorOfConstants{Int32}(1,ncells)
+    xgrid[CellRegions]=ones(Int32,ncells)
     xgrid[BFaceRegions]=Array{Int32,1}([1,1,2,2,3,3,4,4])
     xBFaceNodes=Array{Int32,2}([1 2; 2 3; 3 6; 6 9; 9 8; 8 7; 7 4; 4 1]')
     xgrid[BFaceNodes]=xBFaceNodes

@@ -48,22 +48,12 @@ function init!(FES::FESpace{FEType}) where {FEType <: HCURLN0}
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 1) where FEType<:HCURLN0
-    # integrate normal flux of exact_function over edges
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HCURLN0}
     edim = get_ncomponents(FEType)
-    if edim == 2
-        ncomponents = get_ncomponents(eltype(FE))
-        xFaceNormals = FE.xgrid[FaceNormals]
-        function tangentflux_eval2d()
-            temp = zeros(Float64,ncomponents)
-            function closure(result, x, face, xref)
-                exact_function!(temp,x) 
-                result[1] = - temp[1] * xFaceNormals[2,face] # rotated normal = tangent
-                result[1] += temp[2] * xFaceNormals[1,face]
-            end   
-        end   
-        integrate!(Target, FE.xgrid, ON_FACES, tangentflux_eval2d(), bonus_quadorder, 1; item_dependent_integrand = true)
-    elseif edim == 3
+    if edim == 3
+        if items == []
+            items = 1 : nitems
+        end
         ncomponents = get_ncomponents(eltype(FE))
         xEdgeTangents = FE.xgrid[EdgeTangents]
         function tangentflux_eval3d()
@@ -75,7 +65,42 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exac
                 result[1] += temp[3] * xEdgeTangents[3,edge]
             end   
         end   
-        integrate!(Target, FE.xgrid, ON_EDGES, tangentflux_eval3d(), bonus_quadorder, 1; item_dependent_integrand = true)
+        integrate!(Target, FE.xgrid, ON_EDGES, tangentflux_eval3d(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+    end
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HCURLN0}
+    edim = get_ncomponents(FEType)
+    if edim == 2
+        if items == []
+            items = 1 : nitems
+        end
+        ncomponents = get_ncomponents(eltype(FE))
+        xFaceNormals = FE.xgrid[FaceNormals]
+        function tangentflux_eval2d()
+            temp = zeros(Float64,ncomponents)
+            function closure(result, x, face, xref)
+                exact_function!(temp,x) 
+                result[1] = - temp[1] * xFaceNormals[2,face] # rotated normal = tangent
+                result[1] += temp[2] * xFaceNormals[1,face]
+            end   
+        end   
+        integrate!(Target, FE.xgrid, ON_FACES, tangentflux_eval2d(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+    elseif edim == 3
+
+    end
+end
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HCURLN0}
+    edim = get_ncomponents(FEType)
+    if edim == 2
+        # delegate cell faces to face interpolation
+        subitems = slice(FE.xgrid[CellFaces], items)
+        interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    elseif edim == 3
+        # delegate cell edges to edge interpolation
+        subitems = slice(FE.xgrid[CellEdges], items)
+        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
     end
 end
 

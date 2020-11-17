@@ -64,117 +64,72 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1P2}
 
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2}, exact_function!::Function; dofs = [], bonus_quadorder::Int = 0)
-    xCoords = FE.xgrid[Coordinates]
-    xCellNodes = FE.xgrid[CellNodes]
-    xFaceNodes = FE.xgrid[FaceNodes]
-    nnodes = num_sources(xCoords)
-    ncells = num_sources(xCellNodes)
-    nfaces = num_sources(xFaceNodes)
-    FEType = eltype(FE)
-    ncomponents::Int = get_ncomponents(FEType)
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
     edim = get_edim(FEType)
+    nnodes = size(FE.xgrid[Coordinates],2)
+    if edim == 1
+        nedges = num_sources(FE.xgrid[CellNodes])
+    elseif edim == 2
+        nedges = num_sources(FE.xgrid[FaceNodes])
+    elseif edim == 3
+        nedges = num_sources(FE.xgrid[EdgeNodes])
+    end
 
-    result = zeros(Float64,ncomponents)
-    xdim = size(xCoords,1)
-    x = zeros(Float64,xdim)
+    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes + nedges)
 
-    nnodes4item = 0
-    offset4component = [0, nnodes+nfaces]
-    face = 0
-    if length(dofs) == 0 # interpolate at all dofs
-        # interpolate at nodes
-        for j = 1 : nnodes
-            for k=1:xdim
-                x[k] = xCoords[k,j]
-            end    
-            exact_function!(result,x)
-            for k = 1 : ncomponents
-                Target[j+offset4component[k]] = result[k]
-            end    
-        end
+end
 
-        # preserve edge integrals 
-        if edim == 1 # edges are cells
-            xItemNodes = FE.xgrid[CellNodes]
-            xItemVolumes = FE.xgrid[CellVolumes]
-            xItemDofs = FE.dofmaps[CellDofs]
-            AT = ON_CELLS
-        elseif edim == 2 # edges are faces
-            xItemNodes = FE.xgrid[FaceNodes]
-            xItemVolumes = FE.xgrid[FaceVolumes]
-            xItemDofs = FE.dofmaps[FaceDofs]
-            AT = ON_FACES
-        elseif edgim == 3 # edges are edges
-            #todo
-        end
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
+    edim = get_edim(FEType)
+    if edim == 3
+        # delegate edge nodes to node interpolation
+        subitems = slice(FE.xgrid[EdgeNodes], items)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
 
-        # compute exact edge means
-        nitems = num_sources(xItemNodes)
-        edgemeans = zeros(Float64,ncomponents,nitems)
-        integrate!(edgemeans, FE.xgrid, AT, exact_function!, bonus_quadorder, ncomponents)
+        # perform edge mean interpolation
+        ensure_edge_moments!(Target, FE, ON_EDGES, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
+    end
+end
 
-        for item = 1 : nitems
-            for c = 1 : ncomponents
-                # subtract edge mean value of P1 part
-                for dof = 1 : 2
-                    edgemeans[c,item] -= Target[xItemDofs[(c-1)*3 + dof,item]] * xItemVolumes[item] / 6
-                end
-                # set P2 edge bubble such that edge mean is preserved
-                Target[xItemDofs[3*c,item]] = 3 // 2 * edgemeans[c,item] / xItemVolumes[item]
-            end
-        end
-    else
-        item = 0
-        if edim == 2
-            for j in dofs 
-                item = mod(j-1,nnodes+nfaces)+1
-                c = Int(ceil(j/(nnodes+nfaces)))
-                if item <= nnodes
-                    for k=1:xdim
-                        x[k] = xCoords[k,item]
-                    end    
-                    exact_function!(result,x)
-                    Target[j] = result[c]
-                elseif item > nnodes && item <= nnodes+nfaces
-                    item = j - nnodes
-                    nnodes4item = num_targets(xFaceNodes,item)
-                    for k=1:xdim
-                        x[k] = 0
-                        for n=1:nnodes4item
-                            x[k] += xCoords[k,xFaceNodes[n,item]]
-                        end
-                        x[k] /= nnodes4item    
-                    end 
-                    exact_function!(result,x)
-                    Target[j] = result[c]
-                end
-            end
-        elseif edim == 1
-            for j in dofs 
-                item = mod(j-1,nnodes+ncells)+1
-                c = Int(ceil(j/(nnodes+ncells)))
-                if item <= nnodes
-                    for k=1:xdim
-                        x[k] = xCoords[k,item]
-                    end    
-                    exact_function!(result,x)
-                    Target[j] = result[c]
-                elseif item > nnodes && item <= nnodes+ncells
-                    item = j - nnodes
-                    nnodes4item = num_targets(xCellNodes,item)
-                    for k=1:xdim
-                        x[k] = 0
-                        for n=1:nnodes4item
-                            x[k] += xCoords[k,xCellNodes[n,item]]
-                        end
-                        x[k] /= nnodes4item    
-                    end 
-                    exact_function!(result,x)
-                    Target[j] = result[c]
-                end
-            end
-        end
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
+    edim = get_edim(FEType)
+    if edim == 2
+        # delegate face nodes to node interpolation
+        subitems = slice(FE.xgrid[FaceNodes], items)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+
+        # perform face mean interpolation
+        ensure_edge_moments!(Target, FE, ON_FACES, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
+    elseif edim == 3
+        # delegate face edges to edge interpolation
+        subitems = slice(FE.xgrid[FaceEdges], items)
+        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    elseif edim == 1
+        # delegate face nodes to node interpolation
+        subitems = slice(FE.xgrid[FaceNodes], items)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    end
+end
+
+
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
+    edim = get_edim(FEType)
+    ncells = num_sources(FE.xgrid[CellNodes])
+    if edim == 2
+        # delegate cell faces to face interpolation
+        subitems = slice(FE.xgrid[CellFaces], items)
+        interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    elseif edim == 3
+        # delegate cell edges to edge interpolation
+        subitems = slice(FE.xgrid[CellEdges], items)
+        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    elseif edim == 1
+        # delegate cell nodes to node interpolation
+        subitems = slice(FE.xgrid[CellNodes], items)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+
+        # preserve cell integral
+        ensure_edge_moments!(Target, FE, ON_CELLS, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
     end
 end
 
