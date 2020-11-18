@@ -91,11 +91,11 @@ refcoords_for_geometry(::Type{<:Tetrahedron3D}) = [0 0 0; 1 0 0; 0 1 0; 0 0 1]
 nfaces_for_geometry(::Type{<:Tetrahedron3D}) = 4
 nnodes_for_geometry(::Type{<:Tetrahedron3D}) = 4
 nedges_for_geometry(::Type{<:Tetrahedron3D}) = 6
-face_enum_rule(::Type{<:Tetrahedron3D}) = [1 3 2; 1 2 4; 2 3 4; 3 1 4]
+face_enum_rule(::Type{<:Tetrahedron3D}) = [1 3 2; 1 2 4; 2 3 4; 1 4 3]
 facetype_of_cellface(P1::Type{<:Tetrahedron3D},P2::Type{<:Tetrahedron3D}, k) = Triangle2D
 facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
 edge_enum_rule(::Type{<:Tetrahedron3D}) = [1 2; 1 3; 1 4; 2 3; 2 4; 3 4]
-celledges_for_cellface(::Type{<:Tetrahedron3D}) = [2 4 1; 1 5 3; 4 6 5; 2 3 6]
+celledges_for_cellface(::Type{<:Tetrahedron3D}) = [2 4 1; 1 5 3; 4 6 5; 3 6 2]
 
 xrefFACE2xrefCELL(::Type{<:Tetrahedron3D}) = [ (xref4FACE) -> [xref4FACE[1],xref4FACE[2],0],
                                                (xref4FACE) -> [xref4FACE[1],0, xref4FACE[2]], 

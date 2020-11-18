@@ -61,7 +61,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
            for j = 1 : ncomponents
                result[1] += temp[j] * xFaceNormals[j,face]
            end
-           result[1] *= -(xref[1] - 1//2)
+           result[1] *= (xref[1] - 1//2)
        end   
    end   
    integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; items = items, item_dependent_integrand = true, index_offset = nfaces)
@@ -119,8 +119,8 @@ end
 
 function get_basis_normalflux_on_face(::Type{<:HDIVRT1}, ::Type{<:AbstractElementGeometry})
     function closure(refbasis,xref)
-        refbasis[1,1] = 1                 # normal-flux of RT0 function on single face
-        refbasis[2,1] = -12*(xref[1]-0.5) # linear normal-flux of RT1 function
+        refbasis[1,1] = 1                # normal-flux of RT0 function on single face
+        refbasis[2,1] = 12*(xref[1]-1//2) # linear normal-flux of RT1 function
     end
 end
 
@@ -128,13 +128,13 @@ function get_basis_on_cell(::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
     function closure(refbasis,xref)
         temp = 0.5 - xref[1] - xref[2]
         # RT0 basis
-        refbasis[1,:] .= [xref[1], xref[2]-1.0];
+        refbasis[1,:] .= [xref[1], xref[2]-1];
         refbasis[3,:] .= [xref[1], xref[2]];
-        refbasis[5,:] .= [xref[1]-1.0, xref[2]];
+        refbasis[5,:] .= [xref[1]-1, xref[2]];
         # additional face basis functions
-        refbasis[2,:] .= 12*temp .* refbasis[1,:];
-        refbasis[4,:] .= (12*(xref[1] - 1//2)) .* refbasis[3,:];
-        refbasis[6,:] .= (12*(xref[2] - 1//2)) .* refbasis[5,:];
+        refbasis[2,:] .= -12*temp .* refbasis[1,:];
+        refbasis[4,:] .= -(12*(xref[1] - 1//2)) .* refbasis[3,:];
+        refbasis[6,:] .= -(12*(xref[2] - 1//2)) .* refbasis[5,:];
         # interior functions
         refbasis[7,:] .= 12*xref[2] .* refbasis[1,:];
         refbasis[8,:] .= 12*xref[1] .* refbasis[5,:];
@@ -147,7 +147,7 @@ function get_coefficients_on_cell!(FE::FESpace{<:HDIVRT1}, EG::Type{<:AbstractEl
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
         fill!(coefficients,1.0)
-        # multiplication with normal vector signs
+        # multiplication with normal vector signs (only RT0)
         for j = 1 : nfaces,  k = 1 : size(coefficients,1)
             coefficients[k,2*j-1] = xCellFaceSigns[j,cell];
         end

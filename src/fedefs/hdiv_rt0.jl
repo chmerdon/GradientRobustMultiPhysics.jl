@@ -53,11 +53,10 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
         end   
     end   
     integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
-
 end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT0}
-    # delegate cell faces to node interpolation
+    # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
 end
@@ -71,39 +70,39 @@ end
 
 function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Triangle2D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= [xref[1], xref[2]-1.0]
+        refbasis[1,:] .= [xref[1], xref[2]-1]
         refbasis[2,:] .= [xref[1], xref[2]]
-        refbasis[3,:] .= [xref[1]-1.0, xref[2]]
+        refbasis[3,:] .= [xref[1]-1, xref[2]]
     end
 end
 
 function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Quadrilateral2D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= [0.0, xref[2]-1.0]
-        refbasis[2,:] .= [xref[1], 0.0]
-        refbasis[3,:] .= [0.0, xref[2]]
-        refbasis[4,:] .= [xref[1]-1.0, 0.0]
+        refbasis[1,:] .= [0, xref[2]-1]
+        refbasis[2,:] .= [xref[1], 0]
+        refbasis[3,:] .= [0, xref[2]]
+        refbasis[4,:] .= [xref[1]-1, 0]
     end
 end
 
 function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= 2*[xref[1], xref[2], xref[3]-1.0]
-        refbasis[2,:] .= 2*[xref[1], xref[2]-1.0, xref[3]]
+        refbasis[1,:] .= 2*[xref[1], xref[2], xref[3]-1]
+        refbasis[2,:] .= 2*[xref[1], xref[2]-1, xref[3]]
         refbasis[3,:] .= 2*[xref[1], xref[2], xref[3]]
-        refbasis[4,:] .= 2*[xref[1]-1.0, xref[2], xref[3]]
+        refbasis[4,:] .= 2*[xref[1]-1, xref[2], xref[3]]
     end
     # note: factor 2 is chosen, such that normal-flux integrated over faces is 1 again
 end
 
 function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= [0.0, 0.0, xref[3]-1.0]
-        refbasis[2,:] .= [0.0, xref[2]-1.0, 0.0]
-        refbasis[3,:] .= [xref[1], 0.0, 0.0]
-        refbasis[4,:] .= [0.0, xref[2], 0.0]
-        refbasis[5,:] .= [xref[1]-1.0, 0.0, 0.0]
-        refbasis[6,:] .= [0.0, 0.0, xref[3]]
+        refbasis[1,:] .= [0, 0, xref[3]-1]
+        refbasis[2,:] .= [0, xref[2]-1, 0]
+        refbasis[3,:] .= [xref[1], 0, 0]
+        refbasis[4,:] .= [0, xref[2], 0]
+        refbasis[5,:] .= [xref[1]-1, 0, 0]
+        refbasis[6,:] .= [0, 0, xref[3]]
     end
 end
 
