@@ -43,7 +43,7 @@ export Tangent4ElemType!
 
 include("gridstuff.jl")
 export Coordinates
-export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns, CellEdgeSigns
+export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns, CellFaceOrientations, CellEdgeSigns
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceEdges, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTangents
 export BFaces, BFaceCellPos, BFaceVolumes

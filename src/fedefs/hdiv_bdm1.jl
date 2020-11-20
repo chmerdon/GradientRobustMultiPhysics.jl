@@ -15,6 +15,7 @@ get_ndofs_on_face(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry1D
 get_ndofs_on_face(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 3
 get_ndofs_on_cell(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 2*nfaces_for_geometry(EG)
 get_ndofs_on_cell(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 3*nfaces_for_geometry(EG)
+get_ndofs_on_cell_all(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 4*nfaces_for_geometry(EG)
 
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Triangle2D}) = 1;
@@ -61,10 +62,10 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
             end 
         end   
     end   
-
-    # integrate normal flux with linear weight (x[1] - 1//2) of exact_function over edges
     integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
-    function normalflux2_eval()
+   
+    # integrate normal flux with linear weight (x[1] - 1//2) of exact_function over edges
+     function normalflux2_eval()
         temp = zeros(Float64,ncomponents)
         function closure(result, x, face, xref)
             exact_function!(temp,x)
@@ -77,10 +78,8 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end   
     integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; items = items, item_dependent_integrand = true, index_offset = nfaces)
 
-
     # integrate normal flux with linear weight (x[2] - 1//2) of exact_function over edges
     if ncomponents == 3
-        integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
         function normalflux3_eval()
             temp = zeros(Float64,ncomponents)
             function closure(result, x, face, xref)
@@ -141,8 +140,8 @@ end
 function get_basis_normalflux_on_face(::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry2D})
     function closure(refbasis,xref)
         refbasis[1,1] = 1
-        refbasis[2,1] = 24*(xref[2] - 1//3) + 12*(xref[1] - 1//3) # linear normal-flux of first BDM1 function
-        refbasis[3,1] = 24*(xref[1] - 1//3) + 12*(xref[2] - 1//3) # linear normal-flux of second BDM1 function
+        refbasis[2,1] = (24*(xref[1] - 1//3) + 12*(xref[2] - 1//3)) # linear normal-flux of first BDM1 function
+        refbasis[3,1] = (24*(xref[2] - 1//3) + 12*(xref[1] - 1//3)) # linear normal-flux of second BDM1 function
     end
 end
 
@@ -150,39 +149,145 @@ function get_basis_on_cell(::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D})
     function closure(refbasis, xref)
         # RT0 basis
         refbasis[1,:] .= 2*[xref[1], xref[2], xref[3]-1]
-        refbasis[4,:] .= 2*[xref[1], xref[2]-1, xref[3]]
-        refbasis[7,:] .= 2*[xref[1], xref[2], xref[3]]
-        refbasis[10,:] .= 2*[xref[1]-1, xref[2], xref[3]]
+        refbasis[5,:] .= 2*[xref[1], xref[2]-1, xref[3]]
+        refbasis[9,:] .= 2*[xref[1], xref[2], xref[3]]
+        refbasis[13,:] .= 2*[xref[1]-1, xref[2], xref[3]]
         # additional BDM1 functions on faces
+        # note: we define three additional functions per face
+        #       and later select only two linear independent ones that match the local enumeration/orientation
+        #       of the global/local face nodes + a possible sign change managed by coefficient_handler
         # face = [1 3 2]
         temp = 1 - xref[1] - xref[2] - xref[3]
-        refbasis[2,:] .= 12*refbasis[1,:] .+ 48*[                      0,      -1//2 * xref[2],temp + 1//2 * xref[2]] # phi3-weighted linear moment
-        refbasis[3,:] .= 12*refbasis[1,:] .+ 48*[        -1//2 * xref[1],                    0,temp + 1//2 * xref[1]] # phi2-weighted linear moment
+        # FACE1 [1,3,2], normal = [0,0,-1], |E| = 1/2, xref[3] = 0
+        # phi = [-gamma*phi2,-beta*phi3,alpha*phi1+beta*phi3+gamma*phi2]
+        # [J1,J2,J3] = linear moments of normal flux weighted with (phi_1-1/3), (phi_3-1/3), (phi_2-1/3)
+        refbasis[2,:] .= 2*[12*xref[1],0,12*temp-12*xref[1]]               # [1,0,-1]
+        refbasis[3,:] .= 2*[0,-12*xref[2],-12*temp+12*xref[2]]             # [0,-1,1]
+        refbasis[4,:] .= 2*[-12*xref[1],12*xref[2],-12*xref[2]+12*xref[1]] # [-1,1,0]
+        
+        # FACE2 [1 2 4], normal = [0,-1,0], |E| = 1/2, xref[2] = 0
+        # phi = [-beta*phi2,alpha*phi1+beta*phi2+gamma*phi4,-gamma*phi4]
+        # [J1,J2,J3] = linear moments of normal flux weighted with (phi_1-1/3), (phi_2-1/3), (phi_4-1/3)
+        refbasis[6,:] .= 2*[0,12*temp-12*xref[3],12*xref[3]]      # [1,0,-1]
+        refbasis[7,:] .= 2*[-12*xref[1],-12*temp+12*xref[1],0]    # [0,-1,1]
+        refbasis[8,:] .= 2*[12*xref[1],-12*xref[1]+12*xref[3],-12*xref[3]] # [-1,1,0]
 
-        # face = [1 2 4]
-        refbasis[5,:] .= 12*refbasis[4,:] .+ 48*[        -1//2 * xref[1],temp + 1//2 * xref[1],                    0] # phi2-weighted linear moment
-        refbasis[6,:] .= 12*refbasis[4,:] .+ 48*[                      0,temp + 1//2 * xref[3],      -1//2 * xref[3]] # phi4-weighted linear moment
-
-        # face = [2 3 4]
-        refbasis[8,:] .= 12*refbasis[7,:] .- 48*[                xref[1],     + 1//2 * xref[2],                    0] # phi3-weighted linear moment
-        refbasis[9,:] .= 12*refbasis[7,:] .- 48*[                xref[1],                    0,     + 1//2 * xref[3]] # phi4-weighted linear moment
-
-        # face = [1,4,3]
-        refbasis[11,:] .= 12*refbasis[10,:] .+ 48*[temp + 1//2 * xref[3],                    0,      -1//2 * xref[3]] # phi4-weighted linear moment
-        refbasis[12,:] .= 12*refbasis[10,:] .+ 48*[temp + 1//2 * xref[2],      -1//2 * xref[2],                    0] # phi3-weighted linear moment
+        # FACE3 [2 3 4], normal = [1,1,1]/sqrt(3), |E| = sqrt(3)/2, xref[1]+xref[2]+xref[3] = 1
+        # phi = [alpha*phi2,beta*phi3,gamma*phi4]
+        # [J1,J2,J3] = linear moments of normal flux weighted with (phi_2-1/3), (phi_3-1/3), (phi_4-1/3)
+        refbasis[10,:] .= -2*[12*xref[1],0,-12*xref[3]]  # [1,0,-1]
+        refbasis[11,:] .= -2*[-12*xref[1],12*xref[2],0]  # [0,-1,1]
+        refbasis[12,:] .= -2*[0,-12*xref[2],12*xref[3]]  # [-1,1,0]
+        
+        # FACE4 [1 4 3], normal = [-1,0,0], |E| = 1/2, xref[1] = 0
+        # phi = [alpha*phi1+beta*phi4+gamma*phi3,-gamma*phi3,-beta*phi4]
+        # [J1,J2,J3] = linear moments of normal flux weighted with (phi_1-1/3), (phi_4-1/3), (phi_3-1/3)
+        refbasis[14,:] .= 2*[12*temp-12*xref[2],12*xref[2],0]               # [1,0,-1]
+        refbasis[15,:] .= 2*[-12*temp+12*xref[3],0,-12*xref[3]]             # [0,-1,1]
+        refbasis[16,:] .= 2*[-12*xref[3]+12*xref[2],-12*xref[2],+12*xref[3]] # [-1,1,0]
     end
+
+    # ##testing
+    # refbasi = zeros(Rational,16,3)
+    # closure(refbasi,[1//3 1//3 0])
+    # println("refbasi normalflux at FACE 1 midpoint = $(-refbasi[:,3])")
+    # closure(refbasi,[1//3 0 1//3])
+    # println("refbasi normalflux at FACE 2 midpoint = $(-refbasi[:,2])")
+    # closure(refbasi,[1//3 1//3 1//3])
+    # println("refbasi normalflux at FACE 3 midpoint = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
+    # closure(refbasi,[0 1//3 1//3])
+    # println("refbasi normalflux at FACE 4 midpoint = $(-refbasi[:,1])")
+
+    # closure(refbasi,[2//3 1//3 0])
+    # println("refbasi normalflux at FACE 1 node 1 = $(-refbasi[:,3])")
+    # closure(refbasi,[0 2//3 0])
+    # println("refbasi normalflux at FACE 1 node 2 = $(-refbasi[:,3])")
+    # closure(refbasi,[1//3 0 0])
+    # println("refbasi normalflux at FACE 1 node 3 = $(-refbasi[:,3])")
+
+    # closure(refbasi,[1//3 0 2//3])
+    # println("refbasi normalflux at FACE 2 node 1 = $(-refbasi[:,2])")
+    # closure(refbasi,[0 0 1//3])
+    # println("refbasi normalflux at FACE 2 node 2 = $(-refbasi[:,2])")
+    # closure(refbasi,[2//3 0 0])
+    # println("refbasi normalflux at FACE 2 node 3 = $(-refbasi[:,2])")
+
+    # closure(refbasi,[0 1//3 2//3])
+    # println("refbasi normalflux at FACE 3 node 1 = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
+    # closure(refbasi,[2//3 0 1//3])
+    # println("refbasi normalflux at FACE 3 node 2 = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
+    # closure(refbasi,[1//3 2//3 0])
+    # println("refbasi normalflux at FACE 3 node 3 = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
+
+    # closure(refbasi,[0 1//3 0])
+    # println("refbasi normalflux at FACE 4 node 1 = $(-refbasi[:,1])")
+    # closure(refbasi,[0 2//3 1//3])
+    # println("refbasi normalflux at FACE 4 node 2 = $(-refbasi[:,1])")
+    # closure(refbasi,[0 0 2//3])
+    # println("refbasi normalflux at FACE 4 node 3 = $(-refbasi[:,1])")
+
+    return closure
 end
 
 
-function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry})
+function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
         fill!(coefficients,1.0)
         # multiplication with normal vector signs (only RT0)
         for j = 1 : nfaces,  k = 1 : size(coefficients,1)
-            coefficients[k,size(coefficients,1)*(j-1)+1] = xCellFaceSigns[j,cell];
+            coefficients[k,2*j-1] = xCellFaceSigns[j,cell];
         end
         return nothing
     end
 end  
+
+
+function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
+    xCellFaceSigns = FE.xgrid[CellFaceSigns]
+    nfaces = nfaces_for_geometry(EG)
+    function closure(coefficients, cell)
+        fill!(coefficients,1.0)
+        for j = 1 : nfaces,  k = 1 : size(coefficients,1)
+            coefficients[k,3*j-2] = xCellFaceSigns[j,cell]; # RT0
+            coefficients[k,3*j-1] = -1;
+            coefficients[k,3*j] = 1;
+        end
+        return nothing
+    end
+end  
+
+function get_basissubset_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
+    xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
+    xCellFaces = FE.xgrid[CellFaces]
+    xFaceNodes = FE.xgrid[FaceNodes]
+    xCellNodes = FE.xgrid[CellNodes]
+    nfaces = nfaces_for_geometry(EG)
+    orientation::Int32 = 0
+    face::Int32 = 0
+    face_rule = face_enum_rule(EG)
+    function closure(subset_ids, cell)
+        for j = 1 : nfaces
+            subset_ids[3*j-2] = 4*j-3; # always take the RT0 function
+            orientation = xCellFaceOrientations[j,cell]
+            face = xCellFaces[j,cell]
+            if orientation > 0 # cellface nodes and face nodes coincide
+                subset_ids[3*j-1] = 4*j-1; # second BDM1 function
+                subset_ids[3*j] = 4*j-2; # first BDM1 function
+            elseif orientation == -1 # first cellface node and face node coincide (otherwise reversed order)
+                subset_ids[3*j-1] = 4*j-2; # third
+                subset_ids[3*j] = 4*j-1; # second
+            elseif orientation == -2 # second cellface node and face node coincide (otherwise reversed order)
+                subset_ids[3*j-1] = 4*j;
+                subset_ids[3*j] = 4*j-2;
+            elseif orientation == -3 # third cellface node and face node coincide (otherwise reversed order)
+                subset_ids[3*j-1] = 4*j-1; # first
+                subset_ids[3*j] = 4*j; # second
+            end
+
+        end
+        return nothing
+    end
+end  
+ 

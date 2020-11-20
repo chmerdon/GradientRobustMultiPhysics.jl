@@ -27,6 +27,7 @@
 abstract type CellEdges <: AbstractGridAdjacency end
 abstract type CellFaces <: AbstractGridAdjacency end
 abstract type CellFaceSigns <: AbstractGridAdjacency end
+abstract type CellFaceOrientations <: AbstractGridAdjacency end
 abstract type CellEdgeSigns <: AbstractGridAdjacency end
 abstract type CellVolumes <: AbstractGridFloatArray1D end
 abstract type UniqueCellGeometries <: AbstractElementGeometries end
@@ -524,6 +525,84 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
     end
 end
 
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceOrientations})
+    xCellFaceSigns = xgrid[CellFaceSigns]
+    xCellGeometries = xgrid[CellGeometries]
+    xCellFaces = xgrid[CellFaces]
+    xFaceNodes = xgrid[FaceNodes]
+    xCellNodes = xgrid[CellNodes]
+    ncells = num_sources(xCellNodes)
+
+    EG = unique(xCellGeometries)
+    face_rules = Array{Array{Int,2},1}(undef,length(EG))
+    maxfacenodes = 0
+    for j = 1 : length(EG)
+        face_rules[j] = face_enum_rule(EG[j])
+        maxfacenodes = max(size(face_rules[j],2),maxfacenodes)
+    end
+    singleEG = false
+    if length(EG) == 1
+        singleEG = true
+        xCellFaceOrientations = deepcopy(xCellFaceSigns)
+    else
+        xCellFaceOrientations = zeros(Int32, maxfacenodes, ncells)
+    end
+
+    cellEG = EG[1]
+    face_rule = face_rules[1]
+    ncellfaces::Int = 0
+    nfacenodes::Int = 0
+    face::Int = 0
+    facenodes = zeros(Int32,maxfacenodes)
+    found_configuration::Bool = false
+    n::Int = 0
+    iEG::Int = 0
+    for cell = 1 : ncells
+        cellEG = xCellGeometries[cell]
+
+        # find EG index for geometry
+        for j=1:length(EG)
+            if cellEG == EG[j]
+                iEG = j
+                break;
+            end
+        end
+        face_rule = face_rules[iEG] # determines local enumeration of faces
+
+        # determine orientation
+        ncellfaces = num_targets(xCellFaces,cell)
+        for j = 1 : ncellfaces
+            face = xCellFaces[j,cell]
+            nfacenodes = num_targets(xFaceNodes,face)
+            if xCellFaceSigns[j,cell] == 1
+                for k = 1 : nfacenodes
+                    facenodes[k] = xFaceNodes[k,face]
+                end
+            else
+                for k = 1 : nfacenodes
+                    facenodes[nfacenodes + 1 - k] = xFaceNodes[k,face]
+                end
+            end
+            found_configuration = false
+            n = 0
+            while !found_configuration
+                n += 1
+                if facenodes[n] == xCellNodes[face_rule[j,1],cell]
+                    found_configuration = true
+                end
+            end
+            n = mod(n,3) + 1
+            if singleEG == false
+                xCellFaceOrientations.colentries[xCellFaceOrientations.colstart[cell]+j-1] *= n
+            else
+                xCellFaceOrientations[j, cell] *= n
+            end
+        end
+
+    end
+    return xCellFaceOrientations
+end
 
 # FaceEdges = Edges for each face (in 3D)
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceEdges})

@@ -144,6 +144,16 @@ function get_coefficients_on_cell!(FE::FESpace{<:AbstractFiniteElement}, ::Type{
         fill!(coefficients,1.0)
     end
 end    
+function get_basissubset_on_cell!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
+    function closure(subset_ids, cell)
+        # it is assumed that subset_ids is already 1 vector of form subset_ids = 1:ndofs
+        # meaning that all basis functions on the reference cells are used
+        # see 3D implementation of BDM1 for an example how this is can be used the choose
+        # different basis functions depending on the face orientations (which in 3D is not just a sign)
+        return nothing
+    end
+end  
+get_ndofs_on_cell_all(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs_on_cell(FEType, EG)
 
 
 
