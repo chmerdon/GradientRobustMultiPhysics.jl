@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.com/chmerdon/GradientRobustMultiPhysics.jl.svg?branch=master)](https://travis-ci.com/github/chmerdon/GradientRobustMultiPhysics.jl)
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/dev/index.html)
+[![DOI](https://zenodo.org/badge/229078096.svg)](https://zenodo.org/badge/latestdoi/229078096)
 
 
 # GradientRobustMultiPhysics.jl
@@ -22,6 +23,16 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - reconstruction operators for gradient-robust Stokes discretisation (BR>RT0 or CR>RT0 in 2D and 3D, more in progress)
 - export into vtk datafiles for external plotting, internal plotting in 2D via ExtendableGrids.plot
 
+
+### Installation
+via Julia package manager in Julia 1.5 or above:
+
+```@example
+# latest stable version
+(@v1.5) pkg> add GradientRobustMultiPhysics
+# latest version
+(@v1.5) pkg> add GradientRobustMultiPhysics#master
+```
 
 ### EXAMPLES 
 see documentation

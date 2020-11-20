@@ -33,6 +33,15 @@ Recently gradient-robustness was also connected to the design of well-balanced s
         [>Journal-Link<](https://doi.org/10.1016/j.cma.2020.113069)
         [>Preprint-Link<](https://arxiv.org/abs/1911.01295)
 
+## Installation
+via Julia package manager in Julia 1.5 or above:
+
+```@example
+# latest stable version
+(@v1.5) pkg> add GradientRobustMultiPhysics
+# latest version
+(@v1.5) pkg> add GradientRobustMultiPhysics#master
+```
 
 ## Dependencies on other Julia packages
 

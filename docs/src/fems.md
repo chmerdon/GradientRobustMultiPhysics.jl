@@ -17,11 +17,13 @@ AbstractFiniteElements
 
 
 Remarks:
-- each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and a generator for the degrees of freedom map of a [`FESpace`](@ref)
+- each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and degrees of freedom maps for the different [Assembly Types](@ref) (coded as a string)
 - the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated by FEBasisEvaluator.jl
 - depending on additional continuity properties of the element types more basis function sets are defined:
     - AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
     - AbstractHdivFiniteElements additionally have evaluations of nonzero normalfluxes of basisfunctions on faces/bfaces
+    - AbstractHcurlFiniteElements additionally have evaluations of nonzero tangentfluxes of basisfunctions on edges/bedges
+- each finite element has its own implemented standard interpolation that is shortly described below
 
 
 ## List of implemented Finite Elements
@@ -40,19 +42,80 @@ The following table lists all curently implemented finite elements. Click on the
 
 
 
-## Details
+## H1-conforming finite elements
 
-#### H1-conforming finite elements
+### P1 finite element
+
+The lowest-order current finite element that has a degree of freedom on each vertex of the grid. On simplices the
+basis functions coincide with the linear barycentric coordinates, on parallelepiped bi-linear functions are used
+(also known as Q1 element).
+
+The interpolation of a given function into this space performs point evaluations at the nodes.
+
 ```@docs
 H1P1
+```
+
+
+### MINI finite element
+
+The mini finite element adds cell bubles to the P1 element that are e.g. beneficial to define inf-sup stable finite element pairs for the Stokes problem.
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves its
+cell integral.
+
+```@docs
 H1MINI
-H1CR
+```
+
+### Bernardi-Raugel (BR) finite element
+
+The Bernardi-Raugel adds normal-weighted face bubbles to the P1 finite element and therefore is only available
+as a vector-valued element.
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves face integrals of its normal flux.
+
+```@docs
 H1BR
+```
+
+
+### P2 finite element
+
+The P2 finite element method on simplices equals quadratic polynomials. On the Triangle2D shape the degrees of freedom
+are associated with the three vertices and the three faces of the triangle. On the Tetrahedron3D shape the degrees of freedom are associated with the four verties and the six edges. On Parallelogram2D cubic Q2 element functions are used.
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves its face/edge integrals in 2D/3D.
+
+```@docs
 H1P2
+```
+
+### P2B finite element
+
+The P2B finite element adds additional cell bubles (in 2D and 3D) and face bubbles (only in 3D) that are e.g. used to define inf-sup stable finite element pairs for the Stokes problem.
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves its cell and face integrals in 2D and also edge integrals in 3D.
+
+```@docs
 H1P2B
 ```
 
-#### Hdiv-conforming finite elements
+### Crouzeix-Raviart (CR) finite element
+
+The Crouzeix-Raviart element associates one lowest-order function with each face. On the Triangle2D shape, the basis function of a face is one minus two times the nodal basis function of the opposite node. 
+
+The interpolation of a given function into this space preserves its face integrals.
+
+```@docs
+H1CR
+```
+
+
+
+## Hdiv-conforming finite elements
+
+These Raviart-Thomas and Brezzi-Douglas-Marini finite elements of lower order and their standard interpolations are available:
 
 ```@docs
 HDIVRT0
@@ -60,13 +123,20 @@ HDIVBDM1
 HDIVRT1
 ```
 
-#### Hcurl-conforming finite elements
+## Hcurl-conforming finite elements
+
+So far only the lowest order Nedelec element is available in 2D and 3D. On Triangle2D it has one degree of freedom for each face (i.e. the rotated RT0 element), on Tetrahedron3D it has one degree of freedom associated to each of the six edges.
+
+Its standard interpolation of a given functions preserves its tangential face/edge integrals.
 
 ```@docs
 HCURLN0
 ```
 
-#### L2-conforming finite elements
+## L2-conforming finite elements
+
+So far only P0 and P1 elements are available as L2-conforming elements. At the moment they have the same basis functions as the H1-foncorming counterparts and differ only in their dofmaps. It is planned to offer this
+in a more automatic fashion for all elements above in the future.
 
 ```@docs
 L2P0

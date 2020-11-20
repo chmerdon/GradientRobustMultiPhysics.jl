@@ -8,6 +8,8 @@ allowed ElementGeometries:
 - Edge1D (linear polynomials)
 - Triangle2D (linear polynomials)
 - Quadrilateral2D (Q1 space)
+- Tetrahedron3D (linear polynomials)
+- Hexahedron3D (Q1 space)
 """
 abstract type L2P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
