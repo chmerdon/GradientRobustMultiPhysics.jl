@@ -148,6 +148,18 @@ function run_basis_tests()
                     L2P1{2},
                     H1P2{2,2}]
     ExpectedOrders2D = [0,0,1,0,1,1,1,1,1,2]
+    TestCatalog3D = [
+                    HCURLN0{3},
+                    HDIVRT0{3},
+                    HDIVBDM1{3},
+                    L2P0{3},
+                    H1P1{3}, 
+                    H1CR{3},
+                    H1MINI{3,3},
+                    H1BR{3},
+                    L2P1{3},
+                    H1P2{3,3}]
+    ExpectedOrders3D = [0,0,1,0,1,1,1,1,1,2]
 
 
     @testset "Interpolations" begin
@@ -201,6 +213,32 @@ function run_basis_tests()
                 @test error < tolerance
             end
         end
+        println("\n")
+        println("============================")
+        println("Testing Interpolations in 3D")
+        println("============================")
+        for EG in [Tetrahedron3D]
+            xgrid = testgrid(EG)
+            for n = 1 : length(TestCatalog2D)
+                exact_function!, exactvalue = exact_function3D(ExpectedOrders3D[n])
+
+                # Define Bestapproximation problem via PDETooles_PDEProtoTypes
+                L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, length(exactvalue); bonus_quadorder = ExpectedOrders3D[n])
+
+                # choose FE and generate FESpace
+                FEType = TestCatalog3D[n]
+                FES = FESpace{FEType}(xgrid)
+
+                # interpolate
+                Solution = FEVector{Float64}("Interpolation",FES)
+                interpolate!(Solution[1], exact_function!; bonus_quadorder = ExpectedOrders3D[n])
+
+                # check error
+                error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+                println("EG = $EG | FEType = $FEType | order = $(ExpectedOrders3D[n]) | error = $error")
+                @test error < tolerance
+            end
+        end
         println("")
     end
 
@@ -230,13 +268,14 @@ function run_basis_tests()
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
+                    HDIVBDM1{3},
                     H1MINI{3,3},
                     H1BR{3},
                     H1CR{3},
                     H1P1{3},
                     L2P1{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,0,1,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,1,1,1,1,1,2]
 
     @testset "L2-Bestapproximations" begin
         println("\n")

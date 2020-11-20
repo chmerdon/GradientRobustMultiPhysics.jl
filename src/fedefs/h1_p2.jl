@@ -35,6 +35,7 @@ get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{FaceDofs}, EG::Type{<:AbstractEl
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry0D}) = "N1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1E1"
+get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
 
 
 function init!(FES::FESpace{FEType}) where {FEType <: H1P2}

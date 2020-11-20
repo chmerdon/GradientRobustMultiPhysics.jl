@@ -942,6 +942,20 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
         end    
     end
 
+    # enforce that BFaceNodes have same ordering as FaceNodes
+    newBFaceNodes = deepcopy(xBFaceNodes)
+    for bface = 1 : nbfaces
+        nodes_per_face = num_targets(xBFaceNodes,bface)
+        for j = 1 : nodes_per_bface
+            if typeof(xBFaceNodes) <: VariableTargetAdjacency
+                newBFaceNodes.colentries[newBFaceNodes.colstart[bface]+j-1] = xFaceNodes[j,xBFaces[bface]]
+            else
+                newBFaceNodes[j,bface] = xFaceNodes[j,xBFaces[bface]]
+            end
+        end
+    end
+    xgrid[BFaceNodes] = newBFaceNodes
+
    # xgrid[BFaceGeometries] = xBFaceGeometries
     xBFaces
 end

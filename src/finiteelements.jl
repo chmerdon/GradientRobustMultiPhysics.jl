@@ -58,6 +58,8 @@ ItemEdges4DofMap(::Type{BFaceDofs}) = FaceEdges
 Sub2Sup4DofMap(::Type{BFaceDofs}) = BFaces
 Sub2Sup4DofMap(::Type{BEdgeDofs}) = BEdges
 
+get_edim(FEType::Type{<:AbstractFiniteElement}) = 0 # not defined
+
 
 """
 $(TYPEDEF)
@@ -87,6 +89,10 @@ function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = "aut
         if FEType <: AbstractHcurlFiniteElement && get_ncomponents(FEType) == 3
             push!(dofmaps_needed, EdgeDofs)
             push!(dofmaps_needed, BEdgeDofs)
+        end
+        edim = get_edim(FEType)
+        if FEType <: H1P2 && edim == 3
+            push!(dofmaps_needed, EdgeDofs)
         end
     end
 
