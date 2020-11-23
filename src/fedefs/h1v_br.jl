@@ -493,17 +493,17 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FES
 
                     # BDM1 reconstruction coefficients for P1 functions on reference element
                     if xCellFaceOrientations[f,cell] > 0
-                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                    elseif xCellFaceOrientations[f,cell] == -1
                         coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
                         coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                    elseif xCellFaceOrientations[f,cell] == -2
-                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs3[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                    elseif xCellFaceOrientations[f,cell] == -3
+                    elseif xCellFaceOrientations[f,cell] == -1
                         coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                    elseif xCellFaceOrientations[f,cell] == -2
+                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
                         coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs3[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                    elseif xCellFaceOrientations[f,cell] == -3
+                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs3[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
                     end
                 end
             end

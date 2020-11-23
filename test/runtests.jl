@@ -663,7 +663,7 @@ function run_basis_tests()
             [H1CR{3}, L2P0{1}, HDIVRT0{3}],
             [H1BR{3}, L2P0{1}, HDIVRT0{3}],
             [H1BR{3}, L2P0{1}, HDIVBDM1{3}]]
-    ExpectedOrders3D = [[0,3],[0,3],[0,3]]
+    ExpectedOrders3D = [[0,3],[0,3],[1,3]]
 
     @testset "Reconstruction-Operators" begin
     println("\n")
