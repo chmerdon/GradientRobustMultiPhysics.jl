@@ -258,6 +258,10 @@ function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractE
     end
 end  
 
+# subset selector ensures that for every cell face
+# the RT0 and those two BDM1 face functions are chosen
+# such that reflect the two moments with respect to the second and third node
+# of the global face enumeration
 function get_basissubset_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
     xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
     xCellFaces = FE.xgrid[CellFaces]
@@ -274,18 +278,17 @@ function get_basissubset_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractEl
             face = xCellFaces[j,cell]
             if orientation > 0 # cellface nodes and face nodes coincide
                 subset_ids[3*j-1] = 4*j-1; # second BDM1 function
-                subset_ids[3*j] = 4*j-2; # first BDM1 function
+                subset_ids[3*j] = 4*j-2; # third BDM1 function
             elseif orientation == -1 # first cellface node and face node coincide (otherwise reversed order)
-                subset_ids[3*j-1] = 4*j-2; # third
-                subset_ids[3*j] = 4*j-1; # second
+                subset_ids[3*j-1] = 4*j-2; 
+                subset_ids[3*j] = 4*j-1; 
             elseif orientation == -2 # second cellface node and face node coincide (otherwise reversed order)
                 subset_ids[3*j-1] = 4*j;
                 subset_ids[3*j] = 4*j-2;
             elseif orientation == -3 # third cellface node and face node coincide (otherwise reversed order)
-                subset_ids[3*j-1] = 4*j-1; # first
-                subset_ids[3*j] = 4*j; # second
+                subset_ids[3*j-1] = 4*j-1;
+                subset_ids[3*j] = 4*j;
             end
-
         end
         return nothing
     end

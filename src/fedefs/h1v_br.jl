@@ -388,249 +388,128 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FES
     end
 end
 
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Triangle2D})
+function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
-    faces::Array{Int32,1} = [1,2,3]
+    face_rule::Array{Int,2} = face_enum_rule(EG)
+    node::Int = 0
+    face::Int = 0
     function closure(coefficients, cell::Int) 
-        
-        # fill!(coefficients,0.0) # not needed if coefficients is initialized with zeros
-
-        # get faces of cell
-        faces[1] = xCellFaces[1,cell]
-        faces[2] = xCellFaces[2,cell]
-        faces[3] = xCellFaces[3,cell]
-
-        # P1 first component RT0
-        coefficients[1,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-        coefficients[1,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-    
-        # P2 second component RT0
-        coefficients[4,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-        coefficients[4,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[5,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[5,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[6,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[6,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-    
-        # reconstruction coefficients for face bubbles on reference element (same as RT0, BDM1 coefficients are zero)
-        coefficients[7,1] = xFaceVolumes[faces[1]]
-        coefficients[8,2] = xFaceVolumes[faces[2]]
-        coefficients[9,3] = xFaceVolumes[faces[3]]
-        return nothing
-    end
-end
-
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Triangle2D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaceSigns = FER.xgrid[CellFaceSigns]
-    xCellFaces = FE.xgrid[CellFaces]
-    faces::Array{Int32,1} = [1,2,3]
-    function closure(coefficients, cell::Int) 
-        
-        # fill!(coefficients,0.0) # not needed if coefficients is initialized with zeros
-
-        # get faces of cell
-        faces[1] = xCellFaces[1,cell]
-        faces[2] = xCellFaces[2,cell]
-        faces[3] = xCellFaces[3,cell]
-
-        # P1 first component RT0
-        coefficients[1,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-        coefficients[1,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-    
-        # P1 first component BDM1/RT0
-        coefficients[1,6] =  1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]] * xCellFaceSigns[3,cell];
-        coefficients[1,2] = -1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[2,2] =  1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[2,4] = -1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[3,4] =  1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[3,6] = -1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]] * xCellFaceSigns[3,cell]
-    
-        # P2 second component RT0
-        coefficients[4,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-        coefficients[4,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[5,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[5,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[6,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[6,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-    
-        # P1 second component BDM1/RT0
-        coefficients[4,6] =  1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]] * xCellFaceSigns[3,cell]
-        coefficients[4,2] = -1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[5,2] =  1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[5,4] = -1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[6,4] =  1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[6,6] = -1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]] * xCellFaceSigns[3,cell]
-    
-        # reconstruction coefficients for face bubbles on reference element (same as RT0, BDM1 coefficients are zero)
-        coefficients[7,1] = xFaceVolumes[faces[1]]
-        coefficients[8,3] = xFaceVolumes[faces[2]]
-        coefficients[9,5] = xFaceVolumes[faces[3]]
-        return nothing
-    end
-end
-
-
-
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Parallelogram2D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
-    faces::Array{Int32,1} = [1,2,3,4]
-    function closure(coefficients, cell::Int) 
-        
-        # fill!(coefficients,0.0) # not needed if coefficients is initialized with zeros
-
-        # get faces of cell
-        faces[1] = xCellFaces[1,cell]
-        faces[2] = xCellFaces[2,cell]
-        faces[3] = xCellFaces[3,cell]
-        faces[4] = xCellFaces[4,cell]
-
-        # reconstruction coefficients for P1 basis functions on reference element
-        fill!(coefficients,0.0)
-        coefficients[1,4] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[1, faces[4]]
-        coefficients[1,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-        coefficients[4,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-        coefficients[4,4] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[1, faces[4]]
-        coefficients[5,4] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]]
-        coefficients[5,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[6,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[6,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[7,2] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[7,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-        coefficients[8,3] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-        coefficients[8,4] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]]
-
-        coefficients[ 9,1] = xFaceVolumes[faces[1]]
-        coefficients[10,2] = xFaceVolumes[faces[2]]
-        coefficients[11,3] = xFaceVolumes[faces[3]]
-        coefficients[12,4] = xFaceVolumes[faces[4]]
-        return nothing
-    end
-end
-
-
-
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Parallelogram2D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaceSigns = FER.xgrid[CellFaceSigns]
-    xCellFaces = FE.xgrid[CellFaces]
-    faces::Array{Int32,1} = [1,2,3,4]
-    function closure(coefficients, cell::Int) 
-        
-        # fill!(coefficients,0.0) # not needed if coefficients is initialized with zeros
-
-        # get faces of cell
-        faces[1] = xCellFaces[1,cell]
-        faces[2] = xCellFaces[2,cell]
-        faces[3] = xCellFaces[3,cell]
-        faces[4] = xCellFaces[4,cell]
-
-        # reconstruction coefficients for P1 basis functions on reference element
-        coefficients[1,7] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[1, faces[4]]
-        coefficients[1,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]]
-        coefficients[2,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]]
-        coefficients[3,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-        coefficients[4,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]]
-        coefficients[4,7] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[1, faces[4]]
-        coefficients[5,7] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]]
-        coefficients[5,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[6,1] = 1 // 2 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]]
-        coefficients[6,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[7,3] = 1 // 2 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]]
-        coefficients[7,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-        coefficients[8,5] = 1 // 2 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]]
-        coefficients[8,7] = 1 // 2 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]]
-
-        # face bubbles (only RT0)
-        coefficients[ 9,1] = xFaceVolumes[faces[1]]
-        coefficients[10,3] = xFaceVolumes[faces[2]]
-        coefficients[11,5] = xFaceVolumes[faces[3]]
-        coefficients[12,7] = xFaceVolumes[faces[4]]
-
-        # higher-order BDM1
-        coefficients[1,8] =  1 // 12 * xFaceVolumes[faces[4]] * xFaceNormals[1, faces[4]] * xCellFaceSigns[4,cell]
-        coefficients[1,2] = -1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[2,2] =  1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[1, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[2,4] = -1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[3,4] =  1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[1, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[3,6] = -1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]] * xCellFaceSigns[3,cell]
-        coefficients[4,6] =  1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[1, faces[3]] * xCellFaceSigns[3,cell]
-        coefficients[4,8] = -1 // 12 * xFaceVolumes[faces[4]] * xFaceNormals[1, faces[4]] * xCellFaceSigns[4,cell]
-        coefficients[5,8] =  1 // 12 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]] * xCellFaceSigns[4,cell]
-        coefficients[5,2] = -1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[6,2] =  1 // 12 * xFaceVolumes[faces[1]] * xFaceNormals[2, faces[1]] * xCellFaceSigns[1,cell]
-        coefficients[6,4] = -1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[7,4] =  1 // 12 * xFaceVolumes[faces[2]] * xFaceNormals[2, faces[2]] * xCellFaceSigns[2,cell]
-        coefficients[7,6] = -1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]] * xCellFaceSigns[3,cell]
-        coefficients[8,6] =  1 // 12 * xFaceVolumes[faces[3]] * xFaceNormals[2, faces[3]] * xCellFaceSigns[3,cell]
-        coefficients[8,8] = -1 // 12 * xFaceVolumes[faces[4]] * xFaceNormals[2, faces[4]] * xCellFaceSigns[4,cell]
-
-        return nothing
-    end
-end
-
-
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
-    faces::Array{Int32,1} = [1,2,3,4]
-    function closure(coefficients, cell::Int) 
-        # reconstruction coefficients for P1 basis functions on reference element
         # fill!(coefficients,0.0)
-        
-        faces[1] = xCellFaces[1,cell]
-        faces[2] = xCellFaces[2,cell]
-        faces[3] = xCellFaces[3,cell]
-        faces[4] = xCellFaces[4,cell]
-
-        for k = 1 : 3
-            # node 1
-            coefficients[4*k-3,4] = 1 // 3 * xFaceVolumes[faces[4]] * xFaceNormals[k, faces[4]]
-            coefficients[4*k-3,1] = 1 // 3 * xFaceVolumes[faces[1]] * xFaceNormals[k, faces[1]]
-            coefficients[4*k-3,2] = 1 // 3 * xFaceVolumes[faces[2]] * xFaceNormals[k, faces[2]]
-
-            # node 2
-            coefficients[4*k-2,1] = 1 // 3 * xFaceVolumes[faces[1]] * xFaceNormals[k, faces[1]]
-            coefficients[4*k-2,2] = 1 // 3 * xFaceVolumes[faces[2]] * xFaceNormals[k, faces[2]]
-            coefficients[4*k-2,3] = 1 // 3 * xFaceVolumes[faces[3]] * xFaceNormals[k, faces[3]]
-
-            # node 3
-            coefficients[4*k-1,1] = 1 // 3 * xFaceVolumes[faces[1]] * xFaceNormals[k, faces[1]]
-            coefficients[4*k-1,3] = 1 // 3 * xFaceVolumes[faces[3]] * xFaceNormals[k, faces[3]]
-            coefficients[4*k-1,4] = 1 // 3 * xFaceVolumes[faces[4]] * xFaceNormals[k, faces[4]]
-
-            # node 4
-            coefficients[4*k,2] = 1 // 3 * xFaceVolumes[faces[2]] * xFaceNormals[k, faces[2]]
-            coefficients[4*k,3] = 1 // 3 * xFaceVolumes[faces[3]] * xFaceNormals[k, faces[3]]
-            coefficients[4*k,4] = 1 // 3 * xFaceVolumes[faces[4]] * xFaceNormals[k, faces[4]]
+        for f = 1 : size(face_rule,1)
+            face = xCellFaces[f,cell]
+            # reconstruction coefficients for P1 functions on reference element
+            for n = 1 : size(face_rule,2)
+                node = face_rule[f,n]
+                for k = 1 : 2
+                    coefficients[size(face_rule,1)*(k-1)+node,f] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[k, face]
+                end
+            end
+            # reconstruction coefficients for face bubbles on reference element
+            coefficients[2*size(face_rule,1)+f,f] = xFaceVolumes[face]
         end
+        return nothing
+    end
+end
 
-        # reconstruction coefficients for face bubbles on reference element
-        coefficients[13,1] = xFaceVolumes[faces[1]]
-        coefficients[14,2] = xFaceVolumes[faces[2]]
-        coefficients[15,3] = xFaceVolumes[faces[3]]
-        coefficients[16,4] = xFaceVolumes[faces[4]]
+function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVRT0{3}}, EG::Type{<:Tetrahedron3D})
+    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xCellFaces = FE.xgrid[CellFaces]
+    face_rule::Array{Int,2} = face_enum_rule(EG)
+    node::Int = 0
+    face::Int = 0
+    function closure(coefficients, cell::Int) 
+        # fill!(coefficients,0.0)
+        for f = 1 : 4
+            face = xCellFaces[f,cell]
+            # reconstruction coefficients for P1 functions on reference element
+            for n = 1 : 3
+                node = face_rule[f,n]
+                for k = 1 : 3
+                    coefficients[4*(k-1)+node,f] = 1 // 3 * xFaceVolumes[face] * xFaceNormals[k, face]
+                end
+            end
+            # reconstruction coefficients for face bubbles on reference element
+            coefficients[12+f,f] = xFaceVolumes[face]
+        end
+        return nothing
+    end
+end
+
+function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}})
+    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xCellFaceSigns = FER.xgrid[CellFaceSigns]
+    xCellFaces = FE.xgrid[CellFaces]
+    face_rule::Array{Int,2} = face_enum_rule(EG)
+    node::Int = 0
+    face::Int = 0
+    BDM1_coeffs = [-1//12, 1//12]
+    function closure(coefficients, cell::Int) 
+        # fill!(coefficients,0.0)
+        for f = 1 : size(face_rule,1)
+            face = xCellFaces[f,cell]
+            for n = 1 : 2
+                node = face_rule[f,n]
+                for k = 1 : 2
+                    # RT0 reconstruction coefficients for P1 functions on reference element
+                    coefficients[size(face_rule,1)*(k-1)+node,2*(f-1)+1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[k, face]
+
+                    # BDM1 reconstruction coefficients for P1 functions on reference element
+                    coefficients[size(face_rule,1)*(k-1)+node,2*(f-1)+2] = BDM1_coeffs[n] * xFaceVolumes[face] * xFaceNormals[k, face] * xCellFaceSigns[f, cell]
+                end
+            end
+            # RT0 reconstruction coefficients for face bubbles on reference element
+            coefficients[size(face_rule,1)*2+f,2*(f-1)+1] = xFaceVolumes[face]
+        end
+        return nothing
+    end
+end
+
+
+
+function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})
+    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xCellFaceOrientations = FER.xgrid[CellFaceOrientations]
+    xCellFaces = FE.xgrid[CellFaces]
+    face_rule::Array{Int,2} = face_enum_rule(EG)
+    node::Int = 0
+    face::Int = 0
+    BDM1_coeffs1 = [-1//36, -1//36, 1//18]
+    BDM1_coeffs2 = [-1//36, 1//18, -1//36]
+    BDM1_coeffs3 = [1//18, -1//36, -1//36]
+    function closure(coefficients, cell::Int) 
+        # fill!(coefficients,0.0)
+        for f = 1 : 4
+            face = xCellFaces[f,cell]
+            for n = 1 : 3
+                node = face_rule[f,n]
+                for k = 1 : 3
+                    # RT0 reconstruction coefficients for P1 functions on reference element
+                    coefficients[4*(k-1)+node,3*(f-1)+1] = 1 // 3 * xFaceVolumes[face] * xFaceNormals[k, face]
+
+                    # BDM1 reconstruction coefficients for P1 functions on reference element
+                    if xCellFaceOrientations[f,cell] > 0
+                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                    elseif xCellFaceOrientations[f,cell] == -1
+                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                    elseif xCellFaceOrientations[f,cell] == -2
+                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs3[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                    elseif xCellFaceOrientations[f,cell] == -3
+                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs3[n] * xFaceVolumes[face] * xFaceNormals[k, face]
+                    end
+                end
+            end
+            # RT0 reconstruction coefficients for face bubbles on reference element
+            coefficients[12+f,3*(f-1)+1] = xFaceVolumes[face]
+        end
         return nothing
     end
 end

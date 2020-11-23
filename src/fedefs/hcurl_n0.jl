@@ -22,15 +22,15 @@ get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry1D}) =
 get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
 
 
-get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "F1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "f1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
 
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry3D}) = "E1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "E1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "E1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BEdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "I1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry3D}) = "e1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "e1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "e1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BEdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
 
 function init!(FES::FESpace{FEType}) where {FEType <: HCURLN0}
     ncomponents = get_ncomponents(FEType)

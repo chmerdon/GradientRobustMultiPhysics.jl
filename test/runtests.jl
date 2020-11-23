@@ -337,7 +337,7 @@ function run_basis_tests()
             exact_function!, exactvalue = exact_function3D(ExpectedOrders3D[n])
 
             # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-            Problem = L2BestapproximationProblem(exact_function!, 3, length(exactvalue); bestapprox_boundary_regions = [], bonus_quadorder = ExpectedOrders3D[n])
+            Problem = L2BestapproximationProblem(exact_function!, 3, length(exactvalue); bestapprox_boundary_regions = [1], bonus_quadorder = ExpectedOrders3D[n])
             L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, length(exactvalue); bonus_quadorder = ExpectedOrders3D[n])
 
             # choose FE and generate FESpace
@@ -661,8 +661,9 @@ function run_basis_tests()
     ExpectedOrders2D = [[0,3],[0,3],[1,3]]
     TestCatalog3D = [
             [H1CR{3}, L2P0{1}, HDIVRT0{3}],
-            [H1BR{3}, L2P0{1}, HDIVRT0{3}]]
-    ExpectedOrders3D = [[0,3],[0,3]]
+            [H1BR{3}, L2P0{1}, HDIVRT0{3}],
+            [H1BR{3}, L2P0{1}, HDIVBDM1{3}]]
+    ExpectedOrders3D = [[0,3],[0,3],[0,3]]
 
     @testset "Reconstruction-Operators" begin
     println("\n")
@@ -699,7 +700,7 @@ function run_basis_tests()
     println("======================================")
     xgrid = testgrid(Tetrahedron3D)
     for n = 1 : length(TestCatalog3D)
-        exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders2D[n][2])
+        exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders3D[n][2])
 
         # Define Stokes problem via PDETooles_PDEProtoTypes with reconstruction operator in rhs
         FETypes = TestCatalog3D[n]
@@ -718,7 +719,7 @@ function run_basis_tests()
         # check error of reconstruction
         L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
         errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
-        println("EG = Tetrahedron3D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
+        println("EG = Tetrahedron3D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders3D[n][1]) | error = $errorV ")
         @test errorV < tolerance
     end
     println("")

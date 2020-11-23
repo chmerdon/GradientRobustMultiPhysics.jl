@@ -199,6 +199,9 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
             elseif dofmap_patterns[j][k] == 'f'
                 dofs4item_single += nfaces_for_geometry(EG[j])*dofmap_quantifiers[j][k]
                 need_faces = true
+            elseif dofmap_patterns[j][k] == 'e'
+                dofs4item_single += nedges_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                need_edges = true
             elseif dofmap_patterns[j][k] == 'i'
                 dofs4item_single += dofmap_quantifiers[j][k]
                 need_faces = true
