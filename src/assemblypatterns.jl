@@ -343,10 +343,16 @@ function prepare_assembly(
     end
 
     maxfaces = 0
+    maxorientations = 0
     for j = 1 : length(EGdofitem)        
         maxfaces = max(maxfaces,nfaces_for_geometry(EGdofitem[j]))
     end
-    basisevaler = Array{FEBasisEvaluator,4}(undef, length(EG) + length(EGdofitem), length(FE), (length(facejump_operators) > 0) ? maxfaces : 1, (length(facejump_operators) > 0) ? 2 : 1)
+    if length(facejump_operators) > 0
+        for j = 1 : length(EG)  
+            maxorientations = max(maxorientations, length(xrefFACE2xrefOFACE(EG[j])))
+        end
+    end
+    basisevaler = Array{FEBasisEvaluator,4}(undef, length(EG) + length(EGdofitem), length(FE), (length(facejump_operators) > 0) ? maxfaces : 1, (length(facejump_operators) > 0) ? maxorientations : 1)
     for j = 1 : length(EG)
         quadorder = bonus_quadorder
         for k = 1 : length(FE)
@@ -396,18 +402,14 @@ function prepare_assembly(
             qf[EGoffset + j] = QuadratureRule{T,EGdofitem[j]}(qf4face.name * " (shape faces)",Array{Array{T,1},1}(undef,length(qf4face.xref)),qf4face.w)
             for k in facejump_operators
                 xrefFACE2CELL = xrefFACE2xrefCELL(EGdofitem[j])
-                xrefFACE2OTHERCELL = xrefFACE2xrefOTHERCELL(EGdofitem[j])
-                for f = 1 : nfaces4cell
+                EGface = facetype_of_cellface(EGdofitem[j], 1)
+                xrefFACE2OFACE = xrefFACE2xrefOFACE(EGface)
+                for f = 1 : nfaces4cell, orientation = 1 : length(xrefFACE2OFACE)
                     for i = 1 : length(qf4face.xref)
-                        qf[EGoffset + j].xref[i] = xrefFACE2CELL[f](qf4face.xref[i])
-                        #println("face $f : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
+                        qf[EGoffset + j].xref[i] = xrefFACE2CELL[f](xrefFACE2OFACE[orientation](qf4face.xref[i]))
+                        #println("face $f orientation $orientation : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
-                    basisevaler[EGoffset + j,k,f,1] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity - 1)
-                    for i = 1 : length(qf4face.xref)
-                        qf[EGoffset + j].xref[i] = xrefFACE2OTHERCELL[f](qf4face.xref[i])
-                        #println("face $f : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
-                    end
-                    basisevaler[EGoffset + j,k,f,2] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity - 1)
+                    basisevaler[EGoffset + j,k,f,orientation] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity - 1)
                 end
                 ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j,k,1,1].cvals,2)
             end
@@ -522,7 +524,8 @@ function evaluate!(
     EG4dofitem = [1,1] # type of the current item
     ndofs4dofitem = 0 # number of dofs for item
     dofitems = [0,0] # itemnr where the dof numbers can be found
-    itempos4dofitem = [1,1] # local item position in dofitem
+    itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
+    orientation4dofitem::Array{Int,1} = [1,2] # local orientation
     coefficient4dofitem::Array{T,1} = [0.0,0.0]
     dofitem = 0
     coeffs = zeros(T,maxdofs)
@@ -536,7 +539,7 @@ function evaluate!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
 
         if dofitems[1] == 0
             break;
@@ -549,7 +552,7 @@ function evaluate!(
             if dofitem != 0
                 for FEid = 1 : nFE
                     # update FEbasisevaler on dofitem
-                    basisevaler4dofitem = basisevaler[EG4dofitem[di],FEid,itempos4dofitem[di],di]
+                    basisevaler4dofitem = basisevaler[EG4dofitem[di],FEid,itempos4dofitem[di],orientation4dofitem[di]]
                     update!(basisevaler4dofitem, dofitem)
 
                     # update coeffs on dofitem
@@ -672,7 +675,8 @@ function assemble!(
     EG4dofitem = [1,1] # type of the current item
     ndofs4dofitem = 0 # number of dofs for item
     dofitems = [0,0] # itemnr where the dof numbers can be found
-    itempos4dofitem = [1,1] # local item position in dofitem
+    itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
+    orientation4dofitem::Array{Int,1} = [1,2] # local orientation
     coefficient4dofitem = [0,0]
     dofitem = 0
     maxndofs = max_num_targets_per_source(xItemDofs)
@@ -691,7 +695,7 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
 
         # loop over associated dofitems
         for di = 1 : length(dofitems)
@@ -702,7 +706,7 @@ function assemble!(
                 ndofs4dofitem = ndofs4EG[1][EG4dofitem[di]]
 
                 # update FEbasisevaler on dofitem
-                basisevaler4dofitem = basisevaler[EG4dofitem[di],1,itempos4dofitem[di],di]
+                basisevaler4dofitem = basisevaler[EG4dofitem[di],1,itempos4dofitem[di],orientation4dofitem[di]]
                 update!(basisevaler4dofitem,dofitem)
 
                 # update action on dofitem
@@ -811,6 +815,8 @@ function assemble!(
     dofitems2::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found (operator 2)
     itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem1
     itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem2
+    orientation4dofitem1::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem2::Array{Int,1} = [1,2] # local orientation
     coefficient4dofitem1::Array{T,1} = [0.0,0.0] # coefficients for operator 1
     coefficient4dofitem2::Array{T,1} = [0.0,0.0] # coefficients for operator 2
     ndofs4item1::Int = 0 # number of dofs for item
@@ -840,8 +846,8 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
-        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
+        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, orientation4dofitem1, item)
+        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, orientation4dofitem2, item)
 
         # get quadrature weights for integration domain
         weights = qf[EG4item].w
@@ -876,8 +882,8 @@ function assemble!(
                 ndofs4item2 = ndofs4EG[2][EG4dofitem2[dj]]
 
                 # update FEbasisevaler
-                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],di]
-                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],dj]
+                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],orientation4dofitem1[di]]
+                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],orientation4dofitem2[dj]]
                 basisvals1 = basisevaler4dofitem1.cvals
                 basisvals2 = basisevaler4dofitem2.cvals
                 update!(basisevaler4dofitem1,dofitem1)
@@ -1083,6 +1089,8 @@ function assemble!(
     dofitems2 = [0,0] # itemnr where the dof numbers can be found (operator 2)
     itempos4dofitem1 = [1,1] # local item position in dofitem1
     itempos4dofitem2 = [1,1] # local item position in dofitem2
+    orientation4dofitem1 = [1,2] # local orientation
+    orientation4dofitem2 = [1,2] # local orientation
     coefficient4dofitem1 = [0,0] # coefficients for operator 1
     coefficient4dofitem2 = [0,0] # coefficients for operator 2
     ndofs4item1::Int = 0 # number of dofs for item
@@ -1112,8 +1120,8 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
-        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
+        dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, orientation4dofitem1, item)
+        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, orientation4dofitem2, item)
 
         # get quadrature weights for integration domain
         weights = qf[EG4dofitem1[1]].w
@@ -1130,8 +1138,8 @@ function assemble!(
                 ndofs4item2 = ndofs4EG[2][EG4dofitem2[dj]]
 
                 # update FEbasisevaler
-                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],di]
-                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],dj]
+                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],orientation4dofitem1[di]]
+                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],orientation4dofitem2[dj]]
                 basisvals1 = basisevaler4dofitem1.cvals
                 update!(basisevaler4dofitem1,dofitem1)
                 update!(basisevaler4dofitem2,dofitem2)
@@ -1278,6 +1286,9 @@ function assemble!(
     itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem1
     itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem2
     itempos4dofitem3::Array{Int,1} = [1,1] # local item position in dofitem3
+    orientation4dofitem1::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem2::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem3::Array{Int,1} = [1,2] # local orientation
     coefficient4dofitem1::Array{T,1} = [0.0,0.0] # coefficients for operator 1
     coefficient4dofitem2::Array{T,1} = [0.0,0.0] # coefficients for operator 2
     coefficient4dofitem3::Array{T,1} = [0.0,0.0] # coefficients for operator 3
@@ -1306,9 +1317,9 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
-        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
-        dii4op[3](dofitems3, EG4dofitem3, itempos4dofitem3, coefficient4dofitem3, item)
+        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, orientation4dofitem1, item)
+        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, orientation4dofitem2, item)
+        dii4op[3](dofitems3, EG4dofitem3, itempos4dofitem3, coefficient4dofitem3, orientation4dofitem3, item)
 
         # get quadrature weights for integration domain
         weights = qf[EG4item].w
@@ -1327,9 +1338,9 @@ function assemble!(
                 ndofs4item[3] = ndofs4EG[3][EG4dofitem3[dk]]
 
                 # update FEbasisevaler
-                basisevaler4dofitem[1] = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],di]
-                basisevaler4dofitem[2] = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],dj]
-                basisevaler4dofitem[3] = basisevaler[EG4dofitem3[dk],3,itempos4dofitem3[dk],dk]
+                basisevaler4dofitem[1] = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],orientation4dofitem1[di]]
+                basisevaler4dofitem[2] = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],orientation4dofitem2[dj]]
+                basisevaler4dofitem[3] = basisevaler[EG4dofitem3[dk],3,itempos4dofitem3[dk],orientation4dofitem3[dk]]
                 update!(basisevaler4dofitem[1],dofitem1)
                 update!(basisevaler4dofitem[2],dofitem2)
                 update!(basisevaler4dofitem[3],dofitem3)
@@ -1477,6 +1488,9 @@ function assemble!(
     itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem1
     itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem2
     itempos4dofitem3::Array{Int,1} = [1,1] # local item position in dofitem3
+    orientation4dofitem1::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem2::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem3::Array{Int,1} = [1,2] # local orientation
     coefficient4dofitem1::Array{T,1} = [0.0,0.0] # coefficients for operator 1
     coefficient4dofitem2::Array{T,1} = [0.0,0.0] # coefficients for operator 2
     coefficient4dofitem3::Array{T,1} = [0.0,0.0] # coefficients for operator 3
@@ -1509,9 +1523,9 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
-        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
-        dii4op[3](dofitems3, EG4dofitem3, itempos4dofitem3, coefficient4dofitem3, item)
+        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, orientation4dofitem1, item)
+        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, orientation4dofitem2, item)
+        dii4op[3](dofitems3, EG4dofitem3, itempos4dofitem3, coefficient4dofitem3, orientation4dofitem3, item)
 
         # get quadrature weights for integration domain
         weights = qf[EG4item].w
@@ -1533,9 +1547,9 @@ function assemble!(
                 ndofs4item3 = ndofs4EG[3][EG4dofitem3[dk]]
 
                 # update FEbasisevaler
-                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],di]
-                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],dj]
-                basisevaler4dofitem3 = basisevaler[EG4dofitem3[dk],3,itempos4dofitem3[dk],dk]
+                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],orientation4dofitem1[di]]
+                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],orientation4dofitem2[dj]]
+                basisevaler4dofitem3 = basisevaler[EG4dofitem3[dk],3,itempos4dofitem3[dk],orientation4dofitem3[dk]]
                 basisvals3 = basisevaler4dofitem3.cvals
                 update!(basisevaler4dofitem1,dofitem1)
                 update!(basisevaler4dofitem2,dofitem2)
@@ -1694,7 +1708,7 @@ function assemble!(
 
         for FEid = 1 : nFE - 1
             # get dofitem informations
-            EG4item = dii4op[FEid](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+            EG4item = dii4op[FEid](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
 
             # get information on dofitems
             weights = qf[EG4item].w
@@ -1702,7 +1716,7 @@ function assemble!(
                 dofitem = dofitems[di]
                 if dofitem != 0
                     # update FEbasisevaler on dofitem
-                    basisevaler4dofitem = basisevaler[EG4dofitem[di],FEid,itempos4dofitem[di],di]
+                    basisevaler4dofitem = basisevaler[EG4dofitem[di],FEid,itempos4dofitem[di],orientation4dofitem[di]]
                     update!(basisevaler4dofitem, dofitem)
 
                     # update coeffs on dofitem
@@ -1724,7 +1738,7 @@ function assemble!(
 
         # update action on item/dofitem
         # beware: currently last operator must not be a FaceJump operator
-        EG4item = dii4op[nFE](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        EG4item = dii4op[nFE](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
         basisevaler4dofitem = basisevaler[EG4item,nFE,1,1]
         basisvals = basisevaler4dofitem.cvals
         ndofs4dofitem = ndofs4EG[nFE][EG4item]
@@ -1857,6 +1871,8 @@ function assemble!(
     dofitems2::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem
     itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem
+    orientation4dofitem1::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem2::Array{Int,1} = [1,2] # local orientation
     coefficient4dofitem1::Array{Int,1} = [0,0] # coefficients for operator
     coefficient4dofitem2::Array{Int,1} = [0,0] # coefficients for operator
     ndofs4dofitem::Int = 0 # number of dofs for item
@@ -1889,7 +1905,7 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations for ansatz function
-        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, item)
+        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, orientation4dofitem1, item)
 
         # get quadrature weights for integration domain
         weights = qf[EG4dofitem1[1]].w
@@ -1904,7 +1920,7 @@ function assemble!(
                 dofitem = dofitems1[di]
                 if dofitem != 0
                     # update FEbasisevaler on dofitem
-                    basisevaler4dofitem = basisevaler[EG4dofitem1[di],FEid,itempos4dofitem1[di],di]
+                    basisevaler4dofitem = basisevaler[EG4dofitem1[di],FEid,itempos4dofitem1[di],orientation4dofitem1[di]]
                     update!(basisevaler4dofitem, dofitem)
 
                     # update coeffs on dofitem
@@ -1928,7 +1944,7 @@ function assemble!(
         # also no jump operators for the test function are allowed currently
 
         # get dof information for test function
-        dii4op[end](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, item)
+        dii4op[end](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, orientation4dofitem2, item)
         di = 1
         dj = 1
         dofitem1 = dofitems1[di]
@@ -1938,12 +1954,12 @@ function assemble!(
 
         # update FEbasisevalers for ansatz function
         for FEid = 1 : nFE - 1
-            basisevaler4dofitem1[FEid] = basisevaler[EG4dofitem1[di],FEid,itempos4dofitem1[di],di]
+            basisevaler4dofitem1[FEid] = basisevaler[EG4dofitem1[di],FEid,itempos4dofitem1[di],orientation4dofitem1[di]]
             update!(basisevaler4dofitem1[FEid],dofitem1)
         end
 
         # update FEbasisevalers for test function
-        basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],end,itempos4dofitem2[dj],dj]
+        basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],end,itempos4dofitem2[dj],orientation4dofitem2[dj]]
         basisvals = basisevaler4dofitem2.cvals
         update!(basisevaler4dofitem2,dofitem2)
 
@@ -2122,7 +2138,7 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations for ansatz function
-        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
 
         # get quadrature weights for integration domain
         weights = qf[EG4dofitem[1]].w
@@ -2137,7 +2153,7 @@ function assemble!(
                 dofitem = dofitems[di]
                 if dofitem != 0
                     # update FEbasisevaler on dofitem
-                    basisevaler4dofitem = basisevaler[EG4dofitem[di],FEid,itempos4dofitem[di],di]
+                    basisevaler4dofitem = basisevaler[EG4dofitem[di],FEid,itempos4dofitem[di],orientation4dofitem[di]]
                     update!(basisevaler4dofitem, dofitem)
 
                     # update coeffs on dofitem

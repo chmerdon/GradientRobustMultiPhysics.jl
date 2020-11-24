@@ -34,6 +34,7 @@ mutable struct SolverConfig{T <: Real}
     linsolver::Type{<:AbstractLinSolveType} # type for linear solver
     anderson_iterations::Int    # number of Anderson iterations (= 0 normal fixed-point iterations, > 0 Anderson iterations)
     maxlureuse::Array{Int,1}    # max number of solves the LU decomposition of linsolver is reused
+    damping::Real               # damping factor (only for nonlinear solves, 0 = no damping, must be < 1 !)
     verbosity::Int              # verbosity level (tha larger the more messaging)
 end
 
@@ -231,9 +232,9 @@ function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiter
                 end
             end
         end
-        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
     else
-        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
     end
 
 end
@@ -481,17 +482,18 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     LS =  LinearSystem{T, SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
     linsolve!(LS; verbosity = verbosity - 1)
 
-    if verbosity > 0
-        # CHECK RESIDUAL
-        residual = (A.entries*Target.entries - b.entries).^2
-        residual[fixed_dofs] .= 0
-        residuals = zeros(T, length(Target.FEVectorBlocks))
-        for j = 1 : length(Target.FEVectorBlocks)
-            for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
-                residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
-            end
+    residuals = zeros(T, length(Target.FEVectorBlocks))
+    # CHECK RESIDUAL
+    residual = (A.entries*Target.entries - b.entries).^2
+    residual[fixed_dofs] .= 0
+    for j = 1 : length(Target.FEVectorBlocks)
+        for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
+            residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
         end
-        residuals = sqrt.(residuals)
+    end
+    resnorm = sum(residuals)
+    residuals = sqrt.(residuals)
+    if verbosity > 0
         println("\n  residuals = $residuals")
     end
 
@@ -500,6 +502,7 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     for j = 1 : length(PDE.GlobalConstraints)
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
+    return resnorm
 end
 
 
@@ -551,6 +554,9 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             AIOMatrix[anderson_iterations+2,j] = 1
         end
     end
+    if SC.damping > 0
+        LastIterate = deepcopy(Target)
+    end
 
     residual = zeros(T,length(b.entries))
     linresnorm::T = 0.0
@@ -592,7 +598,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             linresnorm = (sqrt(sum(residual, dims = 1)[1]))
         end
 
-        # POSTPROCESS NEW ANDERSON ITERATE
+        # POSTPRCOESS : ANDERSON ITERATE
         if anderson_iterations > 0
             depth = min(anderson_iterations,j-1)
 
@@ -630,7 +636,14 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             else
                 LastAndersonIterates[anderson_iterations+1] = deepcopy(Target)
             end
+        end
 
+        # POSTPROCESS : DAMPING
+        if SC.damping > 0
+            for j = 1 : length(Target.entries)
+                Target.entries[j] = SC.damping*LastIterate.entries[j] + (1-SC.damping)*Target.entries[j]
+            end
+            LastIterate = deepcopy(Target)
         end
 
 
@@ -674,6 +687,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 
+    return resnorm
 end
 
 
@@ -830,6 +844,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 
+    return resnorm
 end
 
 """
@@ -871,6 +886,7 @@ function solve!(
     maxIterations::Int = 10,
     linsolver = DirectUMFPACK,
     maxlureuse = [1],
+    damping = 0,
     AndersonIterations = 0, #  0 = Picard iteration, >0 Anderson iteration
     verbosity::Int = 0) where {T <: Real}
 
@@ -879,6 +895,7 @@ function solve!(
     SolverConfig.anderson_iterations = AndersonIterations
     SolverConfig.linsolver = linsolver
     SolverConfig.maxlureuse = maxlureuse
+    SolverConfig.damping = damping
     
     if verbosity > 0
         println("\nSOLVER")
@@ -920,13 +937,14 @@ function solve!(
     # check if PDE can be solved directly
     if subiterations == "auto"
         if SolverConfig.is_nonlinear == false
-            solve_direct!(Target, PDE, SolverConfig; time = time)
+            residual = solve_direct!(Target, PDE, SolverConfig; time = time)
         else
-            solve_fixpoint_full!(Target, PDE, SolverConfig; time = time)
+            residual = solve_fixpoint_full!(Target, PDE, SolverConfig; time = time)
         end
     else
-        solve_fixpoint_subiterations!(Target, PDE, SolverConfig; time = time)
+        residual = solve_fixpoint_subiterations!(Target, PDE, SolverConfig; time = time)
     end
+    return residual
 end
 
 #########################

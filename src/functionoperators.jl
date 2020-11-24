@@ -243,7 +243,7 @@ end
 function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:AbstractAssemblyType})
     xItemGeometries = FES.xgrid[GridComponentGeometries4AssemblyType(AT)]
     # operator is assumed to be continuous, hence only needs to be evaluated on one dofitem = item
-    function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+    function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
         dofitems[1] = item
         dofitems[2] = 0
         itempos4dofitem[1] = 1
@@ -270,6 +270,7 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON
     xCellFaces = FES.xgrid[CellFaces]
     xFaceGeometries = FES.xgrid[FaceGeometries]
     xCellGeometries = FES.xgrid[CellGeometries]
+    xCellFaceOrientations = FES.xgrid[CellFaceOrientations]
     if DiscType == Jump
         coeff_left = 1
         coeff_right = -1
@@ -278,7 +279,7 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON
         coeff_right = 0.5
     end
     # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
-    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, item)
+    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
         dofitems[1] = xFaceCells[1,item]
         dofitems[2] = xFaceCells[2,item]
         for k = 1 : num_targets(xCellFaces,dofitems[1])
@@ -286,12 +287,14 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON
                 itempos4dofitem[1] = k
             end
         end
+        orientation4dofitem[1] = xCellFaceOrientations[itempos4dofitem[1], dofitems[1]]
         if dofitems[2] > 0
             for k = 1 : num_targets(xCellFaces,dofitems[2])
                 if xCellFaces[k,dofitems[2]] == item
                     itempos4dofitem[2] = k
                 end
             end
+            orientation4dofitem[2] = xCellFaceOrientations[itempos4dofitem[2], dofitems[2]]
         elseif AT == ON_IFACES
             # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
             dofitems[1] = 0

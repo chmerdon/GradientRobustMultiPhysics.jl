@@ -276,18 +276,18 @@ function get_basissubset_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractEl
             subset_ids[3*j-2] = 4*j-3; # always take the RT0 function
             orientation = xCellFaceOrientations[j,cell]
             face = xCellFaces[j,cell]
-            if orientation > 0 # cellface nodes and face nodes coincide
+            if orientation == 1 # cellface nodes and face nodes coincide
                 subset_ids[3*j-1] = 4*j-1; # second BDM1 function
                 subset_ids[3*j] = 4*j-2; # third BDM1 function
-            elseif orientation == -1 # first cellface node and face node coincide (otherwise reversed order)
-                subset_ids[3*j-1] = 4*j-2; 
-                subset_ids[3*j] = 4*j-1; 
-            elseif orientation == -2 # second cellface node and face node coincide (otherwise reversed order)
+            elseif orientation == 2 # second cellface node and face node coincide (otherwise reversed order)
                 subset_ids[3*j-1] = 4*j;
                 subset_ids[3*j] = 4*j-2;
-            elseif orientation == -3 # third cellface node and face node coincide (otherwise reversed order)
+            elseif orientation == 3 # third cellface node and face node coincide (otherwise reversed order)
                 subset_ids[3*j-1] = 4*j-1;
                 subset_ids[3*j] = 4*j;
+            elseif orientation == 4 # first cellface node and face node coincide (otherwise reversed order)
+                subset_ids[3*j-1] = 4*j-2; 
+                subset_ids[3*j] = 4*j-1; 
             end
         end
         return nothing

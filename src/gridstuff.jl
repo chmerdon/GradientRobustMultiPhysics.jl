@@ -62,7 +62,6 @@ abstract type BEdgeRegions <: AbstractElementRegions end
 abstract type BEdgeGeometries <: AbstractElementGeometries end
 abstract type UniqueBEdgeGeometries <: AbstractElementGeometries end
 
-
 # show function for ExtendableGrids and defined Components in its Dict
 function showmore(io::IO, xgrid::ExtendableGrid)
 
@@ -542,11 +541,11 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceOrien
         maxfacenodes = max(size(face_rules[j],2),maxfacenodes)
     end
     singleEG = false
-    if length(EG) == 1
-        singleEG = true
+    if typeof(xCellFaceSigns) <: VariableTargetAdjacency
         xCellFaceOrientations = deepcopy(xCellFaceSigns)
     else
-        xCellFaceOrientations = zeros(Int32, maxfacenodes, ncells)
+        singleEG = true
+        xCellFaceOrientations = zeros(Int32, size(xCellFaceSigns,1), size(xCellFaceSigns,2))
     end
 
     cellEG = EG[1]
@@ -576,27 +575,29 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceOrien
             face = xCellFaces[j,cell]
             nfacenodes = num_targets(xFaceNodes,face)
             if xCellFaceSigns[j,cell] == 1
-                for k = 1 : nfacenodes
-                    facenodes[k] = xFaceNodes[k,face]
+                if singleEG == false
+                    xCellFaceOrientations.colentries[xCellFaceOrientations.colstart[cell]+j-1] = 1
+                else
+                    xCellFaceOrientations[j, cell] = 1
                 end
             else
                 for k = 1 : nfacenodes
                     facenodes[nfacenodes + 1 - k] = xFaceNodes[k,face]
                 end
-            end
-            found_configuration = false
-            n = 0
-            while !found_configuration
-                n += 1
-                if facenodes[n] == xCellNodes[face_rule[j,1],cell]
-                    found_configuration = true
+                found_configuration = false
+                n = 0
+                while !found_configuration
+                    n += 1
+                    if facenodes[n] == xCellNodes[face_rule[j,1],cell]
+                        found_configuration = true
+                    end
                 end
-            end
-            n = mod(n,3) + 1
-            if singleEG == false
-                xCellFaceOrientations.colentries[xCellFaceOrientations.colstart[cell]+j-1] *= n
-            else
-                xCellFaceOrientations[j, cell] *= n
+                n = mod(n-1,3) + 1
+                if singleEG == false
+                    xCellFaceOrientations.colentries[xCellFaceOrientations.colstart[cell]+j-1] = 1+n
+                else
+                    xCellFaceOrientations[j, cell] = 1+n
+                end
             end
         end
 

@@ -21,8 +21,10 @@ face_enum_rule(::Type{<:AbstractElementGeometry1D}) = reshape([1; 2],2,1)
 facetype_of_cellface(P1::Type{<:AbstractElementGeometry1D},P2::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 facetype_of_cellface(::Type{<:AbstractElementGeometry1D}, k) = Vertex0D
 
-xrefFACE2xrefCELL(::Type{<:AbstractElementGeometry1D}) = [ (xref4FACE) -> [1],
-                                                           (xref4FACE) -> [1] ]
+xrefFACE2xrefCELL(::Type{<:AbstractElementGeometry1D}) = [ [(xref4FACE) -> [1]],
+                                                           [(xref4FACE) -> [1]] ]
+
+xrefFACE2xrefOFACE(::Type{<:AbstractElementGeometry1D}) = [(xref4FACE) -> xref4FACE, (xref4FACE) -> 1 .- xref4FACE]
 
 #                   [3]                 
 #                    | \   
@@ -37,13 +39,17 @@ refcoords_for_geometry(::Type{<:Triangle2D}) = [0 0; 1 0; 0 1]
 nnodes_for_geometry(::Type{<:Triangle2D}) = 3
 face_enum_rule(::Type{<:Triangle2D}) = [1 2; 2 3; 3 1]
 
+# maps of reference coords on cell face to reference coords in cell
 xrefFACE2xrefCELL(::Type{<:Triangle2D}) = [ (xref4FACE) -> [xref4FACE[1],0],
-                                            (xref4FACE) -> [1-xref4FACE[1],xref4FACE[1]], 
-                                            (xref4FACE) -> [0,1-xref4FACE[1]] ]
+                                            (xref4FACE) -> [1-xref4FACE[1],xref4FACE[1]],
+                                            (xref4FACE) -> [0,1-xref4FACE[1]]
+                                            ]
 
-xrefFACE2xrefOTHERCELL(::Type{<:Triangle2D}) = [ (xref4FACE) -> [1 - xref4FACE[1],0],
-                                                 (xref4FACE) -> [xref4FACE[1],1-xref4FACE[1]], 
-                                                 (xref4FACE) -> [0,xref4FACE[1]] ]
+# maps of reference coords on face to reference coords in face with other orientation
+xrefFACE2xrefOFACE(::Type{<:Triangle2D}) = [(xref4FACE) -> xref4FACE,                                    # orientation 1 = [1,2,3]
+                                            (xref4FACE) -> [1-xref4FACE[1]-xref4FACE[2],xref4FACE[2]],   # orientation 2 = [2,1,3]
+                                            (xref4FACE) -> [xref4FACE[2],1-xref4FACE[1]-xref4FACE[2]],   # orientation 3 = [3,2,1]
+                                            (xref4FACE) -> [xref4FACE[2],xref4FACE[1]]]                  # orientation 4 = [1,3,2]
 
 #                        [4]--------[3]               
 #                         |          |             [1] = (0,0)
@@ -57,15 +63,13 @@ refcoords_for_geometry(::Type{<:Quadrilateral2D}) = [0 0; 1 0; 1 1; 0 1]
 nnodes_for_geometry(::Type{<:Quadrilateral2D}) = 4
 face_enum_rule(::Type{<:Quadrilateral2D}) = [1 2; 2 3; 3 4; 4 1]
 
+# maps of reference coords on cell face to reference coords in cell
 xrefFACE2xrefCELL(::Type{<:Quadrilateral2D}) = [ (xref4FACE) -> [xref4FACE[1],0],
-                                                 (xref4FACE) -> [1,xref4FACE[1]], 
-                                                 (xref4FACE) -> [1-xref4FACE[1],1], 
-                                                 (xref4FACE) -> [0,1-xref4FACE[1]] ]
+                                                 (xref4FACE) -> [1,xref4FACE[1]],
+                                                 (xref4FACE) -> [1-xref4FACE[1],1],
+                                                 (xref4FACE) -> [0,1-xref4FACE[1]]
+                                                 ]
 
-xrefFACE2xrefOTHERCELL(::Type{<:Quadrilateral2D}) = [ (xref4FACE) -> [1-xref4FACE[1],0],
-                                                      (xref4FACE) -> [1,1-xref4FACE[1]], 
-                                                      (xref4FACE) -> [xref4FACE[1],1], 
-                                                      (xref4FACE) -> [0,xref4FACE[1]] ]
 
 #############################      
 # AbstractElementGeometry2D #    
@@ -97,10 +101,13 @@ facetype_of_cellface(::Type{<:Tetrahedron3D}, k) = Triangle2D
 edge_enum_rule(::Type{<:Tetrahedron3D}) = [1 2; 1 3; 1 4; 2 3; 2 4; 3 4]
 celledges_for_cellface(::Type{<:Tetrahedron3D}) = [2 4 1; 1 5 3; 4 6 5; 3 6 2]
 
-xrefFACE2xrefCELL(::Type{<:Tetrahedron3D}) = [ (xref4FACE) -> [xref4FACE[1],xref4FACE[2],0],
-                                               (xref4FACE) -> [xref4FACE[1],0, xref4FACE[2]], 
-                                               (xref4FACE) -> [1-xref4FACE[1]-xref4FACE[2], xref4FACE[1], xref4FACE[2]], 
-                                               (xref4FACE) -> [0, 1-xref4FACE[1], xref4FACE[2]]]
+# maps of reference coords on cell face to reference coords in cell
+xrefFACE2xrefCELL(::Type{<:Tetrahedron3D}) = [ (xref4FACE) -> [xref4FACE[2],xref4FACE[1],0],
+                                               (xref4FACE) -> [xref4FACE[1],0,xref4FACE[2]],
+                                               (xref4FACE) -> [1-xref4FACE[1]-xref4FACE[2],xref4FACE[1],xref4FACE[2]],
+                                               (xref4FACE) -> [0,xref4FACE[2],xref4FACE[1]]                 
+                                                ]
+
 
 #                         
 #                         [8]--------[7]

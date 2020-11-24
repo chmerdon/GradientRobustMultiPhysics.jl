@@ -572,6 +572,7 @@ function integrate!(
         end
     else # <: AbstractArray{<:Real,2}
         fill!(integral4items,0)
+        item::Int = 0
         for it = 1 : length(items)
             item = items[it]
             # find index for CellType
