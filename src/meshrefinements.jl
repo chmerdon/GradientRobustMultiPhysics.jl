@@ -142,13 +142,13 @@ uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
 # next n nodes are the CellFaces midpoints
 # next node is the CellMidpoint (if needed)
 uniform_refine_rule(::Type{<:Tetrahedron3D}) = [ 1 5 6 7;
-                                                 2 8 5 9;
-                                                 3 6 8 10;
-                                                 4 9 7 10;
-                                                 9 5 7 6;
-                                                 5 8 6 9;
-                                                 7 10 9 6;
-                                                 8 10 6 9]
+                                                 2 5 9 8;
+                                                 3 10 6 8;
+                                                 4 10 9 7;
+                                                 10 5 8 9;
+                                                 5 10 7 9;
+                                                 5 10 8 6;
+                                                 10 5 7 6]
 uniform_refine_needfacemidpoints(::Type{<:Tetrahedron3D}) = false
 uniform_refine_rule(::Type{<:Hexahedron3D}) = [     1   9  21  12  13  22  27  25;
                                                     9   2  10  21  22  14  23  27;

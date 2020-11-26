@@ -31,8 +31,7 @@ end
 function main(;order::Int = 1)
 
     ## choose some grid
-    xgrid = uniform_refine(reference_domain(Parallelepiped3D),2)
-    xgrid = split_grid_into(xgrid,Tetrahedron3D)
+    xgrid = uniform_refine(reference_domain(Tetrahedron3D),2)
 
     ## choose commuting interpolators pair
     if order == 1

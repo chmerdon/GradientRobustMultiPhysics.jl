@@ -39,9 +39,8 @@ function main(; verbosity = 1)
 
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
-    xgrid_b = grid_unitcube(Parallelepiped3D)
+    xgrid = grid_unitcube(Tetrahedron3D)
     nlevels = 5 # maximal number of refinement levels
-    split_into_tets = true # grid is split into Tetrahedron3D after each refinement of the basis grid
     write_vtk = false
 
     ## set finite element type used for discretisation
@@ -62,12 +61,7 @@ function main(; verbosity = 1)
 
         ## uniform mesh refinement
         if level > 1 
-            xgrid_b = uniform_refine(xgrid_b)
-        end
-        if split_into_tets
-            xgrid = split_grid_into(xgrid_b, Tetrahedron3D)
-        else
-            xgrid = xgrid_b
+            xgrid = uniform_refine(xgrid)
         end
         
         ## create finite element space

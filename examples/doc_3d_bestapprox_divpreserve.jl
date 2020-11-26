@@ -5,7 +5,7 @@
 
 This example computes the L2-bestapproximation of some given vector-valued function into an Hdiv-conforming finite element space. It also
 preserves the divergence of the function in the sense that the divergence of the approximation equals the piecewise integral mean of the exact divergence.
-Afterwards the L2 error (also of the divergence) is computed and the solution is plotted.
+Afterwards the L2 error (also of the divergence) is computed.
 
 =#
 
@@ -29,8 +29,7 @@ end
 function main(; verbosity = 1)
 
     ## generate a unit square mesh and refine
-    xgrid = uniform_refine(reference_domain(Parallelepiped3D),1)
-    xgrid = split_grid_into(xgrid, Tetrahedron3D)
+    xgrid = uniform_refine(reference_domain(Tetrahedron3D),2)
     
     ## setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(exact_function!, 3, 3; bestapprox_boundary_regions = [], bonus_quadorder = 3)

@@ -13,10 +13,6 @@ function run_basis_tests()
     function testgrid(EG::Type{<:AbstractElementGeometry3D})
         return uniform_refine(grid_unitcube(EG),1)
     end
-    function testgrid(::Type{Tetrahedron3D})
-        return split_grid_into(uniform_refine(grid_unitcube(Parallelepiped3D),1), Tetrahedron3D)
-
-    end
     function testgrid(::Type{Triangle2D},::Type{Parallelogram2D})
         return uniform_refine(grid_unitsquare_mixedgeometries(),1)
     end
