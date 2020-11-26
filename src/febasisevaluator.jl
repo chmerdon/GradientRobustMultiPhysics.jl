@@ -298,7 +298,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     edim = dim_element(EG)
     xdim = size(FE.xgrid[Coordinates],1)
     offsets = 0:edim:(ncomponents*edim);
-    offsets2 = 0:ndofs4item2:ncomponents*ndofs4item2;
+    offsets2 = 0:ndofs4item2_all:ncomponents*ndofs4item2_all;
     coefficients3 = zeros(T,0,0)
     Dcfg = nothing
     Dresult = nothing

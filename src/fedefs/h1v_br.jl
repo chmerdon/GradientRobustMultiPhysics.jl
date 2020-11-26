@@ -383,7 +383,25 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FES
         coefficients[4,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
         coefficients[4,2] = -1 // 12 * xFaceVolumes[face] * xFaceNormals[2, face]
 
-        coefficients[3,1] = xFaceVolumes[face]
+        coefficients[5,1] = xFaceVolumes[face]
+        return nothing
+    end
+end
+
+
+function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Triangle2D})
+    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xCellFaces = FE.xgrid[CellFaces]
+    nfacenodes::Int = nnodes_for_geometry(EG)
+    function closure(coefficients, face::Int) 
+
+        for j = 1 : nfacenodes, k = 1 : 3
+            coefficients[(j-1)*3 + j,1] = 1 // nfacenodes * xFaceVolumes[face] * xFaceNormals[k, face]
+            coefficients[(j-1)*3 + j,2] = - 1 // 36 * xFaceVolumes[face] * xFaceNormals[k, face]
+            coefficients[(j-1)*3 + j,3] = - 1 // 36 * xFaceVolumes[face] * xFaceNormals[k, face]
+        end
+        coefficients[nfacenodes*3 + 1,1] = xFaceVolumes[face]
         return nothing
     end
 end
