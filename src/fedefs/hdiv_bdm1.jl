@@ -233,10 +233,11 @@ end
 function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
+    dim::Int = dim_element(EG)
     function closure(coefficients, cell)
         fill!(coefficients,1.0)
         # multiplication with normal vector signs (only RT0)
-        for j = 1 : nfaces,  k = 1 : size(coefficients,1)
+        for j = 1 : nfaces,  k = 1 : dim
             coefficients[k,2*j-1] = xCellFaceSigns[j,cell];
         end
         return nothing
@@ -244,12 +245,14 @@ function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractE
 end  
 
 
-function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
+function get_coefficients_on_cell!(FE::FESpace{<: HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    nfaces = nfaces_for_geometry(EG)
+    xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
+    nfaces::Int = nfaces_for_geometry(EG)
+    dim::Int = dim_element(EG)
     function closure(coefficients, cell)
         fill!(coefficients,1.0)
-        for j = 1 : nfaces,  k = 1 : size(coefficients,1)
+        for j = 1 : nfaces,  k = 1 : dim
             coefficients[k,3*j-2] = xCellFaceSigns[j,cell]; # RT0
             coefficients[k,3*j-1] = -1;
             coefficients[k,3*j] = 1;
@@ -264,31 +267,16 @@ end
 # of the global face enumeration
 function get_basissubset_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
     xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
-    xCellFaces = FE.xgrid[CellFaces]
-    xFaceNodes = FE.xgrid[FaceNodes]
-    xCellNodes = FE.xgrid[CellNodes]
-    nfaces = nfaces_for_geometry(EG)
-    orientation::Int32 = 0
-    face::Int32 = 0
-    face_rule = face_enum_rule(EG)
+    nfaces::Int = nfaces_for_geometry(EG)
+    orientation = xCellFaceOrientations[1,1]
+    shift4orientation1::Array{Int,1} = [1,0,1,2]
+    shift4orientation2::Array{Int,1} = [2,2,0,1]
     function closure(subset_ids, cell)
         for j = 1 : nfaces
             subset_ids[3*j-2] = 4*j-3; # always take the RT0 function
             orientation = xCellFaceOrientations[j,cell]
-            face = xCellFaces[j,cell]
-            if orientation == 1 # cellface nodes and face nodes coincide
-                subset_ids[3*j-1] = 4*j-1; # second BDM1 function
-                subset_ids[3*j] = 4*j-2; # third BDM1 function
-            elseif orientation == 2 # second cellface node and face node coincide (otherwise reversed order)
-                subset_ids[3*j-1] = 4*j;
-                subset_ids[3*j] = 4*j-2;
-            elseif orientation == 3 # third cellface node and face node coincide (otherwise reversed order)
-                subset_ids[3*j-1] = 4*j-1;
-                subset_ids[3*j] = 4*j;
-            elseif orientation == 4 # first cellface node and face node coincide (otherwise reversed order)
-                subset_ids[3*j-1] = 4*j-2; 
-                subset_ids[3*j] = 4*j-1; 
-            end
+            subset_ids[3*j-1] = 4*j-shift4orientation1[orientation]
+            subset_ids[3*j  ] = 4*j-shift4orientation2[orientation]
         end
         return nothing
     end

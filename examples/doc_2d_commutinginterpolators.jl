@@ -9,14 +9,10 @@ This example verifies a structural property of the H1 and Hdiv finite element sp
 ```
 for the ``H_1`` interpolator ``I_{\mathrm{P}_k}`` and the standard Raviart-Thomas interpolator ``I_{\mathrm{RT}_{k-1}}`` for $k > 0$.
 In this example we verify this identity for $k=1$ and $k=2$. Note, that the ``H_1`` interpolator only does nodal interpolations at the
-vertices but not in the additional edgrees of freedom. For e.g. ``k=2`` the interpolator preserves the moments along the edges.
-
-!!! note
-
-    In 3D a similar commuting property holds that involves the Nedelec finite element spaces,
-    that will be tested once they are implemented. Also the identities for $k > 2$ will be tested once all functionality is available.
+vertices but not in the additional degrees of freedom. For ``k=2``, the interpolator also preserves the moments along the edges.
 
 =#
+
 
 module Example_2DCommutingInterpolators
 using GradientRobustMultiPhysics

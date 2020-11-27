@@ -494,35 +494,29 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FES
     xCellFaceOrientations = FER.xgrid[CellFaceOrientations]
     xCellFaces = FE.xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
-    node::Int = 0
-    face::Int = 0
-    BDM1_coeffs1 = [-1//36, -1//36, 1//18]
-    BDM1_coeffs2 = [-1//36, 1//18, -1//36]
-    BDM1_coeffs3 = [1//18, -1//36, -1//36]
+    node = face_rule[1,1]
+    face = xCellFaces[1,1]
+    BDM1_coeffs = [-1//36 -1//36 1//18;
+                   -1//36 1//18 -1//36;
+                    1//18 -1//36 -1//36]
+    orientation = xCellFaceOrientations[1,1]
+    factor::Float64 = 0
+    row4orientation1::Array{Int,1} = [2,2,3,1]
+    row4orientation2::Array{Int,1} = [1,3,1,2]
     function closure(coefficients, cell::Int) 
         # fill!(coefficients,0.0)
         for f = 1 : 4
             face = xCellFaces[f,cell]
-            for n = 1 : 3
-                node = face_rule[f,n]
-                for k = 1 : 3
+            for k = 1 : 3
+                factor = xFaceVolumes[face] * xFaceNormals[k, face]
+                for n = 1 : 3
+                    node = face_rule[f,n]
                     # RT0 reconstruction coefficients for P1 functions on reference element
-                    coefficients[4*(k-1)+node,3*(f-1)+1] = 1 // 3 * xFaceVolumes[face] * xFaceNormals[k, face]
-
+                    coefficients[4*(k-1)+node,3*(f-1)+1] = 1 // 3 * factor
+                    orientation = xCellFaceOrientations[f,cell]
                     # BDM1 reconstruction coefficients for P1 functions on reference element
-                    if xCellFaceOrientations[f,cell] == 1
-                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                    elseif xCellFaceOrientations[f,cell] == 2
-                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs3[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                    elseif xCellFaceOrientations[f,cell] == 3
-                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs3[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                    elseif xCellFaceOrientations[f,cell] == 4
-                        coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                        coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs2[n] * xFaceVolumes[face] * xFaceNormals[k, face]
-                    end
+                    coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs[n, row4orientation1[orientation]] * factor
+                    coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs[n, row4orientation2[orientation]] * factor
                 end
             end
             # RT0 reconstruction coefficients for face bubbles on reference element
