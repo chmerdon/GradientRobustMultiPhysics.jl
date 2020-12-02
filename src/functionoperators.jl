@@ -321,3 +321,42 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON
     end
     return closure!
 end
+
+
+
+# special handlers for jump operators
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_BFACES}, DiscType::Type{<:Union{Jump, Average}})
+    xFaceCells = FES.xgrid[FaceCells]
+    xCellFaces = FES.xgrid[CellFaces]
+    xBFaceGeometries = FES.xgrid[BFaceGeometries]
+    xCellGeometries = FES.xgrid[CellGeometries]
+    xBFaces = FES.xgrid[BFaces]
+    xCellFaceOrientations = FES.xgrid[CellFaceOrientations]
+
+    # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
+    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
+        dofitems[1] = xFaceCells[1,xBFaces[item]]
+        dofitems[2] = xFaceCells[2,xBFaces[item]]
+        for k = 1 : num_targets(xCellFaces,dofitems[1])
+            if xCellFaces[k,dofitems[1]] == xBFaces[item]
+                itempos4dofitem[1] = k
+            end
+        end
+        orientation4dofitem[1] = xCellFaceOrientations[itempos4dofitem[1], dofitems[1]]
+        coefficient4dofitem[1] = 1
+
+        # find EG index for geometry
+        for j=1:length(EG)
+            if xCellGeometries[dofitems[1]] == EGdofitems[j]
+                EG4dofitem[1] = length(EG) + j
+                break;
+            end
+        end
+        for j=1:length(EG)
+            if xBFaceGeometries[item] == EG[j]
+                return j
+            end
+        end
+    end
+    return closure!
+end

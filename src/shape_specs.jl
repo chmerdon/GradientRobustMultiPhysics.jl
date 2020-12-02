@@ -47,9 +47,10 @@ xrefFACE2xrefCELL(::Type{<:Triangle2D}) = [ (xref4FACE) -> [xref4FACE[1],0],
 
 # maps of reference coords on face to reference coords in face with other orientation
 xrefFACE2xrefOFACE(::Type{<:Triangle2D}) = [(xref4FACE) -> xref4FACE,                                    # orientation 1 = [1,2,3]
-                                            (xref4FACE) -> [1-xref4FACE[1]-xref4FACE[2],xref4FACE[2]],   # orientation 2 = [2,1,3]
-                                            (xref4FACE) -> [xref4FACE[2],1-xref4FACE[1]-xref4FACE[2]],   # orientation 3 = [3,2,1]
-                                            (xref4FACE) -> [xref4FACE[2],xref4FACE[1]]]                  # orientation 4 = [1,3,2]
+                                            (xref4FACE) -> [xref4FACE[1],1-xref4FACE[1]-xref4FACE[2]],   # orientation 2 = [1,3,2]
+                                            (xref4FACE) -> [1-xref4FACE[1]-xref4FACE[2],xref4FACE[2]],   # orientation 3 = [3,2,1]
+                                            (xref4FACE) -> [xref4FACE[2],xref4FACE[1]]                   # orientation 4 = [2,1,3]
+                                            ]   
 
 #                        [4]--------[3]               
 #                         |          |             [1] = (0,0)

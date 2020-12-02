@@ -2,6 +2,8 @@ using Test
 using ExtendableGrids
 using GradientRobustMultiPhysics
 
+include("test_jumps.jl")
+
 function run_basis_tests()
 
     function testgrid(::Type{Edge1D})
@@ -120,6 +122,25 @@ function run_basis_tests()
         println("")
     end
 
+
+
+    ##################################################
+    # TESTSET ORIENTATION/FACEDISCONTINUITY ASSEMBLY #
+    ##################################################
+    EGs = [Triangle2D,Parallelogram2D,Tetrahedron3D]
+
+    @testset "FaceJumpAssembly" begin
+        println("\n")
+        println("=====================================")
+        println("Testing Orientations/FaceJumpAssembly")
+        println("=====================================")
+        for EG in EGs
+            maxerror = test_jumps(testgrid(EG))
+            println("EG = $EG | left-right-error = $maxerror")
+            @test maxerror < 1e-15
+        end
+
+    end
 
     ##########################################
     # TESTSET Finite Elements interpolations #
@@ -720,6 +741,7 @@ function run_basis_tests()
     end
     println("")
     end
+
 end
 
 

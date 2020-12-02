@@ -962,7 +962,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLFeval; fact
     end
     push!(FES, b.FES)
     FES = Array{FESpace,1}(FES)
-    MLF = MultilinearForm(Float64, ON_CELLS, FES, O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
+    MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], FES, O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
     assemble!(b, O.Data, MLF; factor = factor * O.factor, verbosity = verbosity)
 end
 

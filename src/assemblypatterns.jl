@@ -302,7 +302,7 @@ function prepare_assembly(
     for j=1:length(FE)
         dofitemAT[j] = DofitemAT4Operator(AT, operator[j])
         xItemDofs[j] = Dofmap4AssemblyType(FE[j],dofitemAT[j])
-        if (dofitemAT[j] == ON_CELLS) && (AT <: ON_FACES)
+        if (dofitemAT[j] == ON_CELLS) && (AT <: ON_FACES || AT <: ON_BFACES)
             push!(facejump_operators,j)
         end
     end    
@@ -851,21 +851,6 @@ function assemble!(
 
         # get quadrature weights for integration domain
         weights = qf[EG4item].w
-
-        # check that quadrature points on both sides match
-        #if dofitems1[2] > 0
-        #    bleft = basisevaler[EG4dofitem1[1],1,itempos4dofitem1[1],1]
-        #    bright = basisevaler[EG4dofitem1[2],1,itempos4dofitem1[2],2]
-        #    update!(bleft.L2G,dofitems1[1])
-        #    update!(bright.L2G,dofitems1[2])
-        #    xleft = [0.0,0.0,0.0]
-        #    xright = [0.0,0.0,0.0]
-        #    for i = 1 : length(bleft.xref)
-        #        eval!(xleft, bleft.L2G, bleft.xref[i])
-        #        eval!(xright, bright.L2G, bright.xref[i])
-        #        println("xleft = $xleft right = $xright")
-        #    end
-        #end
 
         # loop over associated dofitems (maximal 2 for jump calculations)
         # di, dj == 2 is only performed if one of the operators jumps
@@ -1687,7 +1672,8 @@ function assemble!(
     EG4dofitem::Array{Int,1} = [1,1] # EG id of the current item with respect to operator
     dofitems::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
-    coefficient4dofitem::Array{Int,1} = [0,0] # coefficients for operator
+    orientation4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
+    coefficient4dofitem::Array{T,1} = [0,0] # coefficients for operator
     ndofs4dofitem::Int = 0 # number of dofs for item
     dofitem::Int = 0
     coeffs::Array{T,1} = zeros(T,maxdofs)
@@ -1739,30 +1725,38 @@ function assemble!(
         # update action on item/dofitem
         # beware: currently last operator must not be a FaceJump operator
         EG4item = dii4op[nFE](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
-        basisevaler4dofitem = basisevaler[EG4item,nFE,1,1]
         basisvals = basisevaler4dofitem.cvals
         ndofs4dofitem = ndofs4EG[nFE][EG4item]
-        update!(action, basisevaler4dofitem, dofitems[1], item, regions[r])
+        
+        for di = 1 : length(dofitems)
+            dofitem = dofitems[di]
+            if dofitem != 0
+                basisevaler4dofitem = basisevaler[EG4dofitem[di],nFE,itempos4dofitem[di],orientation4dofitem[di]]
+                ndofs4dofitem = ndofs4EG[nFE][EG4dofitem[di]]
+                update!(action, basisevaler4dofitem, dofitems[di], item, regions[r])
 
-        for i in eachindex(weights)
-
-            # apply action
-            apply_action!(action_result, action_input[i], action, i)
-
-            # multiply third component
-            for dof_j = 1 : ndofs4dofitem
-                temp = 0
-                for k = 1 : action_resultdim
-                    temp += action_result[k] * basisvals[k,dof_j,i]
+                for i in eachindex(weights)
+        
+                    # apply action
+                    apply_action!(action_result, action_input[i], action, i)
+        
+                    # multiply third component
+                    for dof_j = 1 : ndofs4dofitem
+                        temp = 0
+                        for k = 1 : action_resultdim
+                            temp += action_result[k] * basisvals[k,dof_j,i]
+                        end
+                        localb[dof_j] += temp * weights[i] * coefficient4dofitem[di]
+                    end 
+                end  
+        
+                for dof_i = 1 : ndofs4dofitem
+                    bdof = xItemDofs[nFE][dof_i,dofitem] + offset
+                    b[bdof] += localb[dof_i] * xItemVolumes[item] * factor
                 end
-                localb[dof_j] += temp * weights[i]
-            end 
-        end  
-
-        for dof_i = 1 : ndofs4dofitem
-            bdof = xItemDofs[nFE][dof_i,item] + offset
-            b[bdof] += localb[dof_i] * xItemVolumes[item] * factor
+            end
         end
+        
         fill!(localb, 0.0)
 
         break; # region for loop
@@ -2110,7 +2104,7 @@ function assemble!(
     EG4dofitem::Array{Int,1} = [1,1] # EG id of the current item with respect to operator
     dofitems::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
-    coefficient4dofitem::Array{Int,1} = [0,0] # coefficients for operator
+    coefficient4dofitem::Array{T,1} = [0,0] # coefficients for operator
     ndofs4dofitem::Int = 0 # number of dofs for item
     dofitem::Int = 0
     coeffs::Array{T,1} = zeros(T,maxdofs)
