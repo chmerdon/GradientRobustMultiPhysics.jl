@@ -25,9 +25,9 @@ using ExtendableGrids
 using Printf
 
 ## data
-function boundary_data_top!(result,x)
-    result[1] = 1.0;
-    result[2] = 0.0;
+function boundary_data_top!(result)
+    result[1] = 1;
+    result[2] = 0;
 end
 
 ## everything is wrapped in a main function
@@ -52,10 +52,13 @@ function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_ite
     #####################################################################################    
     #####################################################################################
 
+    ## negotiate data functions to the package
+    user_function_bnd = DataFunction(boundary_data_top!, [2,2]; dependencies = "", quadorder = 0)
+
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true)
     add_boundarydata!(StokesProblem, 1, [1,2,4], HomogeneousDirichletBoundary)
-    add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = boundary_data_top!, bonus_quadorder = 0)
+    add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = user_function_bnd)
 
     ## uniform mesh refinement
     ## in case of Scott-Vogelius we use barycentric refinement

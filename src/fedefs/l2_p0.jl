@@ -62,7 +62,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: 
     FES.dofmaps[BFaceDofs] = xBFaceDofs
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: L2P0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {FEType <: L2P0}
     xCoords = FE.xgrid[Coordinates]
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
@@ -72,18 +72,20 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     ncomponents = get_ncomponents(FEType)
     xdim = size(xCoords,1)
     integrals4cell = zeros(Float64,ncomponents,ncells)
-    integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!, bonus_quadorder, ncomponents)
+    integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!; time = time)
     for cell in items
-        for c = 1 : ncomponents
-            Target[(cell-1)*ncomponents + c] = integrals4cell[c, cell] / xCellVolumes[cell]
+        if cell != 0
+            for c = 1 : ncomponents
+                Target[(cell-1)*ncomponents + c] = integrals4cell[c, cell] / xCellVolumes[cell]
+            end
         end
     end    
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: L2P0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: L2P0}
     # delegate to node cell interpolation
     subitems = slice(FE.xgrid[FaceCells], items)
-    interpolate!(Target, FE, ON_CELLS, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, ON_CELLS, exact_function!; items = subitems, time = time)
 end
 
 

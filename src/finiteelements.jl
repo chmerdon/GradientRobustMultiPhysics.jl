@@ -384,7 +384,7 @@ end
 # point evaluation (at vertices of geometry)
 # for lowest order degrees of freedom
 # used e.g. for interpolation into P1, P2, P2B, MINI finite elements
-function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], component_offset::Int = 0) where {FEType <: AbstractFiniteElement}
+function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}, ::Type{AT_NODES}, exact_function::UserData{AbstractDataFunction}; items = [], component_offset::Int = 0, time = 0) where {FEType <: AbstractFiniteElement}
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     nnodes = size(xCoordinates,2)
@@ -400,7 +400,7 @@ function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}
         for k=1:xdim
             x[k] = xCoordinates[k,j]
         end    
-        exact_function!(result,x)
+        eval!(result, exact_function , x, time)
         for k = 1 : ncomponents
             Target[j+offset4component[k]] = result[k]
         end    
@@ -410,7 +410,7 @@ end
 
 # edge integral means
 # used e.g. for interpolation into P2, P2B finite elements
-function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: AbstractFiniteElement}
+function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function::UserData{AbstractDataFunction}; items = [], time = time) where {FEType <: AbstractFiniteElement}
 
     xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
@@ -423,7 +423,7 @@ function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FETyp
     # compute exact edge means
     ncomponents = get_ncomponents(FEType)
     edgemeans = zeros(Float64,ncomponents,nitems)
-    integrate!(edgemeans, FE.xgrid, AT, exact_function!, bonus_quadorder, ncomponents; items = items)
+    integrate!(edgemeans, FE.xgrid, AT, exact_function; items = items, time = time)
     for item in items
         for c = 1 : ncomponents
             # subtract edge mean value of P1 part

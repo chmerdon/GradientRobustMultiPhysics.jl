@@ -22,18 +22,20 @@ function run_basis_tests()
     tolerance = 2e-12
 
     function exact_function1D(polyorder)
-        function closure(result,x)
+        function polynomial(result,x)
             result[1] = x[1]^polyorder + 1
         end
         function gradient(result,x)
             result[1] = polyorder * x[1]^(polyorder-1)
         end
         exact_integral = 1 // (polyorder+1) + 1
-        return closure, exact_integral, gradient
+        exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", quadorder = polyorder)
+        exact_gradient = DataFunction(gradient, [1,1]; dependencies = "X", quadorder = polyorder - 1)
+        return exact_function, exact_integral, exact_gradient
     end
 
     function exact_function2D(polyorder)
-        function closure(result,x)
+        function polynomial(result,x)
             result[1] = x[1]^polyorder + 2*x[2]^polyorder + 1
             result[2] = 3*x[1]^polyorder - x[2]^polyorder - 1
         end
@@ -44,11 +46,13 @@ function run_basis_tests()
             result[4] = - polyorder * x[2]^(polyorder - 1)
         end
         exact_integral = [3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
-        return closure, exact_integral, gradient
+        exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", quadorder = polyorder)
+        exact_gradient = DataFunction(gradient, [4,2]; dependencies = "X", quadorder = polyorder - 1)
+        return exact_function, exact_integral, exact_gradient
     end
 
     function exact_function3D(polyorder)
-        function closure(result,x)
+        function polynomial(result,x)
             result[1] = 2*x[3]^polyorder - x[2]^polyorder - 1
             result[2] = x[1]^polyorder + 2*x[2]^polyorder + 1
             result[3] = 3*x[1]^polyorder - x[2]^polyorder - 1
@@ -64,7 +68,9 @@ function run_basis_tests()
             result[9] = 0
         end
         exact_integral = [1 // (polyorder + 1) - 1, 3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
-        return closure, exact_integral, gradient
+        exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", quadorder = polyorder)
+        exact_gradient = DataFunction(gradient, [9,3]; dependencies = "X", quadorder = polyorder - 1)
+        return exact_function, exact_integral, exact_gradient
     end
 
     ############################
@@ -83,9 +89,9 @@ function run_basis_tests()
         println("=============================")
         xgrid = testgrid(Edge1D)
         for order = 1 : maxorder1D
-            integrand!, exactvalue = exact_function1D(order)
+            integrand, exactvalue = exact_function1D(order)
             qf = QuadratureRule{Float64,Edge1D}(order)
-            quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue); force_quadrature_rule = qf)
+            quadvalue = integrate(xgrid, ON_CELLS, integrand, length(exactvalue); force_quadrature_rule = qf)
             println("EG = Edge1D | order = $order ($(qf.name), $(length(qf.w)) points) | error = $(quadvalue - exactvalue)")
             @test isapprox(quadvalue,exactvalue)
         end
@@ -97,9 +103,9 @@ function run_basis_tests()
             EG = EG2D[j]
             xgrid = testgrid(EG)
             for order = 1 : maxorder2D[j]
-                integrand!, exactvalue = exact_function2D(order)
+                integrand, exactvalue = exact_function2D(order)
                 qf = QuadratureRule{Float64,EG}(order)
-                quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue); force_quadrature_rule = qf)
+                quadvalue = integrate(xgrid, ON_CELLS, integrand, length(exactvalue); force_quadrature_rule = qf)
                 println("EG = $EG | order = $order ($(qf.name), $(length(qf.w)) points) | error = $(quadvalue - exactvalue)")
                 @test isapprox(quadvalue,exactvalue)
             end
@@ -112,9 +118,9 @@ function run_basis_tests()
             EG = EG3D[j]
             xgrid = testgrid(EG)
             for order = 1 : maxorder3D[j]
-                integrand!, exactvalue = exact_function3D(order)
+                integrand, exactvalue = exact_function3D(order)
                 qf = QuadratureRule{Float64,EG}(order)
-                quadvalue = integrate(xgrid, ON_CELLS, integrand!, order, length(exactvalue); force_quadrature_rule = qf)
+                quadvalue = integrate(xgrid, ON_CELLS, integrand, length(exactvalue); force_quadrature_rule = qf)
                 println("EG = $EG | order = $order ($(qf.name), $(length(qf.w)) points) | error = $(quadvalue - exactvalue)")
                 @test isapprox(quadvalue,exactvalue)
             end
@@ -186,10 +192,10 @@ function run_basis_tests()
         println("============================")
         xgrid = testgrid(Edge1D)
         for n = 1 : length(TestCatalog1D)
-            exact_function!, exactvalue = exact_function1D(ExpectedOrders1D[n])
+            exact_function, exactvalue = exact_function1D(ExpectedOrders1D[n])
 
             # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-            L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 1, length(exactvalue); bonus_quadorder = ExpectedOrders1D[n])
+            L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
             # choose FE and generate FESpace
             FEType = TestCatalog1D[n]
@@ -197,7 +203,7 @@ function run_basis_tests()
 
             # interpolate
             Solution = FEVector{Float64}("Interpolation",FES)
-            interpolate!(Solution[1], exact_function!; bonus_quadorder = ExpectedOrders1D[n])
+            interpolate!(Solution[1], exact_function)
 
             # check error
             error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
@@ -211,10 +217,10 @@ function run_basis_tests()
         for EG in [Triangle2D,Parallelogram2D]
             xgrid = testgrid(EG)
             for n = 1 : length(TestCatalog2D)
-                exact_function!, exactvalue = exact_function2D(ExpectedOrders2D[n])
+                exact_function, exactvalue = exact_function2D(ExpectedOrders2D[n])
 
                 # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-                L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, length(exactvalue); bonus_quadorder = ExpectedOrders2D[n])
+                L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
                 # choose FE and generate FESpace
                 FEType = TestCatalog2D[n]
@@ -222,7 +228,7 @@ function run_basis_tests()
 
                 # interpolate
                 Solution = FEVector{Float64}("Interpolation",FES)
-                interpolate!(Solution[1], exact_function!; bonus_quadorder = ExpectedOrders2D[n])
+                interpolate!(Solution[1], exact_function)
 
                 # check error
                 error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
@@ -237,10 +243,10 @@ function run_basis_tests()
         for EG in [Tetrahedron3D]
             xgrid = testgrid(EG)
             for n = 1 : length(TestCatalog2D)
-                exact_function!, exactvalue = exact_function3D(ExpectedOrders3D[n])
+                exact_function, exactvalue = exact_function3D(ExpectedOrders3D[n])
 
                 # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-                L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, length(exactvalue); bonus_quadorder = ExpectedOrders3D[n])
+                L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
                 # choose FE and generate FESpace
                 FEType = TestCatalog3D[n]
@@ -248,7 +254,7 @@ function run_basis_tests()
 
                 # interpolate
                 Solution = FEVector{Float64}("Interpolation",FES)
-                interpolate!(Solution[1], exact_function!; bonus_quadorder = ExpectedOrders3D[n])
+                interpolate!(Solution[1], exact_function)
 
                 # check error
                 error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
@@ -301,11 +307,11 @@ function run_basis_tests()
         println("===================================")
         xgrid = testgrid(Edge1D)
         for n = 1 : length(TestCatalog1D)
-            exact_function!, exactvalue = exact_function1D(ExpectedOrders1D[n])
+            exact_function, exactvalue = exact_function1D(ExpectedOrders1D[n])
 
             # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-            Problem = L2BestapproximationProblem(exact_function!, 1, length(exactvalue); bestapprox_boundary_regions = [], bonus_quadorder = ExpectedOrders1D[n])
-            L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 1, length(exactvalue); bonus_quadorder = ExpectedOrders1D[n])
+            Problem = L2BestapproximationProblem(exact_function; bestapprox_boundary_regions = [])
+            L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
             # choose FE and generate FESpace
             FEType = TestCatalog1D[n]
@@ -326,11 +332,11 @@ function run_basis_tests()
         println("===================================")
         xgrid = testgrid(Triangle2D, Parallelogram2D)
         for n = 1 : length(TestCatalog2D)
-            exact_function!, exactvalue = exact_function2D(ExpectedOrders2D[n])
+            exact_function, exactvalue = exact_function2D(ExpectedOrders2D[n])
 
             # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-            Problem = L2BestapproximationProblem(exact_function!, 2, length(exactvalue); bestapprox_boundary_regions = [], bonus_quadorder = ExpectedOrders2D[n])
-            L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, length(exactvalue); bonus_quadorder = ExpectedOrders2D[n])
+            Problem = L2BestapproximationProblem(exact_function; bestapprox_boundary_regions = [])
+            L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
             # choose FE and generate FESpace
             FEType = TestCatalog2D[n]
@@ -351,11 +357,11 @@ function run_basis_tests()
         println("===================================")
         xgrid = testgrid(Tetrahedron3D)
         for n = 1 : length(TestCatalog3D)
-            exact_function!, exactvalue = exact_function3D(ExpectedOrders3D[n])
+            exact_function, exactvalue = exact_function3D(ExpectedOrders3D[n])
 
             # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-            Problem = L2BestapproximationProblem(exact_function!, 3, length(exactvalue); bestapprox_boundary_regions = [1], bonus_quadorder = ExpectedOrders3D[n])
-            L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, length(exactvalue); bonus_quadorder = ExpectedOrders3D[n])
+            Problem = L2BestapproximationProblem(exact_function; bestapprox_boundary_regions = [])
+            L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
             # choose FE and generate FESpace
             FEType = TestCatalog3D[n]
@@ -406,11 +412,11 @@ function run_basis_tests()
         println("===================================")
         xgrid = testgrid(Edge1D)
         for n = 1 : length(TestCatalog1D)
-            exact_function!, exactvalue, exact_function_gradient! = exact_function1D(ExpectedOrders1D[n])
+            exact_function, exactvalue, exact_function_gradient = exact_function1D(ExpectedOrders1D[n])
 
             # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-            Problem = H1BestapproximationProblem(exact_function_gradient!, exact_function!, 1, length(exactvalue); bestapprox_boundary_regions = [1,2], bonus_quadorder = ExpectedOrders1D[n] - 1, bonus_quadorder_boundary = ExpectedOrders1D[n])
-            L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 1, length(exactvalue); bonus_quadorder = ExpectedOrders1D[n])
+            Problem = H1BestapproximationProblem(exact_function_gradient, exact_function; bestapprox_boundary_regions = [1,2])
+            L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
             # choose FE and generate FESpace
             FEType = TestCatalog1D[n]
@@ -431,11 +437,11 @@ function run_basis_tests()
         println("===================================")
         xgrid = testgrid(Triangle2D, Parallelogram2D)
         for n = 1 : length(TestCatalog2D)
-            exact_function!, exactvalue, exact_function_gradient! = exact_function2D(ExpectedOrders2D[n])
+            exact_function, exactvalue, exact_function_gradient = exact_function2D(ExpectedOrders2D[n])
 
             # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-            Problem = H1BestapproximationProblem(exact_function_gradient!, exact_function!, 2, length(exactvalue); bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = ExpectedOrders2D[n] - 1, bonus_quadorder_boundary = ExpectedOrders2D[n])
-            L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, length(exactvalue); bonus_quadorder = ExpectedOrders2D[n])
+            Problem = H1BestapproximationProblem(exact_function_gradient, exact_function; bestapprox_boundary_regions = [1,2])
+            L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
             # choose FE and generate FESpace
             FEType = TestCatalog2D[n]
@@ -457,11 +463,11 @@ function run_basis_tests()
         for EG in EG3D
             xgrid = testgrid(EG)
             for n = 1 : length(TestCatalog3D)
-                exact_function!, exactvalue, exact_function_gradient! = exact_function3D(ExpectedOrders3D[n])
+                exact_function, exactvalue, exact_function_gradient = exact_function3D(ExpectedOrders3D[n])
 
                 # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-                Problem = H1BestapproximationProblem(exact_function_gradient!, exact_function!, 3, length(exactvalue); bestapprox_boundary_regions = [1,2,3,4,5,6], bonus_quadorder = ExpectedOrders2D[n] - 1, bonus_quadorder_boundary = ExpectedOrders3D[n])
-                L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, length(exactvalue); bonus_quadorder = ExpectedOrders3D[n])
+                Problem = H1BestapproximationProblem(exact_function_gradient, exact_function; bestapprox_boundary_regions = [1,2])
+                L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
 
                 # choose FE and generate FESpace
                 FEType = TestCatalog3D[n]
@@ -513,7 +519,11 @@ function run_basis_tests()
                 result[2] += polyorder_pressure * x[2]^(polyorder_pressure-1)
             end
         end
-        return exact_velocity!, exact_pressure!, velo_gradient!, rhs!
+        exact_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "X", quadorder = polyorder_velocity)
+        exact_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = "X", quadorder = polyorder_pressure)
+        exact_gradient = DataFunction(velo_gradient!, [4,2]; dependencies = "X", quadorder = polyorder_velocity - 1)
+        rhs = DataFunction(rhs!, [2,2]; dependencies = "X", quadorder = max(0,polyorder_pressure - 1))
+        return exact_velocity, exact_pressure, exact_gradient, rhs
     end
 
     function exact_functions_stokes3D(polyorder_velocity,polyorder_pressure)
@@ -551,7 +561,11 @@ function run_basis_tests()
                 result[3] += polyorder_pressure * x[3]^(polyorder_pressure-1)
             end
         end
-        return exact_velocity!, exact_pressure!, velo_gradient!, rhs!
+        exact_velocity = DataFunction(exact_velocity!, [3,3]; dependencies = "X", quadorder = polyorder_velocity)
+        exact_pressure = DataFunction(exact_pressure!, [1,3]; dependencies = "X", quadorder = polyorder_pressure)
+        exact_gradient = DataFunction(velo_gradient!, [9,3]; dependencies = "X", quadorder = polyorder_velocity - 1)
+        rhs = DataFunction(rhs!, [3,3]; dependencies = "X", quadorder = max(0,polyorder_pressure - 1))
+        return exact_velocity, exact_pressure, exact_gradient, rhs
     end
 
     # list of FETypes that should be tested
@@ -563,10 +577,11 @@ function run_basis_tests()
                     [H1P2B{2,2},L2P1{1}]]
     TestCatalogParallelogram2D = [
                     [H1CR{2},L2P0{1}],
-                    [H1MINI{2,2},H1CR{1}],
+                  #  [H1MINI{2,2},H1CR{1}],
                     [H1BR{2},L2P0{1}],
                     [H1P2{2,2},H1P1{1}]]
-    ExpectedOrders2D = [[1,0],[1,1],[1,0],[2,1],[2,1]]
+    ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[2,1],[2,1]]
+    ExpectedOrdersParallelogram2D = [[1,0],[1,0],[2,1],[2,1]]
     TestCatalog3D = [
                     [H1BR{3},L2P0{1}],
                     [H1CR{3},L2P0{1}],
@@ -582,14 +597,14 @@ function run_basis_tests()
         println("=====================================")
         xgrid = testgrid(Triangle2D)
         for n = 1 : length(TestCatalogTriangle2D)
-            exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
+            exact_velocity, exact_pressure, exact_function_gradient, rhs = exact_functions_stokes2D(ExpectedOrdersTriangle2D[n][1],ExpectedOrdersTriangle2D[n][2])
 
             # Define Stokes problem via PDETooles_PDEProtoTypes
             StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
-            add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders2D[n][1])
-            add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
-            L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
-            L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = ExpectedOrders2D[n][2])
+            add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity)
+            add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs))
+            L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, exact_velocity, Identity)
+            L2ErrorEvaluatorP = L2ErrorIntegrator(Float64, exact_pressure, Identity)
 
             # choose FE and generate FESpace
             FETypes = TestCatalogTriangle2D[n]
@@ -602,7 +617,7 @@ function run_basis_tests()
             # check error
             errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
             errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
-            println("EG = Triangle2D | FETypes = $(FETypes) | orders = $(ExpectedOrders2D[n]) | errorV = $errorV | errorP = $errorP")
+            println("EG = Triangle2D | FETypes = $(FETypes) | orders = $(ExpectedOrdersTriangle2D[n]) | errorV = $errorV | errorP = $errorP")
             @test max(errorV,errorP) < tolerance
         end
         println("\n")
@@ -611,14 +626,14 @@ function run_basis_tests()
         println("==========================================")
         xgrid = uniform_refine(testgrid(Parallelogram2D),1)
         for n = 1 : length(TestCatalogParallelogram2D)
-            exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
+            exact_velocity, exact_pressure, exact_function_gradient, rhs = exact_functions_stokes2D(ExpectedOrdersParallelogram2D[n][1],ExpectedOrdersParallelogram2D[n][2])
 
             # Define Stokes problem via PDETooles_PDEProtoTypes
             StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
-            add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders2D[n][1])
-            add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
-            L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
-            L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = ExpectedOrders2D[n][2])
+            add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity)
+            add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs))
+            L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, exact_velocity, Identity)
+            L2ErrorEvaluatorP = L2ErrorIntegrator(Float64, exact_pressure, Identity)
 
             # choose FE and generate FESpace
             FETypes = TestCatalogParallelogram2D[n]
@@ -631,7 +646,7 @@ function run_basis_tests()
             # check error
             errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
             errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
-            println("EG = Parallelogram2D | FETypes = $(FETypes) | orders = $(ExpectedOrders2D[n]) | errorV = $errorV | errorP = $errorP")
+            println("EG = Parallelogram2D | FETypes = $(FETypes) | orders = $(ExpectedOrdersParallelogram2D[n]) | errorV = $errorV | errorP = $errorP")
             @test max(errorV,errorP) < tolerance
         end
         println("\n")
@@ -640,14 +655,14 @@ function run_basis_tests()
         println("=============================")
         xgrid = testgrid(Tetrahedron3D)
         for n = 1 : length(TestCatalog3D)
-            exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders3D[n][2])
+            exact_velocity, exact_pressure, exact_function_gradient, rhs = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders3D[n][2])
 
             # Define Stokes problem via PDETooles_PDEProtoTypes
             StokesProblem = IncompressibleNavierStokesProblem(3; nonlinear = false)
-            add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders3D[n][1])
-            add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs!, 3, 3; bonus_quadorder = max(0,ExpectedOrders3D[n][2]-1)))
-            L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Identity, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
-            L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure!, Identity, 3, 1; bonus_quadorder = ExpectedOrders3D[n][2])
+            add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_velocity)
+            add_rhsdata!(StokesProblem, 1, RhsOperator(Identity, [0], rhs))
+            L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, exact_velocity, Identity)
+            L2ErrorEvaluatorP = L2ErrorIntegrator(Float64, exact_pressure, Identity)
 
             # choose FE and generate FESpace
             FETypes = TestCatalog3D[n]
@@ -689,14 +704,14 @@ function run_basis_tests()
     println("======================================")
     xgrid = testgrid(Triangle2D, Parallelogram2D)
     for n = 1 : length(TestCatalog2D)
-        exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
+        exact_velocity, exact_pressure, exact_function_gradient, rhs = exact_functions_stokes2D(ExpectedOrders2D[n][1],ExpectedOrders2D[n][2])
 
         # Define Stokes problem via PDETooles_PDEProtoTypes with reconstruction operator in rhs
         FETypes = TestCatalog2D[n]
         Rop = ReconstructionIdentity{FETypes[3]}
         StokesProblem = IncompressibleNavierStokesProblem(2; nonlinear = false)
-        add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders2D[n][1])
-        add_rhsdata!(StokesProblem, 1, RhsOperator(Rop, [0], rhs!, 2, 2; bonus_quadorder = max(0,ExpectedOrders2D[n][2]-1)))
+        add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity)
+        add_rhsdata!(StokesProblem, 1, RhsOperator(Rop, [0], rhs))
         
         # choose FE and generate FESpace
         FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
@@ -706,7 +721,7 @@ function run_basis_tests()
         solve!(Solution, StokesProblem)
 
         # check error of reconstruction
-        L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 2, 2; bonus_quadorder = ExpectedOrders2D[n][1])
+        L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, exact_velocity, Rop)
         errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
         println("EG = Triangle2D/Parallelogram2D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders2D[n][1]) | error = $errorV ")
         @test errorV < tolerance
@@ -717,15 +732,15 @@ function run_basis_tests()
     println("======================================")
     xgrid = testgrid(Tetrahedron3D)
     for n = 1 : length(TestCatalog3D)
-        exact_velocity!, exact_pressure!, exact_function_gradient!, rhs! = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders3D[n][2])
+        exact_velocity, exact_pressure, exact_function_gradient, rhs = exact_functions_stokes3D(ExpectedOrders3D[n][1],ExpectedOrders3D[n][2])
 
         # Define Stokes problem via PDETooles_PDEProtoTypes with reconstruction operator in rhs
         FETypes = TestCatalog3D[n]
         Rop = ReconstructionIdentity{FETypes[3]}
         StokesProblem = IncompressibleNavierStokesProblem(3; nonlinear = false)
-        add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = ExpectedOrders3D[n][1])
-        add_rhsdata!(StokesProblem, 1, RhsOperator(Rop, [0], rhs!, 3, 3; bonus_quadorder = max(0,ExpectedOrders3D[n][2]-1)))
-        
+        add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_velocity)
+        add_rhsdata!(StokesProblem, 1, RhsOperator(Rop, [0], rhs))
+
         # choose FE and generate FESpace
         FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
 
@@ -734,7 +749,7 @@ function run_basis_tests()
         solve!(Solution, StokesProblem)
 
         # check error of reconstruction
-        L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity!, Rop, 3, 3; bonus_quadorder = ExpectedOrders3D[n][1])
+        L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, exact_velocity, Rop)
         errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
         println("EG = Tetrahedron3D | FEType = $(FETypes[1]) | R = $Rop | order = $(ExpectedOrders3D[n][1]) | error = $errorV ")
         @test errorV < tolerance

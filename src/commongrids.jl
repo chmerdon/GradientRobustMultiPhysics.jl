@@ -37,9 +37,14 @@ function grid_unitcube(EG::Type{<:Hexahedron3D}; scale = [1,1,1], shift = [0,0,0
 end
 
 # unit cube as six tets with six boundary regions (bottom, front, right, back, left, top)
-function grid_unitcube(::Type{Tetrahedron3D})
+function grid_unitcube(::Type{Tetrahedron3D}; scale = [1,1,1], shift = [0,0,0])
     xgrid=ExtendableGrid{Float64,Int32}()
-    xgrid[Coordinates]=Array{Float64,2}([0 0 0; 1 0 0; 1 1 0; 0 1 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1]')
+    xCoordinates=Array{Float64,2}([0 0 0; 1 0 0; 1 1 0; 0 1 0; 0 0 1; 1 0 1; 1 1 1; 0 1 1]')
+    for j = 1 : size(xCoordinates,1)
+        xCoordinates[j,:] .+= shift[j]
+        xCoordinates[j,:] .*= scale[j]
+    end
+    xgrid[Coordinates] = xCoordinates
 
     xCellNodes=Array{Int32,2}([1 2 3 7; 1 3 4 7; 1 5 6 7; 1 8 5 7; 1 6 2 7;1 4 8 7]')
     xgrid[CellNodes] = xCellNodes
@@ -54,6 +59,7 @@ function grid_unitcube(::Type{Tetrahedron3D})
     xgrid[CoordinateSystem]=Cartesian3D
     return xgrid
 end
+
 
 
 # unit square as one cell with four boundary regions (bottom, right, top, left)

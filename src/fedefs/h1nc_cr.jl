@@ -39,7 +39,7 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1CR}
     FES.ndofs = nfaces * ncomponents
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1CR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: H1CR}
     # preserve face means
     xItemVolumes = FE.xgrid[FaceVolumes]
     xItemNodes = FE.xgrid[FaceNodes]
@@ -52,7 +52,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
 
     # compute exact face means
     facemeans = zeros(Float64,ncomponents,nitems)
-    integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!, bonus_quadorder, ncomponents; items = items)
+    integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!; items = items, time = time)
     for item in items
         for c = 1 : ncomponents
             Target[offset4component[c]+item] = facemeans[c,item] / xItemVolumes[item]
@@ -60,10 +60,10 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1CR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: H1CR}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
-    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
 end
 
 

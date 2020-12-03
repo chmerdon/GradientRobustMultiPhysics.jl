@@ -29,9 +29,9 @@ using ExtendableGrids
 using Printf
 
 ## problem data for Neumann boundary
-function neumann_force_right!(result,x)
-    result[1] = 0.0
-    result[2] = 10.0
+function neumann_force_right!(result)
+    result[1] = 0
+    result[2] = 10
 end    
 
 ## everything is wrapped in a main function
@@ -47,18 +47,18 @@ function main(; verbosity = 1, Plotter = nothing)
     shear_modulus = (1/(1+poisson_number))*elasticity_modulus
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
+    ## negotiate data function to the package
+    user_function_neumann_bnd = DataFunction(neumann_force_right!, [2,2]; dependencies = "", quadorder = 0)
+
     ## choose finite element type
     FEType = H1P1{2} # P1-Courant
     #FEType = H1P2{2,2} # P2
-
-    #####################################################################################    
-    #####################################################################################
 
     ## PDE description via prototype
     LinElastProblem = LinearElasticityProblem(2; shear_modulus = shear_modulus, lambda = lambda)
 
     ## add Neumann boundary data
-    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [2], neumann_force_right!, 2, 2; on_boundary = true, bonus_quadorder = 0))
+    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [2], user_function_neumann_bnd; on_boundary = true))
 
     ## add Dirichlet boundary data
     add_boundarydata!(LinElastProblem, 1, [4], HomogeneousDirichletBoundary)
@@ -75,7 +75,6 @@ function main(; verbosity = 1, Plotter = nothing)
 
     ## plot stress
     GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
-
 end
 
 end

@@ -29,7 +29,7 @@ function exact_gradient!(result,x)
     result[3] = x[1]
     return nothing
 end
-function rhs!(result,x)
+function rhs!(result)
     result[1] = - 2
     return nothing
 end
@@ -46,14 +46,19 @@ function main(; verbosity = 1)
     ## set finite element type used for discretisation
     FEType = H1P1{1}
 
+    ## negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,3]; dependencies = "X", quadorder = 2)
+    user_function_gradient = DataFunction(exact_gradient!, [3,3]; dependencies = "X", quadorder = 1)
+    user_function_rhs = DataFunction(rhs!, [1,3]; dependencies = "", quadorder = 0)
+
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(3; diffusion = 1.0)
-    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 2)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], rhs!, 3, 1; bonus_quadorder = 0))
+    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = user_function)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs))
 
     ## prepare error calculation
-    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 1; bonus_quadorder = 2)
-    H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient!, Gradient, 3, 3; bonus_quadorder = 1)
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
     L2error = []; H1error = []; NDofs = []
 
     ## loop over levels

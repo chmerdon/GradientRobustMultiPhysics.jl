@@ -504,17 +504,18 @@ function integrate!(
     integral4items::AbstractArray,
     grid::ExtendableGrid,
     AT::Type{<:AbstractAssemblyType},
-    integrand!::Function,
-    order::Int,
-    resultdim::Int;
+    integrand::UserData{<:Union{AbstractDataFunction,AbstractExtendedDataFunction}};
     verbosity::Int = 0,
     index_offset::Int = 0,
+    time = 0,
     items = [],
-    item_dependent_integrand::Bool = false,
     force_quadrature_rule = nothing)
     
+    order = integrand.quadorder
+    resultdim = integrand.dimensions[1]
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
+    @assert dim == integrand.dimensions[2]
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
@@ -543,8 +544,6 @@ function integrate!(
         end
     end
 
-    item_integrand!(result,x,item,xref) = item_dependent_integrand ? integrand!(result,x,item,xref) : integrand!(result,x)
-
     # loop over items
     if items == []
         items = 1 : nitems
@@ -566,7 +565,7 @@ function integrate!(
 
             for i in eachindex(qf[iEG].w)
                 eval!(x, local2global[iEG], qf[iEG].xref[i])
-                item_integrand!(result,x,item, qf[iEG].xref[i])
+                eval!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
                 integral4items[item+index_offset] += result[1] * qf[iEG].w[i] * xItemVolumes[item];
             end  
         end
@@ -583,7 +582,7 @@ function integrate!(
 
             for i in eachindex(qf[iEG].w)
                 eval!(x, local2global[iEG], qf[iEG].xref[i])
-                item_integrand!(result,x,item,qf[iEG].xref[i])
+                eval!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
                 for j = 1 : resultdim
                     integral4items[j,item] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
                 end
@@ -600,19 +599,17 @@ Integration that returns total integral.
 function integrate(
     grid::ExtendableGrid,
     AT::Type{<:AbstractAssemblyType},
-    integrand!::Function,
-    order::Int,
+    integrand!::UserData{<:AbstractDataFunction},
     resultdim::Int;
     verbosity::Int = 0,
     items = [],
-    item_dependent_integrand::Bool = false,
     force_quadrature_rule = nothing)
 
     # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
     # and use the itemwise integration above
     AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
 
-    integrate!(AV, grid, AT, integrand!, order, resultdim; verbosity = verbosity, items = items, item_dependent_integrand = item_dependent_integrand, force_quadrature_rule = force_quadrature_rule)
+    integrate!(AV, grid, AT, integrand!; verbosity = verbosity, items = items, force_quadrature_rule = force_quadrature_rule)
 
     if resultdim == 1
         return AV.entries[1]

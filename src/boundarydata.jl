@@ -33,18 +33,16 @@ struct BoundaryOperator <: AbstractPDEOperator
     data4bregion :: Array{Any,1}
     timedependent :: Array{Bool,1}
     quadorder4bregion :: Array{Int,1}
-    xdim :: Int
-    ncomponents :: Int
 end
 
-function BoundaryOperator(xdim::Int, ncomponents::Int = 1)
+function BoundaryOperator()
     regions4boundarytype = Dict{Type{<:AbstractBoundaryType},Array{Int,1}}()
     quadorder4bregion = zeros(Int,0)
     timedependent = Array{Bool,1}([])
-    return BoundaryOperator(regions4boundarytype, [], timedependent, quadorder4bregion, xdim, ncomponents)
+    return BoundaryOperator(regions4boundarytype, [], timedependent, quadorder4bregion)
 end
 
-function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; timedependent::Bool = false, data = Nothing, bonus_quadorder::Int = 0)
+function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; data = Nothing)
     O.regions4boundarytype[btype]=push!(get(O.regions4boundarytype, btype, []),region)
     while length(O.data4bregion) < region
         push!(O.data4bregion, Nothing)
@@ -53,29 +51,17 @@ function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBou
         push!(O.quadorder4bregion, 0)
         push!(O.timedependent, false)
     end
-    O.quadorder4bregion[region] = bonus_quadorder
+    if typeof(data) <: UserData{<:AbstractDataFunction}
+        O.quadorder4bregion[region] = data.quadorder
+        O.timedependent[region] = is_timedependent(data)
+    end
     O.data4bregion[region] = data
-    O.timedependent[region] = timedependent
 end
 
 
-function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
-
-    # check if function is time-dependent
-    if applicable(data,[0],0,0)
-        timedependent = true
-        datat! = data
-    else
-        timedependent = false
-        if data != Nothing
-            datat!(result,x,t) = data(result,x)
-        else
-            datat! = Nothing
-        end
-    end
-
+function Base.append!(O::BoundaryOperator,regions::Array{Int,1}, btype::Type{<:AbstractBoundaryType}; data = Nothing)
     for j = 1 : length(regions)
-        append!(O,regions[j], btype; timedependent = timedependent, data = datat!, bonus_quadorder = bonus_quadorder)
+        append!(O,regions[j], btype; data = data)
     end
 end
 
@@ -123,15 +109,7 @@ function boundarydata!(
             bregiondofs = Base.unique(bregiondofs)
             bregion = InterDirichletBoundaryRegions[r]
             append!(fixed_dofs,bregiondofs)
-            if O.timedependent[bregion] == true
-                function bregion_data_at_time(result, input)
-                    O.data4bregion[bregion](temp,x,time)
-                end   
-                interpolate!(Target, ON_FACES, bregion_data_at_time; items = ibfaces)
-            else
-                interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ibfaces)
-            end
-
+            interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ibfaces, time = time)
         end   
 
         if verbosity > 0
@@ -188,7 +166,6 @@ function boundarydata!(
                 
         end    
 
-
         bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
         FEType = eltype(FE)
         Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
@@ -199,15 +176,15 @@ function boundarydata!(
             function bnd_rhs_function_h1()
                 temp = zeros(Float64,ncomponents)
                 function closure(result, input, x, region)
-                    O.data4bregion[region](temp,x,time)
+                    eval!(temp, O.data4bregion[region], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j]*input[j] 
                     end 
                 end   
             end   
-            action = RegionWiseXFunctionAction(bnd_rhs_function_h1(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            action_kernel = ActionKernel(bnd_rhs_function_h1(), [1, ncomponents]; dependencies = "XR", quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
@@ -215,8 +192,8 @@ function boundarydata!(
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hdiv()
                 temp = zeros(Float64,ncomponents)
-                function closure(result, input, x, bface)
-                    O.data4bregion[xBFaceRegions[bface]](temp,x,time)
+                function closure(result, input, x, bface, region)
+                    eval!(temp, O.data4bregion[region], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]
@@ -224,8 +201,8 @@ function boundarydata!(
                     result[1] *= input[1] 
                 end   
             end   
-            action = ItemWiseXFunctionAction(bnd_rhs_function_hdiv(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            action_kernel = ActionKernel(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
@@ -233,15 +210,15 @@ function boundarydata!(
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hcurl2d()
                 temp = zeros(Float64,ncomponents)
-                function closure(result, input, x, bface)
-                    O.data4bregion[xBFaceRegions[bface]](temp,x,time)
+                function closure(result, input, x, bface, region)
+                    eval!(temp, O.data4bregion[region], x, time)
                     result[1] = -temp[1] * xFaceNormals[2,xBFaces[bface]]
                     result[1] += temp[2] * xFaceNormals[1,xBFaces[bface]]
                     result[1] *= input[1] 
                 end   
             end   
-            action = ItemWiseXFunctionAction(bnd_rhs_function_hcurl2d(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, action; regions = BADirichletBoundaryRegions)
+            action_kernel = ActionKernel(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
@@ -253,8 +230,8 @@ function boundarydata!(
             function bnd_rhs_function_hcurl3d()
                 temp = zeros(Float64,ncomponents)
                 region::Int = 1
-                function closure(result, input, x, bedge)
-                    region = xBEdgeRegions[bedge]
+                function closure(result, input, x, bedge, region)
+                    eval!(temp, O.data4bregion[region], x, time)
                     if region == 0
                         region = 1
                     end
@@ -265,8 +242,8 @@ function boundarydata!(
                     result[1] *= input[1]
                 end   
             end   
-            action = ItemWiseXFunctionAction(bnd_rhs_function_hcurl3d(),[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BEDGES, FE, Dboperator, action; regions = [0])
+            action_kernel = ActionKernel(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, FE, Dboperator, DoNotChangeAction(1); regions = [0])    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)

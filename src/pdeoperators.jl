@@ -81,7 +81,7 @@ mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOper
     regions::Array{Int,1}
     transposed_assembly::Bool
     store_operator::Bool                    # should the matrix repsentation of the operator be stored?
-    storage::AbstractArray{Float64,2}  # matrix can be stored here to allow for fast matmul operations in iterative settings
+    storage::AbstractArray{<:Real,2}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
 
 """
@@ -136,7 +136,8 @@ function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient
         # just Hook law like a spring where mu is the elasticity modulus
         result[1] = mu*input[1]
     end   
-    action = FunctionAction(tensor_apply_1d, [1,1])
+    action_kernel = ActionKernel(tensor_apply_1d, [1,1]; dependencies = "", quadorder = 0)
+    action = Action(Float64, action_kernel)
     return AbstractBilinearForm("Hookian1D",gradient_operator, gradient_operator, action; regions = regions)
 end
 
@@ -161,7 +162,8 @@ function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} =
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
         result[3] = mu*input[3]
     end   
-    action = FunctionAction(tensor_apply_2d, [3,3])
+    action_kernel = ActionKernel(tensor_apply_2d, [3,3]; dependencies = "", quadorder = 0)
+    action = Action(Float64, action_kernel)
     return AbstractBilinearForm("Hookian2D",gradient_operator, gradient_operator, action; regions = regions)
 end
 
@@ -191,7 +193,8 @@ function HookStiffnessOperator3D(mu::Real, lambda::Real; regions::Array{Int,1} =
         result[5] = mu*input[5]
         result[6] = mu*input[6]
     end   
-    action = FunctionAction(tensor_apply_3d, [6,6])
+    action_kernel = ActionKernel(tensor_apply_3d, [6,6]; dependencies = "", quadorder = 0)
+    action = Action(Float64, action_kernel)
     return AbstractBilinearForm("Hookian3D", gradient_operator, gradient_operator, action; regions = regions)
 end
 
@@ -213,12 +216,13 @@ constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) wi
 interface beta(result,x) (so it writes its result into result and returns nothing)
     
 """
-function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_quadorder::Int = 0, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction}, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+    xdim = beta.dimensions[1]
     function convection_function_func() # dot(convection!, input=Gradient)
-        convection_vector = zeros(Float64,xdim)
-        function closure(result, input, x)
+        convection_vector = zeros(T,xdim)
+        function closure(result, input, x, time)
             # evaluate beta
-            beta(convection_vector,x)
+            eval!(convection_vector,beta,x,time)
             # compute (beta*grad)u
             for j = 1 : ncomponents
                 result[j] = 0.0
@@ -228,8 +232,8 @@ function ConvectionOperator(beta::Function, xdim::Int, ncomponents::Int; bonus_q
             end
         end    
     end    
-    convection_action = XFunctionAction(convection_function_func(), [ncomponents, ncomponents*xdim], xdim; bonus_quadorder = bonus_quadorder)
-    return AbstractBilinearForm("(a(=XFunction) * Gradient) u * v", Gradient,testfunction_operator, convection_action; regions = regions, transposed_assembly = true)
+    action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "XT", quadorder = beta.quadorder)
+    return AbstractBilinearForm("(a(=DataFunction) * Gradient) u * v", Gradient,testfunction_operator, Action(T, action_kernel); regions = regions, transposed_assembly = true)
 end
 
 
@@ -314,15 +318,14 @@ function GenerateNonlinearForm(
     operator1::Array{DataType,1},
     coeff_from::Array{Int,1},
     operator2::Type{<:AbstractFunctionOperator},
-    action_kernel::Function,
-    argsizes::Array{Int,1},
-    dim::Int;
+    action_kernel::UserData{<:AbstractActionKernel};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     ADnewton::Bool = false,
     action_kernel_rhs = nothing,
     bonus_quadorder::Int = 0,
     regions = [0])
 
+    argsizes::Array{Int,1} = action_kernel.dimensions
     ### Newton scheme for a nonlinear operator G(u) is
     ## seek u_next such that : DG u_next = DG u - G(u)
     if ADnewton
@@ -334,9 +337,9 @@ function GenerateNonlinearForm(
         jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[2])
         Dresult = DiffResults.DiffResult(result_temp,jac_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-        cfg =ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
+        cfg =ForwardDiff.JacobianConfig(action_kernel.user_function, result_temp, input_temp)
         function newton_kernel(result, input_current, input_ansatz)
-            ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
+            ForwardDiff.jacobian!(Dresult, action_kernel.user_function, result, input_current, cfg)
             jac = DiffResults.jacobian(Dresult)
             
             for j = 1 : argsizes[1]
@@ -347,24 +350,26 @@ function GenerateNonlinearForm(
             end
             return nothing
         end
-        action = FunctionAction(newton_kernel, argsizes; bonus_quadorder = bonus_quadorder)
+        newton_action_kernel = NLActionKernel(newton_kernel, argsizes; dependencies = "", quadorder = action_kernel.quadorder)
+        action = Action(Float64, newton_action_kernel)
 
         # the action for the RHS just evaluates DG and G at input_current
         temp = zeros(Float64, argsizes[1])
         function rhs_kernel(result, input_current)
             fill!(result,0)
             newton_kernel(result, input_current, input_current)
-            action_kernel(temp, input_current)
+            action_kernel.user_function(temp, input_current)
             for j = 1 : argsizes[1]
                 result[j] -= temp[j]
             end
             return nothing
         end
-        action_rhs = FunctionAction(rhs_kernel, argsizes; bonus_quadorder = bonus_quadorder)
+        rhs_action_kernel = ActionKernel(rhs_kernel, argsizes; dependencies = "", quadorder = action_kernel.quadorder)
+        action_rhs = Action(Float64, rhs_action_kernel)
     else
-        action = FunctionAction(action_kernel, argsizes; bonus_quadorder = bonus_quadorder)
+        action = Action(Float64, action_kernel)
         if action_kernel_rhs != nothing
-            action_rhs = FunctionAction(action_kernel_rhs, argsizes; bonus_quadorder = bonus_quadorder)
+            action_rhs = Action(Float64, action_kernel_rhs)
         else
             action_rhs = nothing
         end
@@ -462,7 +467,8 @@ function ConvectionOperator(a_from::Int, beta_operator, xdim::Int, ncomponents::
             end
         end    
     end    
-    convection_action = FunctionAction(convection_function_fe(), [ncomponents, xdim + ncomponents*xdim])
+    action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = 0)
+    convection_action = Action(Float64, action_kernel)
     a_to = fixed_argument
     if a_to == 1
         name = "(a(=unknown $(a_from)) * Gradient) u * v"
@@ -494,7 +500,8 @@ function ConvectionRotationFormOperator(beta::Int, beta_operator::Type{<:Abstrac
             result[2] = - input[1] * input[3]
         end    
     end    
-    convection_action = FunctionAction(rotationform_2d(), ncomponents)
+    action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", quadorder = 0)
+    convection_action = Action(Float64, action_kernel)
     return AbstractTrilinearForm{ON_CELLS}("(a(=unknown $beta) x Curl2D u ) * v",beta_operator,Curl2D,testfunction_operator,beta, 1, convection_action, regions, true)
 end
 
@@ -519,14 +526,9 @@ right-hand side operator
 can only be applied in PDE RHS
 """
 mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
-    rhsfunction::Function
+    data::UserData{AbstractDataFunction}
     testfunction_operator::Type{<:AbstractFunctionOperator}
-    timedependent::Bool
-    itemdependent::Bool
     regions::Array{Int,1}
-    xdim:: Int
-    ncomponents:: Int
-    bonus_quadorder:: Int
     store_operator::Bool               # should the matrix representation of the operator be stored?
     storage::AbstractArray{Float64,1}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
@@ -534,36 +536,12 @@ end
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
     regions::Array{Int,1},
-    rhsfunction!::Function,
-    xdim::Int,
-    ncomponents::Int = 1;
-    itemdependent::Bool = false,
-    bonus_quadorder::Int = 0,
+    data::UserData{AbstractDataFunction};
     on_boundary::Bool = false)
-
-    # check if function is time-dependent
-    if itemdependent == false
-        if applicable(rhsfunction!,[0],0,0)
-            timedependent = true
-            rhsfunc = rhsfunction!
-        else
-            timedependent = false
-            rhsfunc = (result,x,t) -> rhsfunction!(result,x)
-        end
-    else
-        if applicable(rhsfunction!,[0],0,0,0)
-            timedependent = true
-            rhsfunc = rhsfunction!
-        else
-            timedependent = false
-            rhsfunc = (result,x,t,item) -> rhsfunction!(result,x,item)
-        end
-    end
-
     if on_boundary == true
-        return RhsOperator{ON_BFACES}(rhsfunc, operator, timedependent, itemdependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
+        return RhsOperator{ON_BFACES}(data, operator, regions, false, [])
     else
-        return RhsOperator{ON_CELLS}(rhsfunc, operator, timedependent, itemdependent, regions, xdim, ncomponents, bonus_quadorder, false, [])
+        return RhsOperator{ON_CELLS}(data, operator, regions, false, [])
     end
 end
 
@@ -705,7 +683,7 @@ function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
     return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
 end
 function check_PDEoperator(O::RhsOperator)
-    return false, O.timedependent
+    return false, is_timedependent(O.data)
 end
 
 
@@ -716,6 +694,13 @@ end
 # check if operator causes nonlinearity or time-dependence
 function check_PDEoperator(O::AbstractPDEOperator)
     return false, false
+end
+function check_PDEoperator(O::AbstractBilinearForm)
+    try
+        return false, is_timedependent(O.action.kernel)
+    catch
+        return false, false
+    end
 end
 function check_PDEoperator(O::AbstractTrilinearForm)
     return true, false
@@ -885,39 +870,27 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
     # ensure that storage is large_enough
     FE = CurrentSolution[j].FES
     O.storage = zeros(Float64,FE.ndofs)
+    ncomponents = O.data.dimensions[1]
 
     function rhs_function() # result = F(v) = f*operator(v) = f*input
-        temp = zeros(Float64,O.ncomponents)
-        if O.itemdependent == false
-            function closure(result,input,x)
-                O.rhsfunction(temp,x, time)
-                result[1] = 0
-                for j = 1 : O.ncomponents
-                    result[1] += temp[j]*input[j] 
-                end
-            end
-        else
-            function closure2(result,input,x,item)
-                O.rhsfunction(temp,x, time, item)
-                result[1] = 0
-                for j = 1 : O.ncomponents
-                    result[1] += temp[j]*input[j] 
-                end
+        temp = zeros(Float64,ncomponents)
+        function closure(result,input,x)
+            eval!(temp, O.data, x, time)
+            result[1] = 0
+            for j = 1 : ncomponents
+                result[1] += temp[j]*input[j] 
             end
         end
     end    
-    if O.itemdependent
-        action = ItemWiseXFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
-    else
-        action = XFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
-    end
+    action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
+    action = Action(Float64, action_kernel)
     RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
     assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
 end
 
 
 function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
-    if O.store_operator == true
+    if O.store_operator == true 
         addblock!(A,O.storage; factor = factor)
     else
         FE1 = A.FESX
@@ -927,6 +900,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilin
         else
             BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
         end
+        set_time!(O.action, time)
         assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity, transposed_assembly = O.transposed_assembly)
     end
 end
@@ -943,6 +917,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
         else
             BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
         end
+        set_time!(O.action, time)
         assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
     end
 end
@@ -952,6 +927,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; fact
     FE2 = O.Data2.FES
     FE3 = b.FES
     TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
+    set_time!(O.TLF.action, time)
     assemble!(b, O.Data1, O.Data2, TLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
@@ -963,6 +939,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLFeval; fact
     push!(FES, b.FES)
     FES = Array{FESpace,1}(FES)
     MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], FES, O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
+    set_time!(O.MLF.action, time)
     assemble!(b, O.Data, MLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
@@ -977,6 +954,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; fact
         else
             BLF = BilinearForm(Float64, ON_CELLS, FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
         end
+        set_time!(O.BLF.action, time)
         assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity)
     end
 end
@@ -986,6 +964,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrili
     FE2 = A.FESX
     FE3 = A.FESY
     TLF = TrilinearForm(Float64, typeof(O).parameters[1], FE1, FE2, FE3, O.operator1, O.operator2, O.operator3, O.action; regions = O.regions)  
+    set_time!(TLF.action, time)
     assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, fixed_argument = O.a_to, transposed_assembly = O.transposed_assembly)
 end
 
@@ -994,7 +973,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
     FE2 = A.FESY
     @assert At.FESX == FE2
     @assert At.FESY == FE1
-    DivPressure = BilinearForm(Float64, ON_CELLS, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,[1,1]))   
+    DivPressure = BilinearForm(Float64, ON_CELLS, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
     assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
 end
 
@@ -1003,31 +982,20 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{A
         addblock!(b, O.storage; factor = factor)
     else
         FE = b.FES
+        ncomponents = O.data.dimensions[1]
+        
         function rhs_function() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(Float64,O.ncomponents)
-            if O.itemdependent == false
-                function closure(result,input,x)
-                    O.rhsfunction(temp,x, time)
-                    result[1] = 0
-                    for j = 1 : O.ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                end
-            else
-                function closure2(result,input,x,item)
-                    O.rhsfunction(temp,x, time, item)
-                    result[1] = 0
-                    for j = 1 : O.ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
+            temp = zeros(Float64,ncomponents)
+            function closure(result,input,x)
+                eval!(temp, O.data, x, time)
+                result[1] = 0
+                for j = 1 : ncomponents
+                    result[1] += temp[j]*input[j] 
                 end
             end
-        end
-        if O.itemdependent
-            action = ItemWiseXFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
-        else
-            action = XFunctionAction(rhs_function(),[1, O.ncomponents],O.xdim; bonus_quadorder = O.bonus_quadorder)
-        end
+        end    
+        action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
+        action = Action(Float64, action_kernel)
         RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
         assemble!(b, RHS; factor = factor, verbosity = verbosity)
     end
@@ -1050,6 +1018,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractNonli
     end
     FE2 = A.FESY
     NLF = NonlinearForm(Float64, ON_CELLS, FE, FE2, O.operator1, O.operator2, O.action; regions = O.regions)  
+    set_time!(O.action, time)
     assemble!(A, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity, transposed_assembly = O.transposed_assembly)
 end
 
@@ -1060,5 +1029,6 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractNonli
     end
     FE2 = b.FES
     NLF = NonlinearForm(Float64, ON_CELLS, FE, FE2, O.operator1, O.operator2, O.action_rhs; regions = O.regions)  
+    set_time!(O.action_rhs, time)
     assemble!(b, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity)
 end

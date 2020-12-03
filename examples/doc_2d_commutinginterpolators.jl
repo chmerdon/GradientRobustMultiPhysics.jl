@@ -13,7 +13,6 @@ vertices but not in the additional degrees of freedom. For ``k=2``, the interpol
 
 =#
 
-
 module Example_2DCommutingInterpolators
 using GradientRobustMultiPhysics
 
@@ -33,6 +32,10 @@ function main(;order::Int = 2)
     ## choose some grid
     xgrid = uniform_refine(reference_domain(Triangle2D),2)
 
+    ## negotiate exact_function! and exact_curl! to the package
+    user_function = DataFunction(exact_function!, [1,2]; dependencies = "X", quadorder = 4)
+    user_function_curl = DataFunction(exact_curl!, [2,2]; dependencies = "X", quadorder = 3)
+
     ## choose commuting interpolators pair
     if order == 1
         FE = [H1P1{1},HDIVRT0{2}]; testFE = L2P0{2}
@@ -43,13 +46,13 @@ function main(;order::Int = 2)
     ## do the H1 interpolation of the function
     FESH1 = FESpace{FE[1]}(xgrid)
     H1Interpolation = FEVector{Float64}("H1-Interpolation",FESH1)
-    interpolate!(H1Interpolation[1], exact_function!; bonus_quadorder = 4)
+    interpolate!(H1Interpolation[1], user_function)
 
     ## do the Hdiv interpolation of the Curl of the function
     ## since integrals over faces have to be computed exactly we need to tune the quadrature order
     FESHdiv = FESpace{FE[2]}(xgrid)
     HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FESHdiv)
-    interpolate!(HdivCurlInterpolation[1], exact_curl!; bonus_quadorder = 3)
+    interpolate!(HdivCurlInterpolation[1], user_function_curl)
 
     ## Checking the identity:
     ## Both sides of the identity are finite element function of FEtype testFE

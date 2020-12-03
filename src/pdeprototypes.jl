@@ -29,8 +29,8 @@ function IncompressibleNavierStokesProblem(
     # unknown 1 : velocity (vector-valued)
     # unknown 2 : pressure
     Problem = PDEDescription(name)
-    add_unknown!(Problem,  dimension, dimension; equation_name = "momentum equation", unknown_name = "velocity")
-    add_unknown!(Problem,  1, dimension; equation_name = "incompressibility constraint", unknown_name = "pressure")
+    add_unknown!(Problem; equation_name = "momentum equation", unknown_name = "velocity")
+    add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "pressure")
 
     # add Laplacian for velocity
     add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension))
@@ -82,9 +82,9 @@ function CompressibleNavierStokesProblem(
     # unknown 2 : density
     # unknown 3 : pressure
     Problem = PDEDescription(name)
-    add_unknown!(Problem, dimension, dimension; unknown_name = "velocity", equation_name = "momentum equation")
-    add_unknown!(Problem, 1, dimension; unknown_name = "density", equation_name = "continuity equation")
-    add_unknown!(Problem, 1, dimension; unknown_name = "pressure", equation_name = "equation of state")
+    add_unknown!(Problem; unknown_name = "velocity", equation_name = "momentum equation")
+    add_unknown!(Problem; unknown_name = "density", equation_name = "continuity equation")
+    add_unknown!(Problem; unknown_name = "pressure", equation_name = "equation of state")
 
     # momentum equation
     if shear_modulus != 0
@@ -102,15 +102,16 @@ function CompressibleNavierStokesProblem(
     if gravity! != nothing
         function gravity_function() # result = G(v) = -gravity*input
             temp = zeros(Float64,dimension)
-            function closure(result,input,x)
-                gravity!(temp,x)
+            function closure(result,input,x,time)
+                eval!(temp, gravity!, x, time)
                 result[1] = 0
                 for j = 1 : dimension
                     result[1] -= temp[j]*input[j] 
                 end
             end
         end    
-        gravity_action = XFunctionAction(gravity_function(),[1, 1],dimension)
+        gravity_action_kernel = ActionKernel(gravity_function(), [1,dimension]; name = "gravity action kernel", dependencies = "XT", quadorder = gravity!.quadorder)
+        gravity_action = Action(Float64, gravity_action_kernel)
         add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",Identity,Identity,gravity_action))
     end
 
@@ -118,7 +119,8 @@ function CompressibleNavierStokesProblem(
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
 
     # equation of state
-    eos_action = FunctionAction(equation_of_state!,[1,1])
+    eos_action_kernel = ActionKernel(equation_of_state!,[1,1]; dependencies = "", quadorder = 0)
+    eos_action = Action(Float64, eos_action_kernel)
     add_operator!(Problem, [3,2], ReactionOperator(eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], ReactionOperator(MultiplyScalarAction(-1.0,1)))
 
@@ -150,7 +152,7 @@ function LinearElasticityProblem(
     # generate empty PDEDescription for one unknown
     # unknown 1 : displacement (vector-valued)
     Problem = PDEDescription("linear elasticity problem")
-    add_unknown!(Problem, dimension, dimension; unknown_name = "displacement", equation_name = "displacement equation")
+    add_unknown!(Problem; unknown_name = "displacement", equation_name = "displacement equation")
     if dimension == 3
         add_operator!(Problem, [1,1], HookStiffnessOperator3D(shear_modulus,lambda))
     elseif dimension == 2
@@ -182,7 +184,7 @@ function PoissonProblem(
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("Poisson problem")
-    add_unknown!(Problem, ncomponents, dimension; unknown_name = "unknown", equation_name = "Poisson equation")
+    add_unknown!(Problem; unknown_name = "unknown", equation_name = "Poisson equation")
     add_operator!(Problem, [1,1], LaplaceOperator(diffusion,dimension,ncomponents))
 
     return Problem
@@ -192,7 +194,7 @@ end
 """
 ````
 function L2BestapproximationProblem(
-    uexact::Function,
+    uexact::UserData{AbstractDataFunction},
     dimension::Int = 2,
     ncomponents::Int = 1;
     bonus_quadorder::Int = 0,
@@ -202,23 +204,21 @@ function L2BestapproximationProblem(
 Creates an PDEDescription for an L2-Bestapproximation problem for the given exact function. Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
 """
 function L2BestapproximationProblem(
-    uexact::Function,
-    dimension::Int = 2,
-    ncomponents::Int = 1;
-    bonus_quadorder::Int = 0,
-    bestapprox_boundary_regions = [],
-    time = 0)
+    uexact::UserData{AbstractDataFunction};
+    bestapprox_boundary_regions = [])
 
+    ncomponents = uexact.dimensions[1]
+    xdim = uexact.dimensions[2]
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("L2-Bestapproximation problem")
-    add_unknown!(Problem, ncomponents, dimension; unknown_name = "L2-bestapproximation", equation_name = "L2-bestapproximation equation")
+    add_unknown!(Problem; unknown_name = "L2-bestapproximation", equation_name = "L2-bestapproximation equation")
     add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents)))
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], uexact, dimension, ncomponents; bonus_quadorder = bonus_quadorder))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], uexact))
     if length(bestapprox_boundary_regions) > 0
-        if dimension == 1 # in 1D Dirichlet boundary can be interpolated
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
+        if xdim == 1 # in 1D Dirichlet boundary can be interpolated
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact)
         else
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact, bonus_quadorder = bonus_quadorder)
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact)
         end 
     end
 
@@ -229,10 +229,8 @@ end
 """
 ````
 function H1BestapproximationProblem(
-    exact_function_gradient::Function,
-    exact_function_boundary::Function,
-    dimension::Int = 2,
-    ncomponents::Int = 1;
+    exact_function_gradient::UserData{AbstractDataFunction},
+    exact_function_boundary::UserData{AbstractDataFunction};
     bonus_quadorder::Int = 0,
     bonus_quadorder_boundary::Int = 0,
     bestapprox_boundary_regions = [])
@@ -241,24 +239,24 @@ function H1BestapproximationProblem(
 Creates an PDEDescription for an H1-Bestapproximation problem for the given exact function (only used on the boundary) and its exact gradient (used in the right-hand side). Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
 """
 function H1BestapproximationProblem(
-    uexact_gradient!::Function,
-    uexact!::Function,
-    dimension::Int = 2,
-    ncomponents::Int = 1;
-    bonus_quadorder::Int = 0,
-    bonus_quadorder_boundary::Int = 0,
+    uexact_gradient::UserData{AbstractDataFunction},
+    uexact::UserData{AbstractDataFunction};
     bestapprox_boundary_regions = [])
 
+    ncomponents = uexact.dimensions[1]
+    xdim = uexact.dimensions[2]
+
+    @assert uexact_gradient.dimensions[1] == ncomponents * xdim
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("H1-Bestapproximation problem")
-    add_unknown!(Problem, ncomponents, dimension; unknown_name = "H1-bestapproximation", equation_name = "H1-bestapproximation equation")
-    add_operator!(Problem, [1,1], LaplaceOperator(1.0,dimension,ncomponents))
-    add_rhsdata!(Problem, 1, RhsOperator(Gradient, [0], uexact_gradient!, dimension, ncomponents*dimension; bonus_quadorder = bonus_quadorder))
+    add_unknown!(Problem; unknown_name = "H1-bestapproximation", equation_name = "H1-bestapproximation equation")
+    add_operator!(Problem, [1,1], LaplaceOperator(1.0,xdim,ncomponents))
+    add_rhsdata!(Problem, 1, RhsOperator(Gradient, [0], uexact_gradient))
     if length(bestapprox_boundary_regions) > 0
-        if dimension == 1 # in 1D Dirichlet boundary can be interpolated
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact!, bonus_quadorder = bonus_quadorder_boundary)
+        if xdim == 1 # in 1D Dirichlet boundary can be interpolated
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact)
         else
-            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact!, bonus_quadorder = bonus_quadorder_boundary)
+            add_boundarydata!(Problem, 1, bestapprox_boundary_regions, BestapproxDirichletBoundary; data = uexact)
         end
     else
         add_constraint!(Problem, FixedIntegralMean(0.0))

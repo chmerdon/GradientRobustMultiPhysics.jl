@@ -29,18 +29,22 @@ end
 function main(; verbosity = 1)
 
     ## generate a unit square mesh and refine
-    xgrid = uniform_refine(reference_domain(Tetrahedron3D),2)
+    xgrid = uniform_refine(reference_domain(Tetrahedron3D),4)
     
+    ## negotiate exact_function! and exact_curl! to the package
+    user_function = DataFunction(exact_function!, [3,3]; dependencies = "X", quadorder = 3)
+    user_function_div = DataFunction(exact_divergence!, [1,3]; dependencies = "X", quadorder = 2)
+
     ## setup a bestapproximation problem via a predefined prototype
-    Problem = L2BestapproximationProblem(exact_function!, 3, 3; bestapprox_boundary_regions = [], bonus_quadorder = 3)
+    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
 
     ## add a new unknown (Lagrange multiplier that handles the divergence constraint)
     ## here 1 is the number of components (it is scalar-valued) and 3 is the space dimension
-    add_unknown!(Problem,1,3; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
+    add_unknown!(Problem; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
     ## add the right-hand side data for the constraint and inspect the defined problem
-    add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], exact_divergence!, 3, 1; bonus_quadorder = 2))
+    add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], user_function_div))
     Base.show(Problem)
 
     ## choose some (inf-sup stable) finite element types
@@ -53,8 +57,8 @@ function main(; verbosity = 1)
     solve!(Solution, Problem; verbosity = verbosity)
 
     ## calculate L2 error and L2 divergence error
-    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 3, 3; bonus_quadorder = 3)
-    L2DivergenceErrorEvaluator = L2ErrorIntegrator(exact_divergence!, Divergence, 3, 1; bonus_quadorder = 0)
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    L2DivergenceErrorEvaluator = L2ErrorIntegrator(Float64, user_function_div, Divergence)
     println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
     println("L2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
  

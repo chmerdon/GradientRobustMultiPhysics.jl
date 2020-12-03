@@ -2105,6 +2105,7 @@ function assemble!(
     dofitems::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
     coefficient4dofitem::Array{T,1} = [0,0] # coefficients for operator
+    orientation4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
     ndofs4dofitem::Int = 0 # number of dofs for item
     dofitem::Int = 0
     coeffs::Array{T,1} = zeros(T,maxdofs)
@@ -2238,7 +2239,7 @@ end
 """
 ````
 function L2ErrorIntegrator(
-    exact_function::Function,
+    compare_data::UserData{AbstractDataFunction},
     operator::Type{<:AbstractFunctionOperator},
     xdim::Int,
     ncomponents::Int = 1;
@@ -2248,28 +2249,22 @@ function L2ErrorIntegrator(
 
 Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given exact_function and returns the L2-error.
 """
-function L2ErrorIntegrator(
-    exact_function!::Function,
-    operator::Type{<:AbstractFunctionOperator},
-    xdim::Int,
-    ncomponents::Int = 1;
+function L2ErrorIntegrator(T::Type{<:Real},
+    compare_data::UserData{AbstractDataFunction},
+    operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
-    bonus_quadorder::Int = 0,
     time = 0)
 
-    temp = zeros(Float64,ncomponents)
-    if applicable(exact_function!, temp, 0, 0)
-        exact_func! = exact_function!
-    else
-        exact_func!(temp,x,t) = exact_function!(temp,x)
-    end
+    ncomponents = compare_data.dimensions[1]
+    xdim = compare_data.dimensions[2]
+    temp = zeros(T,ncomponents)
     function L2error_function(result,input,x)
-        exact_func!(temp,x,time)
+        eval!(temp,compare_data,x,time)
         result[1] = 0.0
         for j=1:ncomponents
             result[1] += (temp[j] - input[j])^2
         end    
     end    
-    L2error_action = XFunctionAction(L2error_function,[1,ncomponents],xdim; bonus_quadorder = bonus_quadorder)
-    return ItemIntegrator{Float64,AT}([operator], L2error_action, [0])
+    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[2]]; name = "L2 error kernel", dependencies = "X", quadorder = 2 * compare_data.quadorder)
+    return ItemIntegrator{T,AT}([operator], Action(T, action_kernel), [0])
 end

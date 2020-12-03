@@ -34,7 +34,7 @@ function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT0}
 
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time=  0) where {FEType <: HDIVRT0}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
@@ -44,21 +44,22 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     xFaceNormals = FE.xgrid[FaceNormals]
     function normalflux_eval()
         temp = zeros(Float64,ncomponents)
-        function closure(result, x, face, xref)
-            exact_function!(temp,x)
+        function closure(result, x, face)
+            eval!(temp, exact_function!, x, time) 
             result[1] = 0.0
             for j = 1 : ncomponents
                 result[1] += temp[j] * xFaceNormals[j,face]
             end 
         end   
     end   
-    integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+    edata_function = ExtendedDataFunction(normalflux_eval(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
+    integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT0}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
-    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
 end
 
 

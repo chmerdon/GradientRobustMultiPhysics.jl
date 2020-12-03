@@ -31,7 +31,7 @@ end
 
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT1}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
@@ -42,36 +42,38 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
    nfaces = num_sources(xFaceNormals)
    function normalflux_eval()
        temp = zeros(Float64,ncomponents)
-       function closure(result, x, face, xref)
-           exact_function!(temp,x)
-           result[1] = 0.0
-           for j = 1 : ncomponents
+       function closure(result, x, face)
+            eval!(temp, exact_function!, x, time)
+            result[1] = 0.0
+            for j = 1 : ncomponents
                result[1] += temp[j] * xFaceNormals[j,face]
-           end 
+            end 
        end   
    end   
-   integrate!(Target, FE.xgrid, ON_FACES, normalflux_eval(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+   edata_function = ExtendedDataFunction(normalflux_eval(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
+   integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items)
    
    # integrate first moment of normal flux of exact_function over edges
    function normalflux2_eval()
        temp = zeros(Float64,ncomponents)
        function closure(result, x, face, xref)
-           exact_function!(temp,x)
-           result[1] = 0.0
-           for j = 1 : ncomponents
+            eval!(temp, exact_function!, x, time)
+            result[1] = 0.0
+            for j = 1 : ncomponents
                result[1] += temp[j] * xFaceNormals[j,face]
-           end
-           result[1] *= (xref[1] - 1//2)
+            end
+            result[1] *= (xref[1] - 1//2)
        end   
    end   
-   integrate!(Target, FE.xgrid, ON_FACES, normalflux2_eval(), bonus_quadorder + 1, 1; items = items, item_dependent_integrand = true, index_offset = nfaces)
+   edata_function2 = ExtendedDataFunction(normalflux2_eval(), [1, ncomponents]; dependencies = "XIL", quadorder = exact_function!.quadorder + 1)
+   integrate!(Target, FE.xgrid, ON_FACES, edata_function2; items = items, index_offset = nfaces)
 
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HDIVRT1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT1}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
-    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems)
 
     # set values of interior RT1 functions by integrating over cell
     # they are chosen such that integral mean of exact function is preserved on each cell
@@ -79,7 +81,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     xCellVolumes = FE.xgrid[CellVolumes]
     xCellDofs = FE.dofmaps[CellDofs]
     means = zeros(Float64,2,ncells)
-    integrate!(means, FE.xgrid, ON_CELLS, exact_function!, bonus_quadorder, 2)
+    integrate!(means, FE.xgrid, ON_CELLS, exact_function!)
     qf = QuadratureRule{Float64,Triangle2D}(2)
     FEB = FEBasisEvaluator{Float64,eltype(FE),Triangle2D,Identity,ON_CELLS}(FE, qf)
     if items == []
@@ -126,7 +128,7 @@ end
 
 function get_basis_on_cell(::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
     function closure(refbasis,xref)
-        temp = 0.5 - xref[1] - xref[2]
+        temp = 1//2 - xref[1] - xref[2]
         # RT0 basis
         refbasis[1,:] .= [xref[1], xref[2]-1];
         refbasis[3,:] .= [xref[1], xref[2]];

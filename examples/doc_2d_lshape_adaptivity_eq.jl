@@ -67,30 +67,40 @@ function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
     FEType = H1P1{1}
     FETypeDual = [HDIVBDM1{2},L2P0{1}]
     
+    ## negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,2]; dependencies = "X", quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; dependencies = "X", quadorder = 4)
+
     ## setup Poisson problem
     Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
-    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 8)
+    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
 
     ## setup dual mixed Poisson problem
     DualProblem = PDEDescription("dual mixed formulation")
     add_unknown!(DualProblem, 2, 2; unknown_name = "Stress", equation_name = "stress equation")
     add_operator!(DualProblem, [1,1], ReactionOperator(DoNotChangeAction(2)))
-    add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], exact_function!, 2, 1; on_boundary = true, bonus_quadorder = 10))
+    add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], user_function; on_boundary = true))
     add_unknown!(DualProblem,1,2; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
     add_operator!(DualProblem, [1,2], LagrangeMultiplier(Divergence))
 
     ## setup exact error evaluations
-    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 1; bonus_quadorder = 10)
-    H1ErrorEvaluator = L2ErrorIntegrator(exact_function_gradient!, Gradient, 2, 2; bonus_quadorder = 8)
-    L2ErrorEvaluatorDual = L2ErrorIntegrator(exact_function_gradient!, Identity, 2, 2; bonus_quadorder = 8)
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2ErrorEvaluatorDual = L2ErrorIntegrator(Float64, user_function_gradient, Identity)
 
     ## define error estimator : || sigma_h - nabla u_h ||^2_{L^2(T)}
-    function eqestimator_kernel(result, input, item)
+    ## this can be realised via a kernel function
+    function eqestimator_kernel(result, input)
+        ## input = [Identity(sigma_h), Gradient(u_h)]
         result[1] = (input[1] - input[3])^2 + (input[2] - input[4])^2
         return nothing
     end
-    EQIntegrator = ItemIntegrator{Float64,ON_CELLS}([Identity, Gradient],ItemWiseFunctionAction(eqestimator_kernel, [1,4]; bonus_quadorder = 2), [0])
+    estimator_action_kernel = ActionKernel(eqestimator_kernel, [1,4]; name = "estimator kernel", dependencies = "", quadorder = 2)
+    ## ... which generates an action...
+    estimator_action = Action(Float64,estimator_action_kernel)
+    ## ... which is used inside an ItemIntegrator
+    EQIntegrator = ItemIntegrator{Float64,ON_CELLS}([Identity, Gradient],estimator_action, [0])
           
     ## refinement loop (only uniform for now)
     NDofs = zeros(Int, nlevels)
@@ -120,7 +130,7 @@ function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
 
         ## evaluate eqilibration error estimator
         error4cell = zeros(Float64,1,num_sources(xgrid[CellNodes]))
-        evaluate!(error4cell, EQIntegrator,[DualSolution[1], Solution[1]])
+        evaluate!(error4cell, EQIntegrator, [DualSolution[1], Solution[1]])
 
         ## calculate L2 error, H1 error, estimator, dual L2 error and write to results
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))

@@ -63,7 +63,7 @@ function main(; verbosity = 2, Plotter = nothing)
     viscosity = 1e-6
     timestep = 1e-3
     T = 1e-2 # final time
-    nlevels = 4 # maximal number of refinement levels
+    nlevels = 5 # maximal number of refinement levels
     reconstruct = false # do not change
     graddiv = 0
 
@@ -72,6 +72,7 @@ function main(; verbosity = 2, Plotter = nothing)
 
     ## choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
+    #FETypes = [H1P2B{2,2}, L2P1{1}] # P2-bubble
     #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
     #FETypes = [H1CR{2}, L2P0{1}]; reconstruct = true # Crouzeix-Raviart gradient-robust
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
@@ -91,10 +92,18 @@ function main(; verbosity = 2, Plotter = nothing)
         testfunction_operator = Identity
     end
 
+    ## negotiate data functions to the package
+    ## note that dependencies "XT" marks the function to be x- and t-dependent
+    ## that causes the solver to automatically reassemble associated operators in each time step
+    user_function_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "XT", quadorder = 5)
+    user_function_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = "X", quadorder = 5)
+    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; dependencies = "XT", quadorder = 4)
+    user_function_rhs = DataFunction(exact_rhs!(viscosity), [2,2]; dependencies = "XT", quadorder = 5)
+
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
-    add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 5)
-    add_rhsdata!(StokesProblem, 1, RhsOperator(testfunction_operator, [1], exact_rhs!(viscosity), 2, 2; bonus_quadorder = 5))
+    add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function_velocity)
+    add_rhsdata!(StokesProblem, 1, RhsOperator(testfunction_operator, [1], user_function_rhs))
 
     ## add grad-div stabilisation
     if graddiv > 0
@@ -102,14 +111,14 @@ function main(; verbosity = 2, Plotter = nothing)
     end
 
     ## define bestapproximation problems
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 5)
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5)
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 5, bonus_quadorder_boundary = 5)
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(user_function_pressure; bestapprox_boundary_regions = [])
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(user_function_velocity_gradient, user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation and arrays to store them
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 5, time = T)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 5)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 5, time = T)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity; time = T)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient; time = T)
     L2error_velocity = []; L2error_pressure = []; NDofs = []
     L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
     H1error_velocity = []; H1errorBestApproximation_velocity = []
@@ -209,14 +218,7 @@ function main(; verbosity = 2, Plotter = nothing)
             println("PRES-STOKES : discrete Stokes pressure solution ($(FESpacePressure.name))")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
 
-            if Plotter != nothing
-                ## plot grid
-                xgrid = split_grid_into(xgrid, Triangle2D)
-                ExtendableGrids.plot(xgrid; Plotter = Plotter)
-        
-                ## plot
-                GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
-            end
+            GradientRobustMultiPhysics.plot(Solution, [0,1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
         end    
     end    
 end

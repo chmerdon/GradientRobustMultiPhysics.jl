@@ -40,27 +40,27 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1P1}
     FES.ndofs = nnodes * ncomponents
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P1}
     nnodes = size(FE.xgrid[Coordinates],2)
-    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes)
+    point_evaluation!(Target, FE, AT_NODES, exact_function; items = items, component_offset = nnodes, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P1}
     # delegate edge nodes to node interpolation
     subitems = slice(FE.xgrid[EdgeNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function; items = subitems, bonus_quadorder = bonus_quadorder, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P1}
     # delegate face nodes to node interpolation
     subitems = slice(FE.xgrid[FaceNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function; items = subitems, bonus_quadorder = bonus_quadorder, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P1}
     # delegate cell nodes to node interpolation
     subitems = slice(FE.xgrid[CellNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function; items = subitems, bonus_quadorder = bonus_quadorder, time = time)
 end
 
 

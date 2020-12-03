@@ -46,22 +46,19 @@ end
 function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
 
     ## initial grid
-    ## replace Parallelogrm2D by Triangle2D if you like
-    xgrid = uniform_refine(grid_unitsquare(Parallelogram2D));
-    initgrid = deepcopy(xgrid)
+    ## replace Parallelogram2D by Triangle2D if you like
+    xgrid = uniform_refine(grid_unitsquare(Parallelogram2D),0);
 
     ## problem parameters
     viscosity = 1.0
-    nlevels = 6 # maximal number of refinement levels
-    barycentric_refinement = false # do not change
+    nlevels = 4 # maximal number of refinement levels
 
     ## choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
+    #FETypes = [H1P2B{2,2}, L2P1{1}] # P2-bubble
     #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
-    #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
     FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
  
     ## solver parameters for nonlinear solve
     maxIterations = 20  # termination criterion 1 for nonlinear mode
@@ -70,6 +67,11 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
     #####################################################################################    
     #####################################################################################
 
+    ## negotiate data functions to the package
+    user_function_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "X", quadorder = 2)
+    user_function_pressure = DataFunction(exact_pressure!(viscosity), [1,2]; dependencies = "X", quadorder = 1)
+    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; dependencies = "X", quadorder = 1)
+
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     if nonlinear
@@ -77,18 +79,18 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
         StokesProblem.LHSOperators[1,1][1].store_operator = true
     end
     add_boundarydata!(StokesProblem, 1, [1,3], HomogeneousDirichletBoundary)
-    add_boundarydata!(StokesProblem, 1, [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
+    add_boundarydata!(StokesProblem, 1, [2,4], BestapproxDirichletBoundary; data = user_function_velocity)
     Base.show(StokesProblem)
 
     ## define bestapproximation problems
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!(viscosity), 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 1)
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 1, bonus_quadorder_boundary = 2)
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(user_function_pressure; bestapprox_boundary_regions = [])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(user_function_velocity_gradient, user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation and arrays to store them
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 2)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!(viscosity), Identity, 2, 1; bonus_quadorder = 1)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 1)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient)
     L2error_velocity = []; L2error_pressure = []; L2errorInterpolation_velocity = []; NDofs = []
     L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
     H1error_velocity = []; H1errorInterpolation_velocity = []; H1errorBestApproximation_velocity = []
@@ -97,17 +99,8 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
     for level = 1 : nlevels
 
         ## uniform mesh refinement
-        ## in case of Scott-Vogelius we use barycentric refinement
-        if barycentric_refinement == true
-            xgrid = deepcopy(initgrid)
-            for ref = 1 : level - 1
-                xgrid = uniform_refine(xgrid)
-            end
-            xgrid = barycentric_refine(xgrid)
-        else
-            if (level > 1) 
-                xgrid = uniform_refine(xgrid)
-            end
+        if (level > 1) 
+            xgrid = uniform_refine(xgrid)
         end
 
         ## generate FESpaces
@@ -123,8 +116,8 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
         ## interpolate
         Interpolation = FEVector{Float64}("Interpolation velocity",FESpaceVelocity)
         append!(Interpolation,"Interpolation pressure",FESpacePressure)
-        interpolate!(Interpolation[1], exact_velocity!; bonus_quadorder = 2)
-        interpolate!(Interpolation[2], exact_pressure!(viscosity); bonus_quadorder = 1)
+        interpolate!(Interpolation[1], user_function_velocity)
+        interpolate!(Interpolation[2], user_function_pressure)
 
         ## solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)

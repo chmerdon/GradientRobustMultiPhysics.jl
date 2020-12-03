@@ -1331,7 +1331,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                 d = SC.subiterations[s][k]
                 for o = 1 : length(PDE.RHSOperators[d])
                     if typeof(PDE.RHSOperators[d][o]) <: RhsOperator
-                        if PDE.RHSOperators[d][o].timedependent
+                        if is_timedependent(PDE.RHSOperators[d][o].data)
                             if SC.verbosity > 2
                                 println("  Updating time-dependent rhs data of equation $d")
                             end

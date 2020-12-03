@@ -103,7 +103,7 @@ function init_dofmap!(FES::FESpace{FEType}, ::Type{BFaceDofs}) where {FEType <: 
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: L2P1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function!; items = [], time = 0) where {FEType <: L2P1}
     xCoords = FE.xgrid[Coordinates]
     xdim = size(xCoords,1)
 
@@ -129,7 +129,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::
             for d = 1 : xdim
                 x[d] = xCoords[d,node]
             end    
-            exact_function!(result,x)
+            eval!(result, exact_function!, x, time)
             for c = 1 : ncomponents
                 Target[offset+(c-1)*nnodes4item+k] = result[c]
             end

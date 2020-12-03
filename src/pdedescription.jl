@@ -50,7 +50,7 @@ $(TYPEDSIGNATURES)
 Create empty PDEDescription with no unknowns.
 """
 function PDEDescription(name::String)
-    return PDEDescription(name, 0, [0], 0)
+    return PDEDescription(name, 0)
 end
 
 """
@@ -58,7 +58,7 @@ $(TYPEDSIGNATURES)
 
 Create empty PDEDescription for a specified number of unknowns.
 """
-function PDEDescription(name::String, nunknowns::Int, ncomponents::Array{Int,1}, dim::Int = 2; unknown_names::Array{String,1} = Array{String,1}(undef,0), equation_names::Array{String,1} = Array{String,1}(undef,0))
+function PDEDescription(name::String, nunknowns::Int; unknown_names::Array{String,1} = Array{String,1}(undef,0), equation_names::Array{String,1} = Array{String,1}(undef,0))
 
     # LEFT-HAND-SIDE
     MyLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
@@ -81,7 +81,7 @@ function PDEDescription(name::String, nunknowns::Int, ncomponents::Array{Int,1},
     # BOUNDARY OPERATOR
     MyBoundary = Array{BoundaryOperator,1}(undef,nunknowns)
     for j=1:nunknowns
-        MyBoundary[j] = BoundaryOperator(dim,ncomponents[j])
+        MyBoundary[j] = BoundaryOperator()
     end
 
     # GLOBAL CONSTRAINTS
@@ -97,7 +97,7 @@ $(TYPEDSIGNATURES)
 
 Adds another unknown of specified dimensions to the PDEDescription.
 """
-function add_unknown!(PDE::PDEDescription, ncomponents::Int, dim::Int = 2; equation_name::String = "", unknown_name::String = "")
+function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_name::String = "")
     nunknowns = length(PDE.RHSOperators)+1
     if equation_name == ""
         equation_name = "equation $nunknowns"
@@ -108,7 +108,7 @@ function add_unknown!(PDE::PDEDescription, ncomponents::Int, dim::Int = 2; equat
     push!(PDE.equation_names,equation_name)
     push!(PDE.unknown_names,unknown_name)
     push!(PDE.RHSOperators,[])
-    push!(PDE.BoundaryOperators,BoundaryOperator(dim,ncomponents))
+    push!(PDE.BoundaryOperators,BoundaryOperator())
     NewLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
     for j=1:nunknowns, k = 1:nunknowns
         if j < nunknowns && k < nunknowns
@@ -151,8 +151,8 @@ Adds the given boundary data with the specified AbstractBoundaryType at the spec
 
 If timedependent == true, that data function depends also on time t and is reassembled in any advance! step of a TimeControlSolver.
 """
-function add_boundarydata!(PDE::PDEDescription,position::Int,regions, btype::Type{<:AbstractBoundaryType}; data = Nothing, bonus_quadorder::Int = 0)
-    Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data, bonus_quadorder = bonus_quadorder)
+function add_boundarydata!(PDE::PDEDescription,position::Int,regions, btype::Type{<:AbstractBoundaryType}; data = Nothing)
+    Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data)
 end
 
 

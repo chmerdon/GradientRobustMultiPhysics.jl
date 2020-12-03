@@ -14,7 +14,6 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 ## define some (vector-valued) function (to be L2-bestapproximated in this example)
-## a user-defined (time-independent) function should always have this interface
 function exact_function!(result,x)
     result[1] = (x[1]-1//2)*(x[1]-9//10)*(x[1]-1//3)*(x[1]-1//10)
 end
@@ -25,11 +24,14 @@ function main(; Plotter = nothing, verbosity = 1)
     ## generate mesh and uniform refine twice
     xgrid = simplexgrid([0.0,1//3,2//3,1.0])
     xgrid = uniform_refine(xgrid,2)
+
+    ## negotiate exact_function! to the package
+    user_function = DataFunction(exact_function!, [1,1]; dependencies = "X", quadorder = 4)
     
     ## setup a bestapproximation problem via a predefined prototype
     ## and an L2ErrorEvaluator that can be used later to compute the L2 error
-    Problem = L2BestapproximationProblem(exact_function!,1, 1; bestapprox_boundary_regions = [1,2], bonus_quadorder = 4)
-    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 1, 1; bonus_quadorder = 4)
+    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [1,2])
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
 
     ## choose some finite element type and generate a FESpace for the grid
     ## (here it is a one-dimensional H1-conforming P2 element H1P2{1,1})
@@ -51,7 +53,7 @@ function main(; Plotter = nothing, verbosity = 1)
     xgrid_fine = uniform_refine(xgrid,3)
     FES_fine = FESpace{FEType}(xgrid_fine)
     Interpolation = FEVector{Float64}("fine-grid interpolation",FES_fine)
-    interpolate!(Interpolation[1], exact_function!)
+    interpolate!(Interpolation[1], ON_CELLS, user_function)
     println("L2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
         
     ## evaluate/interpolate function at nodes and plot

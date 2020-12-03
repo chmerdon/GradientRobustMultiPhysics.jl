@@ -22,6 +22,8 @@ export GridComponentVolumes4AssemblyType
 export GridComponentGeometries4AssemblyType
 export GridComponentRegions4AssemblyType
 
+include("userdata.jl")
+export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
 
 include("l2gtransformations.jl");
 export L2GTransformer, update!, eval!, mapderiv!, piola!
@@ -123,6 +125,7 @@ export DiscontinuityTreatment, Jump, Average
 export IdentityDisc, GradientDisc
 
 
+
 include("febasisevaluator.jl")
 export FEBasisEvaluator, update!, eval!
 
@@ -133,18 +136,12 @@ export nodevalues! # = P1interpolation, abstract averaging method that works for
 
 
 include("actions.jl")
-export AbstractAction
-export DoNotChangeAction
-export MultiplyScalarAction, MultiplyVectorAction, MultiplyMatrixAction
-export ItemWiseMultiplyScalarAction
-export RegionWiseMultiplyScalarAction, RegionWiseMultiplyVectorAction
-export FunctionAction
-export ItemWiseFunctionAction
-export XFunctionAction
-export ItemWiseXFunctionAction, RegionWiseXFunctionAction
+export AbstractAction, Action, MultiplyScalarAction, DoNotChangeAction
+
 
 include("accumvector.jl")
 export AccumulatingVector
+
 
 include("assemblypatterns.jl")
 export AbstractAssemblyPattern

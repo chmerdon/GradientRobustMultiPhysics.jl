@@ -21,10 +21,10 @@ module Example_3DElasticity
 using GradientRobustMultiPhysics
 
 ## problem data for Neumann boundary
-function neumann_force_right!(result,x)
-    result[1] = 0.0
-    result[2] = 0.0
-    result[3] = 10.0
+function neumann_force_right!(result)
+    result[1] = 0
+    result[2] = 0
+    result[3] = 10
 end    
 
 ## everything is wrapped in a main function
@@ -32,7 +32,6 @@ function main(; verbosity = 1)
 
     ## mesh = scaled unit cube and 3 uniform refinements
     xgrid = uniform_refine(grid_unitcube(Parallelepiped3D; scale = [4//3,3//4,1//4]), 3)
-    #xgrid = split_grid_into(xgrid, Tetrahedron3D)
 
     ## parameters for isotropic elasticity tensor
     elasticity_modulus = 1000 # elasticity modulus
@@ -43,16 +42,16 @@ function main(; verbosity = 1)
     ## choose finite element type
     FEType = H1P1{3} # P1-Courant
 
-    #####################################################################################    
-    #####################################################################################
+    ## negotiate data functions to the package
+    user_function_neumann_bnd = DataFunction(neumann_force_right!, [3,3]; dependencies = "", quadorder = 0)
 
     ## PDE description via prototype
     LinElastProblem = LinearElasticityProblem(3; shear_modulus = shear_modulus, lambda = lambda)
 
-    ## add Neumann boundary data on right side
-    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [3], neumann_force_right!, 3, 3; on_boundary = true, bonus_quadorder = 0))
+    ## add Neumann boundary data on right side (boundary region 3)
+    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [3], user_function_neumann_bnd; on_boundary = true))
 
-    ## add Dirichlet boundary data on left side
+    ## add Dirichlet boundary data to unknown 1 (displacement) on left side (boundary region 5)
     add_boundarydata!(LinElastProblem, 1, [5], HomogeneousDirichletBoundary)
 
     ## show problem definition

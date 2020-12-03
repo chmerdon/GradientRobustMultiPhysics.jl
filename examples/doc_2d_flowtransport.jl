@@ -39,7 +39,7 @@ using Printf
 ## boundary data
 function inlet_velocity!(result,x)
     result[1] = 4*x[2]*(1-x[2]);
-    result[2] = 0.0;
+    result[2] = 0;
 end
 function inlet_concentration!(result,x)
     result[1] = 1-x[2];
@@ -64,15 +64,19 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     #####################################################################################    
     #####################################################################################
 
+    ## negotiate data functions to the package
+    user_function_inlet_velocity = DataFunction(inlet_velocity!, [2,2]; dependencies = "X", quadorder = 2)
+    user_function_inlet_species = DataFunction(inlet_concentration!, [1,2]; dependencies = "X", quadorder = 1)
+
     ## load Stokes problem prototype
     ## and assign boundary data (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
     Problem.name = "Stokes + Transport"
     add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)
-    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = inlet_velocity!, bonus_quadorder = 2)
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = user_function_inlet_velocity)
 
     ## add transport equation of species
-    add_unknown!(Problem, 2, 1; unknown_name = "concentration", equation_name = "transport equation")
+    add_unknown!(Problem; unknown_name = "concentration", equation_name = "transport equation")
     if FVtransport == true
         ## finite volume upwind discretisation
         FETypeTransport = L2P0{1}
@@ -85,7 +89,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
         add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
     end
     ## with boundary data (i.e. inlet concentration)
-    add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = inlet_concentration!, bonus_quadorder = 0)
+    add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = user_function_inlet_species)
     Base.show(Problem)
     
     ## generate FESpaces

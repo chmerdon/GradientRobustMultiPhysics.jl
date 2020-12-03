@@ -48,7 +48,7 @@ function init!(FES::FESpace{FEType}) where {FEType <: HCURLN0}
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HCURLN0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
     edim = get_ncomponents(FEType)
     if edim == 3
         if items == []
@@ -58,18 +58,19 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
         xEdgeTangents = FE.xgrid[EdgeTangents]
         function tangentflux_eval3d()
             temp = zeros(Float64,ncomponents)
-            function closure(result, x, edge, xref)
-                exact_function!(temp,x) 
+            function closure(result, x, edge)
+                eval!(temp, exact_function!, x, time) 
                 result[1] = temp[1] * xEdgeTangents[1,edge]
                 result[1] += temp[2] * xEdgeTangents[2,edge]
                 result[1] += temp[3] * xEdgeTangents[3,edge]
             end   
         end   
-        integrate!(Target, FE.xgrid, ON_EDGES, tangentflux_eval3d(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+        edata_function = ExtendedDataFunction(tangentflux_eval3d(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
+        integrate!(Target, FE.xgrid, ON_EDGES, edata_function; items = items, time = time)
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HCURLN0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
     edim = get_ncomponents(FEType)
     if edim == 2
         if items == []
@@ -79,28 +80,29 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
         xFaceNormals = FE.xgrid[FaceNormals]
         function tangentflux_eval2d()
             temp = zeros(Float64,ncomponents)
-            function closure(result, x, face, xref)
-                exact_function!(temp,x) 
+            function closure(result, x, face)
+                eval!(temp, exact_function!, x, time) 
                 result[1] = - temp[1] * xFaceNormals[2,face] # rotated normal = tangent
                 result[1] += temp[2] * xFaceNormals[1,face]
             end   
         end   
-        integrate!(Target, FE.xgrid, ON_FACES, tangentflux_eval2d(), bonus_quadorder, 1; items = items, item_dependent_integrand = true)
+        edata_function = ExtendedDataFunction(tangentflux_eval2d(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
+        integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time)
     elseif edim == 3
-
+        # todo
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: HCURLN0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
     edim = get_ncomponents(FEType)
     if edim == 2
         # delegate cell faces to face interpolation
         subitems = slice(FE.xgrid[CellFaces], items)
-        interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
     elseif edim == 3
         # delegate cell edges to edge interpolation
         subitems = slice(FE.xgrid[CellEdges], items)
-        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, time = time)
     end
 end
 

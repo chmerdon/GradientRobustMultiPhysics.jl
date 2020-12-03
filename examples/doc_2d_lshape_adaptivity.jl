@@ -51,14 +51,18 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
     ## choose some finite element
     FEType = H1P2{1,2}
     
+    ## negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,2]; dependencies = "X", quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; dependencies = "X", quadorder = 4)
+
     ## setup Poisson problem
     Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
-    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = exact_function!, bonus_quadorder = 8)
+    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
 
     ## setup exact error evaluations
-    L2ErrorEvaluator = L2ErrorIntegrator(exact_function!, Identity, 2, 1; bonus_quadorder = 10)
-    H1ErrorEvaluator = L2ErrorIntegrator(exact_function_gradient!, Gradient, 2, 2; bonus_quadorder = 8)
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
 
     ## define error estimator
     ## kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)
@@ -72,15 +76,21 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
     end
     ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
     ## note: f = 0 here, but integrand can depend on x to allow for non-homogeneous rhs
-    function L2vol_integrand(result, input, x, item)
+    function L2vol_integrand(result, input, item)
         for j = 1 : length(input)
             input[j] += result[j]
             result[j] = input[j]^2 * xCellVolumes[item]
         end
         return nothing
     end
-    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(GradientDisc{Jump},ItemWiseFunctionAction(L2jump_integrand, [1,2]; bonus_quadorder = 2), [0])
-    volIntegrator = ItemIntegrator{Float64,ON_CELLS}(Laplacian,ItemWiseXFunctionAction(L2vol_integrand, [1,1], 2; bonus_quadorder = 2), [0])
+    eta_jumps_action_kernel = ActionKernel(L2jump_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
+    eta_vol_action_kernel = ActionKernel(L2vol_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
+    ## ... which generates an action...
+    eta_jumps_action = Action(Float64,eta_jumps_action_kernel)
+    eta_vol_action = Action(Float64,eta_vol_action_kernel)
+    ## ... which is used inside an ItemIntegrator
+    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(GradientDisc{Jump},eta_jumps_action, [0])
+    volIntegrator = ItemIntegrator{Float64,ON_CELLS}(Laplacian,eta_vol_action, [0])
           
     ## refinement loop (only uniform for now)
     NDofs = zeros(Int, nlevels)

@@ -42,7 +42,7 @@ get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{BFaceDofs}, EG::Type{<:Abstrac
 
 
 
-function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
 
     xgrid = FE.xgrid
     xItemVolumes = xgrid[CellVolumes]
@@ -59,7 +59,7 @@ function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FETyp
 
     # compute exact cell integrals
     cellintegrals = zeros(Float64,ncomponents,ncells)
-    integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!, bonus_quadorder, ncomponents; items = items)
+    integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = 0)
     cellEG = Triangle2D
     nitemnodes::Int = 0
     for item in items
@@ -77,31 +77,31 @@ function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FETyp
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
     nnodes = size(FE.xgrid[Coordinates],2)
     ncells = num_sources(FE.xgrid[CellNodes])
-    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes + ncells)
+    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes + ncells, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
     # delegate edge nodes to node interpolation
     subitems = slice(FE.xgrid[EdgeNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
     # delegate face nodes to node interpolation
     subitems = slice(FE.xgrid[FaceNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
     # delegate cell nodes to node interpolation
     subitems = slice(FE.xgrid[CellNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
     # fix cell bubble value by preserving integral mean
-    ensure_cell_moments!(Target, FE, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
+    ensure_cell_moments!(Target, FE, exact_function!; items = items, time = time)
 end
 
 

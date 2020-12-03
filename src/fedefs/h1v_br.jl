@@ -41,21 +41,21 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1BR}
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1BR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1BR}
     nnodes = size(FE.xgrid[Coordinates],2)
-    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes)
+    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1BR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: H1BR}
     # delegate edge nodes to node interpolation
     subitems = slice(FE.xgrid[EdgeNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 end
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {T<:Real, FEType <: H1BR}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T<:Real, FEType <: H1BR}
     # delegate face nodes to node interpolation
     subitems = slice(FE.xgrid[FaceNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
     # preserve face means in normal direction
     xItemVolumes = FE.xgrid[FaceVolumes]
@@ -73,7 +73,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON
 
     # compute exact face means
     facemeans = zeros(Float64,ncomponents,nitems)
-    integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!, bonus_quadorder, ncomponents; items = items)
+    integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!; items = items, time = time)
     P1flux::T = 0
     value::T = 0
     itemEG = Edge1D
@@ -95,10 +95,10 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1BR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: H1BR}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
-    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
 end
 
 

@@ -39,21 +39,26 @@ function HydrostaticTestProblem()
     function P1_pressure!(result,x)
         result[1] = x[1]^3 + x[2]^3 - 1//2
     end
-    function P1_velo!(result,x)
-        result[1] = 0.0;
-        result[2] = 0.0;
+    function P1_velo!(result)
+        result[1] = 0;
+        result[2] = 0;
     end
-    function P1_velogradient!(result,x)
-        result[1] = 0.0
-        result[2] = 0.0;
-        result[3] = 0.0;
-        result[4] = 0.0;
+    function P1_velogradient!(result)
+        result[1] = 0
+        result[2] = 0;
+        result[3] = 0;
+        result[4] = 0;
     end
     function P1_rhs!(result,x)
         result[1] = 3*x[1]^2
         result[2] = 3*x[2]^2
     end
-    return P1_pressure!, P1_velo!, P1_velogradient!, P1_rhs!, false
+    user_function_velocity = DataFunction(P1_velo!, [2,2]; dependencies = "", quadorder = 0)
+    user_function_pressure = DataFunction(P1_pressure!, [1,2]; dependencies = "X", quadorder = 3)
+    user_function_velocity_gradient = DataFunction(P1_velogradient!, [4,2]; dependencies = "", quadorder = 0)
+    user_function_rhs = DataFunction(P1_rhs!, [2,2]; dependencies = "X", quadorder = 2)
+
+    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, false
 end
 
 function PotentialFlowTestProblem()
@@ -73,11 +78,16 @@ function PotentialFlowTestProblem()
         result[3] = -6*x[2];
         result[4] = -6*x[1];
     end
-    function P2_rhs!(result,x)
+    function P2_rhs!(result)
         result[1] = 0
         result[2] = 0
     end
-    return P2_pressure!, P2_velo!, P2_velogradient!, P2_rhs!, true
+    user_function_velocity = DataFunction(P2_velo!, [2,2]; dependencies = "X", quadorder = 2)
+    user_function_pressure = DataFunction(P2_pressure!, [1,2]; dependencies = "X", quadorder = 4)
+    user_function_velocity_gradient = DataFunction(P2_velogradient!, [4,2]; dependencies = "X", quadorder = 1)
+    user_function_rhs = DataFunction(P2_rhs!, [2,2]; dependencies = "", quadorder = 0)
+
+    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, true
 end
 
 
@@ -90,28 +100,27 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
 
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
-    add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
-    add_rhsdata!(StokesProblem, 1, RhsOperator(ReconstructionIdentity, [0], rhs!, 2, 2; bonus_quadorder = 2))
+    add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!)
+    add_rhsdata!(StokesProblem, 1, RhsOperator(ReconstructionIdentity, [0], rhs!))
 
     ## define bestapproximation problems
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!, 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 4)
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 1, bonus_quadorder_boundary = 2)
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!; bestapprox_boundary_regions = [])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 0)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!, Identity, 2, 1; bonus_quadorder = 3)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 0)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity!, Identity)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, exact_pressure!, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity_gradient!, Gradient)
     L2error_velocity = []; L2error_pressure = []; L2error_velocity2 = []; L2error_pressure2 = []
     L2errorInterpolation_velocity = []; L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
     H1error_velocity = []; H1error_velocity2 = []; H1errorBestApproximation_velocity = []; NDofs = []
     
-
     ## setup classical (StokesProblem) and pressure-robust scheme (StokesProblem2)
     StokesProblem2 = deepcopy(StokesProblem)
-    StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!, 2, 2; bonus_quadorder = 2)
+    StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!)
     ReconstructionOperator = FETypes[3]
-    StokesProblem2.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!, 2, 2; bonus_quadorder = 2)
+    StokesProblem2.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!)
     if nonlinear
         StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
         StokesProblem2.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator

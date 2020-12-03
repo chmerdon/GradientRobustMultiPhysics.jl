@@ -65,7 +65,7 @@ function init!(FES::FESpace{FEType}) where {FEType <: H1P2}
 
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P2}
     edim = get_edim(FEType)
     nnodes = size(FE.xgrid[Coordinates],2)
     if edim == 1
@@ -76,61 +76,61 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
         nedges = num_sources(FE.xgrid[EdgeNodes])
     end
 
-    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes + nedges)
+    point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes + nedges, time = time)
 
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P2}
     edim = get_edim(FEType)
     if edim == 3
         # delegate edge nodes to node interpolation
         subitems = slice(FE.xgrid[EdgeNodes], items)
-        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform edge mean interpolation
-        ensure_edge_moments!(Target, FE, ON_EDGES, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
+        ensure_edge_moments!(Target, FE, ON_EDGES, exact_function!; items = items, time = time)
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P2}
     edim = get_edim(FEType)
     if edim == 2
         # delegate face nodes to node interpolation
         subitems = slice(FE.xgrid[FaceNodes], items)
-        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform face mean interpolation
-        ensure_edge_moments!(Target, FE, ON_FACES, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
+        ensure_edge_moments!(Target, FE, ON_FACES, exact_function!; items = items, time = time)
     elseif edim == 3
         # delegate face edges to edge interpolation
         subitems = slice(FE.xgrid[FaceEdges], items)
-        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, time = time)
     elseif edim == 1
         # delegate face nodes to node interpolation
         subitems = slice(FE.xgrid[FaceNodes], items)
-        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
     end
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!::Function; items = [], bonus_quadorder::Int = 0) where {FEType <: H1P2}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P2}
     edim = get_edim(FEType)
     ncells = num_sources(FE.xgrid[CellNodes])
     if edim == 2
         # delegate cell faces to face interpolation
         subitems = slice(FE.xgrid[CellFaces], items)
-        interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
     elseif edim == 3
         # delegate cell edges to edge interpolation
         subitems = slice(FE.xgrid[CellEdges], items)
-        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, time = time)
     elseif edim == 1
         # delegate cell nodes to node interpolation
         subitems = slice(FE.xgrid[CellNodes], items)
-        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, bonus_quadorder = bonus_quadorder)
+        interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # preserve cell integral
-        ensure_edge_moments!(Target, FE, ON_CELLS, exact_function!; items = items, bonus_quadorder = bonus_quadorder)
+        ensure_edge_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
     end
 end
 

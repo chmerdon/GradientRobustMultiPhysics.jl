@@ -66,7 +66,7 @@ function exact_density!(M,c)
 end 
 
 ## the exact velocity (zero!)
-function exact_velocity!(result,x)
+function exact_velocity!(result)
     result[1] = 0.0
     result[2] = 0.0
 end 
@@ -81,11 +81,11 @@ function rhs_gravity!(gamma,c)
 end   
 
 ## everything is wrapped in a main function
-function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area = 2e-3)
+function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, write_vtk::Bool = true)
 
     ## load mesh and refine
     xgrid = simplexgrid(IOStream;file = "assets/2d_grid_mountainrange.sg")
-    xgrid = uniform_refine(xgrid,1)
+    xgrid = uniform_refine(xgrid,0)
 
     ## problem data
     c = 10 # coefficient in equation of state
@@ -107,13 +107,19 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area
     #####################################################################################    
     #####################################################################################
 
+
+    ## negotiate edata functions to the package
+    user_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "", quadorder = 0)
+    user_density = DataFunction(exact_density!(M,c), [1,2]; dependencies = "X", quadorder = 3)
+    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; dependencies = "X", quadorder = 3)
+
     ## load compressible Stokes problem prototype and assign boundary data
-    CStokesProblem = CompressibleNavierStokesProblem(equation_of_state!(c,gamma), rhs_gravity!(gamma,c), 2; shear_modulus = shear_modulus, lambda = lambda, nonlinear = false)
+    CStokesProblem = CompressibleNavierStokesProblem(equation_of_state!(c,gamma), user_gravity, 2; shear_modulus = shear_modulus, lambda = lambda, nonlinear = false)
     add_boundarydata!(CStokesProblem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     ## error intergrators for velocity and density
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 0)
-    L2DensityErrorEvaluator = L2ErrorIntegrator(exact_density!(M,c), Identity, 2, 1; bonus_quadorder = 1)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
+    L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
 
     ## modify testfunction in operators
     if reconstruct
@@ -143,7 +149,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area
 
     ## initial values for density (bestapproximation or constant)
     if initial_density_bestapprox 
-        L2DensityBestapproximationProblem = L2BestapproximationProblem(exact_density!(M,c), 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 2)
+        L2DensityBestapproximationProblem = L2BestapproximationProblem(user_density; bestapprox_boundary_regions = [])
         InitialDensity = FEVector{Float64}("L2-Bestapproximation density",FESpacePD)
         solve!(InitialDensity, L2DensityBestapproximationProblem)
         Solution[2][:] = InitialDensity[1][:]
@@ -177,6 +183,10 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, area
     ## plots
     GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
     
+    if write_vtk
+        mkpath("data/example_2d_compressiblestokes/")
+        writeVTK!("data/example_2d_compressiblestokes/results.vtk", Solution)
+    end
 end
 
 end

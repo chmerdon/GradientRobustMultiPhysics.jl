@@ -26,16 +26,16 @@ using ExtendableGrids
 using Printf
 
 ## data
-function boundary_data_top!(result,x)
-    result[1] = 1.0;
-    result[2] = 0.0;
+function boundary_data_top!(result)
+    result[1] = 1;
+    result[2] = 0;
 end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
 
     ## grid
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 6);
 
     ## problem parameters
     viscosity = 1e-2
@@ -49,16 +49,18 @@ function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
     FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius 
 
     #####################################################################################    
     #####################################################################################
 
+    ## negotiate data functions to the package
+    user_function_bnd = DataFunction(boundary_data_top!, [2,2]; dependencies = "", quadorder = 0)
+
     ## load linear Stokes problem prototype and assign data
-    ## we are adding the nonlinar convection term below
+    ## we are adding the nonlinar convection term ourself below
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
     add_boundarydata!(StokesProblem, 1, [1,2,4], HomogeneousDirichletBoundary)
-    add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = boundary_data_top!, bonus_quadorder = 0)
+    add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = user_function_bnd)
 
     ## store matrix of Laplace operator for nonlinear solver
     StokesProblem.LHSOperators[1,1][1].store_operator = true   
@@ -66,7 +68,7 @@ function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
     ## add Newton for convection term
     if ADnewton
         ## AUTOMATIC DIFFERENTATION
-        ## requries AD kernel function for NonlinearForm action (u * grad) u
+        ## requries kernel function for NonlinearForm action (u * grad) u
         function ugradu_kernel_AD(result, input)
             ## input = [u, grad(u)]
             ## compute (u * grad) u = grad(u)*u
@@ -78,9 +80,10 @@ function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
             end
             return nothing
         end 
+        action_kernel = ActionKernel(ugradu_kernel_AD, [2,6]; dependencies = "", quadorder = 1)
 
         ## generate and add nonlinear PDEOperator (modifications to RHS are taken care of automatically)
-        NLConvectionOperator = GenerateNonlinearForm("(u * grad) u  * v", [Identity, Gradient], [1,1], Identity, ugradu_kernel_AD, [2, 6], 2; ADnewton = true)            
+        NLConvectionOperator = GenerateNonlinearForm("(u * grad) u  * v", [Identity, Gradient], [1,1], Identity, action_kernel; ADnewton = true)            
         add_operator!(StokesProblem, [1,1], NLConvectionOperator)
     else
         ## MANUAL DIFFERENTATION
@@ -111,15 +114,12 @@ function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
             end
             return nothing
         end
+        newton_action_kernel = NLActionKernel(ugradu_kernel_nonAD, [2,6]; dependencies = "", quadorder = 1)
+        action_kernel_rhs = ActionKernel(ugradu_kernel_rhs, [2,6]; dependencies = "", quadorder = 1)
 
         ## generate and add nonlinear PDEOperator (modifications to RHS are taken care of by optional arguments)
-        NLConvectionOperator = GenerateNonlinearForm("(u * grad) u  * v", [Identity, Gradient], [1,1], Identity, ugradu_kernel_nonAD, [2, 6], 2; ADnewton = false, action_kernel_rhs = ugradu_kernel_rhs)            
+        NLConvectionOperator = GenerateNonlinearForm("(u * grad) u  * v", [Identity, Gradient], [1,1], Identity, newton_action_kernel; ADnewton = false, action_kernel_rhs = action_kernel_rhs)            
         add_operator!(StokesProblem, [1,1], NLConvectionOperator)         
-    end
-
-    ## uniform mesh refinement, in case of Scott-Vogelius we use barycentric refinement
-    if barycentric_refinement == true
-        xgrid = barycentric_refine(xgrid)
     end
 
     ## generate FESpaces

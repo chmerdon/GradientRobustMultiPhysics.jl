@@ -33,6 +33,10 @@ function main(;order::Int = 1)
     ## choose some grid
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),2)
 
+    ## negotiate exact_function! and exact_curl! to the package
+    user_function = DataFunction(exact_function!, [3,3]; dependencies = "X", quadorder = 3)
+    user_function_curl = DataFunction(exact_curl!, [3,3]; dependencies = "X", quadorder = 2)
+
     ## choose commuting interpolators pair
     if order == 1
         FE = [HCURLN0{3},HDIVRT0{3}]; testFE = L2P0{3}
@@ -41,13 +45,13 @@ function main(;order::Int = 1)
     ## do the Hcurl interpolation of the function
     FESH1 = FESpace{FE[1]}(xgrid)
     HcurlInterpolation = FEVector{Float64}("Hcurl-Interpolation",FESH1)
-    interpolate!(HcurlInterpolation[1], exact_function!; bonus_quadorder = 4)
+    interpolate!(HcurlInterpolation[1], user_function)
 
     ## do the Hdiv interpolation of the Curl of the function
     ## since integrals over faces have to be computed exactly we need to tune the quadrature order
     FESHdiv = FESpace{FE[2]}(xgrid)
     HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FESHdiv)
-    interpolate!(HdivCurlInterpolation[1], exact_curl!; bonus_quadorder = 3)
+    interpolate!(HdivCurlInterpolation[1], user_function_curl)
 
     ## Checking the identity:
     ## Both sides of the identity are finite element function of FEtype testFE
