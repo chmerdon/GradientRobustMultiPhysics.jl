@@ -46,7 +46,7 @@ end
 function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
 
     ## initial grid
-    xgrid = grid_lshape(Triangle2D)
+    xgrid = uniform_refine(grid_lshape(Triangle2D),2)
 
     ## choose some finite element
     FEType = H1P2{1,2}
@@ -66,25 +66,23 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
 
     ## define error estimator
     ## kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)
-    xFaceVolumes = xgrid[FaceVolumes]
-    xFaceNormals = xgrid[FaceNormals]
-    xCellVolumes = xgrid[CellVolumes]
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     function L2jump_integrand(result, input, item)
-        result[1] = (input[1]*xFaceNormals[1,item])^2 + (input[2]*xFaceNormals[2,item])^2
-        result .*= xFaceVolumes[item]
+        result[1] = ((input[1]*xFaceNormals[1,item])^2 + (input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
         return nothing
     end
     ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
     ## note: f = 0 here, but integrand can depend on x to allow for non-homogeneous rhs
     function L2vol_integrand(result, input, item)
         for j = 1 : length(input)
-            input[j] += result[j]
             result[j] = input[j]^2 * xCellVolumes[item]
         end
         return nothing
     end
     eta_jumps_action_kernel = ActionKernel(L2jump_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
-    eta_vol_action_kernel = ActionKernel(L2vol_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
+    eta_vol_action_kernel = ActionKernel(L2vol_integrand, [1,2]; name = "estimator kernel volume", dependencies = "I", quadorder = 1)
     ## ... which generates an action...
     eta_jumps_action = Action(Float64,eta_jumps_action_kernel)
     eta_vol_action = Action(Float64,eta_vol_action_kernel)

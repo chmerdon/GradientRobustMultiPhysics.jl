@@ -13,16 +13,16 @@ function RGB_refinement_rule(EG::Type{<:Triangle2D}, marked_faces::Array{Bool,1}
     if any(marked_faces) == true
         @assert marked_faces[1] = true # closure should always mark reference face
         if marked_faces[2] == true && marked_faces[3] == true
-            return red_refinement(EG)
+            return red_refinement(EG), 1
         elseif marked_faces[2] == true && marked_faces[3] == false
-            return blueR_refinement(EG)
+            return blueR_refinement(EG), 2
         elseif marked_faces[2] == false && marked_faces[3] == true
-            return blueL_refinement(EG)
+            return blueL_refinement(EG), 3
         elseif marked_faces[2] == false && marked_faces[3] == false
-            return green_refinement(EG)
+            return green_refinement(EG), 4
         end
     else
-        return Array{Int,2}([1 2 3])
+        return Array{Int,2}([1 2 3]), 5
     end
 end
 
@@ -64,6 +64,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     oldFaceNodes = source_grid[FaceNodes]
     nfaces = num_sources(oldFaceNodes)
     ncells = num_sources(oldCellNodes)
+    nrefcounts = [0,0,0,0,0]
 
     # closuring
     if verbosity > 0
@@ -139,11 +140,9 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     for cell = 1 : num_sources(oldCellNodes)
         for f = 1 : 3
             localmarked_faces[f] = facemarkers[oldCellFaces[f,cell]]
-            #if localmarked_faces[f] == true
-            #    @assert newnode4facemidpoint[oldCellFaces[f,cell]] > 0
-            #end
         end
-        refine_rule = RGB_refinement_rule(Triangle2D,localmarked_faces)
+        refine_rule, refid = RGB_refinement_rule(Triangle2D,localmarked_faces)
+        nrefcounts[refid] += 1
         for j = 1 : size(refine_rule,1)
             for k = 1 : size(refine_rule,2)
                 m = refine_rule[j,k]
@@ -158,6 +157,9 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
             push!(xCellRegions,oldCellRegions[cell])
         end    
         ncells += size(refine_rule,1)
+    end
+    if verbosity > 0
+        println("    red/blueR/blueL/green/unrefined = $nrefcounts")
     end
 
     # assign new cells to grid
@@ -229,6 +231,9 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
             push!(xBFaceGeometries,itemEG)
             push!(xBFaceRegions,oldBFaceRegions[bface])
         end
+    end
+    if verbosity > 0
+        println("    bisected bfaces = $newbfaces")
     end
     
     xgrid[BFaceNodes] = Array{Int32,2}(reshape(xBFaceNodes,(2,nbfaces+newbfaces)))

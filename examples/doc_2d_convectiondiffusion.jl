@@ -47,7 +47,7 @@ function exact_solution_rhs!(diffusion)
 end    
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
+function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 6)
     
     ## load a mesh of the unit square (this one has triangles and quads in it)
     ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
@@ -80,7 +80,7 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
     # add a gradient jump (interior penalty) stabilisation for dominant convection
     if stabilisation > 0
         ## first we define an item-dependent action kernel...
-        xFaceVolumes = xgrid[FaceVolumes]
+        xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
         function stabilisation_kernel(result, input, item)
             for j = 1 : length(input)
                 result[j] = input[j] * stabilisation * xFaceVolumes[item]^2

@@ -132,7 +132,7 @@ uniform_refine_needcellmidpoints(::Type{<:Edge1D}) = true
 # first k nodes are the CellNodes
 # next m nodes are the CellFaces midpoints
 # next node is the CellMidpoint (if needed)
-uniform_refine_rule(::Type{<:Triangle2D}) = [1 4 6; 2 5 4; 3 6 5; 4 5 6]
+uniform_refine_rule(::Type{<:Triangle2D}) = [1 4 6; 4 2 5; 6 5 3; 5 6 4]
 uniform_refine_rule(::Type{<:Quadrilateral2D}) = [1 5 9 8; 2 6 9 5; 3 7 9 6; 4 8 9 7]
 uniform_refine_needcellmidpoints(::Type{<:Quadrilateral2D}) = true
 
