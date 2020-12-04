@@ -213,7 +213,7 @@ end
 $(TYPEDSIGNATURES)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) with some user-specified function beta with the
-interface beta(result,x) (so it writes its result into result and returns nothing)
+interface beta(result,x::Array{<:Real,1}) (so it writes its result into result and returns nothing)
     
 """
 function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction}, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])

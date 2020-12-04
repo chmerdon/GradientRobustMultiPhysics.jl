@@ -60,7 +60,7 @@ end
 
 ## the exact density (used for initial value of density if configured so)
 function exact_density!(M,c)
-    function closure(result,x)
+    function closure(result,x::Array{<:Real,1})
         result[1] = M*(1.0 - (x[2] - 0.5)/c)
     end
 end 
@@ -73,7 +73,7 @@ end
 
 ## gravity right-hand side (just gravity but with opposite sign!)
 function rhs_gravity!(gamma,c)
-    function closure(result,x)
+    function closure(result,x::Array{<:Real,1})
         result[1] = 1.0 - (x[2] - 0.5)/c # = density
         result[2] = - result[1]^(gamma-2) * gamma
         result[1] = 0.0

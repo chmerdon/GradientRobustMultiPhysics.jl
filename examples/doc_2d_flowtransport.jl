@@ -37,11 +37,11 @@ using Printf
 
 
 ## boundary data
-function inlet_velocity!(result,x)
+function inlet_velocity!(result,x::Array{<:Real,1})
     result[1] = 4*x[2]*(1-x[2]);
     result[2] = 0;
 end
-function inlet_concentration!(result,x)
+function inlet_concentration!(result,x::Array{<:Real,1})
     result[1] = 1-x[2];
 end
 

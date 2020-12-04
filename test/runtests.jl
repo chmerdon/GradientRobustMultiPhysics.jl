@@ -22,10 +22,10 @@ function run_basis_tests()
     tolerance = 2e-12
 
     function exact_function1D(polyorder)
-        function polynomial(result,x)
+        function polynomial(result,x::Array{<:Real,1})
             result[1] = x[1]^polyorder + 1
         end
-        function gradient(result,x)
+        function gradient(result,x::Array{<:Real,1})
             result[1] = polyorder * x[1]^(polyorder-1)
         end
         exact_integral = 1 // (polyorder+1) + 1
@@ -35,11 +35,11 @@ function run_basis_tests()
     end
 
     function exact_function2D(polyorder)
-        function polynomial(result,x)
+        function polynomial(result,x::Array{<:Real,1})
             result[1] = x[1]^polyorder + 2*x[2]^polyorder + 1
             result[2] = 3*x[1]^polyorder - x[2]^polyorder - 1
         end
-        function gradient(result,x)
+        function gradient(result,x::Array{<:Real,1})
             result[1] = polyorder * x[1]^(polyorder-1)
             result[2] = 2 * polyorder * x[2]^(polyorder - 1)
             result[3] = 3 * polyorder * x[1]^(polyorder-1)
@@ -52,12 +52,12 @@ function run_basis_tests()
     end
 
     function exact_function3D(polyorder)
-        function polynomial(result,x)
+        function polynomial(result,x::Array{<:Real,1})
             result[1] = 2*x[3]^polyorder - x[2]^polyorder - 1
             result[2] = x[1]^polyorder + 2*x[2]^polyorder + 1
             result[3] = 3*x[1]^polyorder - x[2]^polyorder - 1
         end
-        function gradient(result,x)
+        function gradient(result,x::Array{<:Real,1})
             result[1] = 0
             result[2] = - polyorder * x[2]^(polyorder - 1)
             result[3] = 2 * polyorder * x[3]^(polyorder - 1)
@@ -494,20 +494,20 @@ function run_basis_tests()
 
 
     function exact_functions_stokes2D(polyorder_velocity,polyorder_pressure)
-        function exact_velocity!(result,x)
+        function exact_velocity!(result,x::Array{<:Real,1})
             result[1] = x[2]^polyorder_velocity + 1
             result[2] = x[1]^polyorder_velocity - 1
         end
-        function exact_pressure!(result,x)
+        function exact_pressure!(result,x::Array{<:Real,1})
             result[1] = x[1]^polyorder_pressure + x[2]^polyorder_pressure - 2 // (polyorder_pressure+1)
         end
-        function velo_gradient!(result,x)
+        function velo_gradient!(result,x::Array{<:Real,1})
             result[1] = 0
             result[2] = polyorder_velocity * x[2]^(polyorder_velocity-1)
             result[3] = polyorder_velocity * x[1]^(polyorder_velocity-1)
             result[4] = 0
         end
-        function rhs!(result,x) # = Delta u + grad p
+        function rhs!(result,x::Array{<:Real,1}) # = Delta u + grad p
             result[1] = 0
             result[2] = 0
             if polyorder_velocity > 1
@@ -527,15 +527,15 @@ function run_basis_tests()
     end
 
     function exact_functions_stokes3D(polyorder_velocity,polyorder_pressure)
-        function exact_velocity!(result,x)
+        function exact_velocity!(result,x::Array{<:Real,1})
             result[1] = x[3]^polyorder_velocity + 1
             result[2] = x[1]^polyorder_velocity - 1
             result[3] = x[2]^polyorder_velocity
         end
-        function exact_pressure!(result,x)
+        function exact_pressure!(result,x::Array{<:Real,1})
             result[1] = x[1]^polyorder_pressure + x[2]^polyorder_pressure + x[3]^polyorder_pressure  - 3 // (polyorder_pressure+1)
         end
-        function velo_gradient!(result,x)
+        function velo_gradient!(result,x::Array{<:Real,1})
             result[1] = 0
             result[2] = 0
             result[3] = polyorder_velocity * x[3]^(polyorder_velocity-1)
@@ -546,7 +546,7 @@ function run_basis_tests()
             result[8] = polyorder_velocity * x[2]^(polyorder_velocity-1)
             result[9] = 0
         end
-        function rhs!(result,x) # = Delta u + grad p
+        function rhs!(result,x::Array{<:Real,1}) # = Delta u + grad p
             result[1] = 0
             result[2] = 0
             result[3] = 0

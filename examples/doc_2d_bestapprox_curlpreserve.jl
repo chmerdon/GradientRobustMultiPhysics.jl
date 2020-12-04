@@ -15,12 +15,12 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 ## define some vector field that should be approximated
-function exact_function!(result,x)
+function exact_function!(result,x::Array{<:Real,1})
     result[1] = x[1]^3+x[2]^2
     result[2] = -x[1]^2 + x[2] + 1
 end
 ## define its curl = -du2/dx1 + du1/dx2
-function exact_curl!(result,x)
+function exact_curl!(result,x::Array{<:Real,1})
     result[1] = 2 * x[2] + 2 * x[1]
 end
 

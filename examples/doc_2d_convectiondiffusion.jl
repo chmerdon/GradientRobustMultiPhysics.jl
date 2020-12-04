@@ -26,10 +26,10 @@ using Printf
 
 
 ## problem data and expected exact solution
-function exact_solution!(result,x)
+function exact_solution!(result,x::Array{<:Real,1})
     result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
 end    
-function exact_solution_gradient!(result,x)
+function exact_solution_gradient!(result,x::Array{<:Real,1})
     result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1
     result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
 end    
@@ -38,11 +38,12 @@ function beta!(result)
     result[2] = 0
 end
 function exact_solution_rhs!(diffusion)
-    function closure(result,x)
+    function closure(result,x::Array{<:Real,1})
         ## diffusion part
         result[1] = -diffusion*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
         ## convection part (beta * grad(u))
         result[1] += x[2]*(2*x[1]-1)*(x[2]-1) + 1
+        return nothing
     end
 end    
 
@@ -85,6 +86,7 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
             for j = 1 : length(input)
                 result[j] = input[j] * stabilisation * xFaceVolumes[item]^2
             end
+            return nothing
         end
         stab_action_kernel = ActionKernel(stabilisation_kernel, [2,2]; name = "stabilisation action kernel", dependencies = "I", quadorder = 0)
         ## ... which generates an action...

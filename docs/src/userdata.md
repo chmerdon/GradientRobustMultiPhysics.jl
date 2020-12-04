@@ -10,7 +10,7 @@ the order and number of dependencies.
 The simplest form of user data is called DataFunction and satisfies the interface
 
 ```@example
-function data_function!(result,x,t)
+function data_function!(result,x::Array{<:Real,1},t::Real)
     # definition of result, possibly dependent on
     # X = space coordinates
     # T = time

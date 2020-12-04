@@ -27,15 +27,15 @@ using Printf
 
 ## data for Hagen-Poiseuille flow
 function exact_pressure!(viscosity)
-    function closure(result,x)
+    function closure(result,x::Array{<:Real,1})
         result[1] = viscosity*(-2*x[1]+1.0)
     end
 end
-function exact_velocity!(result,x)
+function exact_velocity!(result,x::Array{<:Real,1})
     result[1] = x[2]*(1.0-x[2]);
     result[2] = 0.0;
 end
-function exact_velocity_gradient!(result,x)
+function exact_velocity_gradient!(result,x::Array{<:Real,1})
     result[1] = 0.0
     result[2] = (1.0-2.0*x[2]);
     result[3] = 0.0;

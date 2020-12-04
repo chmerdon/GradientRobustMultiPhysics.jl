@@ -14,7 +14,7 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 ## define some (vector-valued) function (to be L2-bestapproximated in this example)
-function exact_function!(result,x)
+function exact_function!(result,x::Array{<:Real,1})
     result[1] = (x[1]-1//2)*(x[1]-9//10)*(x[1]-1//3)*(x[1]-1//10)
 end
 

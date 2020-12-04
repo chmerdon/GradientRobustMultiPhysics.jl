@@ -15,13 +15,13 @@ module Example_3DCommutingInterpolators
 using GradientRobustMultiPhysics
 
 ## define some function
-function exact_function!(result,x)
+function exact_function!(result,x::Array{<:Real,1})
     result[1] = x[2]^2 + x[3]
     result[2] = x[1]^3
     result[3] = 1 + x[3]^2
 end
 ## and its Curl3D
-function exact_curl!(result,x)
+function exact_curl!(result,x::Array{<:Real,1})
     result[1] = 0
     result[2] = 1
     result[3] = 3*x[1]^2 - 2*x[2]

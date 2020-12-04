@@ -36,7 +36,7 @@ function HydrostaticTestProblem()
     ## Stokes problem with f = grad(p)
     ## u = 0
     ## p = x^3+y^3 - 1//2
-    function P1_pressure!(result,x)
+    function P1_pressure!(result,x::Array{<:Real,1})
         result[1] = x[1]^3 + x[2]^3 - 1//2
     end
     function P1_velo!(result)
@@ -49,7 +49,7 @@ function HydrostaticTestProblem()
         result[3] = 0;
         result[4] = 0;
     end
-    function P1_rhs!(result,x)
+    function P1_rhs!(result,x::Array{<:Real,1})
         result[1] = 3*x[1]^2
         result[2] = 3*x[2]^2
     end
@@ -65,14 +65,14 @@ function PotentialFlowTestProblem()
     ## NavierStokes with f = 0
     ## u = grad(h) with h = x^3 - 3xy^2
     ## p = - |grad(h)|^2 + 14//5
-    function P2_pressure!(result,x)
+    function P2_pressure!(result,x::Array{<:Real,1})
         result[1] = - 1//2 * (9*(x[1]^4 + x[2]^4) + 18*x[1]^2*x[2]^2) + 14//5
     end
-    function P2_velo!(result,x)
+    function P2_velo!(result,x::Array{<:Real,1})
         result[1] = 3*x[1]^2 - 3*x[2]^2;
         result[2] = -6*x[1]*x[2];
     end
-    function P2_velogradient!(result,x)
+    function P2_velogradient!(result,x::Array{<:Real,1})
         result[1] = 6*x[1]
         result[2] = -6*x[2];
         result[3] = -6*x[2];

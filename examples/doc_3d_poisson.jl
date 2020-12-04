@@ -19,11 +19,11 @@ using GradientRobustMultiPhysics
 using Printf
 
 ## problem data
-function exact_function!(result,x)
+function exact_function!(result,x::Array{<:Real,1})
     result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
     return nothing
 end
-function exact_gradient!(result,x)
+function exact_gradient!(result,x::Array{<:Real,1})
     result[1] = x[3] - x[2]
     result[2] = - x[1] + 2*x[2]
     result[3] = x[1]

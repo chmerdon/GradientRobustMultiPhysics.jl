@@ -650,7 +650,7 @@ function assemble!(
 
     # prepare assembly
     action = LF.action
-    regions = parse_regions(LF.regions, xItemRegions)
+    regions::Array{Int32,1} = parse_regions(LF.regions, xItemRegions)
     EG, ndofs4EG, qf, basisevaler, dii4op = prepare_assembly(LF, [operator], [FE], regions, 1, action.bonus_quadorder, verbosity - 1)
 
     # get size informations
@@ -681,6 +681,7 @@ function assemble!(
     basisevaler4dofitem = basisevaler[1]
     localb::Array{T,2} = zeros(T,maxndofs,action_resultdim)
     bdof::Int = 0
+    itemfactor::T = 0
 
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -690,6 +691,7 @@ function assemble!(
 
         # get dofitem informations
         dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
+        itemfactor = factor * xItemVolumes[item]
 
         # loop over associated dofitems
         for di = 1 : length(dofitems)
@@ -726,12 +728,12 @@ function assemble!(
                 if onedimensional
                     for dof_i = 1 : ndofs4dofitem
                         bdof = dofs[dof_i] + offset
-                        b[bdof] += factor * localb[dof_i,1] * xItemVolumes[item]
+                        b[bdof] += localb[dof_i,1] * itemfactor
                     end
                 else
                     for dof_i = 1 : ndofs4dofitem, j = 1 : action_resultdim
                         bdof = dofs[dof_i] + offset
-                        b[bdof,j] += factor * localb[dof_i,j] * xItemVolumes[item]
+                        b[bdof,j] += localb[dof_i,j] * itemfactor
                     end
                 end
                 fill!(localb, 0.0)
@@ -2218,15 +2220,14 @@ end
 """
 ````
 function L2ErrorIntegrator(
+    T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction},
-    operator::Type{<:AbstractFunctionOperator},
-    xdim::Int,
-    ncomponents::Int = 1;
+    operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
-    bonus_quadorder::Int = 0)
+    time = 0)
 ````
 
-Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given exact_function and returns the L2-error.
+Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error.
 """
 function L2ErrorIntegrator(T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction},
@@ -2234,12 +2235,11 @@ function L2ErrorIntegrator(T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     time = 0)
 
-    ncomponents = compare_data.dimensions[1]
-    xdim = compare_data.dimensions[2]
+    ncomponents::Int = compare_data.dimensions[1]
     temp = zeros(T,ncomponents)
     function L2error_function(result,input,x)
         eval!(temp,compare_data,x,time)
-        result[1] = 0.0
+        result[1] = 0
         for j=1:ncomponents
             result[1] += (temp[j] - input[j])^2
         end    

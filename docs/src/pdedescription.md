@@ -94,7 +94,7 @@ add_constraint!
 
 ## Dirichlet Boundary Data
 
-BoundaryOperators carry the boundary data for each unknown. Each regions can have a different AbstractBoundaryType and an associated data function that satisfies the interface function data!(result,x) or function data!(result,x,t) if it is also time-dependent.
+BoundaryOperators carry the boundary data for each unknown. Each regions can have a different AbstractBoundaryType and an associated data function that satisfies the interface function data!(result,x::Array{<:Real,1}) or function data!(result,x::Array{<:Real,1},t::Real) if it is also time-dependent.
 
 
 | AbstractBoundaryType                | Subtypes                                 | causes                                                                  |

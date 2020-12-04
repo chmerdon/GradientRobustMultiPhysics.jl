@@ -17,11 +17,11 @@ module Example_2DCommutingInterpolators
 using GradientRobustMultiPhysics
 
 ## define some function
-function exact_function!(result,x)
+function exact_function!(result,x::Array{<:Real,1})
     result[1] = x[1]^2-x[2]^4 + 1
 end
 ## and its CurlScalar = (-dy,dx) 
-function exact_curl!(result,x)
+function exact_curl!(result,x::Array{<:Real,1})
     result[1] = 4*x[2]^3
     result[2] = 2*x[1]
 end

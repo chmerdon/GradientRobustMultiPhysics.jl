@@ -36,21 +36,21 @@ using Printf
 
 
 ## problem data
-function exact_pressure!(result,x)
+function exact_pressure!(result,x::Array{<:Real,1})
     result[1] = sin(x[1]+x[2]) - 2*sin(1)+sin(2)
 end
-function exact_velocity!(result,x,t)
+function exact_velocity!(result,x::Array{<:Real,1},t::Real)
     result[1] = (1+t)*cos(x[2]);
     result[2] = (1+t)*sin(x[1]);
 end
-function exact_velocity_gradient!(result,x,t)
+function exact_velocity_gradient!(result,x::Array{<:Real,1},t::Real)
     result[1] = 0.0
     result[2] = -(1+t)*sin(x[2]);
     result[3] = (1+t)*cos(x[1]);
     result[4] = 0.0;
 end
 function exact_rhs!(viscosity)
-    function closure(result,x,t)
+    function closure(result,x::Array{<:Real,1},t::Real)
         result[1] = viscosity*(1+t)*cos(x[2]) + cos(x[1]+x[2]) + cos(x[2])
         result[2] = viscosity*(1+t)*sin(x[1]) + cos(x[1]+x[2]) + sin(x[1])
     end

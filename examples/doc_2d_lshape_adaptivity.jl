@@ -20,7 +20,7 @@ using ExtendableGrids
 using Printf
 
 ## exact solution u for the Poisson problem
-function exact_function!(result,x)
+function exact_function!(result,x::Array{<:Real,1})
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
@@ -29,7 +29,7 @@ function exact_function!(result,x)
     result[1] *= (x[1]^2 + x[2]^2)^(1/3)
 end
 ## ... and its gradient
-function exact_function_gradient!(result,x)
+function exact_function_gradient!(result,x::Array{<:Real,1})
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
