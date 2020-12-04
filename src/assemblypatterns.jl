@@ -286,9 +286,7 @@ function prepare_assembly(
     bonus_quadorder::Int,
     verbosity::Int) where {T<: Real, AT <: AbstractAssemblyType}
 
-
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     EG = FE[1].xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
 
@@ -486,11 +484,9 @@ function evaluate!(
         FE[j] = FEB[j].FES
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
     end
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = num_sources(xItemNodes)
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = form.action
@@ -647,12 +643,10 @@ function assemble!(
     # get adjacencies
     FE = LF.FE
     operator = LF.operator
-    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE.xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operator))
-    xItemRegions = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = num_sources(xItemNodes)
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = LF.action
@@ -788,19 +782,16 @@ function assemble!(
     # get adjacencies
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
     xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = Int64(num_sources(xItemNodes))
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = BLF.action
     regions = parse_regions(BLF.regions, xItemRegions)
     EG, ndofs4EG, qf, basisevaler, dii4op = prepare_assembly(BLF, operator, FE, regions, 2, action.bonus_quadorder, verbosity - 1)
- 
  
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE[1]))
@@ -839,6 +830,7 @@ function assemble!(
     acol::Int = 0
     arow::Int = 0
     is_locally_symmetric::Bool = BLF.symmetric
+    itemfactor::T = 0
     
     for item = 1 : nitems
     for r = 1 : length(regions)
@@ -851,6 +843,7 @@ function assemble!(
 
         # get quadrature weights for integration domain
         weights = qf[EG4item].w
+        itemfactor = xItemVolumes[item] * factor
 
         # loop over associated dofitems (maximal 2 for jump calculations)
         # di, dj == 2 is only performed if one of the operators jumps
@@ -916,7 +909,7 @@ function assemble!(
                                 end
                             end
                         end 
-                    else # todo: update for jumps
+                    else
                         for dof_j = 1 : ndofs4item2
                             eval!(action_input, basisevaler4dofitem2, dof_j, i)
                             apply_action!(action_result, action_input, action, i)
@@ -929,7 +922,7 @@ function assemble!(
                                         temp += action_result[k] * basisvals1[k,dof_j,i]
                                     end
                                     temp *= coefficient4dofitem1[di]
-                                    localmatrix[dof_i,dof_j] += weights[i] * temp 
+                                    localmatrix[dof_i,dof_j] += weights[i] * temp
                                 end
                             else # symmetric case
                                 for dof_i = dof_j : ndofs4item1
@@ -945,8 +938,6 @@ function assemble!(
                     end
                 end
 
-                localmatrix .*= xItemVolumes[item] * factor
-
                 # copy localmatrix into global matrix
                 if is_locally_symmetric == false
                     for dof_i = 1 : ndofs4item1
@@ -955,15 +946,15 @@ function assemble!(
                             if localmatrix[dof_i,dof_j] != 0
                                 acol = dofs2[dof_j] + offsetY
                                 if transposed_assembly == true
-                                    _addnz(A,acol,arow,localmatrix[dof_i,dof_j],1)
+                                    _addnz(A,acol,arow,localmatrix[dof_i,dof_j] * itemfactor,1)
                                 else 
-                                    _addnz(A,arow,acol,localmatrix[dof_i,dof_j],1)  
+                                    _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)  
                                 end
                                 if transpose_copy != nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
                                     if transposed_assembly == true
-                                        _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j],-1)
+                                        _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,-1)
                                     else
-                                        _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j],-1)
+                                        _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j] * itemfactor,-1)
                                     end
                                 end
                             end
@@ -975,17 +966,17 @@ function assemble!(
                             if localmatrix[dof_i,dof_j] != 0 
                                 arow = dofs[dof_i] + offsetX
                                 acol = dofs2[dof_j] + offsetY
-                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j],1)
+                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)
                                 arow = dofs[dof_j] + offsetX
                                 acol = dofs2[dof_i] + offsetY
-                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j],1)
+                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)
                             end
                         end
                     end    
                     for dof_i = 1 : ndofs4item1
                         arow = dofs2[dof_i] + offsetX
                         acol = dofs[dof_i] + offsetY
-                       _addnz(A,arow,acol,localmatrix[dof_i,dof_i],1)
+                       _addnz(A,arow,acol,localmatrix[dof_i,dof_i] * itemfactor,1)
                     end    
                 end    
                 fill!(localmatrix,0.0)
@@ -1046,13 +1037,11 @@ function assemble!(
     # get adjacencies
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
     xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = Int64(num_sources(xItemNodes))
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = BLF.action
@@ -1236,14 +1225,12 @@ function assemble!(
     # get adjacencies
     FE = [TLF.FE1, TLF.FE2, TLF.FE3]
     operator = [TLF.operator1, TLF.operator2, TLF.operator3]
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs::Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1} = [Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1])),
                  Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2])),
                  Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, operator[3]))]
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = Int64(num_sources(xItemNodes))
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = TLF.action
@@ -1441,14 +1428,12 @@ function assemble!(
     # get adjacencies
     FE = [TLF.FE1, TLF.FE2, TLF.FE3]
     operator = [TLF.operator1, TLF.operator2, TLF.operator3]
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
     xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
     xItemDofs3::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, operator[3]))
     xItemRegions::Array{Int,1} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems::Int = num_sources(xItemNodes)
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = TLF.action
@@ -1632,15 +1617,13 @@ function assemble!(
     # get adjacencies
     FE = MLF.FE
     operator = MLF.operators
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : length(FE)
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operator[j]))
     end
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = Int64(num_sources(xItemNodes))
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = MLF.action
@@ -1818,15 +1801,13 @@ function assemble!(
     push!(operators, NLF.operator2)
     
     # get adjacencies
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : nFE
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
     end
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = Int64(num_sources(xItemNodes))
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = NLF.action
@@ -2061,15 +2042,13 @@ function assemble!(
     push!(operators, NLF.operator2)
     
     # get adjacencies
-    xItemNodes = FE[1].xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : nFE
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
     end
-    xItemRegions = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = Int64(num_sources(xItemNodes))
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
 
     # prepare assembly
     action = NLF.action

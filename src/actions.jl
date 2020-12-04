@@ -6,6 +6,18 @@ mutable struct Action{T <: Real} <: AbstractAction
     name::String
     citem::Int
     cregion::Int
+    bonus_quadorder::Int
+    argsizes::Array{Int,1}
+    xref::Array{Array{T,1},1}
+end
+
+# actions that do depend on x
+# and require additional managament of global evaluation points
+mutable struct TAction{T <: Real} <: AbstractAction
+    kernel::UserData{<:AbstractActionKernel}
+    name::String
+    citem::Int
+    cregion::Int
     ctime::T
     bonus_quadorder::Int
     argsizes::Array{Int,1}
@@ -15,6 +27,19 @@ end
 # actions that do depend on x
 # and require additional managament of global evaluation points
 mutable struct XAction{T <: Real} <: AbstractAction
+    kernel::UserData{<:AbstractActionKernel}
+    name::String
+    citem::Int
+    cregion::Int
+    bonus_quadorder::Int
+    argsizes::Array{Int,1}
+    xref::Array{Array{T,1},1}
+    x::Array{Array{T,1},1}
+end
+
+# actions that do depend on x
+# and require additional managament of global evaluation points
+mutable struct XTAction{T <: Real} <: AbstractAction
     kernel::UserData{<:AbstractActionKernel}
     name::String
     citem::Int
@@ -39,9 +64,17 @@ that should match the number format of the used quadrature rules and grid coordi
 """
 function Action(T, kernel::UserData{<:AbstractActionKernel}; name = "user action")
     if is_xdependent(kernel)
-        return XAction{T}(kernel, name, 0, 0, 0, kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0), Array{T,1}(undef,0))
+        if is_timedependent(kernel)
+            return XTAction{T}(kernel, name, 0, 0, 0, kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0), Array{T,1}(undef,0))
+        else
+            return XAction{T}(kernel, name, 0, 0, kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0), Array{T,1}(undef,0))
+        end
     else
-        return Action{T}(kernel, name, 0, 0, 0, kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0))
+        if is_timedependent(kernel)
+            return TAction{T}(kernel, name, 0, 0, 0, kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0))
+        else
+            return Action{T}(kernel, name, 0, 0, kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0))
+        end
     end
 end
 
@@ -75,6 +108,7 @@ function DoNotChangeAction(ncomponents::Int)
         for j = 1 : ncomponents
             result[j] = input[j]
         end
+        return nothing
     end
     kernel = ActionKernel(do_nothing_kernel,[ncomponents, ncomponents]; dependencies = "", quadorder = 0)
     return Action(Float64, kernel; name = "do nothing action")
@@ -82,21 +116,22 @@ end
 
 # set_time! is called in the beginning of every operator assembly
 function set_time!(C::AbstractAction, time)
+    return nothing
 end
 
-function set_time!(C::Union{XAction{T},Action{T}}, time::T) where {T <: Real}
+function set_time!(C::Union{XTAction{T},TAction{T}}, time::T) where {T <: Real}
     C.ctime = time
+    return nothing
 end
 
-
-
-function update!(C::Action{T}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
+function update!(C::Union{Action{T}, TAction{T}}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
     C.cregion = region
     C.citem = vitem
     C.xref = FEBE.xref
+    return nothing
 end
 
-function update!(C::XAction{T}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
+function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
     C.cregion = region
     C.citem = vitem
     C.xref = FEBE.xref
@@ -113,22 +148,47 @@ function update!(C::XAction{T}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, 
     for i = 1 : length(FEBE.xref) 
         eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
+    return nothing
 end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::Action{T}, i::Int) where {T <: Real}
-    eval!(result, C.kernel, input, [], C.ctime, C.cregion, C.citem, C.xref[i]);
+    eval!(result, C.kernel, input, nothing, nothing, C.cregion, C.citem, C.xref[i]);
+    return nothing
 end
 
 function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XAction{T}, i::Int) where {T <: Real}
+    eval!(result, C.kernel, input, C.x[i], nothing, C.cregion, C.citem, C.xref[i]);
+    return nothing
+end
+
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::TAction{T}, i::Int) where {T <: Real}
+    eval!(result, C.kernel, input, nothing, C.ctime, C.cregion, C.citem, C.xref[i]);
+    return nothing
+end
+
+function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XTAction{T}, i::Int) where {T <: Real}
     eval!(result, C.kernel, input, C.x[i], C.ctime, C.cregion, C.citem, C.xref[i]);
+    return nothing
 end
 
 ## apply! function for action in nonlinear assemblies
 
 function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::Action{T}, i::Int) where {T <: Real}
-    eval!(result, C.kernel, input_last, input_ansatz, [], C.ctime, C.cregion, C.citem, C.xref[i]);
+    eval!(result, C.kernel, input_last, input_ansatz, nothing, nothing, C.cregion, C.citem, C.xref[i]);
+    return nothing
 end
 
 function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::XAction{T}, i::Int) where {T <: Real}
+    eval!(result, C.kernel, input_last, input_ansatz, C.x[i], nothing, C.cregion, C.citem, C.xref[i]);
+    return nothing
+end
+
+function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::TAction{T}, i::Int) where {T <: Real}
+    eval!(result, C.kernel, input_last, input_ansatz, nothing, C.ctime, C.cregion, C.citem, C.xref[i]);
+    return nothing
+end
+
+function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::XTAction{T}, i::Int) where {T <: Real}
     eval!(result, C.kernel, input_last, input_ansatz, C.x[i], C.ctime, C.cregion, C.citem, C.xref[i]);
+    return nothing
 end
