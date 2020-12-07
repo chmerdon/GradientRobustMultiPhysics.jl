@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Hagen-Poiseuille (Navier–Stokes) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../abstractactions/">Abstract Actions</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li class="is-active"><a class="tocitem" href>2D Hagen-Poiseuille (Navier–Stokes)</a></li><li><a class="tocitem" href="../doc_2d_jumpestimator/">2D Jump-Estimator</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration)</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_autonewton/">2D Lid-driven cavity (AD-Newton)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_elasticity/">3D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>2D Hagen-Poiseuille (Navier–Stokes)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Hagen-Poiseuille (Navier–Stokes)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_hagenpoiseuille.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Hagen-Poiseuille-(Navier–Stokes)"><a class="docs-heading-anchor" href="#D-Hagen-Poiseuille-(Navier–Stokes)">2D Hagen-Poiseuille (Navier–Stokes)</a><a id="D-Hagen-Poiseuille-(Navier–Stokes)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Hagen-Poiseuille-(Navier–Stokes)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_hagenpoiseuille.jl">source code</a>)</p><p>This example computes a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Hagen-Poiseuille (Navier–Stokes) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li class="is-active"><a class="tocitem" href>2D Hagen-Poiseuille (Navier–Stokes)</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration)</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_autonewton/">2D Lid-driven cavity (AD-Newton)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_elasticity/">3D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>2D Hagen-Poiseuille (Navier–Stokes)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Hagen-Poiseuille (Navier–Stokes)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_hagenpoiseuille.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Hagen-Poiseuille-(Navier–Stokes)"><a class="docs-heading-anchor" href="#D-Hagen-Poiseuille-(Navier–Stokes)">2D Hagen-Poiseuille (Navier–Stokes)</a><a id="D-Hagen-Poiseuille-(Navier–Stokes)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Hagen-Poiseuille-(Navier–Stokes)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_hagenpoiseuille.jl">source code</a>)</p><p>This example computes a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
 - \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
 \mathrm{div}(u) &amp; = 0
 \end{aligned}\]</p><p>with exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>Here we solve the simple Hagen-Poiseuille flow on the two-dimensional unit square domain on a series of uniform refined meshes.</p><p>After that the errors of the Stokes solution, interpolations and bestapproximation into the FESpace is printed for easy comparison. (Note that second order schemes are exact in this example and that the mesh is structured.)</p><pre><code class="language-julia">module Example_2DHagenPoiseuille
@@ -11,15 +11,15 @@ using Printf
 
 # data for Hagen-Poiseuille flow
 function exact_pressure!(viscosity)
-    function closure(result,x)
+    function closure(result,x::Array{&lt;:Real,1})
         result[1] = viscosity*(-2*x[1]+1.0)
     end
 end
-function exact_velocity!(result,x)
+function exact_velocity!(result,x::Array{&lt;:Real,1})
     result[1] = x[2]*(1.0-x[2]);
     result[2] = 0.0;
 end
-function exact_velocity_gradient!(result,x)
+function exact_velocity_gradient!(result,x::Array{&lt;:Real,1})
     result[1] = 0.0
     result[2] = (1.0-2.0*x[2]);
     result[3] = 0.0;
@@ -30,22 +30,19 @@ end
 function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
 
     # initial grid
-    # replace Parallelogrm2D by Triangle2D if you like
-    xgrid = uniform_refine(grid_unitsquare(Parallelogram2D));
-    initgrid = deepcopy(xgrid)
+    # replace Parallelogram2D by Triangle2D if you like
+    xgrid = uniform_refine(grid_unitsquare(Parallelogram2D),0);
 
     # problem parameters
     viscosity = 1.0
-    nlevels = 6 # maximal number of refinement levels
-    barycentric_refinement = false # do not change
+    nlevels = 4 # maximal number of refinement levels
 
     # choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
+    #FETypes = [H1P2B{2,2}, L2P1{1}] # P2-bubble
     #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
-    #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
     FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1P2{2,2}, L2P1{1}]; barycentric_refinement = true # Scott-Vogelius
 
     # solver parameters for nonlinear solve
     maxIterations = 20  # termination criterion 1 for nonlinear mode
@@ -54,6 +51,11 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
     #####################################################################################
     #####################################################################################
 
+    # negotiate data functions to the package
+    user_function_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = &quot;X&quot;, quadorder = 2)
+    user_function_pressure = DataFunction(exact_pressure!(viscosity), [1,2]; dependencies = &quot;X&quot;, quadorder = 1)
+    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; dependencies = &quot;X&quot;, quadorder = 1)
+
     # load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     if nonlinear
@@ -61,18 +63,18 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
         StokesProblem.LHSOperators[1,1][1].store_operator = true
     end
     add_boundarydata!(StokesProblem, 1, [1,3], HomogeneousDirichletBoundary)
-    add_boundarydata!(StokesProblem, 1, [2,4], BestapproxDirichletBoundary; data = exact_velocity!, bonus_quadorder = 2)
+    add_boundarydata!(StokesProblem, 1, [2,4], BestapproxDirichletBoundary; data = user_function_velocity)
     Base.show(StokesProblem)
 
     # define bestapproximation problems
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 2)
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!(viscosity), 2, 1; bestapprox_boundary_regions = [], bonus_quadorder = 1)
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!, 2, 2; bestapprox_boundary_regions = [1,2,3,4], bonus_quadorder = 1, bonus_quadorder_boundary = 2)
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(user_function_pressure; bestapprox_boundary_regions = [])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(user_function_velocity_gradient, user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
 
     # define ItemIntegrators for L2/H1 error computation and arrays to store them
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity!, Identity, 2, 2; bonus_quadorder = 2)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(exact_pressure!(viscosity), Identity, 2, 1; bonus_quadorder = 1)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(exact_velocity_gradient!, Gradient, 2, 4; bonus_quadorder = 1)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient)
     L2error_velocity = []; L2error_pressure = []; L2errorInterpolation_velocity = []; NDofs = []
     L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
     H1error_velocity = []; H1errorInterpolation_velocity = []; H1errorBestApproximation_velocity = []
@@ -81,17 +83,8 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
     for level = 1 : nlevels
 
         # uniform mesh refinement
-        # in case of Scott-Vogelius we use barycentric refinement
-        if barycentric_refinement == true
-            xgrid = deepcopy(initgrid)
-            for ref = 1 : level - 1
-                xgrid = uniform_refine(xgrid)
-            end
-            xgrid = barycentric_refine(xgrid)
-        else
-            if (level &gt; 1)
-                xgrid = uniform_refine(xgrid)
-            end
+        if (level &gt; 1)
+            xgrid = uniform_refine(xgrid)
         end
 
         # generate FESpaces
@@ -107,8 +100,8 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
         # interpolate
         Interpolation = FEVector{Float64}(&quot;Interpolation velocity&quot;,FESpaceVelocity)
         append!(Interpolation,&quot;Interpolation pressure&quot;,FESpacePressure)
-        interpolate!(Interpolation[1], exact_velocity!; bonus_quadorder = 2)
-        interpolate!(Interpolation[2], exact_pressure!(viscosity); bonus_quadorder = 1)
+        interpolate!(Interpolation[1], user_function_velocity)
+        interpolate!(Interpolation[2], user_function_pressure)
 
         # solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation velocity&quot;,FESpaceVelocity)
@@ -171,4 +164,4 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_jumpestimator/">2D Jump-Estimator »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 26 November 2020 16:30">Thursday 26 November 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 7 December 2020 09:08">Monday 7 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
