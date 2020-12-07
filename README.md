@@ -12,7 +12,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 ### Features/Limitations:
 - solve 1D, 2D and 3D problems in Cartesian coordinates
 - type-treed FiniteElements (scalar or vector-valued)
-    - H1 elements (so far P1, P2, MINI, CR, BR)
+    - H1 elements (so far P1, P2, P2B, MINI, CR, BR)
     - Hdiv elements (so far RT0, BDM1, RT1)
     - L2 elements (so far P0, P1)
     - Hcurl elements (so far N0)
