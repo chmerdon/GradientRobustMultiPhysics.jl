@@ -1018,30 +1018,32 @@ assemble!(
     fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
+    fixed_argument::Int = 2,
     factor = 1,
     verbosity::Int = 0) where {T<: Real, AT <: AbstractAssemblyType}
 ````
 
 Assembly of a BilinearForm BLF into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
-Here, the second argument is fixed by the given coefficients in fixedFE.
-With apply_action_to=2 the action can be also applied to the second fixed argument instead of the first one (default).
+Here, the second argument is fixed (default) by the given coefficients in fixedFE.
+With apply_action_to=2 the action can be also applied to the second argument instead of the first one (default).
 """
 function assemble!(
     b::AbstractArray{T,1},
     fixedFE::AbstractArray{T,1},    # coefficient for fixed 2nd component
     BLF::BilinearForm{T, AT};
     apply_action_to::Int = 1,
+    fixed_argument::Int = 2,
     factor = 1,
     verbosity::Int = 0,
-    offset = 0,
-    offset2 = 0) where {T<: Real, AT <: AbstractAssemblyType}
+    offsets::Array{Int,1} = [0,0]) where {T<: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
     FE = [BLF.FE1, BLF.FE2]
     operator = [BLF.operator1, BLF.operator2]
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1]))
-    xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))
+    xItemDofs::Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1} = [
+        Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, operator[1])),
+        Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, operator[2]))]
     xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
@@ -1052,43 +1054,43 @@ function assemble!(
 
 
     # get size informations
+    free_argument = 1
+    if fixed_argument == 1
+        free_argument = 2
+    end
+
     ncomponents::Int = get_ncomponents(eltype(FE[1]))
     ncomponents2::Int = get_ncomponents(eltype(FE[2]))
     cvals_resultdim::Int = size(basisevaler[1,apply_action_to,1,1].cvals,1)
-    cvals_resultdim2::Int = size(basisevaler[1,2,1,1].cvals,1)
+    cvals_resultdim2::Int = size(basisevaler[1,fixed_argument,1,1].cvals,1)
     action_resultdim::Int = action.argsizes[1]
 
     # loop over items
-    EG4dofitem1 = [1,1] # EG id of the current item with respect to operator 1
-    EG4dofitem2 = [1,1] # EG id of the current item with respect to operator 2
-    dofitems1 = [0,0] # itemnr where the dof numbers can be found (operator 1)
-    dofitems2 = [0,0] # itemnr where the dof numbers can be found (operator 2)
-    itempos4dofitem1 = [1,1] # local item position in dofitem1
-    itempos4dofitem2 = [1,1] # local item position in dofitem2
-    orientation4dofitem1 = [1,2] # local orientation
-    orientation4dofitem2 = [1,2] # local orientation
-    coefficient4dofitem1 = [0,0] # coefficients for operator 1
-    coefficient4dofitem2 = [0,0] # coefficients for operator 2
-    ndofs4item1::Int = 0 # number of dofs for item
-    ndofs4item2::Int = 0 # number of dofs for item
-    dofitem1 = 0
-    dofitem2 = 0
-    maxdofs1::Int = max_num_targets_per_source(xItemDofs1)
-    maxdofs2::Int = max_num_targets_per_source(xItemDofs2)
-    dofs = zeros(Int,maxdofs1)
-    coeffs2 = zeros(T,maxdofs2)
+    EG4dofitem1::Array{Int,1} = [1,1] # EG id of the current item with respect to operator 1
+    EG4dofitem2::Array{Int,1} = [1,1] # EG id of the current item with respect to operator 2
+    dofitems1::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found (operator 1)
+    dofitems2::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found (operator 2)
+    itempos4dofitem1::Array{Int,1} = [1,1] # local item position in dofitem1
+    itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem2
+    orientation4dofitem1::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem2::Array{Int,1} = [1,2] # local orientation
+    coefficient4dofitem1::Array{T,1} = [0,0] # coefficients for operator 1
+    coefficient4dofitem2::Array{T,1} = [0,0] # coefficients for operator 2
+    ndofs4item::Array{Int,1} = [0,0] # number of dofs for item
+    dofitems::Array{Int,1} = [0,0]
+    maxdofs::Array{Int,1} = [max_num_targets_per_source(xItemDofs[1]), max_num_targets_per_source(xItemDofs[2])]
+    fixed_coeffs = zeros(T,maxdofs[fixed_argument])
     action_input::Array{T,1} = zeros(T,cvals_resultdim) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
-    basisevaler4dofitem1 = basisevaler[1,1,1,1]
-    basisevaler4dofitem2 = basisevaler[1,2,1,1]
-    basisvals1::Array{T,3} = basisevaler4dofitem1.cvals
-    localmatrix = zeros(T,maxdofs1,maxdofs2)
+    basisevaler4dofitem::Array{FEBasisEvaluator,1} = [basisevaler[1,1,1,1], basisevaler[1,2,1,1]]
+    basisvals::Array{T,3} = basisevaler4dofitem[free_argument].cvals
     fixedval = zeros(T, cvals_resultdim2) # some temporary variable
     temp::T = 0 # some temporary variable
-    localb::Array{T,1} = zeros(T,maxdofs1)
+    localb::Array{T,1} = zeros(T,maxdofs[free_argument])
     bdof::Int = 0
     fdof::Int = 0
+    itemfactor::T = 0     
 
     for item = 1 : nitems
     for r = 1 : length(regions)
@@ -1101,64 +1103,72 @@ function assemble!(
 
         # get quadrature weights for integration domain
         weights = qf[EG4dofitem1[1]].w
+        itemfactor = factor * xItemVolumes[item]
 
         # loop over associated dofitems (maximal 2 for jump calculations)
         # di, dj == 2 is only performed if one of the operators jumps
         for di = 1 : 2, dj = 1 : 2
-            dofitem1 = dofitems1[di]
-            dofitem2 = dofitems2[dj]
-            if dofitem1 > 0 && dofitem2 > 0
+            dofitems[1] = dofitems1[di]
+            dofitems[2] = dofitems2[dj]
+            if dofitems[1] > 0 && dofitems[2] > 0
 
                 # get number of dofs on this dofitem
-                ndofs4item1 = ndofs4EG[1][EG4dofitem1[di]]
-                ndofs4item2 = ndofs4EG[2][EG4dofitem2[dj]]
+                ndofs4item[1] = ndofs4EG[1][EG4dofitem1[di]]
+                ndofs4item[2] = ndofs4EG[2][EG4dofitem2[dj]]
 
                 # update FEbasisevaler
-                basisevaler4dofitem1 = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],orientation4dofitem1[di]]
-                basisevaler4dofitem2 = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],orientation4dofitem2[dj]]
-                basisvals1 = basisevaler4dofitem1.cvals
-                update!(basisevaler4dofitem1,dofitem1)
-                update!(basisevaler4dofitem2,dofitem2)
+                basisevaler4dofitem[1] = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],orientation4dofitem1[di]]
+                basisevaler4dofitem[2] = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],orientation4dofitem2[dj]]
+                basisvals = basisevaler4dofitem[free_argument].cvals
+                update!(basisevaler4dofitem[1],dofitems[1])
+                update!(basisevaler4dofitem[2],dofitems[2])
 
                 # update action on dofitem
-                if apply_action_to == 1
-                    update!(action, basisevaler4dofitem1, dofitem1, item, regions[r])
-                else
-                    update!(action, basisevaler4dofitem2, dofitem2, item, regions[r])
-                end
+                update!(action, basisevaler4dofitem[apply_action_to], dofitems[apply_action_to], item, regions[r])
 
                 # update dofs
-                for j=1:ndofs4item1
-                    dofs[j] = xItemDofs1[j,dofitem1]
+                for j=1:ndofs4item[fixed_argument]
+                    fdof = xItemDofs[fixed_argument][j,dofitems[fixed_argument]] + offsets[fixed_argument]
+                    if fixed_argument == 1
+                        fixed_coeffs[j] = fixedFE[fdof] * coefficient4dofitem1[di]
+                    else
+                        fixed_coeffs[j] = fixedFE[fdof] * coefficient4dofitem2[dj]
+                    end
                 end
-                for j=1:ndofs4item2
-                    fdof = xItemDofs2[j,dofitem2] + offset2
-                    coeffs2[j] = fixedFE[fdof]
-                end
+
 
                 for i in eachindex(weights)
                 
-                    # evaluate second component
+                    # evaluate fixed argument
                     fill!(fixedval, 0.0)
-                    eval!(fixedval, basisevaler4dofitem2, coeffs2, i)
-                    fixedval .*= coefficient4dofitem2[dj]
+                    eval!(fixedval, basisevaler4dofitem[fixed_argument], fixed_coeffs, i)
 
-                    if apply_action_to == 2
-                        # apply action to second argument
+                    if apply_action_to == fixed_argument
+                        # apply action to fixed argument
                         apply_action!(action_result, fixedval, action, i)
 
-                        # multiply first argument
-                        for dof_i = 1 : ndofs4item1
+                        # multiply free argument
+                        for dof_i = 1 : ndofs4item[free_argument]
                             temp = 0
                             for k = 1 : action_resultdim
-                                temp += action_result[k] * basisvals1[k,dof_i,i]
+                                temp += action_result[k] * basisvals[k,dof_i,i]
                             end
-                            localb[dof_i] += temp * weights[i] * coefficient4dofitem1[di]
+                            if free_argument == 1
+                                temp *= coefficient4dofitem1[di]
+                            else
+                                temp *= coefficient4dofitem2[dj]
+                            end
+                            localb[dof_i] += temp * weights[i]
                         end 
                     else
-                        for dof_i = 1 : ndofs4item1
-                            # apply action to first argument
-                            eval!(action_input, basisevaler4dofitem1, dof_i, i)
+                        for dof_i = 1 : ndofs4item[free_argument]
+                            # apply action to free argument
+                            eval!(action_input, basisevaler4dofitem[free_argument], dof_i, i)
+                            if free_argument == 1
+                                action_input .*= coefficient4dofitem1[di]
+                            else
+                                action_input .*= coefficient4dofitem2[dj]
+                            end
                             apply_action!(action_result, action_input, action, i)
             
                             # multiply second argument
@@ -1166,14 +1176,14 @@ function assemble!(
                             for k = 1 : action_resultdim
                                 temp += action_result[k] * fixedval[k]
                             end
-                            localb[dof_i] += temp * weights[i] * coefficient4dofitem1[di]
+                            localb[dof_i] += temp * weights[i]
                         end 
                     end
                 end
 
-                for dof_i = 1 : ndofs4item1
-                    bdof = dofs[dof_i] + offset
-                    b[bdof] += localb[dof_i] * xItemVolumes[item] * factor
+                for dof_i = 1 : ndofs4item[free_argument]
+                    bdof = xItemDofs[free_argument][dof_i,dofitems[free_argument]] + offsets[free_argument]
+                    b[bdof] += localb[dof_i] * itemfactor
                 end
                 fill!(localb, 0.0)
             end
@@ -1192,10 +1202,11 @@ function assemble!(
     fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
     BLF::BilinearForm;
     apply_action_to::Int = 1,
+    fixed_argument::Int = 2,
     factor = 1,
     verbosity::Int = 0)
 
-    assemble!(b.entries, fixedFE.entries, BLF; apply_action_to = apply_action_to, factor = factor, verbosity = verbosity, offset = b.offset, offset2 = fixedFE.offset)
+    assemble!(b.entries, fixedFE.entries, BLF; apply_action_to = apply_action_to, factor = factor, fixed_argument = fixed_argument, verbosity = verbosity, offsets = [b.offset, fixedFE.offset])
 end
 
 """

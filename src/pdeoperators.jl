@@ -567,12 +567,13 @@ struct BLFeval <: AbstractPDEOperatorRHS
     BLF::AbstractBilinearForm
     Data::FEVectorBlock
     factor::Real
+    fixed_argument::Int
     nonlinear::Bool
     timedependent::Bool
 end
 
-function BLFeval(BLF, Data, factor; nonlinear::Bool = false, timedependent::Bool = false)
-    return BLFeval(BLF, Data, factor, nonlinear, timedependent)
+function BLFeval(BLF, Data, factor; fixed_argument::Int = 2, nonlinear::Bool = false, timedependent::Bool = false)
+    return BLFeval(BLF, Data, factor, fixed_argument, nonlinear, timedependent)
 end
 
 
@@ -950,12 +951,12 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; fact
         FE1 = b.FES
         FE2 = O.Data.FES
         if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
-            BLF = SymmetricBilinearForm(Float64, ON_CELLS, FE1, O.BLF.operator1, O.BLF.action; regions = O.BLF.regions)    
+            BLF = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], FE1, O.BLF.operator1, O.BLF.action; regions = O.BLF.regions)    
         else
-            BLF = BilinearForm(Float64, ON_CELLS, FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
+            BLF = BilinearForm(Float64, typeof(O.BLF).parameters[1], FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
         end
         set_time!(O.BLF.action, time)
-        assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity)
+        assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument)
     end
 end
 

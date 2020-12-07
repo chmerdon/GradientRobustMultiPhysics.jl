@@ -80,14 +80,14 @@ end
 function NLActionKernel(
     f::Function,
     dimensions::Array{Int,1};
-    name = "user action kernel",
+    name = "nonlinear user action kernel",
     dependencies::String = "",
     quadorder::Int = 0)
 ````
 
 Provides a negotation interface for some function to be used as a nonlinear action kernel. The function f has to obey the interface
 
-    f(result, input_current, input_ansatz)
+    f(result, input)
 
 No further dependencies are allowed currently. Since this is a work-in-progress feature more details will follow later.
 """
@@ -107,7 +107,7 @@ end
 function DataFunction(
     f::Function,
     dimensions::Array{Int,1};
-    name = "user action kernel",
+    name = "user data function",
     dependencies::String = "",
     quadorder::Int = 0)
 ````
@@ -140,10 +140,10 @@ end
 
 """
 ````
-function DataFunction(
+function ExtendedDataFunction(
     f::Function,
     dimensions::Array{Int,1};
-    name = "user action kernel",
+    name = "user data function",
     dependencies::String = "",
     quadorder::Int = 0)
 ````
