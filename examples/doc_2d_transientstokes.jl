@@ -95,10 +95,10 @@ function main(; verbosity = 2, Plotter = nothing)
     ## negotiate data functions to the package
     ## note that dependencies "XT" marks the function to be x- and t-dependent
     ## that causes the solver to automatically reassemble associated operators in each time step
-    user_function_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "XT", quadorder = 5)
-    user_function_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = "X", quadorder = 5)
-    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; dependencies = "XT", quadorder = 4)
-    user_function_rhs = DataFunction(exact_rhs!(viscosity), [2,2]; dependencies = "XT", quadorder = 5)
+    user_function_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "XT", quadorder = 5)
+    user_function_pressure = DataFunction(exact_pressure!, [1,2]; name = "p_exact", dependencies = "X", quadorder = 5)
+    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; name = "grad(u_exact)", dependencies = "XT", quadorder = 4)
+    user_function_rhs = DataFunction(exact_rhs!(viscosity), [2,2]; name = "f", dependencies = "XT", quadorder = 5)
 
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)

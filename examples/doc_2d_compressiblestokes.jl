@@ -98,7 +98,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     FETypes = [H1BR{2}, L2P0{1}, L2P0{1}] # Bernardi--Raugel
     #FETypes = [H1CR{2}, L2P0{1}, L2P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
 
-    ## solver parametersExample_
+    ## solver parameters
     timestep = shear_modulus / (2*c)
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
     maxTimeSteps = 1000  # termination criterion 1
@@ -109,9 +109,9 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
 
 
     ## negotiate edata functions to the package
-    user_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "", quadorder = 0)
-    user_density = DataFunction(exact_density!(M,c), [1,2]; dependencies = "X", quadorder = 3)
-    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; dependencies = "X", quadorder = 3)
+    user_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "", quadorder = 0)
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 3)
+    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = "g", dependencies = "X", quadorder = 3)
 
 
     ## set function operators depending on reconstruct
@@ -138,10 +138,10 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2))
     Problem.LHSOperators[1,1][1].store_operator = true
     if lambda != 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",TestFunctionOperatorDivergence,TestFunctionOperatorDivergence,MultiplyScalarAction(lambda,1)))
+        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * div(u) * div(v) (lambda = $lambda)",TestFunctionOperatorDivergence,TestFunctionOperatorDivergence,MultiplyScalarAction(lambda,1)))
         Problem.LHSOperators[1,1][2].store_operator = true
     end
-    add_operator!(Problem, [1,3], AbstractBilinearForm("div(velocity)*pressure",Divergence,Identity,MultiplyScalarAction(-1.0, 1)))
+    add_operator!(Problem, [1,3], AbstractBilinearForm("div(v)*p",Divergence,Identity,MultiplyScalarAction(-1.0, 1)))
     Problem.LHSOperators[1,3][1].store_operator = true
 
     function gravity_action()
@@ -153,7 +153,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
         gravity_action_kernel = ActionKernel(closure, [1,2]; name = "gravity action kernel", dependencies = "XT", quadorder = user_gravity.quadorder)
         return Action(Float64, gravity_action_kernel)
     end    
-    add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",TestFunctionOperatorIdentity,Identity,gravity_action()))
+    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*rho",TestFunctionOperatorIdentity,Identity,gravity_action()))
     Problem.LHSOperators[1,2][1].store_operator = true
 
     ## continuity equation
@@ -164,9 +164,12 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     ## here we do some best-approximation of the pressure that comes out of the equation of state
     eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = "", quadorder = 0)
     eos_action = Action(Float64, eos_action_kernel)
-    add_operator!(Problem, [3,2], AbstractBilinearForm("pressure * eos(density)",Identity,Identity,eos_action; apply_action_to = 2))
+    add_operator!(Problem, [3,2], AbstractBilinearForm("p * eos(density)",Identity,Identity,eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1)))
     Problem.LHSOperators[3,3][1].store_operator = true
+
+    ## show Problem definition
+    show(Problem)
 
     ## generate FESpaces and solution vector
     FESpaceV = FESpace{FETypes[1]}(xgrid)

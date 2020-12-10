@@ -211,7 +211,7 @@ function Base.show(io::IO, PDE::PDEDescription)
                 try
                     print("$(PDE.RHSOperators[j][o].name) (regions = $(PDE.RHSOperators[j][o].regions))")
                 catch
-                    print("$(typeof(PDE.RHSOperators[j][o])) (regions = [0])")
+                    print("$(PDE.RHSOperators[j][o].name) (regions = [0])")
                 end
                 if o == length(PDE.RHSOperators[j])
                     println("")

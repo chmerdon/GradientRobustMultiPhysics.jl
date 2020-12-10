@@ -47,9 +47,9 @@ function main(; verbosity = 1)
     FEType = H1P1{1}
 
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,3]; dependencies = "X", quadorder = 2)
-    user_function_gradient = DataFunction(exact_gradient!, [3,3]; dependencies = "X", quadorder = 1)
-    user_function_rhs = DataFunction(rhs!, [1,3]; dependencies = "", quadorder = 0)
+    user_function = DataFunction(exact_function!, [1,3]; name = "u_exact", dependencies = "X", quadorder = 2)
+    user_function_gradient = DataFunction(exact_gradient!, [3,3]; name = "grad(u_exact)", dependencies = "X", quadorder = 1)
+    user_function_rhs = DataFunction(rhs!, [1,3]; dependencies = "", name = "f", quadorder = 0)
 
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(3; diffusion = 1.0)

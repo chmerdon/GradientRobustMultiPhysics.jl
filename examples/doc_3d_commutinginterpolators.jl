@@ -34,8 +34,8 @@ function main(;order::Int = 1)
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),2)
 
     ## negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [3,3]; dependencies = "X", quadorder = 3)
-    user_function_curl = DataFunction(exact_curl!, [3,3]; dependencies = "X", quadorder = 2)
+    user_function = DataFunction(exact_function!, [3,3]; name = "u_exact", dependencies = "X", quadorder = 3)
+    user_function_curl = DataFunction(exact_curl!, [3,3]; name = "Curl(u_exact)", dependencies = "X", quadorder = 2)
 
     ## choose commuting interpolators pair
     if order == 1

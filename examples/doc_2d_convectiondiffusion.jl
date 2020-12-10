@@ -56,10 +56,10 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
     xgrid = grid_unitsquare_mixedgeometries(); # initial grid
 
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_solution!, [1,2]; dependencies = "X", quadorder = 4)
-    user_function_gradient = DataFunction(exact_solution_gradient!, [2,2]; dependencies = "X", quadorder = 3)
-    user_function_rhs = DataFunction(exact_solution_rhs!(diffusion), [1,2]; dependencies = "X", quadorder = 3)
-    user_function_convection = DataFunction(beta!, [2,2]; dependencies = "", quadorder = 0)
+    user_function = DataFunction(exact_solution!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
+    user_function_gradient = DataFunction(exact_solution_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 3)
+    user_function_rhs = DataFunction(exact_solution_rhs!(diffusion), [1,2]; name = "f", dependencies = "X", quadorder = 3)
+    user_function_convection = DataFunction(beta!, [2,2]; name = "beta", dependencies = "", quadorder = 0)
 
     ## choose a finite element type, here we choose a second order H1-conforming one
     FEType = H1P2{1,2}

@@ -43,7 +43,7 @@ function main(; verbosity = 1)
     FEType = H1P1{3} # P1-Courant
 
     ## negotiate data functions to the package
-    user_function_neumann_bnd = DataFunction(neumann_force_right!, [3,3]; dependencies = "", quadorder = 0)
+    user_function_neumann_bnd = DataFunction(neumann_force_right!, [3,3]; name = "g", dependencies = "", quadorder = 0)
 
     ## PDE description via prototype
     LinElastProblem = LinearElasticityProblem(3; shear_modulus = shear_modulus, lambda = lambda)

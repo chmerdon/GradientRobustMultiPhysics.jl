@@ -15,7 +15,7 @@ where ``\mathbf{u} = (1,0)`` along the top boundary of a square domain.
 
 This examples highlights the use of automatic differentation to obtain Newton derivatives of nonlinear PDEOperators. The user can 
 switch between a Newton obtained by automatic differentation (ADnewton = true) and a 'manual' Newton scheme (ADnewton = false). The runtime
-of the manual newton is slightly faster.
+of the manual newton is slightly faster, but requires much more code input from the user that is more prone to errors.
 
 =#
 
@@ -54,10 +54,11 @@ function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
     #####################################################################################
 
     ## negotiate data functions to the package
-    user_function_bnd = DataFunction(boundary_data_top!, [2,2]; dependencies = "", quadorder = 0)
+    user_function_bnd = DataFunction(boundary_data_top!, [2,2]; name = "u_bnd", dependencies = "", quadorder = 0)
 
     ## load linear Stokes problem prototype and assign data
     ## we are adding the nonlinar convection term ourself below
+    ## to discuss the details
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
     add_boundarydata!(StokesProblem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = user_function_bnd)
@@ -87,7 +88,7 @@ function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
         add_operator!(StokesProblem, [1,1], NLConvectionOperator)
     else
         ## MANUAL DIFFERENTATION
-        ## uses the following kernel function
+        ## uses the following kernel function for the linearised convection operator
         function ugradu_kernel_nonAD(result, input_current, input_ansatz)
             ## input_current = [current, grad(current)]
             ## input_ansatz = [ansatz, grad(ansatz)]
@@ -101,7 +102,7 @@ function main(; verbosity = 2, Plotter = nothing, ADnewton = true)
             end
             return nothing
         end
-        ## and a similar kernel function for the RHS
+        ## and a similar kernel function for the right-hand side
         function ugradu_kernel_rhs(result, input_current)
             ## input_current = [current, grad(current)]
             ## input_ansatz = [ansatz, grad(ansatz)]

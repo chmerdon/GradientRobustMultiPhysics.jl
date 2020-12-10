@@ -53,7 +53,7 @@ function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_ite
     #####################################################################################
 
     ## negotiate data functions to the package
-    user_function_bnd = DataFunction(boundary_data_top!, [2,2]; dependencies = "", quadorder = 0)
+    user_function_bnd = DataFunction(boundary_data_top!, [2,2]; name = "u_bnd", dependencies = "", quadorder = 0)
 
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true)

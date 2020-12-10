@@ -32,8 +32,8 @@ function main(; verbosity = 1, Plotter = nothing)
     xgrid = uniform_refine(xgrid,5)
 
     ## negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [2,2]; dependencies = "X", quadorder = 3)
-    user_function_curl = DataFunction(exact_curl!, [1,2]; dependencies = "X", quadorder = 1)
+    user_function = DataFunction(exact_function!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 3)
+    user_function_curl = DataFunction(exact_curl!, [1,2]; name = "curl(u_exact)", dependencies = "X", quadorder = 1)
     
     ## setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [1,2,3,4])

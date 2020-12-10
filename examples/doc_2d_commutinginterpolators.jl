@@ -33,8 +33,8 @@ function main(;order::Int = 2)
     xgrid = uniform_refine(reference_domain(Triangle2D),2)
 
     ## negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [1,2]; dependencies = "X", quadorder = 4)
-    user_function_curl = DataFunction(exact_curl!, [2,2]; dependencies = "X", quadorder = 3)
+    user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
+    user_function_curl = DataFunction(exact_curl!, [2,2]; name = "Curl(u_exact)", dependencies = "X", quadorder = 3)
 
     ## choose commuting interpolators pair
     if order == 1

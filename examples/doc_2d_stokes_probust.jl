@@ -53,10 +53,10 @@ function HydrostaticTestProblem()
         result[1] = 3*x[1]^2
         result[2] = 3*x[2]^2
     end
-    user_function_velocity = DataFunction(P1_velo!, [2,2]; dependencies = "", quadorder = 0)
-    user_function_pressure = DataFunction(P1_pressure!, [1,2]; dependencies = "X", quadorder = 3)
-    user_function_velocity_gradient = DataFunction(P1_velogradient!, [4,2]; dependencies = "", quadorder = 0)
-    user_function_rhs = DataFunction(P1_rhs!, [2,2]; dependencies = "X", quadorder = 2)
+    user_function_velocity = DataFunction(P1_velo!, [2,2]; name = "u_exact", dependencies = "", quadorder = 0)
+    user_function_pressure = DataFunction(P1_pressure!, [1,2]; name = "p_exact", dependencies = "X", quadorder = 3)
+    user_function_velocity_gradient = DataFunction(P1_velogradient!, [4,2]; name = "grad(u_exact)", dependencies = "", quadorder = 0)
+    user_function_rhs = DataFunction(P1_rhs!, [2,2]; name = "f", dependencies = "X", quadorder = 2)
 
     return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, false
 end
@@ -82,10 +82,10 @@ function PotentialFlowTestProblem()
         result[1] = 0
         result[2] = 0
     end
-    user_function_velocity = DataFunction(P2_velo!, [2,2]; dependencies = "X", quadorder = 2)
-    user_function_pressure = DataFunction(P2_pressure!, [1,2]; dependencies = "X", quadorder = 4)
-    user_function_velocity_gradient = DataFunction(P2_velogradient!, [4,2]; dependencies = "X", quadorder = 1)
-    user_function_rhs = DataFunction(P2_rhs!, [2,2]; dependencies = "", quadorder = 0)
+    user_function_velocity = DataFunction(P2_velo!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 2)
+    user_function_pressure = DataFunction(P2_pressure!, [1,2]; name = "p_exact", dependencies = "X", quadorder = 4)
+    user_function_velocity_gradient = DataFunction(P2_velogradient!, [4,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 1)
+    user_function_rhs = DataFunction(P2_rhs!, [2,2]; name = "f", dependencies = "", quadorder = 0)
 
     return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, true
 end

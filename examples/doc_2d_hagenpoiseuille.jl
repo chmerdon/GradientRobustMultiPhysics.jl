@@ -43,7 +43,7 @@ function exact_velocity_gradient!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
+function main(; verbosity = 2, Plotter = nothing, nonlinear = false)
 
     ## initial grid
     ## replace Parallelogram2D by Triangle2D if you like
@@ -51,7 +51,7 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
 
     ## problem parameters
     viscosity = 1.0
-    nlevels = 4 # maximal number of refinement levels
+    nlevels = 5 # maximal number of refinement levels
 
     ## choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -68,12 +68,12 @@ function main(; verbosity = 1, Plotter = nothing, nonlinear = false)
     #####################################################################################
 
     ## negotiate data functions to the package
-    user_function_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "X", quadorder = 2)
-    user_function_pressure = DataFunction(exact_pressure!(viscosity), [1,2]; dependencies = "X", quadorder = 1)
-    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; dependencies = "X", quadorder = 1)
+    user_function_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 2)
+    user_function_pressure = DataFunction(exact_pressure!(viscosity), [1,2]; name = "p_exact", dependencies = "X", quadorder = 1)
+    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 1)
 
     ## load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
+    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear, auto_newton = nonlinear)
     if nonlinear
         ## store matrix of Laplace operator for nonlinear solver
         StokesProblem.LHSOperators[1,1][1].store_operator = true

@@ -4,18 +4,21 @@
 function IncompressibleNavierStokesProblem(
     dimension::Int = 2;
     viscosity = 1.0,
-    nonlinear::Bool = true,
+    nonlinear::Bool = false,
+    auto_newton::Bool = false,
     nopressureconstraint::Bool = false,
     pmean = 0)
 ````
 
-Creates a PDEDescription for the incompressible Navier-Stokes equations of the specified dimension and globally constant viscosity parameter.
+Creates a PDEDescription for the incompressible (Navier-)Stokes equations of the specified dimension and globally constant viscosity parameter.
+If nonlinear = true the nonlinear convection term is added to the PDEDescription. If also auto_newton = true, a Newton iteration is devised
+by automatic differentiation of the convection term.
 """
 function IncompressibleNavierStokesProblem(
     dimension::Int = 2;
     viscosity = 1.0,
     nonlinear::Bool = true,
-    newton::Bool = true, # Newton 
+    auto_newton::Bool = true, # Newton by AD
     no_pressure_constraint::Bool = false,
     pmean = 0)
 
@@ -39,7 +42,7 @@ function IncompressibleNavierStokesProblem(
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
     
     if nonlinear
-        add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, dimension, dimension))
+        add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, dimension, dimension; auto_newton = auto_newton))
     end
     
     # zero pressure integral mean

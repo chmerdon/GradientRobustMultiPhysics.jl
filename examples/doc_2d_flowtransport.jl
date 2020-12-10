@@ -65,8 +65,8 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     #####################################################################################
 
     ## negotiate data functions to the package
-    user_function_inlet_velocity = DataFunction(inlet_velocity!, [2,2]; dependencies = "X", quadorder = 2)
-    user_function_inlet_species = DataFunction(inlet_concentration!, [1,2]; dependencies = "X", quadorder = 1)
+    user_function_inlet_velocity = DataFunction(inlet_velocity!, [2,2]; name = "inflow", dependencies = "X", quadorder = 2)
+    user_function_inlet_species = DataFunction(inlet_concentration!, [1,2]; name = "inlet concentration", dependencies = "X", quadorder = 1)
 
     ## load Stokes problem prototype
     ## and assign boundary data (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)

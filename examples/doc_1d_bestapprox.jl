@@ -26,7 +26,7 @@ function main(; Plotter = nothing, verbosity = 1)
     xgrid = uniform_refine(xgrid,2)
 
     ## negotiate exact_function! to the package
-    user_function = DataFunction(exact_function!, [1,1]; dependencies = "X", quadorder = 4)
+    user_function = DataFunction(exact_function!, [1,1]; name = "u_exact", dependencies = "X", quadorder = 4)
     
     ## setup a bestapproximation problem via a predefined prototype
     ## and an L2ErrorEvaluator that can be used later to compute the L2 error

@@ -52,8 +52,8 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
     FEType = H1P2{1,2}
     
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; dependencies = "X", quadorder = 5)
-    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; dependencies = "X", quadorder = 4)
+    user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 4)
 
     ## setup Poisson problem
     Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)

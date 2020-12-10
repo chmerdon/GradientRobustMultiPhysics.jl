@@ -29,7 +29,7 @@ A vanilla PDEDescription for this weak formulation (without boundary data) can b
 PoissonProblem
 ```
 
-Example-Script: EXAMPLE_ConvectionDiffusion.jl
+Example-Script: [2D Convection-Diffusion-Problem](@ref)
 
 Remarks:
 - dual weak formulations are also possible but are not available as a prototype currently
@@ -65,7 +65,7 @@ Remarks:
 - if nonlinear == false the nonlinear convection term is not added to the equation resulting in the plain Stokes equations.
 - if nopressureconstraint == true removes the integral mean constraint on the pressure.
 
-Example-Scripts: EXAMPLE_Stokes.jl, EXAMPLE_Stokes_probust.jl
+Example-Script: [2D Hagen-Poiseuille (Navier--Stokes)](@ref)
 
 
 ## Navier-Lame equations (linear elasticity)
@@ -100,7 +100,7 @@ A vanilla PDEDescription for this weak formulation (without boundary data) can b
 LinearElasticityProblem
 ```
 
-Example-Scripts: EXAMPLE_CookMembrane.jl, EXAMPLE_ElasticTire2.jl
+Example-Scripts: [2D Linear Elasticity](@ref)
 
 
 ## L2-Bestapproximation
@@ -118,6 +118,8 @@ Of course, on the continuous level, it holds ``u = u_\text{exact}``, but if the 
 L2BestapproximationProblem
 ```
 
+Example-Scripts: [3D Divergence-Preserving L2-Bestapproximation](@ref)
+
 
 ## H1-Bestapproximation
 
@@ -126,8 +128,6 @@ This PDEDescription can be used to setup an H1-Bestapproximation very fast. The 
 ```math
 (\nabla u,\nabla v) = (\nabla u_\text{exact}, \nabla v) \quad \text{for all } v\in H^1_0(\Omega)
 ```
-
-
 
 ```@docs
 H1BestapproximationProblem

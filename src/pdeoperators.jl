@@ -233,7 +233,7 @@ function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction
         end    
     end    
     action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "XT", quadorder = beta.quadorder)
-    return AbstractBilinearForm("(a(=DataFunction) * Gradient) u * v", Gradient,testfunction_operator, Action(T, action_kernel); regions = regions, transposed_assembly = true)
+    return AbstractBilinearForm("($(beta.name) * Gradient) u * v", Gradient,testfunction_operator, Action(T, action_kernel); regions = regions, transposed_assembly = true)
 end
 
 
@@ -449,13 +449,34 @@ function AbstractTrilinearForm(name,
 end
 
 """
-$(TYPEDSIGNATURES)
+````
+function ConvectionOperator(
+    a_from::Int, 
+    beta_operator,
+    xdim::Int,
+    ncomponents::Int;
+    fixed_argument::Int = 1,
+    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    regions::Array{Int,1} = [0],
+    auto_newton::Bool = false)
+````
 
-constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) where beta is the id of some unknown of the PDEDescription.
-With fixed_argument = 2 beta and u can siwtch their places.
+constructs an PDE operator for a convection term of the form c(a,u,v) = (beta_operator(a)*grad(u),v) where a_from is the id of some unknown of the PDEDescription.
+xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
+With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v). 
+With auto_newton = true a Newton scheme for a(u,v) = (u*grad(u),v) is automatically derived (and fixed_argument is ignored).
 
 """
-function ConvectionOperator(a_from::Int, beta_operator, xdim::Int, ncomponents::Int; fixed_argument::Int = 1, testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+function ConvectionOperator(
+    a_from::Int, 
+    beta_operator,
+    xdim::Int,
+    ncomponents::Int;
+    fixed_argument::Int = 1,
+    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    regions::Array{Int,1} = [0],
+    auto_newton::Bool = false)
+
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = grad(u)
@@ -470,17 +491,23 @@ function ConvectionOperator(a_from::Int, beta_operator, xdim::Int, ncomponents::
         end    
     end    
     action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = 0)
-    convection_action = Action(Float64, action_kernel)
-    a_to = fixed_argument
-    if a_to == 1
-        name = "(a(=unknown $(a_from)) * Gradient) u * v"
-    elseif a_to == 2
-        name = "(u * Gradient) a(=unknown $(a_from)) * v"
-    elseif a_to == 3
-        name = "(u * Gradient) v * a(=unknown $(a_from))"
+    if auto_newton
+        ## generates a nonlinear form with automatic Newton operators by AD
+        return GenerateNonlinearForm("(u * grad) u  * v", [beta_operator, Gradient], [a_from,a_from], testfunction_operator, action_kernel; ADnewton = true)     
+    else
+        ## returns linearised convection operators as a trilinear form (Picard iteration)
+        convection_action = Action(Float64, action_kernel)
+        a_to = fixed_argument
+        if a_to == 1
+            name = "(a(=unknown $(a_from)) * Gradient) u * v"
+        elseif a_to == 2
+            name = "(u * Gradient) a(=unknown $(a_from)) * v"
+        elseif a_to == 3
+            name = "(u * Gradient) v * a(=unknown $(a_from))"
+        end
+        
+        return AbstractTrilinearForm{ON_CELLS}(name,beta_operator,Gradient,testfunction_operator,a_from,a_to,convection_action, regions, true)
     end
-    
-    return AbstractTrilinearForm{ON_CELLS}(name,beta_operator,Gradient,testfunction_operator,a_from,a_to,convection_action, regions, true)
 
 end
 
@@ -511,15 +538,12 @@ end
 """
 ````
 mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
-    rhsfunction::Function
+    name::String
+    data::UserData{AbstractDataFunction}
     testfunction_operator::Type{<:AbstractFunctionOperator}
-    timedependent::Bool
     regions::Array{Int,1}
-    xdim:: Int
-    ncomponents:: Int
-    bonus_quadorder:: Int
-    store_operator::Bool                    # should the vector of the operator be stored?
-    storage::AbstractArray{Float64,1}       # vector can be stored here to allow for fast reassembly in iterative settings
+    store_operator::Bool               # should the matrix representation of the operator be stored?
+    storage::AbstractArray{Float64,1}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
 ````
 
@@ -528,6 +552,7 @@ right-hand side operator
 can only be applied in PDE RHS
 """
 mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
+    name::String
     data::UserData{AbstractDataFunction}
     testfunction_operator::Type{<:AbstractFunctionOperator}
     regions::Array{Int,1}
@@ -539,11 +564,16 @@ function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
     regions::Array{Int,1},
     data::UserData{AbstractDataFunction};
+    name = "auto",
     on_boundary::Bool = false)
+
+    if name == "auto"
+        name = "$(data.name) x $operator(v_h)"
+    end
     if on_boundary == true
-        return RhsOperator{ON_BFACES}(data, operator, regions, false, [])
+        return RhsOperator{ON_BFACES}(name, data, operator, regions, false, [])
     else
-        return RhsOperator{ON_CELLS}(data, operator, regions, false, [])
+        return RhsOperator{ON_CELLS}(name, data, operator, regions, false, [])
     end
 end
 
@@ -551,6 +581,7 @@ end
 """
 ````
 struct BLFeval <: AbstractPDEOperatorRHS
+    name::String
     BLF::AbstractBilinearForm
     Data::FEVectorBlock
     factor::Real
@@ -566,6 +597,7 @@ The operator can be manually marked as nonlinear or time-dependent to trigger re
 can only be applied in PDE RHS
 """
 struct BLFeval <: AbstractPDEOperatorRHS
+    name::String
     BLF::AbstractBilinearForm
     Data::FEVectorBlock
     factor::Real
@@ -574,14 +606,18 @@ struct BLFeval <: AbstractPDEOperatorRHS
     timedependent::Bool
 end
 
-function BLFeval(BLF, Data, factor; fixed_argument::Int = 2, nonlinear::Bool = false, timedependent::Bool = false)
-    return BLFeval(BLF, Data, factor, fixed_argument, nonlinear, timedependent)
+function BLFeval(BLF, Data, factor; name = "auto", fixed_argument::Int = 2, nonlinear::Bool = false, timedependent::Bool = false)
+    if name == "auto"
+        name = "BLFeval($(BLF.name), fixed = $fixed_argument)"
+    end
+    return BLFeval(name, BLF, Data, factor, fixed_argument, nonlinear, timedependent)
 end
 
 
 """
 ````
 struct TLFeval <: AbstractPDEOperatorRHS
+    name::String
     TLF::AbstractTrilinearForm
     Data1::FEVectorBlock
     Data2::FEVectorBlock
@@ -598,6 +634,7 @@ The operator can be manually marked as nonlinear or time-dependent to trigger re
 can only be applied in PDE RHS
 """
 struct TLFeval <: AbstractPDEOperatorRHS
+    name::String
     TLF::AbstractTrilinearForm
     Data1::FEVectorBlock
     Data2::FEVectorBlock
@@ -606,14 +643,18 @@ struct TLFeval <: AbstractPDEOperatorRHS
     timedependent::Bool
 end
 
-function TLFeval(TLF, Data1, Data2, factor::Real = 1; nonlinear::Bool = false, timedependent::Bool = false)
-    return TLFeval(TLF, Data1, Data2, factor, nonlinear, timedependent)
+function TLFeval(TLF, Data1, Data2, factor::Real = 1; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
+    if name == "auto"
+        name = "TLFeval($(TLF.name))"
+    end
+    return TLFeval(name, TLF, Data1, Data2, factor, nonlinear, timedependent)
 end
 
 
 """
 ````
 struct MLFeval <: AbstractPDEOperatorRHS
+    name::String
     MLF::AbstractMultilinearForm
     Data::Array{FEVectorBlock,1}
     factor::Real
@@ -629,6 +670,7 @@ The operator can be manually marked as nonlinear or time-dependent to trigger re
 can only be applied in PDE RHS
 """
 struct MLFeval <: AbstractPDEOperatorRHS
+    name::String
     MLF::AbstractMultilinearForm
     Data::Array{FEVectorBlock,1}
     factor::Real
@@ -636,8 +678,11 @@ struct MLFeval <: AbstractPDEOperatorRHS
     timedependent::Bool
 end
 
-function MLFeval(MLF, Data, factor; nonlinear::Bool = false, timedependent::Bool = false)
-    return MLFeval(MLF, Data, factor, nonlinear, timedependent)
+function MLFeval(MLF, Data, factor; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
+    if name == "auto"
+        name = "MLFeval($(MLF.name))"
+    end
+    return MLFeval(name, MLF, Data, factor, nonlinear, timedependent)
 end
 
 

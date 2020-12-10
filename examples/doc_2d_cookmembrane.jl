@@ -48,7 +48,7 @@ function main(; verbosity = 1, Plotter = nothing)
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
     ## negotiate data function to the package
-    user_function_neumann_bnd = DataFunction(neumann_force_right!, [2,2]; dependencies = "", quadorder = 0)
+    user_function_neumann_bnd = DataFunction(neumann_force_right!, [2,2]; name = "g", dependencies = "", quadorder = 0)
 
     ## choose finite element type
     FEType = H1P1{2} # P1-Courant

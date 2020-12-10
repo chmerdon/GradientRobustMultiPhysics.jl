@@ -32,8 +32,8 @@ function main(; verbosity = 1)
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),4)
     
     ## negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [3,3]; dependencies = "X", quadorder = 3)
-    user_function_div = DataFunction(exact_divergence!, [1,3]; dependencies = "X", quadorder = 2)
+    user_function = DataFunction(exact_function!, [3,3]; name = "u_exact", dependencies = "X", quadorder = 3)
+    user_function_div = DataFunction(exact_divergence!, [1,3]; name = "div(u_exact)", dependencies = "X", quadorder = 2)
 
     ## setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
