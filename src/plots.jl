@@ -25,22 +25,26 @@ function plot(
     if Plotter != nothing
         # extract grid
         xgrid = Source[1].FES.xgrid
+        spacedim = size( xgrid[Coordinates],1)
 
         if verbosity > 0
             println("\nPLOTTING")
             println("========\n")
         end
 
-        if xgrid[UniqueCellGeometries] != [Triangle2D]
+        if xgrid[UniqueCellGeometries] != [Triangle2D] && xgrid[UniqueCellGeometries] != [Tetrahedron3D]
             if verbosity > 0
-                println("   need triangles, splitting into triangles")
+                println("   need simplices, splitting into simplices")
             end
             xgrid = deepcopy(Source[1].FES.xgrid)
-            xgrid = split_grid_into(xgrid,Triangle2D)
+            if spacedim == 2
+                xgrid = split_grid_into(xgrid,Triangle2D)
+            elseif spacedim == 3
+                xgrid = split_grid_into(xgrid,Tetrahedron3D)
+            end
         end
         xCoordinates = xgrid[Coordinates]
         nnodes = num_sources(xCoordinates)
-        spacedim = size(xCoordinates,1)
 
         # collect data
         offsets = zeros(Int, length(blockids)+1)

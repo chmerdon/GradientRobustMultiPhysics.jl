@@ -113,15 +113,8 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     user_density = DataFunction(exact_density!(M,c), [1,2]; dependencies = "X", quadorder = 3)
     user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; dependencies = "X", quadorder = 3)
 
-    ## load compressible Stokes problem prototype and assign boundary data
-    CStokesProblem = CompressibleNavierStokesProblem(equation_of_state!(c,gamma), user_gravity, 2; shear_modulus = shear_modulus, lambda = lambda, nonlinear = false)
-    add_boundarydata!(CStokesProblem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
-    ## error intergrators for velocity and density
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
-    L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
-
-    ## modify testfunction in operators
+    ## set function operators depending on reconstruct
     if reconstruct
         TestFunctionOperatorIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
         TestFunctionOperatorDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
@@ -129,16 +122,51 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
         TestFunctionOperatorIdentity = Identity
         TestFunctionOperatorDivergence = Divergence
     end
-    if lambda != 0
-        CStokesProblem.LHSOperators[1,1][2].operator1 = TestFunctionOperatorDivergence
-        CStokesProblem.LHSOperators[1,1][2].operator2 = TestFunctionOperatorDivergence
-    end
-    CStokesProblem.LHSOperators[1,2][1].operator1 = TestFunctionOperatorIdentity
 
-    ## store matrix of velo-pressure and velo-gravity operator
-    ## so that only a matrix-vector multiplication is needed in every iteration
-    CStokesProblem.LHSOperators[1,2][1].store_operator = true
-    CStokesProblem.LHSOperators[1,3][1].store_operator = true
+
+    ## generate empty PDEDescription for three unknowns
+    ## unknown 1 : velocity (vector-valued)
+    ## unknown 2 : density
+    ## unknown 3 : pressure
+    Problem = PDEDescription("compressible Stokes problem")
+    add_unknown!(Problem; unknown_name = "velocity", equation_name = "momentum equation")
+    add_unknown!(Problem; unknown_name = "density", equation_name = "continuity equation")
+    add_unknown!(Problem; unknown_name = "pressure", equation_name = "equation of state")
+    add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
+
+    ## momentum equation
+    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2))
+    Problem.LHSOperators[1,1][1].store_operator = true
+    if lambda != 0
+        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * grad(div(u)) (lambda = $lambda)",TestFunctionOperatorDivergence,TestFunctionOperatorDivergence,MultiplyScalarAction(lambda,1)))
+        Problem.LHSOperators[1,1][2].store_operator = true
+    end
+    add_operator!(Problem, [1,3], AbstractBilinearForm("div(velocity)*pressure",Divergence,Identity,MultiplyScalarAction(-1.0, 1)))
+    Problem.LHSOperators[1,3][1].store_operator = true
+
+    function gravity_action()
+        temp = zeros(Float64,2)
+        function closure(result,input,x, t)
+            eval!(temp, user_gravity, x, t)
+            result[1] = - temp[1] * input[1] - temp[2] * input[2]
+        end
+        gravity_action_kernel = ActionKernel(closure, [1,2]; name = "gravity action kernel", dependencies = "XT", quadorder = user_gravity.quadorder)
+        return Action(Float64, gravity_action_kernel)
+    end    
+    add_operator!(Problem, [1,2], AbstractBilinearForm("gravity*velocity*density",TestFunctionOperatorIdentity,Identity,gravity_action()))
+    Problem.LHSOperators[1,2][1].store_operator = true
+
+    ## continuity equation
+    ## here a finite volume upwind convection operator on triangles is used
+    add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
+
+    ## equation of state
+    ## here we do some best-approximation of the pressure that comes out of the equation of state
+    eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = "", quadorder = 0)
+    eos_action = Action(Float64, eos_action_kernel)
+    add_operator!(Problem, [3,2], AbstractBilinearForm("pressure * eos(density)",Identity,Identity,eos_action; apply_action_to = 2))
+    add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1)))
+    Problem.LHSOperators[3,3][1].store_operator = true
 
     ## generate FESpaces and solution vector
     FESpaceV = FESpace{FETypes[1]}(xgrid)
@@ -161,20 +189,23 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
 
     ## initial values for pressure obtained from equation of state
     equation_of_state!(c,gamma)(Solution[3],Solution[2])
-    Minit= M * sum(Solution[2][:] .* xgrid[CellVolumes])
+    Minit = M * sum(Solution[2][:] .* xgrid[CellVolumes])
 
     ## generate time-dependent solver
     ## we have three equations [1] for velocity, [2] for density, [3] for pressure
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
     ## so we can reuse the other subiteration matrices in each timestep
-    TCS = TimeControlSolver(CStokesProblem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [2], verbosity = verbosity)
+    TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [2], verbosity = verbosity)
     advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 
+    ## compute error in mass constraint
     Md = sum(Solution[2][:] .* xgrid[CellVolumes])
     @printf("  mass_error = %.4e - %.4e = %.4e \n",Minit, Md, abs(Minit-Md))
 
     ## compute L2 error for velocity and density
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
+    L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
     L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
     println("\nL2error(Velocity) = $L2error")
     L2error = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))

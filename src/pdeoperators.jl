@@ -332,6 +332,8 @@ function GenerateNonlinearForm(
         name = name * " [AD-Newton]"
         # the action for the derivative matrix DG is calculated by automatic differentiation (AD)
         # from the given action_kernel of the operator G
+
+        # for differentation other dependencies of the action_kernel are fixed
         result_temp = Vector{Float64}(undef,argsizes[1])
         input_temp = Vector{Float64}(undef,argsizes[2])
         jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[2])
@@ -704,7 +706,11 @@ function check_PDEoperator(O::AbstractBilinearForm)
     end
 end
 function check_PDEoperator(O::AbstractTrilinearForm)
-    return true, false
+    try
+        return true, is_timedependent(O.action.kernel)
+    catch
+        return true, false
+    end
 end
 function check_PDEoperator(O::FVConvectionDiffusionOperator)
     return O.beta_from != 0, false
@@ -722,7 +728,11 @@ function check_PDEoperator(O::MLFeval)
     return O.nonlinear, O.timedependent
 end
 function check_PDEoperator(O::AbstractNonlinearForm)
-    return true, false
+    try
+        return true, is_timedependent(O.action.kernel)
+    catch
+        return true, false
+    end
 end
 
 # check if operator also depends on arg (additional to the argument relative to position in PDEDescription)

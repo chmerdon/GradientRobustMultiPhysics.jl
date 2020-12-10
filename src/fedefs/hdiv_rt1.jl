@@ -44,7 +44,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
        temp = zeros(Float64,ncomponents)
        function closure(result, x, face)
             eval!(temp, exact_function!, x, time)
-            result[1] = 0.0
+            result[1] = 0
             for j = 1 : ncomponents
                result[1] += temp[j] * xFaceNormals[j,face]
             end 

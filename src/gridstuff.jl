@@ -102,7 +102,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     ncells = num_sources(xCellNodes)
     nnodes = num_sources(xgrid[Coordinates])
     xCellGeometries = xgrid[CellGeometries]
-    dim::Int = dim_element(xCellGeometries[1])
 
     # transpose CellNodes to get NodeCells
     xNodeCells = atranspose(xCellNodes)
@@ -115,6 +114,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
     # find unique face enumeration rules
     EG = unique(xCellGeometries)
+    dim::Int = dim_element(EG[1])
     face_rules = Array{Array{Int,2},1}(undef,length(EG))
     maxfacenodes::Int = 0
     for j = 1 : length(EG)

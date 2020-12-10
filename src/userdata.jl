@@ -33,7 +33,7 @@ only space and time dependent, i.e
 
     f(result, input, X, T)
 
-The input vector usually provides the FunctionOperator evaluations of (a subset of ) the ansatz arguments of the assembly pattern where the action is used.
+The input vector usually provides the FunctionOperator evaluations of (a subset of) the ansatz arguments of the assembly pattern where the action is used.
 The array dimensions specifies the expected length of result and input and quadorder determines the additional quadrature order to be used if this
 function (or its derived action) is involved in an assembly process.
 """
@@ -85,11 +85,15 @@ function NLActionKernel(
     quadorder::Int = 0)
 ````
 
-Provides a negotation interface for some function to be used as a nonlinear action kernel. The function f has to obey the interface
+Provides a negotation interface for some function to be used as a nonlinear action kernel that can be used in the
+NonlinearOperator constructor without automatic differentiation. The function f has to obey the interface
 
-    f(result, input)
+    f(result, input_current, input_ansatz)
 
-No further dependencies are allowed currently. Since this is a work-in-progress feature more details will follow later.
+and can be seen as a linearisation of a nonlinearity that can depend on the operator evaluation of the current iterate (input_current)
+and, as usual, the operator evaluations of the ansatz function (input_ansatz).
+
+No further dependencies are allowed currently. Note, that this is a work-in-progress feature.
 """
 function NLActionKernel(f::Function, dimensions::Array{Int,1}; name = "user nonlinear action kernel", dependencies::String = "", quadorder::Int = 0)
 
@@ -112,7 +116,8 @@ function DataFunction(
     quadorder::Int = 0)
 ````
 
-Provides a negotation interface for some function to be used as boundary or right-hand side data or as a source function for finite element interpolations.
+Provides a negotation interface for some user-defined function that 
+can be used in integrate! and boundary or right-hand side data assignments.
 The function f has to obey the interface
 
     f(result, [X, T])
@@ -148,7 +153,8 @@ function ExtendedDataFunction(
     quadorder::Int = 0)
 ````
 
-Provides a negotation interface for some extended function.
+Provides a negotation interface for some data function with extended dependencies
+(region number, item number and local coordinates) that can be used in integrate!.
 The function f has to obey the interface
 
     f(result, [X, T, R, I, L])

@@ -67,43 +67,6 @@ Remarks:
 
 Example-Scripts: EXAMPLE_Stokes.jl, EXAMPLE_Stokes_probust.jl
 
-## Compressible Navier--Stokes equations
-
-
-The compressible Navier--Stokes equations in d dimensions seek a (vector-valued) velocity ``\mathbf{u}``, a density ``\varrho`` and a pressure ``p`` such that
-```math
-\begin{aligned}
-- \mu \Delta \mathbf{u} + \lambda \nabla(\mathrm{div}(\mathbf{u}))  + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p & = \mathbf{f} + \varrho \mathbf{g}\\
-\mathrm{div}(\varrho \mathbf{u}) & = 0\\
-        p & = eos(\varrho)\\
-        \int_\Omega \varrho \, dx & = M\\
-        \varrho & \geq 0
-\end{aligned}
-```
-where eos is some equation of state function that describes the dependence of the pressure on the density (and further physical quantities like temperature in a more general setting). Moreover, ``\mu`` and ``\lambda`` are Lame parameters and ``\mathbf{f}`` and ``\mathbf{g}`` are given right-hand side data.
-
-
-The weak formulation (for homogeneous Dirichlet boundary data) seeks ``(\mathbf{u},p,\varrho)`` such that
-```math
-\begin{aligned}
-(\mu \nabla \mathbf{u},\nabla \mathbf{v}) + (\lambda \mathrm{div} \mathbf{u},\mathrm{div} \mathbf{v})  + ((u \cdot \nabla) \mathbf{u}, \mathbf{v}) + (\mathrm{div} \mathbf{v}, p) & = (\mathbf{f},\mathbf{v}) && \text{for all } \mathbf{v} \in H^1_0(\Omega)^d\\
-(\varrho \mathbf{u}, \nabla q) & = 0 && \text{for all } q \in W^{1,\infty}(\Omega)\\
-        p & = eos(\varrho)\\
-        \int_\Omega \varrho \, dx & = M\\
-        \varrho & \geq 0
-\end{aligned}
-```
-
-A vanilla PDEDescription for a proper weak formulation that can be solved iteratively can be generated with the constructor below.
-
-
-```@docs
-CompressibleNavierStokesProblem
-```
-
-Example-Script: EXAMPLE_CompressibleStokes.jl
-
-
 
 ## Navier-Lame equations (linear elasticity)
 

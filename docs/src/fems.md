@@ -23,7 +23,7 @@ Remarks:
     - AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
     - AbstractHdivFiniteElements additionally have evaluations of nonzero normalfluxes of basisfunctions on faces/bfaces
     - AbstractHcurlFiniteElements additionally have evaluations of nonzero tangentfluxes of basisfunctions on edges/bedges
-- each finite element has its own implemented standard interpolation that is shortly described below
+- each finite element has its own implemented standard interpolation interpolate! that can be applied to [Data Functions](@ref) and is shortly described below
 
 
 ## List of implemented Finite Elements

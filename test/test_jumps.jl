@@ -43,8 +43,8 @@ function test_jumps(xgrid; verbosity = 0)
         if dofitems[2] > 0
             bleft = basisevaler[EG4dofitem[1],1,itempos4dofitem[1],orientation4dofitem[1]]
             bright = basisevaler[EG4dofitem[2],1,itempos4dofitem[2],orientation4dofitem[2]]
-            update!(bleft.L2G,dofitems[1])
-            update!(bright.L2G,dofitems[2])
+            GradientRobustMultiPhysics.update!(bleft.L2G,dofitems[1])
+            GradientRobustMultiPhysics.update!(bright.L2G,dofitems[2])
             for i = 1 : length(bleft.xref)
                 eval!(xleft, bleft.L2G, bleft.xref[i])
                 eval!(xright, bright.L2G, bright.xref[i])

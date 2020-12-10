@@ -269,8 +269,8 @@ end
 
 function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Tetrahedron3D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
-    function closure(coefficients, cell)
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+    function closure(coefficients::Array{<:Real,2}, cell)
         # multiplication with normal vectors
         fill!(coefficients,1.0)
         coefficients[1,13] = xFaceNormals[1, xCellFaces[1,cell]];
@@ -292,7 +292,7 @@ end
 
 function get_coefficients_on_face!(FE::FESpace{H1BR{3}}, ::Type{<:Triangle2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    function closure(coefficients, face)
+    function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
         fill!(coefficients,1.0)
         coefficients[1,10] = xFaceNormals[1, face];
@@ -304,8 +304,8 @@ end
 
 function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Hexahedron3D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
-    function closure(coefficients, cell)
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+    function closure(coefficients::Array{<:Real,2}, cell)
         # multiplication with normal vectors
         fill!(coefficients,1.0)
         coefficients[1,25] = xFaceNormals[1, xCellFaces[1,cell]];
@@ -333,7 +333,7 @@ end
 
 function get_coefficients_on_face!(FE::FESpace{H1BR{3}}, ::Type{<:Quadrilateral2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    function closure(coefficients, face)
+    function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
         fill!(coefficients,1.0)
         coefficients[1,13] = xFaceNormals[1, face];
@@ -352,9 +352,8 @@ end
 function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
-    function closure(coefficients, face::Int) 
-
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+    function closure(coefficients::Array{<:Real,2}, face::Int) 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
         coefficients[2,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
         coefficients[3,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[2, face]
@@ -368,8 +367,8 @@ end
 function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Edge1D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
-    function closure(coefficients, face::Int) 
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+    function closure(coefficients::Array{<:Real,2}, face::Int) 
 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
         coefficients[1,2] = 1 // 12 * xFaceVolumes[face] * xFaceNormals[1, face]
@@ -392,10 +391,9 @@ end
 function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Triangle2D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     nfacenodes::Int = nnodes_for_geometry(EG)
-    function closure(coefficients, face::Int) 
-
+    function closure(coefficients::Array{<:Real,2}, face::Int) 
         for j = 1 : nfacenodes, k = 1 : 3
             coefficients[(j-1)*3 + j,1] = 1 // nfacenodes * xFaceVolumes[face] * xFaceNormals[k, face]
             coefficients[(j-1)*3 + j,2] = - 1 // 36 * xFaceVolumes[face] * xFaceNormals[k, face]
@@ -409,11 +407,11 @@ end
 function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
-    function closure(coefficients, cell::Int) 
+    function closure(coefficients::Array{<:Real,2}, cell::Int) 
         # fill!(coefficients,0.0)
         for f = 1 : size(face_rule,1)
             face = xCellFaces[f,cell]
@@ -434,11 +432,11 @@ end
 function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVRT0{3}}, EG::Type{<:Tetrahedron3D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
-    function closure(coefficients, cell::Int) 
+    function closure(coefficients::Array{<:Real,2}, cell::Int) 
         # fill!(coefficients,0.0)
         for f = 1 : 4
             face = xCellFaces[f,cell]
@@ -459,13 +457,13 @@ end
 function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaceSigns = FER.xgrid[CellFaceSigns]
-    xCellFaces = FE.xgrid[CellFaces]
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FER.xgrid[CellFaceSigns]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
-    BDM1_coeffs = [-1//12, 1//12]
-    function closure(coefficients, cell::Int) 
+    BDM1_coeffs::Array{Float64,1} = [-1//12, 1//12]
+    function closure(coefficients::Array{<:Real,2}, cell::Int) 
         # fill!(coefficients,0.0)
         for f = 1 : size(face_rule,1)
             face = xCellFaces[f,cell]
@@ -491,36 +489,40 @@ end
 function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaceOrientations = FER.xgrid[CellFaceOrientations]
-    xCellFaces = FE.xgrid[CellFaces]
+    xCellFaceOrientations::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FER.xgrid[CellFaceOrientations]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
-    node = face_rule[1,1]
-    face = xCellFaces[1,1]
-    BDM1_coeffs = [-1//36 -1//36 1//18;
+    node::Int = face_rule[1,1]
+    face::Int32 = 0
+    BDM1_coeffs::Array{Float64,2} = [-1//36 -1//36 1//18;
                    -1//36 1//18 -1//36;
                     1//18 -1//36 -1//36]
-    orientation = xCellFaceOrientations[1,1]
-    factor::Float64 = 0
+    orientation::Int = 0
+    index1::Int = 0
+    index2::Int = 0
     row4orientation1::Array{Int,1} = [2,2,3,1]
     row4orientation2::Array{Int,1} = [1,3,1,2]
-    function closure(coefficients, cell::Int) 
+    function closure(coefficients::Array{<:Real,2}, cell::Int) 
         # fill!(coefficients,0.0)
+        index2 = 0
         for f = 1 : 4
             face = xCellFaces[f,cell]
+            index1 = 0
             for k = 1 : 3
-                factor = xFaceVolumes[face] * xFaceNormals[k, face]
                 for n = 1 : 3
                     node = face_rule[f,n]
                     # RT0 reconstruction coefficients for P1 functions on reference element
-                    coefficients[4*(k-1)+node,3*(f-1)+1] = 1 // 3 * factor
+                    coefficients[index1+node,index2+1] = 1 // 3 * xFaceNormals[k, face] * xFaceVolumes[face] 
                     orientation = xCellFaceOrientations[f,cell]
                     # BDM1 reconstruction coefficients for P1 functions on reference element
-                    coefficients[4*(k-1)+node,3*(f-1)+2] = BDM1_coeffs[n, row4orientation1[orientation]] * factor
-                    coefficients[4*(k-1)+node,3*(f-1)+3] = BDM1_coeffs[n, row4orientation2[orientation]] * factor
+                    coefficients[index1+node,index2+2] = BDM1_coeffs[n, row4orientation1[orientation]] * xFaceNormals[k, face] * xFaceVolumes[face] 
+                    coefficients[index1+node,index2+3] = BDM1_coeffs[n, row4orientation2[orientation]] * xFaceNormals[k, face] * xFaceVolumes[face] 
                 end
+                index1 += 4
             end
             # RT0 reconstruction coefficients for face bubbles on reference element
-            coefficients[12+f,3*(f-1)+1] = xFaceVolumes[face]
+            coefficients[index1+f,index2+1] = xFaceVolumes[face]
+            index2 += 3
         end
         return nothing
     end

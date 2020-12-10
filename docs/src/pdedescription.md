@@ -46,7 +46,7 @@ The PDE consists of PDEOperators characterising some feature of the model (like 
 | [`GenerateNonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u)),\mathrm{FO}_3(v))``                   |
 | [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))``                                           |
 
-Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Abstract Actions](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Abstract Actions](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
+Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Actions](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Actions](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
 
 
 ### Linear Operators
@@ -70,7 +70,7 @@ RhsOperator
 
 ## Nonlinear Operators
 
-It is possible to assign nonlinear operators in such a way that its Jacobian can be computed by automatic differentation to setup a Newton scheme, see below for details.
+Nonlinear Operators can be setup in two ways. The manual way requires the user to define an action with a nonlinear action kernel (see [Action Kernels](@ref)) that specifies the linearisation of the nonlinearity. The is also an automatic way where the user specifies a norml action kernel (where the input can be used nonlinearly) which is then automatically differentiated to generate the linearised action kernel, see below for details.
 
 ```@docs
 GenerateNonlinearForm

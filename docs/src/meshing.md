@@ -27,7 +27,7 @@ see [source code of shape_specs.jl](https://github.com/chmerdon/GradientRobustMu
 
     [1]-----[2]               [1] = [0]
                               [2] = [1]
-
+                              
 ----
 ##### Triangle2D
     
