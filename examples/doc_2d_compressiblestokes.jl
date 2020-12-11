@@ -95,8 +95,8 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     lambda = - 1//3 * shear_modulus
 
     ## choose finite element type [velocity, density,  pressure]
-    FETypes = [H1BR{2}, L2P0{1}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1CR{2}, L2P0{1}, L2P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
+    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel
+    #FETypes = [H1CR{2}, H1P0{1}, H1P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
 
     ## solver parameters
     timestep = shear_modulus / (2*c)
@@ -116,11 +116,11 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
 
     ## set function operators depending on reconstruct
     if reconstruct
-        TestFunctionOperatorIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
-        TestFunctionOperatorDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
+        VeloIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
+        VeloDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
     else # classical choices
-        TestFunctionOperatorIdentity = Identity
-        TestFunctionOperatorDivergence = Divergence
+        VeloIdentity = Identity
+        VeloDivergence = Divergence
     end
 
 
@@ -138,7 +138,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2))
     Problem.LHSOperators[1,1][1].store_operator = true
     if lambda != 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * div(u) * div(v) (lambda = $lambda)",TestFunctionOperatorDivergence,TestFunctionOperatorDivergence,MultiplyScalarAction(lambda,1)))
+        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * div(u) * div(v) (lambda = $lambda)",VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1)))
         Problem.LHSOperators[1,1][2].store_operator = true
     end
     add_operator!(Problem, [1,3], AbstractBilinearForm("div(v)*p",Divergence,Identity,MultiplyScalarAction(-1.0, 1)))
@@ -153,7 +153,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
         gravity_action_kernel = ActionKernel(closure, [1,2]; name = "gravity action kernel", dependencies = "XT", quadorder = user_gravity.quadorder)
         return Action(Float64, gravity_action_kernel)
     end    
-    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*rho",TestFunctionOperatorIdentity,Identity,gravity_action()))
+    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*rho",VeloIdentity,Identity,gravity_action()))
     Problem.LHSOperators[1,2][1].store_operator = true
 
     ## continuity equation
@@ -166,7 +166,6 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     eos_action = Action(Float64, eos_action_kernel)
     add_operator!(Problem, [3,2], AbstractBilinearForm("p * eos(density)",Identity,Identity,eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1)))
-    Problem.LHSOperators[3,3][1].store_operator = true
 
     ## show Problem definition
     show(Problem)

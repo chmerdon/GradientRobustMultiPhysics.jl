@@ -37,34 +37,6 @@ get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractE
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1E1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
 
-
-function init!(FES::FESpace{FEType}) where {FEType <: H1P2}
-    ncomponents = get_ncomponents(FEType)
-    edim = get_edim(FEType)
-    name = "P2"
-    for n = 1 : ncomponents-1
-        name = name * "xP2"
-    end
-    FES.name = name * " (H1, edim=$edim)"   
-
-    # total number of dofs
-    ndofs = 0
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    ndofs4component = 0
-    if edim == 1
-        ncells = num_sources(FES.xgrid[CellNodes])
-        ndofs4component = nnodes + ncells
-    elseif edim == 2
-        nfaces = num_sources(FES.xgrid[FaceNodes])
-        ndofs4component = nnodes + nfaces
-    elseif edim == 3
-        nedges = num_sources(FES.xgrid[EdgeNodes])
-        ndofs4component = nnodes + nedges
-    end    
-    FES.ndofs = ndofs4component * ncomponents
-
-end
-
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P2}
     edim = get_edim(FEType)
     nnodes = size(FE.xgrid[Coordinates],2)
@@ -132,28 +104,6 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
         # preserve cell integral
         ensure_edge_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
     end
-end
-
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2})
-    nnodes = num_sources(FE.xgrid[Coordinates])
-    FEType = eltype(FE)
-    ncomponents::Int = get_ncomponents(FEType)
-    edim = get_edim(FEType)
-    if edim == 1
-        ncells = num_sources(FE.xgrid[CellNodes])
-        offset4component = 0:(nnodes+ncells):ncomponents*(nnodes+ncells)
-    elseif edim == 2
-        nfaces = num_sources(FE.xgrid[FaceNodes])
-        offset4component = 0:(nnodes+nfaces):ncomponents*(nnodes+nfaces)
-    elseif edim == 3
-        nedges = num_sources(FE.xgrid[EdgeNodes])
-        offset4component = 0:(nnodes+nedges):ncomponents*(nnodes+nedges)
-    end
-    for node = 1 : nnodes
-        for c = 1 : ncomponents
-            Target[c,node] = Source[offset4component[c]+node]
-        end    
-    end    
 end
 
 

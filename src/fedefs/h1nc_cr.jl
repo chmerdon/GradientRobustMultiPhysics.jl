@@ -26,18 +26,6 @@ get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{FaceDofs}, EG::Type{<:AbstractEl
 get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
 
 
-function init!(FES::FESpace{FEType}) where {FEType <: H1CR}
-    ncomponents = get_ncomponents(FEType)
-    name = "CR"
-    for n = 1 : ncomponents-1
-        name = name * "xCR"
-    end
-    FES.name = name * " (H1nc)"   
-
-    # count number of dofs
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    FES.ndofs = nfaces * ncomponents
-end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: H1CR}
     # preserve face means

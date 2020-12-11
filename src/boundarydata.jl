@@ -83,9 +83,13 @@ function boundarydata!(
     xdim = size(FE.xgrid[Coordinates],1) 
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    xBFaceDofs = FE.dofmaps[BFaceDofs]
+    xBFaceDofs = nothing
+    nbfaces::Int = 0
+    if length(O.regions4boundarytype) > 0
+        xBFaceDofs = FE.dofmaps[BFaceDofs]
+        nbfaces = num_sources(xBFaceDofs)
+    end
     xBFaces = FE.xgrid[BFaces]
-    nbfaces = num_sources(xBFaceDofs)
     xBFaceRegions = FE.xgrid[BFaceRegions]
 
     ######################
@@ -99,17 +103,38 @@ function boundarydata!(
         # find Dirichlet dofs
         for r = 1 : length(InterDirichletBoundaryRegions)
             bregiondofs = []
+            ifaces = []
             ibfaces = []
             for bface = 1 : nbfaces
                 if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
-                    append!(ibfaces,xBFaces[bface])
+                    append!(ifaces,xBFaces[bface])
+                    append!(ibfaces,bface)
                     append!(bregiondofs,xBFaceDofs[:,bface])
                 end
             end    
             bregiondofs = Base.unique(bregiondofs)
             bregion = InterDirichletBoundaryRegions[r]
             append!(fixed_dofs,bregiondofs)
-            interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ibfaces, time = time)
+            if FE.broken == true
+                # face interpolation expects continuous dofmaps
+                # quick and dirty fix: use face interpolation and remap dofs to broken dofs
+                FESc = FESpace{FEType}(FE.xgrid; dofmaps_needed = [CellDofs,BFaceDofs])
+                Targetc = FEVector{Float64}("auxiliary data",FESc)
+                interpolate!(Targetc[1], ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
+                xBFaceDofsc = FESc.dofmaps[BFaceDofs]
+                dof::Int = 0
+                dofc::Int = 0
+                for bface in ibfaces
+                    for k = 1 : num_targets(xBFaceDofs,bface)
+                        dof = xBFaceDofs[k,bface]
+                        dofc = xBFaceDofsc[k,bface]
+                        Target[dof] = Targetc.entries[dofc]
+                    end
+                end
+            else
+                # use face interpolation
+                interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
+            end
         end   
 
         if verbosity > 0
@@ -192,7 +217,7 @@ function boundarydata!(
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hdiv()
                 temp = zeros(Float64,ncomponents)
-                function closure(result, input, x, bface, region)
+                function closure(result, input, x, region, bface)
                     eval!(temp, O.data4bregion[region], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
@@ -210,7 +235,7 @@ function boundarydata!(
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hcurl2d()
                 temp = zeros(Float64,ncomponents)
-                function closure(result, input, x, bface, region)
+                function closure(result, input, x, region, bface)
                     eval!(temp, O.data4bregion[region], x, time)
                     result[1] = -temp[1] * xFaceNormals[2,xBFaces[bface]]
                     result[1] += temp[2] * xFaceNormals[1,xBFaces[bface]]
@@ -222,20 +247,16 @@ function boundarydata!(
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
-        elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains
+        elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains, does not work properly yet
             xEdgeTangents = FE.xgrid[EdgeTangents]
             xBEdgeRegions = FE.xgrid[BEdgeRegions]
             xBEdges = FE.xgrid[BEdges]
 
             function bnd_rhs_function_hcurl3d()
                 temp = zeros(Float64,ncomponents)
-                region::Int = 1
-                function closure(result, input, x, bedge, region)
-                    eval!(temp, O.data4bregion[region], x, time)
-                    if region == 0
-                        region = 1
-                    end
-                    O.data4bregion[region](temp,x,time)
+                fixed_region::Int = 1
+                function closure(result, input, x, region, bedge)
+                    eval!(temp, O.data4bregion[fixed_region], x, time)
                     result[1] = temp[1] * xEdgeTangents[1,xBEdges[bedge]]
                     result[1] += temp[2] * xEdgeTangents[2,xBEdges[bedge]]
                     result[1] += temp[3] * xEdgeTangents[3,xBEdges[bedge]]
@@ -243,7 +264,7 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
+            RHS_bnd = LinearForm(Float64, ON_BEDGES, FE, Dboperator, Action(Float64, action_kernel); regions = [0])
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
             L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, FE, Dboperator, DoNotChangeAction(1); regions = [0])    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)

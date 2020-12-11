@@ -56,9 +56,9 @@ function main(; verbosity = 2, Plotter = nothing, nonlinear = false)
     ## choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
     #FETypes = [H1P2B{2,2}, L2P1{1}] # P2-bubble
-    #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
+    #FETypes = [H1CR{2}, H1P0{1}] # Crouzeix--Raviart
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
-    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
+    FETypes = [H1BR{2}, H1P0{1}] # Bernardi--Raugel
  
     ## solver parameters for nonlinear solve
     maxIterations = 20  # termination criterion 1 for nonlinear mode

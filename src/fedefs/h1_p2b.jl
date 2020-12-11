@@ -24,32 +24,6 @@ get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{CellDofs}, EG::Type{<:AbstractE
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 
-function init!(FES::FESpace{FEType}) where {FEType <: H1P2B}
-    ncomponents = get_ncomponents(FEType)
-    edim = get_edim(FEType)
-    name = "P2B"
-    for n = 1 : ncomponents-1
-        name = name * "xP2B"
-    end
-    FES.name = name * " (H1, edim=$edim)"   
-
-    # total number of dofs
-    ndofs = 0
-    nnodes = num_sources(FES.xgrid[Coordinates])
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    ncells = num_sources(FES.xgrid[CellNodes]) 
-    ndofs4component = 0
-    if edim == 2
-        ndofs4component = nnodes + nfaces + ncells
-    elseif edim == 3
-        nedges = num_sources(FES.xgrid[EdgeNodes])
-        ndofs4component = nnodes + nedges + nfaces + ncells
-    end    
-    FES.ndofs = ndofs4component * ncomponents
-
-end
-
-
 
 function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; items = [], time = 0) where {FEType <: H1P2B}
 
@@ -166,28 +140,6 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     # fix cell bubble value by preserving integral mean
     ensure_cell_moments!(Target, FE, exact_function!; items = items, time = time)
 end
-
-
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1P2B})
-    nnodes = num_sources(FE.xgrid[Coordinates])
-    nfaces = num_sources(FE.xgrid[FaceNodes])
-    ncells = num_sources(FE.xgrid[CellNodes])
-    FEType = eltype(FE)
-    ncomponents::Int = get_ncomponents(FEType)
-    edim = get_edim(FEType)
-    if edim == 2
-        offset4component = (nnodes+nfaces+ncells) .* Array{Int,1}(0:ncomponents)
-    elseif edim == 3
-        nedges = num_sources(FE.xgrid[EdgeNodes])
-        offset4component = (nnodes+nedges+nfaces+ncells) .* Array{Int,1}(0:ncomponents)
-    end
-    for node = 1 : nnodes
-        for c = 1 : ncomponents
-            Target[c,node] = Source[offset4component[c]+node]
-        end    
-    end    
-end
-
 
 function get_basis_on_face(FEType::Type{<:H1P2B}, EG::Type{<:AbstractElementGeometry})
     ncomponents = get_ncomponents(FEType)

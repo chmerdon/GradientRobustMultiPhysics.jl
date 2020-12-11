@@ -19,11 +19,11 @@ function exact_function!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 1)
+function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = false)
 
-    ## generate mesh and uniform refine twice
+    ## generate mesh and uniform refine nrefs times
     xgrid = simplexgrid([0.0,1//3,2//3,1.0])
-    xgrid = uniform_refine(xgrid,2)
+    xgrid = uniform_refine(xgrid,ref)
 
     ## negotiate exact_function! to the package
     user_function = DataFunction(exact_function!, [1,1]; name = "u_exact", dependencies = "X", quadorder = 4)
@@ -35,8 +35,9 @@ function main(; Plotter = nothing, verbosity = 1)
 
     ## choose some finite element type and generate a FESpace for the grid
     ## (here it is a one-dimensional H1-conforming P2 element H1P2{1,1})
+    ## the broken switch toggles a broken dofmap
     FEType = H1P2{1,1}
-    FES = FESpace{FEType}(xgrid)
+    FES = FESpace{FEType}(xgrid; broken = broken)
 
     ## generate a solution vector and solve the problem
     ## (the verbosity argument that many functions have steers the talkativity,
@@ -50,7 +51,7 @@ function main(; Plotter = nothing, verbosity = 1)
 
     ## to compare our discrete solution with a finer one, we interpolate the exact function
     ## again on some more refined mesh and also compute the L2 error on this one
-    xgrid_fine = uniform_refine(xgrid,3)
+    xgrid_fine = uniform_refine(xgrid,2)
     FES_fine = FESpace{FEType}(xgrid_fine)
     Interpolation = FEVector{Float64}("fine-grid interpolation",FES_fine)
     interpolate!(Interpolation[1], ON_CELLS, user_function)

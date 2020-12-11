@@ -128,7 +128,6 @@ abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 
 # operator to be used for Dirichlet boundary data
-DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractL2FiniteElement}) = Identity
 DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractH1FiniteElement}) = Identity
 DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHdivFiniteElement}) = NormalFlux
 DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHcurlFiniteElement}) = TangentFlux

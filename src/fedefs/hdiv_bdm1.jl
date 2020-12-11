@@ -35,10 +35,6 @@ get_dofmap_pattern(FEType::Type{<:HDIVBDM1{3}}, ::Type{BFaceDofs}, EG::Type{<:Ab
 function init!(FES::FESpace{FEType}) where {FEType <: HDIVBDM1}
     ncomponents = get_ncomponents(FEType)
     FES.name = "BDM1 (Hdiv, $(ncomponents)d)"
-
-    # count number of dofs
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    FES.ndofs = ncomponents*nfaces
 end
 
 

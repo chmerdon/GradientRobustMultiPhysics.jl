@@ -6,7 +6,7 @@ The implementation is based on ExtendableGrids.jl that allows to have unstructur
 
 !!! note
 
-    The focus is (at least currently) not on high-performance, high-order or parallel-computing. Also, this package is still in an early development stage with a limited number of applications and interfaces (especially in 3D and for time-dependent PDEs) and features might change in future updates.
+    The focus is (at least currently) not on high-performance, high-order or parallel-computing. Also, this package is still in an early development stage and features and interfaces might change in future updates.
     
 
 ## What is gradient-robustness?
@@ -33,6 +33,7 @@ Recently gradient-robustness was also connected to the design of well-balanced s
         [>Journal-Link<](https://doi.org/10.1016/j.cma.2020.113069)
         [>Preprint-Link<](https://arxiv.org/abs/1911.01295)
 
+
 ## Installation
 via Julia package manager in Julia 1.5 or above:
 
@@ -58,8 +59,8 @@ via Julia package manager in Julia 1.5 or above:
 
 The general work-flow is as follows:
 
-1. Describe your PDE system with the help of the [PDE Description](@ref) (possibly based on one of the [PDE Prototypes](@ref)). Additional parameters or non-constant parameters or non-standard terms (like stabilisations) in the weak form can be added manually afterwards.
-2. Generate a mesh (possibly using one of the constructors by ExtendableGrid.jl) and assign boundary and right-hand side data matching the boundary regions and regions in the mesh (see [PDE Description](@ref) again for details).
+1. Describe your PDE system with the help of the [PDE Description](@ref) (possibly based on one of the [PDE Prototypes](@ref)). Additional parameters, right-hand side and boundary data can be assigned via [User Data and Action Kernels](@ref).
+2. Generate a mesh, possibly using one of the constructors by ExtendableGrid.jl or via mesh generators in [SimplexGridFacrory.jl](https://github.com/j-fu/SimplexGridFactory.jl).
 3. Define finite element ansatz spaces (see [Finite Element Spaces and Arrays](@ref) for details) for the unknowns of your PDE system.
 4. Solve by using solve! or via a TimeControlSolver and advance! if the PDE system is time-dependent (see [PDE Solvers](@ref) for details).
 

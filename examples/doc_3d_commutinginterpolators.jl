@@ -39,7 +39,7 @@ function main(;order::Int = 1)
 
     ## choose commuting interpolators pair
     if order == 1
-        FE = [HCURLN0{3},HDIVRT0{3}]; testFE = L2P0{3}
+        FE = [HCURLN0{3},HDIVRT0{3}]; testFE = H1P0{3}
     end
 
     ## do the Hcurl interpolation of the function
@@ -58,7 +58,7 @@ function main(;order::Int = 1)
     ## Hence, we evaluate the error by testing the identity by all basisfunctions of this type
     
     ## first: generate the test space and some matching FEVector
-    FEStest = FESpace{testFE}(xgrid)
+    FEStest = FESpace{testFE}(xgrid; broken = true)
     error = FEVector{Float64}("ErrorVector",FEStest)
 
     ## Define bilinear forms that represents testing each side of the identity with the testspace functions

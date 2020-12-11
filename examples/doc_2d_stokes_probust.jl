@@ -137,7 +137,7 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
 
         ## get FESpaces
         FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
-        FESpacePressure = FESpace{FETypes[2]}(xgrid)
+        FESpacePressure = FESpace{FETypes[2]}(xgrid; broken = true)
 
         Solution = FEVector{Float64}("Stokes velocity classical",FESpaceVelocity)
         append!(Solution,"Stokes pressure (classical)",FESpacePressure)
@@ -219,9 +219,9 @@ function main(; verbosity = 0, nlevels = 4, viscosity = 1e-2)
     xgrid = grid_unitsquare_mixedgeometries() # initial grid
 
     ## choose finite element discretisation
-    #FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
-    FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
-    #FETypes = [H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
+    #FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
+    FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
+    #FETypes = [H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
 
     ## run
     solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, verbosity = verbosity)
@@ -233,9 +233,9 @@ end
 function test(; verbosity = 0)
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
 
-    testspaces = [[H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
-                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
-                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]]
+    testspaces = [[H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]]
     error = []
     for FETypes in testspaces
         push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false, verbosity = verbosity))

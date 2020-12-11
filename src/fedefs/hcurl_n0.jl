@@ -15,12 +15,10 @@ get_ndofs_on_edge(FEType::Type{<:HCURLN0}, EG::Type{<:AbstractElementGeometry}) 
 get_ndofs_on_cell(FEType::Type{HCURLN0{2}}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)
 get_ndofs_on_cell(FEType::Type{HCURLN0{3}}, EG::Type{<:AbstractElementGeometry}) = nedges_for_geometry(EG)
 
-
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry1D}) = 0;
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry2D}) = 1;
 get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry1D}) = 0;
 get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
-
 
 get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "f1"
 get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
@@ -31,22 +29,6 @@ get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{FaceDofs}, EG::Type{<:Abst
 get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
 get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "e1"
 get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BEdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
-
-function init!(FES::FESpace{FEType}) where {FEType <: HCURLN0}
-    ncomponents = get_ncomponents(FEType)
-    FES.name = "N0 (Hcurl, $(ncomponents)d)"
-
-    # count number of dofs
-    edim = get_ncomponents(FEType)
-    if edim == 2
-        nfaces = num_sources(FES.xgrid[FaceNodes])
-        FES.ndofs = nfaces
-    elseif edim == 3
-        nedges = num_sources(FES.xgrid[EdgeNodes])
-        FES.ndofs = nedges
-    end
-end
-
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
     edim = get_ncomponents(FEType)

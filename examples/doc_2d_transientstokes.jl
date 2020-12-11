@@ -66,19 +66,20 @@ function main(; verbosity = 2, Plotter = nothing)
     nlevels = 5 # maximal number of refinement levels
     reconstruct = false # do not change
     graddiv = 0
+    broken_p = false # is pressure space broken ?
 
     ## initial grid
     xgrid = grid_unitsquare(Triangle2D);
 
     ## choose one of these (inf-sup stable) finite element type pairs
     #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
-    #FETypes = [H1P2B{2,2}, L2P1{1}] # P2-bubble
-    #FETypes = [H1CR{2}, L2P0{1}] # Crouzeix--Raviart
-    #FETypes = [H1CR{2}, L2P0{1}]; reconstruct = true # Crouzeix-Raviart gradient-robust
+    #FETypes = [H1P2B{2,2}, H1P1{1}]; broken_p = true # P2-bubble
+    #FETypes = [H1CR{2}, H1P0{1}]; broken_p = true # Crouzeix--Raviart
+    #FETypes = [H1CR{2}, H1P0{1}]; broken_p = true; reconstruct = true # Crouzeix-Raviart gradient-robust
     #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
     #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
-    #FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}]; reconstruct = true # Bernardi--Raugel gradient-robust
+    #FETypes = [H1BR{2}, H1P0{1}]; broken_p = true # Bernardi--Raugel
+    FETypes = [H1BR{2}, H1P0{1}]; broken_p = true; reconstruct = true # Bernardi--Raugel gradient-robust
 
     #####################################################################################    
     #####################################################################################
@@ -130,7 +131,7 @@ function main(; verbosity = 2, Plotter = nothing)
 
         ## generate FESpaces
         FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
-        FESpacePressure = FESpace{FETypes[2]}(xgrid)
+        FESpacePressure = FESpace{FETypes[2]}(xgrid; broken = broken_p)
 
         ## generate solution fector
         Solution = FEVector{Float64}("Stokes velocity",FESpaceVelocity)

@@ -38,9 +38,9 @@ function main(;order::Int = 2)
 
     ## choose commuting interpolators pair
     if order == 1
-        FE = [H1P1{1},HDIVRT0{2}]; testFE = L2P0{2}
+        FE = [H1P1{1},HDIVRT0{2}]; testFE = H1P0{2}
     elseif order == 2
-        FE = [H1P2{1,2},HDIVRT1{2}]; testFE = L2P1{2}
+        FE = [H1P2{1,2},HDIVRT1{2}]; testFE = H1P1{2}
     end
 
     ## do the H1 interpolation of the function
@@ -59,7 +59,7 @@ function main(;order::Int = 2)
     ## Hence, we evaluate the error by testing the identity by all basisfunctions of this type
     
     ## first: generate the test space and some matching FEVector
-    FEStest = FESpace{testFE}(xgrid)
+    FEStest = FESpace{testFE}(xgrid; broken = true)
     error = FEVector{Float64}("ErrorVector",FEStest)
 
     ## Define bilinear forms that represents testing each side of the identity with the testspace functions

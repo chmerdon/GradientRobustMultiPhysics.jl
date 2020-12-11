@@ -29,7 +29,7 @@ function main(; verbosity = 1, Plotter = nothing)
 
     ## generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
-    xgrid = uniform_refine(xgrid,5)
+    xgrid = uniform_refine(xgrid,3)
 
     ## negotiate exact_function! and exact_curl! to the package
     user_function = DataFunction(exact_function!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 3)
@@ -48,7 +48,7 @@ function main(; verbosity = 1, Plotter = nothing)
     Base.show(Problem)
 
     ## choose some (inf-sup stable) finite element types
-    FEType = [HCURLN0{2}, L2P0{1}]
+    FEType = [HCURLN0{2}, H1P0{1}]
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
 
     ## create a solution vector and solve the problem

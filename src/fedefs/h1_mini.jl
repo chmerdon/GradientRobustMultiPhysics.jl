@@ -21,20 +21,6 @@ get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Triangle2D}) = FEType.param
 get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = FEType.parameters[2] == 2 ? 4 : 2;
 get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Tetrahedron3D}) = 4;
 
-function init!(FES::FESpace{FEType}) where {FEType <: H1MINI}
-    ncomponents = get_ncomponents(FEType)
-    name = "MINI"
-    for n = 1 : ncomponents-1
-        name = name * "xMINI"
-    end
-    FES.name = name * " (H1)"   
-
-    # count number of dofs
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    ncells = num_sources(FES.xgrid[CellNodes])
-    FES.ndofs = (nnodes + ncells) * ncomponents
-
-end
 
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "N1I1"
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset

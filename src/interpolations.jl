@@ -1,17 +1,4 @@
 # this method calls the interpolate! method specified by the finite element if available
-function interpolate!(Target::FEVectorBlock, source_data::UserData{AbstractDataFunction}; dofs = [], verbosity::Int = 0, time = 0)
-    if verbosity > 0
-        println("\nINTERPOLATING")
-        println("=============")
-        println("     target = $(Target.name)")
-        println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
-    end
-    # check if function is time-dependent
-    interpolate!(Target, Target.FES, ON_CELLS, source_data; time = time)
-end
-
-
-# this method calls the interpolate! method specified by the finite element if available
 function interpolate!(Target::FEVectorBlock, AT::Type{<:AbstractAssemblyType}, source_data::UserData{AbstractDataFunction}; items = [], verbosity::Int = 0, time = 0)
     if verbosity > 0
         println("\nINTERPOLATING")
@@ -20,9 +7,41 @@ function interpolate!(Target::FEVectorBlock, AT::Type{<:AbstractAssemblyType}, s
         println("         AT = $AT")
         println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
     end
-    # check if function is time-dependent
-    interpolate!(Target, Target.FES, AT, source_data; items = items, time = time)
+    if Target.FES.broken == true
+        FEType = eltype(Target.FES)
+        FESc = FESpace{FEType}(Target.FES.xgrid; dofmaps_needed = [CellDofs])
+        Targetc = FEVector{Float64}("auxiliary data",FESc)
+        interpolate!(Targetc[1], FESc, AT, source_data; items = items, time = time)
+        xCellDofs = Target.FES.dofmaps[CellDofs]
+        xCellDofsc = FESc.dofmaps[CellDofs]
+        dof::Int = 0
+        dofc::Int = 0
+        if items == []
+            items = 1 : num_sources(xCellDofs)
+        end
+        for cell in items
+            for k = 1 : num_targets(xCellDofs,cell)
+                dof = xCellDofs[k,cell]
+                dofc = xCellDofsc[k,cell]
+                Target[dof] = Targetc.entries[dofc]
+            end
+        end
+    else
+        interpolate!(Target, Target.FES, AT, source_data; items = items, time = time)
+    end
 end
+
+# this method calls the interpolate! method specified by the finite element if available
+function interpolate!(Target::FEVectorBlock, source_data::UserData{AbstractDataFunction}; dofs = [], verbosity::Int = 0, time = 0)
+    if verbosity > 0
+        println("\nINTERPOLATING")
+        println("=============")
+        println("     target = $(Target.name)")
+        println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
+    end
+    interpolate!(Target, ON_CELLS, source_data; time = time)
+end
+
 
 
 """

@@ -48,9 +48,9 @@ function main(; verbosity = 1)
     Base.show(Problem)
 
     ## choose some (inf-sup stable) finite element types
-    #FEType = [HDIVRT0{3}, L2P0{1}]
-    FEType = [HDIVBDM1{3}, L2P0{1}]
-    FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
+    #FEType = [HDIVRT0{3}, H1P0{1}]
+    FEType = [HDIVBDM1{3}, H1P0{1}]
+    FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid; broken = true)]
 
     ## create a solution vector and solve the problem
     Solution = FEVector{Float64}("L2-Bestapproximation",FES)

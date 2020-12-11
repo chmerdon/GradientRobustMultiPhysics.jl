@@ -27,19 +27,6 @@ get_dofmap_pattern(FEType::Type{<:H1P1}, ::Type{CellDofs}, EG::Type{<:AbstractEl
 get_dofmap_pattern(FEType::Type{<:H1P1}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1"
 get_dofmap_pattern(FEType::Type{<:H1P1}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1"
 
-function init!(FES::FESpace{FEType}) where {FEType <: H1P1}
-    ncomponents = get_ncomponents(FEType)
-    name = "P1"
-    for n = 1 : ncomponents-1
-        name = name * "xP1"
-    end
-    FES.name = name * " (H1)"   
-
-    # count number of dofs
-    nnodes = num_sources(FES.xgrid[Coordinates]) 
-    FES.ndofs = nnodes * ncomponents
-end
-
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P1}
     nnodes = size(FE.xgrid[Coordinates],2)
     point_evaluation!(Target, FE, AT_NODES, exact_function; items = items, component_offset = nnodes, time = time)
@@ -58,22 +45,14 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
 end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P1}
-    # delegate cell nodes to node interpolation
-    subitems = slice(FE.xgrid[CellNodes], items)
-    interpolate!(Target, FE, AT_NODES, exact_function; items = subitems, bonus_quadorder = bonus_quadorder, time = time)
-end
-
-
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1P1})
-    nnodes = num_sources(FE.xgrid[Coordinates])
-    FEType = eltype(FE)
-    ncomponents::Int = get_ncomponents(FEType)
-    offset4component = 0:nnodes:ncomponents*nnodes
-    for node = 1 : nnodes
-        for c = 1 : ncomponents
-            Target[c,node] = Source[offset4component[c]+node]
-        end    
-    end    
+    if FE.broken == true
+        # broken interpolation
+        point_evaluation_broken!(Target, FE, ON_CELLS, exact_function; items = items, time = time)
+    else
+        # delegate cell nodes to node interpolation
+        subitems = slice(FE.xgrid[CellNodes], items)
+        interpolate!(Target, FE, AT_NODES, exact_function; items = subitems, bonus_quadorder = bonus_quadorder, time = time)
+    end
 end
 
 function get_basis_on_cell(FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})

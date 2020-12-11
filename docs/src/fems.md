@@ -13,11 +13,10 @@ AbstractFiniteElements
 - AbstractH1FiniteElement
 - AbstractHdivFiniteElement
 - AbstractHcurlFiniteElement
-- AbstractL2FiniteElement
-
 
 Remarks:
 - each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and degrees of freedom maps for the different [Assembly Types](@ref) (coded as a string)
+- broken finite elements are possible via the broken switch in the [FESpace](@ref) constructor
 - the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated by FEBasisEvaluator.jl
 - depending on additional continuity properties of the element types more basis function sets are defined:
     - AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
@@ -31,14 +30,15 @@ Remarks:
 The following table lists all curently implemented finite elements. Click on them to find out more details.
 
 
-| H1 finite elements | Hdiv finite elements | Hcurl finite elements | L2 finite elements |
-| :----------------: | :------------------: | :-------------------: | :----------------: |
-| [`H1P1`](@ref)     | [`HDIVRT0`](@ref)    | [`HCURLN0`](@ref)     | [`L2P0`](@ref)     |
-| [`H1MINI`](@ref)   | [`HDIVBDM1`](@ref)   |                       | [`L2P1`](@ref)     |
-| [`H1CR`](@ref)     | [`HDIVRT1`](@ref)    |                       |                    |
-| [`H1BR`](@ref)     |                      |                       |                    |
-| [`H1P2`](@ref)     |                      |                       |                    |
-| [`H1P2B`](@ref)    |                      |                       |                    |
+| H1 finite elements | Hdiv finite elements | Hcurl finite elements |
+| :----------------: | :------------------: | :-------------------: |
+| [`H1P0`](@ref)     | [`HDIVRT0`](@ref)    | [`HCURLN0`](@ref)     |
+| [`H1P1`](@ref)     | [`HDIVBDM1`](@ref)   |                       |
+| [`H1MINI`](@ref)   | [`HDIVRT1`](@ref)    |                       |
+| [`H1CR`](@ref)     |                      |                       |
+| [`H1BR`](@ref)     |                      |                       |
+| [`H1P2`](@ref)     |                      |                       |
+| [`H1P2B`](@ref)    |                      |                       |
 
 
 
@@ -133,12 +133,3 @@ Its standard interpolation of a given functions preserves its tangential face/ed
 HCURLN0
 ```
 
-## L2-conforming finite elements
-
-So far only P0 and P1 elements are available as L2-conforming elements. At the moment they have the same basis functions as the H1-foncorming counterparts and differ only in their dofmaps. It is planned to offer this
-in a more automatic fashion for all elements above in the future.
-
-```@docs
-L2P0
-L2P1
-```

@@ -24,15 +24,6 @@ get_dofmap_pattern(FEType::Type{<:HDIVRT0}, ::Type{CellDofs}, EG::Type{<:Abstrac
 get_dofmap_pattern(FEType::Type{<:HDIVRT0}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i1"
 get_dofmap_pattern(FEType::Type{<:HDIVRT0}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i1"
 
-function init!(FES::FESpace{FEType}) where {FEType <: HDIVRT0}
-    ncomponents = get_ncomponents(FEType)
-    FES.name = "RT0 (Hdiv, $(ncomponents)d)"
-
-    # count number of dofs
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    FES.ndofs = nfaces
-
-end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time=  0) where {FEType <: HDIVRT0}
     ncomponents = get_ncomponents(FEType)

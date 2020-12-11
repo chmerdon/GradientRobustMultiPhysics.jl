@@ -30,17 +30,6 @@ get_dofmap_pattern(FEType::Type{<:H1BR}, ::Type{FaceDofs}, EG::Type{<:AbstractEl
 get_dofmap_pattern(FEType::Type{<:H1BR}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1i1"
 
 
-function init!(FES::FESpace{FEType}) where {FEType <: H1BR}
-    ncomponents = get_ncomponents(FEType)
-    FES.name = "BR (H1, $(ncomponents)d)"
-
-    # count number of dofs
-    nnodes = num_sources(FES.xgrid[Coordinates])
-    nfaces = num_sources(FES.xgrid[FaceNodes])
-    FES.ndofs = nnodes * ncomponents + nfaces
-end
-
-
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1BR}
     nnodes = size(FE.xgrid[Coordinates],2)
     point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes, time = time)
@@ -99,20 +88,6 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
-end
-
-
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1BR})
-    nnodes = num_sources(FE.xgrid[Coordinates])
-    nfaces = num_sources(FE.xgrid[FaceNodes])
-    FEType = eltype(FE)
-    ncomponents = get_ncomponents(FEType)
-    offset4component = 0:nnodes:ncomponents*nnodes
-    for node = 1 : nnodes
-        for c = 1 : ncomponents
-            Target[c,node] = Source[offset4component[c]+node]
-        end    
-    end    
 end
 
 

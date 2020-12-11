@@ -65,7 +65,7 @@ function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
 
     ## choose some finite elements for primal and dual problem
     FEType = H1P1{1}
-    FETypeDual = [HDIVBDM1{2},L2P0{1}]
+    FETypeDual = [HDIVBDM1{2},H1P0{1}]
     
     ## negotiate data functions to the package
     user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 5)
