@@ -31,9 +31,9 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
 
     # choose one of these (inf-sup stable) finite element type pairs for the flow
     #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
-    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
-    FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
-    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
+    #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
+    FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
+    #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
 
     #####################################################################################
     #####################################################################################
@@ -53,7 +53,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     add_unknown!(Problem; unknown_name = &quot;concentration&quot;, equation_name = &quot;transport equation&quot;)
     if FVtransport == true
         # finite volume upwind discretisation
-        FETypeTransport = L2P0{1}
+        FETypeTransport = H1P0{1}
         add_operator!(Problem, [3,3], FVConvectionDiffusionOperator(1))
     else
         # finite element convection and diffusion (very small) operators
@@ -100,4 +100,4 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_cookmembrane/">« 2D Linear Elasticity</a><a class="docs-footer-nextpage" href="../doc_2d_hagenpoiseuille/">2D Hagen-Poiseuille (Navier–Stokes) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 10 December 2020 14:14">Thursday 10 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_cookmembrane/">« 2D Linear Elasticity</a><a class="docs-footer-nextpage" href="../doc_2d_hagenpoiseuille/">2D Hagen-Poiseuille (Navier–Stokes) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 11 December 2020 19:25">Friday 11 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

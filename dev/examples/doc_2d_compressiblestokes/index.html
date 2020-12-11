@@ -62,8 +62,8 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     lambda = - 1//3 * shear_modulus
 
     # choose finite element type [velocity, density,  pressure]
-    FETypes = [H1BR{2}, L2P0{1}, L2P0{1}] # Bernardi--Raugel
-    #FETypes = [H1CR{2}, L2P0{1}, L2P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
+    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel
+    #FETypes = [H1CR{2}, H1P0{1}, H1P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
 
     # solver parameters
     timestep = shear_modulus / (2*c)
@@ -83,11 +83,11 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
 
     # set function operators depending on reconstruct
     if reconstruct
-        TestFunctionOperatorIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
-        TestFunctionOperatorDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
+        VeloIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
+        VeloDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
     else # classical choices
-        TestFunctionOperatorIdentity = Identity
-        TestFunctionOperatorDivergence = Divergence
+        VeloIdentity = Identity
+        VeloDivergence = Divergence
     end
 
 
@@ -105,7 +105,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2))
     Problem.LHSOperators[1,1][1].store_operator = true
     if lambda != 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm(&quot;lambda * div(u) * div(v) (lambda = $lambda)&quot;,TestFunctionOperatorDivergence,TestFunctionOperatorDivergence,MultiplyScalarAction(lambda,1)))
+        add_operator!(Problem, [1,1], AbstractBilinearForm(&quot;lambda * div(u) * div(v) (lambda = $lambda)&quot;,VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1)))
         Problem.LHSOperators[1,1][2].store_operator = true
     end
     add_operator!(Problem, [1,3], AbstractBilinearForm(&quot;div(v)*p&quot;,Divergence,Identity,MultiplyScalarAction(-1.0, 1)))
@@ -120,7 +120,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
         gravity_action_kernel = ActionKernel(closure, [1,2]; name = &quot;gravity action kernel&quot;, dependencies = &quot;XT&quot;, quadorder = user_gravity.quadorder)
         return Action(Float64, gravity_action_kernel)
     end
-    add_operator!(Problem, [1,2], AbstractBilinearForm(&quot;g*v*rho&quot;,TestFunctionOperatorIdentity,Identity,gravity_action()))
+    add_operator!(Problem, [1,2], AbstractBilinearForm(&quot;g*v*rho&quot;,VeloIdentity,Identity,gravity_action()))
     Problem.LHSOperators[1,2][1].store_operator = true
 
     # continuity equation
@@ -133,7 +133,6 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     eos_action = Action(Float64, eos_action_kernel)
     add_operator!(Problem, [3,2], AbstractBilinearForm(&quot;p * eos(density)&quot;,Identity,Identity,eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], AbstractBilinearForm(&quot;p*q&quot;,Identity,Identity,MultiplyScalarAction(-1,1)))
-    Problem.LHSOperators[3,3][1].store_operator = true
 
     # show Problem definition
     show(Problem)
@@ -190,4 +189,4 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« Commuting Interpolators (2D)</a><a class="docs-footer-nextpage" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 10 December 2020 14:14">Thursday 10 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« Commuting Interpolators (2D)</a><a class="docs-footer-nextpage" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 11 December 2020 19:25">Friday 11 December 2020</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
