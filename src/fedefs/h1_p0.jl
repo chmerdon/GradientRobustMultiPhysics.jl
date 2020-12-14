@@ -22,11 +22,13 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     ncells = num_sources(FE.xgrid[CellNodes])
     if items == []
         items = 1 : ncells
+    else
+        items = filter(!iszero, items)
     end
     ncomponents = get_ncomponents(FEType)
     xdim = size(xCoords,1)
     integrals4cell = zeros(Float64,ncomponents,ncells)
-    integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!; time = time)
+    integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!; items = items, time = time)
     for cell in items
         if cell != 0
             for c = 1 : ncomponents

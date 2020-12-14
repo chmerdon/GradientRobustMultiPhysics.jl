@@ -120,7 +120,7 @@ function boundarydata!(
                 # quick and dirty fix: use face interpolation and remap dofs to broken dofs
                 FESc = FESpace{FEType}(FE.xgrid; dofmaps_needed = [CellDofs,BFaceDofs])
                 Targetc = FEVector{Float64}("auxiliary data",FESc)
-                interpolate!(Targetc[1], ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
+                interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
                 xBFaceDofsc = FESc.dofmaps[BFaceDofs]
                 dof::Int = 0
                 dofc::Int = 0
