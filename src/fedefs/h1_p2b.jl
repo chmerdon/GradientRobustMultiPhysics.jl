@@ -30,7 +30,7 @@ function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FETyp
     xgrid = FE.xgrid
     xItemVolumes = xgrid[CellVolumes]
     xItemNodes = xgrid[CellNodes]
-    xItemDofs = FE.dofmaps[CellDofs]
+    xItemDofs = FE[CellDofs]
     xCellGeometries = xgrid[CellGeometries]
     ncells = num_sources(xItemNodes)
     nnodes = size(xgrid[Coordinates],2)

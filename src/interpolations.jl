@@ -12,8 +12,8 @@ function interpolate!(Target::FEVectorBlock, AT::Type{<:AbstractAssemblyType}, s
         FESc = FESpace{FEType}(Target.FES.xgrid; dofmaps_needed = [CellDofs])
         Targetc = FEVector{Float64}("auxiliary data",FESc)
         interpolate!(Targetc[1], FESc, AT, source_data; items = items, time = time)
-        xCellDofs = Target.FES.dofmaps[CellDofs]
-        xCellDofsc = FESc.dofmaps[CellDofs]
+        xCellDofs = Target.FES[CellDofs]
+        xCellDofsc = FESc[CellDofs]
         dof::Int = 0
         dofc::Int = 0
         if items == []
@@ -62,7 +62,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2},
 
   xItemGeometries = FE.xgrid[CellGeometries]
   xItemRegions = FE.xgrid[CellRegions]
-  xItemDofs = FE.dofmaps[CellDofs]
+  xItemDofs = FE[CellDofs]
   xItemNodes = FE.xgrid[CellNodes]
 
   T = Base.eltype(Target)

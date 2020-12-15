@@ -51,7 +51,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON
     xItemNodes = FE.xgrid[FaceNodes]
     xItemGeometries = FE.xgrid[FaceGeometries]
     xFaceNormals = FE.xgrid[FaceNormals]
-    xItemDofs = FE.dofmaps[FaceDofs]
+    xItemDofs = FE[FaceDofs]
     nnodes = size(FE.xgrid[Coordinates],2)
     nitems = num_sources(xItemNodes)
     ncomponents = get_ncomponents(FEType)

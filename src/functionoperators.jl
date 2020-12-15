@@ -199,11 +199,11 @@ QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialG
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
 
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_CELLS}) = FES.dofmaps[CellDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_FACES}) = FES.dofmaps[FaceDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES.dofmaps[BFaceDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_EDGES}) = FES.dofmaps[EdgeDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BEDGES}) = FES.dofmaps[BEdgeDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{ON_CELLS}) = FES[CellDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_FACES}) = FES[FaceDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES[BFaceDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_EDGES}) = FES[EdgeDofs]
+Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BEDGES}) = FES[BEdgeDofs]
 
 # default junctions
 function DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})

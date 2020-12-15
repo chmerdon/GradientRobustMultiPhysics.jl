@@ -71,7 +71,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
         edata_function = ExtendedDataFunction(tangentflux_eval2d(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
         integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time)
     elseif edim == 3
-        # todo
+        # delegate face edges to edge interpolation
+        subitems = slice(FE.xgrid[FaceEdges], items)
+        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, time = time)
     end
 end
 

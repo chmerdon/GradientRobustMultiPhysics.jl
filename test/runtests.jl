@@ -158,7 +158,6 @@ function run_basis_tests()
                     H1P1{1}, 
                     H1P2{1,1}]
     ExpectedOrders1D = [0,1,2]
-    also_broken1D = [true,true,true]
     TestCatalog2D = [
                     HCURLN0{2},
                     HDIVRT0{2},
@@ -170,7 +169,6 @@ function run_basis_tests()
                     H1BR{2},
                     H1P2{2,2}]
     ExpectedOrders2D = [0,0,1,0,1,1,1,1,2]
-    also_broken2D = [false,false,false,false,true,false,false,false,false]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -182,7 +180,6 @@ function run_basis_tests()
                     H1BR{3},
                     H1P2{3,3}]
     ExpectedOrders3D = [0,0,1,0,1,1,1,1,2]
-    also_broken3D = [false,false,false,false,true,false,false,false,false]
 
     function test_interpolation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
@@ -216,9 +213,7 @@ function run_basis_tests()
         xgrid = testgrid(Edge1D)
         for n = 1 : length(TestCatalog1D)
             test_interpolation(xgrid, TestCatalog1D[n], ExpectedOrders1D[n])
-            if also_broken1D[n] == true
-                test_interpolation(xgrid, TestCatalog1D[n], ExpectedOrders1D[n], true)
-            end
+            test_interpolation(xgrid, TestCatalog1D[n], ExpectedOrders1D[n], true)
         end
         println("\n")
         println("============================")
@@ -228,9 +223,7 @@ function run_basis_tests()
             xgrid = testgrid(EG)
             for n = 1 : length(TestCatalog2D)
                 test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n])
-                if also_broken2D[n] == true
-                    test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], true)
-                end
+                test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], true)
             end
         end
         println("\n")
@@ -241,9 +234,7 @@ function run_basis_tests()
             xgrid = testgrid(EG)
             for n = 1 : length(TestCatalog3D)
                 test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n])
-                if also_broken3D[n] == true
-                    test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n], true)
-                end
+                test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n], true)
             end
         end
         println("")

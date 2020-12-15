@@ -86,7 +86,7 @@ function boundarydata!(
     xBFaceDofs = nothing
     nbfaces::Int = 0
     if length(O.regions4boundarytype) > 0
-        xBFaceDofs = FE.dofmaps[BFaceDofs]
+        xBFaceDofs = FE[BFaceDofs]
         nbfaces = num_sources(xBFaceDofs)
     end
     xBFaces = FE.xgrid[BFaces]
@@ -121,7 +121,7 @@ function boundarydata!(
                 FESc = FESpace{FEType}(FE.xgrid; dofmaps_needed = [CellDofs,BFaceDofs])
                 Targetc = FEVector{Float64}("auxiliary data",FESc)
                 interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
-                xBFaceDofsc = FESc.dofmaps[BFaceDofs]
+                xBFaceDofsc = FESc[BFaceDofs]
                 dof::Int = 0
                 dofc::Int = 0
                 for bface in ibfaces

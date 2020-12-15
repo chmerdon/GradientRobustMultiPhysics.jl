@@ -68,7 +68,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     # they are chosen such that integral mean of exact function is preserved on each cell
     ncells = num_sources(FE.xgrid[CellNodes])
     xCellVolumes = FE.xgrid[CellVolumes]
-    xCellDofs = FE.dofmaps[CellDofs]
+    xCellDofs = FE[CellDofs]
     means = zeros(Float64,2,ncells)
     integrate!(means, FE.xgrid, ON_CELLS, exact_function!)
     qf = QuadratureRule{Float64,Triangle2D}(2)

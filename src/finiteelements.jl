@@ -73,6 +73,15 @@ mutable struct FESpace{FEType<:AbstractFiniteElement}
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
 end
 
+
+"""
+$(TYPEDSIGNATURES)
+Set new dofmap
+"""
+Base.setindex!(FES::FESpace,v,DM::Type{<:DofMap}) = FES.dofmaps[DM] = v
+
+
+
 function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = "auto", broken::Bool = false, verbosity = 0 ) where {FEType <:AbstractFiniteElement}
     # piecewise constants are always broken
     if FEType <: H1P0 
@@ -88,40 +97,22 @@ function FESpace{FEType}(xgrid::ExtendableGrid; name = "", dofmaps_needed = "aut
     end
     FES.name = broken ? "$FEType (broken)" : "$FEType"
 
-    if dofmaps_needed == "auto"
-        if broken == true
-            dofmaps_needed = [CellDofs, BFaceDofs]
-        else
-            dofmaps_needed = [CellDofs, FaceDofs, BFaceDofs]
-        end
-        if FEType <: AbstractHcurlFiniteElement && get_ncomponents(FEType) == 3
-            if broken == false
-                push!(dofmaps_needed, EdgeDofs)
-            end
-            # push!(dofmaps_needed, BEdgeDofs) # 3D Hcurl boundary data not working properly yet
-        end
-        edim = get_edim(FEType)
-        if FEType <: H1P2 && edim == 3
-            if broken == false
-                push!(dofmaps_needed, EdgeDofs)
+    # count ndofs
+    count_ndofs!(FES)
+
+    # generate ordered dofmaps
+    if dofmaps_needed != "auto"
+        # generate required dof maps
+        for j = 1 : length(dofmaps_needed)
+            if verbosity > 0
+                println("  ...generating dofmap for $(dofmaps_needed[j])")
+                @time init_dofmap!(FES, dofmaps_needed[j])
+            else
+                init_dofmap!(FES, dofmaps_needed[j])
             end
         end
     else
-        if broken == true
-            @assert dofmaps_needed[1] == CellDofs
-        end
-    end
-
-    count_ndofs!(FES)
-
-    # generate required dof maps
-    for j = 1 : length(dofmaps_needed)
-        if verbosity > 0
-            println("  ...generating dofmap for $(dofmaps_needed[j])")
-            @time init_dofmap!(FES, dofmaps_needed[j])
-        else
-            init_dofmap!(FES, dofmaps_needed[j])
-        end
+        # dofmaps are generated on demand
     end
 
     return FES
@@ -374,8 +365,9 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
         pos = 0
     end
     # save dofmap
-    FES.dofmaps[DM] = xItemDofs
+    FES[DM] = xItemDofs
 end
+
 
 
 function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{BFaceDofs}) where {FEType <: AbstractFiniteElement}
@@ -432,7 +424,7 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{BFaceDofs}) where {F
     xBFaces = FES.xgrid[BFaces]
     xFaceCells = FES.xgrid[FaceCells]
     xCellNodes = FES.xgrid[CellNodes]
-    xCellDofs = FES.dofmaps[CellDofs]
+    xCellDofs = FES[CellDofs]
     xBFaceDofs = VariableTargetAdjacency(Int32)
     nnodes = size(xgrid[Coordinates],2)
     ncells = num_sources(xgrid[CellNodes])
@@ -576,7 +568,7 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{BFaceDofs}) where {F
         end
         append!(xBFaceDofs,local_dofs[1:nldofs])
     end
-    FES.dofmaps[BFaceDofs] = xBFaceDofs
+    FES[BFaceDofs] = xBFaceDofs
 end
 
 function init_dofmap!(FES::FESpace, DM::Type{<:DofMap})
@@ -586,6 +578,27 @@ function init_dofmap!(FES::FESpace, DM::Type{<:DofMap})
         init_dofmap_from_pattern!(FES, DM)
     end
 end
+
+
+"""
+$(TYPEDSIGNATURES)
+To be called by getindex. This triggers lazy creation of 
+non-existing dofmaps
+"""
+Base.get!(FES::FESpace,DM::Type{<:DofMap}) = get!( ()-> init_dofmap!(FES,DM), FES.dofmaps ,DM)
+
+"""
+````
+Base.getindex(FES::FESpace,DM::Type{<:DofMap})
+````
+Generic method for obtaining dofmap.
+This method is mutating in the sense that non-existing dofmaps
+are created on demand.
+Due to the fact that components are stored as Any the return
+value triggers type instability.
+"""
+Base.getindex(FES::FESpace,DM::Type{<:DofMap})=get!(FES,DM)
+
 
 function count_ndofs!(FES::FESpace{FEType}) where {FEType <: AbstractFiniteElement}
     xgrid = FES.xgrid
@@ -720,7 +733,7 @@ function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{FETyp
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     xCellNodes = FES.xgrid[CellNodes]
-    xCellDofs = FES.dofmaps[CellDofs]
+    xCellDofs = FES[CellDofs]
 
     nnodes = size(xCoordinates,2)
     ncomponents = get_ncomponents(FEType)
