@@ -1,8 +1,10 @@
 
 """
-$(TYPEDEF)
+````
+abstract type H1MINI{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int}
+````
 
-Mini finite element (continuous piecewise linear + cell bubbles)
+Mini finite element.
 
 allowed element geometries:
 - Triangle2D (linear polynomials + cubic cell bubble)

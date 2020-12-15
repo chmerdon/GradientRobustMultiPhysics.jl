@@ -7,14 +7,31 @@ This page describes the finite element type-tree and lists all implemented finit
 
 ## The Finite Element Type-Tree
 
-Finite elements are abstract type leaves in a type-tree. Its root and first layer look like this
+Finite elements are abstract type leaves in a type-tree. The complete tree looks like this:
 
-AbstractFiniteElements
-- AbstractH1FiniteElement
-- AbstractHdivFiniteElement
-- AbstractHcurlFiniteElement
+```
+AbstractFiniteElement
+├─ AbstractH1FiniteElement
+│  ├─ AbstractH1FiniteElementWithCoefficients
+│  │  └─ H1BR
+│  ├─ H1CR
+│  ├─ H1MINI
+│  ├─ H1P0
+│  ├─ H1P1
+│  ├─ H1P2
+│  └─ H1P2B
+├─ AbstractHcurlFiniteElement
+│  └─ HCURLN0
+└─ AbstractHdivFiniteElement
+   ├─ HDIVBDM1
+   ├─ HDIVRT0
+   └─ HDIVRT1
+```
 
-Remarks:
+
+#### Remarks
+- each type depends on one or two parameters, the first one is always the number of components (ncomponents) that determines of the
+  finite element is scalar- or veector-valued; some elements additionaly require the parameter edim <: Int if they are structurally different in different space dimensions
 - each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and degrees of freedom maps for the different [Assembly Types](@ref) (coded as a string)
 - broken finite elements are possible via the broken switch in the [FESpace](@ref) constructor
 - the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated by FEBasisEvaluator.jl
@@ -22,7 +39,7 @@ Remarks:
     - AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
     - AbstractHdivFiniteElements additionally have evaluations of nonzero normalfluxes of basisfunctions on faces/bfaces
     - AbstractHcurlFiniteElements additionally have evaluations of nonzero tangentfluxes of basisfunctions on edges/bedges
-- each finite element has its own implemented standard interpolation interpolate! that can be applied to [Data Functions](@ref) and is shortly described below
+- each finite element has its own implemented standard interpolation interpolate! (see [Finite Element Interpolations](@ref)) that can be applied to [Data Functions](@ref), below it is shortly described what this means for each finite element
 
 
 ## List of implemented Finite Elements
@@ -43,6 +60,16 @@ The following table lists all curently implemented finite elements. Click on the
 
 
 ## H1-conforming finite elements
+
+### P1 finite element
+
+Piecewise constant finite element that has one degree of freedom on each cell of the grid.
+
+The interpolation of a given function into this space preserves the cell integrals.
+
+```@docs
+H1P0
+```
 
 ### P1 finite element
 

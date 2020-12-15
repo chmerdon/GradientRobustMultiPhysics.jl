@@ -1,3 +1,8 @@
+[![Build status](https://github.com/chmerdon/GradientRobustMultiPhysics.jl/workflows/linux-macos-windows/badge.svg)](https://github.com/chmerdon/GradientRobustMultiPhysics.jl/actions)
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/dev/index.html)
+[![DOI](https://zenodo.org/badge/229078096.svg)](https://zenodo.org/badge/latestdoi/229078096)
+
 # GradientRobustMultiPhysics.jl
 
 This package offers (mostly low-order) finite element methods for multiphysics problems in Julia that focus on the preservation of structural and qualitative properties, in particular the gradient-robustness property for the discretisation of (nearly) incompressible flows and resulting qualitative properties in coupled processes. The code therefore offers several classical and novel non-standard finite element discretisations to play and compare with in these applications and a toolkit to setup multi-physics problems by defining PDE systems and generating fixed-point iterations to solve them.
@@ -11,7 +16,7 @@ The implementation is based on ExtendableGrids.jl that allows to have unstructur
 
 ## What is gradient-robustness?
 
-Gradient-robustness is a feature of discretisations that exactly balance gradient forces in the momentum balance. In the case of the incompressible Navier--Stokes equations this means that the discrete velocity does not depend on the exact pressure. Divergence-conforming finite element methods have this property but are usually expensive and difficult to contruct. However, also non-divergence-conforming classical finite element methods can be made pressure-robust with the help of reconstruction operators applied to testfuntions in certain terms of the momentum balance, see e.g. references [1,2] below.
+Gradient-robustness is a feature of discretisations that exactly balance gradient forces in the momentum balance. In the case of the incompressible Navier--Stokes equations this means that the discrete velocity does not depend on the exact pressure. Divergence-free finite element methods have this property but are usually expensive and difficult to contruct. However, also non-divergence-free classical finite element methods can be made pressure-robust with the help of reconstruction operators applied to testfuntions in certain terms of the momentum balance, see e.g. references [1,2] below.
 
 Recently gradient-robustness was also connected to the design of well-balanced schemes e.g. in the context of (nearly) compressible flows, see e.g. reference [3] below.
 
@@ -51,6 +56,7 @@ via Julia package manager in Julia 1.5 or above:
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
 [DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
+[IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl)\
 [BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)
 
 

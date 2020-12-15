@@ -324,7 +324,7 @@ function prepare_assembly(
     # get function that handles the dofitem information for every integration item
     dii4op = Array{Function,1}(undef,length(FE))
     for j=1:length(FE)
-        dii4op[j]  = DofitemInformation4Operator(FE[j], EG, EGdofitem, AT, operator[j])
+        dii4op[j]  = DofitemInformation4Operator(FE[j].xgrid, EG, EGdofitem, AT, operator[j])
     end
 
     # find proper quadrature QuadratureRules
@@ -354,7 +354,7 @@ function prepare_assembly(
     for j = 1 : length(EG)
         quadorder = bonus_quadorder
         for k = 1 : length(FE)
-            quadorder += get_polynomialorder(eltype(FE[k]), EG[j]) + QuadratureOrderShift4Operator(eltype(FE[k]),operator[k])
+            quadorder += get_polynomialorder(eltype(FE[k]), EG[j]) + QuadratureOrderShift4Operator(operator[k])
         end
         quadorder = max(quadorder,0)          
         qf[j] = QuadratureRule{T,EG[j]}(quadorder);
@@ -380,7 +380,7 @@ function prepare_assembly(
         for j = 1 : length(EGdofitem)
             quadorder = bonus_quadorder
             for k = 1 : length(FE)
-                quadorder += get_polynomialorder(eltype(FE[k]), EGdofitem[j]) + QuadratureOrderShift4Operator(eltype(FE[k]),operator[k])
+                quadorder += get_polynomialorder(eltype(FE[k]), EGdofitem[j]) + QuadratureOrderShift4Operator(operator[k])
             end
             quadorder = max(quadorder,0)        
             nfaces4cell = nfaces_for_geometry(EGdofitem[j])

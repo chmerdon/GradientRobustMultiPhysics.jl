@@ -100,7 +100,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     subset_handler = get_basissubset_on_cell!(FE, EG)
 
     # compute refbasisderivvals and further coefficients needed for operator eval
-    derivorder = NeededDerivative4Operator(FEType,FEOP)
+    derivorder = NeededDerivative4Operator(FEOP)
     edim = dim_element(EG)
     xdim = size(FE.xgrid[Coordinates],1)
     xref = copy(qf.xref)
@@ -304,7 +304,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     Dresult = nothing
     resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
     current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
-    derivorder = NeededDerivative4Operator(FEType,FEOP)
+    derivorder = NeededDerivative4Operator(FEOP)
     if derivorder == 0
         # refbasisderivvals are used as a cache fpr the reconstruction basis
         refbasisderivvals = zeros(T,ncomponents,ndofs4item2_all,length(qf.w));

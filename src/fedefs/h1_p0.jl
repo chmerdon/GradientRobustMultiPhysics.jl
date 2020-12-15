@@ -1,7 +1,9 @@
 """
-$(TYPEDEF)
+````
+abstract type H1P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
+````
 
-piecewise constant polynomials
+Piecewise constant polynomials.
 
 allowed on every ElementGeometry
 """

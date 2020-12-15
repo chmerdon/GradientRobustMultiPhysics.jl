@@ -5,7 +5,7 @@ Note that all examples are written inside their own modules. To start an example
 
 
 Here is an example how to start the example in "examples/doc\_2d\_compressiblestokes.jl":
-```@example
+```
 # include example file, e.g.:
 include("examples/doc_2d_compressiblestokes.jl")
 # as a result some module is loaded, in this case Example_2DCompressibleStokes

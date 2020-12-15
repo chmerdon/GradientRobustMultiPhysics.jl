@@ -1,8 +1,11 @@
 
 """
-$(TYPEDEF)
+````
+abstract type H1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
+````
 
-Continuous piecewise first-order polynomials with arbitrary number of components.
+
+Continuous piecewise first-order polynomials.
 
 allowed ElementGeometries:
 - Edge1D (linear polynomials)

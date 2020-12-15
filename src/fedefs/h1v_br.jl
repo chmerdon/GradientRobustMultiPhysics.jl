@@ -1,6 +1,8 @@
 
 """
-$(TYPEDEF)
+````
+abstract type H1BR{edim} <: AbstractH1FiniteElementWithCoefficients where {edim<:Int}
+````
 
 vector-valued (ncomponents = edim) Bernardi--Raugel element
 (first-order polynomials + normal-weighted face bubbles)

@@ -71,38 +71,6 @@ export VertexRule
 export integrate!, integrate
 
 
-include("finiteelements.jl")
-export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
-export AbstractFiniteElement
-export FESpace
-
-export AbstractH1FiniteElement
-export H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR
-export L2P1 # will be AbstractL2FiniteElement one day
-
-export AbstractH1FiniteElementWithCoefficients
-export H1BR
-
-export AbstractHdivFiniteElement
-export HDIVRT0, HDIVBDM1, HDIVRT1
-
-export AbstractHcurlFiniteElement
-export HCURLN0
-
-export get_ncomponents
-export reconstruct!
-
-
-include("fevector.jl");
-export FEVectorBlock, FEVector
-export fill!, addblock!
-
-
-include("fematrix.jl");
-export FEMatrixBlock, FEMatrix
-export fill!, addblock!, addblock_matmul!, lrmatmul
-
-
 include("functionoperators.jl")
 export AbstractFunctionOperator
 export Identity, IdentityComponent
@@ -121,18 +89,41 @@ export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 export DefaultName4Operator
 
+
+include("finiteelements.jl")
+export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
+export AbstractFiniteElement
+export FESpace
+
+export AbstractH1FiniteElement
+export H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR
+
+export AbstractH1FiniteElementWithCoefficients
+export H1BR
+
+export AbstractHdivFiniteElement
+export HDIVRT0, HDIVBDM1, HDIVRT1
+
+export AbstractHcurlFiniteElement
+export HCURLN0
+
+export get_ncomponents
+export reconstruct!
+
+export interpolate! # must be defined separately by each FEdefinition
+export nodevalues! # = P1interpolation, abstract averaging method that works for any element, but can be overwritten by FEdefinition to something simpler
+
+export FEVectorBlock, FEVector
+export FEMatrixBlock, FEMatrix
+export fill!, addblock!, addblock_matmul!, lrmatmul
+
+
+
 export DiscontinuityTreatment, Jump, Average
 export IdentityDisc, GradientDisc
 
-
-
 include("febasisevaluator.jl")
 export FEBasisEvaluator, update!, eval!
-
-
-include("interpolations.jl")
-export interpolate! # must be defined separately by each FEdefinition
-export nodevalues! # = P1interpolation, abstract averaging method that works for any element, but can be overwritten by FEdefinition to something simpler
 
 
 include("actions.jl")

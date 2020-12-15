@@ -4,8 +4,6 @@ abstract type DiscontinuityTreatment end
 abstract type Average <: DiscontinuityTreatment end # average the values on both sides of the face
 abstract type Jump <: DiscontinuityTreatment end # calculate the jump between both sides of the face
 
-
-
 """
 $(TYPEDEF)
 
@@ -37,6 +35,7 @@ reconstruction identity operator: evaluates a reconstructed version of the finit
 
 FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
 """
+abstract type AbstractFiniteElement end
 abstract type ReconstructionIdentity{FEreconst<:AbstractFiniteElement} <: Identity end # 1*R(v_h)
 abstract type ReconstructionIdentityDisc{FEreconst<:AbstractFiniteElement, DT<:DiscontinuityTreatment} <: ReconstructionIdentity{FEreconst} end # 1*R(v_h)
 """
@@ -127,26 +126,22 @@ abstract type ReconstructionDivergence{FEreconst<:AbstractFiniteElement} <: Dive
 abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 
-# operator to be used for Dirichlet boundary data
-DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractH1FiniteElement}) = Identity
-DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHdivFiniteElement}) = NormalFlux
-DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHcurlFiniteElement}) = TangentFlux
 
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 0
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:IdentityComponent}) = 0
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Gradient}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = 2
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = 2
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl2D}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Curl3D}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = 1
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Trace}) = 0
-NeededDerivative4Operator(::Type{<:AbstractFiniteElement},::Type{Deviator}) = 0
+NeededDerivative4Operator(::Type{<:Identity}) = 0
+NeededDerivative4Operator(::Type{<:IdentityComponent}) = 0
+NeededDerivative4Operator(::Type{NormalFlux}) = 0
+NeededDerivative4Operator(::Type{TangentFlux}) = 0
+NeededDerivative4Operator(::Type{<:Gradient}) = 1
+NeededDerivative4Operator(::Type{SymmetricGradient}) = 1
+NeededDerivative4Operator(::Type{TangentialGradient}) = 1
+NeededDerivative4Operator(::Type{Laplacian}) = 2
+NeededDerivative4Operator(::Type{Hessian}) = 2
+NeededDerivative4Operator(::Type{CurlScalar}) = 1
+NeededDerivative4Operator(::Type{Curl2D}) = 1
+NeededDerivative4Operator(::Type{Curl3D}) = 1
+NeededDerivative4Operator(::Type{<:Divergence}) = 1
+NeededDerivative4Operator(::Type{Trace}) = 0
+NeededDerivative4Operator(::Type{Deviator}) = 0
 
 DefaultName4Operator(::Type{Identity}) = "id"
 DefaultName4Operator(::Type{IdentityDisc{Jump}}) = "[[id]]"
@@ -185,25 +180,20 @@ Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 Length4Operator(::Type{Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
 
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Identity}) = 0
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:IdentityComponent}) = 0
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{NormalFlux}) = 0
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentFlux}) = 0
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Gradient}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{CurlScalar}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Curl2D}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Curl3D}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{<:Divergence}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{SymmetricGradient}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{TangentialGradient}) = -1
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Laplacian}) = -2
-QuadratureOrderShift4Operator(::Type{<:AbstractFiniteElement},::Type{Hessian}) = -2
+QuadratureOrderShift4Operator(::Type{<:Identity}) = 0
+QuadratureOrderShift4Operator(::Type{<:IdentityComponent}) = 0
+QuadratureOrderShift4Operator(::Type{NormalFlux}) = 0
+QuadratureOrderShift4Operator(::Type{TangentFlux}) = 0
+QuadratureOrderShift4Operator(::Type{<:Gradient}) = -1
+QuadratureOrderShift4Operator(::Type{CurlScalar}) = -1
+QuadratureOrderShift4Operator(::Type{Curl2D}) = -1
+QuadratureOrderShift4Operator(::Type{Curl3D}) = -1
+QuadratureOrderShift4Operator(::Type{<:Divergence}) = -1
+QuadratureOrderShift4Operator(::Type{SymmetricGradient}) = -1
+QuadratureOrderShift4Operator(::Type{TangentialGradient}) = -1
+QuadratureOrderShift4Operator(::Type{Laplacian}) = -2
+QuadratureOrderShift4Operator(::Type{Hessian}) = -2
 
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_CELLS}) = FES[CellDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_FACES}) = FES[FaceDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES[BFaceDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_EDGES}) = FES[EdgeDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BEDGES}) = FES[BEdgeDofs]
 
 # default junctions
 function DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
@@ -218,7 +208,7 @@ function DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, FO::Type{<:Abstrac
     return AT
 end
 
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
+function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitem, AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
     # check if operator is discontinuous for this AT
     discontinuous = false
     posdt = 0
@@ -231,16 +221,16 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:Abs
     end
     if discontinuous
         # call discontinuity handlers
-        DofitemInformation4Operator(FES, EG, EGdofitem, AT, FO.parameters[posdt])
+        DofitemInformation4Operator(xgrid, EG, EGdofitem, AT, FO.parameters[posdt])
     else
         # call standard handlers
-        DofitemInformation4Operator(FES, EG, EGdofitem, AT)
+        DofitemInformation4Operator(xgrid, EG, EGdofitem, AT)
     end
 end
 
 # default handlers
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:AbstractAssemblyType})
-    xItemGeometries = FES.xgrid[GridComponentGeometries4AssemblyType(AT)]
+function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitem, AT::Type{<:AbstractAssemblyType})
+    xItemGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
     # operator is assumed to be continuous, hence only needs to be evaluated on one dofitem = item
     function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
         dofitems[1] = item
@@ -259,17 +249,17 @@ function DofitemInformation4Operator(FES::FESpace, EG, EGdofitem, AT::Type{<:Abs
     return closure
 end
 
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
-    return DofitemInformation4Operator(FES, EG, EGdofitems, AT)
+function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
+    return DofitemInformation4Operator(xgrid, EG, EGdofitems, AT)
 end
 
 # special handlers for jump operators
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_FACES}, DiscType::Type{<:Union{Jump, Average}})
-    xFaceCells = FES.xgrid[FaceCells]
-    xCellFaces = FES.xgrid[CellFaces]
-    xFaceGeometries = FES.xgrid[FaceGeometries]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    xCellFaceOrientations = FES.xgrid[CellFaceOrientations]
+function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::Type{<:ON_FACES}, DiscType::Type{<:Union{Jump, Average}})
+    xFaceCells = xgrid[FaceCells]
+    xCellFaces = xgrid[CellFaces]
+    xFaceGeometries = xgrid[FaceGeometries]
+    xCellGeometries = xgrid[CellGeometries]
+    xCellFaceOrientations = xgrid[CellFaceOrientations]
     if DiscType == Jump
         coeff_left = 1
         coeff_right = -1
@@ -324,13 +314,13 @@ end
 
 
 # special handlers for jump operators
-function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_BFACES}, DiscType::Type{<:Union{Jump, Average}})
-    xFaceCells = FES.xgrid[FaceCells]
-    xCellFaces = FES.xgrid[CellFaces]
-    xBFaceGeometries = FES.xgrid[BFaceGeometries]
-    xCellGeometries = FES.xgrid[CellGeometries]
-    xBFaces = FES.xgrid[BFaces]
-    xCellFaceOrientations = FES.xgrid[CellFaceOrientations]
+function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::Type{<:ON_BFACES}, DiscType::Type{<:Union{Jump, Average}})
+    xFaceCells = xgrid[FaceCells]
+    xCellFaces = xgrid[CellFaces]
+    xBFaceGeometries = xgrid[BFaceGeometries]
+    xCellGeometries = xgrid[CellGeometries]
+    xBFaces = xgrid[BFaces]
+    xCellFaceOrientations = xgrid[CellFaceOrientations]
 
     # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
     function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)

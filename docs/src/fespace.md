@@ -1,7 +1,8 @@
 
 # Finite Element Spaces and Arrays
 
-This page describes the structure [FESpace](@ref) that acts as a finite element space on a given grid.
+This page describes the structure [FESpace](@ref) that acts as a finite element space on a given grid
+and the degree of freedom maps [DofMaps](@ref).
 See [Implemented Finite Elements](@ref) for a list of available finite element types.
 
 Moreover, there are special arrays [FEVector](@ref) and [FEMatrix](@ref) that carry coefficients and discretised PDEOperators.
@@ -9,12 +10,32 @@ Moreover, there are special arrays [FEVector](@ref) and [FEMatrix](@ref) that ca
 
 ## FESpace
 
+To generate a finite element space only a finite element type and a grid is needed, dofmaps are generated automatically on demand.
 
-```@docs
-FESpace{AbstractFiniteElement}
-eltype(::FESpace)
-show(::IO, ::FESpace)
+```@autodocs
+Modules = [GradientRobustMultiPhysics]
+Pages = ["finiteelements.jl"]
+Order   = [:type, :function]
 ```
+
+## DofMaps
+
+```@autodocs
+Modules = [GradientRobustMultiPhysics]
+Pages = ["dofmaps.jl"]
+Order   = [:type, :function]
+```
+
+
+The following DofMap subtypes are available and are used as keys to access the dofmap via FESpace[DofMap] (which is equivalent to FESpace.dofmaps[DofMap]).
+
+| DofMap             | Explanation                                       |
+| :----------------: | :-----------------------------------------------: | 
+| CellDofs           | degrees of freedom for on each cell               | 
+| FaceDofs           | degrees of freedom for each face                  | 
+| EdgeDofs           | degrees of freedom for each edge (in 3D)          | 
+| BFaceDofs          | degrees of freedom for each boundary face         |
+| BEdgeDofs          | degrees of freedom for each boundary edge (in 3D) |
 
 
 ## FEVector

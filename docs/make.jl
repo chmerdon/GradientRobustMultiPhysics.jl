@@ -82,6 +82,7 @@ function make_all()
             "Home" => "index.md",
             "Implemented Finite Elements" => "fems.md",
             "FE Spaces and Arrays" => "fespace.md",
+            "FE Interpolation" => "interpolations.md",
             "Function Operators" => "functionoperators.md",
             "PDE Description" => "pdedescription.md",
             "PDE Prototypes" => "pdeprototypes.md",

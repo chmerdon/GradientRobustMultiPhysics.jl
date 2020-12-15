@@ -20,6 +20,10 @@ homogeneous Dirichlet data
 """
 abstract type HomogeneousDirichletBoundary <: DirichletBoundary end
 
+# operator to be used for Dirichlet boundary data
+DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractH1FiniteElement}) = Identity
+DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHdivFiniteElement}) = NormalFlux
+DefaultDirichletBoundaryOperator4FE(::Type{<:AbstractHcurlFiniteElement}) = TangentFlux
 
 """
 $(TYPEDEF)

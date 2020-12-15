@@ -1,5 +1,7 @@
 """
-$(TYPEDEF)
+````
+abstract type HDIVBDM1{edim} <: AbstractHdivFiniteElement where {edim<:Int}
+````
 
 Hdiv-conforming vector-valued (ncomponents = edim) lowest-order Brezzi-Douglas-Marini space
 
@@ -30,13 +32,6 @@ get_dofmap_pattern(FEType::Type{<:HDIVBDM1{2}}, ::Type{BFaceDofs}, EG::Type{<:Ab
 get_dofmap_pattern(FEType::Type{<:HDIVBDM1{3}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "f3"
 get_dofmap_pattern(FEType::Type{<:HDIVBDM1{3}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i3"
 get_dofmap_pattern(FEType::Type{<:HDIVBDM1{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i3"
-
-
-function init!(FES::FESpace{FEType}) where {FEType <: HDIVBDM1}
-    ncomponents = get_ncomponents(FEType)
-    FES.name = "BDM1 (Hdiv, $(ncomponents)d)"
-end
-
 
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HDIVBDM1}

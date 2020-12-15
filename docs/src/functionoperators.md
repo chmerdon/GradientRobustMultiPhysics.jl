@@ -45,9 +45,3 @@ FunctionOperators are building blocks for the weak form and define the operation
     are added as soon as they are needed (and possibly upon request).
 
 
-```@autodocs
-Modules = [GradientRobustMultiPhysics]
-Pages = ["functionoperators.jl"]
-Order   = [:type, :function]
-```
-
