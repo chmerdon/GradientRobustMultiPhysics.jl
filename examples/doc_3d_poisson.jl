@@ -35,7 +35,7 @@ function rhs!(result)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1)
+function main(; Plotter = nothing, verbosity = 1)
 
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
@@ -62,6 +62,7 @@ function main(; verbosity = 1)
     L2error = []; H1error = []; NDofs = []
 
     ## loop over levels
+    Solution = nothing
     for level = 1 : nlevels
 
         ## uniform mesh refinement
@@ -95,6 +96,9 @@ function main(; verbosity = 1)
         @printf(" %.5e |",L2error[j])
         @printf(" %.5e\n",H1error[j])
     end
+
+    ## plot (Plotter = Makie should work)
+    GradientRobustMultiPhysics.plot(Solution, [1], [Identity]; Plotter = Plotter, verbosity = verbosity)
 end
 
 end

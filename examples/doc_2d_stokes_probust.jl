@@ -94,6 +94,7 @@ end
 function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1)
 
     ## load problem data and set solver parameters
+    ReconstructionOperator = FETypes[3]
     exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = Problem()
     maxIterations = 20  # termination criterion 1 for nonlinear mode
     maxResidual = 1e-12 # termination criterion 2 for nonlinear mode
@@ -101,7 +102,7 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
     ## load Stokes problem prototype and assign data
     StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
     add_boundarydata!(StokesProblem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!)
-    add_rhsdata!(StokesProblem, 1, RhsOperator(ReconstructionIdentity, [0], rhs!))
+    add_rhsdata!(StokesProblem, 1, RhsOperator(ReconstructionOperator, [0], rhs!))
 
     ## define bestapproximation problems
     L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
@@ -119,7 +120,6 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
     ## setup classical (StokesProblem) and pressure-robust scheme (StokesProblem2)
     StokesProblem2 = deepcopy(StokesProblem)
     StokesProblem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!)
-    ReconstructionOperator = FETypes[3]
     StokesProblem2.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!)
     if nonlinear
         StokesProblem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator

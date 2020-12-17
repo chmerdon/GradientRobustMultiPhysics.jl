@@ -364,7 +364,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
         xBFaceRegions = zeros(Int32,0)
         xBFaceGeometries = []
         nbfaces = num_sources(oldBFaceNodes)
-        if dim == 2
+        if dim == 2 || typeof(oldBFaceNodes) == Array{Int32,2}
             xBFaceNodes = []
         else
             xBFaceNodes = VariableTargetAdjacency(Int32)
@@ -386,6 +386,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
 
         bcell = 0
         edge = 0
+        newnbfaces = 0
         for bface = 1 : nbfaces
             face = oldBFaces[bface]
             itemEG = oldBFaceGeometries[bface]
@@ -419,10 +420,11 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
                 append!(xBFaceNodes,subitemnodes[1:size(refine_rules[iEG],2)])
                 push!(xBFaceGeometries,itemEG)
                 push!(xBFaceRegions,oldBFaceRegions[bface])
+                newnbfaces += 1
             end    
         end
-        if dim == 2 # plotter needs Array which is ok in 2D as there can only be Edge1D boundary faces
-            xgrid[BFaceNodes] = Array{Int32,2}(reshape(xBFaceNodes,(2,nbfaces*2)))
+        if dim == 2 || typeof(oldBFaceNodes) == Array{Int32,2}
+            xgrid[BFaceNodes] = Array{Int32,2}(reshape(xBFaceNodes,(size(oldBFaceNodes,1),newnbfaces)))
         else
             xgrid[BFaceNodes] = xBFaceNodes
         end

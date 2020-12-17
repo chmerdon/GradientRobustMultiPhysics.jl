@@ -23,7 +23,7 @@ function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = fals
 
     ## generate mesh and uniform refine nrefs times
     xgrid = simplexgrid([0.0,1//3,2//3,1.0])
-    xgrid = uniform_refine(xgrid,ref)
+    xgrid = uniform_refine(xgrid,nrefs)
 
     ## negotiate exact_function! to the package
     user_function = DataFunction(exact_function!, [1,1]; name = "u_exact", dependencies = "X", quadorder = 4)

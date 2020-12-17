@@ -29,7 +29,7 @@ function main(; verbosity = 1, Plotter = nothing)
 
     ## generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
-    xgrid = uniform_refine(xgrid,3)
+    xgrid = uniform_refine(xgrid,4)
 
     ## negotiate exact_function! and exact_curl! to the package
     user_function = DataFunction(exact_function!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 3)

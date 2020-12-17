@@ -28,10 +28,10 @@ function neumann_force_right!(result)
 end    
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1)
+function main(; Plotter = nothing, verbosity = 1)
 
     ## mesh = scaled unit cube and 3 uniform refinements
-    xgrid = uniform_refine(grid_unitcube(Parallelepiped3D; scale = [4//3,3//4,1//4]), 3)
+    xgrid = uniform_refine(grid_unitcube(Tetrahedron3D; scale = [4//3,3//4,1//4]), 3)
 
     ## parameters for isotropic elasticity tensor
     elasticity_modulus = 1000 # elasticity modulus
@@ -64,9 +64,8 @@ function main(; verbosity = 1)
     Solution = FEVector{Float64}("displacement",FES)
     solve!(Solution, LinElastProblem; verbosity = verbosity)
 
-    ## write to vtk
-    mkpath("data/example_3delasticity/")
-    writeVTK!("data/example_3delasticity/results.vtk", Solution)
+    ## plot (Plotter = Makie should work)
+    GradientRobustMultiPhysics.plot(Solution, [1], [Identity]; Plotter = Plotter, verbosity = verbosity)
 
 end
 
