@@ -12,7 +12,7 @@ Order   = [:type, :function]
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["writevtk.jl"]
+Pages = ["dataexport.jl"]
 Order   = [:type, :function]
 ```
 

@@ -2,7 +2,13 @@
 """
 $(TYPEDSIGNATURES)
 
-Plots operators applied to components of a given FEVector via ExtendablePlots.plot, either in subplots or several single plots.
+Plots operators applied to components of a given FEVector Source (operator[j9] is applied to component with blockids[j])
+via ExtendablePlots.plot, either in one window with subplots or several single plots.
+
+If blockids[j] == 0, a plot of the grid is generated at the j-th subplot.
+
+Plotter = PyPlot should work in 2D
+Plotter = Makie should work in 3D (but only with a single plot currently)
 """
 function plot(
     Source::FEVector,

@@ -2,7 +2,7 @@ vtkcelltype(::Type{<:AbstractElementGeometry1D}) = 3
 vtkcelltype(::Type{<:Triangle2D}) = 5
 vtkcelltype(::Type{<:Quadrilateral2D}) = 9
 vtkcelltype(::Type{<:Tetrahedron3D}) = 10
-vtkcelltype(::Type{<:Hexahedron3D}) = 12 # maybe needs renumbering of cellnodes !!!
+vtkcelltype(::Type{<:Hexahedron3D}) = 12
 
 """
 $(TYPEDSIGNATURES)
@@ -137,6 +137,78 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
                 @printf(io, "%f ", sqrt(absval))
             end
         end
+    end
+    close(io)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Writes the specified FEVector into a CSV datafile with the given filename. First d colomuns are the grid coordinates, the remaining column are filled
+with the evaluations of the operators where operator[j] is applied to Source[blockids[j]].
+
+"""
+function writeCSV!(filename::String, Source::FEVector; blockids = [], operators = [], names = [], seperator::String = "\t", verbosity::Int = 0)
+    if blockids == []
+        blockids = 1:length(Data)
+    end
+
+    # open file and write VTK header
+    io = open(filename, "w")
+    if verbosity > 0
+        println("\nDATAEXPORT (CSV)")
+        println("===============\n")
+    end
+    
+    # open grid
+    xgrid = Source[1].FES.xgrid
+    xCoordinates = xgrid[Coordinates]
+    nnodes = size(xCoordinates,2)
+    xdim = size(xCoordinates,1)
+    for j = 1 : xdim
+        @printf(io, "X%d",j)
+        @printf(io, "%s", seperator)
+    end
+
+    # collect data
+    offsets = zeros(Int, length(blockids)+1)
+    for j = 1 : length(blockids)
+        if blockids[j] > 0
+            FEType = eltype(Source[blockids[j]].FES)
+            offsets[j+1] = offsets[j] + Length4Operator(operators[j], xdim, get_ncomponents(FEType))
+        end
+    end
+
+    nodevals = zeros(Float64,offsets[end],nnodes)
+    name = ""
+    for j = 1 : length(blockids)
+        try
+            name = names[j]
+        catch
+            name = "$(operators[j])(" * Source[blockids[j]].name * ")"
+        end
+        @printf(io, "%s %s",name,seperator)
+        ## evaluate operator
+        if blockids[j] > 0
+            if verbosity > 0
+                println("   collecting data for block $j : " * "$(operators[j])(" * Source[blockids[j]].name * ")")
+            end
+            nodevalues!(nodevals, Source[blockids[j]], operators[j]; target_offset = offsets[j], zero_target = false)
+        end
+    end
+    @printf(io, "\n")
+
+    # write data
+    for n = 1 : nnodes
+        for j = 1 : xdim
+            @printf(io, "%.6f",xCoordinates[j,n])
+            @printf(io, "%s", seperator)
+        end
+        for j = 1 : offsets[end]
+            @printf(io, "%.6f",nodevals[j,n])
+            @printf(io, "%s", seperator)
+        end
+        @printf(io, "\n")
     end
     close(io)
 end

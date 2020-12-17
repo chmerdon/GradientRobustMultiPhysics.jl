@@ -218,8 +218,8 @@ export grid_unitcube
 export grid_lshape
 export grid_unitsquare, grid_unitsquare_mixedgeometries
 
-include("writevtk.jl")
-export writeVTK!
+include("dataexport.jl")
+export writeVTK!, writeCSV!
 
 include("plots.jl")
 export plot
