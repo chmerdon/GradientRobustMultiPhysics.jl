@@ -80,7 +80,7 @@ function plot(
                 push!(layout, layout[end] + subplots_per_column)
             end
             layout_aspect = length(layout) / subplots_per_column
-            if ExtendableGrids.ispyplot(Plotter)
+            if ispyplot(Plotter)
                 if clear
                     Plotter.clf()
                 end
@@ -90,15 +90,19 @@ function plot(
             elseif plottertype(Plotter) == MakieType
                 # not supported yet
             end
-            ctx = Array{PlotterContext,1}(undef, length(blockids))
+            ctx = Array{SubVis,1}(undef, length(blockids))
+            # figure=fig, cbar=true
+            vis=GridVisualizer(Plotter=Plotter, layout=(subplots_per_column,length(blockids)÷subplots_per_column), clear=false, legend=false, edges=true,cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
             for j = 1 : length(blockids)
-                subplot = subplots_per_column * 100 + (length(layout)-1) * 10 + j
-                ctx[j] = PlotterContext(Plotter, figure=fig, clear=false, legend=false, edges=true, subplot=subplot, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                #                subplot = subplots_per_column * 100 + (length(layout)-1) * 10 + j
+                ctx[j] = vis[(j-1)%subplots_per_column+1,(j-1)÷subplots_per_column+1]
             end
         else
-            ctx = Array{PlotterContext,1}(undef, length(blockids))
+            ctx = Array{SubVis,1}(undef, length(blockids))
             for j = 1 : length(blockids)
-                ctx[j] = PlotterContext(Plotter, fignumber=j, clear=true, legend=false, edges=true, cmap = cmap, show = show, cbar = cbar, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                #cbar = cbar, 
+                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, legend=false, edges=true, cmap = cmap, show = show,isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                ctx[j] = vis[1,1]
             end
         end
 
@@ -109,7 +113,7 @@ function plot(
                 if verbosity > 0
                     println("   plotting grid into plot $j")
                 end
-                ExtendableGrids.plot!(ctx[j], xgrid) 
+                visualize!(ctx[j], xgrid,show=true) 
                 if plottertype(Plotter) == PyPlotType
                     Plotter.title("grid")
                 end
@@ -130,12 +134,13 @@ function plot(
                 if verbosity > 0
                     println("   plotting data into plot $j : " * title)
                 end
-                ExtendableGrids.plot!(ctx[j], xgrid, Z) 
+                visualize!(ctx[j], xgrid, Z) 
                 if plottertype(Plotter) == PyPlotType
                     Plotter.title(title)
                 end
             end
         end
-
+        reveal(vis)
+        
     end
 end
