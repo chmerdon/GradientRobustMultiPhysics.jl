@@ -108,7 +108,6 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     max_ncell4node::Int = max_num_targets_per_source(xNodeCells)
 
     # instantiate new empty adjacency fields
-    xFaceNodes = VariableTargetAdjacency(Int32)
     xFaceCells = zeros(Int32,0) # cells are appended and at the end rewritten into 2,nfaces array
 
 
@@ -139,7 +138,10 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
             append!(xCellFaceSigns,zeros(Int32,nfaces_for_geometry(cellEG)))
         end   
     end
-    if !singleFEG
+    if singleFEG
+        xFaceNodes = zeros(Int32,0)
+    else
+        xFaceNodes = VariableTargetAdjacency(Int32)
         xFaceGeometries::Array{DataType,1} = []
     end
 
@@ -303,10 +305,11 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
         end    
     end
 
-    if singleFEG == false
-        xgrid[FaceGeometries] = xFaceGeometries
-    else
+    if singleFEG
+        xFaceNodes = reshape(xFaceNodes,2,Int(length(xFaceNodes)/2))
         xgrid[FaceGeometries] = VectorOfConstants(facetype_of_cellface(EG[1], 1), face)
+    else
+        xgrid[FaceGeometries] = xFaceGeometries
     end
     xgrid[CellFaces] = xCellFaces
     xgrid[CellFaceSigns] = xCellFaceSigns

@@ -73,7 +73,7 @@ function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_ite
     solve!(Solution, StokesProblem; verbosity = verbosity, AndersonIterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
 
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+    GradientRobustMultiPhysics.plot(Solution, [1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
 
 end
 

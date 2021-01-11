@@ -38,7 +38,7 @@ end
 function main(; verbosity = 1, Plotter = nothing)
 
     ## load mesh and refine
-    xgrid = simplexgrid(IOStream;file = "assets/2d_grid_cookmembrane.sg")
+    xgrid = simplexgrid("assets/2d_grid_cookmembrane.sg")
     xgrid = uniform_refine(xgrid,2)
 
     ## problem parameters
@@ -74,7 +74,7 @@ function main(; verbosity = 1, Plotter = nothing)
     solve!(Solution, LinElastProblem; verbosity = verbosity)
 
     ## plot stress
-    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
 end
 
 end

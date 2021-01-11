@@ -149,7 +149,7 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
             end
 
             ## plot
-            GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+            GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
         end    
     end    
 end

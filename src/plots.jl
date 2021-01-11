@@ -15,8 +15,9 @@ function plot(
     blockids::Array{Int,1},
     operators::Array{DataType,1};
     Plotter = nothing,
-    use_subplots = false,
+    resolution = (800,500),
     subplots_per_column = 2,
+    use_subplots::Bool = true,
     colorlevels=51,
     isolines=11,
     aspect=1,
@@ -92,7 +93,7 @@ function plot(
             end
             ctx = Array{SubVis,1}(undef, length(blockids))
             # figure=fig, cbar=true
-            vis=GridVisualizer(Plotter=Plotter, layout=(subplots_per_column,length(blockids)÷subplots_per_column), clear=false, legend=false, edges=true,cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+            vis=GridVisualizer(Plotter=Plotter, layout=(subplots_per_column,(length(blockids)-1)÷subplots_per_column+1), clear=false, legend=false, edges=true,cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
             for j = 1 : length(blockids)
                 #                subplot = subplots_per_column * 100 + (length(layout)-1) * 10 + j
                 ctx[j] = vis[(j-1)%subplots_per_column+1,(j-1)÷subplots_per_column+1]
@@ -124,9 +125,6 @@ function plot(
                 else
                     Z[:] = view(nodevals,offsets[j]+1,:)
                     title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
-                end
-                if use_subplots == false
-                    title = maintitle * " " * title
                 end
                 if minimum(Z) == maximum(Z)
                     Z[1] += 1e-16

@@ -84,7 +84,7 @@ end
 function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, write_vtk::Bool = true)
 
     ## load mesh and refine
-    xgrid = simplexgrid(IOStream;file = "assets/2d_grid_mountainrange.sg")
+    xgrid = simplexgrid("assets/2d_grid_mountainrange.sg")
     xgrid = uniform_refine(xgrid,0)
 
     ## problem data
@@ -214,7 +214,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     println("L2error(Density) = $L2error")
     
     ## plots
-    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
     
     if write_vtk
         mkpath("data/example_2d_compressiblestokes/")

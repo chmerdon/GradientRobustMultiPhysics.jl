@@ -62,7 +62,7 @@ function main(; verbosity = 1, Plotter = nothing)
     println("L2error(Curl2D) = $(sqrt(evaluate(L2CurlErrorEvaluator,Solution[1])))")
        
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Curl2D]; Plotter = Plotter, verbosity = verbosity, use_subplots = true)
+    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Curl2D]; Plotter = Plotter, verbosity = verbosity)
 end
 
 end
