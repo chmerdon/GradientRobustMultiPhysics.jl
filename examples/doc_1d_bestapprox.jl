@@ -12,6 +12,7 @@ module Example_1DBestapprox
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using .GridVisualize
 
 ## define some (vector-valued) function (to be L2-bestapproximated in this example)
 function exact_function!(result,x::Array{<:Real,1})
@@ -61,11 +62,12 @@ function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = fals
     if Plotter != nothing
         nodevals = zeros(Float64,1,size(xgrid[Coordinates],2))
         nodevalues!(nodevals,Solution[1],FES)
-        p = ExtendableGrids.plot(xgrid, nodevals[1,:]; Plotter = Plotter, label = "coarse approximation")
+        p=GridVisualizer(Plotter=Plotter,layout=(1,1))
+        visualize!(p[1,1],xgrid, nodevals[1,:], color=(0,1,0), label = "coarse approximation")
 
         nodevals_fine = zeros(Float64,1,size(xgrid_fine[Coordinates],2))
         nodevalues!(nodevals_fine,Interpolation[1],FES_fine)
-        ExtendableGrids.plot(xgrid_fine, nodevals_fine[1,:]; Plotter = Plotter, clear = false, p = p, color = (1,0,0), label = "fine interpolation")
+        visualize!(p[1,1],xgrid_fine, nodevals_fine[1,:], clear = false, color = (1,0,0), label = "fine interpolation",show=true)
     end
 end
 
