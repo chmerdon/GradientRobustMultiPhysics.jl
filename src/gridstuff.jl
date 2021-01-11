@@ -306,7 +306,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     end
 
     if singleFEG
-        xFaceNodes = reshape(xFaceNodes,2,Int(length(xFaceNodes)/2))
+        xFaceNodes = reshape(xFaceNodes,nodes_per_cellface,Int(length(xFaceNodes)/nodes_per_cellface))
         xgrid[FaceGeometries] = VectorOfConstants(facetype_of_cellface(EG[1], 1), face)
     else
         xgrid[FaceGeometries] = xFaceGeometries
