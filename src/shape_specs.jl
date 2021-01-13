@@ -148,64 +148,90 @@ edgetype_of_celledge(::Type{<:AbstractElementGeometry3D}, k) = Edge1D
 ### VOLUMES ###
 ###############
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Vertex0D}, ::Type{<:ExtendableGrids.AbstractCoordinateSystem})
-    return 0.0
+function Volume4ElemType(Coords, Nodes, ::Type{<:Vertex0D}, ::Type{<:ExtendableGrids.AbstractCoordinateSystem})
+    function closure(item)
+        return 0
+    end
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian1D})
-    return abs(Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]])
+function Volume4ElemType(Coords, Nodes, ::Type{<:Edge1D}, ::Type{Cartesian1D})
+    function closure(item)
+        return abs(Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]])
+    end
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian2D})
-    return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2)
+function Volume4ElemType(Coords, Nodes, ::Type{<:Edge1D}, ::Type{Cartesian2D})
+    function closure(item)
+        return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2)
+    end
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Edge1D}, ::Type{Cartesian3D})
-    return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2  + (Coords[3, Nodes[2,item]] - Coords[3, Nodes[1,item]]).^2)
+function Volume4ElemType(Coords, Nodes, ::Type{<:Edge1D}, ::Type{Cartesian3D})
+    function closure(item)
+        return sqrt((Coords[1, Nodes[2,item]] - Coords[1, Nodes[1,item]]).^2 + (Coords[2, Nodes[2,item]] - Coords[2, Nodes[1,item]]).^2  + (Coords[3, Nodes[2,item]] - Coords[3, Nodes[1,item]]).^2)
+    end
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian2D})
-    return 1 // 2 * ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
-                  +   Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
-                  +   Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
+function Volume4ElemType(Coords, Nodes, ::Type{<:Triangle2D}, ::Type{Cartesian2D})
+    function closure(item)
+        return 1 // 2 * ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
+                      +   Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
+                      +   Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
+    end
 end
 
-#function Volume4ElemType(Coords, Nodes, item, ::Type{Parallelogram2D}, ::Type{Cartesian2D})
-#    return ( Coords[1, Nodes[1, item]] * (Coords[2, Nodes[2,item]] -  Coords[2, Nodes[3, item]])
-#           + Coords[1, Nodes[2, item]] * (Coords[2, Nodes[3,item]] -  Coords[2, Nodes[1, item]])
-#           + Coords[1, Nodes[3, item]] * (Coords[2, Nodes[1,item]] -  Coords[2, Nodes[2, item]]) )
-#end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Quadrilateral2D}, ::Type{Cartesian2D})
-    return 1//2 * (   (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]]) * (Coords[2, Nodes[2, item]] - Coords[2, Nodes[4, item]])
+function Volume4ElemType(Coords, Nodes, ::Type{<:Quadrilateral2D}, ::Type{Cartesian2D})
+    function closure(item)
+        return 1//2 * (   (Coords[1, Nodes[1, item]] - Coords[1, Nodes[3, item]]) * (Coords[2, Nodes[2, item]] - Coords[2, Nodes[4, item]])
                     + (Coords[1, Nodes[4, item]] - Coords[1, Nodes[2, item]]) * (Coords[2, Nodes[1, item]] - Coords[2, Nodes[3, item]]) );
+
+    end
 end
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
-    # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
-    d12 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[3, item]]
-    return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2) / 2;
-end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelogram2D}, ::Type{Cartesian3D})
-    # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
-    d12 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[2, item]]
-    d14 = @views Coords[:, Nodes[1, item]] - Coords[:, Nodes[4, item]]
-    return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2);
-end
-
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Parallelepiped3D}, ::Type{Cartesian3D})
-    return    ((Coords[1, Nodes[5, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[2, Nodes[5, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[3, Nodes[5, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]])));
+function Volume4ElemType(Coords, Nodes, ::Type{<:Triangle2D}, ::Type{Cartesian3D})
+    d12 = zeros(Float64,3)
+    d14 = zeros(Float64,3)
+    function closure(item)
+        # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
+        for k = 1 : 3
+            d12[k] = Coords[k, Nodes[1, item]] - Coords[k, Nodes[2, item]]
+            d14[k] = Coords[k, Nodes[1, item]] - Coords[k, Nodes[3, item]]
+        end
+        return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2) / 2;
+    end
 end
 
 
-function Volume4ElemType(Coords, Nodes, item, ::Type{<:Tetrahedron3D}, ::Type{Cartesian3D})
-    return    1 // 6 * ((Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]])) 
-    + (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]])));
+function Volume4ElemType(Coords, Nodes, ::Type{<:Parallelogram2D}, ::Type{Cartesian3D})
+    d12 = zeros(Float64,3)
+    d14 = zeros(Float64,3)
+    function closure(item)
+        # norm(cross(p(1)-p(2), p(1)-p(3)), 2)
+        for k = 1 : 3
+            d12[k] = Coords[k, Nodes[1, item]] - Coords[k, Nodes[2, item]]
+            d14[k] = Coords[k, Nodes[1, item]] - Coords[k, Nodes[4, item]]
+        end
+        return sqrt((d12[2]*d14[3]-d12[3]*d14[2])^2 + (d12[3]*d14[1]-d12[1]*d14[3])^2 + (d12[1]*d14[2]-d12[2]*d14[1])^2);
+    end
+end
+
+
+function Volume4ElemType(Coords, Nodes, ::Type{<:Parallelepiped3D}, ::Type{Cartesian3D})
+    function closure(item)
+        return    ((Coords[1, Nodes[5, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
+        + (Coords[2, Nodes[5, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]])) 
+        + (Coords[3, Nodes[5, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]])));
+    
+    end
+end
+
+
+function Volume4ElemType(Coords, Nodes, ::Type{<:Tetrahedron3D}, ::Type{Cartesian3D})
+    function closure(item)
+        return    1 // 6 * ((Coords[1, Nodes[4, item]] - Coords[1, Nodes[1, item]]) * ( (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]]) - (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) * (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]])) 
+        + (Coords[2, Nodes[4, item]] - Coords[2, Nodes[1, item]]) * ( (Coords[3, Nodes[2, item]] - Coords[3, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]]) - (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[3, Nodes[3, item]] - Coords[3, Nodes[1, item]])) 
+        + (Coords[3, Nodes[4, item]] - Coords[3, Nodes[1, item]]) * ( (Coords[1, Nodes[2, item]] - Coords[1, Nodes[1, item]]) * (Coords[2, Nodes[3, item]] - Coords[2, Nodes[1, item]]) - (Coords[2, Nodes[2, item]] - Coords[2, Nodes[1, item]]) * (Coords[1, Nodes[3, item]] - Coords[1, Nodes[1, item]])));
+    end
 end
   
 

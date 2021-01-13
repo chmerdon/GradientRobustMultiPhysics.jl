@@ -327,10 +327,10 @@ function assemble!(
                     PDEoperator = PDE.LHSOperators[equations[j],k][o]
                     try
                         if PDEoperator.store_operator == false
-                            break
+                            continue
                         end
                     catch
-                        break
+                        continue
                     end
                     update_storage!(PDEoperator, CurrentSolution, equations[j], k ; time = time, verbosity = verbosity)
                 end
@@ -341,10 +341,10 @@ function assemble!(
                 PDEoperator = PDE.RHSOperators[equations[j]][o]
                 try
                     if PDEoperator.store_operator == false
-                        break
+                        continue
                     end
                 catch
-                    break
+                    continue
                 end
                 update_storage!(PDEoperator, CurrentSolution, equations[j] ; time = time, verbosity = verbosity)
             end

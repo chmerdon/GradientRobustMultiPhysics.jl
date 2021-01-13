@@ -164,7 +164,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     current_item::Array{Int,1} = zeros(Int,maxfacenodes) # should be large enough to store largest nnodes per cellface
     flag4item::Array{Bool,1} = zeros(Bool,nnodes)
     no_neighbours_found::Bool = true
-    same_face = false
+    same_face::Bool = false
     
     # loop over cells
     for cell = 1 : ncells
@@ -233,7 +233,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                 for f2 = 1 : faces_per_cell2
 
                     # check if face f2 is already known to cell2
-                    if xCellFaces[f2,cell2] > 0
+                    if xCellFaces[f2,cell2] != 0
                         continue;
                     end    
 
@@ -790,8 +790,26 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellVolumes})
     # init CellVolumes
     xCellVolumes = zeros(Real,ncells)
 
+    # get Volume4ElemType handlers
+    EG = xgrid[UniqueCellGeometries]
+    handlers = Array{Function,1}(undef, length(EG))
+    for j = 1: length(EG)
+        handlers[j] = Volume4ElemType(xCoordinates, xCellNodes, EG[j], xCoordinateSystem)
+    end
+
+    iEG::Int = 1
+    cellEG = xCellGeometries[1]
     for cell = 1 : ncells
-        xCellVolumes[cell] = Volume4ElemType(xCoordinates,xCellNodes,cell,xCellGeometries[cell],xCoordinateSystem)
+        if length(EG) > 1
+            cellEG = xCellGeometries[cell]
+            for j=1:length(EG)
+                if cellEG == EG[j]
+                    iEG = j
+                    break;
+                end
+            end
+        end
+        xCellVolumes[cell] = handlers[iEG](cell)
     end
 
     xCellVolumes
@@ -808,10 +826,28 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceVolumes})
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceVolumes
-    xFaceVolumes = zeros(Real,nfaces)
+    xFaceVolumes = zeros(Float64,nfaces)
 
+    # get Volume4ElemType handlers
+    EG = xgrid[UniqueFaceGeometries]
+    handlers = Array{Function,1}(undef, length(EG))
+    for j = 1: length(EG)
+        handlers[j] = Volume4ElemType(xCoordinates, xFaceNodes, EG[j], xCoordinateSystem)
+    end
+
+    iEG::Int = 1
+    faceEG = xFaceGeometries[1]
     for face = 1 : nfaces
-        xFaceVolumes[face] = Volume4ElemType(xCoordinates,xFaceNodes,face,xFaceGeometries[face],xCoordinateSystem)
+        if length(EG) > 1
+            faceEG = xFaceGeometries[face]
+            for j=1:length(EG)
+                if faceEG == EG[j]
+                    iEG = j
+                    break;
+                end
+            end
+        end
+        xFaceVolumes[face] = handlers[iEG](face)
     end
 
     xFaceVolumes
@@ -828,10 +864,28 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceVolumes}
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init FaceVolumes
-    xBFaceVolumes = zeros(Real,nbfaces)
+    xBFaceVolumes = zeros(Float64,nbfaces)
 
+    # get Volume4ElemType handlers
+    EG = xgrid[UniqueBFaceGeometries]
+    handlers = Array{Function,1}(undef, length(EG))
+    for j = 1: length(EG)
+        handlers[j] = Volume4ElemType(xCoordinates, xBFaceNodes, EG[j], xCoordinateSystem)
+    end
+
+    iEG::Int = 1
+    faceEG = xBFaceGeometries[1]
     for bface = 1 : nbfaces
-        xBFaceVolumes[bface] = Volume4ElemType(xCoordinates,xBFaceNodes,bface,xBFaceGeometries[bface],xCoordinateSystem)
+        if length(EG) > 1
+            faceEG = xBFaceGeometries[bface]
+            for j=1:length(EG)
+                if faceEG == EG[j]
+                    iEG = j
+                    break;
+                end
+            end
+        end
+        xBFaceVolumes[bface] = handlers[iEG](bface)
     end
 
     xBFaceVolumes
@@ -848,10 +902,28 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeVolumes})
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init EdgeVolumes
-    xEdgeVolumes = zeros(Real,nedges)
+    xEdgeVolumes = zeros(Float64,nedges)
 
+    # get Volume4ElemType handlers
+    EG = xgrid[UniqueEdgeGeometries]
+    handlers = Array{Function,1}(undef, length(EG))
+    for j = 1: length(EG)
+        handlers[j] = Volume4ElemType(xCoordinates, xEdgeNodes, EG[j], xCoordinateSystem)
+    end
+
+    iEG::Int = 1
+    edgeEG = xEdgeGeometries[1]
     for edge = 1 : nedges
-        xEdgeVolumes[edge] = Volume4ElemType(xCoordinates,xEdgeNodes,edge,xEdgeGeometries[edge],xCoordinateSystem)
+        if length(EG) > 1
+            edgeEG = xEdgeGeometries[edge]
+            for j=1:length(EG)
+                if edgeEG == EG[j]
+                    iEG = j
+                    break;
+                end
+            end
+        end
+        xEdgeVolumes[edge] = handlers[iEG](edge)
     end
 
     xEdgeVolumes
@@ -868,7 +940,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdgeVolumes}
     xCoordinateSystem = xgrid[CoordinateSystem]
 
     # init EdgeVolumes
-    xBEdgeVolumes = zeros(Real,nbedges)
+    xBEdgeVolumes = zeros(Float64,nbedges)
 
     for bedge = 1 : nbedges
         xBEdgeVolumes[bedge] = Volume4ElemType(xCoordinates,xBEdgeNodes,bedge,xBEdgeGeometries[bedge],xCoordinateSystem)
