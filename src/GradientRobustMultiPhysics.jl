@@ -1,7 +1,7 @@
 module GradientRobustMultiPhysics
 
 using ExtendableGrids
-using .GridVisualize
+using GridVisualize
 export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D, num_sources, simplexgrid, VectorOfConstants
 using ExtendableSparse
 using SuiteSparse

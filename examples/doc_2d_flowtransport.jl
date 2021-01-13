@@ -118,7 +118,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(Solution, [0,1,2,3], [Identity, Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
 
     if write_vtk
         mkpath("data/example_flowtransport/")

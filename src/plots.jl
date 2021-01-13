@@ -114,7 +114,7 @@ function plot(
                 if verbosity > 0
                     println("   plotting grid into plot $j")
                 end
-                visualize!(ctx[j], xgrid,show=true) 
+                gridplot!(ctx[j], xgrid,show=true) 
                 if plottertype(Plotter) == PyPlotType
                     Plotter.title("grid")
                 end
@@ -132,7 +132,7 @@ function plot(
                 if verbosity > 0
                     println("   plotting data into plot $j : " * title)
                 end
-                visualize!(ctx[j], xgrid, Z) 
+                scalarplot!(ctx[j], xgrid, Z) 
                 if plottertype(Plotter) == PyPlotType
                     Plotter.title(title)
                 end
