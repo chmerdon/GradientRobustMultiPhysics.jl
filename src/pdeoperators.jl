@@ -553,7 +553,7 @@ can only be applied in PDE RHS
 """
 mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
     name::String
-    data::UserData{AbstractDataFunction}
+    data::UserData{<:AbstractDataFunction}
     testfunction_operator::Type{<:AbstractFunctionOperator}
     regions::Array{Int,1}
     store_operator::Bool               # should the matrix representation of the operator be stored?
@@ -563,7 +563,7 @@ end
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
     regions::Array{Int,1},
-    data::UserData{AbstractDataFunction};
+    data::UserData{<:AbstractDataFunction};
     name = "auto",
     on_boundary::Bool = false)
 
@@ -982,6 +982,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; fact
     FE1 = O.Data1.FES
     FE2 = O.Data2.FES
     FE3 = b.FES
+
     TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
     set_time!(O.TLF.action, time)
     assemble!(b, O.Data1, O.Data2, TLF; factor = factor * O.factor, verbosity = verbosity)
@@ -1039,18 +1040,31 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{A
     else
         FE = b.FES
         ncomponents = O.data.dimensions[1]
-        
-        function rhs_function() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(Float64,ncomponents)
-            function closure(result,input,x)
-                eval!(temp, O.data, x, time)
-                result[1] = 0
-                for j = 1 : ncomponents
-                    result[1] += temp[j]*input[j] 
+        if typeof(O.data) <: UserData{AbstractExtendedDataFunction}
+            function rhs_function_ext() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,ncomponents)
+                function closure(result,input,x, region, item, xref)
+                    eval!(temp, O.data, x, time, region, item, xref)
+                    result[1] = 0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
                 end
-            end
-        end    
-        action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
+            end    
+            action_kernel = ActionKernel(rhs_function_ext(),[1, ncomponents]; dependencies = "XRIL", quadorder = O.data.quadorder)
+        else
+            function rhs_function() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,ncomponents)
+                function closure(result,input,x)
+                    eval!(temp, O.data, x, time)
+                    result[1] = 0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
+                end
+            end    
+            action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
+        end
         action = Action(Float64, action_kernel)
         RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
         assemble!(b, RHS; factor = factor, verbosity = verbosity)

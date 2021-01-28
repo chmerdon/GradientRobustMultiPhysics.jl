@@ -226,7 +226,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
     
     if verbosity > 0
         println("  ...constructing FEBasisEvaluator for $FEOP operator of $FEType on $EG")
@@ -281,7 +281,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coefficients = zeros(T,ncomponents,ndofs4item2)
         if AT == ON_CELLS
             coeff_handler = get_coefficients_on_cell!(FE2, EG)
-        elseif AT <: Union{ON_BFACES,<:ON_FACES}
+        elseif AT <: Union{ON_BFACES,<:ON_FACES,<:ON_IFACES}
             coeff_handler = get_coefficients_on_face!(FE2, EG)
         end
     else
@@ -340,7 +340,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
 
     # get reconstruction coefficient handlers
-    if AT <: Union{ON_BFACES,<:ON_FACES}
+    if AT <: Union{ON_BFACES,<:ON_FACES,<:ON_IFACES}
         rcoeff_handler = get_reconstruction_coefficients_on_face!(FE, FE2, EG)
     else
         rcoeff_handler = get_reconstruction_coefficients_on_cell!(FE, FE2, EG)
@@ -350,9 +350,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         println("     size(cvals) = $(size(current_eval))")
         println("ndofs_all2/ndofs2 = $ndofs4item2_all/$ndofs4item2")
     end
-
     
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+    FEB = FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+    return FEB
 end    
 
 
@@ -411,6 +411,31 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
                 for i = 1 : length(FEBE.xref)
                     for k = 1 : FEBE.offsets[2] # ncomponents
                         FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[k,dof_j,i]; 
+                    end
+                end
+            end
+        end
+    end
+    return nothing
+end
+
+
+# RECONSTRUCTION NORMALFLUX OPERATOR
+# Hdiv ELEMENTS (just divide by face volume)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <:AbstractAssemblyType, FETypeReconst <: AbstractFiniteElement, FEOP <: ReconstructionNormalFlux{FETypeReconst}}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # get local reconstruction coefficients
+        # and accumulate
+        FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
+
+        fill!(FEBE.cvals,0.0)
+        for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
+            if FEBE.coefficients2[dof_i,dof_j] != 0
+                for i = 1 : length(FEBE.xref)
+                    for k = 1 : FEBE.offsets[2] # ncomponents
+                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] *  FEBE.refbasisvals[i][dof_j,k] / FEBE.L2G.ItemVolumes[item]
                     end
                 end
             end

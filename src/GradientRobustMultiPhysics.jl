@@ -14,20 +14,7 @@ using ForwardDiff
 using DocStringExtensions
 using Printf
 
-
-include("junctions.jl");
-export AbstractAssemblyType
-export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
-export GridComponentNodes4AssemblyType
-export GridComponentVolumes4AssemblyType
-export GridComponentGeometries4AssemblyType
-export GridComponentRegions4AssemblyType
-
-include("userdata.jl")
-export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
-
-include("l2gtransformations.jl");
-export L2GTransformer, update!, eval!, mapderiv!, piola!
+## stuff that may go to ExtendableGrids
 
 include("shape_specs.jl")
 export refcoords_for_geometry
@@ -43,7 +30,6 @@ export Volume4ElemType
 export Normal4ElemType!
 export Tangent4ElemType!
 
-
 include("gridstuff.jl")
 export Coordinates
 export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns, CellFaceOrientations, CellEdgeSigns
@@ -52,10 +38,9 @@ export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTange
 export BFaces, BFaceCellPos, BFaceVolumes
 export BEdgeNodes, BEdges, BEdgeVolumes, BEdgeGeometries
 export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries, UniqueBEdgeGeometries
-
-include("serialadjacency.jl")
-export SerialVariableTargetAdjacency
-
+export GridComponent4TypeProperty
+export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
+export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
 
 include("meshrefinements.jl")
 export split_grid_into
@@ -65,12 +50,31 @@ export barycentric_refine
 include("adaptive_meshrefinements.jl")
 export RGB_refine
 
+include("serialadjacency.jl")
+export SerialVariableTargetAdjacency
+
+
+
+
+include("userdata.jl")
+export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
+
+include("assemblytypes.jl");
+export AbstractAssemblyType
+export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
+export ItemType4AssemblyType
+export GridComponentNodes4AssemblyType
+export GridComponentVolumes4AssemblyType
+export GridComponentGeometries4AssemblyType
+export GridComponentRegions4AssemblyType
+
+include("l2gtransformations.jl");
+export L2GTransformer, update!, eval!, mapderiv!, piola!
 
 include("quadrature.jl")
 export QuadratureRule
 export VertexRule
 export integrate!, integrate
-
 
 include("functionoperators.jl")
 export AbstractFunctionOperator
@@ -78,6 +82,7 @@ export Identity, IdentityComponent
 export ReconstructionIdentity, ReconstructionIdentityDisc
 export ReconstructionGradient, ReconstructionGradientDisc
 export ReconstructionDivergence
+export ReconstructionNormalFlux
 export NormalFlux, TangentFlux
 export Gradient, GradientDisc
 export SymmetricGradient, TangentialGradient
@@ -89,7 +94,6 @@ export NeededDerivatives4Operator, QuadratureOrderShift4Operator
 export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 export DefaultName4Operator
-
 
 include("finiteelements.jl")
 export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
@@ -203,7 +207,6 @@ export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_t
 
 export AbstractTimeIntegrationRule
 export BackwardEuler
-
 
 include("pdeprototypes.jl")
 export CompressibleNavierStokesProblem

@@ -62,6 +62,51 @@ abstract type BEdgeRegions <: AbstractElementRegions end
 abstract type BEdgeGeometries <: AbstractElementGeometries end
 abstract type UniqueBEdgeGeometries <: AbstractElementGeometries end
 
+
+## grid item types to dispatch certain things to the correct GridComponents
+abstract type ITEMTYPE_NODE end
+abstract type ITEMTYPE_CELL end
+abstract type ITEMTYPE_FACE end
+abstract type ITEMTYPE_BFACE end
+abstract type ITEMTYPE_EDGE end
+abstract type ITEMTYPE_BEDGE end
+
+abstract type PROPERTY_NODES end
+abstract type PROPERTY_VOLUME end
+abstract type PROPERTY_REGION end
+abstract type PROPERTY_GEOMETRY end
+abstract type PROPERTY_UNIQUEGEOMETRY end
+
+GridComponent4TypeProperty(::Type{ITEMTYPE_CELL},::Type{PROPERTY_NODES}) = CellNodes
+GridComponent4TypeProperty(::Type{ITEMTYPE_CELL},::Type{PROPERTY_VOLUME}) = CellVolumes
+GridComponent4TypeProperty(::Type{ITEMTYPE_CELL},::Type{PROPERTY_REGION}) = CellRegions
+GridComponent4TypeProperty(::Type{ITEMTYPE_CELL},::Type{PROPERTY_GEOMETRY}) = CellGeometries
+GridComponent4TypeProperty(::Type{ITEMTYPE_CELL},::Type{PROPERTY_UNIQUEGEOMETRY}) = UniqueCellGeometries
+
+GridComponent4TypeProperty(::Type{ITEMTYPE_FACE},::Type{PROPERTY_NODES}) = FaceNodes
+GridComponent4TypeProperty(::Type{ITEMTYPE_FACE},::Type{PROPERTY_VOLUME}) = FaceVolumes
+GridComponent4TypeProperty(::Type{ITEMTYPE_FACE},::Type{PROPERTY_REGION}) = FaceRegions
+GridComponent4TypeProperty(::Type{ITEMTYPE_FACE},::Type{PROPERTY_GEOMETRY}) = FaceGeometries
+GridComponent4TypeProperty(::Type{ITEMTYPE_FACE},::Type{PROPERTY_UNIQUEGEOMETRY}) = UniqueFaceGeometries
+
+GridComponent4TypeProperty(::Type{ITEMTYPE_BFACE},::Type{PROPERTY_NODES}) = BFaceNodes
+GridComponent4TypeProperty(::Type{ITEMTYPE_BFACE},::Type{PROPERTY_VOLUME}) = BFaceVolumes
+GridComponent4TypeProperty(::Type{ITEMTYPE_BFACE},::Type{PROPERTY_REGION}) = BFaceRegions
+GridComponent4TypeProperty(::Type{ITEMTYPE_BFACE},::Type{PROPERTY_GEOMETRY}) = BFaceGeometries
+GridComponent4TypeProperty(::Type{ITEMTYPE_BFACE},::Type{PROPERTY_UNIQUEGEOMETRY}) = UniqueBFaceGeometries
+
+GridComponent4TypeProperty(::Type{ITEMTYPE_EDGE},::Type{PROPERTY_NODES}) = EdgeNodes
+GridComponent4TypeProperty(::Type{ITEMTYPE_EDGE},::Type{PROPERTY_VOLUME}) = EdgeVolumes
+GridComponent4TypeProperty(::Type{ITEMTYPE_EDGE},::Type{PROPERTY_REGION}) = EdgeRegions
+GridComponent4TypeProperty(::Type{ITEMTYPE_EDGE},::Type{PROPERTY_GEOMETRY}) = EdgeGeometries
+GridComponent4TypeProperty(::Type{ITEMTYPE_EDGE},::Type{PROPERTY_UNIQUEGEOMETRY}) = UniqueEdgeGeometries
+
+GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_NODES}) = BEdgeNodes
+GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_VOLUME}) = BEdgeVolumes
+GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_REGION}) = BEdgeRegions
+GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_GEOMETRY}) = BEdgeGeometries
+GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_UNIQUEGEOMETRY}) = UniqueBEdgeGeometries
+
 # show function for ExtendableGrids and defined Components in its Dict
 function showmore(io::IO, xgrid::ExtendableGrid)
 
@@ -657,7 +702,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceEdges})
         end   
     end
 
-    nfacenodes::Int = 0
+    nfacenodes::Int = num_targets(xFaceNodes,1)
     ncelledges::Int = 0
     nedgenodes::Int = 0
     nfaceedges::Int = nedges_for_geometry(EG[1])
@@ -685,10 +730,10 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceEdges})
                 end
             end
             edge_rule = edge_rules[iEG] # determines local enumeration of face edges
+            nfacenodes = num_targets(xFaceNodes,face)
         end
 
         # mark nodes of face
-        nfacenodes = num_targets(xFaceNodes,face)
         for j = 1 : nfacenodes
             node = xFaceNodes[j, face]
             flag4face[node] = true; 
@@ -794,13 +839,13 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceSigns
 end
 
 
-function collectVolumes4Geometries(T::Type{<:Real}, xgrid::ExtendableGrid, AT::Type{<:AbstractAssemblyType})
+function collectVolumes4Geometries(T::Type{<:Real}, xgrid::ExtendableGrid, ItemType)
     # get links to other stuff
     xCoordinates = xgrid[Coordinates]
     xCoordinateSystem = xgrid[CoordinateSystem]
-    xItemNodes = xgrid[GridComponentNodes4AssemblyType(AT)]
-    xGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
-    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
+    xItemNodes = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_NODES) ]
+    xGeometries = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_GEOMETRY) ]
+    EG = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_UNIQUEGEOMETRY) ]
     nitems = num_sources(xItemNodes)
 
     # get Volume4ElemType handlers
@@ -833,23 +878,23 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ON_CELLS)
+    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_CELL)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ON_FACES)
+    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_FACE)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ON_BFACES)
+    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_BFACE)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ON_EDGES)
+    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_EDGE)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdgeVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ON_BEDGES)
+    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_BEDGE)
 end
 
 
@@ -1007,6 +1052,7 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceCellPos})
+    # gets the local position of a bface in the CellFaces row of its adjacent cell
 
     # get links to other stuff
     xCoordinates = xgrid[Coordinates]

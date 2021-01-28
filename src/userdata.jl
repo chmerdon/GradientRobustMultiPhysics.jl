@@ -23,7 +23,8 @@ function ActionKernel(
     quadorder::Int = 0)
 ````
 
-Provides a negotation interface for some function to be used as an action kernel. The function has to obey the interface
+Provides a negotation interface for some function that can be used in the Action constructor to define a user-defined operator action.
+The function has to obey the interface
 
     f(result, input, [X, T, R, I, L])
 
@@ -66,6 +67,10 @@ function ActionKernel(f::Function, dimensions::Array{Int,1}; name = "user action
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, L)
     elseif dependencies == "XRI"
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, R, I)
+    elseif dependencies == "XTRI"
+        nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, R, I)
+    elseif dependencies == "XRIL"
+        nf = (result, input,X,T,R,I,L) -> f(result, input, X, R, I, L)
     elseif dependencies == "XTRIL"
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, R, I, L)
     end

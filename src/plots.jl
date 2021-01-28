@@ -29,6 +29,10 @@ function plot(
     maintitle = "",
     fsize = 10)
 
+    if length(blockids) == 1
+        use_subplots = false
+    end
+
     if Plotter != nothing
         # extract grid
         xgrid = Source[1].FES.xgrid
