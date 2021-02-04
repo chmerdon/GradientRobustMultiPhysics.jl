@@ -71,7 +71,7 @@ function main(; Plotter = nothing, verbosity = 1)
         end
         
         ## create finite element space
-        FES = FESpace{FEType}(xgrid; dofmaps_needed = [CellDofs, BFaceDofs])
+        FES = FESpace{FEType}(xgrid)
 
         ## solve the problem
         Solution = FEVector{Float64}("Solution",FES)
