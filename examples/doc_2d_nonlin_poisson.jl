@@ -9,7 +9,7 @@ This example computes the solution ``u`` of the nonlinear Poisson problem
 -\mathrm{div}((1+u^2) \nabla u) & = f \quad \text{in } \Omega
 \end{aligned}
 ```
-with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series of uniform refined unit squares.
+with some right-hand side ``f`` on a series of uniform refinements of the unit square ``\Omega``.
 
 This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression
 and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.
@@ -103,7 +103,7 @@ end
 
 
 ## test function that is called by test unit
-## tests if hydrostatic problem is solved exactly by pressure-robust methods
+## tests if the above problem is solved exactly by P2-FEM
 function test(; verbosity = 0)
     return main(; verbosity = 0, FEType = H1P2{1,2}, nlevels = 1)
 end
