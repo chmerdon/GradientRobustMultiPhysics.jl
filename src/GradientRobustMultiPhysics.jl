@@ -57,6 +57,7 @@ export SerialVariableTargetAdjacency
 
 
 include("userdata.jl")
+export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
 export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
 
 include("assemblytypes.jl");
@@ -172,9 +173,9 @@ export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
 
 export RhsOperator
-export BLFeval
-export TLFeval
-export MLFeval
+export BLF2RHS
+export TLF2RHS
+export MLF2RHS
 
 export LHSoperator_also_modifies_RHS
 

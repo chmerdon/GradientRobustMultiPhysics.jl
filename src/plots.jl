@@ -87,11 +87,9 @@ function plot(
             layout_aspect = length(layout) / subplots_per_column
             if ispyplot(Plotter)
                 if clear
-                    Plotter.clf()
+                    Plotter.clf() 
                 end
-            end
-            if plottertype(Plotter) == PyPlotType
-                fig = Plotter.figure(maintitle,figsize=(layout_aspect*fsize,fsize))
+                # fig = Plotter.figure(figsize=(layout_aspect*fsize,fsize))
             elseif plottertype(Plotter) == MakieType
                 # not supported yet
             end
@@ -120,15 +118,15 @@ function plot(
                 end
                 gridplot!(ctx[j], xgrid,show=true) 
                 if plottertype(Plotter) == PyPlotType
-                    Plotter.title("grid")
+                    Plotter.title(maintitle * " grid")
                 end
             else
                 if offsets[j+1] - offsets[j] > 1
                     Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
-                    title = "| $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ") |"
+                    title = maintitle * " | $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ") |"
                 else
                     Z[:] = view(nodevals,offsets[j]+1,:)
-                    title = "$(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
+                    title = maintitle * " $(DefaultName4Operator(operators[j]))(" * Source[blockids[j]].name * ")"
                 end
                 if minimum(Z) == maximum(Z)
                     Z[1] += 1e-16

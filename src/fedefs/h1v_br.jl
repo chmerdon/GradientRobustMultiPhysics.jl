@@ -345,7 +345,7 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FES
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
-    function closure(coefficients::Array{<:Real,2}, face::Int) 
+    function closure(coefficients::Array{<:Real,2}, face) 
 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
         coefficients[1,2] = 1 // 12 * xFaceVolumes[face] * xFaceNormals[1, face]

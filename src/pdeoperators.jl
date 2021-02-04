@@ -251,7 +251,7 @@ abstract multi-linearform with arbitrary many argument of the form
 
 m(v1,v2,...,vk) = (A(O(v1),O(v2),...,O(vk-1)),Ok(vk))
 
-(so far only intended for use as RHSOperator together with MLFeval)
+(so far only intended for use as RHSOperator together with MLF2RHS)
 """
 mutable struct AbstractMultilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
@@ -580,10 +580,10 @@ end
 
 """
 ````
-struct BLFeval <: AbstractPDEOperatorRHS
+struct BLF2RHS <: AbstractPDEOperatorRHS
     name::String
     BLF::AbstractBilinearForm
-    Data::FEVectorBlock
+    data_id::Int
     factor::Real
     nonlinear::Bool
     timedependent::Bool
@@ -596,67 +596,69 @@ The operator can be manually marked as nonlinear or time-dependent to trigger re
 
 can only be applied in PDE RHS
 """
-struct BLFeval <: AbstractPDEOperatorRHS
+struct BLF2RHS <: AbstractPDEOperatorRHS
     name::String
     BLF::AbstractBilinearForm
-    Data::FEVectorBlock
+    data_id::Int
     factor::Real
     fixed_argument::Int
     nonlinear::Bool
     timedependent::Bool
 end
 
-function BLFeval(BLF, Data, factor; name = "auto", fixed_argument::Int = 2, nonlinear::Bool = false, timedependent::Bool = false)
+function BLF2RHS(BLF, data_id, factor; name = "auto", fixed_argument::Int = 2, nonlinear::Bool = false, timedependent::Bool = false)
     if name == "auto"
-        name = "BLFeval($(BLF.name), fixed = $fixed_argument)"
+        if fixed_argument == 1
+            name = "BLF($(BLF.name)(#$(data_id),*)"
+        elseif fixed_argument == 2
+            name = "BLF($(BLF.name)(*,#$(data_id))"
+        end
     end
-    return BLFeval(name, BLF, Data, factor, fixed_argument, nonlinear, timedependent)
+    return BLF2RHS(name, BLF, data_id, factor, fixed_argument, nonlinear, timedependent)
 end
-
 
 """
 ````
-struct TLFeval <: AbstractPDEOperatorRHS
+struct TLF2RHS <: AbstractPDEOperatorRHS
     name::String
     TLF::AbstractTrilinearForm
-    Data1::FEVectorBlock
-    Data2::FEVectorBlock
+    data_ids::Array{Int,1}
     factor::Real
     nonlinear::Bool
     timedependent::Bool
 end
 ````
 
-evaluation of a AbstractTrilinearForm TLF (multiplied by a factor) where the first and second argument are fixed by given FEVectorBlocks Data1 and Data2.
+evaluation of a AbstractTrilinearForm TLF (multiplied by a factor) where the first and second argument are fixed by the FEVectorBlocks coressponding to the given data_ids.
 
 The operator can be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
 
 can only be applied in PDE RHS
 """
-struct TLFeval <: AbstractPDEOperatorRHS
+struct TLF2RHS <: AbstractPDEOperatorRHS
     name::String
     TLF::AbstractTrilinearForm
-    Data1::FEVectorBlock
-    Data2::FEVectorBlock
+    data_ids::Array{Int,1}
     factor::Real
     nonlinear::Bool
     timedependent::Bool
 end
 
-function TLFeval(TLF, Data1, Data2, factor::Real = 1; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
+function TLF2RHS(TLF, data_ids, factor::Real = 1; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
     if name == "auto"
-        name = "TLFeval($(TLF.name))"
+        name = "TLF($(TLF.name))(#$(data_ids[1]),#$(data_ids[2]), *)"
     end
-    return TLFeval(name, TLF, Data1, Data2, factor, nonlinear, timedependent)
+    return TLF2RHS(name, TLF, data_ids, factor, nonlinear, timedependent)
 end
+
 
 
 """
 ````
-struct MLFeval <: AbstractPDEOperatorRHS
+struct MLF2RHS <: AbstractPDEOperatorRHS
     name::String
     MLF::AbstractMultilinearForm
-    Data::Array{FEVectorBlock,1}
+    data_ids::Array{Int,1}
     factor::Real
     nonlinear::Bool
     timedependent::Bool
@@ -669,20 +671,20 @@ The operator can be manually marked as nonlinear or time-dependent to trigger re
 
 can only be applied in PDE RHS
 """
-struct MLFeval <: AbstractPDEOperatorRHS
+struct MLF2RHS <: AbstractPDEOperatorRHS
     name::String
     MLF::AbstractMultilinearForm
-    Data::Array{FEVectorBlock,1}
+    data_ids::Array{Int,1}
     factor::Real
     nonlinear::Bool
     timedependent::Bool
 end
 
-function MLFeval(MLF, Data, factor; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
+function MLF2RHS(MLF, data_ids, factor; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
     if name == "auto"
-        name = "MLFeval($(MLF.name))"
+        name = "MLF2RHS($(MLF.name))"
     end
-    return MLFeval(name, MLF, Data, factor, nonlinear, timedependent)
+    return MLF2RHS(name, MLF, data_ids, factor, nonlinear, timedependent)
 end
 
 
@@ -763,13 +765,13 @@ end
 function check_PDEoperator(O::CopyOperator)
     return true, true
 end
-function check_PDEoperator(O::BLFeval)
+function check_PDEoperator(O::BLF2RHS)
     return O.nonlinear, O.timedependent
 end
-function check_PDEoperator(O::TLFeval)
+function check_PDEoperator(O::TLF2RHS)
     return O.nonlinear, O.timedependent
 end
-function check_PDEoperator(O::MLFeval)
+function check_PDEoperator(O::MLF2RHS)
     return O.nonlinear, O.timedependent
 end
 function check_PDEoperator(O::AbstractNonlinearForm)
@@ -978,41 +980,40 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
     end
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLFeval; factor = 1, time::Real = 0, verbosity::Int = 0)
-    FE1 = O.Data1.FES
-    FE2 = O.Data2.FES
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLF2RHS; factor = 1, time::Real = 0, verbosity::Int = 0)
+    FE1 = CurrentSolution[O.data_ids[1]].FES
+    FE2 = CurrentSolution[O.data_ids[1]].FES
     FE3 = b.FES
-
     TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
     set_time!(O.TLF.action, time)
-    assemble!(b, O.Data1, O.Data2, TLF; factor = factor * O.factor, verbosity = verbosity)
+    assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], TLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLFeval; factor = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLF2RHS; factor = 1, time::Real = 0, verbosity::Int = 0)
     FES = []
     for k = 1 : length(O.Data)
-        push!(FES, O.Data[k].FES)
+        push!(FES, CurrentSolution[O.data_ids[k]].FES)
     end
     push!(FES, b.FES)
     FES = Array{FESpace,1}(FES)
     MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], FES, O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
     set_time!(O.MLF.action, time)
-    assemble!(b, O.Data, MLF; factor = factor * O.factor, verbosity = verbosity)
+    assemble!(b, CurrentSolution[O.data_ids], MLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLFeval; factor = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLF2RHS; factor = 1, time::Real = 0, verbosity::Int = 0)
     if O.BLF.store_operator == true
-        addblock_matmul!(b,O.BLF.storage,O.Data; factor = factor)
+        addblock_matmul!(b,O.BLF.storage,CurrentSolution[O.data_id]; factor = factor)
     else
         FE1 = b.FES
-        FE2 = O.Data.FES
+        FE2 = CurrentSolution(O.data_id).FES
         if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
             BLF = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], FE1, O.BLF.operator1, O.BLF.action; regions = O.BLF.regions)    
         else
             BLF = BilinearForm(Float64, typeof(O.BLF).parameters[1], FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
         end
         set_time!(O.BLF.action, time)
-        assemble!(b, O.Data, BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument)
+        assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument)
     end
 end
 

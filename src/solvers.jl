@@ -1233,7 +1233,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     end
 
     nsubiterations = length(SC.subiterations)
-    statistics = zeros(Float64,length(X),3)
+    statistics = zeros(Float64,length(X),4)
     resnorm = 1.0e60
     nlresnorm = 1.0e60
     d = 0
@@ -1249,6 +1249,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
         assemble_massmatrix4subiteration!(TCS, s; verbosity = SC.verbosity - 1)
 
         for iteration = 1 : SC.maxIterations
+            statistics[s,4] = iteration.^2 # will be square-rooted later
     
             # REASSEMBLE NONLINEARITIES IN CURRENT EQUATION IF NONLINEAR ITERATIONS > 1
             if SC.maxIterations > 1
@@ -1483,21 +1484,23 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
     end
     if TCS.SC.verbosity > 0
         if TCS.SC.maxIterations > 1
-            @printf("\n    STEP  |    TIME    | LSRESIDUAL | NLRESIDUAL |   CHANGE ")
-            @printf("\n          |            |  (total)   |  (total)   |")
+            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
+            for j = 1 : size(statistics,1)
+                @printf("        ")
+            end
+            if do_after_each_timestep != nothing
+                do_after_each_timestep(0, statistics)
+            end
+            @printf("\n          |            |  (total)   |    (total)     |")
         else
             @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            for j = 1 : size(statistics,1)
+                @printf("        ")
+            end
+            if do_after_each_timestep != nothing
+                do_after_each_timestep(0, statistics)
+            end
             @printf("\n          |            |  (total)   |")
-        end
-        for j = 1 : size(statistics,1)
-            @printf("  %s  ",TCS.PDE.unknown_names[j])
-        end
-        @printf("\n  ----------------------------------------------")
-        for j = 1 : size(statistics,1)
-            @printf("---------")
-        end
-        if TCS.SC.maxIterations > 1
-            @printf("---------")
         end
     end
     for iteration = 1 : maxTimeSteps
@@ -1507,14 +1510,14 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
             if TCS.SC.maxIterations > 1
-                @printf(" %.4e |",sqrt(sum(statistics[:,3].^2)))
+                @printf(" %.4e (%d) |",sqrt(sum(statistics[:,3].^2)), statistics[1,4])
             end
             for j = 1 : size(statistics,1)
                 @printf(" %.4e ",statistics[j,2])
             end
         end
         if do_after_each_timestep != nothing
-            do_after_each_timestep(statistics)
+            do_after_each_timestep(TCS.cstep, statistics)
         end
         if sum(statistics[:,2]) < stationarity_threshold
             println("\n  stationarity detected after $iteration timesteps")
@@ -1542,21 +1545,26 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
     end
     if TCS.SC.verbosity > 0
         if TCS.SC.maxIterations > 1
-            @printf("\n    STEP  |    TIME    | LSRESIDUAL | NLRESIDUAL |   CHANGE ")
-            @printf("\n          |            |  (total)   |  (total)   |")
+            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
+            for j = 1 : size(statistics,1)
+                @printf("        ")
+            end
+            if do_after_each_timestep != nothing
+                do_after_each_timestep(0, statistics)
+            end
+            @printf("\n          |            |  (total)   |    (total)     |")
         else
             @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            for j = 1 : size(statistics,1)
+                @printf("        ")
+            end
+            if do_after_each_timestep != nothing
+                do_after_each_timestep(0, statistics)
+            end
             @printf("\n          |            |  (total)   |")
         end
         for j = 1 : size(statistics,1)
             @printf("  %s  ",TCS.PDE.unknown_names[j])
-        end
-        @printf("\n  ----------------------------------------------")
-        for j = 1 : size(statistics,1)
-            @printf("---------")
-        end
-        if TCS.SC.maxIterations > 1
-            @printf("---------")
         end
     end
     while TCS.ctime < finaltime - finaltime_tolerance
@@ -1566,14 +1574,14 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
             if TCS.SC.maxIterations > 1
-                @printf(" %.4e |",sqrt(sum(statistics[:,3].^2)))
+                @printf(" %.4e (%d) |",sqrt(sum(statistics[:,3].^2)), statistics[1,4])
             end
             for j = 1 : size(statistics,1)
                 @printf(" %.4e ",statistics[j,2])
             end
         end
         if do_after_each_timestep != nothing
-            do_after_each_timestep(statistics)
+            do_after_each_timestep(TCS.cstep, statistics)
         end
     end
     if TCS.SC.verbosity > 0

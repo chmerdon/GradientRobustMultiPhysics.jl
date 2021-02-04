@@ -308,7 +308,6 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     if derivorder == 0
         # refbasisderivvals are used as a cache fpr the reconstruction basis
         refbasisderivvals = zeros(T,ncomponents,ndofs4item2_all,length(qf.w));
-        current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
     elseif derivorder == 1
 
         # derivatives of the reconstruction basis on the reference domain are computed
@@ -429,6 +428,31 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         # get local reconstruction coefficients
         # and accumulate
         FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
+
+        fill!(FEBE.cvals,0.0)
+        for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
+            if FEBE.coefficients2[dof_i,dof_j] != 0
+                for i = 1 : length(FEBE.xref)
+                    for k = 1 : FEBE.offsets[2] # ncomponents
+                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] *  FEBE.refbasisvals[i][dof_j,k] / FEBE.L2G.ItemVolumes[item]
+                    end
+                end
+            end
+        end
+    end
+    return nothing
+end
+
+
+# RECONSTRUCTION NORMALFLUX OPERATOR
+# Hdiv ELEMENTS (just divide by face volume)
+function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {T <: Real, FEType <: AbstractH1FiniteElement, EG <: AbstractElementGeometry, AT <: ON_BFACES, FETypeReconst <: AbstractFiniteElement, FEOP <: ReconstructionNormalFlux{FETypeReconst}}
+    if FEBE.citem != item
+        FEBE.citem = item
+
+        # get local reconstruction coefficients
+        # and accumulate
+        FEBE.reconstcoeffs_handler(FEBE.coefficients2, FEBE.FE.xgrid[BFaces][item])
 
         fill!(FEBE.cvals,0.0)
         for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
