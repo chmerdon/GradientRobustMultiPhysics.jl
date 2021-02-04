@@ -590,9 +590,9 @@ struct BLF2RHS <: AbstractPDEOperatorRHS
 end
 ````
 
-evaluation of a AbstractBilinearForm BLF (multiplied by a factor) where the second argument is fixed by given FEVectorBlock Data.
+evaluation of a AbstractBilinearForm BLF (multiplied by a factor) where the second argument is fixed by the given FEVectorBlock of the current solution coressponding to the given data_id.
 
-The operator can be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
+The operator must be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
 
 can only be applied in PDE RHS
 """
@@ -629,9 +629,9 @@ struct TLF2RHS <: AbstractPDEOperatorRHS
 end
 ````
 
-evaluation of a AbstractTrilinearForm TLF (multiplied by a factor) where the first and second argument are fixed by the FEVectorBlocks coressponding to the given data_ids.
+evaluation of a AbstractTrilinearForm TLF (multiplied by a factor) where the first and second argument are fixed by the FEVectorBlocks of the current solution coressponding to the given data_ids.
 
-The operator can be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
+The operator must be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
 
 can only be applied in PDE RHS
 """
@@ -665,9 +665,9 @@ struct MLF2RHS <: AbstractPDEOperatorRHS
 end
 ````
 
-evaluation of a AbstractMultilinearForm MLF (multiplied by a factor) where all but the last argument are fixed by given FEVectorBlocks in the array Data.
+evaluation of a AbstractMultilinearForm MLF (multiplied by a factor) where all but the last argument are fixed by the FEVectorBlocks of the current solution coressponding to the given data_ids.
 
-The operator can be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
+The operator must be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
 
 can only be applied in PDE RHS
 """

@@ -668,13 +668,13 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
 
         if resnorm < SC.maxResidual
             if verbosity > 0
-                println("  converged (maxResidual reached)")
+                println("  converged after $j iterations (maxResidual reached)")
             end
             break;
         end
         if j == SC.maxIterations
             if verbosity > 0
-                println("  terminated (maxIterations reached)")
+                println("  terminated after $j iterations (maxIterations reached)")
                 break
             end
         end

@@ -6,10 +6,13 @@
 This example computes the solution ``u`` of the nonlinear Poisson problem
 ```math
 \begin{aligned}
--div((1+u^2) \nabla u) & = f \quad \text{in } \Omega
+-\mathrm{div}((1+u^2) \nabla u) & = f \quad \text{in } \Omega
 \end{aligned}
 ```
 with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series of uniform refined unit squares.
+
+This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression
+and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.
 
 =#
 
@@ -34,15 +37,11 @@ function rhs!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 1)
+## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
+function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1})
 
     ## choose initial mesh
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D),1)
-    nlevels = 5 # maximal number of refinement levels
-
-    ## set finite element type used for discretisation
-    FEType = H1P1{1}
-    # FEType = H1P2{1,2} # since solution is quadratic, this choice should lead to the exact solution
+    xgrid = grid_unitsquare(Triangle2D)
 
     ## negotiate data functions to the package
     user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 2)
@@ -57,11 +56,9 @@ function main(; Plotter = nothing, verbosity = 1)
         return nothing
     end 
     action_kernel = ActionKernel(nonlin_kernel, [2,3]; dependencies = "", quadorder = 2)
-
-    ## generate nonlinear PDEOperator (with automatic Newton)
     nonlin_diffusion = GenerateNonlinearForm("((1+u^2)*grad(u))*grad(v)", [Identity, Gradient], [1,1], Gradient, action_kernel; ADnewton = true)   
 
-    ## generate problem description and assign operator and data
+    ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
     add_unknown!(Problem; unknown_name = "unknown", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
@@ -76,11 +73,8 @@ function main(; Plotter = nothing, verbosity = 1)
     ## loop over levels
     Solution = nothing
     for level = 1 : nlevels
-
         ## uniform mesh refinement
-        if level > 1 
-            xgrid = uniform_refine(xgrid)
-        end
+        xgrid = uniform_refine(xgrid)
         
         ## create finite element space
         FES = FESpace{FEType}(xgrid; dofmaps_needed = [CellDofs, BFaceDofs])
@@ -98,13 +92,20 @@ function main(; Plotter = nothing, verbosity = 1)
     ## output errors in a nice table
     println("\n   NDOF  |   L2ERROR   |   H1ERROR")
     for j=1:nlevels
-        @printf("  %6d |",NDofs[j]);
-        @printf(" %.5e |",L2error[j])
-        @printf(" %.5e\n",H1error[j])
+        @printf("  %6d | %.5e | %.5e\n",NDofs[j],L2error[j],H1error[j]);
     end
 
     ## plot
     GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+
+    return H1error[end]
+end
+
+
+## test function that is called by test unit
+## tests if hydrostatic problem is solved exactly by pressure-robust methods
+function test(; verbosity = 0)
+    return main(; verbosity = 0, FEType = H1P2{1,2}, nlevels = 1)
 end
 
 end
