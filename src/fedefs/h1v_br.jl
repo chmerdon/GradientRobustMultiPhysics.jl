@@ -143,7 +143,7 @@ end
 function get_coefficients_on_cell!(FE::FESpace{H1BR{2}}, ::Type{<:Triangle2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
-    function closure(coefficients, cell)
+    function closure(coefficients::Array{<:Real,2}, cell)
         fill!(coefficients,1.0)
         coefficients[1,7] = xFaceNormals[1, xCellFaces[1,cell]];
         coefficients[2,7] = xFaceNormals[2, xCellFaces[1,cell]];
@@ -157,7 +157,7 @@ end
 function get_coefficients_on_cell!(FE::FESpace{H1BR{2}}, ::Type{<:Quadrilateral2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
-    function closure(coefficients, cell)
+    function closure(coefficients::Array{<:Real,2}, cell)
         fill!(coefficients,1.0)
         coefficients[1,9] = xFaceNormals[1, xCellFaces[1,cell]];
         coefficients[2,9] = xFaceNormals[2, xCellFaces[1,cell]];
@@ -172,14 +172,13 @@ end
 
 function get_coefficients_on_face!(FE::FESpace{H1BR{2}}, ::Type{<:Edge1D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    function closure(coefficients, face)
+    function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
         fill!(coefficients,1.0)
         coefficients[1,5] = xFaceNormals[1, face];
         coefficients[2,5] = xFaceNormals[2, face];
     end
 end    
-
 
 ############
 # 3D basis #
@@ -277,7 +276,6 @@ function get_coefficients_on_face!(FE::FESpace{H1BR{3}}, ::Type{<:Triangle2D})
         coefficients[3,10] = xFaceNormals[3, face];
     end
 end    
-
 
 function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Hexahedron3D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
@@ -460,7 +458,6 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FES
         return nothing
     end
 end
-
 
 
 function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})

@@ -671,7 +671,7 @@ function assemble!(
     dofitems = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
     orientation4dofitem::Array{Int,1} = [1,2] # local orientation
-    coefficient4dofitem = [0,0]
+    coefficient4dofitem::Array{T,1} = [0,0]
     dofitem = 0
     maxndofs = max_num_targets_per_source(xItemDofs)
     dofs = zeros(Int,maxndofs)
@@ -720,7 +720,7 @@ function assemble!(
                         eval!(action_input, basisevaler4dofitem , dof_i, i)
                         apply_action!(action_result, action_input, action, i)
                         for j = 1 : action_resultdim
-                            localb[dof_i,j] += action_result[j] * weights[i]
+                            localb[dof_i,j] += action_result[j] * weights[i] * coefficient4dofitem[di]
                         end
                     end 
                 end  
@@ -1274,13 +1274,9 @@ function assemble!(
     orientation4dofitem1::Array{Int,1} = [1,2] # local orientation
     orientation4dofitem2::Array{Int,1} = [1,2] # local orientation
     orientation4dofitem3::Array{Int,1} = [1,2] # local orientation
-    coefficient4dofitem1::Array{T,1} = [0.0,0.0] # coefficients for operator 1
-    coefficient4dofitem2::Array{T,1} = [0.0,0.0] # coefficients for operator 2
-    coefficient4dofitem3::Array{T,1} = [0.0,0.0] # coefficients for operator 3
+    coefficient4dofitem::Array{Array{T,1},1} = [[0.0,0.0],[0.0,0.0],[0.0,0.0]] # coefficients for operators
     ndofs4item::Array{Int, 1} = [0,0,0]
-    dofitem1::Int = 0
-    dofitem2::Int = 0
-    dofitem3::Int = 0
+    dofitem::Array{Int,1} = [0,0,0]
     offsets = [0, size(basisevaler[1,1,1,1].cvals,1), size(basisevaler[1,1,1,1].cvals,1) + size(basisevaler[1,2,1,1].cvals,1)]
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
@@ -1302,20 +1298,20 @@ function assemble!(
     if xItemRegions[item] == regions[r]
 
         # get dofitem informations
-        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem1, orientation4dofitem1, item)
-        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem2, orientation4dofitem2, item)
-        dii4op[3](dofitems3, EG4dofitem3, itempos4dofitem3, coefficient4dofitem3, orientation4dofitem3, item)
+        EG4item = dii4op[1](dofitems1, EG4dofitem1, itempos4dofitem1, coefficient4dofitem[1], orientation4dofitem1, item)
+        dii4op[2](dofitems2, EG4dofitem2, itempos4dofitem2, coefficient4dofitem[2], orientation4dofitem2, item)
+        dii4op[3](dofitems3, EG4dofitem3, itempos4dofitem3, coefficient4dofitem[3], orientation4dofitem3, item)
 
         # get quadrature weights for integration domain
         weights = qf[EG4item].w
 
         # loop over associated dofitems (maximal 2 for jump calculations)
         for di = 1 : 2, dj = 1 : 2, dk = 1 : 2
-            dofitem1 = dofitems1[di]
-            dofitem2 = dofitems2[dj]
-            dofitem3 = dofitems3[dk]
+            dofitem[1] = dofitems1[di]
+            dofitem[2] = dofitems2[dj]
+            dofitem[3] = dofitems3[dk]
 
-            if dofitem1 > 0 && dofitem2 > 0 && dofitem3 > 0
+            if dofitem[1] > 0 && dofitem[2] > 0 && dofitem[3] > 0
 
                 # get number of dofs on this dofitem
                 ndofs4item[1] = ndofs4EG[1][EG4dofitem1[di]]
@@ -1326,36 +1322,37 @@ function assemble!(
                 basisevaler4dofitem[1] = basisevaler[EG4dofitem1[di],1,itempos4dofitem1[di],orientation4dofitem1[di]]
                 basisevaler4dofitem[2] = basisevaler[EG4dofitem2[dj],2,itempos4dofitem2[dj],orientation4dofitem2[dj]]
                 basisevaler4dofitem[3] = basisevaler[EG4dofitem3[dk],3,itempos4dofitem3[dk],orientation4dofitem3[dk]]
-                update!(basisevaler4dofitem[1],dofitem1)
-                update!(basisevaler4dofitem[2],dofitem2)
-                update!(basisevaler4dofitem[3],dofitem3)
+                update!(basisevaler4dofitem[1],dofitem[1])
+                update!(basisevaler4dofitem[2],dofitem[2])
+                update!(basisevaler4dofitem[3],dofitem[3])
 
                 # update action on dofitem
-                update!(action, basisevaler4dofitem[fixed_argument], dofitem2, item, regions[r])
+                update!(action, basisevaler4dofitem[2], dofitem[2], item, regions[r])
 
                 # update coeffs of fixed argument
                 for j=1:ndofs4item[fixed_argument]
-                    coeffs[j] = FE1[xItemDofs[fixed_argument][j,dofitem1]]
+                    coeffs[j] = FE1[xItemDofs[fixed_argument][j,dofitem[fixed_argument]]]
                 end
                 # update dofs of free arguments
                 for j=1:ndofs4item[nonfixed_ids[1]]
-                    dofs2[j] = xItemDofs[nonfixed_ids[1]][j,dofitem2]
+                    dofs2[j] = xItemDofs[nonfixed_ids[1]][j,dofitem[nonfixed_ids[1]]]
                 end
                 for j=1:ndofs4item[nonfixed_ids[2]]
-                    dofs3[j] = xItemDofs[nonfixed_ids[2]][j,dofitem3]
+                    dofs3[j] = xItemDofs[nonfixed_ids[2]][j,dofitem[nonfixed_ids[2]]]
                 end
 
                 if fixed_argument in [1,2]
+    
                     basisvals_testfunction = basisevaler4dofitem[nonfixed_ids[2]].cvals
                     for i in eachindex(weights)
     
                         # evaluate fixed argument into action
                         fill!(action_input, 0.0)
-                        eval!(action_input, basisevaler4dofitem[fixed_argument], coeffs, i; offset = offsets[fixed_argument], factor = coefficient4dofitem1[di])
+                        eval!(action_input, basisevaler4dofitem[fixed_argument], coeffs, i; offset = offsets[fixed_argument], factor = coefficient4dofitem[fixed_argument][di])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i, offset = offsets[nonfixed_ids[1]], factor = coefficient4dofitem2[dj])
+                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i, offset = offsets[nonfixed_ids[1]], factor = coefficient4dofitem[nonfixed_ids[1]][dj])
                             
                             apply_action!(action_result, action_input, action, i)
             
@@ -1364,7 +1361,7 @@ function assemble!(
                                 for k = 1 : action_resultdim
                                     temp += action_result[k] * basisvals_testfunction[k,dof_j,i]
                                 end
-                                localmatrix[dof_i,dof_j] += temp * weights[i] * coefficient4dofitem3[dk]
+                                localmatrix[dof_i,dof_j] += temp * weights[i] * coefficient4dofitem[nonfixed_ids[2]][dk]
                             end
                         end 
                     end
@@ -1373,21 +1370,21 @@ function assemble!(
     
                         # evaluate fixed argument into separate vector
                         fill!(evalfixedFE, 0.0)
-                        eval!(evalfixedFE, basisevaler4dofitem[fixed_argument], coeffs, i; factor = coefficient4dofitem3[di])
+                        eval!(evalfixedFE, basisevaler4dofitem[fixed_argument], coeffs, i; factor = coefficient4dofitem[fixed_argument][di])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i; factor = coefficient4dofitem1[di])
+                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i; factor = coefficient4dofitem[nonfixed_ids[1]][di])
                             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
-                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[2]], dof_j, i; offset = offsets[2], factor = coefficient4dofitem2[dj])
+                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[2]], dof_j, i; offset = offsets[2], factor = coefficient4dofitem[nonfixed_ids[2]][dj])
                                 apply_action!(action_result, action_input, action, i)
             
                                 temp = 0
                                 for k = 1 : action_resultdim
                                     temp += action_result[k] * evalfixedFE[k]
                                 end
-                                localmatrix[dof_i,dof_j] += temp * weights[i] * coefficient4dofitem3[dk]
+                                localmatrix[dof_i,dof_j] += temp * weights[i]
                             end
                         end 
                     end
@@ -1719,15 +1716,14 @@ function assemble!(
         end
 
         # update action on item/dofitem
-        # beware: currently last operator must not be a FaceJump operator
         EG4item = dii4op[nFE](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
-        basisvals = basisevaler4dofitem.cvals
         ndofs4dofitem = ndofs4EG[nFE][EG4item]
         
         for di = 1 : length(dofitems)
             dofitem = dofitems[di]
             if dofitem != 0
                 basisevaler4dofitem = basisevaler[EG4dofitem[di],nFE,itempos4dofitem[di],orientation4dofitem[di]]
+                basisvals = basisevaler4dofitem.cvals
                 ndofs4dofitem = ndofs4EG[nFE][EG4dofitem[di]]
                 update!(action, basisevaler4dofitem, dofitems[di], item, regions[r])
 
@@ -2256,5 +2252,20 @@ function L2ErrorIntegrator(T::Type{<:Real},
         end    
     end    
     action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[2]]; name = "L2 error kernel", dependencies = "X", quadorder = 2 * compare_data.quadorder)
+    return ItemIntegrator{T,AT}([operator], Action(T, action_kernel), [0])
+end
+function L2ErrorIntegrator(T::Type{<:Real},
+    operator::Type{<:AbstractFunctionOperator};
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    time = 0)
+    call = 0
+    function L2error_function(result,input)
+        result[1] = 0
+        call += 1
+        for j=1:length(input)
+            result[1] += input[j]^2
+        end    
+    end    
+    action_kernel = ActionKernel(L2error_function, [1,1]; name = "L2 error kernel", dependencies = "", quadorder = 2)
     return ItemIntegrator{T,AT}([operator], Action(T, action_kernel), [0])
 end

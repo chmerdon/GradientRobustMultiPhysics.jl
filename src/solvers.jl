@@ -85,7 +85,7 @@ function linsolve!(
                                          values(LS.b),
                                          1,
                                          Pl=LS.ALU,
-                                         tol=1e-10,
+                                         reltol=1e-10,
                                          max_mv_products=20,
                                          log=true)
         LS.nliniter = history.iters
@@ -96,7 +96,7 @@ function linsolve!(
                                          values(LS.b),
                                          1,
                                          Pl=LS.ALU,
-                                         tol=1e-10,
+                                         reltol=1e-10,
                                          max_mv_products=20,
                                          log=true)
         LS.nliniter = history.iters
@@ -312,7 +312,7 @@ function assemble!(
     end
 
     if verbosity > 0
-        println("\n  Entering assembly of equations=$equations (min_trigger = $min_trigger)")
+        println("\n  Entering assembly of equations=$equations (time = $time, min_trigger = $min_trigger)")
     end
 
     # important to flush first in case there is some cached stuff that
@@ -1200,6 +1200,7 @@ function TimeControlSolver(
 ````
 
 Advances a TimeControlSolver one step in time with the given timestep.
+
 """
 function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
@@ -1217,6 +1218,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     res = TCS.res
     X = TCS.X
     LastIterate = TCS.LastIterate
+    fixed_dofs = TCS.fixed_dofs
 
     # save current solution if nonlinear iterations are needed
     # X will then contain the current nonlinear iterate
@@ -1274,7 +1276,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                         end
                     end
                     # reassembly nonlinear operators with current solution
-                    assemble!(A[s],b[s],PDE,SC,X; equations = SC.subiterations[s], min_trigger = AssemblyAlways, verbosity = SC.verbosity - 2, time = TCS.ctime + timestep)
+                    assemble!(A[s],b[s],PDE,SC,X; equations = SC.subiterations[s], min_trigger = AssemblyAlways, verbosity = SC.verbosity - 2, time = TCS.ctime)
                 end
             end
 
@@ -1325,26 +1327,28 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
 
             # UPDATE TIME-DEPENDENT RHS-DATA
-            # rhs evaluated at last time step (ctime - timestep) is already assembled
+            # rhs evaluated at last time step (ctime - timestep) was already assembled and has to be subtracted
             # and it depends on the timestep_rule how to update it
             # atm only BackwardEuler is supported so we have to replace the right-hand side by its evaluation at current ctime
-            for k = 1 : length(SC.subiterations[s])
-                d = SC.subiterations[s][k]
-                for o = 1 : length(PDE.RHSOperators[d])
-                    if typeof(PDE.RHSOperators[d][o]) <: RhsOperator
-                        if is_timedependent(PDE.RHSOperators[d][o].data)
-                            if SC.verbosity > 2
-                                println("  Updating time-dependent rhs data of equation $d")
+            if iteration == 1 # this needs only be done in the first iteration (otherwise already done above in the nonlinear section)
+                for k = 1 : length(SC.subiterations[s])
+                    d = SC.subiterations[s][k]
+                    for o = 1 : length(PDE.RHSOperators[d])
+                        if typeof(PDE.RHSOperators[d][o]) <: RhsOperator
+                            if is_timedependent(PDE.RHSOperators[d][o].data)
+                                if SC.verbosity > 2
+                                    println("  Updating time-dependent rhs data of equation $d: ($(PDE.RHSOperators[d][o].name))")
+                                end
+                                assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = -1, time = TCS.ctime - timestep)
+                                assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = +1, time = TCS.ctime)
                             end
-                            assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = -1, time = TCS.ctime - timestep)
-                            assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = +1, time = TCS.ctime)
-                        end
-                    end    
-                end
-            end  
+                        end    
+                    end
+                end  
+            end
 
             # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA at current (already updated) time ctime
-            # needs to be done after adding the time derivative, since it overwrittes Data from last timestep
+            # needs to be done after adding the time derivative, since it overwrites Data from last timestep
             # if SC.maxiterations > 1 (because X = LastIterate in this case)
             for k = 1 : length(SC.subiterations[s])
                 d = SC.subiterations[s][k]
@@ -1359,8 +1363,6 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                     # nothing todo as all boundary data for block d is time-independent
                 end
             end    
-
-            fixed_dofs = TCS.fixed_dofs
 
             # PREPARE GLOBALCONSTRAINTS
             # known bug: this will only work if no components in front of the constrained component(s)
@@ -1453,7 +1455,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
         # REASSEMBLE PARTS FOR NEXT SUBITERATION
         next_eq = (s == nsubiterations) ? 1 : s+1
-        assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 2, time = TCS.ctime + timestep)
+        assemble!(A[next_eq],b[next_eq],PDE,SC,X; equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 2, time = TCS.ctime) # is this time ok? (+timetep causes errors in time-dependent rhs data)
     end
 
     # REALIZE GLOBAL GLOBALCONSTRAINTS 

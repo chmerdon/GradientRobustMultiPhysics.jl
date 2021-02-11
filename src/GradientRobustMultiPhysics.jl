@@ -123,6 +123,8 @@ export FEVectorBlock, FEVector
 export FEMatrixBlock, FEMatrix
 export fill!, addblock!, addblock_matmul!, lrmatmul
 
+export get_reconstruction_matrix
+
 
 
 export DiscontinuityTreatment, Jump, Average

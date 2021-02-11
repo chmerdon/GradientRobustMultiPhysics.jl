@@ -89,7 +89,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coefficients = zeros(T,ncomponents,ndofs4item)
         if AT == ON_CELLS
             coeff_handler = get_coefficients_on_cell!(FE, EG)
-        elseif AT <: Union{ON_BFACES,<:ON_FACES}
+        elseif AT == ON_BFACES
+            coeff_handler = get_coefficients_on_bface!(FE, EG)
+        elseif AT <: ON_FACES
             coeff_handler = get_coefficients_on_face!(FE, EG)
         elseif AT <: Union{ON_BEDGES,<:ON_EDGES}
             coeff_handler = get_coefficients_on_edge!(FE, EG)
@@ -281,7 +283,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coefficients = zeros(T,ncomponents,ndofs4item2)
         if AT == ON_CELLS
             coeff_handler = get_coefficients_on_cell!(FE2, EG)
-        elseif AT <: Union{ON_BFACES,<:ON_FACES,<:ON_IFACES}
+        elseif AT == ON_BFACES
+            coeff_handler = get_coefficients_on_bface!(FE2, EG)
+        elseif AT <: Union{<:ON_FACES,<:ON_IFACES}
             coeff_handler = get_coefficients_on_face!(FE2, EG)
         end
     else

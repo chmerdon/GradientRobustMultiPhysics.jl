@@ -475,7 +475,8 @@ function ConvectionOperator(
     fixed_argument::Int = 1,
     testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
     regions::Array{Int,1} = [0],
-    auto_newton::Bool = false)
+    auto_newton::Bool = false,
+    quadorder = 0)
 
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
@@ -490,7 +491,7 @@ function ConvectionOperator(
             end
         end    
     end    
-    action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = 0)
+    action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = quadorder)
     if auto_newton
         ## generates a nonlinear form with automatic Newton operators by AD
         return GenerateNonlinearForm("(u * grad) u  * v", [beta_operator, Gradient], [a_from,a_from], testfunction_operator, action_kernel; ADnewton = true)     
@@ -991,7 +992,7 @@ end
 
 function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLF2RHS; factor = 1, time::Real = 0, verbosity::Int = 0)
     FES = []
-    for k = 1 : length(O.Data)
+    for k = 1 : length(O.data_ids)
         push!(FES, CurrentSolution[O.data_ids[k]].FES)
     end
     push!(FES, b.FES)

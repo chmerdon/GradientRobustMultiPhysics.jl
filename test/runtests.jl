@@ -141,11 +141,21 @@ function run_basis_tests()
         println("Testing Orientations/FaceJumpAssembly")
         println("=====================================")
         for EG in EGs
-            maxerror = test_jumps(testgrid(EG))
+            maxerror = test_qpmatchup(testgrid(EG))
             println("EG = $EG | left-right-error = $maxerror")
-            @test maxerror < 1e-15
+            @test abs(maxerror) < 1e-14
+            for disc in [Jump,Average]
+                maxerror = test_disc_LF(testgrid(EG), disc)
+                println("EG = $EG | disc = $disc | AP = LinearForm | error = $maxerror")
+                @test abs(maxerror) < 1e-14
+                maxerror = test_disc_BLF(testgrid(EG), disc)
+                println("EG = $EG | disc = $disc | AP = BilinearForm | error = $maxerror")
+                @test maximum(abs.(maxerror)) < 1e-13
+                maxerror = test_disc_TLF(testgrid(EG), disc)
+                println("EG = $EG | disc = $disc | AP = TrilinearForm | error = $maxerror")
+                @test maximum(abs.(maxerror)) < 1e-13
+            end
         end
-
     end
 
     ##########################################

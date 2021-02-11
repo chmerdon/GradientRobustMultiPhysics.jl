@@ -296,4 +296,81 @@ include("fedefs/hcurl_n0.jl");
 
 
 
+function get_coefficients_on_bface!(FE::FESpace{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry})
+    get_coeffs_on_face! = get_coefficients_on_face!(FE, EG)
+    xBFaces = FE.xgrid[BFaces]
+    function closure(coefficients, bface)
+        get_coeffs_on_face!(coefficients, xBFaces[bface])
+    end
+end    
 
+
+function get_reconstruction_matrix(T::Type{<:Real}, FE::FESpace, FER::FESpace)
+    xgrid = FE.xgrid
+    xCellGeometries = xgrid[CellGeometries]
+    EG = xgrid[UniqueCellGeometries]
+
+    FEType = eltype(FE)
+    FETypeReconst = eltype(FER)
+
+    ncells = num_sources(xgrid[CellNodes])
+    rhandlers = [get_reconstruction_coefficients_on_cell!(FE, FER, EG[1])]
+    chandlers = [get_coefficients_on_cell!(FER, EG[1])]
+    shandlers = [get_basissubset_on_cell!(FER, EG[1])]
+    for j = 2 : length(EG)
+        append!(rhandlers, [get_reconstruction_coefficients_on_cell!(FE, FER, EG[j])])
+        append!(chandlers, [get_coefficients_on_cell!(FER, EG[j])])
+        append!(shandlers, [get_basissubset_on_cell!(FER, EG[j])])
+    end
+
+    ndofs_FE = zeros(Int,length(EG))
+    ndofs_FER = zeros(Int,length(EG))
+    for j = 1 : length(EG)
+        ndofs_FE[j] = get_ndofs_on_cell(FEType, EG[j])
+        ndofs_FER[j] = get_ndofs_on_cell(FETypeReconst, EG[j])
+    end
+    
+    xCellDofs = FE[CellDofs]
+    xCellDofsR = FER[CellDofs]
+
+    ## generate matrix
+    A = ExtendableSparseMatrix{T,Int64}(FER.ndofs,FE.ndofs)
+
+    iEG = 1
+    cellEG = EG[1]
+    ncomponents = get_ncomponents(FEType)
+    coefficients = zeros(T, ncomponents, maximum(ndofs_FER))
+    basissubset = zeros(Int, maximum(ndofs_FER))
+    rcoefficients = zeros(T, maximum(ndofs_FE),maximum(ndofs_FER))
+    dof::Int = 0
+    dofR::Int = 0
+    for cell = 1 : ncells
+        if length(EG) > 1
+            cellEG = xCellGeometries[cell]
+            for j=1:length(EG)
+                if cellEG == EG[j]
+                    iEG = j
+                    break;
+                end
+            end
+        end
+        # get Hdiv coefficients and subset
+        chandlers[iEG](coefficients, cell)
+        shandlers[iEG](basissubset, cell)
+
+        # get reconstruction coefficients
+        rhandlers[iEG](rcoefficients, cell)
+
+        for dof_i = 1 : ndofs_FE[iEG]
+            dof = xCellDofs[dof_i,cell]
+            for dof_j = 1 : ndofs_FER[iEG]
+                if rcoefficients[dof_i,dof_j] != 0
+                    dofR = xCellDofsR[dof_j,cell]
+                    A[dofR,dof] = rcoefficients[dof_i,dof_j]
+                end
+            end
+        end
+    end
+    flush!(A)
+    return A
+end

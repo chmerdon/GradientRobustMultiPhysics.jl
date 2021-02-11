@@ -66,7 +66,7 @@ via Julia package manager in Julia 1.5 or above:
 The general work-flow is as follows:
 
 1. Describe your PDE system with the help of the [PDE Description](@ref) (possibly based on one of the [PDE Prototypes](@ref)). Additional parameters, right-hand side and boundary data can be assigned via [User Data and Action Kernels](@ref).
-2. Generate a mesh, possibly using one of the constructors by ExtendableGrid.jl or via mesh generators in [SimplexGridFacrory.jl](https://github.com/j-fu/SimplexGridFactory.jl).
+2. Generate a mesh, possibly using one of the constructors by ExtendableGrid.jl or via mesh generators in [SimplexGridFactory.jl](https://github.com/j-fu/SimplexGridFactory.jl).
 3. Define finite element ansatz spaces (see [Finite Element Spaces and Arrays](@ref) for details) for the unknowns of your PDE system.
 4. Solve by using solve! or via a TimeControlSolver and advance! if the PDE system is time-dependent (see [PDE Solvers](@ref) for details).
 

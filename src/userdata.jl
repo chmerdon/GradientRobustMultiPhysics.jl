@@ -59,6 +59,8 @@ function ActionKernel(f::Function, dimensions::Array{Int,1}; name = "user action
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, I)
     elseif dependencies == "XL"
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, L)
+    elseif dependencies == "TI"
+        nf = (result, input,X,T,R,I,L) -> f(result, input, T, I)
     elseif dependencies == "XTR"
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, R)
     elseif dependencies == "XTI"
