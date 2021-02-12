@@ -20,7 +20,7 @@ Creates a TrilinearForm that can be assembeld into a matrix (with one argument f
 function TrilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FES::Array{<:FESpace,1},
+    FES::Array{FESpace,1},
     operators::Array{DataType,1},
     action::AbstractAction;
     regions::Array{Int,1} = [0])

@@ -154,7 +154,7 @@ function test_disc_TLF(xgrid, discontinuity, verbosity = 0)
         return nothing
     end
     action = Action(Float64, ActionKernel(action_kernel, [1,2]; quadorder = 0))
-    TestForm = TrilinearForm(Float64, ON_IFACES, [FE, FE, FE], [IdentityDisc{discontinuity}, IdentityDisc{Average}, IdentityDisc{Average}], action)
+    TestForm = TrilinearForm(Float64, ON_IFACES, Array{FESpace,1}([FE, FE, FE]), [IdentityDisc{discontinuity}, IdentityDisc{Average}, IdentityDisc{Average}], action)
 
     # average should equal length of interior skeleton
     error = zeros(Float64,4)

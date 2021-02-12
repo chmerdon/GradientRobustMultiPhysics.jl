@@ -16,7 +16,7 @@ mutable struct AssemblyPatternPreparations
 end
 
 struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}
-    FES::Array{<:FESpace,1}
+    FES::Array{FESpace,1}
     operators::Array{DataType,1}
     action::AbstractAction
     regions::Array{Int,1}

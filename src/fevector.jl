@@ -56,12 +56,12 @@ end
 
 """
 ````
-FEVector{T}(name::String, FES::Array{<:FESpace,1}) where T <: Real
+FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 ````
 
 Creates FEVector that has one block for each FESpace in FES.
 """
-function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace,1}) where T <: Real
+function FEVector{T}(name::Array{String,1}, FES::Array{FESpace,1}) where T <: Real
     ndofs = 0
     for j = 1:length(FES)
         ndofs += FES[j].ndofs
@@ -75,7 +75,7 @@ function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace,1}) where T <: 
     end    
     return FEVector{T}(Blocks, entries)
 end
-function FEVector{T}(name::String, FES::Array{<:FESpace,1}) where T <: Real
+function FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
     names = Array{String,1}(undef, length(FES))
     for j = 1:length(FES)
         names[j] = name * " [$j]"

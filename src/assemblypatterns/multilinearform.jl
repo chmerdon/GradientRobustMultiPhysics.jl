@@ -6,7 +6,7 @@ abstract type APT_MultilinearForm <: AssemblyPatternType end
 function MultilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FE::Array{<:FESpace,1},
+    FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
     regions::Array{Int,1} = [0])
@@ -17,7 +17,7 @@ Creates a MultilinearForm that can be only assembled into a vector (with all but
 function MultilinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FE::Array{<:FESpace,1},
+    FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
     regions::Array{Int,1} = [0])

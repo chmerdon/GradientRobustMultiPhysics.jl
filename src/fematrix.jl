@@ -103,12 +103,12 @@ end
 
 """
 ````
-FEMatrix{T}(name::String, FES::Array{<:FESpace,1}) where T <: Real
+FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 ````
 
 Creates FEMatrix with blocks (FESX[i],FESY[j]) (enumerated row-wise).
 """
-function FEMatrix{T}(name::String, FES::Array{<:FESpace,1}) where T <: Real
+function FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
     ndofs = 0
     for j=1:length(FES)
         ndofs += FES[j].ndofs

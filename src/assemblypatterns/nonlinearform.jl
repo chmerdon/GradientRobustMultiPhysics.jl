@@ -4,7 +4,7 @@ abstract type APT_NonlinearForm <: AssemblyPatternType end # nonlinear form whos
 ````
 function NonlinearForm(
     T::Type{<:Real},
-    FES::Array{<:FESpace,1},          # finite element spaces for each operator of the ansatz function and the last one refers to the test function
+    FES::Array{FESpace,1},          # finite element spaces for each operator of the ansatz function and the last one refers to the test function
     operators::Array{DataType,1},   # operators that should be evaluated for the ansatz function and the last one refers to the test function
     action::AbstractAction;         # action that shoul have an AbstractNLActionKernel
     regions::Array{Int,1} = [0])
@@ -15,7 +15,7 @@ Creates a NonlinearForm assembly pattern.
 function NonlinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
-    FES::Array{<:FESpace,1}, 
+    FES::Array{FESpace,1}, 
     operators::Array{DataType,1},  
     action::AbstractAction;
     regions::Array{Int,1} = [0])
