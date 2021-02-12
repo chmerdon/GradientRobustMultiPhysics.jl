@@ -87,8 +87,8 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
     eta_jumps_action = Action(Float64,eta_jumps_action_kernel)
     eta_vol_action = Action(Float64,eta_vol_action_kernel)
     ## ... which is used inside an ItemIntegrator
-    jumpIntegrator = ItemIntegrator{Float64,ON_IFACES}(GradientDisc{Jump},eta_jumps_action, [0])
-    volIntegrator = ItemIntegrator{Float64,ON_CELLS}(Laplacian,eta_vol_action, [0])
+    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action)
+    volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action)
           
     ## refinement loop (only uniform for now)
     NDofs = zeros(Int, nlevels)

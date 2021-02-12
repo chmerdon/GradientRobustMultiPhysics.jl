@@ -263,9 +263,8 @@ end
 
 mutable struct AbstractNonlinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
     name::String
-    operator1::Array{DataType,1}
-    coeff_from::Array{Int,1}     # unknown id where coefficient for each operator in operator1 are taken from
-    operator2::Type{<:AbstractFunctionOperator}
+    operators::Array{DataType,1}
+    coeff_from::Array{Int,1}     # unknown id where coefficient for each operator in operators are taken from, remaining ones are for the test function
     action::AbstractAction
     action_rhs
     regions::Array{Int,1}
@@ -377,7 +376,8 @@ function GenerateNonlinearForm(
         end
     end
 
-    return AbstractNonlinearForm{AT}(name, operator1, coeff_from, operator2, action, action_rhs, regions, ADnewton, true)
+    append!(operator1, [operator2])
+    return AbstractNonlinearForm{AT}(name, operator1, coeff_from, action, action_rhs, regions, ADnewton, true)
 end
 
 
@@ -859,7 +859,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVConvectionD
     # compute normal fluxes of component beta
     c = O.beta_from
     fill!(O.fluxes,0)
-    fluxIntegrator = ItemIntegrator{Float64,ON_FACES}(NormalFlux, DoNotChangeAction(1), [0])
+    fluxIntegrator = ItemIntegrator(Float64,ON_FACES, [NormalFlux], DoNotChangeAction(1))
     evaluate!(O.fluxes,fluxIntegrator,[CurrentSolution[c]]; verbosity = verbosity - 1)
 
     nfaces4cell = 0
@@ -910,9 +910,9 @@ function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector,
     O.storage = ExtendableSparseMatrix{Float64,Int32}(FE1.ndofs,FE2.ndofs)
 
     if FE1 == FE2 && O.operator1 == O.operator2
-        BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+        BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
     else
-        BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+        BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
     end
 
     assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
@@ -943,7 +943,7 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
     end    
     action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
     action = Action(Float64, action_kernel)
-    RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
+    RHS = LinearForm(Float64,AT, FE, [O.testfunction_operator], action; regions = O.regions)
     assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
 end
 
@@ -955,9 +955,9 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilin
         FE1 = A.FESX
         FE2 = A.FESY
         if FE1 == FE2 && O.operator1 == O.operator2
-            BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+            BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
         else
-            BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+            BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
         end
         set_time!(O.action, time)
         assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity, transposed_assembly = O.transposed_assembly)
@@ -972,9 +972,9 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilin
         FE1 = b.FES
         FE2 = CurrentSolution[fixed_component].FES
         if FE1 == FE2 && O.operator1 == O.operator2
-            BLF = SymmetricBilinearForm(Float64, AT, FE1, O.operator1, O.action; regions = O.regions)    
+            BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
         else
-            BLF = BilinearForm(Float64, AT, FE1, FE2, O.operator1, O.operator2, O.action; regions = O.regions)    
+            BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
         end
         set_time!(O.action, time)
         assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
@@ -985,7 +985,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLF2RHS; fact
     FE1 = CurrentSolution[O.data_ids[1]].FES
     FE2 = CurrentSolution[O.data_ids[1]].FES
     FE3 = b.FES
-    TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], FE1, FE2, FE3, O.TLF.operator1, O.TLF.operator2, O.TLF.operator3, O.TLF.action; regions = O.TLF.regions)  
+    TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions)  
     set_time!(O.TLF.action, time)
     assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], TLF; factor = factor * O.factor, verbosity = verbosity)
 end
@@ -1009,9 +1009,9 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLF2RHS; fact
         FE1 = b.FES
         FE2 = CurrentSolution(O.data_id).FES
         if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
-            BLF = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], FE1, O.BLF.operator1, O.BLF.action; regions = O.BLF.regions)    
+            BLF = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE1], [O.BLF.operator1, O.BLF.operator1], O.BLF.action; regions = O.BLF.regions)    
         else
-            BLF = BilinearForm(Float64, typeof(O.BLF).parameters[1], FE1, FE2, O.BLF.operator1, O.BLF.operator2, O.BLF.action; regions = O.BLF.regions)    
+            BLF = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions)    
         end
         set_time!(O.BLF.action, time)
         assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument)
@@ -1022,7 +1022,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrili
     FE1 = CurrentSolution[O.a_from].FES
     FE2 = A.FESX
     FE3 = A.FESY
-    TLF = TrilinearForm(Float64, typeof(O).parameters[1], FE1, FE2, FE3, O.operator1, O.operator2, O.operator3, O.action; regions = O.regions)  
+    TLF = TrilinearForm(Float64, typeof(O).parameters[1], [FE1, FE2, FE3], [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)  
     set_time!(TLF.action, time)
     assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, fixed_argument = O.a_to, transposed_assembly = O.transposed_assembly)
 end
@@ -1032,7 +1032,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMulti
     FE2 = A.FESY
     @assert At.FESX == FE2
     @assert At.FESY == FE1
-    DivPressure = BilinearForm(Float64, ON_CELLS, FE1, FE2, O.operator, Identity, MultiplyScalarAction(-1.0,1))   
+    DivPressure = BilinearForm(Float64, ON_CELLS, [FE1, FE2], [O.operator, Identity], MultiplyScalarAction(-1.0,1))   
     assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
 end
 
@@ -1068,7 +1068,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{A
             action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
         end
         action = Action(Float64, action_kernel)
-        RHS = LinearForm(Float64,AT, FE, O.testfunction_operator, action; regions = O.regions)
+        RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], action; regions = O.regions)
         assemble!(b, RHS; factor = factor, verbosity = verbosity)
     end
 end
@@ -1088,8 +1088,8 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractNonli
     for j = 1 : length(O.coeff_from)
         FE[j] = CurrentSolution[O.coeff_from[j]].FES
     end
-    FE2 = A.FESY
-    NLF = NonlinearForm(Float64, ON_CELLS, FE, FE2, O.operator1, O.operator2, O.action; regions = O.regions)  
+    push!(FE,A.FESY)
+    NLF = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action; regions = O.regions) 
     set_time!(O.action, time)
     assemble!(A, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity, transposed_assembly = O.transposed_assembly)
 end
@@ -1099,8 +1099,8 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractNonli
     for j = 1 : length(O.coeff_from)
         FE[j] = CurrentSolution[O.coeff_from[j]].FES
     end
-    FE2 = b.FES
-    NLF = NonlinearForm(Float64, ON_CELLS, FE, FE2, O.operator1, O.operator2, O.action_rhs; regions = O.regions)  
+    push!(FE,b.FES)
+    NLF = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action_rhs; regions = O.regions)  
     set_time!(O.action_rhs, time)
     assemble!(b, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity)
 end

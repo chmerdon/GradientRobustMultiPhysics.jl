@@ -62,8 +62,8 @@ function main(;order::Int = 1)
     error = FEVector{Float64}("ErrorVector",FEStest)
 
     ## Define bilinear forms that represents testing each side of the identity with the testspace functions
-    BLF1 = BilinearForm(Float64, ON_CELLS, FEStest, FESHdiv, Identity, Identity, DoNotChangeAction(3))
-    BLF2 = BilinearForm(Float64, ON_CELLS, FEStest, FESH1, Identity, Curl3D, DoNotChangeAction(3))
+    BLF1 = BilinearForm(Float64, ON_CELLS, [FEStest, FESHdiv], [Identity, Identity], DoNotChangeAction(3))
+    BLF2 = BilinearForm(Float64, ON_CELLS, [FEStest, FESH1], [Identity, Curl3D], DoNotChangeAction(3))
 
     ## evaluate the bilinear forms in the respective interpolations and subtract them from each other
     ## note that in these calls always the second argument of the bilinearform is fixed by the given FEVectorBlock

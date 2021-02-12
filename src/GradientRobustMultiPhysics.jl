@@ -143,15 +143,15 @@ export AccumulatingVector
 
 
 include("assemblypatterns.jl")
-export AbstractAssemblyPattern
-export ItemIntegrator
+export AssemblyPatternType, AssemblyPreparations
+export ItemIntegrator, L2ErrorIntegrator
 export LinearForm
 export BilinearForm, SymmetricBilinearForm
 export TrilinearForm
 export MultilinearForm
 export NonlinearForm
+export prepare_assembly!
 export assemble!, evaluate!, evaluate
-export L2ErrorIntegrator
 
 
 include("pdeoperators.jl")

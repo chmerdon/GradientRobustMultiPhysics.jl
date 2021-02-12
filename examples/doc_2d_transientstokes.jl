@@ -219,7 +219,7 @@ function main(; verbosity = 2, Plotter = nothing)
             println("PRES-STOKES : discrete Stokes pressure solution ($(FESpacePressure.name))")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
 
-            GradientRobustMultiPhysics.plot(Solution, [0,1,2], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
+            GradientRobustMultiPhysics.plot(Solution, [0,1,2], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
         end    
     end    
 end

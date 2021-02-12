@@ -78,10 +78,10 @@ function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
 
     ## setup dual mixed Poisson problem
     DualProblem = PDEDescription("dual mixed formulation")
-    add_unknown!(DualProblem, 2, 2; unknown_name = "Stress", equation_name = "stress equation")
+    add_unknown!(DualProblem; unknown_name = "Stress", equation_name = "stress equation")
     add_operator!(DualProblem, [1,1], ReactionOperator(DoNotChangeAction(2)))
     add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], user_function; on_boundary = true))
-    add_unknown!(DualProblem,1,2; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
+    add_unknown!(DualProblem; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
     add_operator!(DualProblem, [1,2], LagrangeMultiplier(Divergence))
 
     ## setup exact error evaluations
@@ -100,7 +100,7 @@ function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
     ## ... which generates an action...
     estimator_action = Action(Float64,estimator_action_kernel)
     ## ... which is used inside an ItemIntegrator
-    EQIntegrator = ItemIntegrator{Float64,ON_CELLS}([Identity, Gradient],estimator_action, [0])
+    EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient],estimator_action)
           
     ## refinement loop (only uniform for now)
     NDofs = zeros(Int, nlevels)

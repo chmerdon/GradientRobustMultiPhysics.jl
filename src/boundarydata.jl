@@ -119,25 +119,27 @@ function boundarydata!(
             bregiondofs = Base.unique(bregiondofs)
             bregion = InterDirichletBoundaryRegions[r]
             append!(fixed_dofs,bregiondofs)
-            if FE.broken == true
-                # face interpolation expects continuous dofmaps
-                # quick and dirty fix: use face interpolation and remap dofs to broken dofs
-                FESc = FESpace{FEType}(FE.xgrid; dofmaps_needed = [CellDofs,BFaceDofs])
-                Targetc = FEVector{Float64}("auxiliary data",FESc)
-                interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
-                xBFaceDofsc = FESc[BFaceDofs]
-                dof::Int = 0
-                dofc::Int = 0
-                for bface in ibfaces
-                    for k = 1 : num_targets(xBFaceDofs,bface)
-                        dof = xBFaceDofs[k,bface]
-                        dofc = xBFaceDofsc[k,bface]
-                        Target[dof] = Targetc.entries[dofc]
+            if length(ifaces) > 0
+                if FE.broken == true
+                    # face interpolation expects continuous dofmaps
+                    # quick and dirty fix: use face interpolation and remap dofs to broken dofs
+                    FESc = FESpace{FEType}(FE.xgrid; dofmaps_needed = [CellDofs,BFaceDofs])
+                    Targetc = FEVector{Float64}("auxiliary data",FESc)
+                    interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
+                    xBFaceDofsc = FESc[BFaceDofs]
+                    dof::Int = 0
+                    dofc::Int = 0
+                    for bface in ibfaces
+                        for k = 1 : num_targets(xBFaceDofs,bface)
+                            dof = xBFaceDofs[k,bface]
+                            dofc = xBFaceDofsc[k,bface]
+                            Target[dof] = Targetc.entries[dofc]
+                        end
                     end
+                else
+                    # use face interpolation
+                    interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
                 end
-            else
-                # use face interpolation
-                interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
             end
         end   
 
@@ -213,9 +215,9 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_h1(), [1, ncomponents]; dependencies = "XR", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         elseif Dboperator == NormalFlux
             xFaceNormals = FE.xgrid[FaceNormals]
@@ -231,9 +233,9 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
             xFaceNormals = FE.xgrid[FaceNormals]
@@ -247,9 +249,9 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, FE, Dboperator, Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, FE, Dboperator, DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains, does not work properly yet
             xEdgeTangents = FE.xgrid[EdgeTangents]
@@ -268,9 +270,9 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BEDGES, FE, Dboperator, Action(Float64, action_kernel); regions = [0])
+            RHS_bnd = LinearForm(Float64, ON_BEDGES, [FE], [Dboperator], Action(Float64, action_kernel); regions = [0])
             assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, FE, Dboperator, DoNotChangeAction(1); regions = [0])    
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = [0])    
             assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
         end    
 

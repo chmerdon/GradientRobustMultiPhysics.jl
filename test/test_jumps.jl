@@ -9,18 +9,21 @@ function test_qpmatchup(xgrid; verbosity = 0)
     T = Float64
 
     action = DoNotChangeAction(ncomponents)
-    TestForm = LinearForm{Float64,AT}(FE, IdentityDisc{Jump}, action, [0])
+    AP = LinearForm(Float64, AT, [FE], [IdentityDisc{Jump}], action)
 
-    operator = TestForm.operator
+    operators = AP.operators
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operator))
+    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operators[1]))
     nitems = Int64(num_sources(xItemNodes))
 
     # prepare assembly
-    regions::Array{Int32,1} = [1]
-    bonus_quadorder = 5
-    EG, ndofs4EG, qf, basisevaler, dii4op =  GradientRobustMultiPhysics.prepare_assembly(TestForm, [operator], [FE], regions, 1, bonus_quadorder, verbosity - 1)
+    prepare_assembly!(AP; verbosity = verbosity)
+    EG = AP.APP.EG
+    ndofs4EG = AP.APP.ndofs4EG
+    qf = AP.APP.qf
+    basisevaler = AP.APP.basisevaler
+    dii4op = AP.APP.dii4op
  
     EG4item = 0
     EG4dofitem = [1,1] # type of the current item
@@ -75,7 +78,7 @@ function test_disc_LF(xgrid, discontinuity, verbosity = 0)
     fill!(FEFunction[1],1)
 
     action = DoNotChangeAction(ncomponents)
-    TestForm = LinearForm{Float64,ON_IFACES}(FE, IdentityDisc{discontinuity}, action, [0])
+    TestForm = LinearForm(Float64,ON_IFACES, [FE], [IdentityDisc{discontinuity}], action)
     b = zeros(Float64,FE.ndofs)
     assemble!(b, TestForm)
     error = 0
@@ -101,7 +104,7 @@ function test_disc_BLF(xgrid, discontinuity, verbosity = 0)
     fill!(FEFunction[1],1)
  
     action = DoNotChangeAction(ncomponents)
-    TestForm = BilinearForm{Float64,ON_IFACES}(FE, FE, IdentityDisc{discontinuity}, IdentityDisc{discontinuity}, action, [0], false)
+    TestForm = BilinearForm(Float64,ON_IFACES,[FE, FE], [IdentityDisc{discontinuity}, IdentityDisc{discontinuity}], action)
     A = FEMatrix{Float64}("test",FE)
     assemble!(A[1,1], TestForm)
     flush!(A[1,1].entries)
@@ -151,7 +154,7 @@ function test_disc_TLF(xgrid, discontinuity, verbosity = 0)
         return nothing
     end
     action = Action(Float64, ActionKernel(action_kernel, [1,2]; quadorder = 0))
-    TestForm = TrilinearForm{Float64,ON_IFACES}(FE, FE, FE, IdentityDisc{discontinuity}, IdentityDisc{Average}, IdentityDisc{Average}, action, [0])
+    TestForm = TrilinearForm(Float64, ON_IFACES, [FE, FE, FE], [IdentityDisc{discontinuity}, IdentityDisc{Average}, IdentityDisc{Average}], action)
 
     # average should equal length of interior skeleton
     error = zeros(Float64,4)
