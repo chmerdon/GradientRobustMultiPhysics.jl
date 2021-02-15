@@ -266,6 +266,8 @@ function assemble!(
 
     # get adjacencies
     FE = AP.FES
+    @assert FE[1] == FE1.FES
+    @assert FE[2] == FE2.FES
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, AP.operators[1]))
     xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, AP.operators[2]))

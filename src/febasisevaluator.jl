@@ -570,7 +570,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
 
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
-                FEBE.cvals[1,dof_i,i] = FEBE.refbasisvals[i,dof_i,FEOP.parameters[1]] * FEBE.coefficients[FEOP.parameters[1],dof_i];
+                FEBE.cvals[1,dof_i,i] = FEBE.refbasisvals[i][dof_i,FEOP.parameters[1]] * FEBE.coefficients[FEOP.parameters[1],dof_i];
             end
         end
     end

@@ -119,7 +119,7 @@ function set_time!(C::AbstractAction, time)
     return nothing
 end
 
-function set_time!(C::Union{XTAction{T},TAction{T}}, time::T) where {T <: Real}
+function set_time!(C::Union{XTAction{T},TAction{T}}, time) where {T <: Real}
     C.ctime = time
     return nothing
 end

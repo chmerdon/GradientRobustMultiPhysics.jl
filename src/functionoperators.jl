@@ -293,12 +293,16 @@ function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::
                 end
             end
             orientation4dofitem[2] = xCellFaceOrientations[itempos4dofitem[2], dofitems[2]]
-        elseif AT == ON_IFACES
-            # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
-            dofitems[1] = 0
+            coefficient4dofitem[1] = coeff_left
+            coefficient4dofitem[2] = coeff_right
+        else
+            coefficient4dofitem[1] = 1
+            coefficient4dofitem[2] = 0
+            if AT == ON_IFACES
+                # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
+                dofitems[1] = 0
+            end
         end
-        coefficient4dofitem[1] = coeff_left
-        coefficient4dofitem[2] = coeff_right
 
         # find EG index for geometry
         for k = 1 : 2

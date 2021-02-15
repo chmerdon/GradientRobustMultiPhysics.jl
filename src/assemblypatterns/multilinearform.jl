@@ -21,8 +21,9 @@ function MultilinearForm(
     operators::Array{DataType,1}, 
     action::AbstractAction; 
     regions::Array{Int,1} = [0])
+
     @assert length(FE) == length(operators)
-    return AssemblyPattern{APT_MultilinearForm, T, AT}(FE,operators,action,regions)
+    return AssemblyPattern{APT_MultilinearForm, T, AT}(FE,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
 end
 
 """
@@ -50,11 +51,11 @@ function assemble!(
     offsets2 = [0]) where {APT <: APT_MultilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
-    FE = AP.FE
+    FE = AP.FES
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     for j = 1 : length(FE)
-        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, AP.operator[j]))
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, AP.operators[j]))
     end
     xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)

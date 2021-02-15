@@ -33,10 +33,9 @@ function assemble!(
     offset = 0) where {APT <: APT_LinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     # get adjacencies
-    operators = AP.operators
     FE = AP.FES[1]
     xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operators[1]))
+    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, AP.operators[1]))
     xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
@@ -55,7 +54,7 @@ function assemble!(
 
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE))
-    cvals_resultdim::Int = size(basisevaler[1,1,1,1].cvals,1)
+    cvals_resultdim::Int = size(basisevaler[end,1,1,1].cvals,1)
     action_resultdim::Int = action.argsizes[1]
 
     if typeof(b) <: AbstractArray{T,1}

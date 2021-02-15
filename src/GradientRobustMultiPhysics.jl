@@ -59,6 +59,7 @@ export SerialVariableTargetAdjacency
 include("userdata.jl")
 export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
 export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
+export is_timedependent, is_regiondependent, is_itemdependent
 
 include("assemblytypes.jl");
 export AbstractAssemblyType

@@ -554,12 +554,24 @@ can only be applied in PDE RHS
 """
 mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
     name::String
-    data::UserData{<:AbstractDataFunction}
+    action::AbstractAction
     testfunction_operator::Type{<:AbstractFunctionOperator}
     regions::Array{Int,1}
+    timedependent::Bool
     store_operator::Bool               # should the matrix representation of the operator be stored?
     storage::AbstractArray{Float64,1}  # matrix can be stored here to allow for fast matmul operations in iterative settings
 end
+
+
+function RhsOperator(name::String, 
+    AT::Type{<:AbstractAssemblyType},
+    operator::Type{<:AbstractFunctionOperator},
+    action::AbstractAction;
+    regions::Array{Int,1} = [0])
+
+    RhsOperator{AT}(name, action, operator, regions, is_timedependent(action.kernel), false, [])
+end
+
 
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
@@ -571,10 +583,39 @@ function RhsOperator(
     if name == "auto"
         name = "$(data.name) * $operator(v_h)"
     end
-    if on_boundary == true
-        return RhsOperator{ON_BFACES}(name, data, operator, regions, false, [])
+
+    ncomponents = data.dimensions[1]
+    if typeof(data) <: UserData{AbstractExtendedDataFunction}
+        function rhs_function_ext() # result = F(v) = f*operator(v) = f*input
+            temp = zeros(Float64,ncomponents)
+            function closure(result,input,x, t, region, item, xref)
+                eval!(temp, data, x, t, region, item, xref)
+                result[1] = 0
+                for j = 1 : ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
+            end
+        end    
+        action_kernel = ActionKernel(rhs_function_ext(),[1, ncomponents]; dependencies = "XTRIL", quadorder = data.quadorder)
     else
-        return RhsOperator{ON_CELLS}(name, data, operator, regions, false, [])
+        function rhs_function() # result = F(v) = f*operator(v) = f*input
+            temp = zeros(Float64,ncomponents)
+            function closure(result,input,x, t)
+                eval!(temp, data, x, t)
+                result[1] = 0
+                for j = 1 : ncomponents
+                    result[1] += temp[j]*input[j] 
+                end
+            end
+        end    
+        action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "XT", quadorder = data.quadorder)
+    end
+    action = Action(Float64, action_kernel)
+
+    if on_boundary == true
+        return RhsOperator{ON_BFACES}(name, action, operator, regions, is_timedependent(data), false, [])
+    else
+        return RhsOperator{ON_CELLS}(name, action, operator, regions, is_timedependent(data), false, [])
     end
 end
 
@@ -734,7 +775,7 @@ function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
     return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
 end
 function check_PDEoperator(O::RhsOperator)
-    return false, is_timedependent(O.data)
+    return false, O.timedependent
 end
 
 
@@ -929,21 +970,8 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
     # ensure that storage is large_enough
     FE = CurrentSolution[j].FES
     O.storage = zeros(Float64,FE.ndofs)
-    ncomponents = O.data.dimensions[1]
-
-    function rhs_function() # result = F(v) = f*operator(v) = f*input
-        temp = zeros(Float64,ncomponents)
-        function closure(result,input,x)
-            eval!(temp, O.data, x, time)
-            result[1] = 0
-            for j = 1 : ncomponents
-                result[1] += temp[j]*input[j] 
-            end
-        end
-    end    
-    action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
-    action = Action(Float64, action_kernel)
-    RHS = LinearForm(Float64,AT, FE, [O.testfunction_operator], action; regions = O.regions)
+    set_time!(O.action, time)
+    RHS = LinearForm(Float64,AT, FE, [O.testfunction_operator], O.action; regions = O.regions)
     assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
 end
 
@@ -996,8 +1024,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLF2RHS; fact
         push!(FES, CurrentSolution[O.data_ids[k]].FES)
     end
     push!(FES, b.FES)
-    FES = Array{FESpace,1}(FES)
-    MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], FES, O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
+    MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
     set_time!(O.MLF.action, time)
     assemble!(b, CurrentSolution[O.data_ids], MLF; factor = factor * O.factor, verbosity = verbosity)
 end
@@ -1007,7 +1034,7 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLF2RHS; fact
         addblock_matmul!(b,O.BLF.storage,CurrentSolution[O.data_id]; factor = factor)
     else
         FE1 = b.FES
-        FE2 = CurrentSolution(O.data_id).FES
+        FE2 = CurrentSolution[O.data_id].FES
         if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
             BLF = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE1], [O.BLF.operator1, O.BLF.operator1], O.BLF.action; regions = O.BLF.regions)    
         else
@@ -1022,7 +1049,7 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrili
     FE1 = CurrentSolution[O.a_from].FES
     FE2 = A.FESX
     FE3 = A.FESY
-    TLF = TrilinearForm(Float64, typeof(O).parameters[1], [FE1, FE2, FE3], [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)  
+    TLF = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)  
     set_time!(TLF.action, time)
     assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, fixed_argument = O.a_to, transposed_assembly = O.transposed_assembly)
 end
@@ -1041,34 +1068,9 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{A
         addblock!(b, O.storage; factor = factor)
     else
         FE = b.FES
-        ncomponents = O.data.dimensions[1]
-        if typeof(O.data) <: UserData{AbstractExtendedDataFunction}
-            function rhs_function_ext() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(Float64,ncomponents)
-                function closure(result,input,x, region, item, xref)
-                    eval!(temp, O.data, x, time, region, item, xref)
-                    result[1] = 0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                end
-            end    
-            action_kernel = ActionKernel(rhs_function_ext(),[1, ncomponents]; dependencies = "XRIL", quadorder = O.data.quadorder)
-        else
-            function rhs_function() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(Float64,ncomponents)
-                function closure(result,input,x)
-                    eval!(temp, O.data, x, time)
-                    result[1] = 0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                end
-            end    
-            action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "X", quadorder = O.data.quadorder)
-        end
-        action = Action(Float64, action_kernel)
-        RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], action; regions = O.regions)
+        RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions) 
+
+        set_time!(O.action, time)
         assemble!(b, RHS; factor = factor, verbosity = verbosity)
     end
 end
