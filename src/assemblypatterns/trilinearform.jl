@@ -71,10 +71,10 @@ function assemble!(
         println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
-    ndofs4EG = AP.APP.ndofs4EG
-    qf = AP.APP.qf
-    basisevaler = AP.APP.basisevaler
-    dii4op = AP.APP.dii4op
+    ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
+    qf::Array{QuadratureRule,1} = AP.APP.qf
+    basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
+    dii4op::Array{Function,1} = AP.APP.dii4op
 
     # get size informations
     ncomponents = zeros(Int,length(FE))
@@ -283,10 +283,10 @@ function assemble!(
         println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
-    ndofs4EG = AP.APP.ndofs4EG
-    qf = AP.APP.qf
-    basisevaler = AP.APP.basisevaler
-    dii4op = AP.APP.dii4op
+    ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
+    qf::Array{QuadratureRule,1} = AP.APP.qf
+    basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
+    dii4op::Array{Function,1} = AP.APP.dii4op
 
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE[1]))
@@ -400,7 +400,6 @@ function assemble!(
                     eval!(action_input, basisevaler4dofitem2, coeffs2, i; offset = cvals_resultdim, factor = coefficient4dofitem2[dj])
         
                     # apply action to FE1 and FE2
-                    
                     apply_action!(action_result, action_input, action, i)
                    
                     # multiply third component

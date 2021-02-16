@@ -76,25 +76,25 @@ function assemble!(
         println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
-    ndofs4EG = AP.APP.ndofs4EG
-    qf = AP.APP.qf
-    basisevaler = AP.APP.basisevaler
-    dii4op = AP.APP.dii4op
+    ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
+    qf::Array{QuadratureRule,1} = AP.APP.qf
+    basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
+    dii4op::Array{Function,1} = AP.APP.dii4op
  
     # get size informations
     ncomponents = zeros(Int,length(FE))
     offsets = zeros(Int,length(FE)+1)
-    maxdofs = 0
+    maxdofs::Int = 0
     for j = 1 : nFE
         ncomponents[j] = get_ncomponents(eltype(FE[j]))
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
         offsets[j+1] = offsets[j] + size(basisevaler[1,j,1,1].cvals,1)
     end
     action_resultdim::Int = action.argsizes[1]
-    maxdofs2 = max_num_targets_per_source(xItemDofs[end])
+    maxdofs2::Int = max_num_targets_per_source(xItemDofs[end])
 
  
-    maxnweights = 0
+    maxnweights::Int = 0
     for j = 1 : length(qf)
         maxnweights = max(maxnweights, length(qf[j].w))
     end
@@ -114,8 +114,8 @@ function assemble!(
     itempos4dofitem2::Array{Int,1} = [1,1] # local item position in dofitem
     orientation4dofitem1::Array{Int,1} = [1,2] # local orientation
     orientation4dofitem2::Array{Int,1} = [1,2] # local orientation
-    coefficient4dofitem1::Array{Int,1} = [0,0] # coefficients for operator
-    coefficient4dofitem2::Array{Int,1} = [0,0] # coefficients for operator
+    coefficient4dofitem1::Array{T,1} = [0,0] # coefficients for operator
+    coefficient4dofitem2::Array{T,1} = [0,0] # coefficients for operator
     ndofs4dofitem::Int = 0 # number of dofs for item
     dofitem::Int = 0
     coeffs::Array{T,1} = zeros(T,maxdofs)
@@ -134,6 +134,7 @@ function assemble!(
     localmatrix::Array{T,2} = zeros(T,maxdofs,maxdofs2)
     acol::Int = 0
     arow::Int = 0
+    fdof::Int = 0
 
 
     # note: at the moment we expect that all FE[1:end-1] are the same !
@@ -143,7 +144,7 @@ function assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
-    for item = 1 : nitems
+    @time for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
@@ -159,7 +160,6 @@ function assemble!(
         for FEid = 1 : nFE - 1
 
             # get information on dofitems
-            weights = qf[EG4item].w
             for di = 1 : length(dofitems1)
                 dofitem = dofitems1[di]
                 if dofitem != 0
@@ -326,10 +326,10 @@ function assemble!(
         println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
-    ndofs4EG = AP.APP.ndofs4EG
-    qf = AP.APP.qf
-    basisevaler = AP.APP.basisevaler
-    dii4op = AP.APP.dii4op
+    ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
+    qf::Array{QuadratureRule,1} = AP.APP.qf
+    basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
+    dii4op::Array{Function,1} = AP.APP.dii4op
  
     # get size informations
     ncomponents = zeros(Int,length(FE))

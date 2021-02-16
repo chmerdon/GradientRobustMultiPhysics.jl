@@ -68,10 +68,10 @@ function assemble!(
         println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
-    ndofs4EG = AP.APP.ndofs4EG
-    qf = AP.APP.qf
-    basisevaler = AP.APP.basisevaler
-    dii4op = AP.APP.dii4op
+    ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
+    qf::Array{QuadratureRule,1} = AP.APP.qf
+    basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
+    dii4op::Array{Function,1} = AP.APP.dii4op
 
     # get size informations
     ncomponents = zeros(Int,length(FE))

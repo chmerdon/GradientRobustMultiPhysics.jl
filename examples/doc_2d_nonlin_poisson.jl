@@ -49,7 +49,7 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1})
     user_function_rhs = DataFunction(rhs!, [1,2]; dependencies = "X", name = "f", quadorder = 4)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    function nonlin_kernel(result, input)
+    function nonlin_kernel(result::Array{<:Real,1}, input::Array{<:Real,1})
         ## input = [u, grad(u)]
         result[1] = (1+input[1]^2)*input[2]
         result[2] = (1+input[1]^2)*input[3]
