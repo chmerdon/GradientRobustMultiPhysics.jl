@@ -851,7 +851,10 @@ end
 
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOperator; time::Real = 0, verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
+    if verbosity > 0 
+        println("  Assembling FVConvectionOperator $(O.name)...")
+    end
     FE1 = A.FESX
     FE2 = A.FESY
     @assert FE1 == FE2
@@ -879,7 +882,10 @@ function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::DiagonalOpera
 end
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::FVConvectionDiffusionOperator; time::Real = 0, verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
+    if verbosity > 0 
+        println("  Assembling FVConvectionOperator $(O.name)...")
+    end
     FE1 = A.FESX
     FE2 = A.FESY
     @assert FE1 == FE2
@@ -976,63 +982,81 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
 end
 
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
-    if O.store_operator == true 
-        addblock!(A,O.storage; factor = factor)
-    else
-        FE1 = A.FESX
-        FE2 = A.FESY
-        if FE1 == FE2 && O.operator1 == O.operator2
-            BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
-        else
-            BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}    
+    if O.store_operator == true
+        if verbosity > 0 
+            println("  Adding Bilinearform $(O.name) from storage...")
         end
+        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
+    else
         set_time!(O.action, time)
-        assemble!(A, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity, transposed_assembly = O.transposed_assembly)
+        if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+            if verbosity > 0 
+                println("  Creating assembly pattern for Bilinearform $(O.name)...")
+            end
+            FE1 = A.FESX
+            FE2 = A.FESY
+            if FE1 == FE2 && O.operator1 == O.operator2
+                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
+            else
+                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
+            end 
+            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false)
+        else
+            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true)
+        end
     end
 end
 
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractBilinearForm{AT}; factor = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}    
     if O.store_operator == true
         addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
-        FE1 = b.FES
-        FE2 = CurrentSolution[fixed_component].FES
-        if FE1 == FE2 && O.operator1 == O.operator2
-            BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
-        else
-            BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
-        end
         set_time!(O.action, time)
-        assemble!(b, CurrentSolution[fixed_component], BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+        if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+            if verbosity > 0 
+                println("  Creating assembly pattern for Bilinearform $(O.name)...")
+            end
+            FE1 = b.FES
+            FE2 = CurrentSolution[fixed_component].FES
+            if FE1 == FE2 && O.operator1 == O.operator2
+                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
+            else
+                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
+            end 
+            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false)
+        else
+            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true)
+        end
     end
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::TLF2RHS; factor = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::TLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0) 
+    set_time!(O.TLF.action, time)
     FE1 = CurrentSolution[O.data_ids[1]].FES
     FE2 = CurrentSolution[O.data_ids[1]].FES
     FE3 = b.FES
     TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions)  
-    set_time!(O.TLF.action, time)
-    assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], TLF; factor = factor * O.factor, verbosity = verbosity)
+    SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], TLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::MLF2RHS; factor = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::MLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0)  
+    set_time!(O.MLF.action, time)
     FES = []
     for k = 1 : length(O.data_ids)
         push!(FES, CurrentSolution[O.data_ids[k]].FES)
     end
     push!(FES, b.FES)
-    MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions)  
-    set_time!(O.MLF.action, time)
-    assemble!(b, CurrentSolution[O.data_ids], MLF; factor = factor * O.factor, verbosity = verbosity)
+    MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions) 
+    SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids], MLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLF2RHS; factor = 1, time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::BLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0)  
     if O.BLF.store_operator == true
         addblock_matmul!(b,O.BLF.storage,CurrentSolution[O.data_id]; factor = factor)
     else
+        set_time!(O.BLF.action, time)
         FE1 = b.FES
         FE2 = CurrentSolution[O.data_id].FES
         if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
@@ -1040,69 +1064,101 @@ function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::BLF2RHS; fact
         else
             BLF = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions)    
         end
-        set_time!(O.BLF.action, time)
-        assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument)
+        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument)
     end
 end
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractTrilinearForm; time::Real = 0, verbosity::Int = 0)
-    FE1 = CurrentSolution[O.a_from].FES
-    FE2 = A.FESX
-    FE3 = A.FESY
-    TLF = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)  
-    set_time!(TLF.action, time)
-    assemble!(A, CurrentSolution[O.a_from], TLF; verbosity = verbosity, fixed_argument = O.a_to, transposed_assembly = O.transposed_assembly)
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractTrilinearForm, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
+    set_time!(O.action, time)
+    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+        if verbosity > 0 
+            println("  Creating assembly pattern for Trilinearform $(O.name)...")
+        end
+        FE1 = CurrentSolution[O.a_from].FES
+        FE2 = A.FESX
+        FE3 = A.FESY
+        SC.LHS_AssemblyPatterns[j,k][o] = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)   
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false)
+    else
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true)
+    end
 end
 
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::LagrangeMultiplier; time::Real = 0, verbosity::Int = 0, At::FEMatrixBlock)
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert At.FESX == FE2
-    @assert At.FESY == FE1
-    DivPressure = BilinearForm(Float64, ON_CELLS, [FE1, FE2], [O.operator, Identity], MultiplyScalarAction(-1.0,1))   
-    assemble!(A, DivPressure; verbosity = verbosity, transpose_copy = At)
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::LagrangeMultiplier, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0, At::FEMatrixBlock)
+    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+        if verbosity > 0 
+            println("  Creating assembly pattern for LagrangeMultiplier $(O.name)...")
+        end
+        FE1 = A.FESX
+        FE2 = A.FESY
+        @assert At.FESX == FE2
+        @assert At.FESY == FE1
+        SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, ON_CELLS, [FE1, FE2], [O.operator, Identity], MultiplyScalarAction(-1.0,1))   
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = false)
+    else
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = true)
+    end
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::RhsOperator{AT}; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::RhsOperator{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
         addblock!(b, O.storage; factor = factor)
     else
-        FE = b.FES
-        RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions) 
+        if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
+            if verbosity > 0 
+                println("  Creating assembly pattern for RhsOperator $(O.name)...")
+            end
+            FE = b.FES
+            SC.RHS_AssemblyPatterns[j][o] = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions) 
 
-        set_time!(O.action, time)
-        assemble!(b, RHS; factor = factor, verbosity = verbosity)
+            set_time!(O.action, time)
+            SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = false)
+        else
+            SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = true)
+        end
     end
 end
 
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::CopyOperator; time::Real = 0, verbosity::Int = 0) 
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0) 
     for j = 1 : length(b)
         b[j] = CurrentSolution[O.copy_from][j] * O.factor
     end
 end
 
 
-
-
-function assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractNonlinearForm; time::Real = 0, verbosity::Int = 0)
-    FE = Array{FESpace,1}(undef, length(O.coeff_from))
-    for j = 1 : length(O.coeff_from)
-        FE[j] = CurrentSolution[O.coeff_from[j]].FES
-    end
-    push!(FE,A.FESY)
-    NLF = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action; regions = O.regions) 
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
     set_time!(O.action, time)
-    assemble!(A, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity, transposed_assembly = O.transposed_assembly)
+    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+        if verbosity > 0 
+            println("  Creating assembly pattern for nonlinear operator $(O.name)...")
+        end
+        FE = Array{FESpace,1}(undef, length(O.coeff_from))
+        for j = 1 : length(O.coeff_from)
+            FE[j] = CurrentSolution[O.coeff_from[j]].FES
+        end
+        push!(FE,A.FESY)
+        SC.LHS_AssemblyPatterns[j,k][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action; regions = O.regions) 
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = false)
+    else
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = true)
+    end
 end
 
-function assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractNonlinearForm; time::Real = 0, verbosity::Int = 0)
-    FE = Array{FESpace,1}(undef, length(O.coeff_from))
-    for j = 1 : length(O.coeff_from)
-        FE[j] = CurrentSolution[O.coeff_from[j]].FES
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
+    if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
+        if verbosity > 0 
+            println("  Creating assembly pattern for RHS of nonlinear operator $(O.name)...")
+        end
+        FE = Array{FESpace,1}(undef, length(O.coeff_from))
+        for j = 1 : length(O.coeff_from)
+            FE[j] = CurrentSolution[O.coeff_from[j]].FES
+        end
+        push!(FE,b.FES)
+        SC.RHS_AssemblyPatterns[j][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action_rhs; regions = O.regions)  
+        set_time!(O.action_rhs, time)
+        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = false)
+    else
+        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = true)
     end
-    push!(FE,b.FES)
-    NLF = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action_rhs; regions = O.regions)  
-    set_time!(O.action_rhs, time)
-    assemble!(b, NLF, CurrentSolution[O.coeff_from]; verbosity = verbosity)
 end

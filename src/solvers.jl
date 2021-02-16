@@ -26,6 +26,10 @@ mutable struct SolverConfig{T <: Real}
     LHS_dependencies::Array{Array{Int,1},2} # dependencies on components
     RHS_AssemblyTriggers::Array{DataType,1} # assembly triggers for blocks in RHS
     RHS_dependencies::Array{Array{Int,1},1} # dependencies on components
+    LHS_AssemblyPatterns::Array{Array{AssemblyPattern,1},2} # last used assembly pattern (and assembly pattern preps to avoid their recomputation)
+    RHS_AssemblyPatterns::Array{Array{AssemblyPattern,1},1} # last used assembly pattern (and assembly pattern preps to avoid their recomputation)
+    LHS_AssemblyTimes::Array{Array{Float64,1},2}
+    RHS_AssemblyTimes::Array{Array{Float64,1},1}
     subiterations::Array{Array{Int,1},1} # combination of equations (= rows in PDE.LHS) that should be solved together
     maxIterations::Int          # maximum number of iterations
     maxResidual::Real           # tolerance for residual
@@ -220,8 +224,24 @@ function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiter
         # assign dependencies
         RHS_dep[j] = deepcopy(Base.unique(current_dep))
     end
-
-
+    LHS_APs = Array{Array{AssemblyPattern,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,1))
+    RHS_APs = Array{Array{AssemblyPattern,1},1}(undef,size(PDE.RHSOperators,1))
+    LHS_AssemblyTimes = Array{Array{Float64,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
+    RHS_AssemblyTimes = Array{Array{Float64,1},1}(undef,size(PDE.RHSOperators,1))
+    for j = 1 : size(PDE.LHSOperators,1), k = 1 : size(PDE.LHSOperators,2)
+        LHS_APs[j,k] = Array{AssemblyPattern,1}(undef, length(PDE.LHSOperators[j,k]))
+        LHS_AssemblyTimes[j,k] = zeros(Float64, length(PDE.LHSOperators[j,k]))
+        for o = 1 : length(PDE.LHSOperators[j,k])
+            LHS_APs[j,k][o] = EmptyAssemblyPattern()
+        end
+    end
+    for j = 1 : size(PDE.RHSOperators,1)
+        RHS_APs[j] = Array{AssemblyPattern,1}(undef, length(PDE.RHSOperators[j]))
+        RHS_AssemblyTimes[j] = zeros(Float64, length(PDE.RHSOperators[j]))
+        for o = 1 : length(PDE.RHSOperators[j])
+            RHS_APs[j][o] = EmptyAssemblyPattern()
+        end
+    end
     if subiterations != "auto"
         for s = 1 : length(subiterations), k = 1 : size(PDE.LHSOperators,1)
             if (k in subiterations[s]) == false
@@ -232,9 +252,9 @@ function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiter
                 end
             end
         end
-        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
     else
-        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
     end
 
 end
@@ -332,7 +352,7 @@ function assemble!(
                     catch
                         continue
                     end
-                    update_storage!(PDEoperator, CurrentSolution, equations[j], k ; time = time, verbosity = verbosity)
+                    update_storage!(PDEoperator, CurrentSolution, equations[j], k; time = time, verbosity = verbosity)
                 end
             end
         end
@@ -362,16 +382,15 @@ function assemble!(
             fill!(b[j],0.0)
             rhs_block_has_been_erased[j] = true
             for o = 1 : length(PDE.RHSOperators[equations[j]])
+                PDEOperator = PDE.RHSOperators[equations[j]][o]
                 if verbosity > 0
-                    try
-                        println("  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[equations[j]][o])) ($(PDE.RHSOperators[equations[j]][o].testfunction_operator))")
-                    catch
-                        println("  Assembling into rhs block [$j]: $(typeof(PDE.RHSOperators[equations[j]][o]))")
-                    end
-                    @time assemble!(b[j], CurrentSolution, PDE.RHSOperators[equations[j]][o]; time = time, verbosity = verbosity)
+                    assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time, verbosity = verbosity)
                 else
-                    assemble!(b[j], CurrentSolution, PDE.RHSOperators[equations[j]][o]; time = time, verbosity = verbosity)
-                end    
+                    assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time, verbosity = verbosity)
+                end   
+                if verbosity > 0
+                    println("  Assembly time for operator $(PDEOperator.name) = $(SC.RHS_AssemblyTimes[equations[j]][o])s")
+                end   
             end
         end
     end
@@ -390,20 +409,14 @@ function assemble!(
                         end
                         fill!(A[j,subblock],0.0)
                         for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                            PDEoperator = PDE.LHSOperators[equations[j],k][o]
-                            if verbosity > 0
-                                println("  Assembling into matrix block[$j,$subblock]: $(PDEoperator.name)")
-                                if typeof(PDEoperator) <: LagrangeMultiplier
-                                    @time assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity, At = A[subblock,j])
-                                else
-                                    @time assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity)
-                                end    
+                            PDEOperator = PDE.LHSOperators[equations[j],k][o]
+                            if typeof(PDEOperator) <: LagrangeMultiplier
+                                assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time, verbosity = verbosity, At = A[subblock,j])
                             else
-                                if typeof(PDEoperator) <: LagrangeMultiplier
-                                    assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity, At = A[subblock,j])
-                                else
-                                    assemble!(A[j,subblock], CurrentSolution, PDEoperator; time = time, verbosity = verbosity)
-                                end    
+                                assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time, verbosity = verbosity)
+                            end  
+                            if verbosity > 0
+                                println("  Assembly time for operator $(PDEOperator.name) = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
                             end  
                         end  
                     end
@@ -990,10 +1003,15 @@ function assemble_massmatrix4subiteration!(TCS::TimeControlSolver, i::Int; verbo
             if TCS.nonlinear_dt[pos] == true || force == true
                 if verbosity > 1
                     println("\n  Assembling mass matrix for block [$j,$j] of subiteration $i with action of type $(typeof(TCS.dt_actions[pos]))...")
-                    @time assemble!(TCS.AM[i][j,j],TCS.X,ReactionOperator(TCS.dt_actions[pos]; identity_operator = TCS.dt_operators[pos]); verbosity = verbosity - 2)
-                else
-                    assemble!(TCS.AM[i][j,j],TCS.X,ReactionOperator(TCS.dt_actions[pos]; identity_operator = TCS.dt_operators[pos]); verbosity = verbosity - 2)
                 end
+                A = TCS.AM[i][j,j]
+                FE1 = A.FESX
+                FE2 = A.FESY
+                operator1 = TCS.dt_operators[pos]
+                operator2 = TCS.dt_operators[pos]
+                BLF = SymmetricBilinearForm(Float64, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
+                time = @elapsed assemble!(A, BLF; verbosity = verbosity - 1, skip_preps = false)
+                println("   time = $time")
             end
         end
     end
@@ -1335,12 +1353,12 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                     d = SC.subiterations[s][k]
                     for o = 1 : length(PDE.RHSOperators[d])
                         if typeof(PDE.RHSOperators[d][o]) <: RhsOperator
-                            if is_timedependent(PDE.RHSOperators[d][o].data)
+                            if is_timedependent(PDE.RHSOperators[d][o].action.kernel)
                                 if SC.verbosity > 2
                                     println("  Updating time-dependent rhs data of equation $d: ($(PDE.RHSOperators[d][o].name))")
                                 end
-                                assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = -1, time = TCS.ctime - timestep)
-                                assemble!(b[s][k], X, PDE.RHSOperators[d][o]; factor = +1, time = TCS.ctime)
+                                assemble!(b[s][k], SC, d, o, PDE.RHSOperators[d][o], X; factor = -1, time = TCS.ctime - timestep)
+                                assemble!(b[s][k], SC, d, o, PDE.RHSOperators[d][o], X; factor = +1, time = TCS.ctime)
                             end
                         end    
                     end

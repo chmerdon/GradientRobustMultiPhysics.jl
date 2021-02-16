@@ -144,7 +144,7 @@ function assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
-    @time for item = 1 : nitems
+    for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]

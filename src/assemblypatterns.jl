@@ -3,6 +3,7 @@
 ############################
 
 abstract type AssemblyPatternType end
+abstract type APT_Undefined <: AssemblyPatternType end
 
 # backpack to save all the information needed for assembly
 # like element geometries (EG), quadrature formulas (qf), basisevaluators for the FES, ...
@@ -22,6 +23,10 @@ struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAsse
     regions::Array{Int,1}
     APP::AssemblyPatternPreparations # hidden stuff needed for assembly
 end 
+
+function EmptyAssemblyPattern()
+    return AssemblyPattern{APT_Undefined, Float64, ON_CELLS}([],[],DoNotChangeAction(1),[0],AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
+end
 
 function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbosity::Int = 0) where {APT <: AssemblyPatternType, T<: Real, AT <: AbstractAssemblyType}
 
