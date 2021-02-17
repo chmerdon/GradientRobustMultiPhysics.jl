@@ -108,8 +108,9 @@ function AbstractBilinearForm(name,
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     apply_action_to = 1,
     regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = false)
-    return AbstractBilinearForm{AT}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,false,zeros(Float64,0,0))
+    transposed_assembly::Bool = false,
+    store::Bool = false)
+    return AbstractBilinearForm{AT}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,store,zeros(Float64,0,0))
 end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
     return AbstractBilinearForm("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
@@ -120,8 +121,8 @@ $(TYPEDEF)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
 """
-function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; gradient_operator = Gradient, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); regions = regions)
+function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
+    return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); regions = regions, store = store)
 end
 
 """
@@ -567,9 +568,10 @@ function RhsOperator(name::String,
     AT::Type{<:AbstractAssemblyType},
     operator::Type{<:AbstractFunctionOperator},
     action::AbstractAction;
-    regions::Array{Int,1} = [0])
+    regions::Array{Int,1} = [0],
+    store::Bool = false)
 
-    RhsOperator{AT}(name, action, operator, regions, is_timedependent(action.kernel), false, [])
+    RhsOperator{AT}(name, action, operator, regions, is_timedependent(action.kernel), store, [])
 end
 
 
@@ -578,7 +580,8 @@ function RhsOperator(
     regions::Array{Int,1},
     data::UserData{<:AbstractDataFunction};
     name = "auto",
-    on_boundary::Bool = false)
+    on_boundary::Bool = false,
+    store::Bool = false)
 
     if name == "auto"
         name = "$(data.name) * $operator(v_h)"
@@ -613,9 +616,9 @@ function RhsOperator(
     action = Action(Float64, action_kernel)
 
     if on_boundary == true
-        return RhsOperator{ON_BFACES}(name, action, operator, regions, is_timedependent(data), false, [])
+        return RhsOperator{ON_BFACES}(name, action, operator, regions, is_timedependent(data), store, [])
     else
-        return RhsOperator{ON_CELLS}(name, action, operator, regions, is_timedependent(data), false, [])
+        return RhsOperator{ON_CELLS}(name, action, operator, regions, is_timedependent(data), store, [])
     end
 end
 
@@ -977,7 +980,7 @@ function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; 
     FE = CurrentSolution[j].FES
     O.storage = zeros(Float64,FE.ndofs)
     set_time!(O.action, time)
-    RHS = LinearForm(Float64,AT, FE, [O.testfunction_operator], O.action; regions = O.regions)
+    RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions)
     assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
 end
 
@@ -987,7 +990,7 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
         if verbosity > 0 
             println("  Adding Bilinearform $(O.name) from storage...")
         end
-        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
+        addblock!(A,O.storage)
     else
         set_time!(O.action, time)
         if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
@@ -1078,9 +1081,9 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractTril
         FE2 = A.FESX
         FE3 = A.FESY
         SC.LHS_AssemblyPatterns[j,k][o] = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)   
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false)
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false, transposed_assembly = O.transposed_assembly)
     else
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true)
+        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true, transposed_assembly = O.transposed_assembly)
     end
 end
 
