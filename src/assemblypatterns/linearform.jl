@@ -43,8 +43,6 @@ function assemble!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -62,6 +60,17 @@ function assemble!(
         onedimensional = true
     else
         onedimensional = false
+    end
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into vector")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
     end
 
     # loop over items

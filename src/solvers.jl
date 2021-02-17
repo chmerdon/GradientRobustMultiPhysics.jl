@@ -435,9 +435,9 @@ function assemble!(
                             PDEoperator = PDE.LHSOperators[equations[j],k][o]
                             if verbosity > 0
                                 println("  Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(PDEoperator.name)") 
-                                @time assemble!(b[j], CurrentSolution, PDEoperator; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                                @time assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
                             else  
-                                assemble!(b[j], CurrentSolution, PDEoperator; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                                assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
                             end  
                         end
                     end

@@ -1009,7 +1009,7 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
 end
 
 
-function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}    
+function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 1) where {AT<:AbstractAssemblyType}    
     if O.store_operator == true
         addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
@@ -1025,9 +1025,9 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
             else
                 SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
             end 
-            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false)
+            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
         else
-            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true)
+            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
         end
     end
 end

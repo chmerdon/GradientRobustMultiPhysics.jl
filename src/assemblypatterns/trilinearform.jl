@@ -42,7 +42,8 @@ assemble!(
 ````
 
 Assembly of a TrilinearForm AP into given two-dimensional AbstractArray (e.g. a FEMatrixBlock).
-Here, the first argument is fixed by the given coefficients in FE1.
+Here, one argument (specified by fixed_argument) is fixed by the given coefficients in FE1. Note, that the action is
+(currently) always applied to the first and second argument.
 """
 function assemble!(
     A::AbstractArray{T,2},
@@ -67,8 +68,6 @@ function assemble!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -84,6 +83,17 @@ function assemble!(
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
     end
     action_resultdim::Int = action.argsizes[1]
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into matrix (transposed_assembly = $transposed_assembly) with fixed_argument = $fixed_argument")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (apply_to = [1,2], size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
+    end
 
     # loop over items
     EG4item::Int = 1
@@ -279,8 +289,6 @@ function assemble!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -294,6 +302,17 @@ function assemble!(
     cvals_resultdim::Int = size(basisevaler[1,1,1,1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1,2,1,1].cvals,1)
     action_resultdim::Int = action.argsizes[1]
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into vector with fixed_arguments = [1,2]")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (apply_to = [1,2], size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
+    end
 
     # loop over items
     EG4item::Int = 1

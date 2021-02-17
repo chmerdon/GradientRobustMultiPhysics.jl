@@ -96,8 +96,6 @@ function evaluate!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; FES = FE, verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -116,6 +114,16 @@ function evaluate!(
     end
     action_resultdim::Int = action.argsizes[1]
     maxdofs2 = max_num_targets_per_source(xItemDofs[end])
+
+    if verbosity > 0
+        println("  Evaluating ($APT,$AT,$T)")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       action = $(AP.action.name) (size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
+    end
 
     maxnweights = 0
     for j = 1 : length(qf)

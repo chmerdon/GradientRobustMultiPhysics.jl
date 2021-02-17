@@ -64,14 +64,23 @@ function assemble!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into vector with fixed_arguments = [1:$(nFE-1)]")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (apply_to = [1:$(nFE-1)], size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
+    end
 
     # get size informations
     ncomponents = zeros(Int,length(FE))

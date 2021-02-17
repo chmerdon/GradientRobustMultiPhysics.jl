@@ -72,8 +72,6 @@ function assemble!(
     # prepare assembly
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -103,6 +101,17 @@ function assemble!(
         action_input[j] = zeros(T,offsets[end-1]) # heap for action input
     end
     action_input2 = zeros(T,offsets[end-1])
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into matrix (transposed = $transposed_assembly)")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (apply_to = [operators(FEB),operators(argument 1)] size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
+    end
 
     # loop over items
     EG4item::Int = 0
@@ -322,8 +331,6 @@ function assemble!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -351,6 +358,17 @@ function assemble!(
     action_input = Array{Array{T,1},1}(undef,maxnweights)
     for j = 1 : maxnweights
         action_input[j] = zeros(T,offsets[end-1]) # heap for action input
+    end
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into vector (action evaluated with given coefficients)")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
     end
 
     # loop over items

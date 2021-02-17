@@ -171,10 +171,9 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
     end
 
     if verbosity > 0
-        println("\nASSEMBLY PREPARATION $(typeof(AP))")
-        println("====================================")
+        println("  Preparing assembly for $APT")
+        println("     regions = $(AP.regions)")
         println("      action = $(typeof(AP.action))")
-        println("     regions = $regions")
         println("          EG = $EG")
         println("\n  List of arguments FEType / operator / ndofs4EG:")
         for k = 1 : length(FE)

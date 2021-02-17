@@ -59,8 +59,6 @@ function assemble!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -72,6 +70,17 @@ function assemble!(
     ncomponents::Int = get_ncomponents(eltype(FE[1]))
     cvals_resultdim::Int = size(basisevaler[end,apply_action_to,1,1].cvals,1)
     action_resultdim::Int = action.argsizes[1]
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into matrix (transposed_assembly = $transposed_assembly)")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (apply_to = $apply_action_to, size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
+    end
  
     # loop over items
     EG4item::Int = 1
@@ -328,8 +337,6 @@ function assemble!(
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
-    elseif verbosity > 0
-        println("warning: skipping assembly preparations for $APT")
     end
     EG = AP.APP.EG
     ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
@@ -348,6 +355,17 @@ function assemble!(
     cvals_resultdim::Int = size(basisevaler[1,apply_action_to,1,1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1,fixed_argument,1,1].cvals,1)
     action_resultdim::Int = action.argsizes[1]
+
+    if verbosity > 0
+        println("  Assembling ($APT,$AT,$T) into vector with fixed argument $fixed_argument")
+        println("   skip_preps = $skip_preps")
+        println("    operators = $(AP.operators)")
+        println("      regions = $(AP.regions)")
+        println("       factor = $factor")
+        println("       action = $(AP.action.name) (apply_to = $apply_action_to, size = $(action.argsizes))")
+        println("        qf[1] = $(qf[1].name) ")
+        println("           EG = $EG")
+    end
 
     # loop over items
     EG4dofitem1::Array{Int,1} = [1,1] # EG id of the current item with respect to operator 1
