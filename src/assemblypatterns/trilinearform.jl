@@ -186,11 +186,11 @@ function assemble!(
     
                         # evaluate fixed argument into action
                         fill!(action_input, 0.0)
-                        eval!(action_input, basisevaler4dofitem[fixed_argument], coeffs, i; offset = offsets[fixed_argument], factor = coefficient4dofitem[fixed_argument][di])
+                        eval!(action_input, basisevaler4dofitem[fixed_argument], coeffs, i, offsets[fixed_argument], coefficient4dofitem[fixed_argument][di])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i, offset = offsets[nonfixed_ids[1]], factor = coefficient4dofitem[nonfixed_ids[1]][dj])
+                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]], coefficient4dofitem[nonfixed_ids[1]][dj])
                             
                             apply_action!(action_result, action_input, action, i)
             
@@ -208,14 +208,14 @@ function assemble!(
     
                         # evaluate fixed argument into separate vector
                         fill!(evalfixedFE, 0.0)
-                        eval!(evalfixedFE, basisevaler4dofitem[fixed_argument], coeffs, i; factor = coefficient4dofitem[fixed_argument][di])
+                        eval!(evalfixedFE, basisevaler4dofitem[fixed_argument], coeffs, i, 0, coefficient4dofitem[fixed_argument][di])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i; factor = coefficient4dofitem[nonfixed_ids[1]][di])
+                            eval!(action_input, basisevaler4dofitem[nonfixed_ids[1]], dof_i, i, 0, coefficient4dofitem[nonfixed_ids[1]][di])
                             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
-                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[2]], dof_j, i; offset = offsets[2], factor = coefficient4dofitem[nonfixed_ids[2]][dj])
+                                eval!(action_input, basisevaler4dofitem[nonfixed_ids[2]], dof_j, i, offsets[2], coefficient4dofitem[nonfixed_ids[2]][dj])
                                 apply_action!(action_result, action_input, action, i)
             
                                 temp = 0
@@ -299,7 +299,7 @@ function assemble!(
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE[1]))
     ncomponents2::Int = get_ncomponents(eltype(FE[2]))
-    cvals_resultdim::Int = size(basisevaler[1,1,1,1].cvals,1)
+    cvals_resultdim = size(basisevaler[1,1,1,1].cvals,1)
     cvals_resultdim2::Int = size(basisevaler[1,2,1,1].cvals,1)
     action_resultdim::Int = action.argsizes[1]
 
@@ -401,22 +401,21 @@ function assemble!(
                 # update coeffs, dofs
                 for j=1:ndofs4item1
                     bdof = xItemDofs1[j,dofitem1]
-                    coeffs1[j] = FE1[bdof]
+                    coeffs1[j] = FE1[bdof] * coefficient4dofitem1[di]
                 end
                 for j=1:ndofs4item2
                     bdof = xItemDofs2[j,dofitem2]
-                    coeffs2[j] = FE2[bdof]
+                    coeffs2[j] = FE2[bdof] * coefficient4dofitem2[dj]
                 end
                 for j=1:ndofs4item3
                     dofs3[j] = xItemDofs3[j,dofitem3]
                 end
 
                 for i in eachindex(weights)
-
                     # evaluate first and second component
-                    fill!(action_input, 0.0)
-                    eval!(action_input, basisevaler4dofitem1, coeffs1, i; factor = coefficient4dofitem1[di])
-                    eval!(action_input, basisevaler4dofitem2, coeffs2, i; offset = cvals_resultdim, factor = coefficient4dofitem2[dj])
+                    fill!(action_input, 0)
+                    eval!(action_input, basisevaler4dofitem1, coeffs1, i)
+                    eval!(action_input, basisevaler4dofitem2, coeffs2, i, cvals_resultdim)
         
                     # apply action to FE1 and FE2
                     apply_action!(action_result, action_input, action, i)

@@ -299,21 +299,23 @@ end
 # PIOLA MAPS
 # x = A*xref + b
 # returns A
-function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, xref)
+function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, xref)
     M[1,1] = T.A[1,1]
     M[1,2] = T.A[1,2]
     M[2,1] = T.A[2,1]
     M[2,2] = T.A[2,2]
-    return 2*T.ItemVolumes[T.citem]
+    info[1] = 2*T.ItemVolumes[T.citem]
+    return nothing
 end
-function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, xref)
+function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, xref)
     M[1,1] = T.A[1,1]
     M[1,2] = T.A[1,2]
     M[2,1] = T.A[2,1]
     M[2,2] = T.A[2,2]
-    return T.ItemVolumes[T.citem]
+    info[1] = T.ItemVolumes[T.citem]
+    return nothing
 end
-function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}, xref)
+function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}, xref)
     M[1,1] = T.A[1,1]
     M[1,2] = T.A[1,2]
     M[1,3] = T.A[1,3]
@@ -323,10 +325,11 @@ function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}
     M[3,1] = T.A[3,1]
     M[3,2] = T.A[3,2]
     M[3,3] = T.A[3,3]
-    return 6*T.ItemVolumes[T.citem]
+    info[1] = 6*T.ItemVolumes[T.citem]
+    return nothing
 end
 # similar for parallelogram
-function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, xref)
+function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, xref)
     M[1,1] = T.A[1,1]
     M[1,2] = T.A[1,2]
     M[1,3] = T.A[1,3]
@@ -336,5 +339,6 @@ function piola!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian
     M[3,1] = T.A[3,1]
     M[3,2] = T.A[3,2]
     M[3,3] = T.A[3,3]
-    return T.ItemVolumes[T.citem]
+    info[1] = T.ItemVolumes[T.citem]
+    return nothing
 end

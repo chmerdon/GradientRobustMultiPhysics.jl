@@ -1037,22 +1037,36 @@ end
 
 function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::TLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0) 
     set_time!(O.TLF.action, time)
-    FE1 = CurrentSolution[O.data_ids[1]].FES
-    FE2 = CurrentSolution[O.data_ids[1]].FES
-    FE3 = b.FES
-    TLF = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions)  
-    SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], TLF; factor = factor * O.factor, verbosity = verbosity)
+    if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
+        if verbosity > 0 
+            println("  Creating assembly pattern for Trilinearform $(O.name)...")
+        end
+        FE1 = CurrentSolution[O.data_ids[1]].FES
+        FE2 = CurrentSolution[O.data_ids[1]].FES
+        FE3 = b.FES
+        SC.RHS_AssemblyPatterns[j][o] = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions)
+        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
+    else
+        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
+    end
 end
 
 function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::MLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0)  
     set_time!(O.MLF.action, time)
-    FES = []
-    for k = 1 : length(O.data_ids)
-        push!(FES, CurrentSolution[O.data_ids[k]].FES)
+    if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
+        if verbosity > 0 
+            println("  Creating assembly pattern for Multilinearform $(O.name)...")
+        end
+        FES = []
+        for k = 1 : length(O.data_ids)
+            push!(FES, CurrentSolution[O.data_ids[k]].FES)
+        end
+        push!(FES, b.FES)
+        SC.RHS_AssemblyPatterns[j][o] = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions) 
+        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
+    else
+        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
     end
-    push!(FES, b.FES)
-    MLF = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions) 
-    SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids], MLF; factor = factor * O.factor, verbosity = verbosity)
 end
 
 function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::BLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0)  

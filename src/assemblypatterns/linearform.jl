@@ -86,7 +86,7 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,cvals_resultdim) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
-    basisevaler4dofitem = basisevaler[1]
+    basisevaler4dofitem::FEBasisEvaluator = basisevaler[1]
     localb::Array{T,2} = zeros(T,maxndofs,action_resultdim)
     bdof::Int = 0
     itemfactor::T = 0
@@ -94,7 +94,7 @@ function assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
-    for item = 1 : nitems
+   for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]

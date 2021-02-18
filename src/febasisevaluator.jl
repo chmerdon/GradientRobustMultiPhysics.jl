@@ -391,7 +391,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
                 for k = 1 : FEBE.offsets[2] # ncomponents
@@ -434,11 +434,12 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
 
         fill!(FEBE.cvals,0.0)
+        xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
         for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
             if FEBE.coefficients2[dof_i,dof_j] != 0
                 for i = 1 : length(FEBE.xref)
                     for k = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] *  FEBE.refbasisvals[i][dof_j,k] / FEBE.L2G.ItemVolumes[item]
+                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] *  FEBE.refbasisvals[i][dof_j,k] / xItemVolumes[item]
                     end
                 end
             end
@@ -459,11 +460,12 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.reconstcoeffs_handler(FEBE.coefficients2, FEBE.FE.xgrid[BFaces][item])
 
         fill!(FEBE.cvals,0.0)
+        xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
         for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
             if FEBE.coefficients2[dof_i,dof_j] != 0
                 for i = 1 : length(FEBE.xref)
                     for k = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] *  FEBE.refbasisvals[i][dof_j,k] / FEBE.L2G.ItemVolumes[item]
+                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] *  FEBE.refbasisvals[i][dof_j,k] / xItemVolumes[item]
                     end
                 end
             end
@@ -518,7 +520,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Union{Identity,IdentityDis
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : length(FEBE.current_subset) # ndofs4item
                 for k = 1 : FEBE.offsets[2] # ncomponents
@@ -593,7 +595,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : length(FEBE.current_subset) # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
@@ -720,9 +722,10 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.citem = item
     
         # use Piola transformation on basisvals
+        xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.ncomponents
-                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] / FEBE.L2G.ItemVolumes[item]
+                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] / xItemVolumes[item]
             end
         end
     end
@@ -737,9 +740,10 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         FEBE.citem = item
     
         # use Piola transformation on basisvals
+        xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : FEBE.offsets2[2], k = 1 : FEBE.ncomponents
-                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] / FEBE.L2G.ItemVolumes[item]
+                FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] / xItemVolumes[item]
             end
         end
     end
@@ -863,7 +867,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,<:Gradient,AT}, item::Int) w
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
                 mapderiv!(FEBE.L2GM2,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : length(FEBE.current_subset) # ndofs4item
@@ -1134,7 +1138,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : size(FEBE.cvals,2) # ndofs4item (H1)
                 for dof_j = 1 : length(FEBE.current_subset) # ndofs4item (Hdiv)
@@ -1171,7 +1175,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
                 mapderiv!(FEBE.L2GM2,FEBE.L2G,FEBE.xref[i])
             end
 
@@ -1221,7 +1225,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Divergence}, item::Int) wher
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : length(FEBE.current_subset) # ndofs4item
                 FEBE.cvals[1,dof_i,i] = 0.0;
@@ -1252,7 +1256,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Curl2D}, item::Int) where {T
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 FEBE.cvals[1,dof_i,i] = FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i]
@@ -1281,7 +1285,7 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,Curl3D}, item::Int) where {T
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
-                FEBE.iteminfo[1] = piola!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : FEBE.offsets2[2] # ndofs4item
                 for k = 1 : 3
@@ -1301,7 +1305,7 @@ end
 
 
 # use basisevaluator to evaluate j-th basis function at quadrature point i
-function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i; offset::Int = 0, factor = 1)
+function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i, offset::Int = 0, factor = 1)
     for k = 1 : size(FEBE.cvals,1) # resultdim
         result[offset + k] = FEBE.cvals[k,j,i] * factor
     end  
@@ -1309,7 +1313,7 @@ function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i; offset::Int = 0, f
 end
 
 # use basisevaluator to evaluate some function at quadrature point i with the given coefficients
-function eval!(result, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, coefficients::Array{T,1}, i; offset::Int = 0, factor = 1) where {T <: Real, FEType, FEOP, EG}
+function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, coefficients::Array{T,1}, i, offset = 0, factor = 1) where {T <: Real, FEType, FEOP, EG}
     for dof_i = 1 : size(FEBE.cvals,2) # ndofs4item
         for k = 1 : size(FEBE.cvals,1) # resultdim
             result[offset+k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i] * factor 
