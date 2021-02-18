@@ -63,7 +63,7 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1})
     add_unknown!(Problem; unknown_name = "unknown", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs))
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
 
     ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)

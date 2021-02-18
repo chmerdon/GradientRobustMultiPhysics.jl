@@ -135,14 +135,11 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     ## momentum equation
-    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2))
-    Problem.LHSOperators[1,1][1].store_operator = true
+    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2; store = true))
     if lambda != 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * div(u) * div(v) (lambda = $lambda)",VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1)))
-        Problem.LHSOperators[1,1][2].store_operator = true
+        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * div(u) * div(v) (lambda = $lambda)",VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1); store = true))
     end
-    add_operator!(Problem, [1,3], AbstractBilinearForm("div(v)*p",Divergence,Identity,MultiplyScalarAction(-1.0, 1)))
-    Problem.LHSOperators[1,3][1].store_operator = true
+    add_operator!(Problem, [1,3], AbstractBilinearForm("div(v)*p",Divergence,Identity,MultiplyScalarAction(-1.0, 1); store = true))
 
     function gravity_action()
         temp = zeros(Float64,2)
@@ -153,8 +150,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
         gravity_action_kernel = ActionKernel(closure, [1,2]; name = "gravity action kernel", dependencies = "XT", quadorder = user_gravity.quadorder)
         return Action(Float64, gravity_action_kernel)
     end    
-    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*rho",VeloIdentity,Identity,gravity_action()))
-    Problem.LHSOperators[1,2][1].store_operator = true
+    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*rho",VeloIdentity,Identity,gravity_action(); store = true))
 
     ## continuity equation
     ## here a finite volume upwind convection operator on triangles is used
@@ -165,7 +161,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = "", quadorder = 0)
     eos_action = Action(Float64, eos_action_kernel)
     add_operator!(Problem, [3,2], AbstractBilinearForm("p * eos(density)",Identity,Identity,eos_action; apply_action_to = 2))
-    add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1)))
+    add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1); store = true))
 
     ## show Problem definition
     show(Problem)

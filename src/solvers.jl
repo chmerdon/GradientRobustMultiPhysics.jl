@@ -312,6 +312,30 @@ function Base.show(io::IO, SC::SolverConfig)
 end
 
 
+
+function show_statistics(io::IO, PDE::PDEDescription, SC::SolverConfig)
+
+    println("\nACCUMULATED ASSEMBLY TIMES")
+    println("==========================")
+
+    for j = 1 : size(SC.LHS_AssemblyTimes,1)
+        for k = 1 : size(SC.LHS_AssemblyTimes,2)
+            for o = 1 : size(SC.LHS_AssemblyTimes[j,k],1)
+                println("  LHS[$j,$k][$o] ($(PDE.LHSOperators[j,k][o].name)) = $(SC.LHS_AssemblyTimes[j,k][o])s")
+            end
+        end
+    end
+
+    for j = 1 : size(SC.RHS_AssemblyTimes,1)
+        for o = 1 : size(SC.RHS_AssemblyTimes[j],1)
+            println("  RHS[$j][$o] ($(PDE.RHSOperators[j][o].name)) = $(SC.RHS_AssemblyTimes[j][o])s")
+        end
+    end
+
+end
+
+
+
 function assemble!(
     A::FEMatrix{T},
     b::FEVector{T},
@@ -339,6 +363,7 @@ function assemble!(
     # will not be seen by fill! functions
     flush!(A.entries)
 
+    elapsedtime::Float64 = 0
     # force (re)assembly of stored bilinearforms and RhsOperators
     if (min_trigger == AssemblyInitial) == true
         for j = 1:length(equations)
@@ -352,7 +377,11 @@ function assemble!(
                     catch
                         continue
                     end
-                    update_storage!(PDEoperator, CurrentSolution, equations[j], k; time = time, verbosity = verbosity)
+                    elapsedtime = @elapsed update_storage!(PDEoperator, CurrentSolution, equations[j], k; time = time, verbosity = verbosity)
+                    SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+                    if verbosity > 0
+                        println("  Assembly time for storage of operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
+                    end
                 end
             end
         end
@@ -366,7 +395,11 @@ function assemble!(
                 catch
                     continue
                 end
-                update_storage!(PDEoperator, CurrentSolution, equations[j] ; time = time, verbosity = verbosity)
+                elapsedtime = @elapsed update_storage!(PDEoperator, CurrentSolution, equations[j] ; time = time, verbosity = verbosity)
+                SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+                if verbosity > 0
+                    println("  Assembly time for storage of operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.RHS_AssemblyTimes[equations[j]][o])s")
+                end
             end
         end
     end
@@ -383,13 +416,10 @@ function assemble!(
             rhs_block_has_been_erased[j] = true
             for o = 1 : length(PDE.RHSOperators[equations[j]])
                 PDEOperator = PDE.RHSOperators[equations[j]][o]
+                elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time, verbosity = verbosity)
+                SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
                 if verbosity > 0
-                    assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time, verbosity = verbosity)
-                else
-                    assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time, verbosity = verbosity)
-                end   
-                if verbosity > 0
-                    println("  Assembly time for operator $(PDEOperator.name) = $(SC.RHS_AssemblyTimes[equations[j]][o])s")
+                    println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j]][o])s")
                 end   
             end
         end
@@ -411,13 +441,14 @@ function assemble!(
                         for o = 1 : length(PDE.LHSOperators[equations[j],k])
                             PDEOperator = PDE.LHSOperators[equations[j],k][o]
                             if typeof(PDEOperator) <: LagrangeMultiplier
-                                assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time, verbosity = verbosity, At = A[subblock,j])
+                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time, verbosity = verbosity, At = A[subblock,j])
                             else
-                                assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time, verbosity = verbosity)
+                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time, verbosity = verbosity)
                             end  
+                            SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             if verbosity > 0
-                                println("  Assembly time for operator $(PDEOperator.name) = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
-                            end  
+                                println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
+                            end
                         end  
                     end
                 else
@@ -435,10 +466,14 @@ function assemble!(
                             PDEoperator = PDE.LHSOperators[equations[j],k][o]
                             if verbosity > 0
                                 println("  Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(PDEoperator.name)") 
-                                @time assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                                elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
                             else  
-                                assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                                elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
                             end  
+                            SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+                            if verbosity > 0
+                                println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
+                            end
                         end
                     end
                 end
@@ -514,6 +549,10 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     # (possibly changes some entries of Target)
     for j = 1 : length(PDE.GlobalConstraints)
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
+    end
+
+    if verbosity > 1
+        show_statistics(stdout,PDE,SC)
     end
     return resnorm
 end
@@ -700,6 +739,10 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 
+    if verbosity > 1
+        show_statistics(stdout,PDE,SC)
+    end
+
     return resnorm
 end
 
@@ -855,6 +898,10 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     # (possibly changes some entries of Target)
     for j = 1 : length(PDE.GlobalConstraints)
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
+    end
+
+    if verbosity > 1
+        show_statistics(stdout,PDE,SC)
     end
 
     return resnorm
@@ -1547,6 +1594,10 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             println("  terminated (maxTimeSteps reached)")
         end
     end
+
+    if TCS.SC.verbosity > 1
+        show_statistics(stdout,TCS.PDE,TCS.SC)
+    end
 end
 
 
@@ -1606,5 +1657,9 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
     end
     if TCS.SC.verbosity > 0
         @printf("\n\n  arrived at time T = %.4e...\n",TCS.ctime)
+    end
+
+    if TCS.SC.verbosity > 1
+        show_statistics(stdout,TCS.PDE,TCS.SC)
     end
 end

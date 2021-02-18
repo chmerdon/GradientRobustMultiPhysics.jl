@@ -889,33 +889,42 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
     if verbosity > 0 
         println("  Assembling FVConvectionOperator $(O.name)...")
     end
+    T = Float64
     FE1 = A.FESX
     FE2 = A.FESY
     @assert FE1 == FE2
-    xFaceNodes = FE1.xgrid[FaceNodes]
-    xFaceNormals = FE1.xgrid[FaceNormals]
-    xFaceCells = FE1.xgrid[FaceCells]
-    xFaceVolumes = FE1.xgrid[FaceVolumes]
-    xCellFaces = FE1.xgrid[CellFaces]
-    xCellFaceSigns = FE1.xgrid[CellFaceSigns]
-    nfaces = num_sources(xFaceNodes)
-    ncells = num_sources(xCellFaceSigns)
-    nnodes = num_sources(FE1.xgrid[Coordinates])
+    xFaceNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceNodes]
+    xFaceNormals::Array{T,2} = FE1.xgrid[FaceNormals]
+    xFaceCells::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceCells]
+    xFaceVolumes::Array{T,1} = FE1.xgrid[FaceVolumes]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaces]
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaceSigns]
+    nfaces::Int = num_sources(xFaceNodes)
+    ncells::Int = num_sources(xCellFaceSigns)
+    nnodes::Int = num_sources(FE1.xgrid[Coordinates])
     
     # ensure that flux field is long enough
     if length(O.fluxes) < nfaces
         O.fluxes = zeros(Float64,1,nfaces)
     end
     # compute normal fluxes of component beta
-    c = O.beta_from
+    c::Int = O.beta_from
     fill!(O.fluxes,0)
-    fluxIntegrator = ItemIntegrator(Float64,ON_FACES, [NormalFlux], DoNotChangeAction(1))
-    evaluate!(O.fluxes,fluxIntegrator,[CurrentSolution[c]]; verbosity = verbosity - 1)
+    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+        if verbosity > 0 
+            println("  Creating assembly pattern for convection fluxes $(O.name)...")
+        end
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64,ON_FACES, [NormalFlux], DoNotChangeAction(1))
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]]; verbosity = verbosity - 1, skip_preps = false)
+    else
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]]; verbosity = verbosity - 1, skip_preps = true)
+    end
 
-    nfaces4cell = 0
-    face = 0
-    flux = 0.0
-    other_cell = 0
+    fluxes::Array{T,2} = O.fluxes
+    nfaces4cell::Int = 0
+    face::Int = 0
+    flux::T = 0.0
+    other_cell::Int = 0
     for cell = 1 : ncells
         nfaces4cell = num_targets(xCellFaces,cell)
         for cf = 1 : nfaces4cell
@@ -924,20 +933,20 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
             if other_cell == cell
                 other_cell = xFaceCells[2,face]
             end
-            flux = O.fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
+            flux = fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
             if (other_cell > 0) 
                 flux *= 1 // 2 # because it will be accumulated on two cells
             end       
             if flux > 0 # flow from cell to other_cell
-                A[cell,cell] += flux
+                _addnz(A,cell,cell,flux,1)
                 if other_cell > 0
-                    A[other_cell,cell] -= flux
+                    _addnz(A,other_cell,cell,-flux,1)
                     # otherwise flow goes out of domain
                 end    
             else # flow from other_cell into cell
                 if other_cell > 0 # flow comes from neighbour cell
-                    A[other_cell,other_cell] -= flux
-                    A[cell,other_cell] += flux
+                    _addnz(A,other_cell,other_cell,-flux,1)
+                    _addnz(A,cell,other_cell,flux,1)
                 else # flow comes from outside domain
                    #  A[cell,cell] += flux
                 end 
@@ -1004,9 +1013,9 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
             else
                 SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
             end 
-            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false)
+            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = false)
         else
-            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true)
+            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = true)
         end
     end
 end
@@ -1028,9 +1037,9 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
             else
                 SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
             end 
-            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
+            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, verbosity = verbosity - 1, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
         else
-            SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
+            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, verbosity = verbosity - 1, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
         end
     end
 end
@@ -1045,9 +1054,9 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::TLF2RHS, CurrentSolu
         FE2 = CurrentSolution[O.data_ids[1]].FES
         FE3 = b.FES
         SC.RHS_AssemblyPatterns[j][o] = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions)
-        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
+        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
     else
-        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
+        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
     end
 end
 
@@ -1063,9 +1072,9 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::MLF2RHS, CurrentSolu
         end
         push!(FES, b.FES)
         SC.RHS_AssemblyPatterns[j][o] = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions) 
-        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
+        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
     else
-        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
+        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
     end
 end
 
@@ -1074,14 +1083,21 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::BLF2RHS, CurrentSolu
         addblock_matmul!(b,O.BLF.storage,CurrentSolution[O.data_id]; factor = factor)
     else
         set_time!(O.BLF.action, time)
-        FE1 = b.FES
-        FE2 = CurrentSolution[O.data_id].FES
-        if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
-            BLF = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE1], [O.BLF.operator1, O.BLF.operator1], O.BLF.action; regions = O.BLF.regions)    
+        if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
+            if verbosity > 0 
+                println("  Creating assembly pattern for Multilinearform $(O.name)...")
+            end
+            FE1 = b.FES
+            FE2 = CurrentSolution[O.data_id].FES
+            if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
+                SC.RHS_AssemblyPatterns[j][o] = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE1], [O.BLF.operator1, O.BLF.operator1], O.BLF.action; regions = O.BLF.regions)    
+            else
+                SC.RHS_AssemblyPatterns[j][o] = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions)    
+            end
+            assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = false)
         else
-            BLF = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions)    
+            assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = true)
         end
-        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument)
     end
 end
 
@@ -1095,9 +1111,9 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractTril
         FE2 = A.FESX
         FE3 = A.FESY
         SC.LHS_AssemblyPatterns[j,k][o] = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)   
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false, transposed_assembly = O.transposed_assembly)
+        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false, transposed_assembly = O.transposed_assembly)
     else
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true, transposed_assembly = O.transposed_assembly)
+        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true, transposed_assembly = O.transposed_assembly)
     end
 end
 
@@ -1111,9 +1127,9 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::LagrangeMult
         @assert At.FESX == FE2
         @assert At.FESY == FE1
         SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, ON_CELLS, [FE1, FE2], [O.operator, Identity], MultiplyScalarAction(-1.0,1))   
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = false)
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = false)
     else
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = true)
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = true)
     end
 end
 
@@ -1129,9 +1145,9 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::RhsOperator{AT}, Cur
             SC.RHS_AssemblyPatterns[j][o] = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions) 
 
             set_time!(O.action, time)
-            SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = false)
+            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = false)
         else
-            SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = true)
+            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = true)
         end
     end
 end
@@ -1156,9 +1172,9 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractNonl
         end
         push!(FE,A.FESY)
         SC.LHS_AssemblyPatterns[j,k][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action; regions = O.regions) 
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = false)
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = false)
     else
-        SC.LHS_AssemblyTimes[j,k][o] = @elapsed assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = true)
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = true)
     end
 end
 
@@ -1174,8 +1190,8 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::AbstractNonlinearFor
         push!(FE,b.FES)
         SC.RHS_AssemblyPatterns[j][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action_rhs; regions = O.regions)  
         set_time!(O.action_rhs, time)
-        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = false)
+        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = false)
     else
-        SC.RHS_AssemblyTimes[j][o] = @elapsed assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = true)
+        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = true)
     end
 end
