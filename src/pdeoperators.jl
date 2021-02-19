@@ -340,8 +340,9 @@ function GenerateNonlinearForm(
         Dresult = DiffResults.DiffResult(result_temp,jac_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
         cfg =ForwardDiff.JacobianConfig(action_kernel.user_function, result_temp, input_temp)
-        function newton_kernel(result, input_current, input_ansatz)
-            ForwardDiff.jacobian!(Dresult, action_kernel.user_function, result, input_current, cfg)
+        func::Function = action_kernel.user_function
+        function newton_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1})
+            ForwardDiff.jacobian!(Dresult, func, result, input_current, cfg)
             jac = DiffResults.jacobian(Dresult)
             
             for j = 1 : argsizes[1]
@@ -357,10 +358,10 @@ function GenerateNonlinearForm(
 
         # the action for the RHS just evaluates DG and G at input_current
         temp = zeros(Float64, argsizes[1])
-        function rhs_kernel(result, input_current)
+        function rhs_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1})
             fill!(result,0)
             newton_kernel(result, input_current, input_current)
-            action_kernel.user_function(temp, input_current)
+            func(temp, input_current)
             for j = 1 : argsizes[1]
                 result[j] -= temp[j]
             end

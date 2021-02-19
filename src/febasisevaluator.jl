@@ -383,11 +383,15 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
     
         # cell update transformation
         update!(FEBE.L2G, item)
-        FEBE.coeffs_handler(FEBE.coefficients, item)
-        FEBE.subset_handler(FEBE.current_subset, item)
+        coeffs::Array{T,2} = FEBE.coefficients
+        subset::Array{Int,1} = FEBE.current_subset
+        FEBE.coeffs_handler(coeffs, item);
+        FEBE.subset_handler(subset, item)
 
         # use Piola transformation on Hdiv basis
         # and save it in refbasisderivvals
+        tempeval::Array{T,3} = FEBE.refbasisderivvals
+        fill!(tempeval,0)
         for i = 1 : length(FEBE.xref)
             # evaluate Piola matrix at quadrature point
             if FEBE.L2G.nonlinear || i == 1
@@ -395,25 +399,25 @@ function update!(FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, item::Int) where {
             end
             for dof_i = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
                 for k = 1 : FEBE.offsets[2] # ncomponents
-                    FEBE.refbasisderivvals[k,dof_i,i] = 0.0;
                     for l = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.refbasisderivvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][FEBE.current_subset[dof_i],l];
+                        tempeval[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][subset[dof_i],l];
                     end    
-                    FEBE.refbasisderivvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.iteminfo[1]
+                    tempeval[k,dof_i,i] *= coeffs[k,dof_i] / FEBE.iteminfo[1]
                 end
             end
         end
 
         # get local reconstruction coefficients
         # and accumulate
-        FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
+        rcoeffs::Array{T,2} = FEBE.coefficients2
+        FEBE.reconstcoeffs_handler(rcoeffs, item)
 
         fill!(FEBE.cvals,0.0)
-        for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(FEBE.coefficients2,2) # ndofs4item (Hdiv)
-            if FEBE.coefficients2[dof_i,dof_j] != 0
+        for dof_i = 1 : size(FEBE.cvals,2), dof_j = 1 : size(rcoeffs,2) # ndofs4item (Hdiv)
+            if rcoeffs[dof_i,dof_j] != 0
                 for i = 1 : length(FEBE.xref)
                     for k = 1 : FEBE.offsets[2] # ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[k,dof_j,i]; 
+                        FEBE.cvals[k,dof_i,i] += rcoeffs[dof_i,dof_j] * tempeval[k,dof_j,i]; 
                     end
                 end
             end
@@ -1305,7 +1309,7 @@ end
 
 
 # use basisevaluator to evaluate j-th basis function at quadrature point i
-function eval!(result, FEBE::FEBasisEvaluator, j::Integer, i, offset::Int = 0, factor = 1)
+function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP}, j::Int, i::Int, offset::Int = 0, factor = 1) where {T <: Real, FEType, FEOP, EG}
     for k = 1 : size(FEBE.cvals,1) # resultdim
         result[offset + k] = FEBE.cvals[k,j,i] * factor
     end  

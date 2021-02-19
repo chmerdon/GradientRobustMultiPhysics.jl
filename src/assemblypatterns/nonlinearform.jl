@@ -145,7 +145,6 @@ function assemble!(
     arow::Int = 0
     fdof::Int = 0
 
-
     # note: at the moment we expect that all FE[1:end-1] are the same !
     # otherweise more than one MatrixBlock has to be assembled and we need more offset information
     # hence, this only can handle nonlinearities at the moment that depend on one unknown of the PDEsystem
@@ -180,14 +179,14 @@ function assemble!(
                     ndofs4dofitem = ndofs4EG[FEid][EG4dofitem1[di]]
                     for j=1:ndofs4dofitem
                         fdof = xItemDofs[FEid][j,dofitem]
-                        coeffs[j] = FEB[FEid][fdof]
+                        coeffs[j] = FEB[FEid][fdof] * coefficient4dofitem1[di]
                     end
 
                     for i in eachindex(weights)
                         if FEid == 1 && di == 1
                             fill!(action_input[i], 0)
                         end
-                        eval!(action_input[i], basisevaler4dofitem, coeffs, i, offsets[FEid], coefficient4dofitem1[di])
+                        eval!(action_input[i], basisevaler4dofitem, coeffs, i, offsets[FEid])
                     end  
                 end
             end
@@ -325,7 +324,7 @@ function assemble!(
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, AP.operators[j]))
     end
     xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
+    nitems::Int = length(xItemVolumes)
 
     # prepare assembly
     action = AP.action
@@ -341,17 +340,17 @@ function assemble!(
     # get size informations
     ncomponents = zeros(Int,length(FE))
     offsets = zeros(Int,length(FE)+1)
-    maxdofs = 0
+    maxdofs::Int = 0
     for j = 1 : nFE
         ncomponents[j] = get_ncomponents(eltype(FE[j]))
         maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
         offsets[j+1] = offsets[j] + size(basisevaler[1,j,1,1].cvals,1)
     end
     action_resultdim::Int = action.argsizes[1]
-    maxdofs2 = max_num_targets_per_source(xItemDofs[end])
+    maxdofs2::Int = max_num_targets_per_source(xItemDofs[end])
 
  
-    maxnweights = 0
+    maxnweights::Int = 0
     for j = 1 : length(qf)
         maxnweights = max(maxnweights, length(qf[j].w))
     end
@@ -385,10 +384,6 @@ function assemble!(
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
     basisevaler4dofitem = basisevaler[1,1,1,1]
-    basisevaler4dofitem1 = Array{Any,1}(undef,nFE)
-    for j = 1 : nFE
-        basisevaler4dofitem1[j] = basisevaler[1,j,1,1]
-    end
     basisvals::Array{T,3} = basisevaler4dofitem.cvals
     temp::T = 0 # some temporary variable
     localb = zeros(T,maxdofs)
@@ -430,14 +425,16 @@ function assemble!(
                     ndofs4dofitem = ndofs4EG[FEid][EG4dofitem[di]]
                     for j=1:ndofs4dofitem
                         bdof = xItemDofs[FEid][j,dofitem]
-                        coeffs[j] = FEB[FEid][bdof]
+                        coeffs[j] = FEB[FEid][bdof] * coefficient4dofitem[di]
                     end
 
-                    for i in eachindex(weights)
-                        if FEid == 1 && di == 1
+                    if FEid == 1 && di == 1
+                        for i in eachindex(weights)
                             fill!(action_input[i], 0)
                         end
-                        eval!(action_input[i], basisevaler4dofitem, coeffs, i, offsets[FEid], coefficient4dofitem[di])
+                    end
+                    for i in eachindex(weights)
+                        eval!(action_input[i], basisevaler4dofitem, coeffs, i, offsets[FEid])
                     end  
                 end
             end
@@ -445,7 +442,6 @@ function assemble!(
 
         # at this point the action_input at each quadrature point contains information on the last solution
         # also no jump operators for the test function are allowed currently
-
         di = 1
         dofitem = dofitems[di]
         ndofs4item = ndofs4EG[1][EG4dofitem[di]]

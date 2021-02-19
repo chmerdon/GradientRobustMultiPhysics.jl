@@ -315,20 +315,28 @@ end
 
 function show_statistics(io::IO, PDE::PDEDescription, SC::SolverConfig)
 
+    subiterations = SC.subiterations
+
     println("\nACCUMULATED ASSEMBLY TIMES")
     println("==========================")
 
-    for j = 1 : size(SC.LHS_AssemblyTimes,1)
-        for k = 1 : size(SC.LHS_AssemblyTimes,2)
-            for o = 1 : size(SC.LHS_AssemblyTimes[j,k],1)
-                println("  LHS[$j,$k][$o] ($(PDE.LHSOperators[j,k][o].name)) = $(SC.LHS_AssemblyTimes[j,k][o])s")
+    for s = 1 : length(subiterations)
+        for j = 1 : length(subiterations[s])
+            eq = subiterations[s][j]
+            for k = 1 : size(SC.LHS_AssemblyTimes,2)
+                for o = 1 : size(SC.LHS_AssemblyTimes[eq,k],1)
+                    println("  LHS[$eq,$k][$o] ($(PDE.LHSOperators[eq,k][o].name)) = $(SC.LHS_AssemblyTimes[eq,k][o])s")
+                end
             end
         end
     end
 
-    for j = 1 : size(SC.RHS_AssemblyTimes,1)
-        for o = 1 : size(SC.RHS_AssemblyTimes[j],1)
-            println("  RHS[$j][$o] ($(PDE.RHSOperators[j][o].name)) = $(SC.RHS_AssemblyTimes[j][o])s")
+    for s = 1 : length(subiterations)
+        for j = 1 : length(subiterations[s])
+            eq = subiterations[s][j]
+            for o = 1 : size(SC.RHS_AssemblyTimes[eq],1)
+                println("  RHS[$eq][$o] ($(PDE.RHSOperators[eq][o].name)) = $(SC.RHS_AssemblyTimes[eq][o])s")
+            end
         end
     end
 
@@ -369,36 +377,36 @@ function assemble!(
         for j = 1:length(equations)
             for k = 1 : size(PDE.LHSOperators,2)
                 for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                    PDEoperator = PDE.LHSOperators[equations[j],k][o]
+                    PDEOperator = PDE.LHSOperators[equations[j],k][o]
                     try
-                        if PDEoperator.store_operator == false
+                        if PDEOperator.store_operator == false
                             continue
                         end
                     catch
                         continue
                     end
-                    elapsedtime = @elapsed update_storage!(PDEoperator, CurrentSolution, equations[j], k; time = time, verbosity = verbosity)
+                    elapsedtime = @elapsed update_storage!(PDEOperator, CurrentSolution, equations[j], k; time = time, verbosity = verbosity)
                     SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                     if verbosity > 0
-                        println("  Assembly time for storage of operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
+                        println("  Assembly time for storage of operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s)")
                     end
                 end
             end
         end
         for j = 1:length(equations)
             for o = 1 : length(PDE.RHSOperators[equations[j]])
-                PDEoperator = PDE.RHSOperators[equations[j]][o]
+                PDEOperator = PDE.RHSOperators[equations[j]][o]
                 try
-                    if PDEoperator.store_operator == false
+                    if PDEOperator.store_operator == false
                         continue
                     end
                 catch
                     continue
                 end
-                elapsedtime = @elapsed update_storage!(PDEoperator, CurrentSolution, equations[j] ; time = time, verbosity = verbosity)
+                elapsedtime = @elapsed update_storage!(PDEOperator, CurrentSolution, equations[j] ; time = time, verbosity = verbosity)
                 SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
                 if verbosity > 0
-                    println("  Assembly time for storage of operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.RHS_AssemblyTimes[equations[j]][o])s")
+                    println("  Assembly time for storage of operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.RHS_AssemblyTimes[equations[j]][o])s)")
                 end
             end
         end
@@ -419,7 +427,7 @@ function assemble!(
                 elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time, verbosity = verbosity)
                 SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
                 if verbosity > 0
-                    println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j]][o])s")
+                    println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.RHS_AssemblyTimes[equations[j]][o])s)")
                 end   
             end
         end
@@ -437,7 +445,7 @@ function assemble!(
                         if verbosity > 0
                             println("  Erasing lhs block [$j,$subblock]")
                         end
-                        fill!(A[j,subblock],0.0)
+                        fill!(A[j,subblock],0)
                         for o = 1 : length(PDE.LHSOperators[equations[j],k])
                             PDEOperator = PDE.LHSOperators[equations[j],k][o]
                             if typeof(PDEOperator) <: LagrangeMultiplier
@@ -447,7 +455,7 @@ function assemble!(
                             end  
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             if verbosity > 0
-                                println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
+                                println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s)")
                             end
                         end  
                     end
@@ -458,21 +466,21 @@ function assemble!(
                                 if verbosity > 0
                                     println("  Erasing rhs block [$j]")
                                 end
-                                fill!(b[j],0.0)
+                                fill!(b[j],0)
                                 rhs_block_has_been_erased[j] = true
                             end
                         end
                         for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                            PDEoperator = PDE.LHSOperators[equations[j],k][o]
+                            PDEOperator = PDE.LHSOperators[equations[j],k][o]
                             if verbosity > 0
-                                println("  Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(PDEoperator.name)") 
-                                elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                                println("  Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(PDEOperator.name)") 
+                                elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, PDEOperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
                             else  
-                                elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, PDEoperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
+                                elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, PDEOperator, CurrentSolution; factor = -1.0, time = time, verbosity = verbosity, fixed_component = k)
                             end  
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             if verbosity > 0
-                                println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s")
+                                println("  Assembly time for operator $(PDEOperator.name) = $(elapsedtime)s (total = $(SC.LHS_AssemblyTimes[equations[j],k][o])s)")
                             end
                         end
                     end
@@ -758,45 +766,47 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
 
-
-    # ASSEMBLE SYSTEM INIT
-    nsubiterations = length(SC.subiterations)
-    eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
-    A = Array{FEMatrix{T},1}(undef,nsubiterations)
-    b = Array{FEVector{T},1}(undef,nsubiterations)
-    x = Array{FEVector{T},1}(undef,nsubiterations)
-    for i = 1 : nsubiterations
-        A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
-        b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
-        x[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
-        assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = SC.subiterations[i], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
-        eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
-        for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(SC.subiterations[i])
-            if j < SC.subiterations[i][eq]
-                eqoffsets[i][eq] += FEs[j].ndofs
+    assembly_time = @elapsed begin
+        # ASSEMBLE SYSTEM INIT
+        nsubiterations = length(SC.subiterations)
+        eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
+        A = Array{FEMatrix{T},1}(undef,nsubiterations)
+        b = Array{FEVector{T},1}(undef,nsubiterations)
+        x = Array{FEVector{T},1}(undef,nsubiterations)
+        for i = 1 : nsubiterations
+            A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
+            b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
+            x[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
+            assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = SC.subiterations[i], min_trigger = AssemblyInitial, verbosity = verbosity - 2)
+            eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
+            for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(SC.subiterations[i])
+                if j < SC.subiterations[i][eq]
+                    eqoffsets[i][eq] += FEs[j].ndofs
+                end
             end
         end
-    end
 
-    # ASSEMBLE BOUNDARY DATA
-    fixed_dofs = []
-    eqdof = 0
-    for j = 1 : length(Target.FEVectorBlocks)
-        if verbosity > 2
-            println("\n  Assembling boundary data for block [$j]...")
-            @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
-            append!(fixed_dofs, new_fixed_dofs)
-        else
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
-            append!(fixed_dofs, new_fixed_dofs)
+        # ASSEMBLE BOUNDARY DATA
+        fixed_dofs = []
+        eqdof = 0
+        for j = 1 : length(Target.FEVectorBlocks)
+            if verbosity > 2
+                println("\n  Assembling boundary data for block [$j]...")
+                @time new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
+                append!(fixed_dofs, new_fixed_dofs)
+            else
+                new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time, verbosity = verbosity - 2) .+ Target[j].offset
+                append!(fixed_dofs, new_fixed_dofs)
+            end    
         end    
-    end    
+    end
     
     residual = Array{FEVector{T},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
         residual[s] = FEVector{T}("residual subiteration $s", FEs[SC.subiterations[s]])
     end
-    resnorm::T = 0.0
+    linresnorm = zeros(T,nsubiterations)
+    resnorm = zeros(T,nsubiterations)
 
 
     ## INIT SOLVERS
@@ -807,11 +817,15 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
 
 
     if verbosity > 1
-        println("\n  Starting fixpoint iterations with $(length(SC.subiterations)) subiterations")
+        @printf("\n  initial assembly time = %.2e (s)\n",assembly_time)
+        @printf("\n  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
+        @printf("\n  -----------------------------------------------------------------------")
     end
     for iteration = 1 : SC.maxIterations
 
-        for s = 1 : nsubiterations
+        time_reassembly = 0
+        time_solver = 0
+        time_total = @elapsed for s = 1 : nsubiterations
             if verbosity > 2
                 println("\n  Subiteration $s with equations $(SC.subiterations[s])")
             end
@@ -841,7 +855,22 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             # SOLVE
-            linsolve!(LS[s]; verbosity = verbosity - 1)
+            time_solver += @elapsed linsolve!(LS[s]; verbosity = verbosity - 1)
+
+            # CHECK LINEAR RESIDUAL
+            if verbosity > 1
+                residual[s].entries[:] = (A[s].entries*x[s].entries - b[s].entries).^2
+                for j = 1 : length(fixed_dofs)
+                    for eq = 1 : length(SC.subiterations[s])
+                        # check if fixed_dof is necessary for subiteration
+                        if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
+                            eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+                            residual[s][eq][eqdof] = 0
+                        end
+                    end
+                end
+                linresnorm[s] = (sqrt(sum(residual[s].entries, dims = 1)[1]))
+            end
 
             # WRITE INTO Target
             for j = 1 : length(SC.subiterations[s])
@@ -851,13 +880,14 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             # REASSEMBLE PARTS FOR NEXT SUBITERATION
-            next_eq = (s == nsubiterations) ? 1 : s+1
-            assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 2)
+            time_reassembly += @elapsed begin
+                next_eq = (s == nsubiterations) ? 1 : s+1
+                assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 2)
+            end
 
         end
 
-        # CHECK RESIDUAL
-        resnorm = 0.0
+        # CHECK NONLINEAR RESIDUAL
         for s = 1 : nsubiterations
             residual[s].entries[:] = (A[s].entries*x[s].entries - b[s].entries).^2
             for j = 1 : length(fixed_dofs)
@@ -868,23 +898,16 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
                     end
                 end
             end
-            resnorm += (sqrt(sum(residual[s].entries, dims = 1)[1]))
-            if verbosity > 2
-                println("  residual[$s] = $(sqrt(sum(residual[s].entries, dims = 1)[1]))")
-            end
+            resnorm[s] = (sqrt(sum(residual[s].entries, dims = 1)[1]))
         end
+
         if verbosity > 1
-            println("  iteration = $iteration | residual = $resnorm")
+            @printf("\n     %4d  ", iteration)
+            @printf(" | %e", sqrt(sum(linresnorm.^2)))
+            @printf(" | %e", sqrt(sum(resnorm.^2)))
+            @printf(" | %.2e/%.2e/%.2e",time_reassembly,time_solver, time_total)
         end
 
-
-
-        if resnorm < SC.maxResidual
-            if verbosity > 0
-                println("  converged (maxResidual reached)")
-            end
-            break
-        end
         if iteration == SC.maxIterations
             if verbosity > 0
                 println("  terminated (maxIterations reached)")
@@ -892,6 +915,12 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
         end
 
+        if sqrt(sum(resnorm.^2)) < SC.maxResidual
+            if verbosity > 0
+                println("  converged (maxResidual of $(SC.maxResidual) reached)")
+            end
+            break
+        end
     end
 
     # REALIZE GLOBALCONSTRAINTS 
