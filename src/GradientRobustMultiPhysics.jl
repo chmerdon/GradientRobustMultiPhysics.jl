@@ -35,6 +35,7 @@ export Coordinates
 export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns, CellFaceOrientations, CellEdgeSigns
 export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceEdges, FaceNormals
 export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTangents
+export NodePatchGroups
 export BFaces, BFaceCellPos, BFaceVolumes
 export BEdgeNodes, BEdges, BEdgeVolumes, BEdgeGeometries
 export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries, UniqueBEdgeGeometries
@@ -48,6 +49,7 @@ export uniform_refine
 export barycentric_refine
 
 include("adaptive_meshrefinements.jl")
+export bulk_mark
 export RGB_refine
 
 include("serialadjacency.jl")
@@ -97,6 +99,10 @@ export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 export DefaultName4Operator
 
+export DiscontinuityTreatment, Jump, Average
+export IdentityDisc, GradientDisc
+
+
 include("finiteelements.jl")
 export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
 export AbstractFiniteElement
@@ -114,22 +120,19 @@ export HDIVRT0, HDIVBDM1, HDIVRT1
 export AbstractHcurlFiniteElement
 export HCURLN0
 
-export get_ncomponents
+export get_polynomialorder
+export get_ncomponents, get_basis_on_cell, get_basis_on_face
 export reconstruct!
 
 export interpolate! # must be defined separately by each FEdefinition
 export nodevalues! # = P1interpolation, abstract averaging method that works for any element, but can be overwritten by FEdefinition to something simpler
 
 export FEVectorBlock, FEVector
-export FEMatrixBlock, FEMatrix
+export FEMatrixBlock, FEMatrix, _addnz
 export fill!, addblock!, addblock_matmul!, lrmatmul
 
 export get_reconstruction_matrix
 
-
-
-export DiscontinuityTreatment, Jump, Average
-export IdentityDisc, GradientDisc
 
 include("febasisevaluator.jl")
 export FEBasisEvaluator, update!, eval!

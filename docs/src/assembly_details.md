@@ -13,13 +13,13 @@ The following assembly types are available.
 | :--------------- | :---------------------------------------------------- |
 | ON_CELLS         | assembles over the cells of the mesh                  |
 | ON_FACES         | assembles over all faces of the mesh                  |
-| ON_IFACES (*)    | assembles over the interior faces of the mesh         |
+| ON_IFACES        | assembles over the interior faces of the mesh         |
 | ON_BFACES        | assembles over the boundary faces of the mesh         |
 | ON_EDGES (*)     | assembles over all edges of the mesh (in 3D)          |
 | ON_BEDGES (*)    | assembles over the boundary edges of the mesh (in 3D) |
 
 !!! note
-    (*) = still experimental, might have some issues
+    (*) = only reasonable in 3D and still experimental, might have some issues
 
 
 ## Assembly Patterns
@@ -28,9 +28,65 @@ Each Pattern comes with a number of arguments/quantities with associated [Functi
 
 The patterns are used by the assembly of the PDE operators defined in a [PDE Description](@ref). However, it is also possible for the user to use them directly, see e.g. the example [Commuting Interpolators (2D)](@ref).
 
+The following table lists all available assembly patterns and how they can be used for assembly or evaluations.
+
+
+| AssemblyPattern    | evaluate | assemble into matrix | assembled into vector |
+| :----------------: | :------: | :------------------: | :-------------------: |
+| ItemIntegrator     |    yes   |          no          |           no          |
+| LinearForm         |     no   |          no          |          yes          |
+| BilinearForm       |     no   |         yes          |          yes (1)      |
+| TrilinearForm      |     no   |         yes (1)      |          yes (2)      |
+| MultilinearForm    |     no   |          no          |          yes (N-1)    |
+| NonlinearForm      |     no   |         yes (L)      |          yes (L)      |
+
+Number in brackets denotes the number of fixed arguments needed for this assembly, (L) means that a current solution is needed to evaluate (to evaluate the linearisation of the nonlinear form in this state).
+Evaluations of the other AssemblyPatterns will be possible in a future update, but currently have to be performed by maintaining a duplicate of the pattern rewritten as an ItemIntegrator.
+
+
+#### ItemIntegrator
+
+```@docs
+ItemIntegrator
+```
+
+
+#### Linearform
+
+```@docs
+LinearForm
+```
+
+
+#### Bilinearform
+
+```@docs
+BilinearForm
+SymmetricBilinearForm
+```
+
+#### Trilinearform
 
 ```@autodocs
-Modules = [GradientRobustMultiPhysics]
-Pages = ["assemblypatterns.jl"]
-Order   = [:type, :function]
+TrilinearForm
+```
+
+#### Multilinearform
+
+```@docs
+MultilinearForm
+```
+
+#### Nonlinearform
+
+```@docs
+NonlinearForm
+```
+
+
+### Evaluate! & Assemble!
+
+```@docs
+evaluate!
+assemble!
 ```

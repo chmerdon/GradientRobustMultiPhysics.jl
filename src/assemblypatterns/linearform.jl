@@ -1,29 +1,23 @@
 abstract type APT_LinearForm <: AssemblyPatternType end
 
 """
-$(TYPEDEF)
+````
+function LinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE::Array{FESpace,1},
+    operators::Array{DataType,1}, 
+    action::AbstractAction; 
+    regions::Array{Int,1} = [0])
+````
 
-creates a linearform assembly pattern
+Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
     return AssemblyPattern{APT_LinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
 end
 
 
-"""
-````
-assemble!(
-    b::Union{AbstractArray{T,1},AbstractArray{T,2}},
-    AP::AssemblyPattern{APT,T,AT},
-    verbosity::Int = 0,
-    skip_preps::Bool = false,
-    factor = 1,
-    offset = 0) where {APT <: APT_LinearForm <: Real, AT <: AbstractAssemblyType}
-
-````
-
-Assembly of a LinearForm assembly pattern into a given one- or two-dimensional Array b.
-"""
 function assemble!(
     b::Union{AbstractArray{T,1},AbstractArray{T,2}},
     AP::AssemblyPattern{APT,T,AT};

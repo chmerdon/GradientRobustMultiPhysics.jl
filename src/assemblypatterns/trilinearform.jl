@@ -4,18 +4,13 @@ abstract type APT_TrilinearForm <: AssemblyPatternType end
 ````
 function TrilinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
-    FE1::FESpace,
-    FE2::FESpace,
-    FE3::FESpace,
-    operator1::Type{<:AbstractFunctionOperator},
-    operator2::Type{<:AbstractFunctionOperator},
-    operator3::Type{<:AbstractFunctionOperator},
-    action::AbstractAction; # is only applied to FE1/operator1 + FE2/operator2
+    FES::Array{FESpace,1},          
+    operators::Array{DataType,1},
+    action::AbstractAction;
     regions::Array{Int,1} = [0])
 ````
 
-Creates a TrilinearForm that can be assembeld into a matrix (with one argument fixed) or into a vector (with two fixed arguments).
+Creates a TrilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function TrilinearForm(
     T::Type{<:Real},

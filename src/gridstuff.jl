@@ -62,6 +62,8 @@ abstract type BEdgeRegions <: AbstractElementRegions end
 abstract type BEdgeGeometries <: AbstractElementGeometries end
 abstract type UniqueBEdgeGeometries <: AbstractElementGeometries end
 
+abstract type NodePatchGroups <: AbstractGridIntegerArray1D end
+
 
 ## grid item types to dispatch certain things to the correct GridComponents
 abstract type ITEMTYPE_NODE end
@@ -376,6 +378,44 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
     xgrid[CellFaceSigns] = xCellFaceSigns
     xgrid[FaceCells] = reshape(xFaceCells,2,face)
     xFaceNodes
+end
+
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{NodePatchGroups})
+    xCellNodes = xgrid[CellNodes]
+    xNodeCells = atranspose(xCellNodes)
+    nnodes = size(xgrid[Coordinates],2)
+    ncells = num_sources(xCellNodes)
+    ncells4node::Int = 0
+    group4node = zeros(Int,nnodes)
+    cell::Int = 0
+    cgroup::Int = 0
+    cell_in_group = zeros(Bool,ncells)
+    take_into = false
+    cgroup = 0
+    while minimum(group4node) == 0
+        cell_in_group .= false
+        cgroup += 1
+        for node = 1 : nnodes
+            if group4node[node] == 0
+                ncells4node = num_targets(xNodeCells,node)
+                take_into = true
+                for c = 1 : ncells4node
+                    if cell_in_group[xNodeCells[c,node]] == true
+                        take_into = false
+                        break
+                    end
+                end
+                if take_into
+                    group4node[node] = cgroup
+                    for c = 1 : ncells4node
+                        cell_in_group[xNodeCells[c,node]] = true
+                    end
+                end
+            end
+        end
+    end
+    group4node
 end
 
 

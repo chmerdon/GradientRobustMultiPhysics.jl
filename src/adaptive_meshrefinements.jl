@@ -1,3 +1,38 @@
+function bulk_mark(xgrid, refinement_indicators, theta = 0.5; verbosity::Int = 0, indicator_AT = ON_CELLS)
+
+    xFaceCells = xgrid[FaceCells]
+    xFaceNodes = xgrid[FaceNodes]
+    nfaces = num_sources(xFaceNodes)
+
+    # redistribute refinement_indicators to face indicators (if necessary)
+    if indicator_AT == ON_CELLS
+        refind4face = zeros(Float64,nfaces)
+        cell::Int = 0
+        for face = 1 : nfaces, k = 1 : 2
+            cell = xFaceCells[k,face]
+            if cell > 0
+                refind4face[face] += refinement_indicators[cell]
+            end
+        end
+    elseif indicator_AT == ON_FACES
+        refind4face = refinement_indicators
+    end
+
+    # mark largest indicators until theta*total is reached
+    p = Base.sortperm(refind4face[:], rev = true)
+    totalsum = sum(refind4face)
+    csum = 0
+    j = 0
+    facemarker = zeros(Bool,nfaces)
+    while csum <= theta*totalsum
+        j += 1
+        csum += refind4face[p[j]]
+        facemarker[p[j]] = true
+    end
+
+    return facemarker
+end
+
 
 
 # adaptive refinement rules fo TRIANGLE2D

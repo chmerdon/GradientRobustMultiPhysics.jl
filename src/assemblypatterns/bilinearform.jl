@@ -3,18 +3,34 @@ abstract type APT_BilinearForm <: AssemblyPatternType end
 abstract type APT_SymmetricBilinearForm <: APT_BilinearForm end
 
 """
-$(TYPEDEF)
+````
+function SymmetricBilinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE::Array{FESpace,1},
+    operators::Array{DataType,1}, 
+    action::AbstractAction; 
+    regions::Array{Int,1} = [0])
+````
 
-creates a symmetric bilinearform assembly pattern
+Creates a symmetric BilinearForm assembly pattern with the given FESpaces, operators and action etc. Symmetry is not checked automatically, but is assumed during assembly!
 """
 function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
     return AssemblyPattern{APT_SymmetricBilinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
 end
 
 """
-$(TYPEDEF)
+````
+function BilinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE::Array{FESpace,1},
+    operators::Array{DataType,1}, 
+    action::AbstractAction; 
+    regions::Array{Int,1} = [0])
+````
 
-creates a symmetric bilinearform assembly pattern
+Creates a (unsymmetric) BilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
     return AssemblyPattern{APT_BilinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))

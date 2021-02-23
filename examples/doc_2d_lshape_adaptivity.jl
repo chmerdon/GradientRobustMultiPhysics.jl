@@ -4,7 +4,7 @@
 ([source code](SOURCE_URL))
 
 This example computes the standard-residual error estimator for the $H^1$ error of some $H^1$-conforming
-approximation ``u_h`` to the solution ``u`` of some vector Poisson problem ``-\Delta u = f`` on the L-shaped domain, i.e.
+approximation ``u_h`` to the solution ``u`` of some Poisson problem ``-\Delta u = f`` on an L-shaped domain, i.e.
 ```math
 \eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
 + \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \mathbf{n}]] \|^2_{L^2(F)}
@@ -131,8 +131,6 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
             ## uniform mesh refinement
             xgrid = uniform_refine(xgrid)
         else
-            ## adaptive mesh refinement
-            ## mark faces with largest errors
             nfaces = num_sources(xgrid[FaceNodes])
             refinement_indicators = sum(jump_error, dims = 1)
             xFaceCells = xgrid[FaceCells]
@@ -143,18 +141,10 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
                     refinement_indicators[face] += vol_error[1,cell] + vol_error[2,cell]
                 end
             end
-            p = Base.sortperm(refinement_indicators[1,:], rev = true)
-            totalsum = sum(refinement_indicators)
-            csum = 0
-            j = 0
-            facemarker = zeros(Bool,nfaces)
-            while csum <= theta*totalsum
-                j += 1
-                csum += refinement_indicators[1,p[j]]
-                facemarker[p[j]] = true
-            end
 
+            ## adaptive mesh refinement
             ## refine by red-green-blue refinement (incl. closuring)
+            facemarker = bulk_mark(xgrid, refinement_indicators, theta; verbosity = verbosity, indicator_AT = ON_FACES)
             xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
         end
     end

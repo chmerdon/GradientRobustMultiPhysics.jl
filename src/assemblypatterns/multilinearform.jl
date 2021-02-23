@@ -12,7 +12,7 @@ function MultilinearForm(
     regions::Array{Int,1} = [0])
 ````
 
-Creates a MultilinearForm that can be only assembled into a vector (with all but one fixed argument which currently is always the last one).
+Creates a MultilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function MultilinearForm(
     T::Type{<:Real},

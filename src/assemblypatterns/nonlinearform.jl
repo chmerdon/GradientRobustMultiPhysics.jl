@@ -30,7 +30,7 @@ end
 assemble!(
     A::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT};
-    FEB::Array{<:FEVectorBlock,1};         # coefficients for each operator
+    FEB::Array{<:FEVectorBlock,1};         # coefficients of current solution for each operator
     verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false
@@ -295,7 +295,7 @@ end
 assemble!(
     b::AbstractVector,
     AP::NonlinearForm{T, AT},
-    FEB::Array{<:FEVectorBlock,1};         # coefficients for each operator
+    FEB::Array{<:FEVectorBlock,1};         # coefficients of current solution for each operator
     verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false

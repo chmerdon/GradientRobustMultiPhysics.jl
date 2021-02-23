@@ -1,9 +1,16 @@
 abstract type APT_ItemIntegrator <: AssemblyPatternType end
 
 """
-$(TYPEDEF)
+````
+function ItemIntegrator(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    operators::Array{DataType,1}, 
+    action::AbstractAction; 
+    regions::Array{Int,1} = [0])
+````
 
-creates an item integrator that can e.g. be used for error/norm evaluations
+Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
 function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action; regions = [0])
     return AssemblyPattern{APT_ItemIntegrator, T, AT}([],operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
@@ -19,7 +26,7 @@ function L2ErrorIntegrator(
     time = 0)
 ````
 
-Creates an item integrator that compares FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error.
+Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error.
 """
 function L2ErrorIntegrator(T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction},
@@ -176,14 +183,14 @@ function evaluate!(
                     ndofs4dofitem = ndofs4EG[FEid][EG4dofitem[di]]
                     for j=1:ndofs4dofitem
                         fdof = xItemDofs[FEid][j,dofitem]
-                        coeffs[j] = FEB[FEid][fdof]
+                        coeffs[j] = FEB[FEid][fdof] * coefficient4dofitem[di]
                     end
 
                     for i in eachindex(weights)
                         if FEid == 1 && di == 1
                             fill!(action_input[i], 0)
                         end
-                        eval!(action_input[i], basisevaler4dofitem, coeffs, i, offsets[FEid], coefficient4dofitem[di])
+                        eval!(action_input[i], basisevaler4dofitem, coeffs, i, offsets[FEid])
                     end  
                 end
             end

@@ -1,20 +1,20 @@
 #= 
 
-# 2D Equilibration Error Estimation (L-shape)
+# 2D Equilibration Error Estimation (Global)
 ([source code](SOURCE_URL))
 
 This example computes a global equilibration error estimator for the $H^1$ error of some $H^1$-conforming
-approximation ``u_h`` to the solution ``u`` of some vector Poisson problem ``-\Delta u = f`` on the L-shaped domain, i.e.
+approximation ``u_h`` to the solution ``u`` of some Poisson problem ``-\Delta u = f`` on an L-shaped domain, i.e.
 ```math
 \eta^2(\sigma_h) := \| \sigma_h - \nabla u_h \|^2_{L^2(T)}
 ```
-where ``\sigma_h`` discretisates the exact ``\sigma`` int the dual mixed problem
+where ``\sigma_h`` is an Hdiv-conforming approximation of the exact ``\sigma`` in the dual mixed problem
 ```math
 \sigma - \nabla u = 0
 \quad \text{and} \quad
 \mathrm{div}(\sigma) + f = 0
 ```
-with some Hdiv-conforming element.
+by solving the problem globally.
 
 
 !!! note
@@ -23,8 +23,7 @@ with some Hdiv-conforming element.
     possibly with some additional term that weighs in the oscillations of $f$, which are zero in this example,
     and some additional terms that quantifies the Dirichlet boundary error, which is neglected here.
 
-    Also, there are local designs for equilibrated fluxes in the literature which are computable with much less
-    numerical costs.
+    See the local equilibrated version for a less costly alternative.
 
 =#
 
@@ -150,29 +149,8 @@ function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
             xgrid = uniform_refine(xgrid)
         else
             ## adaptive mesh refinement
-            ## mark faces with largest errors
-            nfaces = num_sources(xgrid[FaceNodes])
-            refinement_indicators = zeros(Float64,nfaces)
-            xFaceCells = xgrid[FaceCells]
-            cell::Int = 0
-            for face = 1 : nfaces, k = 1 : 2
-                cell = xFaceCells[k,face]
-                if cell > 0
-                    refinement_indicators[face] += error4cell[1,cell]
-                end
-            end
-            p = Base.sortperm(refinement_indicators[:], rev = true)
-            totalsum = sum(refinement_indicators)
-            csum = 0
-            j = 0
-            facemarker = zeros(Bool,nfaces)
-            while csum <= theta*totalsum
-                j += 1
-                csum += refinement_indicators[p[j]]
-                facemarker[p[j]] = true
-            end
-
             ## refine by red-green-blue refinement (incl. closuring)
+            facemarker = bulk_mark(xgrid, view(error4cell,1,:), theta; verbosity = verbosity)
             xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
         end
     end

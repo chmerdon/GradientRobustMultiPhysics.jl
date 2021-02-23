@@ -56,7 +56,9 @@ function make_all()
     # Generate Markdown pages from examples
     #
     example_jl_dir = joinpath(@__DIR__,"..","examples")
+    example_jl_dir2 = joinpath(@__DIR__,"..","examples_advanced")
     example_md_dir  = joinpath(@__DIR__,"src","examples")
+    example_md_dir2  = joinpath(@__DIR__,"src","examples_advanced")
     
     for example_source in readdir(example_jl_dir)
         base,ext=splitext(example_source)
@@ -71,6 +73,22 @@ function make_all()
         end
     end
     generated_examples=joinpath.("examples",readdir(example_md_dir))
+
+    for example_source in readdir(example_jl_dir2)
+        base,ext=splitext(example_source)
+        if example_source[1:4] == "doc_" && ext==".jl"
+            source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples_advanced/"*example_source
+            preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
+            Literate.markdown(joinpath(@__DIR__,"..","examples_advanced",example_source),
+                              example_md_dir2,
+                              documenter=false,
+                              info=false,
+                              preprocess=preprocess)
+        end
+    end
+    generated_examples_advanced=joinpath.("examples_advanced",readdir(example_md_dir2))
+
+
     pushfirst!(generated_examples, "examples_intro.md")
 
     makedocs(
@@ -92,7 +110,8 @@ function make_all()
             "Meshing" => "meshing.md",
             "Quadrature" => "quadrature.md",
             "Export/Viewers" => "viewers.md",
-            "Examples" => generated_examples
+            "Examples (Intro)" => generated_examples,
+            "Examples (Advanced)" => generated_examples_advanced
         ]
     )
 
