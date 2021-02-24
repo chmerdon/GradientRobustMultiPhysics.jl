@@ -225,6 +225,8 @@ function main(; verbosity = 0, nlevels = 4, viscosity = 1e-2)
 
     ## run
     solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, verbosity = verbosity)
+
+    return nothing
 end
 
 
@@ -245,3 +247,8 @@ function test(; verbosity = 0)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DPressureRobustness.main()

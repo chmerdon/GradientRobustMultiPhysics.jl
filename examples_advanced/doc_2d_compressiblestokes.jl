@@ -26,10 +26,10 @@ p &= eos(\varrho) := c \varrho^\gamma
 \end{aligned}
 ```
 such that ``\mathbf{f} = 0`` and ``\mathbf{g}`` nonzero to match the prescribed solution.
-This example is designed to study the well-balanced property of a discretisations. Note that gradient-robust discretisations (set reconstruct = true below)
-have a much smaller L2 velocity error (i.e. approximate the well-balanced state much better). For larger c the problem gets more incompressible which reduces
+This example is designed to study the well-balanced property of a discretisation. Note that a gradient-robust discretisation (set reconstruct = true below)
+has a much smaller L2 velocity error (i.e. approximatse the well-balanced state much better). For larger c the problem gets more incompressible which reduces
 the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density.
-Also, on a uniform mesh the gradient-robust method is perfect!
+See reference below for more details.
 
 !!! reference
 
@@ -81,22 +81,43 @@ function rhs_gravity!(gamma,c)
 end   
 
 ## everything is wrapped in a main function
-function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, write_vtk::Bool = true)
+function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true, c = 10, gamma = 1.4, M = 1, shear_modulus = 1e-3, lambda = -1e-3/3)
 
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_mountainrange.sg")
-    xgrid = uniform_refine(xgrid,0)
+    xgrid = uniform_refine(xgrid,1)
 
-    ## problem data
-    c = 10 # coefficient in equation of state
-    gamma = 1.4 # power in gamma law in equations of state
-    M = 1  # average mass for density
-    shear_modulus = 1e-1
-    lambda = - 1//3 * shear_modulus
+    ## solve without and with reconstruction
+    Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma, verbosity = verbosity)
+    ## plots
+    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity - 1)
 
-    ## choose finite element type [velocity, density,  pressure]
-    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel
-    #FETypes = [H1CR{2}, H1P0{1}, H1P0{1}] # Crouzeix--Raviart (possibly needs smaller timesteps)
+    Solution2 = setup_and_solve(xgrid; reconstruct = true, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma, verbosity = verbosity)
+    ## plots
+    GradientRobustMultiPhysics.plot(Solution2, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity - 1)
+
+    ## compare L2 error for velocity and density
+    user_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "", quadorder = 0)
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 3)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
+    L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
+    L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
+    L2error2 = sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1]))
+    @printf("\n        reconstruct     false    |    true\n")
+    @printf("================================================\n")
+    @printf("L2error(Velocity) | %.5e  | %.5e \n",L2error,L2error2)
+    L2error = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))
+    L2error2 = sqrt(evaluate(L2DensityErrorEvaluator,Solution2[2]))
+    @printf("L2error(Density)  | %.5e  | %.5e \n",L2error,L2error2)
+    
+end
+
+function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, shear_modulus = 1, lambda = 0, verbosity = 0)
+
+    ## negotiate edata functions to the package
+    user_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "", quadorder = 0)
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 3)
+    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = "g", dependencies = "X", quadorder = 3)
 
     ## solver parameters
     timestep = shear_modulus / (2*c)
@@ -104,20 +125,13 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     maxTimeSteps = 1000  # termination criterion 1
     stationarity_threshold = 1e-13/shear_modulus # stop when change is below this treshold
 
-    #####################################################################################    
-    #####################################################################################
-
-
-    ## negotiate edata functions to the package
-    user_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "", quadorder = 0)
-    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 3)
-    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = "g", dependencies = "X", quadorder = 3)
-
-
+    ## set finite element type [velocity, density,  pressure]
+    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel
+    
     ## set function operators depending on reconstruct
     if reconstruct
-        VeloIdentity = ReconstructionIdentity{HDIVRT0{2}} # identity operator for gradient-robust scheme
-        VeloDivergence = ReconstructionDivergence{HDIVRT0{2}} # divergence operator for gradient-robust scheme
+        VeloIdentity = ReconstructionIdentity{HDIVBDM1{2}} # identity operator for gradient-robust scheme
+        VeloDivergence = ReconstructionDivergence{HDIVBDM1{2}} # divergence operator for gradient-robust scheme
     else # classical choices
         VeloIdentity = Identity
         VeloDivergence = Divergence
@@ -201,21 +215,7 @@ function main(; verbosity = 2, Plotter = nothing, reconstruct::Bool = true, writ
     Md = sum(Solution[2][:] .* xgrid[CellVolumes])
     @printf("  mass_error = %.4e - %.4e = %.4e \n",Minit, Md, abs(Minit-Md))
 
-    ## compute L2 error for velocity and density
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
-    L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
-    L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
-    println("\nL2error(Velocity) = $L2error")
-    L2error = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))
-    println("L2error(Density) = $L2error")
-    
-    ## plots
-    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
-    
-    if write_vtk
-        mkpath("data/example_2d_compressiblestokes/")
-        writeVTK!("data/example_2d_compressiblestokes/results.vtk", Solution)
-    end
+    return Solution
 end
 
 end

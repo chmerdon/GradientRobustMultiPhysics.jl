@@ -128,9 +128,9 @@ function linsolve!(
 
     if verbosity > 1
         println("\n  Solving directly with UMFPACK...")
-        @time LS.x[:] = LS.ALU\LS.b
+        @time ldiv!(LS.x,LS.ALU,LS.b)
     else
-        LS.x[:] = LS.ALU\LS.b
+        ldiv!(LS.x,LS.ALU,LS.b)
     end
     LS.nliniter = 1
     LS.nsolves += 1
@@ -747,7 +747,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 
-    if verbosity > 1
+    if verbosity > 2
         show_statistics(stdout,PDE,SC)
     end
 
@@ -929,7 +929,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         realize_constraint!(Target,PDE.GlobalConstraints[j]; verbosity = verbosity - 2)
     end
 
-    if verbosity > 1
+    if verbosity > 2
         show_statistics(stdout,PDE,SC)
     end
 
@@ -1018,7 +1018,7 @@ function solve!(
 
     SolverConfig.maxResidual = maxResidual
     SolverConfig.maxIterations = maxIterations
-    if verbosity > 1
+    if verbosity > 2
         Base.show(SolverConfig)
     end
 
@@ -1087,7 +1087,9 @@ function assemble_massmatrix4subiteration!(TCS::TimeControlSolver, i::Int; verbo
                 operator2 = TCS.dt_operators[pos]
                 BLF = SymmetricBilinearForm(Float64, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
                 time = @elapsed assemble!(A, BLF; verbosity = verbosity - 1, skip_preps = false)
-                println("   time = $time")
+                if verbosity > 1
+                    println("   mass matrix assembly time = $time")
+                end
             end
         end
     end
@@ -1598,6 +1600,9 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             end
             @printf("\n          |            |  (total)   |")
         end
+        for j = 1 : size(statistics,1)
+            @printf("  %s  ",TCS.PDE.unknown_names[j])
+        end
     end
     for iteration = 1 : maxTimeSteps
         statistics = advance!(TCS, timestep)
@@ -1624,7 +1629,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
         end
     end
 
-    if TCS.SC.verbosity > 1
+    if TCS.SC.verbosity > 2
         show_statistics(stdout,TCS.PDE,TCS.SC)
     end
 end
@@ -1688,7 +1693,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
         @printf("\n\n  arrived at time T = %.4e...\n",TCS.ctime)
     end
 
-    if TCS.SC.verbosity > 1
+    if TCS.SC.verbosity > 2
         show_statistics(stdout,TCS.PDE,TCS.SC)
     end
 end

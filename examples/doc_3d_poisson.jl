@@ -35,7 +35,7 @@ function rhs!(result)
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 1)
+function main(; Plotter = nothing, verbosity = 0)
 
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
@@ -102,3 +102,8 @@ function main(; Plotter = nothing, verbosity = 1)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_3DPoisson.main()

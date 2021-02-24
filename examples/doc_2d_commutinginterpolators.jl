@@ -2,6 +2,7 @@
 
 # Commuting Interpolators (2D)
 ([source code](SOURCE_URL))
+([execute](true))
 
 This example verifies a structural property of the H1 and Hdiv finite element spaces and their interpolators which is
 ```math
@@ -14,6 +15,7 @@ vertices but not in the additional degrees of freedom. For ``k=2``, the interpol
 =#
 
 module Example_2DCommutingInterpolators
+
 using GradientRobustMultiPhysics
 
 ## define some function
@@ -27,7 +29,7 @@ function exact_curl!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(;order::Int = 2)
+function main(;order::Int = 2, testmode = false)
 
     ## choose some grid
     xgrid = uniform_refine(reference_domain(Triangle2D),2)
@@ -73,17 +75,25 @@ function main(;order::Int = 2)
 
     ## do some norm that recognizes a nonzero in the vector
     error = sqrt(sum(error[1][:].^2, dims = 1)[1])
-    println("error(Curl(I_$(FE[1])(psi) - I_$(FE[2])(Curl(psi))) = $error")
-    return error
+    if testmode == true
+        return error
+    else
+        println("error(Curl(I_$(FE[1])(psi) - I_$(FE[2])(Curl(psi))) = $error")
+    end
 end
 
 ## test function that is called by test unit
 function test()
     error = []
     for order in [1,2]
-        push!(error, max(main(order = order)))
+        push!(error, max(main(order = order, testmode = true)))
     end
     return maximum(error)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DCommutingInterpolators.main()

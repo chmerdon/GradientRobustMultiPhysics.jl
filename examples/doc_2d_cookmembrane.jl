@@ -78,3 +78,8 @@ function main(; verbosity = 1, Plotter = nothing)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DCookMembrane.main()

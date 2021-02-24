@@ -43,7 +43,7 @@ function exact_function_gradient!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
+function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
 
     ## initial grid
     xgrid = uniform_refine(grid_lshape(Triangle2D),2)
@@ -131,6 +131,8 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
             ## uniform mesh refinement
             xgrid = uniform_refine(xgrid)
         else
+            ## adaptive mesh refinement
+            ## compute refinement indicators
             nfaces = num_sources(xgrid[FaceNodes])
             refinement_indicators = sum(jump_error, dims = 1)
             xFaceCells = xgrid[FaceCells]
@@ -142,7 +144,6 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
                 end
             end
 
-            ## adaptive mesh refinement
             ## refine by red-green-blue refinement (incl. closuring)
             facemarker = bulk_mark(xgrid, refinement_indicators, theta; verbosity = verbosity, indicator_AT = ON_FACES)
             xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
@@ -171,3 +172,9 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
 end
 
 end
+
+
+#=
+### Output of default main() run
+=#
+Example_Lshape.main()

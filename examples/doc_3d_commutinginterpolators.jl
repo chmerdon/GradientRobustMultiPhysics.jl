@@ -28,7 +28,7 @@ function exact_curl!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(;order::Int = 1)
+function main(;order::Int = 1, testmode = false)
 
     ## choose some grid
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),2)
@@ -72,17 +72,25 @@ function main(;order::Int = 1)
 
     ## do some norm that recognizes a nonzero in the vector
     error = sqrt(sum(error[1][:].^2, dims = 1)[1])
-    println("error(Curl(I_$(FE[1])(psi) - I_$(FE[2])(Curl(psi))) = $error")
-    return error
+    if testmode == true
+        return error
+    else
+        println("error(Curl(I_$(FE[1])(psi) - I_$(FE[2])(Curl(psi))) = $error")
+    end
 end
 
 ## test function that is called by test unit
 function test()
     error = []
     for order in [1]
-        push!(error, max(main(order = order)))
+        push!(error, max(main(order = order, testmode = true)))
     end
     return maximum(error)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_3DCommutingInterpolators.main()

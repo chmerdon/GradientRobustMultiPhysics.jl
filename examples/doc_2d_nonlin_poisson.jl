@@ -38,7 +38,7 @@ end
 
 ## everything is wrapped in a main function
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1})
+function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1}, testmode = false)
 
     ## choose initial mesh
     xgrid = grid_unitsquare(Triangle2D)
@@ -65,6 +65,9 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1})
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
 
+    ## print problem description
+    Base.show(Problem)
+
     ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
     H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
@@ -89,23 +92,30 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1})
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
     end
 
-    ## output errors in a nice table
-    println("\n   NDOF  |   L2ERROR   |   H1ERROR")
-    for j=1:nlevels
-        @printf("  %6d | %.5e | %.5e\n",NDofs[j],L2error[j],H1error[j]);
+    if testmode == true
+        return H1error[end]
+    else
+        ## output errors in a nice table
+        println("\n   NDOF  |   L2ERROR   |   H1ERROR")
+        for j=1:nlevels
+            @printf("  %6d | %.5e | %.5e\n",NDofs[j],L2error[j],H1error[j]);
+        end
+    
+        ## plot
+        GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
     end
-
-    ## plot
-    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
-
-    return H1error[end]
 end
 
 
 ## test function that is called by test unit
 ## tests if the above problem is solved exactly by P2-FEM
 function test(; verbosity = 0)
-    return main(; verbosity = 0, FEType = H1P2{1,2}, nlevels = 1)
+    return main(; verbosity = 0, FEType = H1P2{1,2}, nlevels = 1, testmode = true)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DNonlinearPoisson.main()

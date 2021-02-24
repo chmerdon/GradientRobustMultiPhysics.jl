@@ -127,3 +127,8 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DFlowTransport.main()

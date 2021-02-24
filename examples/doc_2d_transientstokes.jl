@@ -225,3 +225,8 @@ function main(; verbosity = 2, Plotter = nothing)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DTransientStokes.main()

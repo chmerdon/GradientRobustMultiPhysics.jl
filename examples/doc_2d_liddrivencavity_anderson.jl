@@ -31,10 +31,10 @@ function boundary_data_top!(result)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_iterations = 5)
+function main(; verbosity = 2, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10)
 
     ## grid
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4);
 
     ## problem parameters
     maxIterations = 50  # termination criterion 1 for nonlinear mode
@@ -54,8 +54,8 @@ function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_ite
     ## negotiate data functions to the package
     user_function_bnd = DataFunction(boundary_data_top!, [2,2]; name = "u_bnd", dependencies = "", quadorder = 0)
 
-    ## load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true)
+    ## load Navier-Stokes problem prototype and assign data
+    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false)
     add_boundarydata!(StokesProblem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = user_function_bnd)
 
@@ -78,3 +78,8 @@ function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_ite
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DLidDrivenCavityAnderson.main()

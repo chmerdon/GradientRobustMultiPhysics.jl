@@ -55,8 +55,8 @@ function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = fals
     xgrid_fine = uniform_refine(xgrid,2)
     FES_fine = FESpace{FEType}(xgrid_fine)
     Interpolation = FEVector{Float64}("fine-grid interpolation",FES_fine)
-    interpolate!(Interpolation[1], ON_CELLS, user_function)
-    println("L2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
+    interpolate!(Interpolation[1], ON_CELLS, user_function; verbosity = verbosity)
+    println("\nL2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
         
     ## evaluate/interpolate function at nodes and plot
     if Plotter != nothing
@@ -72,3 +72,9 @@ function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = fals
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_1DBestapprox.main()
+

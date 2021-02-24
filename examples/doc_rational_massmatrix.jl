@@ -15,7 +15,7 @@ using ExtendableGrids
 
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main(; verbosity = 0, Plotter = nothing)
 
     ## reference domain as extendable grid
     xgrid = reference_domain(Triangle2D, Rational)
@@ -31,9 +31,18 @@ function main(; verbosity = 1, Plotter = nothing)
     MAMA = FEMatrix{Rational}("mass matrix for $(FEType)",FES)
     assemble!(MAMA[1],MAMA_BLF; verbosity = verbosity)
 
-    ## show mass matrix divided by area
-    Base.show(MAMA.entries./xgrid[CellVolumes][1])
+    ## divide by area
+    MAMA.entries ./= xgrid[CellVolumes][1]
 
+    ## print matrix
+    for j = 1 : size(MAMA.entries,1)
+        println("$(MAMA.entries[j,:])")
+    end
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_RationalMAMA.main()

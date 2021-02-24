@@ -65,3 +65,8 @@ function main(; verbosity = 1)
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_3DBestapproxDivpreserve.main()

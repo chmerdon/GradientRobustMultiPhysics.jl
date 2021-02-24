@@ -2,7 +2,6 @@ using Documenter
 using Literate
 using ExtendableSparse
 using ExtendableGrids
-
 using GradientRobustMultiPhysics
 
 
@@ -65,11 +64,21 @@ function make_all()
         if example_source[1:4] == "doc_" && ext==".jl"
             source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/"*example_source
             preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
-            Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
+            try
+                Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
                               example_md_dir,
                               documenter=false,
+                              execute=true,
                               info=false,
                               preprocess=preprocess)
+            catch
+                Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
+                              example_md_dir,
+                              documenter=false,
+                              execute=false,
+                              info=false,
+                              preprocess=preprocess)
+            end
         end
     end
     generated_examples=joinpath.("examples",readdir(example_md_dir))

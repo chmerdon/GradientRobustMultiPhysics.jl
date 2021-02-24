@@ -36,7 +36,7 @@ function IncompressibleNavierStokesProblem(
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "pressure")
 
     # add Laplacian for velocity
-    add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension))
+    add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension; store = true))
 
     # add Lagrange multiplier for divergence of velocity
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))

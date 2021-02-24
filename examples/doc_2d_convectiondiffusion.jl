@@ -78,7 +78,7 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
     add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
 
-    # add a gradient jump (interior penalty) stabilisation for dominant convection
+    ## add a gradient jump (interior penalty) stabilisation for dominant convection
     if stabilisation > 0
         ## first we define an item-dependent action kernel...
         xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
@@ -155,3 +155,8 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DConvectionDiffusion.main()
