@@ -201,4 +201,181 @@ function main(; verbosity = 2, Plotter = nothing)
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 23 February 2021 19:39">Tuesday 23 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre><code class="language-none">Main.##295.Example_2DTransientStokes</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DTransientStokes.main()</code></pre><pre><code class="language-none">
+PREPARING TIME-DEPENDENT SOLVER
+===============================
+  system name = incompressible Stokes-Problem  @starttime = 0
+
+  FEs = H1BR{2} (ndofs = 54)
+        H1P0{1} (broken) (ndofs = 16)
+        
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+
+  advancing in time until T = 1.0000e-02...
+
+    STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
+          |            |  (total)   |  velocity    pressure  
+       1  | 1.0000e-03 | 7.0070e-14 | 6.0845e-02  3.2145e+01 
+       2  | 2.0000e-03 | 7.3799e-14 | 2.2416e-03  3.3918e+01 
+       3  | 3.0000e-03 | 7.2766e-14 | 2.2416e-03  4.4387e-09 
+       4  | 4.0000e-03 | 7.8245e-14 | 2.2416e-03  4.4405e-09 
+       5  | 5.0000e-03 | 6.8574e-14 | 2.2416e-03  4.4375e-09 
+       6  | 6.0000e-03 | 6.6590e-14 | 2.2416e-03  4.4424e-09 
+       7  | 7.0000e-03 | 7.6610e-14 | 2.2416e-03  4.4358e-09 
+       8  | 8.0000e-03 | 9.4302e-14 | 2.2416e-03  4.4408e-09 
+       9  | 9.0000e-03 | 5.9898e-14 | 2.2416e-03  4.4401e-09 
+      10  | 1.0000e-02 | 1.0650e-13 | 2.2416e-03  4.4369e-09 
+
+  arrived at time T = 1.0000e-02...
+
+PREPARING TIME-DEPENDENT SOLVER
+===============================
+  system name = incompressible Stokes-Problem  @starttime = 0
+
+  FEs = H1BR{2} (ndofs = 186)
+        H1P0{1} (broken) (ndofs = 64)
+        
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+
+  advancing in time until T = 1.0000e-02...
+
+    STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
+          |            |  (total)   |  velocity    pressure  
+       1  | 1.0000e-03 | 4.0833e-14 | 3.4431e-02  2.9439e+01 
+       2  | 2.0000e-03 | 4.2950e-14 | 5.0017e-03  3.4344e+01 
+       3  | 3.0000e-03 | 4.0730e-14 | 5.0017e-03  1.3763e-08 
+       4  | 4.0000e-03 | 3.8609e-14 | 5.0017e-03  1.3770e-08 
+       5  | 5.0000e-03 | 3.9934e-14 | 5.0017e-03  1.3771e-08 
+       6  | 6.0000e-03 | 3.9370e-14 | 5.0017e-03  1.3767e-08 
+       7  | 7.0000e-03 | 4.0224e-14 | 5.0017e-03  1.3763e-08 
+       8  | 8.0000e-03 | 4.0277e-14 | 5.0017e-03  1.3773e-08 
+       9  | 9.0000e-03 | 4.6090e-14 | 5.0017e-03  1.3770e-08 
+      10  | 1.0000e-02 | 4.0501e-14 | 5.0017e-03  1.3766e-08 
+
+  arrived at time T = 1.0000e-02...
+
+PREPARING TIME-DEPENDENT SOLVER
+===============================
+  system name = incompressible Stokes-Problem  @starttime = 0
+
+  FEs = H1BR{2} (ndofs = 690)
+        H1P0{1} (broken) (ndofs = 256)
+        
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+
+  advancing in time until T = 1.0000e-02...
+
+    STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
+          |            |  (total)   |  velocity    pressure  
+       1  | 1.0000e-03 | 2.2431e-14 | 2.0235e-02  1.4106e+01 
+       2  | 2.0000e-03 | 2.1922e-14 | 1.0631e-02  2.5067e+01 
+       3  | 3.0000e-03 | 2.0823e-14 | 1.0631e-02  3.5573e-08 
+       4  | 4.0000e-03 | 2.0243e-14 | 1.0631e-02  3.5528e-08 
+       5  | 5.0000e-03 | 2.2373e-14 | 1.0631e-02  3.5563e-08 
+       6  | 6.0000e-03 | 2.1035e-14 | 1.0631e-02  3.5560e-08 
+       7  | 7.0000e-03 | 2.1814e-14 | 1.0631e-02  3.5528e-08 
+       8  | 8.0000e-03 | 2.2678e-14 | 1.0631e-02  3.5573e-08 
+       9  | 9.0000e-03 | 1.9606e-14 | 1.0631e-02  3.5540e-08 
+      10  | 1.0000e-02 | 2.1144e-14 | 1.0631e-02  3.5524e-08 
+
+  arrived at time T = 1.0000e-02...
+
+PREPARING TIME-DEPENDENT SOLVER
+===============================
+  system name = incompressible Stokes-Problem  @starttime = 0
+
+  FEs = H1BR{2} (ndofs = 2658)
+        H1P0{1} (broken) (ndofs = 1024)
+        
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+
+  advancing in time until T = 1.0000e-02...
+
+    STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
+          |            |  (total)   |  velocity    pressure  
+       1  | 1.0000e-03 | 1.0838e-14 | 2.2664e-02  9.2561e+00 
+       2  | 2.0000e-03 | 1.0685e-14 | 2.1940e-02  1.6447e+01 
+       3  | 3.0000e-03 | 1.1183e-14 | 2.1940e-02  3.3815e-08 
+       4  | 4.0000e-03 | 1.1037e-14 | 2.1940e-02  3.3979e-08 
+       5  | 5.0000e-03 | 1.0855e-14 | 2.1940e-02  3.4094e-08 
+       6  | 6.0000e-03 | 1.0964e-14 | 2.1940e-02  3.4223e-08 
+       7  | 7.0000e-03 | 1.1219e-14 | 2.1940e-02  3.4265e-08 
+       8  | 8.0000e-03 | 1.1288e-14 | 2.1940e-02  3.4453e-08 
+       9  | 9.0000e-03 | 1.0904e-14 | 2.1940e-02  3.4501e-08 
+      10  | 1.0000e-02 | 1.0791e-14 | 2.1940e-02  3.4659e-08 
+
+  arrived at time T = 1.0000e-02...
+
+PREPARING TIME-DEPENDENT SOLVER
+===============================
+  system name = incompressible Stokes-Problem  @starttime = 0
+
+  FEs = H1BR{2} (ndofs = 10434)
+        H1P0{1} (broken) (ndofs = 4096)
+        
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+
+  advancing in time until T = 1.0000e-02...
+
+    STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
+          |            |  (total)   |  velocity    pressure  
+       1  | 1.0000e-03 | 5.6774e-15 | 4.3992e-02  4.0327e+01 
+       2  | 2.0000e-03 | 5.5957e-15 | 4.4615e-02  1.0217e+01 
+       3  | 3.0000e-03 | 5.6620e-15 | 4.4612e-02  1.8086e-06 
+       4  | 4.0000e-03 | 5.6180e-15 | 4.4609e-02  1.7267e-06 
+       5  | 5.0000e-03 | 5.6107e-15 | 4.4606e-02  1.6488e-06 
+       6  | 6.0000e-03 | 5.5852e-15 | 4.4603e-02  1.5750e-06 
+       7  | 7.0000e-03 | 5.6129e-15 | 4.4601e-02  1.5048e-06 
+       8  | 8.0000e-03 | 5.6666e-15 | 4.4598e-02  1.4381e-06 
+       9  | 9.0000e-03 | 5.6146e-15 | 4.4596e-02  1.3748e-06 
+      10  | 1.0000e-02 | 5.5258e-15 | 4.4594e-02  1.3148e-06 
+
+  arrived at time T = 1.0000e-02...
+
+         |   L2ERROR      order   |   L2ERROR      order   
+   NDOF  | VELO-STOKES            | VELO-L2BEST            
+      70 | 1.66625e-02    0.000   | 6.56132e-03    0.000
+     250 | 4.82864e-03    1.946   | 1.20901e-03    2.657
+     946 | 1.31357e-03    1.956   | 2.23836e-04    2.535
+    3682 | 3.54528e-04    1.928   | 4.37347e-05    2.403
+   14530 | 9.54968e-05    1.911   | 9.13956e-06    2.281
+
+         |   H1ERROR      order   |   H1ERROR      order   
+   NDOF  | VELO-STOKES            | VELO-H1BEST            
+      70 | 1.75365e-01    0.000   | 8.28255e-02    0.000
+     250 | 1.00801e-01    0.870   | 3.28129e-02    1.455
+     946 | 5.60064e-02    0.883   | 1.39950e-02    1.281
+    3682 | 3.09099e-02    0.875   | 6.41292e-03    1.148
+   14530 | 1.59987e-02    0.959   | 3.06865e-03    1.074
+
+         |   L2ERROR      order   |   L2ERROR      order   
+   NDOF  | PRES-STOKES            | PRES-L2BEST            
+      70 | 6.99626e-02    0.000   | 6.98503e-02    0.000
+     250 | 3.49974e-02    1.088   | 3.49744e-02    1.087
+     946 | 1.74974e-02    1.042   | 1.74943e-02    1.041
+    3682 | 8.74844e-03    1.020   | 8.74806e-03    1.020
+   14530 | 4.37419e-03    1.010   | 4.37415e-03    1.010
+
+LEGEND
+======
+VELO-STOKES : discrete Stokes velocity solution (H1BR{2})
+VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)
+VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)
+PRES-STOKES : discrete Stokes pressure solution (H1P0{1} (broken))
+PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 February 2021 19:19">Wednesday 24 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

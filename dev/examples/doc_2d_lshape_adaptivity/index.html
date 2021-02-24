@@ -30,7 +30,7 @@ function exact_function_gradient!(result,x::Array{&lt;:Real,1})
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
+function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
 
     # initial grid
     xgrid = uniform_refine(grid_lshape(Triangle2D),2)
@@ -118,6 +118,8 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
             # uniform mesh refinement
             xgrid = uniform_refine(xgrid)
         else
+            # adaptive mesh refinement
+            # compute refinement indicators
             nfaces = num_sources(xgrid[FaceNodes])
             refinement_indicators = sum(jump_error, dims = 1)
             xFaceCells = xgrid[FaceCells]
@@ -129,7 +131,6 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
                 end
             end
 
-            # adaptive mesh refinement
             # refine by red-green-blue refinement (incl. closuring)
             facemarker = bulk_mark(xgrid, refinement_indicators, theta; verbosity = verbosity, indicator_AT = ON_FACES)
             xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
@@ -157,4 +158,205 @@ function main(; verbosity = 1, nlevels = 20, theta = 1//3, Plotter = nothing)
 
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson-Iteration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 23 February 2021 19:39">Tuesday 23 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre><code class="language-none">Main.##269.Example_Lshape</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_Lshape.main()</code></pre><pre><code class="language-none">
+  SOLVE LEVEL 1
+    ndofs = 225
+  ESTIMATE
+    estim H1 error = 0.4677742324221007
+    exact H1 error = 0.08242715274914716
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 5
+    red/blueR/blueL/green/unrefined = [1, 1, 1, 3, 90]
+    bisected bfaces = 0
+
+  SOLVE LEVEL 2
+    ndofs = 245
+  ESTIMATE
+    estim H1 error = 0.2705802579946867
+    exact H1 error = 0.051644476000358604
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 7
+    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 100]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 3
+    ndofs = 271
+  ESTIMATE
+    estim H1 error = 0.18078323133808996
+    exact H1 error = 0.03424675768909563
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 7
+    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 112]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 4
+    ndofs = 297
+  ESTIMATE
+    estim H1 error = 0.12898396625124253
+    exact H1 error = 0.024094430763383544
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 7
+    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 124]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 5
+    ndofs = 323
+  ESTIMATE
+    estim H1 error = 0.1014017064476887
+    exact H1 error = 0.01859272878859967
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 5 / 11
+    red/blueR/blueL/green/unrefined = [1, 3, 3, 5, 130]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 6
+    ndofs = 365
+  ESTIMATE
+    estim H1 error = 0.0816083377023947
+    exact H1 error = 0.014849577531524324
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 10 / 17
+    red/blueR/blueL/green/unrefined = [3, 4, 3, 9, 143]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 7
+    ndofs = 431
+  ESTIMATE
+    estim H1 error = 0.06294474356717268
+    exact H1 error = 0.011439201479174287
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 16 / 22
+    red/blueR/blueL/green/unrefined = [5, 5, 4, 8, 172]
+    bisected bfaces = 3
+
+  SOLVE LEVEL 8
+    ndofs = 516
+  ESTIMATE
+    estim H1 error = 0.04985789712865129
+    exact H1 error = 0.00896293946437206
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 28 / 35
+    red/blueR/blueL/green/unrefined = [10, 4, 5, 19, 197]
+    bisected bfaces = 3
+
+  SOLVE LEVEL 9
+    ndofs = 653
+  ESTIMATE
+    estim H1 error = 0.038805671315719714
+    exact H1 error = 0.006946488559426678
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 39 / 53
+    red/blueR/blueL/green/unrefined = [11, 9, 10, 29, 243]
+    bisected bfaces = 6
+
+  SOLVE LEVEL 10
+    ndofs = 859
+  ESTIMATE
+    estim H1 error = 0.029623119977286828
+    exact H1 error = 0.005335533262266187
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 56 / 71
+    red/blueR/blueL/green/unrefined = [18, 13, 12, 35, 324]
+    bisected bfaces = 3
+
+  SOLVE LEVEL 11
+    ndofs = 1140
+  ESTIMATE
+    estim H1 error = 0.022625442861439696
+    exact H1 error = 0.004071904287572566
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 77 / 87
+    red/blueR/blueL/green/unrefined = [18, 16, 15, 54, 438]
+    bisected bfaces = 4
+
+  SOLVE LEVEL 12
+    ndofs = 1484
+  ESTIMATE
+    estim H1 error = 0.016852949810639405
+    exact H1 error = 0.0030249541117442972
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 105 / 129
+    red/blueR/blueL/green/unrefined = [29, 23, 22, 74, 563]
+    bisected bfaces = 7
+
+  SOLVE LEVEL 13
+    ndofs = 1993
+  ESTIMATE
+    estim H1 error = 0.012683741538462957
+    exact H1 error = 0.002267729049627557
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 145 / 184
+    red/blueR/blueL/green/unrefined = [44, 33, 33, 88, 764]
+    bisected bfaces = 16
+
+  SOLVE LEVEL 14
+    ndofs = 2713
+  ESTIMATE
+    estim H1 error = 0.009471209815703248
+    exact H1 error = 0.0016782897379485585
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 198 / 253
+    red/blueR/blueL/green/unrefined = [56, 50, 47, 135, 1026]
+    bisected bfaces = 9
+
+  SOLVE LEVEL 15
+    ndofs = 3716
+  ESTIMATE
+    estim H1 error = 0.006786807375560992
+    exact H1 error = 0.0012027103913761147
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 273 / 334
+    red/blueR/blueL/green/unrefined = [71, 61, 69, 173, 1437]
+    bisected bfaces = 22
+
+  SOLVE LEVEL 16
+    ndofs = 5030
+  ESTIMATE
+    estim H1 error = 0.005025429556375833
+    exact H1 error = 0.0008911337662681598
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 384 / 449
+    red/blueR/blueL/green/unrefined = [90, 95, 91, 243, 1938]
+    bisected bfaces = 13
+
+  SOLVE LEVEL 17
+    ndofs = 6813
+  ESTIMATE
+    estim H1 error = 0.0036879331675181404
+    exact H1 error = 0.0006490386213459125
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 532 / 627
+    red/blueR/blueL/green/unrefined = [139, 127, 119, 327, 2630]
+    bisected bfaces = 18
+
+  SOLVE LEVEL 18
+    ndofs = 9303
+  ESTIMATE
+    estim H1 error = 0.0027117451166356445
+    exact H1 error = 0.0004761040906724678
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 726 / 860
+    red/blueR/blueL/green/unrefined = [204, 158, 160, 443, 3613]
+    bisected bfaces = 29
+
+  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   
+=========|========================|========================|========================
+     225 | 3.51513e-03    0.000   | 8.24272e-02    0.000   | 4.67774e-01    0.000   |
+     245 | 1.54195e-03    19.353   | 5.16445e-02    10.980   | 2.70580e-01    12.857   |
+     271 | 7.05652e-04    15.500   | 3.42468e-02    8.146   | 1.80783e-01    7.997   |
+     297 | 4.41473e-04    10.239   | 2.40944e-02    7.676   | 1.28984e-01    7.370   |
+     323 | 3.71256e-04    4.128   | 1.85927e-02    6.178   | 1.01402e-01    5.734   |
+     365 | 2.88551e-04    4.123   | 1.48496e-02    3.678   | 8.16083e-02    3.553   |
+     431 | 2.02334e-04    4.271   | 1.14392e-02    3.140   | 6.29447e-02    3.125   |
+     516 | 1.72474e-04    1.774   | 8.96294e-03    2.711   | 4.98579e-02    2.590   |
+     653 | 1.38064e-04    1.890   | 6.94649e-03    2.165   | 3.88057e-02    2.129   |
+     859 | 8.87911e-05    3.220   | 5.33553e-03    1.925   | 2.96231e-02    1.970   |
+    1140 | 6.70427e-05    1.985   | 4.07190e-03    1.910   | 2.26254e-02    1.904   |
+    1484 | 4.42021e-05    3.159   | 3.02495e-03    2.254   | 1.68529e-02    2.234   |
+    1993 | 2.90202e-05    2.854   | 2.26773e-03    1.954   | 1.26837e-02    1.927   |
+    2713 | 1.62991e-05    3.741   | 1.67829e-03    1.952   | 9.47121e-03    1.894   |
+    3716 | 1.08439e-05    2.591   | 1.20271e-03    2.118   | 6.78681e-03    2.119   |
+    5030 | 6.42595e-06    3.456   | 8.91134e-04    1.981   | 5.02543e-03    1.985   |
+    6813 | 3.92810e-06    3.244   | 6.49039e-04    2.090   | 3.68793e-03    2.040   |
+    9303 | 2.49173e-06    2.922   | 4.76104e-04    1.989   | 2.71175e-03    1.974   |
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson-Iteration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 February 2021 19:18">Wednesday 24 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -15,10 +15,10 @@ function boundary_data_top!(result)
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_iterations = 5)
+function main(; verbosity = 2, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10)
 
     # grid
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4);
 
     # problem parameters
     maxIterations = 50  # termination criterion 1 for nonlinear mode
@@ -38,8 +38,8 @@ function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_ite
     # negotiate data functions to the package
     user_function_bnd = DataFunction(boundary_data_top!, [2,2]; name = &quot;u_bnd&quot;, dependencies = &quot;&quot;, quadorder = 0)
 
-    # load Stokes problem prototype and assign data
-    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true)
+    # load Navier-Stokes problem prototype and assign data
+    StokesProblem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false)
     add_boundarydata!(StokesProblem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(StokesProblem, 1, [3], BestapproxDirichletBoundary; data = user_function_bnd)
 
@@ -61,4 +61,91 @@ function main(; verbosity = 2, Plotter = nothing, viscosity = 1e-3, anderson_ite
 
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 23 February 2021 19:39">Tuesday 23 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre><code class="language-none">Main.##268.Example_2DLidDrivenCavityAnderson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DLidDrivenCavityAnderson.main()</code></pre><pre><code class="language-none">
+PDE-DESCRIPTION
+===============
+  system name = incompressible Navier-Stokes-Problem
+
+     id   | unknown name / equation name
+    [1]   | velocity / momentum equation 
+    [2]   | pressure / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | Laplacian (regions = [0])
+            | (a(=unknown 1) * Gradient) u * v (regions = [0])
+    [1,2]   | LagrangeMultiplier(Divergence) (regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | none
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [3]
+                         HomogeneousDirichletBoundary -&gt; [1, 2, 4]
+                          
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+
+SOLVER
+======
+  system name = incompressible Navier-Stokes-Problem  @time = 0
+
+  FEs = H1BR{2} (ndofs = 2658)
+        H1P0{1} (broken) (ndofs = 1024)
+        
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+  initial assembly time = 2.09e+00 (s)
+
+  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+  -----------------------------------------------------------------------
+        1   | 1.204792e-17 | 2.696401e-02 | 4.22e-01/3.09e-02/4.61e-01
+        2   | 1.630093e-17 | 1.218817e-02 | 3.69e-02/4.20e-02/2.06e-01
+        3   | 1.643430e-17 | 7.722605e-03 | 4.25e-02/3.22e-02/8.06e-02
+        4   | 1.969882e-17 | 7.799207e-03 | 3.71e-02/4.55e-02/8.94e-02
+        5   | 1.804263e-17 | 6.623426e-03 | 3.55e-02/3.19e-02/8.23e-02
+        6   | 2.069660e-17 | 3.381181e-03 | 3.50e-02/3.05e-02/7.55e-02
+        7   | 2.034944e-17 | 5.022463e-03 | 3.50e-02/3.86e-02/8.50e-02
+        8   | 1.791696e-17 | 5.181019e-03 | 3.78e-02/3.44e-02/9.03e-02
+        9   | 2.054301e-17 | 3.522884e-03 | 3.53e-02/3.34e-02/8.86e-02
+       10   | 2.274583e-17 | 2.102938e-03 | 3.43e-02/3.02e-02/8.59e-02
+       11   | 2.089388e-17 | 2.544854e-03 | 3.39e-02/3.20e-02/9.06e-02
+       12   | 2.042022e-17 | 2.788009e-03 | 3.46e-02/3.20e-02/9.06e-02
+       13   | 1.914984e-17 | 1.183645e-03 | 4.11e-02/3.07e-02/9.50e-02
+       14   | 2.039063e-17 | 8.681663e-04 | 3.53e-02/3.22e-02/9.09e-02
+       15   | 2.075805e-17 | 5.043650e-04 | 3.63e-02/3.06e-02/9.08e-02
+       16   | 1.916487e-17 | 8.394340e-04 | 3.60e-02/3.28e-02/9.32e-02
+       17   | 2.014356e-17 | 4.898647e-04 | 3.66e-02/3.25e-02/9.39e-02
+       18   | 2.131702e-17 | 1.513515e-04 | 3.71e-02/3.27e-02/9.45e-02
+       19   | 1.987187e-17 | 1.221754e-04 | 3.49e-02/3.45e-02/9.37e-02
+       20   | 2.093314e-17 | 8.092184e-05 | 3.74e-02/3.31e-02/9.50e-02
+       21   | 1.885045e-17 | 5.367415e-05 | 3.68e-02/3.25e-02/9.43e-02
+       22   | 2.411373e-17 | 1.369259e-05 | 3.73e-02/3.33e-02/9.55e-02
+       23   | 2.042472e-17 | 1.037655e-05 | 3.62e-02/3.20e-02/9.36e-02
+       24   | 1.932989e-17 | 8.423072e-06 | 3.82e-02/3.08e-02/9.72e-02
+       25   | 1.877762e-17 | 3.174013e-06 | 3.54e-02/3.20e-02/9.25e-02
+       26   | 2.186810e-17 | 1.396529e-06 | 3.94e-02/3.37e-02/1.00e-01
+       27   | 2.112141e-17 | 6.530746e-07 | 3.54e-02/3.37e-02/9.54e-02
+       28   | 2.073074e-17 | 4.937983e-07 | 3.50e-02/3.10e-02/8.96e-02
+       29   | 1.994775e-17 | 2.799209e-07 | 3.96e-02/3.23e-02/9.64e-02
+       30   | 2.177359e-17 | 1.484009e-07 | 3.49e-02/4.75e-02/1.07e-01
+       31   | 2.012353e-17 | 9.351292e-08 | 3.47e-02/3.10e-02/9.01e-02
+       32   | 2.059199e-17 | 2.788012e-08 | 3.48e-02/3.23e-02/9.14e-02
+       33   | 1.981459e-17 | 2.593860e-08 | 3.48e-02/3.17e-02/9.07e-02
+       34   | 2.023706e-17 | 2.271365e-08 | 3.96e-02/3.01e-02/9.43e-02
+       35   | 1.923162e-17 | 2.120520e-08 | 3.57e-02/3.37e-02/9.57e-02
+       36   | 1.971408e-17 | 1.686097e-08 | 3.82e-02/3.54e-02/1.04e-01
+       37   | 1.819676e-17 | 6.668510e-09 | 3.60e-02/3.73e-02/9.90e-02
+       38   | 2.103452e-17 | 5.825774e-09 | 3.41e-02/3.05e-02/8.95e-02
+       39   | 2.184301e-17 | 2.758898e-09 | 3.52e-02/3.10e-02/8.97e-02
+       40   | 2.279521e-17 | 1.698212e-09 | 3.78e-02/3.22e-02/9.65e-02
+       41   | 2.097635e-17 | 5.480294e-10 | 3.55e-02/3.30e-02/9.32e-02
+       42   | 2.099871e-17 | 3.012043e-10 | 3.56e-02/3.08e-02/8.98e-02
+       43   | 1.843211e-17 | 2.551295e-10 | 3.49e-02/3.13e-02/8.97e-02
+       44   | 2.096292e-17 | 1.134660e-10 | 3.42e-02/3.07e-02/8.90e-02
+       45   | 1.912567e-17 | 3.106286e-11 | 3.74e-02/3.16e-02/9.42e-02  converged after 45 iterations (maxResidual reached)
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 February 2021 19:19">Wednesday 24 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
