@@ -161,113 +161,125 @@ SOLVER
 ======
   system name = Poisson problem  @time = 0
 
-  FEs = H1P2{1,2} (ndofs = 23)
-        
+  target (FE) = Problem solution (H1P2{1,2}, ndofs = 23)
+                
   subiteration | equations that are solved together
        [1]     | convection diffusion equation
 
-  residuals = [6.744215088451477e-31]
+  residuals = [2.8867113707702684e-32]
 
 INTERPOLATING
 =============
+     source = u_exact @time = 0
      target = Interpolation
+         AT = ON_CELLS
          FE = H1P2{1,2} (ndofs = 23)
 
 SOLVER
 ======
   system name = Poisson problem  @time = 0
 
-  FEs = H1P2{1,2} (ndofs = 73)
-        
+  target (FE) = Problem solution (H1P2{1,2}, ndofs = 73)
+                
   subiteration | equations that are solved together
        [1]     | convection diffusion equation
 
-  residuals = [2.6743576266851008e-31]
+  residuals = [1.3073807930383807e-31]
 
 INTERPOLATING
 =============
+     source = u_exact @time = 0
      target = Interpolation
+         AT = ON_CELLS
          FE = H1P2{1,2} (ndofs = 73)
 
 SOLVER
 ======
   system name = Poisson problem  @time = 0
 
-  FEs = H1P2{1,2} (ndofs = 257)
-        
+  target (FE) = Problem solution (H1P2{1,2}, ndofs = 257)
+                
   subiteration | equations that are solved together
        [1]     | convection diffusion equation
 
-  residuals = [4.332614639222551e-31]
+  residuals = [3.1038263524624316e-32]
 
 INTERPOLATING
 =============
+     source = u_exact @time = 0
      target = Interpolation
+         AT = ON_CELLS
          FE = H1P2{1,2} (ndofs = 257)
 
 SOLVER
 ======
   system name = Poisson problem  @time = 0
 
-  FEs = H1P2{1,2} (ndofs = 961)
-        
+  target (FE) = Problem solution (H1P2{1,2}, ndofs = 961)
+                
   subiteration | equations that are solved together
        [1]     | convection diffusion equation
 
-  residuals = [1.5028682399362815e-31]
+  residuals = [2.3335861810572775e-32]
 
 INTERPOLATING
 =============
+     source = u_exact @time = 0
      target = Interpolation
+         AT = ON_CELLS
          FE = H1P2{1,2} (ndofs = 961)
 
 SOLVER
 ======
   system name = Poisson problem  @time = 0
 
-  FEs = H1P2{1,2} (ndofs = 3713)
-        
+  target (FE) = Problem solution (H1P2{1,2}, ndofs = 3713)
+                
   subiteration | equations that are solved together
        [1]     | convection diffusion equation
 
-  residuals = [8.315476018180729e-32]
+  residuals = [1.3550287134159863e-32]
 
 INTERPOLATING
 =============
+     source = u_exact @time = 0
      target = Interpolation
+         AT = ON_CELLS
          FE = H1P2{1,2} (ndofs = 3713)
 
 SOLVER
 ======
   system name = Poisson problem  @time = 0
 
-  FEs = H1P2{1,2} (ndofs = 14593)
-        
+  target (FE) = Problem solution (H1P2{1,2}, ndofs = 14593)
+                
   subiteration | equations that are solved together
        [1]     | convection diffusion equation
 
-  residuals = [4.338398871004284e-32]
+  residuals = [8.65786263966576e-33]
 
 INTERPOLATING
 =============
+     source = u_exact @time = 0
      target = Interpolation
+         AT = ON_CELLS
          FE = H1P2{1,2} (ndofs = 14593)
 
          |   L2ERROR   |   L2ERROR
    NDOF  |   SOLUTION  |   INTERPOL
-      23 | 8.96246e-01 | 3.08193e-03
-      73 | 1.11001e+00 | 2.63439e-04
-     257 | 1.11508e+00 | 2.78520e-05
-     961 | 1.11381e+00 | 3.30383e-06
-    3713 | 1.11078e+00 | 4.07237e-07
-   14593 | 1.10832e+00 | 5.07235e-08
+      23 | 6.14399e-03 | 3.08193e-03
+      73 | 5.06404e-04 | 2.63439e-04
+     257 | 5.68101e-05 | 2.78520e-05
+     961 | 6.48860e-06 | 3.30383e-06
+    3713 | 7.73644e-07 | 4.07237e-07
+   14593 | 9.45091e-08 | 5.07235e-08
 
          |   H1ERROR   |   H1ERROR
    NDOF  |   SOLUTION  |   INTERPOL
-      23 | 7.18531e+00 | 3.42620e-02
-      73 | 1.25045e+01 | 7.64421e-03
-     257 | 1.86342e+01 | 1.84899e-03
-     961 | 2.69001e+01 | 4.58288e-04
-    3713 | 3.83134e+01 | 1.14323e-04
-   14593 | 5.39542e+01 | 2.85652e-05
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« Commuting Interpolators (2D)</a><a class="docs-footer-nextpage" href="../doc_2d_cookmembrane/">2D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 February 2021 19:19">Wednesday 24 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      23 | 4.74771e-02 | 3.42620e-02
+      73 | 9.79278e-03 | 7.64421e-03
+     257 | 2.25428e-03 | 1.84899e-03
+     961 | 5.29959e-04 | 4.58288e-04
+    3713 | 1.27610e-04 | 1.14323e-04
+   14593 | 3.12912e-05 | 2.85652e-05
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« Commuting Interpolators (2D)</a><a class="docs-footer-nextpage" href="../doc_2d_cookmembrane/">2D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 February 2021 13:03">Thursday 25 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
