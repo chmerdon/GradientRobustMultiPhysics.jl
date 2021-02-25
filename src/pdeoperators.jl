@@ -121,8 +121,8 @@ $(TYPEDEF)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
 """
-function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
-    return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); regions = regions, store = store)
+function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
+    return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); AT = AT, regions = regions, store = store)
 end
 
 """
@@ -206,8 +206,8 @@ $(TYPEDSIGNATURES)
 constructor for AbstractBilinearForm that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
     
 """
-function ReactionOperator(action::AbstractAction; apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm("Reaction",identity_operator, identity_operator, action; apply_action_to = apply_action_to, regions = regions)
+function ReactionOperator(action::AbstractAction; AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
+    return AbstractBilinearForm("Reaction",identity_operator, identity_operator, action; AT = AT, apply_action_to = apply_action_to, regions = regions)
 end
 
 """
@@ -581,7 +581,7 @@ function RhsOperator(
     regions::Array{Int,1},
     data::UserData{<:AbstractDataFunction};
     name = "auto",
-    on_boundary::Bool = false,
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     store::Bool = false)
 
     if name == "auto"
@@ -616,11 +616,7 @@ function RhsOperator(
     end
     action = Action(Float64, action_kernel)
 
-    if on_boundary == true
-        return RhsOperator{ON_BFACES}(name, action, operator, regions, is_timedependent(data), store, [])
-    else
-        return RhsOperator{ON_CELLS}(name, action, operator, regions, is_timedependent(data), store, [])
-    end
+    return RhsOperator{AT}(name, action, operator, regions, is_timedependent(data), store, [])
 end
 
 

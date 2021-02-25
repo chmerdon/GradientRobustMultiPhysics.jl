@@ -112,7 +112,7 @@ add_boundarydata!
 
 ## Other Boundary Data
 
-NeumannBoundary can be implemented as a RhsOperator with on_boundary = true
+NeumannBoundary can be implemented as a RhsOperator with AT = ON_BFACES
 
 PeriodicBoundary can be implemented as a CombineDofs <: AbstractGlobalConstraint
 

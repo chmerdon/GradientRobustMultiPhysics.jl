@@ -110,6 +110,7 @@ export FESpace
 
 export AbstractH1FiniteElement
 export H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR
+export H1P0F
 
 export AbstractH1FiniteElementWithCoefficients
 export H1BR
@@ -120,6 +121,7 @@ export HDIVRT0, HDIVBDM1, HDIVRT1
 export AbstractHcurlFiniteElement
 export HCURLN0
 
+export get_assemblytype
 export get_polynomialorder, get_ndofs, get_ndofs_all
 export get_ncomponents, get_edim
 export get_basis, get_coefficients, get_basissubset

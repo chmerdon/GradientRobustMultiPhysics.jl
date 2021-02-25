@@ -145,8 +145,8 @@ function interpolate!(Target::FEVectorBlock,
         println("         AT = $AT")
         println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
     end
-    if Target.FES.broken == true
-        FEType = eltype(Target.FES)
+    FEType = eltype(Target.FES)
+    if Target.FES.broken == true && get_assemblytype(FEType) == ON_CELLS
         FESc = FESpace{FEType}(Target.FES.xgrid; dofmaps_needed = [CellDofs])
         Targetc = FEVector{Float64}("auxiliary data",FESc)
         interpolate!(Targetc[1], FESc, AT, source_data; items = items, time = time)

@@ -173,23 +173,25 @@ function run_basis_tests()
                     HDIVRT0{2},
                     HDIVBDM1{2},
                     H1P0{2},
+                    H1P0F{2},
                     H1P1{2}, 
                     H1CR{2},
                     H1MINI{2,2},
                     H1BR{2},
                     H1P2{2,2}]
-    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2]
+    ExpectedOrders2D = [0,0,1,0,0,1,1,1,1,2]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
                     HDIVBDM1{3},
                     H1P0{3},
+                    H1P0F{3},
                     H1P1{3}, 
                     H1CR{3},
                     H1MINI{3,3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,0,1,0,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,0,0,1,1,1,1,2]
 
     function test_interpolation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
@@ -203,15 +205,16 @@ function run_basis_tests()
 
         # choose FE and generate FESpace
         FES = FESpace{FEType}(xgrid; broken = broken)
+        AT = get_assemblytype(FEType)
 
         # interpolate
         Solution = FEVector{Float64}("Interpolation",FES)
         interpolate!(Solution[1], exact_function)
 
         # check error
-        L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
+        L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity; AT = AT)
         error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        println("FEType = $FEType $(broken ? "broken" : "") | ndofs = $(FES.ndofs) | order = $order | error = $error")
+        println("FEType = $FEType $(broken ? "broken" : "") $AT | ndofs = $(FES.ndofs) | order = $order | error = $error")
         @test error < tolerance
     end
 
@@ -265,23 +268,25 @@ function run_basis_tests()
                     HDIVRT0{2},
                     HDIVBDM1{2},
                     H1P0{2},
+                    H1P0F{2},
                     H1P1{2}, 
                     H1CR{2},
                     H1MINI{2,2},
                     H1BR{2},
                     H1P2{2,2}]
-    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2]
+    ExpectedOrders2D = [0,0,1,0,0,1,1,1,1,2]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
                     HDIVBDM1{3},
                     H1P0{3},
+                    H1P0F{3},
                     H1P1{3},
                     H1CR{3},
                     H1MINI{3,3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,0,1,0,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,0,0,1,1,1,1,2]
 
     function test_L2bestapproximation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
@@ -294,8 +299,9 @@ function run_basis_tests()
         end
 
         # Define Bestapproximation problem via PDETooles_PDEProtoTypes
-        Problem = L2BestapproximationProblem(exact_function; bestapprox_boundary_regions = [])
-        L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
+        AT = get_assemblytype(FEType)
+        Problem = L2BestapproximationProblem(exact_function; bestapprox_boundary_regions = [], AT = AT)
+        L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity; AT = AT)
 
         # choose FE and generate FESpace
         FES = FESpace{FEType}(xgrid; broken = broken)

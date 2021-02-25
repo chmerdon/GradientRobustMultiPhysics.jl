@@ -37,20 +37,17 @@ ItemEdges4DofMap(::Type{BFaceDofs}) = FaceEdges
 Sub2Sup4DofMap(::Type{BFaceDofs}) = BFaces
 Sub2Sup4DofMap(::Type{BEdgeDofs}) = BEdges
 
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_CELLS}) = FES[CellDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_FACES}) = FES[FaceDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BFACES}) = FES[BFaceDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{<:ON_EDGES}) = FES[EdgeDofs]
-Dofmap4AssemblyType(FES::FESpace, ::Type{ON_BEDGES}) = FES[BEdgeDofs]
+Dofmap4AssemblyType(::Type{ON_CELLS}) = CellDofs
+Dofmap4AssemblyType(::Type{<:ON_FACES}) = FaceDofs
+Dofmap4AssemblyType(::Type{ON_BFACES}) = BFaceDofs
+Dofmap4AssemblyType(::Type{<:ON_EDGES}) = EdgeDofs
+Dofmap4AssemblyType(::Type{ON_BEDGES}) = BEdgeDofs
+
+Dofmap4AssemblyType(FES::FESpace, AT::Type{<:AbstractAssemblyType}) = FES[Dofmap4AssemblyType(AT)]
 
 
 function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) where {FEType <: AbstractFiniteElement}
-    ##
-
-    if FES.broken == true && !(DM in [CellDofs])
-        println("Automatic broken DofMap generation currently only available for CellDofs (but requested $DM)")
-        return nothing
-    end
+    ## Beware: Automatic broken DofMap generation currently only reliable for CellDofs, but should also work for H1P0F for FaceDofs
 
     ## prepare dofmap patterns
     xgrid = FES.xgrid
@@ -439,7 +436,7 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{BFaceDofs}) where {F
 end
 
 function init_dofmap!(FES::FESpace, DM::Type{<:DofMap})
-    if (FES.broken == true) && (DM != CellDofs)
+    if (FES.broken == true) && (Dofmap4AssemblyType(get_assemblytype(eltype(FES))) != DM)
         init_broken_dofmap!(FES, DM)
     else
         init_dofmap_from_pattern!(FES, DM)

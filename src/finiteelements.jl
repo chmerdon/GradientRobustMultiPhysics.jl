@@ -75,7 +75,7 @@ function FESpace{FEType}(
     broken::Bool = false,
     verbosity = 0 ) where {FEType <:AbstractFiniteElement}
     # piecewise constants are always broken
-    if FEType <: H1P0 
+    if FEType <: H1P0 || FEType <: H1P0F
         broken = true
     end
     
@@ -158,6 +158,7 @@ function get_basissubset(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractF
         return nothing
     end
 end  
+get_assemblytype(FEType::Type{<:AbstractFiniteElement}) = ON_CELLS
 get_ndofs(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = 0 # element is undefined for this AT or EG
 get_basis(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = (refbasis,xref) -> nothing
 get_ndofs_all(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT, FEType, EG)
@@ -185,9 +186,17 @@ Base.getindex(FES::FESpace,DM::Type{<:DofMap})=get!(FES,DM)
 
 function count_ndofs!(FES::FESpace{FEType}) where {FEType <: AbstractFiniteElement}
     xgrid = FES.xgrid
-    EG = xgrid[UniqueCellGeometries]
-    xCellGeometries = xgrid[CellGeometries]
-    ncells4EG::Array{Tuple{DataType,Int64},1} = [(i, count(==(i), xCellGeometries)) for i in EG]
+    AT = get_assemblytype(FEType)
+    DofMap = Dofmap4AssemblyType(AT)
+    if AT == ON_CELLS
+        EG = xgrid[UniqueCellGeometries]
+        xItemGeometries = xgrid[CellGeometries]
+        ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
+    elseif AT == ON_FACES
+        EG = xgrid[UniqueFaceGeometries]
+        xItemGeometries = xgrid[FaceGeometries]
+        ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
+    end
     ndofs4EG = zeros(Int, length(EG))
     ncomponents::Int = get_ncomponents(FEType)
     dofs4item4component = zeros(Int,4)
@@ -199,7 +208,7 @@ function count_ndofs!(FES::FESpace{FEType}) where {FEType <: AbstractFiniteEleme
     highest_quantifierNCEF = zeros(Int,0)
     totaldofs = 0
     for j = 1 : length(EG)
-        pattern = get_dofmap_pattern(FEType, CellDofs, EG[j])
+        pattern = get_dofmap_pattern(FEType, DofMap, EG[j])
         for k = 1 : Int(length(pattern)/2)
             pattern_char = pattern[2*k-1]
             quantifier = parse(Int,pattern[2*k])

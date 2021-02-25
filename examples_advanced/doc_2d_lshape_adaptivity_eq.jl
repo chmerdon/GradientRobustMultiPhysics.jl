@@ -79,7 +79,7 @@ function main(; verbosity = 1, nlevels = 12, theta = 1//2, Plotter = nothing)
     DualProblem = PDEDescription("dual mixed formulation")
     add_unknown!(DualProblem; unknown_name = "Stress", equation_name = "stress equation")
     add_operator!(DualProblem, [1,1], ReactionOperator(DoNotChangeAction(2)))
-    add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], user_function; on_boundary = true))
+    add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], user_function; AT = ON_BFACES))
     add_unknown!(DualProblem; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
     add_operator!(DualProblem, [1,2], LagrangeMultiplier(Divergence))
 

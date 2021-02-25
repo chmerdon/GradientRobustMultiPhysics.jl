@@ -107,12 +107,13 @@ Boundary and right-hand side data or other modifications have to be added afterw
 function PoissonProblem(
     dimension::Int = 2;
     ncomponents::Int = 1,
-    diffusion = 1.0)
+    diffusion = 1.0,
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS)
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("Poisson problem")
     add_unknown!(Problem; unknown_name = "unknown", equation_name = "Poisson equation")
-    add_operator!(Problem, [1,1], LaplaceOperator(diffusion,dimension,ncomponents))
+    add_operator!(Problem, [1,1], LaplaceOperator(diffusion,dimension,ncomponents; AT = AT))
 
     return Problem
 end
@@ -132,15 +133,16 @@ Creates an PDEDescription for an L2-Bestapproximation problem for the given exac
 """
 function L2BestapproximationProblem(
     uexact::UserData{AbstractDataFunction};
-    bestapprox_boundary_regions = [])
+    bestapprox_boundary_regions = [],
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS)
 
     ncomponents = uexact.dimensions[1]
     xdim = uexact.dimensions[2]
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("L2-Bestapproximation problem")
     add_unknown!(Problem; unknown_name = "L2-bestapproximation", equation_name = "L2-bestapproximation equation")
-    add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents)))
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], uexact))
+    add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents); AT = AT))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], uexact; AT = AT))
     if length(bestapprox_boundary_regions) > 0
         if xdim == 1 # in 1D Dirichlet boundary can be interpolated
             add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact)
