@@ -15,8 +15,8 @@ abstract type H1CR{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:I
 
 
 get_ncomponents(FEType::Type{<:H1CR}) = FEType.parameters[1]
-get_ndofs_on_face(FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
-get_ndofs_on_cell(FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Edge1D}) = 1; # 0 on continuous edges, but = 1 on edges with jumps
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Triangle2D}) = 1;
@@ -26,8 +26,6 @@ get_polynomialorder(::Type{<:H1CR}, ::Type{<:Tetrahedron3D}) = 1;
 get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "F1"
 get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
 get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
-
-
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: H1CR}
     # preserve face means
@@ -56,15 +54,12 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
 end
 
-
-# BEWARE
+# BEWARE ON FACES
 #
 # all basis functions on a cell are nonzero on all edges,
-# but only the dof associated to the face is eveluated
-# when using get_basis_on_face
-# this leads to lumped bestapproximations along the boundary for example
-
-function get_basis_on_face(FEType::Type{<:H1CR}, ::Type{<:AbstractElementGeometry})
+# but only the dof associated to the face is evaluated
+# when using get_basis on faces
+function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1CR}, ::Type{<:AbstractElementGeometry})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents
@@ -73,7 +68,7 @@ function get_basis_on_face(FEType::Type{<:H1CR}, ::Type{<:AbstractElementGeometr
     end
 end
 
-function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Triangle2D})
+function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
     temp = 0.0
     function closure(refbasis, xref)
@@ -86,7 +81,7 @@ function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Triangle2D})
     end
 end
 
-function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Tetrahedron3D})
+function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Tetrahedron3D})
     ncomponents = get_ncomponents(FEType)
     temp = 0.0
     function closure(refbasis, xref)
@@ -100,7 +95,7 @@ function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Tetrahedron3D})
     end
 end
 
-function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Quadrilateral2D})
+function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
     a = 0.0
     b = 0.0
@@ -124,7 +119,7 @@ function get_basis_on_cell(FEType::Type{<:H1CR}, ET::Type{<:Quadrilateral2D})
     end
 end
 
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{FEType}, FER::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) where {FEType<:H1CR}
+function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{FEType}, FER::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) where {FEType<:H1CR}
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
@@ -142,5 +137,3 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{FEType}, FER::FESp
         return nothing
     end
 end
-
-

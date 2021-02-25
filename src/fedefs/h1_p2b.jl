@@ -14,21 +14,18 @@ abstract type H1P2B{ncomponents,edim} <: AbstractH1FiniteElement where {ncompone
 get_ncomponents(FEType::Type{<:H1P2B}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1P2B}) = FEType.parameters[2]
 
-get_ndofs_on_cell(FEType::Type{<:H1P2B}, EG::Type{<:Triangle2D}) = 7*FEType.parameters[1]
-get_ndofs_on_face(FEType::Type{<:H1P2B}, EG::Type{<:AbstractElementGeometry1D}) = 3*FEType.parameters[1]
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1P2B}, EG::Type{<:Triangle2D}) = 7*FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P2B}, EG::Type{<:AbstractElementGeometry1D}) = 3*FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P2B}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2B}, ::Type{<:Triangle2D}) = 3;
 get_polynomialorder(::Type{<:H1P2B}, ::Type{<:Tetrahedron3D}) = 4;
 
-
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1F1I1"
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 
-
 function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; items = [], time = 0) where {FEType <: H1P2B}
-
     xgrid = FE.xgrid
     xItemVolumes = xgrid[CellVolumes]
     xItemNodes = xgrid[CellNodes]
@@ -84,7 +81,6 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 
     point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = offset, time = time)
-
 end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: H1P2B}
@@ -143,18 +139,16 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     ensure_cell_moments!(Target, FE, exact_function!; items = items, time = time)
 end
 
-function get_basis_on_face(FEType::Type{<:H1P2B}, EG::Type{<:AbstractElementGeometry})
-    ncomponents = get_ncomponents(FEType)
-    edim = get_edim(FEType)
-    # same as P2
-    return get_basis_on_face(H1P2{ncomponents,edim}, EG)
+function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P2B}, EG::Type{<:AbstractElementGeometry})
+    # on faces same as P2
+    return get_basis(AT, H1P2{get_ncomponents(FEType), get_edim(FEType)}, EG)
 end
 
-function get_basis_on_cell(FEType::Type{<:H1P2B}, EG::Type{<:Triangle2D})
+function get_basis(AT::Type{ON_CELLS}, FEType::Type{<:H1P2B}, EG::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
     edim = get_edim(FEType)
-    refbasis_P2 = get_basis_on_cell(H1P2{1,edim}, EG)
-    offset = get_ndofs_on_cell(H1P2{1,edim}, EG) + 1
+    refbasis_P2 = get_basis(AT, H1P2{1,edim}, EG)
+    offset = get_ndofs(AT, H1P2{1,edim}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P2(refbasis, xref)
         # add cell bubbles to P2 basis

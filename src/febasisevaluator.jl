@@ -54,24 +54,13 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     # collect basis function information
     ncomponents::Int = get_ncomponents(FEType)
     ndofs4item::Int = 0
+    refbasis = get_basis(AT, FEType, EG)
+    ndofs4item = get_ndofs(AT, FEType, EG)
+    ndofs4item_all = get_ndofs_all(AT, FEType, EG)
     if AT <: Union{ON_BFACES,<:ON_FACES,<:ON_EDGES,ON_BEDGES}
-        if FEType <: AbstractHdivFiniteElement
-            refbasis = get_basis_normalflux_on_face(FEType, EG)
-            ndofs4item = get_ndofs_on_face(FEType, EG)
+        if FEType <: AbstractHdivFiniteElement ||  FEType <: AbstractHcurlFiniteElement
             ncomponents = 1
-        elseif FEType <: AbstractHcurlFiniteElement
-                refbasis = get_basis_tangentflux_on_edge(FEType, EG)
-                ndofs4item = get_ndofs_on_edge(FEType, EG)
-                ncomponents = 1
-        else
-            refbasis = get_basis_on_face(FEType, EG)
-            ndofs4item = get_ndofs_on_face(FEType, EG)
         end
-        ndofs4item_all = ndofs4item
-    else
-        refbasis = get_basis_on_cell(FEType, EG)
-        ndofs4item = get_ndofs_on_cell(FEType, EG)
-        ndofs4item_all = get_ndofs_on_cell_all(FEType, EG)
     end    
 
     # evaluate basis on reference domain
@@ -87,19 +76,11 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     coeff_handler = nothing
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
-        if AT == ON_CELLS
-            coeff_handler = get_coefficients_on_cell!(FE, EG)
-        elseif AT == ON_BFACES
-            coeff_handler = get_coefficients_on_bface!(FE, EG)
-        elseif AT <: ON_FACES
-            coeff_handler = get_coefficients_on_face!(FE, EG)
-        elseif AT <: Union{ON_BEDGES,<:ON_EDGES}
-            coeff_handler = get_coefficients_on_edge!(FE, EG)
-        end
+        coeff_handler = get_coefficients(AT, FE, EG)
     end    
 
     # set subset handler (only relevant if ndofs4item_all > ndofs4item)
-    subset_handler = get_basissubset_on_cell!(FE, EG)
+    subset_handler = get_basissubset(AT, FE, EG)
 
     # compute refbasisderivvals and further coefficients needed for operator eval
     derivorder = NeededDerivative4Operator(FEOP)
@@ -110,7 +91,14 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     coefficients2 = zeros(T,0,0)
     coefficients3 = zeros(T,0,0)
     offsets = 0:edim:(ncomponents*edim);
-    offsets2 = 0:ndofs4item_all:ncomponents*ndofs4item_all;
+    offsets2 = []
+    if ndofs4item_all > 0
+        offsets2 = 0:ndofs4item_all:ncomponents*ndofs4item_all
+    else
+        if verbosity > 0
+            println("warning: ndofs = 0 for FEType = $FEType on EG = $EG")
+        end
+    end
     compressiontargets = zeros(T,0)
     Dcfg = nothing
     Dresult = nothing
@@ -246,29 +234,16 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     # collect basis function information
     ncomponents::Int = get_ncomponents(FEType)
     ncomponents2::Int = get_ncomponents(FETypeReconst)
-    ndofs4item::Int = 0
-    ndofs4item2::Int = 0
     if AT <: Union{ON_BFACES,<:ON_FACES}
         if FETypeReconst <: AbstractHdivFiniteElement
-            refbasis = get_basis_on_face(FEType, EG)
-            refbasis_reconst = get_basis_normalflux_on_face(FETypeReconst, EG)
             ncomponents2 = 1
-            ndofs4item = get_ndofs_on_face(FEType, EG)
-            ndofs4item2 = get_ndofs_on_face(FETypeReconst, EG)
-        else
-            refbasis = get_basis_on_face(FEType, EG)
-            refbasis_reconst = get_basis_on_face(FETypeReconst, EG)
-            ndofs4item = get_ndofs_on_face(FEType, EG)
-            ndofs4item2 = get_ndofs_on_face(FETypeReconst, EG)
         end
-        ndofs4item2_all = ndofs4item2
-    else
-        refbasis = get_basis_on_cell(FEType, EG)
-        refbasis_reconst = get_basis_on_cell(FETypeReconst, EG)
-        ndofs4item = get_ndofs_on_cell(FEType, EG)
-        ndofs4item2 = get_ndofs_on_cell(FETypeReconst, EG)
-        ndofs4item2_all = get_ndofs_on_cell_all(FETypeReconst, EG)
-    end    
+    end
+    refbasis = get_basis(AT, FEType, EG)
+    refbasis_reconst = get_basis(AT, FETypeReconst, EG)
+    ndofs4item = get_ndofs(AT, FEType, EG)
+    ndofs4item2 = get_ndofs(AT, FETypeReconst, EG)
+    ndofs4item2_all = get_ndofs_all(AT, FETypeReconst, EG)    
 
     # evaluate reconstruction basis
     refbasisvals = Array{Array{T,2},1}(undef,length(qf.w));
@@ -281,13 +256,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     # set coefficient handlers needed for basis evaluation (for both FEType and FETypereconst)
     if FETypeReconst <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item2)
-        if AT == ON_CELLS
-            coeff_handler = get_coefficients_on_cell!(FE2, EG)
-        elseif AT == ON_BFACES
-            coeff_handler = get_coefficients_on_bface!(FE2, EG)
-        elseif AT <: Union{<:ON_FACES,<:ON_IFACES}
-            coeff_handler = get_coefficients_on_face!(FE2, EG)
-        end
+        coeff_handler = get_coefficients(AT, FE2, EG)
     else
         coefficients = zeros(T,0,0)
         coeff_handler = nothing
@@ -295,7 +264,10 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     coefficients2 = zeros(T,ndofs4item,ndofs4item2)
 
     # set subset handler (only relevant if ndofs4item_all > ndofs4item)
-    subset_handler = get_basissubset_on_cell!(FE2, EG)
+    subset_handler = get_basissubset(AT, FE2, EG)
+
+    # get reconstruction coefficient handlers
+    rcoeff_handler = get_reconstruction_coefficients!(AT, FE, FE2, EG)
 
     # compute refbasisderivvals and further coefficients needed for operator eval
     xref = copy(qf.xref)
@@ -340,13 +312,6 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
             end
         end
         coefficients3 = zeros(T,resultdim,ndofs4item2)
-    end
-
-    # get reconstruction coefficient handlers
-    if AT <: Union{ON_BFACES,<:ON_FACES,<:ON_IFACES}
-        rcoeff_handler = get_reconstruction_coefficients_on_face!(FE, FE2, EG)
-    else
-        rcoeff_handler = get_reconstruction_coefficients_on_cell!(FE, FE2, EG)
     end
 
     if verbosity > 0

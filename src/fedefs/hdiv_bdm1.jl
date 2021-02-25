@@ -13,11 +13,11 @@ allowed ElementGeometries:
 abstract type HDIVBDM1{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:HDIVBDM1}) = FEType.parameters[1]
-get_ndofs_on_face(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry1D}) = 2
-get_ndofs_on_face(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 3
-get_ndofs_on_cell(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 2*nfaces_for_geometry(EG)
-get_ndofs_on_cell(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 3*nfaces_for_geometry(EG)
-get_ndofs_on_cell_all(FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 4*nfaces_for_geometry(EG)
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry1D}) = 2
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 3
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 2*nfaces_for_geometry(EG)
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 3*nfaces_for_geometry(EG)
+get_ndofs_all(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 4*nfaces_for_geometry(EG) # in 3D only 3 of 4 face dofs are used depending on orientation
 
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Triangle2D}) = 1;
@@ -95,15 +95,15 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
 end
 
-
-function get_basis_normalflux_on_face(::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry1D})
+## only normalfluxes on faces
+function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry1D})
     function closure(refbasis,xref)
         refbasis[1,1] = 1
         refbasis[2,1] = 12*(xref[1] - 1//2) # linear normal-flux of BDM1 function
     end
 end
 
-function get_basis_on_cell(::Type{HDIVBDM1{2}}, ::Type{<:Triangle2D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{2}}, ::Type{<:Triangle2D})
     function closure(refbasis, xref)
         # RT0 basis
         refbasis[1,:] .= [xref[1], xref[2]-1]
@@ -116,7 +116,7 @@ function get_basis_on_cell(::Type{HDIVBDM1{2}}, ::Type{<:Triangle2D})
     end
 end
 
-function get_basis_on_cell(::Type{HDIVBDM1{2}}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{2}}, ::Type{<:Quadrilateral2D})
     function closure(refbasis, xref)
         # RT0 basis
         refbasis[1,:] .= [0, xref[2]-1]
@@ -131,7 +131,7 @@ function get_basis_on_cell(::Type{HDIVBDM1{2}}, ::Type{<:Quadrilateral2D})
     end
 end
 
-function get_basis_normalflux_on_face(::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry2D})
+function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry2D})
     function closure(refbasis,xref)
         refbasis[1,1] = 1
         refbasis[2,1] = (24*(xref[1] - 1//3) + 12*(xref[2] - 1//3)) # linear normal-flux of first BDM1 function
@@ -139,7 +139,7 @@ function get_basis_normalflux_on_face(::Type{<:HDIVBDM1}, ::Type{<:AbstractEleme
     end
 end
 
-function get_basis_on_cell(::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D})
     function closure(refbasis, xref)
         # RT0 basis
         refbasis[1,:] .= 2*[xref[1], xref[2], xref[3]-1]
@@ -224,11 +224,11 @@ function get_basis_on_cell(::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D})
 end
 
 
-function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D})
-    xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    nfaces = nfaces_for_geometry(EG)
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D})
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaceSigns]
+    nfaces::Int = nfaces_for_geometry(EG)
     dim::Int = dim_element(EG)
-    function closure(coefficients, cell)
+    function closure(coefficients::Array{<:Real,2}, cell::Int)
         fill!(coefficients,1.0)
         # multiplication with normal vector signs (only RT0)
         for j = 1 : nfaces,  k = 1 : dim
@@ -239,12 +239,12 @@ function get_coefficients_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractE
 end  
 
 
-function get_coefficients_on_cell!(FE::FESpace{<: HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
-    xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<: HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}}  = FE.xgrid[CellFaceSigns]
+    xCellFaceOrientations::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaceOrientations]
     nfaces::Int = nfaces_for_geometry(EG)
     dim::Int = dim_element(EG)
-    function closure(coefficients, cell)
+    function closure(coefficients::Array{<:Real,2}, cell::Int)
         fill!(coefficients,1.0)
         for j = 1 : nfaces,  k = 1 : dim
             coefficients[k,3*j-2] = xCellFaceSigns[j,cell]; # RT0
@@ -259,7 +259,7 @@ end
 # the RT0 and those two BDM1 face functions are chosen
 # such that reflect the two moments with respect to the second and third node
 # of the global face enumeration
-function get_basissubset_on_cell!(FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
+function get_basissubset(::Type{ON_CELLS}, FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
     xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
     nfaces::Int = nfaces_for_geometry(EG)
     orientation = xCellFaceOrientations[1,1]

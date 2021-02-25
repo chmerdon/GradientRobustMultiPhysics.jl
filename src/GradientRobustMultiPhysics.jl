@@ -120,8 +120,9 @@ export HDIVRT0, HDIVBDM1, HDIVRT1
 export AbstractHcurlFiniteElement
 export HCURLN0
 
-export get_polynomialorder
-export get_ncomponents, get_basis_on_cell, get_basis_on_face
+export get_polynomialorder, get_ndofs, get_ndofs_all
+export get_ncomponents, get_edim
+export get_basis, get_coefficients, get_basissubset
 export reconstruct!
 
 export interpolate! # must be defined separately by each FEdefinition

@@ -11,8 +11,8 @@ allowed ElementGeometries:
 abstract type HDIVRT1{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:HDIVRT1}) = FEType.parameters[1]
-get_ndofs_on_face(FEType::Type{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry1D}) = 2
-get_ndofs_on_cell(FEType::Type{<:HDIVRT1}, EG::Type{<:Triangle2D}) = 2*nfaces_for_geometry(EG) + 2
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry1D}) = 2
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVRT1}, EG::Type{<:Triangle2D}) = 2*nfaces_for_geometry(EG) + 2
 
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry1D}) = 1;
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry2D}) = 2;
@@ -109,15 +109,15 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
 end
 
 
-
-function get_basis_normalflux_on_face(::Type{<:HDIVRT1}, ::Type{<:AbstractElementGeometry})
+# only normalfluxes on faces
+function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVRT1}, ::Type{<:AbstractElementGeometry})
     function closure(refbasis,xref)
         refbasis[1,1] = 1                # normal-flux of RT0 function on single face
         refbasis[2,1] = 12*(xref[1]-1//2) # linear normal-flux of RT1 function
     end
 end
 
-function get_basis_on_cell(::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
     function closure(refbasis,xref)
         temp = 1//2 - xref[1] - xref[2]
         # RT0 basis
@@ -134,8 +134,7 @@ function get_basis_on_cell(::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
     end
 end
 
-
-function get_coefficients_on_cell!(FE::FESpace{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)

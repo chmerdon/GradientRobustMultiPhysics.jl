@@ -997,9 +997,9 @@ function solve!(
             push!(FEs,Target.FEVectorBlocks[j].FES)
         end    
         if verbosity > 0
-            print("\n  FEs = ")
+            print("\n  target (FE) = ")
             for j = 1 : length(Target)
-                print("$(Target[j].FES.name) (ndofs = $(Target[j].FES.ndofs))\n        ");
+                print("$(Target[j].name) ($(Target[j].FES.name), ndofs = $(Target[j].FES.ndofs))\n                ");
             end
         end
         println("\n  subiteration | equations that are solved together")

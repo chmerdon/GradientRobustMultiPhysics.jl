@@ -1014,9 +1014,9 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
             else
                 SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
             end 
-            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = false)
+            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = false, transposed_assembly = O.transposed_assembly)
         else
-            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = true)
+            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = true, transposed_assembly = O.transposed_assembly)
         end
     end
 end

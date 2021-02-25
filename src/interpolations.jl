@@ -140,6 +140,7 @@ function interpolate!(Target::FEVectorBlock,
     if verbosity > 0
         println("\nINTERPOLATING")
         println("=============")
+        println("     source = $(source_data.name) @time = $time")
         println("     target = $(Target.name)")
         println("         AT = $AT")
         println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
@@ -177,17 +178,11 @@ function interpolate!(Target::FEVectorBlock,
      verbosity::Int = 0)
 ````
 
-Interpolates the given source_data into the finite elements space assigned to the Target FEVectorBlock. The optional time argument
+Interpolates the given source_data into the finite element space assigned to the Target FEVectorBlock. The optional time argument
 is only used if the source_data depends on time.
 """
 function interpolate!(Target::FEVectorBlock, source_data::UserData{AbstractDataFunction}; verbosity::Int = 0, time = 0)
-    if verbosity > 0
-        println("\nINTERPOLATING")
-        println("=============")
-        println("     target = $(Target.name)")
-        println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
-    end
-    interpolate!(Target, ON_CELLS, source_data; time = time)
+    interpolate!(Target, ON_CELLS, source_data; verbosity = verbosity, time = time)
 end
 
 

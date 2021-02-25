@@ -4,7 +4,6 @@
 abstract type H1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int}
 ````
 
-
 Continuous piecewise first-order polynomials.
 
 allowed ElementGeometries:
@@ -17,8 +16,7 @@ allowed ElementGeometries:
 abstract type H1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 get_ncomponents(FEType::Type{<:H1P1}) = FEType.parameters[1] # is this okay?
-get_ndofs_on_face(FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
-get_ndofs_on_cell(FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Triangle2D}) = 1;
@@ -58,7 +56,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-function get_basis_on_cell(FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})
+function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         edim = dim_element(ET)
@@ -72,7 +70,7 @@ function get_basis_on_cell(FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,Abstr
     end
 end
 
-function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         a = 1 - xref[1]
@@ -86,8 +84,7 @@ function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
     end
 end
 
-
-function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
+function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         a = 1 - xref[1]
@@ -104,11 +101,4 @@ function get_basis_on_cell(FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
             refbasis[8*k,k] = a*xref[2]*xref[3]
         end
     end
-end
-
-function get_basis_on_face(FE::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry})
-    cell_basis = get_basis_on_cell(FE, EG)
-    function closure(refbasis,xref)
-        return cell_basis(refbasis,xref)
-    end    
 end

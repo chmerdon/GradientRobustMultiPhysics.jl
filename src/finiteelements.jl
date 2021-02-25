@@ -144,17 +144,12 @@ end
 
 # default coefficient functions that can be overwritten by finite element that has non-default coeffcients
 # ( see e.g. h1v_br.jl )
-function get_coefficients_on_face!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
-    function closure(coefficients, face)
+function get_coefficients(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
+    function closure(coefficients, item)
         fill!(coefficients,1.0)
     end
 end    
-function get_coefficients_on_cell!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
-    function closure(coefficients, cell)
-        fill!(coefficients,1.0)
-    end
-end    
-function get_basissubset_on_cell!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
+function get_basissubset(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
     function closure(subset_ids, cell)
         # it is assumed that subset_ids is already 1 vector of form subset_ids = 1:ndofs
         # meaning that all basis functions on the reference cells are used
@@ -163,7 +158,9 @@ function get_basissubset_on_cell!(FE::FESpace{<:AbstractFiniteElement}, ::Type{<
         return nothing
     end
 end  
-get_ndofs_on_cell_all(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs_on_cell(FEType, EG)
+get_ndofs(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = 0 # element is undefined for this AT or EG
+get_basis(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = (refbasis,xref) -> nothing
+get_ndofs_all(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT, FEType, EG)
 
 
 """
@@ -296,11 +293,11 @@ include("fedefs/hcurl_n0.jl");
 
 
 
-function get_coefficients_on_bface!(FE::FESpace{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry})
-    get_coeffs_on_face! = get_coefficients_on_face!(FE, EG)
+function get_coefficients(::Type{ON_BFACES}, FE::FESpace{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry})
+    get_coeffs_on_face = get_coefficients(ON_FACES, FE, EG)
     xBFaces = FE.xgrid[BFaces]
     function closure(coefficients, bface)
-        get_coeffs_on_face!(coefficients, xBFaces[bface])
+        get_coeffs_on_face(coefficients, xBFaces[bface])
     end
 end    
 
@@ -314,20 +311,20 @@ function get_reconstruction_matrix(T::Type{<:Real}, FE::FESpace, FER::FESpace)
     FETypeReconst = eltype(FER)
 
     ncells = num_sources(xgrid[CellNodes])
-    rhandlers = [get_reconstruction_coefficients_on_cell!(FE, FER, EG[1])]
-    chandlers = [get_coefficients_on_cell!(FER, EG[1])]
-    shandlers = [get_basissubset_on_cell!(FER, EG[1])]
+    rhandlers = [get_reconstruction_coefficient(ON_CELLS, FE, FER, EG[1])]
+    chandlers = [get_coefficients(ON_CELLS, FER, EG[1])]
+    shandlers = [get_basissubset(ON_CELLS, FER, EG[1])]
     for j = 2 : length(EG)
-        append!(rhandlers, [get_reconstruction_coefficients_on_cell!(FE, FER, EG[j])])
-        append!(chandlers, [get_coefficients_on_cell!(FER, EG[j])])
-        append!(shandlers, [get_basissubset_on_cell!(FER, EG[j])])
+        append!(rhandlers, [get_reconstruction_coefficients(ON_CELLS, FE, FER, EG[j])])
+        append!(chandlers, [get_coefficients(ON_CELLS, FER, EG[j])])
+        append!(shandlers, [get_basissubset(ON_CELLS, FER, EG[j])])
     end
 
     ndofs_FE = zeros(Int,length(EG))
     ndofs_FER = zeros(Int,length(EG))
     for j = 1 : length(EG)
-        ndofs_FE[j] = get_ndofs_on_cell(FEType, EG[j])
-        ndofs_FER[j] = get_ndofs_on_cell(FETypeReconst, EG[j])
+        ndofs_FE[j] = get_ndofs(ON_CELLS, FEType, EG[j])
+        ndofs_FER[j] = get_ndofs(ON_CELLS, FETypeReconst, EG[j])
     end
     
     xCellDofs = FE[CellDofs]

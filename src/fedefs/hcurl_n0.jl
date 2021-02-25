@@ -13,9 +13,9 @@ allowed ElementGeometries:
 abstract type HCURLN0{edim} <: AbstractHcurlFiniteElement where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:HCURLN0}) = FEType.parameters[1]
-get_ndofs_on_edge(FEType::Type{<:HCURLN0}, EG::Type{<:AbstractElementGeometry}) = 1
-get_ndofs_on_cell(FEType::Type{HCURLN0{2}}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)
-get_ndofs_on_cell(FEType::Type{HCURLN0{3}}, EG::Type{<:AbstractElementGeometry}) = nedges_for_geometry(EG)
+get_ndofs(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}, Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HCURLN0}, EG::Type{<:AbstractElementGeometry}) = 1
+get_ndofs(::Type{ON_CELLS}, FEType::Type{HCURLN0{2}}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)
+get_ndofs(::Type{ON_CELLS}, FEType::Type{HCURLN0{3}}, EG::Type{<:AbstractElementGeometry}) = nedges_for_geometry(EG)
 
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry1D}) = 0;
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry2D}) = 1;
@@ -92,14 +92,14 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-
-function get_basis_tangentflux_on_edge(::Type{<:HCURLN0}, ::Type{<:AbstractElementGeometry})
+# on faces dofs are only tangential fluxes
+function get_basis(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}, Type{<:ON_BFACES}, Type{<:ON_FACES}}, ::Type{<:HCURLN0}, ::Type{<:AbstractElementGeometry})
     function closure(refbasis,xref)
         refbasis[1,1] = 1
     end
 end
 
-function get_basis_on_cell(::Type{HCURLN0{2}}, ::Type{<:Triangle2D})
+function get_basis(::Type{ON_CELLS}, ::Type{HCURLN0{2}}, ::Type{<:Triangle2D})
     function closure(refbasis,xref)
         refbasis[1,:] .= [1.0-xref[2], xref[1]]
         refbasis[2,:] .= [-xref[2], xref[1]]
@@ -107,7 +107,7 @@ function get_basis_on_cell(::Type{HCURLN0{2}}, ::Type{<:Triangle2D})
     end
 end
 
-function get_basis_on_cell(::Type{HCURLN0{2}}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{ON_CELLS}, ::Type{HCURLN0{2}}, ::Type{<:Quadrilateral2D})
     function closure(refbasis,xref)
         refbasis[1,:] .= [1 - xref[2], 0.0]
         refbasis[2,:] .= [0.0, xref[1]]
@@ -116,7 +116,7 @@ function get_basis_on_cell(::Type{HCURLN0{2}}, ::Type{<:Quadrilateral2D})
     end
 end
 
-function get_basis_on_cell(::Type{HCURLN0{3}}, ::Type{<:Tetrahedron3D})
+function get_basis(::Type{ON_CELLS}, ::Type{HCURLN0{3}}, ::Type{<:Tetrahedron3D})
     function closure(refbasis,xref)
         refbasis[1,:] .= [1.0-xref[2]-xref[3], xref[1], xref[1]] # edge 1 = [1,2]
         refbasis[2,:] .= [xref[2], 1-xref[3]-xref[1], xref[2]]   # edge 2 = [1,3]
@@ -127,14 +127,7 @@ function get_basis_on_cell(::Type{HCURLN0{3}}, ::Type{<:Tetrahedron3D})
     end
 end
 
-function get_coefficients_on_edge!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry1D})
-    function closure(coefficients, edge)
-        fill!(coefficient, 1.0)
-        return nothing
-    end
-end  
-
-function get_coefficients_on_cell!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry2D})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
@@ -146,7 +139,7 @@ function get_coefficients_on_cell!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractEl
     end
 end   
 
-function get_coefficients_on_cell!(FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry3D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry3D})
     xCellEdgeSigns = FE.xgrid[CellEdgeSigns]
     nedges = nedges_for_geometry(EG)
     function closure(coefficients, cell)

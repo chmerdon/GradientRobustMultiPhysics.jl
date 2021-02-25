@@ -14,8 +14,8 @@ allowed ElementGeometries:
 abstract type HDIVRT0{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:HDIVRT0}) = FEType.parameters[1]
-get_ndofs_on_face(FEType::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) = 1
-get_ndofs_on_cell(FEType::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) = 1
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)
 
 get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:AbstractElementGeometry1D}) = 0;
 get_polynomialorder(::Type{<:HDIVRT0{2}}, ::Type{<:AbstractElementGeometry2D}) = 1;
@@ -55,14 +55,14 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
 end
 
-
-function get_basis_normalflux_on_face(::Type{<:HDIVRT0}, ::Type{<:AbstractElementGeometry})
+# only normalfluxes on faces
+function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVRT0}, ::Type{<:AbstractElementGeometry})
     function closure(refbasis, xref)
         refbasis[1,1] = 1
     end
 end
 
-function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Triangle2D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{2}}, ::Type{<:Triangle2D})
     function closure(refbasis, xref)
         refbasis[1,:] .= [xref[1], xref[2]-1]
         refbasis[2,:] .= [xref[1], xref[2]]
@@ -70,7 +70,7 @@ function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Triangle2D})
     end
 end
 
-function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{2}}, ::Type{<:Quadrilateral2D})
     function closure(refbasis, xref)
         refbasis[1,:] .= [0, xref[2]-1]
         refbasis[2,:] .= [xref[1], 0]
@@ -79,7 +79,7 @@ function get_basis_on_cell(::Type{HDIVRT0{2}}, ::Type{<:Quadrilateral2D})
     end
 end
 
-function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
     function closure(refbasis, xref)
         refbasis[1,:] .= 2*[xref[1], xref[2], xref[3]-1]
         refbasis[2,:] .= 2*[xref[1], xref[2]-1, xref[3]]
@@ -89,7 +89,7 @@ function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
     # note: factor 2 is chosen, such that normal-flux integrated over faces is 1 again
 end
 
-function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
+function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
     function closure(refbasis, xref)
         refbasis[1,:] .= [0, 0, xref[3]-1]
         refbasis[2,:] .= [0, xref[2]-1, 0]
@@ -100,8 +100,7 @@ function get_basis_on_cell(::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
     end
 end
 
-
-function get_coefficients_on_cell!(FE::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)

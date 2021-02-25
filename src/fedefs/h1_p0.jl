@@ -10,8 +10,7 @@ allowed on every ElementGeometry
 abstract type H1P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 get_ncomponents(FEType::Type{<:H1P0}) = FEType.parameters[1]
-get_ndofs_on_face(FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
-get_ndofs_on_cell(FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_CELLS},Type{<:ON_BFACES}}, FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = 0;
 
@@ -46,8 +45,6 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     interpolate!(Target, FE, ON_CELLS, exact_function!; items = subitems, time = time)
 end
 
-
-
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1P0})
     xCoords = FE.xgrid[Coordinates]
     xCellNodes = FE.xgrid[CellNodes]
@@ -70,7 +67,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis_on_cell(FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry})
+function get_basis(::Union{<:Type{ON_CELLS},<:Type{ON_BFACES}}, FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents
@@ -78,11 +75,3 @@ function get_basis_on_cell(FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometr
         end
     end
 end
-
-function get_basis_on_face(FE::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry})
-    refbasis_cell = get_basis_on_cell(FE, EG)
-    function closure(refbasis, xref)
-        return refbasis_cell(refbasis, xref[1:end-1])
-    end    
-end
-

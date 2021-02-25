@@ -15,9 +15,8 @@ allowed ElementGeometries:
 abstract type H1BR{edim} <: AbstractH1FiniteElementWithCoefficients where {edim<:Int} end
 
 get_ncomponents(FEType::Type{<:H1BR}) = FEType.parameters[1]
-get_ndofs_on_face(FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = 1 + nnodes_for_geometry(EG) * FEType.parameters[1]
-get_ndofs_on_cell(FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) + nnodes_for_geometry(EG) * FEType.parameters[1]
-
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = 1 + nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) + nnodes_for_geometry(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Triangle2D}) = 2;
@@ -97,10 +96,10 @@ end
 # 2D basis #
 ############
 
-function get_basis_on_face(FEType::Type{H1BR{2}}, EG::Type{<:Edge1D})
+function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{H1BR{2}}, EG::Type{<:Edge1D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_face(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_face(H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
+    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubble to P1 basis
@@ -108,10 +107,10 @@ function get_basis_on_face(FEType::Type{H1BR{2}}, EG::Type{<:Edge1D})
     end
 end
 
-function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Triangle2D})
+function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
+    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -122,10 +121,10 @@ function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Triangle2D})
 end
 
 
-function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Quadrilateral2D})
+function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
+    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
     a = 0.0
     b = 0.0
     function closure(refbasis, xref)
@@ -140,7 +139,7 @@ function get_basis_on_cell(FEType::Type{H1BR{2}}, EG::Type{<:Quadrilateral2D})
     end
 end
 
-function get_coefficients_on_cell!(FE::FESpace{H1BR{2}}, ::Type{<:Triangle2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, ::Type{<:Triangle2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -154,7 +153,7 @@ function get_coefficients_on_cell!(FE::FESpace{H1BR{2}}, ::Type{<:Triangle2D})
     end
 end
 
-function get_coefficients_on_cell!(FE::FESpace{H1BR{2}}, ::Type{<:Quadrilateral2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, ::Type{<:Quadrilateral2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -170,7 +169,7 @@ function get_coefficients_on_cell!(FE::FESpace{H1BR{2}}, ::Type{<:Quadrilateral2
     end
 end
 
-function get_coefficients_on_face!(FE::FESpace{H1BR{2}}, ::Type{<:Edge1D})
+function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{H1BR{2}}, ::Type{<:Edge1D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
@@ -184,10 +183,10 @@ end
 # 3D basis #
 ############
 
-function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Triangle2D})
+function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{H1BR{3}}, EG::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_face(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_face(H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
+    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -195,10 +194,10 @@ function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Triangle2D})
     end
 end
 
-function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
+function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_face(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_face(H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
+    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -206,10 +205,10 @@ function get_basis_on_face(FEType::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
     end
 end
 
-function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D})
+function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
+    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -220,10 +219,10 @@ function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D})
     end
 end
 
-function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
+function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
     ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis_on_cell(H1P1{ncomponents}, EG)
-    offset = get_ndofs_on_cell(H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
+    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
     a = 0.0
     b = 0.0
     c = 0.0
@@ -243,7 +242,7 @@ function get_basis_on_cell(FEType::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
 end
 
 
-function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Tetrahedron3D})
+function get_coefficients(::Type{ON_CELLS},FE::FESpace{H1BR{3}}, ::Type{<:Tetrahedron3D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -266,7 +265,7 @@ function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Tetrahedron3D}
 end    
 
 
-function get_coefficients_on_face!(FE::FESpace{H1BR{3}}, ::Type{<:Triangle2D})
+function get_coefficients(::Type{<:ON_FACES},FE::FESpace{H1BR{3}}, ::Type{<:Triangle2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
@@ -277,7 +276,7 @@ function get_coefficients_on_face!(FE::FESpace{H1BR{3}}, ::Type{<:Triangle2D})
     end
 end    
 
-function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Hexahedron3D})
+function get_coefficients(::Type{ON_CELLS},FE::FESpace{H1BR{3}}, ::Type{<:Hexahedron3D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -306,7 +305,7 @@ function get_coefficients_on_cell!(FE::FESpace{H1BR{3}}, ::Type{<:Hexahedron3D})
 end    
 
 
-function get_coefficients_on_face!(FE::FESpace{H1BR{3}}, ::Type{<:Quadrilateral2D})
+function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{H1BR{3}}, ::Type{<:Quadrilateral2D})
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
@@ -324,9 +323,9 @@ end
 ###########################
 
 
-function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+function get_reconstruction!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D})
+    xFaceVolumes::Array{<:Real,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{<:Real,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, face::Int) 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
@@ -339,7 +338,7 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FES
 end
 
 
-function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Edge1D})
+function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Edge1D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
@@ -363,7 +362,7 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{2}}, FER::FES
 end
 
 
-function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Triangle2D})
+function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Triangle2D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
@@ -379,7 +378,7 @@ function get_reconstruction_coefficients_on_face!(FE::FESpace{H1BR{3}}, FER::FES
     end
 end
 
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}})
+function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
@@ -404,7 +403,7 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FES
     end
 end
 
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVRT0{3}}, EG::Type{<:Tetrahedron3D})
+function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{3}}, FER::FESpace{HDIVRT0{3}}, EG::Type{<:Tetrahedron3D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
@@ -429,15 +428,15 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FES
     end
 end
 
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}})
+    xFaceVolumes::Array{<:Real,1} = FE.xgrid[FaceVolumes]
+    xFaceNormals::Array{<:Real,2} = FE.xgrid[FaceNormals]
     xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FER.xgrid[CellFaceSigns]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
-    BDM1_coeffs::Array{Float64,1} = [-1//12, 1//12]
+    BDM1_coeffs::Array{<:Real,1} = [-1//12, 1//12]
     function closure(coefficients::Array{<:Real,2}, cell::Int) 
         # fill!(coefficients,0.0)
         for f = 1 : size(face_rule,1)
@@ -460,7 +459,7 @@ function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{2}}, FER::FES
 end
 
 
-function get_reconstruction_coefficients_on_cell!(FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})
+function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaceOrientations::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FER.xgrid[CellFaceOrientations]

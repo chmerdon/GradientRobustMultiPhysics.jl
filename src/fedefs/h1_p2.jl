@@ -17,10 +17,9 @@ abstract type H1P2{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponen
 get_ncomponents(FEType::Type{<:H1P2}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1P2}) = FEType.parameters[2]
 
-get_ndofs_on_face(FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2])*(FEType.parameters[2]+1)/2*FEType.parameters[1])
-get_ndofs_on_cell(FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2]+1)*(FEType.parameters[2]+2)/2*FEType.parameters[1])
-get_ndofs_on_cell(FEType::Type{<:H1P2}, EG::Type{<:Quadrilateral2D}) = 8*FEType.parameters[1]
-
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2])*(FEType.parameters[2]+1)/2*FEType.parameters[1])
+get_ndofs(::Type{<:ON_CELLS},FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2]+1)*(FEType.parameters[2]+2)/2*FEType.parameters[1])
+get_ndofs(::Type{<:ON_CELLS},FEType::Type{<:H1P2}, EG::Type{<:Quadrilateral2D}) = 8*FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Triangle2D}) = 2;
@@ -109,7 +108,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
 end
 
 
-function get_basis_on_cell(::Type{<:H1P2}, ::Type{<:Vertex0D})
+function get_basis(::Type{<:AbstractAssemblyType},::Type{<:H1P2}, ::Type{<:Vertex0D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis,xref)
         for k = 1 : ncomponents
@@ -118,7 +117,7 @@ function get_basis_on_cell(::Type{<:H1P2}, ::Type{<:Vertex0D})
     end
 end
 
-function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Edge1D})
+function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Edge1D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         temp = 1 - xref[1]
@@ -130,7 +129,7 @@ function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Edge1D})
     end
 end
 
-function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Triangle2D})
+function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         temp = 1 - xref[1] - xref[2]
@@ -146,7 +145,7 @@ function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Triangle2D})
 end
 
 
-function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D})
+function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         temp = 1 - xref[1] - xref[2] - xref[3]
@@ -166,7 +165,7 @@ function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D})
 end
 
 
-function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         refbasis[1,1] = 1 - xref[1]
@@ -190,9 +189,4 @@ function get_basis_on_cell(FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D})
             refbasis[8*k,k] = refbasis[8,1]  # face 4
         end
     end
-end
-
-
-function get_basis_on_face(FE::Type{<:H1P2}, EG::Type{<:AbstractElementGeometry})
-    return get_basis_on_cell(FE, EG)
 end
