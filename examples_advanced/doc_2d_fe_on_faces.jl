@@ -1,6 +1,6 @@
 #= 
 
-# 2D FaceGrid
+# 2D Finite Elements on Faces
 ([source code](SOURCE_URL))
 
 This code demonstrates the novel feature of finite element spaces on faces by providing AT = ON_FACES in the finite element space constructor. It is used here to solve a bestapproximation into an Hdiv-conforming space
@@ -23,15 +23,14 @@ end
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
 function main(; Plotter = nothing, verbosity = 1, nlevels = 6, FEType = H1P1{1}, testmode = false)
 
-    ## choose initial mesh and get face grid
+    ## choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
 
-    ## define bestapproximation on face grid
-    ## be careful with boundary conditions (not reasonable on face grid)
+    ## define bestapproximation problem
     user_function = DataFunction(exact_function!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 3)
     Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
 
-    ## we want to use a broken space and give the constraint of no normal jumps
+    ## we want to use a broken space and give the constraint of no normal jumps on interior faces
     ## in form of a Lagrange multiplier, since there is no NormalFluxDisc{Jump} operator yet,
     ## we have to use the full identity and multiply the normal vector in an action
     xFaceNormals = xgrid[FaceNormals]
@@ -42,9 +41,12 @@ function main(; Plotter = nothing, verbosity = 1, nlevels = 6, FEType = H1P1{1},
     LMaction = Action(Float64, ActionKernel(LMaction_kernel, [1,2]; dependencies = "I", quadorder = 0))
     add_unknown!(Problem; unknown_name = "Lagrange multiplier for face jumps", equation_name = "face jump constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(IdentityDisc{Jump}; AT = ON_IFACES, action = LMaction))
+    ## the diagonal operator sets the lagrange multiplier on boundary faces to zero
     add_operator!(Problem, [2,2], DiagonalOperator("Diag(1)", 1.0, true, [1,2,3,4]))
 
     ## choose some (inf-sup stable) finite element types
+    ## first space is the Hdiv element
+    ## second will be used for the Lagrange multiplier space on faces
     FEType = [HDIVBDM1{2}, H1P1{1}]
     FES = [FESpace{FEType[1]}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
 
@@ -61,8 +63,3 @@ function main(; Plotter = nothing, verbosity = 1, nlevels = 6, FEType = H1P1{1},
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DFaceElements.main()
