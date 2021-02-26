@@ -46,17 +46,20 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)
 
+    # get effective assembly type for basis
+    # depending on the AT and the AT of the FESpace
+    FEAT = EffAT4AssemblyType(typeof(FE).parameters[2],AT)
 
     if verbosity > 0
-        println("  ...constructing FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP")
+        println("  ...constructing FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT")
     end
 
     # collect basis function information
     ncomponents::Int = get_ncomponents(FEType)
     ndofs4item::Int = 0
-    refbasis = get_basis(AT, FEType, EG)
-    ndofs4item = get_ndofs(AT, FEType, EG)
-    ndofs4item_all = get_ndofs_all(AT, FEType, EG)
+    refbasis = get_basis(FEAT, FEType, EG)
+    ndofs4item = get_ndofs(FEAT, FEType, EG)
+    ndofs4item_all = get_ndofs_all(FEAT, FEType, EG)
     if AT <: Union{ON_BFACES,<:ON_FACES,<:ON_EDGES,ON_BEDGES}
         if FEType <: AbstractHdivFiniteElement ||  FEType <: AbstractHcurlFiniteElement
             ncomponents = 1
@@ -76,11 +79,11 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     coeff_handler = nothing
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
-        coeff_handler = get_coefficients(AT, FE, EG)
+        coeff_handler = get_coefficients(FEAT, FE, EG)
     end    
 
     # set subset handler (only relevant if ndofs4item_all > ndofs4item)
-    subset_handler = get_basissubset(AT, FE, EG)
+    subset_handler = get_basissubset(FEAT, FE, EG)
 
     # compute refbasisderivvals and further coefficients needed for operator eval
     derivorder = NeededDerivative4Operator(FEOP)

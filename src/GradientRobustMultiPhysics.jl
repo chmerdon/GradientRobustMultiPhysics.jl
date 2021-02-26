@@ -42,6 +42,7 @@ export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries
 export GridComponent4TypeProperty
 export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
 export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
+export get_facegrid
 
 include("meshrefinements.jl")
 export split_grid_into
@@ -110,7 +111,6 @@ export FESpace
 
 export AbstractH1FiniteElement
 export H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR
-export H1P0F
 
 export AbstractH1FiniteElementWithCoefficients
 export H1BR

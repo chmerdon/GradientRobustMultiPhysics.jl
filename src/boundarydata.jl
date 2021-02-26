@@ -92,9 +92,9 @@ function boundarydata!(
     if length(O.regions4boundarytype) > 0
         xBFaceDofs = FE[BFaceDofs]
         nbfaces = num_sources(xBFaceDofs)
+        xBFaces = FE.xgrid[BFaces]
+        xBFaceRegions = FE.xgrid[BFaceRegions]
     end
-    xBFaces = FE.xgrid[BFaces]
-    xBFaceRegions = FE.xgrid[BFaceRegions]
 
     ######################
     # Dirichlet boundary #

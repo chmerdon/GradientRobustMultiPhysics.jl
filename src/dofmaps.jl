@@ -43,7 +43,26 @@ Dofmap4AssemblyType(::Type{ON_BFACES}) = BFaceDofs
 Dofmap4AssemblyType(::Type{<:ON_EDGES}) = EdgeDofs
 Dofmap4AssemblyType(::Type{ON_BEDGES}) = BEdgeDofs
 
-Dofmap4AssemblyType(FES::FESpace, AT::Type{<:AbstractAssemblyType}) = FES[Dofmap4AssemblyType(AT)]
+EffAT4AssemblyType(::Type{ON_CELLS},::Type{ON_CELLS}) = ON_CELLS
+EffAT4AssemblyType(::Type{ON_CELLS},::Type{<:ON_FACES}) = ON_FACES
+EffAT4AssemblyType(::Type{ON_CELLS},::Type{ON_BFACES}) = ON_BFACES
+EffAT4AssemblyType(::Type{ON_CELLS},::Type{<:ON_EDGES}) = ON_EDGES
+EffAT4AssemblyType(::Type{ON_CELLS},::Type{ON_BEDGES}) = ON_BEDGES
+
+EffAT4AssemblyType(::Type{ON_FACES},::Type{ON_CELLS}) = nothing
+EffAT4AssemblyType(::Type{ON_FACES},::Type{<:ON_FACES}) = ON_CELLS
+EffAT4AssemblyType(::Type{ON_FACES},::Type{<:ON_EDGES}) = ON_FACES
+EffAT4AssemblyType(::Type{ON_FACES},::Type{<:ON_BEDGES}) = ON_BFACES
+
+EffAT4AssemblyType(::Type{ON_EDGES},::Type{ON_CELLS}) = nothing
+EffAT4AssemblyType(::Type{ON_EDGES},::Type{<:ON_FACES}) = nothing
+EffAT4AssemblyType(::Type{ON_EDGES},::Type{<:ON_EDGES}) = ON_CELLS
+
+
+
+function Dofmap4AssemblyType(FES::FESpace, AT::Type{<:AbstractAssemblyType})
+    return FES[Dofmap4AssemblyType(EffAT4AssemblyType(typeof(FES).parameters[2],AT))]
+end
 
 
 function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) where {FEType <: AbstractFiniteElement}
@@ -436,7 +455,7 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{BFaceDofs}) where {F
 end
 
 function init_dofmap!(FES::FESpace, DM::Type{<:DofMap})
-    if (FES.broken == true) && (Dofmap4AssemblyType(get_assemblytype(eltype(FES))) != DM)
+    if (FES.broken == true) && (DM != CellDofs)
         init_broken_dofmap!(FES, DM)
     else
         init_dofmap_from_pattern!(FES, DM)

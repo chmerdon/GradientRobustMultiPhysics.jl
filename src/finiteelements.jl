@@ -38,7 +38,7 @@ end
 
 A struct that has a finite element type as parameter and carries dofmaps (CellDofs, FaceDofs, BFaceDofs) plus additional grid information and access to arrays holding coefficients if needed.
 """
-mutable struct FESpace{FEType<:AbstractFiniteElement}
+mutable struct FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
     ndofs::Int                            # total number of dofs
@@ -58,30 +58,34 @@ Base.setindex!(FES::FESpace,v,DM::Type{<:DofMap}) = FES.dofmaps[DM] = v
 
 """
 ````
-function FESpace{FEType<:AbstractFiniteElement}(
+function FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}(
     xgrid::ExtendableGrid;
     name = "",
     broken::Bool = false,
     verbosity = 0)
 ````
 
-Constructur for FESpace. The broken switch allows to generate a broken finite element space (with no continuities at all). If no name is provided
+Constructor for FESpace. The broken switch allows to generate a broken finite element space (with no continuities at all). If no name is provided
 it is generated automatically from FEType.
 """
-function FESpace{FEType}(
+function FESpace{FEType,AT}(
     xgrid::ExtendableGrid;
     name = "",
     dofmaps_needed = "auto",
     broken::Bool = false,
-    verbosity = 0 ) where {FEType <:AbstractFiniteElement}
+    verbosity = 0 ) where {FEType <:AbstractFiniteElement, AT<:AbstractAssemblyType}
     # piecewise constants are always broken
-    if FEType <: H1P0 || FEType <: H1P0F
+    if FEType <: H1P0
         broken = true
+    end
+
+    if AT == ON_FACES
+        xgrid = get_facegrid(xgrid)
     end
     
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)
-    FES = FESpace{FEType}(name,broken,0,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
+    FES = FESpace{FEType,AT}(name,broken,0,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
 
     if verbosity > 0
         println("  Initialising FESpace $FEType...")
@@ -113,6 +117,14 @@ function FESpace{FEType}(
     return FES
 end
 
+function FESpace{FEType}(
+    xgrid::ExtendableGrid;
+    name = "",
+    dofmaps_needed = "auto",
+    broken::Bool = false,
+    verbosity = 0 ) where {FEType <:AbstractFiniteElement}
+    return FESpace{FEType,ON_CELLS}(xgrid; name = name, dofmaps_needed = dofmaps_needed, broken = broken, verbosity = verbosity)
+end
 
 """
 $(TYPEDSIGNATURES)
@@ -158,7 +170,6 @@ function get_basissubset(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractF
         return nothing
     end
 end  
-get_assemblytype(FEType::Type{<:AbstractFiniteElement}) = ON_CELLS
 get_ndofs(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = 0 # element is undefined for this AT or EG
 get_basis(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = (refbasis,xref) -> nothing
 get_ndofs_all(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT, FEType, EG)
@@ -184,19 +195,11 @@ value triggers type instability.
 Base.getindex(FES::FESpace,DM::Type{<:DofMap})=get!(FES,DM)
 
 
-function count_ndofs!(FES::FESpace{FEType}) where {FEType <: AbstractFiniteElement}
+function count_ndofs!(FES::FESpace{FEType,AT}) where {FEType <: AbstractFiniteElement, AT <: AbstractAssemblyType}
     xgrid = FES.xgrid
-    AT = get_assemblytype(FEType)
-    DofMap = Dofmap4AssemblyType(AT)
-    if AT == ON_CELLS
-        EG = xgrid[UniqueCellGeometries]
-        xItemGeometries = xgrid[CellGeometries]
-        ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
-    elseif AT == ON_FACES
-        EG = xgrid[UniqueFaceGeometries]
-        xItemGeometries = xgrid[FaceGeometries]
-        ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
-    end
+    EG = xgrid[UniqueCellGeometries]
+    xItemGeometries = xgrid[CellGeometries]
+    ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
     ndofs4EG = zeros(Int, length(EG))
     ncomponents::Int = get_ncomponents(FEType)
     dofs4item4component = zeros(Int,4)
@@ -208,7 +211,7 @@ function count_ndofs!(FES::FESpace{FEType}) where {FEType <: AbstractFiniteEleme
     highest_quantifierNCEF = zeros(Int,0)
     totaldofs = 0
     for j = 1 : length(EG)
-        pattern = get_dofmap_pattern(FEType, DofMap, EG[j])
+        pattern = get_dofmap_pattern(FEType, CellDofs, EG[j])
         for k = 1 : Int(length(pattern)/2)
             pattern_char = pattern[2*k-1]
             quantifier = parse(Int,pattern[2*k])

@@ -396,9 +396,11 @@ can only be applied in PDE LHS
 struct LagrangeMultiplier <: AbstractPDEOperatorLHS
     name::String
     operator::Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
+    action::AbstractAction
+    AT::Type{<:AbstractAssemblyType}
 end
-function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator})
-    return LagrangeMultiplier("LagrangeMultiplier($operator)",operator)
+function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = DoNotChangeAction(1))
+    return LagrangeMultiplier("LagrangeMultiplier($operator)",operator, action, AT)
 end
 
 
@@ -1123,10 +1125,10 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::LagrangeMult
         FE2 = A.FESY
         @assert At.FESX == FE2
         @assert At.FESY == FE1
-        SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, ON_CELLS, [FE1, FE2], [O.operator, Identity], MultiplyScalarAction(-1.0,1))   
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = false)
+        SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, O.AT, [FE1, FE2], [O.operator, Identity], O.action)   
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = false, factor = -1)
     else
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = true)
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = true, factor = -1)
     end
 end
 

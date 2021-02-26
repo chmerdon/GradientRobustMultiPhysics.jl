@@ -109,6 +109,28 @@ GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_REGION}) = BEd
 GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_GEOMETRY}) = BEdgeGeometries
 GridComponent4TypeProperty(::Type{ITEMTYPE_BEDGE},::Type{PROPERTY_UNIQUEGEOMETRY}) = UniqueBEdgeGeometries
 
+
+function get_facegrid(source_grid)
+    facegrid=ExtendableGrid{typeof(source_grid).parameters[1],typeof(source_grid).parameters[2]}()
+    facegrid[Coordinates]=source_grid[Coordinates]
+    facegrid[CellNodes]=source_grid[FaceNodes]
+    facegrid[CoordinateSystem]=source_grid[CoordinateSystem]
+    facegrid[CellGeometries]=source_grid[FaceGeometries]
+    facegrid[UniqueCellGeometries]=source_grid[UniqueFaceGeometries]
+
+    ## assing bface regions to coressponding cell regions of face grid
+    ## (interior faces stay at face region 0)
+    xBFaces = source_grid[BFaces]
+    xBFaceRegions = source_grid[BFaceRegions]
+    nfaces = num_sources(source_grid[FaceNodes])
+    xFaceRegions = zeros(Int32,nfaces)
+    for j = 1 : length(xBFaces)
+        xFaceRegions[xBFaces[j]] = xBFaceRegions[j]
+    end
+    facegrid[CellRegions] = xFaceRegions
+    return facegrid
+end
+
 # show function for ExtendableGrids and defined Components in its Dict
 function showmore(io::IO, xgrid::ExtendableGrid)
 
