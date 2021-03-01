@@ -19,7 +19,7 @@ function TrilinearForm(
     operators::Array{DataType,1},
     action::AbstractAction;
     regions::Array{Int,1} = [0])
-    return  AssemblyPattern{APT_TrilinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
+    return  AssemblyPattern{APT_TrilinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing,nothing))
 end
 
 
@@ -50,16 +50,8 @@ function assemble!(
     skip_preps::Bool = false,
     factor = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    # get adjacencies
-    FE = AP.FES
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs::Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1} = [Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, AP.operators[1])),
-                 Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, AP.operators[2])),
-                 Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, AP.operators[3]))]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
-
     # prepare assembly
+    FE = AP.FES
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
@@ -69,6 +61,13 @@ function assemble!(
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemDofs::Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1} = [Dofmap4AssemblyType(FE[1], AP.APP.basisAT[1]),
+                 Dofmap4AssemblyType(FE[2], AP.APP.basisAT[2]),
+                 Dofmap4AssemblyType(FE[3], AP.APP.basisAT[3])]
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
+
 
     # get size informations
     ncomponents = zeros(Int,length(FE))
@@ -269,18 +268,10 @@ function assemble!(
     factor::Real = 1,
     offset::Int = 0) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    # get adjacencies
+    # prepare assembly
     FE = AP.FES
     @assert FE[1] == FE1.FES
     @assert FE[2] == FE2.FES
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], DofitemAT4Operator(AT, AP.operators[1]))
-    xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], DofitemAT4Operator(AT, AP.operators[2]))
-    xItemDofs3::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[3], DofitemAT4Operator(AT, AP.operators[3]))
-    xItemRegions::Array{Int,1} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
-
-    # prepare assembly
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
@@ -290,6 +281,13 @@ function assemble!(
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemDofs1::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[1], AP.APP.basisAT[1])
+    xItemDofs2::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[2], AP.APP.basisAT[2])
+    xItemDofs3::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE[3], AP.APP.basisAT[3])
+    xItemRegions::Array{Int,1} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
+
 
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE[1]))

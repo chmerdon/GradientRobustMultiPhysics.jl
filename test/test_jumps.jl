@@ -5,17 +5,11 @@ function test_qpmatchup(xgrid; verbosity = 0)
 
     AT = ON_IFACES
     ncomponents = 1
-    FE = FESpace{H1P1{ncomponents}}(xgrid)
+    FE = FESpace{H1P0{ncomponents}}(xgrid)
     T = Float64
 
     action = DoNotChangeAction(ncomponents)
-    AP = LinearForm(Float64, AT, [FE], [IdentityDisc{Jump}], action)
-
-    operators = AP.operators
-    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, operators[1]))
-    nitems = Int64(num_sources(xItemNodes))
+    AP = LinearForm(Float64, AT, [FE], [GradientDisc{Jump}], action)
 
     # prepare assembly
     prepare_assembly!(AP; verbosity = verbosity)
@@ -24,6 +18,13 @@ function test_qpmatchup(xgrid; verbosity = 0)
     qf = AP.APP.qf
     basisevaler = AP.APP.basisevaler
     dii4op = AP.APP.dii4op
+
+    operators = AP.operators
+    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, AP.APP.basisAT[1])
+    nitems = Int64(num_sources(xItemNodes))
+
  
     EG4item = 0
     EG4dofitem = [1,1] # type of the current item
@@ -73,7 +74,7 @@ function test_disc_LF(xgrid, discontinuity, verbosity = 0)
 
     # generate constant P0 function with no jumps
     ncomponents = 1
-    FE = FESpace{H1P0{ncomponents}}(xgrid)
+    FE = FESpace{H1P1{ncomponents}}(xgrid)
     FEFunction = FEVector{Float64}("velocity",FE)
     fill!(FEFunction[1],1)
 

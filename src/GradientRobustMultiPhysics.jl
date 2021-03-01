@@ -151,7 +151,7 @@ export AccumulatingVector
 
 include("assemblypatterns.jl")
 export AssemblyPatternType, AssemblyPreparations
-export ItemIntegrator, L2ErrorIntegrator
+export ItemIntegrator, L2ErrorIntegrator, L2NormIntegrator, L2DifferenceIntegrator
 export LinearForm
 export BilinearForm, SymmetricBilinearForm
 export TrilinearForm

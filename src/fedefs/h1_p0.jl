@@ -10,11 +10,12 @@ allowed on every ElementGeometry
 abstract type H1P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 get_ncomponents(FEType::Type{<:H1P0}) = FEType.parameters[1]
-get_ndofs(::Union{Type{<:ON_CELLS},Type{<:ON_BFACES}}, FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
+get_ndofs(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = 0;
 
 get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
+get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "C1"
 get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "C1"
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {FEType <: H1P0}
@@ -67,7 +68,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis(::Union{<:Type{ON_CELLS},<:Type{ON_BFACES}}, FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry})
+function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents

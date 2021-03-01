@@ -13,7 +13,7 @@ function ItemIntegrator(
 Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
 function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action; regions = [0])
-    return AssemblyPattern{APT_ItemIntegrator, T, AT}([],operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
+    return AssemblyPattern{APT_ItemIntegrator, T, AT}([],operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing,nothing))
 end
 
 """
@@ -47,22 +47,33 @@ function L2ErrorIntegrator(T::Type{<:Real},
     action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[2]]; name = "L2 error kernel", dependencies = "X", quadorder = 2 * compare_data.quadorder)
     return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions)
 end
-function L2ErrorIntegrator(T::Type{<:Real},
+function L2NormIntegrator(T::Type{<:Real},
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
-    regions = [0],
-    time = 0)
-    call = 0
-    function L2error_function(result,input)
+    regions = [0])
+    function L2norm_function(result,input)
         result[1] = 0
-        call += 1
         for j=1:ncomponents
             result[1] += input[j]^2
         end    
     end    
-    action_kernel = ActionKernel(L2error_function, [1,ncomponents]; name = "L2 error kernel", dependencies = "", quadorder = 2)
+    action_kernel = ActionKernel(L2norm_function, [1,ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = 2)
     return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions)
+end
+function L2DifferenceIntegrator(T::Type{<:Real},
+    ncomponents::Int,
+    operator::Type{<:AbstractFunctionOperator};
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    regions = [0])
+    function L2difference_function(result,input)
+        result[1] = 0
+        for j=1:ncomponents
+            result[1] += (input[j]-input[ncomponents+j])^2
+        end    
+    end    
+    action_kernel = ActionKernel(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", quadorder = 2)
+    return ItemIntegrator(T,AT, [operator, operator], Action(T, action_kernel); regions = regions)
 end
 
 
@@ -85,21 +96,14 @@ function evaluate!(
     skip_preps::Bool = false,
     verbosity::Int = 0) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
 
-    # get adjacencies
+    # prepare assembly
     operators = AP.operators
     @assert length(FEB) == length(operators)
     nFE = length(FEB)
     FE = Array{FESpace,1}(undef, nFE)
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef, nFE)
     for j = 1 : nFE
         FE[j] = FEB[j].FES
-        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, operators[j]))
     end
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
-
-    # prepare assembly
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; FES = FE, verbosity = verbosity - 1)
@@ -109,6 +113,14 @@ function evaluate!(
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef, nFE)
+    for j = 1 : nFE
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j], AP.APP.basisAT[j])
+    end
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
+
 
     # get size informations
     ncomponents = zeros(Int,nFE)

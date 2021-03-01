@@ -204,21 +204,60 @@ QuadratureOrderShift4Operator(::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{Hessian}) = -2
 
 
-# default junctions
-function DofitemAT4Operator(AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
-    # check if operator is discontinuous for this AT
-    for j = 1 : length(FO.parameters)
-        if typeof(FO.parameters[j]) != Int64
-            if FO.parameters[j] <: DiscontinuityTreatment
+# this function decides which basis should be evaluated for the evaluation of an operator
+# e.g. Hdiv elements can use the face basis for the evaluation of the normal flux operator,
+# but an H1 element must evaluate the cell basis for GradientDisc{Jump} ON_FACES
+function DefaultBasisAssemblyType4Operator(operator::Type{<:AbstractFunctionOperator}, patternAT::Type{<:AbstractAssemblyType}, continuity::Type{<:AbstractFiniteElement})
+    if patternAT == ON_CELLS
+        return ON_CELLS
+    elseif patternAT <: Union{<:ON_FACES,<:ON_BFACES}
+        if continuity <: AbstractH1FiniteElement
+            if QuadratureOrderShift4Operator(operator) == 0
+                return patternAT
+            else
                 return ON_CELLS
             end
+        elseif continuity <: AbstractHdivFiniteElement
+            if QuadratureOrderShift4Operator(operator) == 0 && operator <: NormalFlux
+                return patternAT
+            else
+                return ON_CELLS
+            end
+        elseif continuity <: AbstractHcurlFiniteElement
+            if QuadratureOrderShift4Operator(operator) == 0 && operator <: TangentFlux
+                return patternAT
+            else
+                return ON_CELLS
+            end
+        else
+            return ON_CELLS
         end
+    elseif patternAT <: Union{<:ON_EDGS,<:ON_BEDGES}
+        if continuity <: AbstractH1FiniteElement
+            if QuadratureOrderShift4Operator(operator) == 0
+                return patternAT
+            else
+                return ON_CELLS
+            end
+        elseif continuity <: AbstractHdivFiniteElement
+            return ON_CELLS
+        elseif continuity <: AbstractHcurlFiniteElement
+            if QuadratureOrderShift4Operator(operator) == 0 && operator <: TangentFlux
+                return patternAT
+            else
+                return ON_CELLS
+            end
+        else
+            return ON_CELLS
+        end
+    else return patternAT
     end
-    return AT
 end
 
-function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitem, AT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
+
+function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyType}, basisAT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
     # check if operator is discontinuous for this AT
+    xgrid = FES.xgrid
     discontinuous = false
     posdt = 0
     for j = 1 : length(FO.parameters)
@@ -230,16 +269,23 @@ function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitem, AT::T
     end
     if discontinuous
         # call discontinuity handlers
-        DofitemInformation4Operator(xgrid, EG, EGdofitem, AT, FO.parameters[posdt])
+        # for e.g. IdentityDisc, GradientDifsc etc.
+        # if AT == ON_FACES: if continuity allows it, assembly ON_FACES two times on each face
+        #                    otherwise leads to ON_CELL assembly on neighbouring CELLS
+        # if AT == ON_EDGES: todo (should lead to ON_CELL assembly on neighbouring CELLS, morea than two)
+        DofitemInformation4Operator(FES, AT, basisAT, FO.parameters[posdt])
     else
         # call standard handlers
-        DofitemInformation4Operator(xgrid, EG, EGdofitem, AT)
+        # assembly as specified by AT
+        DofitemInformation4Operator(FES, AT, basisAT)
     end
 end
 
-# default handlers
-function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitem, AT::Type{<:AbstractAssemblyType})
+# default handlers for continupus operators
+function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyType}, basisAT::Type{<:AbstractAssemblyType})
+    xgrid = FES.xgrid
     xItemGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
+    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
     # operator is assumed to be continuous, hence only needs to be evaluated on one dofitem = item
     function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
         dofitems[1] = item
@@ -258,17 +304,20 @@ function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitem, AT::T
     return closure
 end
 
-function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
-    return DofitemInformation4Operator(xgrid, EG, EGdofitems, AT)
+function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
+    return DofitemInformation4Operator(FES, EG, EGdofitems, AT)
 end
 
-# special handlers for jump operators
-function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::Type{<:ON_FACES}, DiscType::Type{<:Union{Jump, Average}})
+# special handlers for jump operators with ON_CELL basis
+function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_FACES}, basisAT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
+    xgrid = FES.xgrid
     xFaceCells = xgrid[FaceCells]
     xCellFaces = xgrid[CellFaces]
     xFaceGeometries = xgrid[FaceGeometries]
     xCellGeometries = xgrid[CellGeometries]
     xCellFaceOrientations = xgrid[CellFaceOrientations]
+    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
+    EGdofitems = xgrid[GridComponentUniqueGeometries4AssemblyType(basisAT)]
     if DiscType == Jump
         coeff_left = 1
         coeff_right = -1
@@ -325,15 +374,64 @@ function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::
 end
 
 
+# special handlers for jump operators on FACES of broken spaces that otherwise have the necessary continuity (so that they can use the ON_FACES basis)
+function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_FACES}, basisAT::Type{<:ON_FACES}, DiscType::Type{<:Union{Jump, Average}})
+    xgrid = FES.xgrid
+    xFaceCells = xgrid[FaceCells]
+    xCellFaces = xgrid[CellFaces]
+    xItemGeometries = xgrid[FaceGeometries]
+    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
+    EGdofitems = xgrid[GridComponentUniqueGeometries4AssemblyType(basisAT)]
+    if DiscType == Jump
+        coeff_left = 1
+        coeff_right = -1
+    elseif DiscType == Average
+        coeff_left = 0.5
+        coeff_right = 0.5
+    end
+    localndofs = zeros(Int, length(EGdofitems))
+    for j = 1 : length(EGdofitems)
+        localndofs[j] = get_ndofs(basisAT, typeof(FES).parameters[1], EGdofitems[j])
+    end
+    # operator is discontinous ON_FACES and needs to be evaluated in the face dofs of the neighbourings cells
+    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
+        if xFaceCells[2,item] > 0
+            coefficient4dofitem[1] = coeff_left
+            coefficient4dofitem[2] = coeff_right
+            dofitems[1] = item
+            dofitems[2] = item
+        else
+            coefficient4dofitem[1] = 1
+            coefficient4dofitem[2] = 0
+            dofitems[1] = item
+            dofitems[2] = 0
+        end
+        # find EG index for geometry
+        for j=1:length(EG)
+            if xItemGeometries[item] == EG[j]
+                EG4dofitem[1] = j
+                EG4dofitem[2] = j
+                dofoffset4dofitem[2] = localndofs[j]
+                break;
+            end
+        end
+        return EG4dofitem[1]
+    end
+    return closure!
+end
 
-# special handlers for jump operators
-function DofitemInformation4Operator(xgrid::ExtendableGrid, EG, EGdofitems, AT::Type{<:ON_BFACES}, DiscType::Type{<:Union{Jump, Average}})
+
+# special handlers for jump operators with ON_CELL basis
+function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_BFACES}, basisAT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
+    xgrid = FES.xgrid
     xFaceCells = xgrid[FaceCells]
     xCellFaces = xgrid[CellFaces]
     xBFaceGeometries = xgrid[BFaceGeometries]
     xCellGeometries = xgrid[CellGeometries]
     xBFaces = xgrid[BFaces]
     xCellFaceOrientations = xgrid[CellFaceOrientations]
+    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
+    EGdofitems = xgrid[GridComponentUniqueGeometries4AssemblyType(basisAT)]
 
     # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
     function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)

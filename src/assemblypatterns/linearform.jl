@@ -14,7 +14,7 @@ function LinearForm(
 Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
-    return AssemblyPattern{APT_LinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
+    return AssemblyPattern{APT_LinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing,nothing))
 end
 
 
@@ -26,14 +26,8 @@ function assemble!(
     factor = 1,
     offset = 0) where {APT <: APT_LinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    # get adjacencies
-    FE = AP.FES[1]
-    xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, AP.operators[1]))
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
-
     # prepare assembly
+    FE = AP.FES[1]
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
@@ -43,6 +37,12 @@ function assemble!(
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+
+    xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, AP.APP.basisAT[1])
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
+
 
     # get size informations
     ncomponents::Int = get_ncomponents(eltype(FE))
@@ -72,11 +72,11 @@ function assemble!(
     ndofs4dofitem::Int = 0 # number of dofs for item
     dofitems::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
-    orientation4dofitem::Array{Int,1} = [1,2] # local orientation
+    orientation4dofitem::Array{Int,1} = [1,1] # local orientation
+    dofoffset4dofitem::Array{Int,1} = [0,0] # local dof offset (for broken dofmaps)
     coefficient4dofitem::Array{T,1} = [0,0]
     dofitem::Int = 0
     maxndofs::Int = max_num_targets_per_source(xItemDofs)
-    dofs = zeros(Int,maxndofs)
     action_input::Array{T,1} = zeros(T,cvals_resultdim) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
@@ -112,11 +112,6 @@ function assemble!(
                 # update action on dofitem
                 update!(action, basisevaler4dofitem, dofitem, item, regions[r])
 
-                # update dofs
-                for j=1:ndofs4dofitem
-                    dofs[j] = xItemDofs[j,dofitem]
-                end
-
                 weights = qf[EG4dofitem[di]].w
                 for i in eachindex(weights)
                     for dof_i = 1 : ndofs4dofitem
@@ -131,12 +126,12 @@ function assemble!(
 
                 if onedimensional
                     for dof_i = 1 : ndofs4dofitem
-                        bdof = dofs[dof_i] + offset
+                        bdof = xItemDofs[dof_i + dofoffset4dofitem[di],dofitem] + offset
                         b[bdof] += localb[dof_i,1] * itemfactor
                     end
                 else
                     for dof_i = 1 : ndofs4dofitem, j = 1 : action_resultdim
-                        bdof = dofs[dof_i] + offset
+                        bdof = xItemDofs[dof_i + dofoffset4dofitem[di],dofitem] + offset
                         b[bdof,j] += localb[dof_i,j] * itemfactor
                     end
                 end

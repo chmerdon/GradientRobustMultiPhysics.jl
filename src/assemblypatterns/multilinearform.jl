@@ -23,7 +23,7 @@ function MultilinearForm(
     regions::Array{Int,1} = [0])
 
     @assert length(FE) == length(operators)
-    return AssemblyPattern{APT_MultilinearForm, T, AT}(FE,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
+    return AssemblyPattern{APT_MultilinearForm, T, AT}(FE,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing,nothing))
 end
 
 """
@@ -50,17 +50,8 @@ function assemble!(
     offset = 0,
     offsets2 = [0]) where {APT <: APT_MultilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    # get adjacencies
-    FE = AP.FES
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
-    for j = 1 : length(FE)
-        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, AP.operators[j]))
-    end
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
-
     # prepare assembly
+    FE = AP.FES
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
@@ -70,6 +61,14 @@ function assemble!(
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
+    for j = 1 : length(FE)
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j], AP.APP.basisAT[j])
+    end
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
+
 
     if verbosity > 0
         println("  Assembling ($APT,$AT,$T) into vector with fixed_arguments = [1:$(nFE-1)]")

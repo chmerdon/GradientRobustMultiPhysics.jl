@@ -5,6 +5,7 @@
 
 This code demonstrates the novel feature of finite element spaces on faces by providing AT = ON_FACES in the finite element space constructor. It is used here to solve a bestapproximation into an Hdiv-conforming space
 by using a broken Hdiv space and setting the normal jumps on interior faces to zero by using a Lagrange multiplier on the faces of the grid (a broken H1-conforming space).
+Then the solution is compared to the solution of the same problem using the continuous Hdiv-conforming space.
 
 =#
 
@@ -14,14 +15,13 @@ using GradientRobustMultiPhysics
 
 ## problem data
 function exact_function!(result,x::Array{<:Real,1})
-    result[1] = x[1]
-    result[2] = x[2]
+    result[1] = x[1]^3+x[2]
+    result[2] = x[2] + 1
     return nothing
 end
 
 ## everything is wrapped in a main function
-## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; Plotter = nothing, verbosity = 1, nlevels = 6, FEType = H1P1{1}, testmode = false)
+function main(; Plotter = nothing, verbosity = 1)
 
     ## choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
@@ -41,25 +41,40 @@ function main(; Plotter = nothing, verbosity = 1, nlevels = 6, FEType = H1P1{1},
     LMaction = Action(Float64, ActionKernel(LMaction_kernel, [1,2]; dependencies = "I", quadorder = 0))
     add_unknown!(Problem; unknown_name = "Lagrange multiplier for face jumps", equation_name = "face jump constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(IdentityDisc{Jump}; AT = ON_IFACES, action = LMaction))
-    ## the diagonal operator sets the lagrange multiplier on boundary faces to zero
+    ## the diagonal operator sets the Lagrange multiplier on boundary faces to zero
     add_operator!(Problem, [2,2], DiagonalOperator("Diag(1)", 1.0, true, [1,2,3,4]))
 
     ## choose some (inf-sup stable) finite element types
     ## first space is the Hdiv element
     ## second will be used for the Lagrange multiplier space on faces
-    FEType = [HDIVBDM1{2}, H1P1{1}]
+    FEType = [HDIVRT1{2}, H1P1{1}]
     FES = [FESpace{FEType[1]}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
 
     ## solve
     Solution = FEVector{Float64}("discrete solution",FES)
     solve!(Solution, Problem; verbosity = verbosity)
 
-    ## calculate L2 error
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-
     ## plot
     GradientRobustMultiPhysics.plot(Solution, [1], [Identity]; Plotter = Plotter, verbosity = verbosity)
+    
+    ## solve again with Hdiv-continuous element
+    ## to see that we get the same result
+    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
+    FES = FESpace{FEType[1]}(xgrid)
+
+    ## solve
+    Solution2 = FEVector{Float64}("discrete solution",FES)
+    solve!(Solution2, Problem; verbosity = verbosity)
+
+    ## calculate L2 error
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    println("\nL2error(Hdiv broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
+    println("\nL2error(Hdiv cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))")
+
+    ## check if the two solutions are identical
+    L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
+    println("\nl2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))")
+
 end
 
 end

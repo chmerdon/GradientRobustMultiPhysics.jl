@@ -13,7 +13,6 @@
 mutable struct FEBasisEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
-    ItemDofs::Union{VariableTargetAdjacency,SerialVariableTargetAdjacency,Array{Int32,2}}    # link to ItemDofs
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
@@ -41,7 +40,6 @@ end
 
 
 function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0) where {T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
-    ItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, FEOP))
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)
@@ -51,7 +49,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     FEAT = EffAT4AssemblyType(typeof(FE).parameters[2],AT)
 
     if verbosity > 0
-        println("  ...constructing FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT")
+        println("  ...constructing FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT, AT =$AT")
     end
 
     # collect basis function information
@@ -215,7 +213,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
 
 
-    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, coeff_handler, nothing, subset_handler, 1:ndofs4item, compressiontargets)
+    return FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2, coefficients3, coeff_handler, nothing, subset_handler, 1:ndofs4item, compressiontargets)
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence
@@ -229,7 +227,6 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     # avoid computation of full dofmap
     # we will just use local basis functions
     FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmaps_needed = [])
-    ItemDofs = Dofmap4AssemblyType(FE, DofitemAT4Operator(AT, FEOP))
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)
@@ -322,7 +319,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         println("ndofs_all2/ndofs2 = $ndofs4item2_all/$ndofs4item2")
     end
     
-    FEB = FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2, ItemDofs,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+    FEB = FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,ncomponents,offsets,offsets2,0,current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     return FEB
 end    
 

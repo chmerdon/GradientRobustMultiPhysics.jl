@@ -20,7 +20,7 @@ function NonlinearForm(
     action::AbstractAction;
     regions::Array{Int,1} = [0])
 
-    return AssemblyPattern{APT_NonlinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing))
+    return AssemblyPattern{APT_NonlinearForm, T, AT}(FES,operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing,nothing))
 end
 
 
@@ -49,27 +49,9 @@ function assemble!(
     offsetX = 0,
     offsetY = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    # extract finite element spaces and operators
+    # prepare assembly
     FE = AP.FES
     nFE::Int = length(FE)
-    
-    # get adjacencies
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
-    for j = 1 : nFE
-        if j < nFE
-            @assert FEB[j].FES == FE[j]
-        end
-        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, AP.operators[j]))
-    end
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
-
-    # check if action has a nonlinear action kernel
-    action = AP.action
-    @assert typeof(action.kernel) <: UserData{AbstractNLActionKernel}
-
-    # prepare assembly
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
     end
@@ -78,6 +60,20 @@ function assemble!(
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
+    for j = 1 : nFE
+        if j < nFE
+            @assert FEB[j].FES == FE[j]
+        end
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j], AP.APP.basisAT[j])
+    end
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
+
+    # check if action has a nonlinear action kernel
+    action = AP.action
+    @assert typeof(action.kernel) <: UserData{AbstractNLActionKernel}
  
     # get size informations
     ncomponents = zeros(Int,length(FE))
@@ -313,20 +309,9 @@ function assemble!(
     skip_preps::Bool = false,
     offset = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    # extract finite element spaces and operators
+    # prepare assembly
     FE = AP.FES
     nFE::Int = length(FE)
-    
-    # get adjacencies
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
-    for j = 1 : nFE
-        xItemDofs[j] = Dofmap4AssemblyType(FE[j], DofitemAT4Operator(AT, AP.operators[j]))
-    end
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems::Int = length(xItemVolumes)
-
-    # prepare assembly
     action = AP.action
     if !skip_preps
         prepare_assembly!(AP; verbosity = verbosity - 1)
@@ -336,6 +321,14 @@ function assemble!(
     qf::Array{QuadratureRule,1} = AP.APP.qf
     basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
     dii4op::Array{Function,1} = AP.APP.dii4op
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
+    for j = 1 : nFE
+        xItemDofs[j] = Dofmap4AssemblyType(FE[j], AP.APP.basisAT[j])
+    end
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems::Int = length(xItemVolumes)
+
  
     # get size informations
     ncomponents = zeros(Int,length(FE))
