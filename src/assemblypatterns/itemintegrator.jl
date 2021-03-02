@@ -13,7 +13,7 @@ function ItemIntegrator(
 Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
 function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action; regions = [0])
-    return AssemblyPattern{APT_ItemIntegrator, T, AT}([],operators,action,regions,AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing,nothing))
+    return AssemblyPattern{APT_ItemIntegrator, T, AT}([],operators,action,regions,AssemblyManager{T}(length(operators)))
 end
 
 """
@@ -44,7 +44,7 @@ function L2ErrorIntegrator(T::Type{<:Real},
             result[1] += (temp[j] - input[j])^2
         end    
     end    
-    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[2]]; name = "L2 error kernel", dependencies = "X", quadorder = 2 * compare_data.quadorder)
+    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = "L2 error kernel", dependencies = "X", quadorder = 2 * compare_data.quadorder)
     return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions)
 end
 function L2NormIntegrator(T::Type{<:Real},
@@ -97,42 +97,29 @@ function evaluate!(
     verbosity::Int = 0) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
 
     # prepare assembly
-    operators = AP.operators
-    @assert length(FEB) == length(operators)
     nFE = length(FEB)
-    FE = Array{FESpace,1}(undef, nFE)
-    for j = 1 : nFE
-        FE[j] = FEB[j].FES
-    end
-    action = AP.action
     if !skip_preps
+        FE = Array{FESpace,1}(undef, nFE)
+        for j = 1 : nFE
+            FE[j] = FEB[j].FES
+        end
+        @assert length(FEB) == length(AP.operators)
         prepare_assembly!(AP; FES = FE, verbosity = verbosity - 1)
     end
-    EG = AP.APP.EG
-    ndofs4EG::Array{Array{Int,1},1} = AP.APP.ndofs4EG
-    qf::Array{QuadratureRule,1} = AP.APP.qf
-    basisevaler::Array{FEBasisEvaluator,4} = AP.APP.basisevaler
-    dii4op::Array{Function,1} = AP.APP.dii4op
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef, nFE)
-    for j = 1 : nFE
-        xItemDofs[j] = Dofmap4AssemblyType(FE[j], AP.APP.basisAT[j])
-    end
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    AM::AssemblyManager{T} = AP.AM
+    xItemVolumes::Array{T,1} = FEB[1].FES.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FEB[1].FES.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
-
-    # get size informations
-    ncomponents = zeros(Int,nFE)
-    offsets = zeros(Int,nFE+1)
-    maxdofs = 0
-    for j = 1 : nFE
-        ncomponents[j] = get_ncomponents(eltype(FE[j]))
-        maxdofs = max(maxdofs, max_num_targets_per_source(xItemDofs[j]))
-        offsets[j+1] = offsets[j] + size(basisevaler[end,j,1,1].cvals,1)
-    end
+    # prepare action
+    action = AP.action
     action_resultdim::Int = action.argsizes[1]
-    maxdofs2 = max_num_targets_per_source(xItemDofs[end])
+    maxnweights = get_maxnqweights(AM)
+    action_input = Array{Array{T,1},1}(undef,maxnweights)
+    for j = 1 : maxnweights
+        action_input[j] = zeros(T,action.argsizes[2]) # heap for action input
+    end
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     if verbosity > 0
         println("  Evaluating ($APT,$AT,$T)")
@@ -144,28 +131,17 @@ function evaluate!(
         println("           EG = $EG")
     end
 
-    maxnweights = 0
-    for j = 1 : length(qf)
-        maxnweights = max(maxnweights, length(qf[j].w))
-    end
-    action_input = Array{Array{T,1},1}(undef,maxnweights)
-    for j = 1 : maxnweights
-        action_input[j] = zeros(T,offsets[end]) # heap for action input
-    end
-    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
-
     # loop over items
-    EG4item::Int = 0
-    EG4dofitem::Array{Int,1} = [1,1] # type of the current item
-    ndofs4dofitem::Int = 0 # number of dofs for item
-    dofitems::Array{Int,1} = [0,0] # itemnr where the dof numbers can be found
-    itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
-    orientation4dofitem::Array{Int,1} = [1,2] # local orientation
-    coefficient4dofitem::Array{T,1} = [0.0,0.0]
-    dofitem::Int = 0
-    coeffs = zeros(T,maxdofs)
-    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
-    basisevaler4dofitem::FEBasisEvaluator = basisevaler[1,1,1,1]
+    offsets = zeros(Int,nFE+1)
+    maxdofs = get_maxndofs(AM)
+    basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
+    for j = 1 : nFE
+        basisevaler = get_basisevaler(AM, j, 1)
+        offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
+    end
+    maxdofitems::Array{Int,1} = get_maxdofitems(AM)
+    coeffs = zeros(T,sum(maxdofs[1:end]))
+    weights::Array{T,1} = get_qweights(AM)
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
@@ -174,50 +150,43 @@ function evaluate!(
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
 
-        # get dofitem informations
-        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
+        # update assembly manager (also updates necessary basisevaler)
+        update!(AP.AM, item)
+        weights = get_qweights(AM)
 
-        if dofitems[1] == 0
-            break;
-        end
+        # assemble all operators into action_input
+        for FEid = 1 : nFE
+            for di = 1 : maxdofitems[FEid]
+                if AM.dofitems[FEid][di] != 0
+                    # get correct basis evaluator for dofitem (was already updated by AM)
+                    basisevaler = get_basisevaler(AM, FEid, di)
+    
+                    # update action on dofitem
+                    update!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
 
-        # get information on dofitems
-        weights = qf[EG4item].w
-        for di = 1 : length(dofitems)
-            dofitem = dofitems[di]
-            if dofitem != 0
-                for FEid = 1 : nFE
-                    # update FEbasisevaler on dofitem
-                    basisevaler4dofitem = basisevaler[EG4dofitem[di],FEid,itempos4dofitem[di],orientation4dofitem[di]]
-                    update!(basisevaler4dofitem, dofitem)
+                    # get coefficients of FE number FEid on current dofitem
+                    get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
+                    coeffs .*= AM.coeff4dofitem[FEid][di]
 
-                    # update coeffs on dofitem
-                    ndofs4dofitem = ndofs4EG[FEid][EG4dofitem[di]]
-                    for j=1:ndofs4dofitem
-                        fdof = xItemDofs[FEid][j,dofitem]
-                        coeffs[j] = FEB[FEid][fdof] * coefficient4dofitem[di]
-                    end
-
+                    # write evaluation of operator of current FE into action_input
                     for i in eachindex(weights)
-                        if FEid == 1 && di == 1
-                            fill!(action_input[i], 0)
-                        end
-                        eval!(action_input[i], basisevaler4dofitem, coeffs, i, offsets[FEid])
+                        eval!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
                     end  
                 end
             end
         end
 
-        # update action on item/dofitem
-       # basisevaler4dofitem = basisevaler[EG4item[1],1,1,1]
-        update!(action, basisevaler4dofitem, dofitems[1], item, regions[r])
+        # update action on item/dofitem (of first operator)
+        basisevaler4dofitem = get_basisevaler(AM, 1, 1)
+        update!(action, basisevaler4dofitem, AM.dofitems[1][1], item, regions[r])
 
+        # apply action to FEVector and accumulate
         for i in eachindex(weights)
-            # apply action to FEVector
             apply_action!(action_result, action_input[i], action, i)
             for j = 1 : action_resultdim
                 b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
             end
+            fill!(action_input[i], 0)
         end  
 
         break; # region for loop
@@ -261,6 +230,3 @@ function evaluate(
         return AV.entries
     end
 end
-
-
-

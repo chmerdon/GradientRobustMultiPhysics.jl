@@ -103,7 +103,7 @@ function MultiplyScalarAction(value, ncomponents::Int)
 
 Directly creates an Action that just copies the input to the result.
 """
-function DoNotChangeAction(ncomponents::Int)
+function DoNotChangeAction(ncomponents::Int, T::Type{<:Real} = Float64)
     function do_nothing_kernel(result, input)
         for j = 1 : ncomponents
             result[j] = input[j]
@@ -111,7 +111,7 @@ function DoNotChangeAction(ncomponents::Int)
         return nothing
     end
     kernel = ActionKernel(do_nothing_kernel,[ncomponents, ncomponents]; dependencies = "", quadorder = 0)
-    return Action(Float64, kernel; name = "do nothing action")
+    return Action(T, kernel; name = "do nothing action")
 end
 
 # set_time! is called in the beginning of every operator assembly
@@ -151,22 +151,22 @@ function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qite
     return nothing
 end
 
-function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::Action{T}, i::Int) where {T <: Real}
+function apply_action!(result::Array{T,1}, input::Array{T,1}, C::Action{T}, i::Int) where {T <: Real}
     eval!(result, C.kernel, input, nothing, nothing, C.cregion, C.citem, C.xref[i]);
     return nothing
 end
 
-function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XAction{T}, i::Int) where {T <: Real}
+function apply_action!(result::Array{T,1}, input::Array{T,1}, C::XAction{T}, i::Int) where {T <: Real}
     eval!(result, C.kernel, input, C.x[i], nothing, C.cregion, C.citem, C.xref[i]);
     return nothing
 end
 
-function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::TAction{T}, i::Int) where {T <: Real}
+function apply_action!(result::Array{T,1}, input::Array{T,1}, C::TAction{T}, i::Int) where {T <: Real}
     eval!(result, C.kernel, input, nothing, C.ctime, C.cregion, C.citem, C.xref[i]);
     return nothing
 end
 
-function apply_action!(result::Array{<:Real,1}, input::Array{<:Real,1}, C::XTAction{T}, i::Int) where {T <: Real}
+function apply_action!(result::Array{T,1}, input::Array{T,1}, C::XTAction{T}, i::Int) where {T <: Real}
     eval!(result, C.kernel, input, C.x[i], C.ctime, C.cregion, C.citem, C.xref[i]);
     return nothing
 end

@@ -25,7 +25,7 @@ function main(; verbosity = 0, Plotter = nothing)
     FES = FESpace{FEType}(xgrid)
 
     ## define mass matrix bilinear form
-    MAMA_BLF = SymmetricBilinearForm(Rational,ON_CELLS,[FES,FES],[Identity,Identity],DoNotChangeAction(1))
+    MAMA_BLF = SymmetricBilinearForm(Rational,ON_CELLS,[FES,FES],[Identity,Identity],DoNotChangeAction(1,Rational))
 
     ## assemble mass matrix
     MAMA = FEMatrix{Rational}("mass matrix for $(FEType)",FES)

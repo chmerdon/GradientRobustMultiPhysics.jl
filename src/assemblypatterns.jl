@@ -7,30 +7,99 @@ abstract type APT_Undefined <: AssemblyPatternType end
 
 # backpack to save all the information needed for assembly
 # like element geometries (EG), quadrature formulas (qf), basisevaluators for the FES, ...
-# idea is to store this to avoid recomputation in e.g. in iterative schemes
-mutable struct AssemblyPatternPreparations
-    EG
-    ndofs4EG
-    qf
-    basisevaler
-    dii4op
-    basisAT
+# idea is to store this to avoid recomputation in e.g. an in iterative scheme
+# also many redundant stuff within assembly of patterns happens here
+# like chosing the coressponding basis evaluators, quadrature rules and managing the dofs
+mutable struct AssemblyManager{T <: Real}
+    xItemDofs::Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}                # DofMaps
+    ndofs4EG::Array{Array{Int,1},1}             # ndofs for each finite element on each EG
+    nop::Int                                    # number of operators
+    qf::Array{QuadratureRule,1}                 # quadrature rules
+    basisevaler::Array{FEBasisEvaluator,4}      # finite element basis evaluators
+    dii4op::Array{Function,1}
+    basisAT::Array{Type{<:AbstractAssemblyType},1}
+    citem::Int
+    dofitems::Array{Array{Int,1},1}
+    EG4dofitem::Array{Array{Int,1},1}          # coordinate 1 in basisevaler
+    itempos4dofitem::Array{Array{Int,1},1}      # coordinate 3 in basisevaler
+    coeff4dofitem::Array{Array{T,1},1}          
+    dofoffset4dofitem::Array{Array{Int,1},1}
+    orientation4dofitem::Array{Array{Int,1},1}  # coordinate 4 in basisevaler
 end
+
+function AssemblyManager{T}(nop::Int) where {T <: Real}
+    return AssemblyManager{T}(
+    Array{DofMap,1}(undef,nop),
+    Array{Array{Int,1},1}(undef,nop),
+    nop,
+    Array{QuadratureRule,1}(undef,nop),
+    Array{FEBasisEvaluator,4}(undef,1,nop,1,1),
+    Array{Function,1}(undef,nop),
+    Array{AbstractAssemblyType,1}(undef,nop),
+    0,
+    Array{Array{Int,1},1}(undef,nop),
+    Array{Array{Int,1},1}(undef,nop),
+    Array{Array{Int,1},1}(undef,nop),
+    Array{Array{T,1},1}(undef,nop),
+    Array{Array{Int,1},1}(undef,nop),
+    Array{Array{Int,1},1}(undef,nop))
+end
+
+function update!(AM::AssemblyManager{T}, item::Int) where {T <: Real}
+    # get dofitem informations
+    if AM.citem != item
+        AM.citem = item
+        for j = 1 : AM.nop
+            AM.dii4op[j](AM.dofitems[j], AM.EG4dofitem[j], AM.itempos4dofitem[j], AM.coeff4dofitem[j], AM.orientation4dofitem[j], item)
+            # update needed basisevaler
+            for di = 1 : length(AM.dofitems[j])
+                if AM.dofitems[j][di] != 0
+                    update!(AM.basisevaler[AM.EG4dofitem[j][di],j,AM.itempos4dofitem[j][di],AM.orientation4dofitem[j][di]], AM.dofitems[j][di])
+                end
+            end
+        end
+    end
+end
+
+@inline get_basisevaler(AM::AssemblyManager, op::Int, dofitem::Int) = AM.basisevaler[AM.EG4dofitem[op][dofitem],op,AM.itempos4dofitem[op][dofitem],AM.orientation4dofitem[op][dofitem]]
+@inline get_qweights(AM::AssemblyManager) = AM.qf[AM.EG4dofitem[1][1]].w
+@inline get_ndofs(AM, op::Int, dofitem::Int) = AM.ndofs4EG[op][AM.EG4dofitem[op][dofitem]]
+@inline get_maxndofs(AM::AssemblyManager) = maximum.(AM.ndofs4EG)
+@inline get_maxndofs(AM::AssemblyManager, op::Int) = maximum(AM.ndofs4EG[op])
+@inline function get_maxnqweights(AM::AssemblyManager) 
+    maxn::Int = 0
+    for j = 1 : length(AM.qf)
+        maxn = max(maxn,length(AM.qf[j].w))
+    end
+    return maxn
+end
+@inline get_maxdofitems(AM::AssemblyManager) = length.(AM.dofitems)
+
+@inline get_dof(AM::AssemblyManager, op::Int, dofitem::Int, dof_i::Int) = AM.xItemDofs[op][dof_i + AM.dofoffset4dofitem[op][dofitem], AM.dofitems[op][dofitem]]
+function get_dofs!(dofs::Array{Int,1}, AM::AssemblyManager, op::Int, dofitem::Int)
+    for dof_i = 1 : AM.ndofs4EG[op][AM.EG4dofitem[op][dofitem]]
+        dofs[dof_i] = AM.xItemDofs[op][dof_i + AM.dofoffset4dofitem[op][dofitem], AM.dofitems[op][dofitem]]
+    end
+end
+function get_coeffs!(coeffs::Array{T,1}, FE::AbstractArray{T,1}, AM::AssemblyManager, op::Int, dofitem::Int, offset::Int = 0) where {T <: Real}
+    for dof_i = 1 : AM.ndofs4EG[op][AM.EG4dofitem[op][dofitem]]
+        coeffs[dof_i] = FE[offset + AM.xItemDofs[op][dof_i + AM.dofoffset4dofitem[op][dofitem], AM.dofitems[op][dofitem]]]
+    end
+end
+
+
 
 struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}
     FES::Array{FESpace,1}
     operators::Array{DataType,1}
     action::AbstractAction
     regions::Array{Int,1}
-    APP::AssemblyPatternPreparations # hidden stuff needed for assembly
+    AM::AssemblyManager # hidden stuff needed for assembly
 end 
 
 function EmptyAssemblyPattern()
-    return AssemblyPattern{APT_Undefined, Float64, ON_CELLS}([],[],DoNotChangeAction(1),[0],AssemblyPatternPreparations(nothing,nothing,nothing,nothing,nothing,nothing))
+    return AssemblyPattern{APT_Undefined, Float64, ON_CELLS}([],[],DoNotChangeAction(1),[0],AssemblyManager{Float64}(1))
 end
-
-
-
 
 # this function decides which basis should be evaluated for the evaluation of an operator
 # e.g. Hdiv elements can use the face basis for the evaluation of the normal flux operator,
@@ -117,7 +186,6 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyTy
     # operator is assumed to be continuous, hence only needs to be evaluated on one dofitem = item
     function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
         dofitems[1] = item
-        dofitems[2] = 0
         itempos4dofitem[1] = 1
         coefficient4dofitem[1] = 1
         # find EG index for geometry
@@ -476,12 +544,29 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
     end
 
     # write down assembly preparations
-    AP.APP.EG = EG
-    AP.APP.ndofs4EG = ndofs4EG
-    AP.APP.qf = qf
-    AP.APP.basisevaler = basisevaler
-    AP.APP.dii4op = dii4op
-    AP.APP.basisAT = dofitemAT
+    AP.AM.ndofs4EG = ndofs4EG
+    AP.AM.qf = qf
+    AP.AM.basisevaler = basisevaler
+    AP.AM.dii4op = dii4op
+    AP.AM.basisAT = dofitemAT
+    AP.AM.nop = length(FE)
+    AP.AM.citem = 0
+
+    AP.AM.dofitems = Array{Array{Int,1},1}(undef, length(FE))
+    AP.AM.EG4dofitem = Array{Array{Int,1},1}(undef, length(FE))        
+    AP.AM.itempos4dofitem = Array{Array{Int,1},1}(undef, length(FE))    
+    AP.AM.coeff4dofitem = Array{Array{T,1},1}(undef, length(FE))          
+    AP.AM.dofoffset4dofitem = Array{Array{Int,1},1}(undef, length(FE))
+    AP.AM.orientation4dofitem = Array{Array{Int,1},1}(undef, length(FE))  
+    for j = 1 : length(FE)
+        AP.AM.dofitems[j] = (j in continuous_operators) ? zeros(Int,1) : zeros(Int,2)
+        AP.AM.EG4dofitem[j] = [1,1]
+        AP.AM.itempos4dofitem[j] = [1,1]
+        AP.AM.coeff4dofitem[j] = ones(T,2)
+        AP.AM.dofoffset4dofitem[j] = zeros(Int,2)
+        AP.AM.orientation4dofitem[j] = [1,1]
+        AP.AM.xItemDofs[j] = Dofmap4AssemblyType(FE[j], dofitemAT[j])
+    end
 end
 
 # each assembly pattern is in its own file

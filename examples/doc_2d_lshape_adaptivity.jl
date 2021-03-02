@@ -76,8 +76,9 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
     ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
     ## note: f = 0 here, but integrand can depend on x to allow for non-homogeneous rhs
     function L2vol_integrand(result, input, item)
+        result[1] = 0
         for j = 1 : length(input)
-            result[j] = input[j]^2 * xCellVolumes[item]
+            result[1] += input[j]^2 * xCellVolumes[item]
         end
         return nothing
     end
@@ -111,8 +112,8 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         xFaceVolumes = xgrid[FaceVolumes]
         xFaceNormals = xgrid[FaceNormals]
         xCellVolumes = xgrid[CellVolumes]
-        vol_error = zeros(Float64,2,num_sources(xgrid[CellNodes]))
-        jump_error = zeros(Float64,2,num_sources(xgrid[FaceNodes]))
+        vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
+        jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
         evaluate!(vol_error,volIntegrator,[Solution[1]])
         evaluate!(jump_error,jumpIntegrator,[Solution[1]])
 
@@ -140,7 +141,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
             for face = 1 : nfaces, k = 1 : 2
                 cell = xFaceCells[k,face]
                 if cell > 0
-                    refinement_indicators[face] += vol_error[1,cell] + vol_error[2,cell]
+                    refinement_indicators[face] += vol_error[1,cell]
                 end
             end
 

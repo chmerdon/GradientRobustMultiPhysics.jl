@@ -13,16 +13,15 @@ function test_qpmatchup(xgrid; verbosity = 0)
 
     # prepare assembly
     prepare_assembly!(AP; verbosity = verbosity)
-    EG = AP.APP.EG
-    ndofs4EG = AP.APP.ndofs4EG
-    qf = AP.APP.qf
-    basisevaler = AP.APP.basisevaler
-    dii4op = AP.APP.dii4op
+    ndofs4EG = AP.AM.ndofs4EG
+    qf = AP.AM.qf
+    basisevaler = AP.AM.basisevaler
+    dii4op = AP.AM.dii4op
 
     operators = AP.operators
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, AP.APP.basisAT[1])
+    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, AP.AM.basisAT[1])
     nitems = Int64(num_sources(xItemNodes))
 
  
