@@ -486,9 +486,9 @@ function ConvectionOperator(
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = grad(u)
     function convection_function_fe()
-        function closure(result, input)
+        function closure(result::Array{<:Real,1}, input::Array{<:Real,1})
             for j = 1 : ncomponents
-                result[j] = 0.0
+                result[j] = 0
                 for k = 1 : xdim
                     result[j] += input[k]*input[xdim+(j-1)*xdim+k]
                 end
@@ -913,7 +913,7 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
         if verbosity > 0 
             println("  Creating assembly pattern for convection fluxes $(O.name)...")
         end
-        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64,ON_FACES, [NormalFlux], DoNotChangeAction(1))
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux], DoNotChangeAction(1))
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]]; verbosity = verbosity - 1, skip_preps = false)
     else
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]]; verbosity = verbosity - 1, skip_preps = true)

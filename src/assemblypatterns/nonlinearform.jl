@@ -20,7 +20,7 @@ function NonlinearForm(
     action::AbstractAction;
     regions::Array{Int,1} = [0])
 
-    return AssemblyPattern{APT_NonlinearForm, T, AT}(FES,operators,action,regions,AssemblyManager{T}(length(operators)))
+    return AssemblyPattern{APT_NonlinearForm, T, AT}(FES,operators,action,regions)
 end
 
 

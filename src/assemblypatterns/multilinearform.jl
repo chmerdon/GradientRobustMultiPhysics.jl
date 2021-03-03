@@ -23,7 +23,7 @@ function MultilinearForm(
     regions::Array{Int,1} = [0])
 
     @assert length(FE) == length(operators)
-    return AssemblyPattern{APT_MultilinearForm, T, AT}(FE,operators,action,regions,AssemblyManager{T}(length(operators)))
+    return AssemblyPattern{APT_MultilinearForm, T, AT}(FE,operators,action,regions)
 end
 
 """

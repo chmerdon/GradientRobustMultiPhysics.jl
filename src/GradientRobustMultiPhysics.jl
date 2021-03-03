@@ -210,7 +210,7 @@ export add_constraint!
 
 
 include("solvers.jl")
-export AbstractLinSolveType
+export AbstractLinSolveType, LinearSystem
 export DirectUMFPACK, IterativeBigStabl_LUPC
 export solve!, assemble!
 export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_time!

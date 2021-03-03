@@ -14,7 +14,7 @@ function LinearForm(
 Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
-    return AssemblyPattern{APT_LinearForm, T, AT}(FES,operators,action,regions,AssemblyManager{T}(length(operators)))
+    return AssemblyPattern{APT_LinearForm, T, AT}(FES,operators,action,regions)
 end
 
 

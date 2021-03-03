@@ -19,7 +19,7 @@ function TrilinearForm(
     operators::Array{DataType,1},
     action::AbstractAction;
     regions::Array{Int,1} = [0])
-    return  AssemblyPattern{APT_TrilinearForm, T, AT}(FES,operators,action,regions,AssemblyManager{T}(length(operators)))
+    return  AssemblyPattern{APT_TrilinearForm, T, AT}(FES,operators,action,regions)
 end
 
 
@@ -82,7 +82,7 @@ function assemble!(
     indexmap = CartesianIndices(zeros(Int, Tuple(maxdofitems)))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1),get_basisevaler(AM, 2, 1),get_basisevaler(AM, 3, 1)]
     basisvals_testfunction::Array{T,3} = basisevaler[3].cvals
-    nonfixed_ids = setdiff([1,2,3], fixed_argument)
+    nonfixed_ids::Array{Int,1} = setdiff([1,2,3], fixed_argument)
     coeffs::Array{T,1} = zeros(T,get_maxndofs(AM,fixed_argument))
     dofs2::Array{Int,1} = zeros(Int,get_maxndofs(AM,nonfixed_ids[1]))
     dofs3::Array{Int,1} = zeros(Int,get_maxndofs(AM,nonfixed_ids[2]))
@@ -90,7 +90,7 @@ function assemble!(
     evalfixedFE::Array{T,1} = zeros(T,size(basisevaler[fixed_argument].cvals,1)) # evaluation of argument 1
     ndofs4item::Array{Int, 1} = [0,0,0]
     dofitem::Array{Int,1} = [0,0,0]
-    offsets = [0, size(basisevaler[1].cvals,1), size(basisevaler[1].cvals,1) + size(basisevaler[2].cvals,1)]
+    offsets::Array{Int,1} = [0, size(basisevaler[1].cvals,1), size(basisevaler[1].cvals,1) + size(basisevaler[2].cvals,1)]
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
     temp::T = 0 # some temporary variable
 
@@ -145,13 +145,14 @@ function assemble!(
                             # apply action to fixed argument and first non-fixed argument
                             eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]], AM.coeff4dofitem[nonfixed_ids[1]][di[nonfixed_ids[1]]])
                             apply_action!(action_result, action_input, action, i)
+                            action_result .*= AM.coeff4dofitem[nonfixed_ids[2]][di[nonfixed_ids[2]]]
             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                                 temp = 0
                                 for k = 1 : action_resultdim
                                     temp += action_result[k] * basisvals_testfunction[k,dof_j,i]
                                 end
-                                localmatrix[dof_i,dof_j] += temp * weights[i] * AM.coeff4dofitem[nonfixed_ids[2]][di[nonfixed_ids[2]]]
+                                localmatrix[dof_i,dof_j] += temp * weights[i] 
                             end
                         end 
                     end
@@ -265,7 +266,7 @@ function assemble!(
     coeffs2::Array{T,1} = zeros(T,get_maxndofs(AM,fixed_arguments[2]))
     dofs3::Array{Int,1} = zeros(Int,get_maxndofs(AM,nonfixed_id))
     dofitem::Array{Int,1} = [0,0,0]
-    offsets = [0, size(basisevaler[1].cvals,1), size(basisevaler[1].cvals,1) + size(basisevaler[2].cvals,1)]
+    offsets::Array{Int,1} = [0, size(basisevaler[1].cvals,1), size(basisevaler[1].cvals,1) + size(basisevaler[2].cvals,1)]
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
     itemfactor::T = 0 # some temporary variable
     localb::Array{T,1} = zeros(T,length(dofs3))

@@ -53,15 +53,7 @@ mutable struct LinearSystem{T <: Real, ST <: AbstractLinSolveType}
     nluu::Int # number of LU updates so far
     nsolves::Int # number of solvers so far
     nliniter::Int # number of iterations for last solve
-end
-
-function LinearSystem{T,DirectUMFPACK}(x,A,b; update_after::Int = 1) where {T<: Real}
-    return LinearSystem{T,DirectUMFPACK}(x,A,b,nothing,update_after,0,0,0)
-end
-
-
-function LinearSystem{T,IterativeBigStabl_LUPC}(x,A,b; update_after::Int = 3) where {T<: Real}
-    return LinearSystem{T,IterativeBigStabl_LUPC}(x,A,b,nothing,update_after,0,0,0)
+    LinearSystem{T, ST}(x,A,b; update_after::Int = 1) where {T <: Real, ST <: AbstractLinSolveType} = new{T,ST}(x,A,b,nothing,update_after,0,0,0)
 end
 
 
@@ -232,14 +224,14 @@ function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiter
         LHS_APs[j,k] = Array{AssemblyPattern,1}(undef, length(PDE.LHSOperators[j,k]))
         LHS_AssemblyTimes[j,k] = zeros(Float64, length(PDE.LHSOperators[j,k]))
         for o = 1 : length(PDE.LHSOperators[j,k])
-            LHS_APs[j,k][o] = EmptyAssemblyPattern()
+            LHS_APs[j,k][o] = AssemblyPattern()
         end
     end
     for j = 1 : size(PDE.RHSOperators,1)
         RHS_APs[j] = Array{AssemblyPattern,1}(undef, length(PDE.RHSOperators[j]))
         RHS_AssemblyTimes[j] = zeros(Float64, length(PDE.RHSOperators[j]))
         for o = 1 : length(PDE.RHSOperators[j])
-            RHS_APs[j][o] = EmptyAssemblyPattern()
+            RHS_APs[j][o] = AssemblyPattern()
         end
     end
     if subiterations != "auto"
@@ -948,7 +940,7 @@ function solve!(
     maxIterations::Int = 10,
     linsolver = DirectUMFPACK,
     maxlureuse = [1],
-    AndersonIterations = 0, #  0 = Picard iteration, >0 Anderson iteration (experimental feature)
+    anderson_iterations = 0, #  0 = Picard iteration, >0 Anderson iteration (experimental feature)
     verbosity::Int = 0)
 ````
 
@@ -976,12 +968,12 @@ function solve!(
     linsolver = DirectUMFPACK,
     maxlureuse = [1],
     damping = 0,
-    AndersonIterations = 0, #  0 = Picard iteration, >0 Anderson iteration
+    anderson_iterations = 0, #  0 = Picard iteration, >0 Anderson iteration
     verbosity::Int = 0) where {T <: Real}
 
     SolverConfig = generate_solver(PDE, T; subiterations = subiterations, verbosity = verbosity)
     SolverConfig.dirichlet_penalty = dirichlet_penalty
-    SolverConfig.anderson_iterations = AndersonIterations
+    SolverConfig.anderson_iterations = anderson_iterations
     SolverConfig.linsolver = linsolver
     SolverConfig.maxlureuse = maxlureuse
     SolverConfig.damping = damping

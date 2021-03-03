@@ -7,7 +7,9 @@
 
 This package offers (mostly low-order) finite element methods for multiphysics problems in Julia that focus on the preservation of structural and qualitative properties, in particular the gradient-robustness property for the discretisation of (nearly) incompressible flows and resulting qualitative properties in coupled processes. The code therefore offers several classical and novel non-standard finite element discretisations to play and compare with in these applications and a toolkit to setup multi-physics problems by defining PDE systems and generating fixed-point iterations to solve them.
 
-The implementation is based on ExtendableGrids.jl that allows to have unstructured grids with mixed element geometries in it, e.g. triangles and quads in the same mesh.
+The implementation is based on [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl) that allows to have unstructured grids with mixed element geometries in it, e.g. triangles and quads in the same mesh.
+
+Also note, that this package is part of the meta-package [PDELIB.jl](https://github.com/WIAS-BERLIN/PDELib.jl)
 
 !!! note
 
@@ -52,6 +54,7 @@ via Julia package manager in Julia 1.5 or above:
 ## Dependencies on other Julia packages
 
 [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)\
+[GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)\
 [ExtendableSparse.jl](https://github.com/j-fu/ExtendableSparse.jl)\
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\

@@ -24,7 +24,7 @@ The following assembly types are available.
 
 ## Assembly Patterns
 
-Each Pattern comes with a number of arguments/quantities with associated [Function Operators](@ref) as well as one of the [Assembly Types](@ref) that states whether the form is evaluated over CELLS, FACES order BFACES (see above). Moreover, patterns can have [Abstract Actions](@ref) that allow to make the evaluations parameter-, region- and/or function-dependent. Each pattern then has two implementation that writes into FEMatrix or FEVector (where e.g. a subset of arguments is fixed).
+Each Pattern comes with a number of arguments/quantities with associated [Function Operators](@ref) as well as one of the [Assembly Types](@ref) that states whether the form is evaluated over CELLS, FACES order BFACES (see above). Important note: this assembly type is relative to the grid of the first argument of the pattern. If this argument already lives ON_FACES and the pattern is also ON_FACES, it will ultimatively assemble on the faces of the faces (that are the edges of the grid with these faces). Moreover, patterns can have [Abstract Actions](@ref) that allow to make the evaluations parameter-, region- and/or function-dependent. Each pattern then has usually on to three implementation that writes into FEMatrix or FEVector (where e.g. a subset of arguments is fixed) or evaluates the pattern in the given FEVectorBlocks.
 
 The patterns are used by the assembly of the PDE operators defined in a [PDE Description](@ref). However, it is also possible for the user to use them directly, see e.g. the example [Commuting Interpolators (2D)](@ref).
 

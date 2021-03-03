@@ -141,12 +141,12 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
 
         Solution = FEVector{Float64}("Stokes velocity classical",FESpaceVelocity)
         append!(Solution,"Stokes pressure (classical)",FESpacePressure)
-        solve!(Solution, StokesProblem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity)
+        solve!(Solution, StokesProblem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
         push!(NDofs,length(Solution.entries))
 
         Solution2 = FEVector{Float64}("Stokes velocity p-robust",FESpaceVelocity)
         append!(Solution2,"Stokes pressure (p-robust)",FESpacePressure)
-        solve!(Solution2, StokesProblem2; maxIterations = maxIterations, maxResidual = maxResidual)
+        solve!(Solution2, StokesProblem2; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
 
         ## solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FESpaceVelocity)
@@ -210,7 +210,7 @@ end
 
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, nlevels = 4, viscosity = 1e-2)
+function main(; verbosity = 0, nlevels = 3, viscosity = 1e-2)
     ## set problem to solve
     #Problem = HydrostaticTestProblem
     Problem = PotentialFlowTestProblem

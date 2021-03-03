@@ -310,11 +310,12 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Union{Type{BFaceDofs},Typ
     ncells = num_sources(xgrid[CellNodes])
     xFaceNodes = FES.xgrid[SuperItemNodes4DofMap(DM)]
     xFaceGeometries = xgrid[ItemGeometries4DofMap(DM)]
-    nfaces = num_sources(xFaceNodes)
     xFaceDofs = VariableTargetAdjacency(Int32)
     if DM == BFaceDofs
         xRealFace = FES.xgrid[BFaces]
+        nfaces = length(xRealFace)
     elseif DM == FaceDofs
+        nfaces = num_sources(xFaceNodes)
         xRealFace = 1:nfaces
     end
 
@@ -353,7 +354,7 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Union{Type{BFaceDofs},Typ
         for c = 1 : 2
             cell = xFaceCells[c,face]
             if cell > 0
-                faceEG = xFaceGeometries[face]
+                faceEG = xFaceGeometries[f]
                 iEG = findfirst(isequal(faceEG), EG)
                 pattern = dofmap_patterns[iEG]
 

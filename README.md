@@ -6,21 +6,23 @@
 
 # GradientRobustMultiPhysics.jl
 
-finite element module for Julia focussing on gradient-robust finite element methods and multiphysics applications
+finite element module for Julia focussing on gradient-robust finite element methods and multiphysics applications, part of the meta-package [PDELIB.jl](https://github.com/WIAS-BERLIN/PDELib.jl)\ 
 
 
 ### Features/Limitations:
-- solve 1D, 2D and 3D problems in Cartesian coordinates
-- type-treed FiniteElements (scalar or vector-valued)
+- solves 1D, 2D and 3D problems in Cartesian coordinates
+- uses type-treed FiniteElements (scalar or vector-valued)
     - H1 elements (so far P1, P2, P2B, MINI, CR, BR)
     - Hdiv elements (so far RT0, BDM1, RT1)
     - Hcurl elements (so far N0)
+- finite elements can be broken (e.g. piecewise Hdiv) or live on faces or edges (experimental feature)
 - based on [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl), allowing mixed element geometries in the grid (simplices and quads atm)
-- PDEDescription module and problem prototypes for easy problem description and discretisation setup
-- PDEDescription recognizes nonlinear operators and automatically devises fixed-point or Newton algorithms (experimental)
+- PDEDescription module for easy and close-to-physics problem description and discretisation setup
+- PDEDescription recognizes nonlinear operators and automatically devises fixed-point or Newton algorithms by automatic differentation (experimental feature)
 - time-dependent solvers (only backward Euler for now)
 - reconstruction operators for gradient-robust Stokes discretisations (BR>RT0/BDM1 in 2D/3D, or CR>RT0 in 2D, more in progress)
-- export into vtk datafiles for external plotting, internal plotting in 2D via ExtendableGrids.plot
+- internal plotting via [GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)
+- export into vtk datafiles for external plotting
 
 
 ### Installation
@@ -40,6 +42,7 @@ see documentation
 ### Dependencies on other Julia packages:
 
 [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)\
+[GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)\
 [ExtendableSparse.jl](https://github.com/j-fu/ExtendableSparse.jl)\
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\

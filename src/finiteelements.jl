@@ -65,8 +65,8 @@ function FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}(
     verbosity = 0)
 ````
 
-Constructor for FESpace. The broken switch allows to generate a broken finite element space (with no continuities at all). If no name is provided
-it is generated automatically from FEType.
+Constructor for FESpace of the given FEType, AT = ON_CELLS/ON_FACES/ON_EDGES generates a finite elements space on the cells/faces/edges of the provided xgrid (if omitted ON_CELLS is used as default).
+The broken switch allows to generate a broken finite element space (that is piecewise H1/Hdiv/HCurl). If no name is provided it is generated automatically from FEType.
 """
 function FESpace{FEType,AT}(
     xgrid::ExtendableGrid;
