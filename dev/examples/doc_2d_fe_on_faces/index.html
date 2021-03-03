@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Finite Elements on Faces · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li class="is-active"><a class="tocitem" href>2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Finite Elements on Faces</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Finite Elements on Faces</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_fe_on_faces.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Finite-Elements-on-Faces"><a class="docs-heading-anchor" href="#D-Finite-Elements-on-Faces">2D Finite Elements on Faces</a><a id="D-Finite-Elements-on-Faces-1"></a><a class="docs-heading-anchor-permalink" href="#D-Finite-Elements-on-Faces" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_fe_on_faces.jl">source code</a>)</p><p>This code demonstrates the novel feature of finite element spaces on faces by providing AT = ON_FACES in the finite element space constructor. It is used here to solve a bestapproximation into an Hdiv-conforming space by using a broken Hdiv space and setting the normal jumps on interior faces to zero by using a Lagrange multiplier on the faces of the grid (a broken H1-conforming space). Then the solution is compared to the solution of the same problem using the continuous Hdiv-conforming space.</p><pre><code class="language-julia">module Example_2DFaceElements
+
+using GradientRobustMultiPhysics
+
+# problem data
+function exact_function!(result,x::Array{&lt;:Real,1})
+    result[1] = x[1]^3+x[2]
+    result[2] = x[2] + 1
+    return nothing
+end
+
+# everything is wrapped in a main function
+function main(; Plotter = nothing, verbosity = 1)
+
+    # choose initial mesh
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
+
+    # define bestapproximation problem
+    user_function = DataFunction(exact_function!, [2,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
+
+    # we want to use a broken space and give the constraint of no normal jumps on interior faces
+    # in form of a Lagrange multiplier, since there is no NormalFluxDisc{Jump} operator yet,
+    # we have to use the full identity and multiply the normal vector in an action
+    add_unknown!(Problem; unknown_name = &quot;Lagrange multiplier for face jumps&quot;, equation_name = &quot;face jump constraint&quot;)
+    add_operator!(Problem, [1,2], LagrangeMultiplier(NormalFluxDisc{Jump}; AT = ON_IFACES))
+    # the diagonal operator sets the Lagrange multiplier on all face boundary regions to zero
+    add_operator!(Problem, [2,2], DiagonalOperator(&quot;Diag(1)&quot;, 1.0, true, [1,2,3,4]))
+
+    # choose some (inf-sup stable) finite element types
+    # first space is the Hdiv element
+    # second will be used for the Lagrange multiplier space on faces
+    FEType = [HDIVRT1{2}, H1P1{1}]
+    FES = [FESpace{FEType[1]}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
+
+    # solve
+    Solution = FEVector{Float64}(&quot;Hdiv-broken solution&quot;,FES)
+    solve!(Solution, Problem; verbosity = verbosity)
+
+    # plot
+    GradientRobustMultiPhysics.plot(Solution, [1], [Identity]; Plotter = Plotter, verbosity = verbosity)
+
+    # solve again with Hdiv-continuous element
+    # to see that we get the same result
+    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
+    FES = FESpace{FEType[1]}(xgrid)
+
+    # solve
+    Solution2 = FEVector{Float64}(&quot;Hdiv-cont. solution&quot;,FES)
+    solve!(Solution2, Problem; verbosity = verbosity)
+
+    # calculate L2 error of both solutions and their difference
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
+    println(&quot;\nL2error(Hdiv broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
+    println(&quot;L2error(Hdiv cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))&quot;)
+    println(&quot;L2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))&quot;)
+end
+
+end</code></pre><pre><code class="language-none">Main.##266.Example_2DFaceElements</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DFaceElements.main()</code></pre><pre><code class="language-none">
+SOLVER
+======
+  system name = L2-Bestapproximation problem  @time = 0
+
+  target (FE) = Hdiv-broken solution [1] (HDIVRT1{2} (broken), ndofs = 2048)
+                Hdiv-broken solution [2] (H1P1{1} (broken), ndofs = 800)
+                
+  subiteration | equations that are solved together
+       [1]     | L2-bestapproximation equation
+               | face jump constraint
+
+  residuals = [1.3400368843096256e-32, 8.963979548065315e-34]
+
+SOLVER
+======
+  system name = L2-Bestapproximation problem  @time = 0
+
+  target (FE) = Hdiv-cont. solution (HDIVRT1{2}, ndofs = 1312)
+                
+  subiteration | equations that are solved together
+       [1]     | L2-bestapproximation equation
+
+  residuals = [1.4496279910219797e-32]
+
+L2error(Hdiv broken) = 0.0004715248381994763
+L2error(Hdiv cont.) = 0.00047152483819947594
+L2error(difference) = 5.610414426352323e-16
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_cookmembrane/">« 2D Linear Elasticity</a><a class="docs-footer-nextpage" href="../doc_2d_flowtransport/">2D Flow + Transport »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 3 March 2021 10:40">Wednesday 3 March 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
