@@ -50,7 +50,7 @@ function update!(AM::AssemblyManager{T}, item::Int) where {T <: Real}
     if AM.citem != item
         AM.citem = item
         for j = 1 : AM.nop
-            AM.dii4op[j](AM.dofitems[j], AM.EG4dofitem[j], AM.itempos4dofitem[j], AM.coeff4dofitem[j], AM.orientation4dofitem[j], item)
+            AM.dii4op[j](AM.dofitems[j], AM.EG4dofitem[j], AM.itempos4dofitem[j], AM.coeff4dofitem[j], AM.orientation4dofitem[j], AM.dofoffset4dofitem[j], item)
             # update needed basisevaler
             for di = 1 : length(AM.dofitems[j])
                 if AM.dofitems[j][di] != 0
@@ -184,7 +184,7 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyTy
     xItemGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
     EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
     # operator is assumed to be continuous, hence only needs to be evaluated on one dofitem = item
-    function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
+    function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
         dofitems[1] = item
         itempos4dofitem[1] = 1
         coefficient4dofitem[1] = 1
@@ -222,7 +222,7 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_FACES}, basisAT
         coeff_right = 0.5
     end
     # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
-    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
+    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
         dofitems[1] = xFaceCells[1,item]
         dofitems[2] = xFaceCells[2,item]
         for k = 1 : num_targets(xCellFaces,dofitems[1])
@@ -297,9 +297,14 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_FACES}, basisAT
             dofitems[1] = item
             dofitems[2] = item
         else
-            coefficient4dofitem[1] = 1
-            coefficient4dofitem[2] = 0
-            dofitems[1] = item
+            if AT == ON_IFACES
+                # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
+                dofitems[1] = 0
+            else
+                coefficient4dofitem[1] = 1
+                coefficient4dofitem[2] = 0
+                dofitems[1] = item
+            end
             dofitems[2] = 0
         end
         # find EG index for geometry
@@ -330,7 +335,7 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_BFACES}, basisA
     EGdofitems = xgrid[GridComponentUniqueGeometries4AssemblyType(basisAT)]
 
     # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
-    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
+    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
         dofitems[1] = xFaceCells[1,xBFaces[item]]
         dofitems[2] = xFaceCells[2,xBFaces[item]]
         for k = 1 : num_targets(xCellFaces,dofitems[1])
@@ -413,9 +418,9 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
             dofitemAT[j] = ON_CELLS
         elseif (dofitemAT[j] == AT) && FE[j].broken && AT != ON_CELLS && discontinuous
             #println("Operator $(operator[j]) for $(typeof(FE[j])) is evaluated in broken mode using the basis $(dofitemAT[j])")
-            #push!(broken_operators,j)
-            push!(discontinuous_operators,j)
-            dofitemAT[j] = ON_CELLS
+            push!(broken_operators,j)
+            #push!(discontinuous_operators,j)
+            #dofitemAT[j] = ON_CELLS
             # this means the assembly uses the broken dofmaps and assembles two times on the same item (with a dof offset)
         else 
             #println("Operator $(operator[j]) for $(typeof(FE[j])) is evaluated in continuous mode using the basis $(dofitemAT[j])")

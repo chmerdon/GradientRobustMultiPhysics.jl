@@ -42,7 +42,7 @@ export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries
 export GridComponent4TypeProperty
 export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
 export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
-export get_facegrid
+export get_facegrid, get_bfacegrid, get_edgegrid
 
 include("meshrefinements.jl")
 export split_grid_into
@@ -88,7 +88,7 @@ export ReconstructionIdentity, ReconstructionIdentityDisc
 export ReconstructionGradient, ReconstructionGradientDisc
 export ReconstructionDivergence
 export ReconstructionNormalFlux
-export NormalFlux, TangentFlux
+export NormalFlux, NormalFluxDisc, TangentFlux, TangentFluxDisc
 export Gradient, GradientDisc
 export SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence

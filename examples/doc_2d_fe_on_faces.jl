@@ -33,15 +33,9 @@ function main(; Plotter = nothing, verbosity = 1)
     ## we want to use a broken space and give the constraint of no normal jumps on interior faces
     ## in form of a Lagrange multiplier, since there is no NormalFluxDisc{Jump} operator yet,
     ## we have to use the full identity and multiply the normal vector in an action
-    xFaceNormals = xgrid[FaceNormals]
-    function LMaction_kernel(result, input, item)
-        ## compute normal flux
-        result[1] = input[1] * xFaceNormals[1,item] + input[2] * xFaceNormals[2,item]
-    end
-    LMaction = Action(Float64, ActionKernel(LMaction_kernel, [1,2]; dependencies = "I", quadorder = 0))
     add_unknown!(Problem; unknown_name = "Lagrange multiplier for face jumps", equation_name = "face jump constraint")
-    add_operator!(Problem, [1,2], LagrangeMultiplier(IdentityDisc{Jump}; AT = ON_IFACES, action = LMaction))
-    ## the diagonal operator sets the Lagrange multiplier on boundary faces to zero
+    add_operator!(Problem, [1,2], LagrangeMultiplier(NormalFluxDisc{Jump}; AT = ON_IFACES))
+    ## the diagonal operator sets the Lagrange multiplier on all face boundary regions to zero
     add_operator!(Problem, [2,2], DiagonalOperator("Diag(1)", 1.0, true, [1,2,3,4]))
 
     ## choose some (inf-sup stable) finite element types
@@ -51,7 +45,7 @@ function main(; Plotter = nothing, verbosity = 1)
     FES = [FESpace{FEType[1]}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
 
     ## solve
-    Solution = FEVector{Float64}("discrete solution",FES)
+    Solution = FEVector{Float64}("Hdiv-broken solution",FES)
     solve!(Solution, Problem; verbosity = verbosity)
 
     ## plot
@@ -63,18 +57,20 @@ function main(; Plotter = nothing, verbosity = 1)
     FES = FESpace{FEType[1]}(xgrid)
 
     ## solve
-    Solution2 = FEVector{Float64}("discrete solution",FES)
+    Solution2 = FEVector{Float64}("Hdiv-cont. solution",FES)
     solve!(Solution2, Problem; verbosity = verbosity)
 
-    ## calculate L2 error
+    ## calculate L2 error of both solutions and their difference
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    println("\nL2error(Hdiv broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-    println("\nL2error(Hdiv cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))")
-
-    ## check if the two solutions are identical
     L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
-    println("\nl2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))")
-
+    println("\nL2error(Hdiv broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
+    println("L2error(Hdiv cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))")
+    println("L2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))")
 end
 
 end
+
+#=
+### Output of default main() run
+=#
+Example_2DFaceElements.main()

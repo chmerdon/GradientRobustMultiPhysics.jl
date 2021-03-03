@@ -81,6 +81,10 @@ function FESpace{FEType,AT}(
 
     if AT == ON_FACES
         xgrid = get_facegrid(xgrid)
+    elseif AT == ON_BFACES
+        xgrid = get_bfacegrid(grid)
+    elseif AT == ON_EDGES
+        xgrid = get_edgegrid(grid)
     end
     
     # first generate some empty FESpace

@@ -31,6 +31,7 @@ function test_qpmatchup(xgrid; verbosity = 0)
     dofitems = [0,0] # itemnr where the dof numbers can be found
     itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
     orientation4dofitem::Array{Int,1} = [1,2] # local orientation
+    dofoffset4dofitem::Array{Int,1} = [1,2] # local orientation
     coefficient4dofitem::Array{T,1} = [0.0,0.0]
     dofitem = 0
     weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
@@ -42,7 +43,7 @@ function test_qpmatchup(xgrid; verbosity = 0)
     for item = 1 : nitems
 
         # get dofitem informations
-        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, item)
+        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
 
         # check that quadrature points on both sides match
         if dofitems[2] > 0

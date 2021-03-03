@@ -86,8 +86,7 @@ function assemble!(
         println("      regions = $(AP.regions)")
         println("       factor = $factor")
         println("       action = $(AP.action.name) (apply_to = $apply_action_to, size = $(action.argsizes))")
-        println("        qf[1] = $(qf[1].name) ")
-        println("           EG = $EG")
+        println("        qf[1] = $(AM.qf[1].name) ")
     end
  
     # loop over items
@@ -164,6 +163,7 @@ function assemble!(
                         end
                     end 
                 end
+
 
                 # copy localmatrix into global matrix
                 itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[other_id][di[other_id]]
@@ -289,8 +289,8 @@ function assemble!(
         println("      regions = $(AP.regions)")
         println("       factor = $factor")
         println("       action = $(AP.action.name) (apply_to = $apply_action_to, size = $(action.argsizes))")
-        println("        qf[1] = $(qf[1].name) ")
-        println("           EG = $EG")
+        println("        qf[1] = $(AM.qf[1].name) ")
+        
     end
 
     # loop over items

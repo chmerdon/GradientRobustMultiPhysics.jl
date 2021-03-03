@@ -46,6 +46,7 @@ evaluates the normal-flux of the finite element function.
 only available on FACES/BFACES and currently only for H1 and Hdiv elements
 """
 abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
+abstract type NormalFluxDisc{DT<:DiscontinuityTreatment} <: NormalFlux end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
 """
 $(TYPEDEF)
 
@@ -55,7 +56,13 @@ FEreconst specifies the reconstruction space and reconstruction algorithm if it 
 """
 abstract type ReconstructionNormalFlux{FEreconst<:AbstractFiniteElement} <: NormalFlux end # R(v_h) * n_F
 
+"""
+$(TYPEDEF)
+
+evaluates the tangent-flux of the finite element function.
+"""
 abstract type TangentFlux <: AbstractFunctionOperator end # v_h * t_F # only for HCurlScalar on Edges
+abstract type TangentFluxDisc{DT<:DiscontinuityTreatment} <: TangentFlux end # v_h * t_F # only for HCurlScalar on Edges
 """
 $(TYPEDEF)
 
@@ -138,7 +145,7 @@ abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 NeededDerivative4Operator(::Type{<:Identity}) = 0
 NeededDerivative4Operator(::Type{<:IdentityComponent}) = 0
 NeededDerivative4Operator(::Type{<:NormalFlux}) = 0
-NeededDerivative4Operator(::Type{TangentFlux}) = 0
+NeededDerivative4Operator(::Type{<:TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:Gradient}) = 1
 NeededDerivative4Operator(::Type{SymmetricGradient}) = 1
 NeededDerivative4Operator(::Type{TangentialGradient}) = 1
@@ -156,9 +163,13 @@ DefaultName4Operator(::Type{IdentityDisc{Jump}}) = "[[id]]"
 DefaultName4Operator(::Type{IdentityDisc{Average}}) = "{{id}}"
 DefaultName4Operator(::Type{<:ReconstructionIdentity}) = "id R"
 DefaultName4Operator(IC::Type{<:IdentityComponent}) = "id_$(IC.parameters[1])"
-DefaultName4Operator(::Type{NormalFlux}) = "NormalFlux"
+DefaultName4Operator(::Type{NormalFlux}) = "*n"
+DefaultName4Operator(::Type{NormalFluxDisc{Jump}}) = "[[*n]]"
+DefaultName4Operator(::Type{NormalFluxDisc{Average}}) = "{{*n}}"
 DefaultName4Operator(::Type{<:ReconstructionNormalFlux}) = "R NormalFlux"
-DefaultName4Operator(::Type{TangentFlux}) = "TangentFlux"
+DefaultName4Operator(::Type{TangentFlux}) = "*t"
+DefaultName4Operator(::Type{TangentFluxDisc{Jump}}) = "[[*t]]"
+DefaultName4Operator(::Type{TangentFluxDisc{Average}}) = "{{*t}}"
 DefaultName4Operator(::Type{<:Gradient}) = "grad"
 DefaultName4Operator(::Type{SymmetricGradient}) = "symgrad"
 DefaultName4Operator(::Type{TangentialGradient}) = "TangentialGradient"
@@ -177,7 +188,7 @@ DefaultName4Operator(::Type{Deviator}) = "dev"
 Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents
 Length4Operator(::Type{<:IdentityComponent}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:NormalFlux}, xdim::Int, ncomponents::Int) = 1
-Length4Operator(::Type{TangentFlux}, xdim::Int, ncomponents::Int) = 1
+Length4Operator(::Type{<:TangentFlux}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
@@ -192,7 +203,7 @@ Length4Operator(::Type{Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
 QuadratureOrderShift4Operator(::Type{<:Identity}) = 0
 QuadratureOrderShift4Operator(::Type{<:IdentityComponent}) = 0
 QuadratureOrderShift4Operator(::Type{<:NormalFlux}) = 0
-QuadratureOrderShift4Operator(::Type{TangentFlux}) = 0
+QuadratureOrderShift4Operator(::Type{<:TangentFlux}) = 0
 QuadratureOrderShift4Operator(::Type{<:Gradient}) = -1
 QuadratureOrderShift4Operator(::Type{CurlScalar}) = -1
 QuadratureOrderShift4Operator(::Type{Curl2D}) = -1

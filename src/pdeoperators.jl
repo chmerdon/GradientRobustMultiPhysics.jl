@@ -206,8 +206,8 @@ $(TYPEDSIGNATURES)
 constructor for AbstractBilinearForm that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
     
 """
-function ReactionOperator(action::AbstractAction; AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm("Reaction",identity_operator, identity_operator, action; AT = AT, apply_action_to = apply_action_to, regions = regions)
+function ReactionOperator(action::AbstractAction; name = "Reaction", AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
+    return AbstractBilinearForm(name,identity_operator, identity_operator, action; AT = AT, apply_action_to = apply_action_to, regions = regions)
 end
 
 """

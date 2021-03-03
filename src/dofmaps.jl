@@ -253,7 +253,8 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
     FES[DM] = xItemDofs
 end
 
-function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{BFaceDofs}) where {FEType <: AbstractFiniteElement}
+
+function init_broken_dofmap!(FES::FESpace{FEType}, DM::Union{Type{BFaceDofs},Type{FaceDofs}}) where {FEType <: AbstractFiniteElement}
     
     ## prepare dofmap patterns
     xgrid = FES.xgrid
@@ -302,221 +303,23 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{BFaceDofs}) where {F
         dofs4item_single = 0
     end
 
-    xBFaceNodes = FES.xgrid[BFaceNodes]
-    nbfaces = num_sources(xBFaceNodes)
-    xBFaces = FES.xgrid[BFaces]
     xFaceCells = FES.xgrid[FaceCells]
     xCellNodes = FES.xgrid[CellNodes]
     xCellDofs = FES[CellDofs]
-    xBFaceDofs = VariableTargetAdjacency(Int32)
     nnodes = size(xgrid[Coordinates],2)
     ncells = num_sources(xgrid[CellNodes])
-    xBFaceGeometries = xgrid[ItemGeometries4DofMap(DM)]
-    if need_faces
-        xCellFaces = xgrid[CellFaces]
-        nfaces = num_sources(xgrid[FaceNodes])
-    end
-    if need_edges
-        xFaceEdges = xgrid[FaceEdges]
-        xCellEdges = xgrid[CellEdges]
-        nedges = num_sources(xgrid[EdgeNodes])
-        local_edges = zeros(Int, max_num_targets_per_source(xFaceEdges))
-    end
-
-    itemEG = EG[1]
-    pattern::String = dofmap_patterns[1]
-    iEG::Int = 1
-    itemdofs = zeros(Int,maxdofs4item)
-    local_nodes = zeros(Int, max_num_targets_per_source(xBFaceNodes))
-    local_face::Int = 0
-    local_dofs = zeros(Int, max_num_targets_per_source(xCellDofs))
-    nldofs::Int = 0
-    node::Int = 0
-    face::Int = 0
-    cell::Int = 0
-    nbfacenodes::Int = 0
-    nbfaceedges::Int = 0
-    ncellnodes::Int = 0
-    ncelledges::Int = 0
-    ncellfaces::Int = 0
-    pos::Int = 0
-    for bface = 1 : nbfaces
-        face = xBFaces[bface]
-        cell = xFaceCells[1,face]
-        bfaceEG = xBFaceGeometries[bface]
-        iEG = findfirst(isequal(bfaceEG), EG)
-        pattern = dofmap_patterns[iEG]
-
-        if need_nodes
-            ncellnodes = num_targets(xCellNodes,cell)
-            nbfacenodes = num_targets(xBFaceNodes,bface)
-            for k = 1 : nbfacenodes
-                node = xBFaceNodes[k,bface]
-                pos = 1
-                while xCellNodes[pos,cell] != node
-                    pos += 1
-                end
-                local_nodes[k] = pos
-            end
-        end
-        if need_faces
-            ncellfaces = num_targets(xCellFaces,cell)
-            pos = 1
-            while xCellFaces[pos,cell] != face
-                pos += 1
-            end
-            local_face = pos
-        end
-        if need_edges
-            ncelledges = num_targets(xCellEdges,cell)
-            nbfaceedges = num_targets(xFaceEdges,face)
-            for k = 1 : nbfaceedges
-                edge = xFaceEdges[k, face]
-                pos = 1
-                while xCellEdges[pos,cell] != edge
-                    pos += 1
-                end
-                local_edges[k] = pos
-            end
-        end
-
-        if pattern == "C" # currently assumes quantifier = 1
-            for c = 1 : ncomponents
-                local_dofs[c] = xCellDofs[1,cell] + c - 1
-            end
-            nldofs = ncomponents
-        elseif pattern == "N" # currently assumes quantifier = 1
-            for k = 1 : nbfacenodes
-                for c = 1 : ncomponents
-                    local_dofs[(c-1)*nbfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*ncellnodes + local_nodes[k]
-                end
-            end
-            nldofs = nbfacenodes*ncomponents
-        elseif pattern == "NC" # currently assumes quantifier = 1
-            for k = 1 : nbfacenodes
-                for c = 1 : ncomponents
-                    local_dofs[(c-1)*nbfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes+1) + local_nodes[k]
-                end
-            end
-            nldofs = nbfacenodes*ncomponents
-        elseif pattern == "Ni" # currently assumes quantifier = 1
-            for k = 1 : nbfacenodes
-                for c = 1 : ncomponents
-                    local_dofs[(c-1)*nbfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*ncellnodes + local_nodes[k]
-                end
-            end
-            nldofs = nbfacenodes*ncomponents + 1
-            local_dofs[nldofs] = xCellDofs[1,cell] - 1 + ncomponents*ncellnodes + local_face
-        elseif pattern == "NI" # currently assumes quantifier = 1
-                for c = 1 : ncomponents
-                    for k = 1 : nbfacenodes
-                        local_dofs[(c-1)*(nbfacenodes+1) + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes + ncellfaces) + local_nodes[k]
-                    end
-                    local_dofs[c*(nbfacenodes+1)] = xCellDofs[1,cell] - 1 + c * ncellnodes + (c-1)*ncellfaces + local_face
-                end
-            nldofs = (nbfacenodes+1)*ncomponents
-        elseif pattern == "NE" # currently assumes quantifier = 1
-                for c = 1 : ncomponents
-                    for k = 1 : nbfacenodes
-                        local_dofs[(c-1)*(nbfacenodes+nbfaceedges) + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes + ncelledges) + local_nodes[k]
-                    end
-                    for k = 1 : nbfaceedges
-                        local_dofs[c*nbfacenodes+(c-1)*nbfaceedges + k] = xCellDofs[1,cell] - 1 + c * ncellnodes + (c-1)*ncelledges + local_edges[k]
-                    end
-                end
-            nldofs = (nbfacenodes+nbfaceedges)*ncomponents
-        elseif pattern == "i"
-            quantifier = dofmap_quantifiers[iEG][1]
-            for q = 1 : quantifier
-                local_dofs[q] = xCellDofs[1,cell] - 1 + (local_face-1)*quantifier + q
-            end
-            nldofs = quantifier
-        elseif pattern == "I" # currently assumes quantifier = 1
-            for c = 1 : ncomponents
-                local_dofs[c] = xCellDofs[1,cell] - 1 + (c-1)*ncellfaces + local_face
-            end
-            nldofs = ncomponents
-        elseif pattern == "e" # currently assumes quantifier = 1
-            for k = 1 : nbfaceedges
-                local_dofs[k] = xCellDofs[1,cell] - 1 + local_edges[k]
-            end
-            nldofs = nbfaceedges
-        elseif pattern == "E" # currently assumes quantifier = 1
-            for k = 1 : nbfaceedges
-                for c = 1 : ncomponents
-                    local_dofs[(c-1)*nbfaceedges + k] = xCellDofs[1,cell] - 1 + (c-1)*ncelledges + local_edges[k]
-                end
-            end
-            nldofs = nbfaceedges*ncomponents
-        end
-        append!(xBFaceDofs,local_dofs[1:nldofs])
-    end
-    FES[BFaceDofs] = xBFaceDofs
-end
-
-
-
-function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{FaceDofs}) where {FEType <: AbstractFiniteElement}
-    
-    ## prepare dofmap patterns
-    xgrid = FES.xgrid
-    EG = xgrid[UCG4DofMap(DM)]
-    ncomponents::Int = get_ncomponents(FEType)
-    need_nodes = false
-    need_faces = false
-    need_edges = false
-    maxdofs4item::Int = 0
-    dofmap_patterns = Array{String,1}(undef,length(EG))
-    dofmap_quantifiers = Array{Array{Int,1},1}(undef,length(EG))
-    dofs4item4component::Int = 0
-    dofs4item_single::Int = 0
-    for j = 1 : length(EG)
-        pattern = get_dofmap_pattern(FEType, DM, EG[j])
-        dofmap_patterns[j] = ""
-        dofmap_quantifiers[j] = zeros(Int,Int(length(pattern)/2))
-        for k = 1 : Int(length(pattern)/2)
-            dofmap_patterns[j] *= pattern[2*k-1]
-            dofmap_quantifiers[j][k] = parse(Int,pattern[2*k])
-            if dofmap_patterns[j][k] == 'N'
-                dofs4item4component += nnodes_for_geometry(EG[j])*dofmap_quantifiers[j][k]
-                need_nodes = true
-            #elseif dofmap_patterns[j][k] == 'F'
-            #    dofs4item4component += nfaces_for_geometry(EG[j])*dofmap_quantifiers[j][k]
-            #    need_faces = true
-            elseif dofmap_patterns[j][k] == 'E'
-                dofs4item4component += nedges_for_geometry(EG[j])*dofmap_quantifiers[j][k]
-                need_edges = true
-            elseif dofmap_patterns[j][k] in ['I','C']
-                dofs4item4component += dofmap_quantifiers[j][k]
-                need_faces = true
-            #elseif dofmap_patterns[j][k] == 'f'
-            #    dofs4item_single += nfaces_for_geometry(EG[j])*dofmap_quantifiers[j][k]
-            #    need_faces = true
-            elseif dofmap_patterns[j][k] == 'e'
-                dofs4item_single += nedges_for_geometry(EG[j])*dofmap_quantifiers[j][k]
-                need_edges = true
-            elseif dofmap_patterns[j][k] in ['i','c'] 
-                dofs4item_single += dofmap_quantifiers[j][k]
-                need_faces = true
-            end
-        end
-        maxdofs4item = max(maxdofs4item,dofs4item4component*ncomponents + dofs4item_single)
-        dofs4item4component = 0
-        dofs4item_single = 0
-    end
-
-    xFaceNodes = FES.xgrid[FaceNodes]
-    nbfaces = num_sources(xFaceNodes)
-    xFaceCells = FES.xgrid[FaceCells]
-    xCellNodes = FES.xgrid[CellNodes]
-    xCellDofs = FES[CellDofs]
+    xFaceNodes = FES.xgrid[SuperItemNodes4DofMap(DM)]
+    xFaceGeometries = xgrid[ItemGeometries4DofMap(DM)]
+    nfaces = num_sources(xFaceNodes)
     xFaceDofs = VariableTargetAdjacency(Int32)
-    nnodes = size(xgrid[Coordinates],2)
-    ncells = num_sources(xgrid[CellNodes])
-    xBFaceGeometries = xgrid[ItemGeometries4DofMap(DM)]
+    if DM == BFaceDofs
+        xRealFace = FES.xgrid[BFaces]
+    elseif DM == FaceDofs
+        xRealFace = 1:nfaces
+    end
+
     if need_faces
         xCellFaces = xgrid[CellFaces]
-        nfaces = num_sources(xgrid[FaceNodes])
     end
     if need_edges
         xFaceEdges = xgrid[FaceEdges]
@@ -544,20 +347,21 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{FaceDofs}) where {FE
     ncelledges::Int = 0
     ncellfaces::Int = 0
     pos::Int = 0
-    for face = 1 : nbfaces
+    for f = 1 : nfaces
+        face = xRealFace[f]
         localoffset = 0
         for c = 1 : 2
             cell = xFaceCells[c,face]
             if cell > 0
-                faceEG = xBFaceGeometries[face]
+                faceEG = xFaceGeometries[face]
                 iEG = findfirst(isequal(faceEG), EG)
                 pattern = dofmap_patterns[iEG]
 
                 if need_nodes
                     ncellnodes = num_targets(xCellNodes,cell)
-                    nfacenodes = num_targets(xBFaceNodes,face)
+                    nfacenodes = num_targets(xFaceNodes,face)
                     for k = 1 : nfacenodes
-                        node = xBFaceNodes[k,face]
+                        node = xFaceNodes[k,face]
                         pos = 1
                         while xCellNodes[pos,cell] != node
                             pos += 1
@@ -575,8 +379,8 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{FaceDofs}) where {FE
                 end
                 if need_edges
                     ncelledges = num_targets(xCellEdges,cell)
-                    nbfaceedges = num_targets(xFaceEdges,face)
-                    for k = 1 : nbfaceedges
+                    nfaceedges = num_targets(xFaceEdges,face)
+                    for k = 1 : nfaceedges
                         edge = xFaceEdges[k, face]
                         pos = 1
                         while xCellEdges[pos,cell] != edge
@@ -592,45 +396,45 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{FaceDofs}) where {FE
                     end
                     nldofs = ncomponents
                 elseif pattern == "N" # currently assumes quantifier = 1
-                    for k = 1 : nbfacenodes
+                    for k = 1 : nfacenodes
                         for c = 1 : ncomponents
-                            local_dofs[(c-1)*nbfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*ncellnodes + local_nodes[k]
+                            local_dofs[(c-1)*nfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*ncellnodes + local_nodes[k]
                         end
                     end
-                    nldofs = nbfacenodes*ncomponents
+                    nldofs = nfacenodes*ncomponents
                 elseif pattern == "NC" # currently assumes quantifier = 1
-                    for k = 1 : nbfacenodes
+                    for k = 1 : nfacenodes
                         for c = 1 : ncomponents
-                            local_dofs[(c-1)*nbfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes+1) + local_nodes[k]
+                            local_dofs[(c-1)*nfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes+1) + local_nodes[k]
                         end
                     end
-                    nldofs = nbfacenodes*ncomponents
+                    nldofs = nfacenodes*ncomponents
                 elseif pattern == "Ni" # currently assumes quantifier = 1
-                    for k = 1 : nbfacenodes
+                    for k = 1 : nfacenodes
                         for c = 1 : ncomponents
-                            local_dofs[(c-1)*nbfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*ncellnodes + local_nodes[k]
+                            local_dofs[(c-1)*nfacenodes + k] = xCellDofs[1,cell] - 1 + (c-1)*ncellnodes + local_nodes[k]
                         end
                     end
-                    nldofs = nbfacenodes*ncomponents + 1
+                    nldofs = nfacenodes*ncomponents + 1
                     local_dofs[nldofs] = xCellDofs[1,cell] - 1 + ncomponents*ncellnodes + local_face
                 elseif pattern == "NI" # currently assumes quantifier = 1
                         for c = 1 : ncomponents
-                            for k = 1 : nbfacenodes
-                                local_dofs[(c-1)*(nbfacenodes+1) + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes + ncellfaces) + local_nodes[k]
+                            for k = 1 : nfacenodes
+                                local_dofs[(c-1)*(nfacenodes+1) + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes + ncellfaces) + local_nodes[k]
                             end
-                            local_dofs[c*(nbfacenodes+1)] = xCellDofs[1,cell] - 1 + c * ncellnodes + (c-1)*ncellfaces + local_face
+                            local_dofs[c*(nfacenodes+1)] = xCellDofs[1,cell] - 1 + c * ncellnodes + (c-1)*ncellfaces + local_face
                         end
-                    nldofs = (nbfacenodes+1)*ncomponents
+                    nldofs = (nfacenodes+1)*ncomponents
                 elseif pattern == "NE" # currently assumes quantifier = 1
                         for c = 1 : ncomponents
-                            for k = 1 : nbfacenodes
-                                local_dofs[(c-1)*(nbfacenodes+nbfaceedges) + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes + ncelledges) + local_nodes[k]
+                            for k = 1 : nfacenodes
+                                local_dofs[(c-1)*(nfacenodes+nfaceedges) + k] = xCellDofs[1,cell] - 1 + (c-1)*(ncellnodes + ncelledges) + local_nodes[k]
                             end
-                            for k = 1 : nbfaceedges
-                                local_dofs[c*nbfacenodes+(c-1)*nbfaceedges + k] = xCellDofs[1,cell] - 1 + c * ncellnodes + (c-1)*ncelledges + local_edges[k]
+                            for k = 1 : nfaceedges
+                                local_dofs[c*nfacenodes+(c-1)*nfaceedges + k] = xCellDofs[1,cell] - 1 + c * ncellnodes + (c-1)*ncelledges + local_edges[k]
                             end
                         end
-                    nldofs = (nbfacenodes+nbfaceedges)*ncomponents
+                    nldofs = (nfacenodes+nfaceedges)*ncomponents
                 elseif pattern == "i"
                     quantifier = dofmap_quantifiers[iEG][1]
                     for q = 1 : quantifier
@@ -643,17 +447,17 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{FaceDofs}) where {FE
                     end
                     nldofs = ncomponents
                 elseif pattern == "e" # currently assumes quantifier = 1
-                    for k = 1 : nbfaceedges
+                    for k = 1 : nfaceedges
                         local_dofs[k] = xCellDofs[1,cell] - 1 + local_edges[k]
                     end
-                    nldofs = nbfaceedges
+                    nldofs = nfaceedges
                 elseif pattern == "E" # currently assumes quantifier = 1
-                    for k = 1 : nbfaceedges
+                    for k = 1 : nfaceedges
                         for c = 1 : ncomponents
-                            local_dofs[(c-1)*nbfaceedges + k] = xCellDofs[1,cell] - 1 + (c-1)*ncelledges + local_edges[k]
+                            local_dofs[(c-1)*nfaceedges + k] = xCellDofs[1,cell] - 1 + (c-1)*ncelledges + local_edges[k]
                         end
                     end
-                    nldofs = nbfaceedges*ncomponents
+                    nldofs = nfaceedges*ncomponents
                 end
                 for j = 1 : nldofs
                     local_facedofs[localoffset+j] = local_dofs[j]
@@ -663,7 +467,7 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Type{FaceDofs}) where {FE
         end
         append!(xFaceDofs,local_facedofs[1:localoffset])
     end
-    FES[FaceDofs] = xFaceDofs
+    FES[DM] = xFaceDofs
 end
 
 

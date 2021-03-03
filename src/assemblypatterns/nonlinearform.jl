@@ -77,8 +77,8 @@ function assemble!(
         println("      regions = $(AP.regions)")
         println("       factor = $factor")
         println("       action = $(AP.action.name) (apply_to = [operators(FEB),operators(argument 1)] size = $(action.argsizes))")
-        println("        qf[1] = $(qf[1].name) ")
-        println("           EG = $EG")
+        println("        qf[1] = $(AM.qf[1].name) ")
+        
     end
 
     # loop over items
@@ -263,8 +263,8 @@ function assemble!(
         println("      regions = $(AP.regions)")
         println("       factor = $factor")
         println("       action = $(AP.action.name) (size = $(action.argsizes))")
-        println("        qf[1] = $(qf[1].name) ")
-        println("           EG = $EG")
+        println("        qf[1] = $(AM.qf[1].name) ")
+        
     end
 
     # loop over items

@@ -127,8 +127,8 @@ function evaluate!(
         println("    operators = $(AP.operators)")
         println("      regions = $(AP.regions)")
         println("       action = $(AP.action.name) (size = $(action.argsizes))")
-        println("        qf[1] = $(qf[1].name) ")
-        println("           EG = $EG")
+        println("        qf[1] = $(AM.qf[1].name) ")
+        
     end
 
     # loop over items
