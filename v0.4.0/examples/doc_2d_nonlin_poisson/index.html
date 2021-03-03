@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Nonlinear Poisson-Problem · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li class="is-active"><a class="tocitem" href>2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Nonlinear Poisson-Problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Nonlinear Poisson-Problem</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_nonlin_poisson.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Nonlinear-Poisson-Problem"><a class="docs-heading-anchor" href="#D-Nonlinear-Poisson-Problem">2D Nonlinear Poisson-Problem</a><a id="D-Nonlinear-Poisson-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#D-Nonlinear-Poisson-Problem" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_nonlin_poisson.jl">source code</a>)</p><p>This example computes the solution <span>$u$</span> of the nonlinear Poisson problem</p><p class="math-container">\[\begin{aligned}
+-\mathrm{div}((1+u^2) \nabla u) &amp; = f \quad \text{in } \Omega
+\end{aligned}\]</p><p>with some right-hand side <span>$f$</span> on a series of uniform refinements of the unit square <span>$\Omega$</span>.</p><p>This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.</p><pre><code class="language-julia">module Example_2DNonlinearPoisson
+
+using GradientRobustMultiPhysics
+using Printf
+
+# problem data
+function exact_function!(result,x::Array{&lt;:Real,1})
+    result[1] = x[1]*x[2]
+    return nothing
+end
+function exact_gradient!(result,x::Array{&lt;:Real,1})
+    result[1] = x[2]
+    result[2] = x[1]
+    return nothing
+end
+function rhs!(result,x::Array{&lt;:Real,1})
+    result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1]) # = -div((1+u^2)*grad(u))
+    return nothing
+end
+
+# everything is wrapped in a main function
+# default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
+function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1}, testmode = false)
+
+    # choose initial mesh
+    xgrid = grid_unitsquare(Triangle2D)
+
+    # negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    user_function_gradient = DataFunction(exact_gradient!, [2,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    user_function_rhs = DataFunction(rhs!, [1,2]; dependencies = &quot;X&quot;, name = &quot;f&quot;, quadorder = 4)
+
+    # prepare nonlinear expression (1+u^2)*grad(u)
+    function nonlin_kernel(result::Array{&lt;:Real,1}, input::Array{&lt;:Real,1})
+        # input = [u, grad(u)]
+        result[1] = (1+input[1]^2)*input[2]
+        result[2] = (1+input[1]^2)*input[3]
+        return nothing
+    end
+    action_kernel = ActionKernel(nonlin_kernel, [2,3]; dependencies = &quot;&quot;, quadorder = 2)
+    nonlin_diffusion = GenerateNonlinearForm(&quot;((1+u^2)*grad(u))*grad(v)&quot;, [Identity, Gradient], [1,1], Gradient, action_kernel; ADnewton = true)
+
+    # generate problem description and assign nonlinear operator and data
+    Problem = PDEDescription(&quot;nonlinear Poisson problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;unknown&quot;, equation_name = &quot;nonlinear Poisson equation&quot;)
+    add_operator!(Problem, [1,1], nonlin_diffusion)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
+
+    # print problem description
+    Base.show(Problem)
+
+    # prepare error calculation
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2error = []; H1error = []; NDofs = []
+
+    # loop over levels
+    Solution = nothing
+    for level = 1 : nlevels
+        # uniform mesh refinement
+        xgrid = uniform_refine(xgrid)
+
+        # create finite element space
+        FES = FESpace{FEType}(xgrid)
+
+        # solve the problem
+        Solution = FEVector{Float64}(&quot;Solution&quot;,FES)
+        push!(NDofs,length(Solution.entries))
+        solve!(Solution, Problem; verbosity = verbosity)
+
+        # calculate L2 and H1 error
+        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
+        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+    end
+
+    if testmode == true
+        return H1error[end]
+    else
+        # output errors in a nice table
+        println(&quot;\n   NDOF  |   L2ERROR   |   H1ERROR&quot;)
+        for j=1:nlevels
+            @printf(&quot;  %6d | %.5e | %.5e\n&quot;,NDofs[j],L2error[j],H1error[j]);
+        end
+
+        # plot
+        GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+    end
+end
+
+
+# test function that is called by test unit
+# tests if the above problem is solved exactly by P2-FEM
+function test(; verbosity = 0)
+    return main(; verbosity = 0, FEType = H1P2{1,2}, nlevels = 1, testmode = true)
+end
+
+end</code></pre><pre><code class="language-none">Main.##274.Example_2DNonlinearPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DNonlinearPoisson.main()</code></pre><pre><code class="language-none">
+PDE-DESCRIPTION
+===============
+  system name = nonlinear Poisson problem
+
+     id   | unknown name / equation name
+    [1]   | unknown / nonlinear Poisson equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | ((1+u^2)*grad(u))*grad(v) [AD-Newton] (regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | ((1+u^2)*grad(u))*grad(v) [AD-Newton] (regions = [0])
+            | f * Identity(v_h) (regions = [0])
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+
+
+SOLVER
+======
+  system name = nonlinear Poisson problem  @time = 0
+
+  target (FE) = Solution (H1P1{1}, ndofs = 13)
+                
+  subiteration | equations that are solved together
+       [1]     | nonlinear Poisson equation
+
+  initial assembly time = 4.47e+00 (s)
+
+  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+  -----------------------------------------------------------------------
+        1   | 1.244445e-16 | 1.879348e-01 | 2.28e-04/6.25e-05/3.37e-04
+        2   | 3.679291e-16 | 2.427676e-03 | 1.47e-04/4.98e-05/2.12e-04
+        3   | 5.956546e-16 | 3.580510e-07 | 1.47e-04/4.10e-05/2.04e-04
+        4   | 4.601466e-16 | 7.822889e-15 | 1.49e-04/3.54e-05/1.97e-04  converged after 4 iterations (maxResidual reached)
+
+SOLVER
+======
+  system name = nonlinear Poisson problem  @time = 0
+
+  target (FE) = Solution (H1P1{1}, ndofs = 41)
+                
+  subiteration | equations that are solved together
+       [1]     | nonlinear Poisson equation
+
+  initial assembly time = 2.76e-03 (s)
+
+  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+  -----------------------------------------------------------------------
+        1   | 4.017305e-16 | 1.552235e-01 | 5.39e-04/1.29e-04/7.13e-04
+        2   | 7.849669e-16 | 1.898915e-03 | 5.10e-04/1.11e-04/6.43e-04
+        3   | 1.085153e-15 | 4.461316e-07 | 5.26e-04/1.03e-04/6.48e-04
+        4   | 1.386314e-15 | 2.388998e-14 | 5.14e-04/1.09e-04/6.41e-04  converged after 4 iterations (maxResidual reached)
+
+SOLVER
+======
+  system name = nonlinear Poisson problem  @time = 0
+
+  target (FE) = Solution (H1P1{1}, ndofs = 145)
+                
+  subiteration | equations that are solved together
+       [1]     | nonlinear Poisson equation
+
+  initial assembly time = 4.78e-03 (s)
+
+  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+  -----------------------------------------------------------------------
+        1   | 1.607908e-15 | 9.834582e-02 | 2.08e-03/4.20e-04/2.57e-03
+        2   | 1.624925e-15 | 1.307935e-03 | 2.04e-03/4.64e-04/2.54e-03
+        3   | 3.155155e-15 | 4.214647e-07 | 2.01e-03/4.27e-04/2.47e-03
+        4   | 2.563960e-15 | 2.994169e-14 | 2.00e-03/4.25e-04/2.46e-03  converged after 4 iterations (maxResidual reached)
+
+SOLVER
+======
+  system name = nonlinear Poisson problem  @time = 0
+
+  target (FE) = Solution (H1P1{1}, ndofs = 545)
+                
+  subiteration | equations that are solved together
+       [1]     | nonlinear Poisson equation
+
+  initial assembly time = 1.41e-02 (s)
+
+  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+  -----------------------------------------------------------------------
+        1   | 3.525682e-15 | 5.522608e-02 | 7.80e-03/1.32e-03/9.28e-03
+        2   | 4.716084e-15 | 8.487585e-04 | 7.80e-03/1.62e-03/9.50e-03
+        3   | 4.563185e-15 | 2.555420e-07 | 7.90e-03/1.77e-03/9.75e-03
+        4   | 4.424124e-15 | 2.272732e-14 | 1.96e-02/1.65e-03/2.14e-02  converged after 4 iterations (maxResidual reached)
+
+SOLVER
+======
+  system name = nonlinear Poisson problem  @time = 0
+
+  target (FE) = Solution (H1P1{1}, ndofs = 2113)
+                
+  subiteration | equations that are solved together
+       [1]     | nonlinear Poisson equation
+
+  initial assembly time = 5.14e-02 (s)
+
+  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+  -----------------------------------------------------------------------
+        1   | 5.037107e-15 | 2.924738e-02 | 3.08e-02/5.69e-03/3.70e-02
+        2   | 8.779632e-15 | 4.905172e-04 | 3.09e-02/6.36e-03/3.74e-02
+        3   | 8.738198e-15 | 1.346748e-07 | 3.08e-02/6.27e-03/3.73e-02
+        4   | 9.065762e-15 | 1.854974e-14 | 3.19e-02/6.27e-03/3.83e-02  converged after 4 iterations (maxResidual reached)
+
+SOLVER
+======
+  system name = nonlinear Poisson problem  @time = 0
+
+  target (FE) = Solution (H1P1{1}, ndofs = 8321)
+                
+  subiteration | equations that are solved together
+       [1]     | nonlinear Poisson equation
+
+  initial assembly time = 2.24e-01 (s)
+
+  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+  -----------------------------------------------------------------------
+        1   | 9.951730e-15 | 1.504798e-02 | 1.23e-01/2.23e-02/1.47e-01
+        2   | 1.881386e-14 | 2.640269e-04 | 1.26e-01/2.88e-02/1.55e-01
+        3   | 1.891352e-14 | 6.824838e-08 | 1.22e-01/2.92e-02/1.52e-01
+        4   | 1.875192e-14 | 3.137531e-14 | 1.26e-01/2.85e-02/1.55e-01  converged after 4 iterations (maxResidual reached)
+
+   NDOF  |   L2ERROR   |   H1ERROR
+      13 | 6.62330e-03 | 1.44378e-01
+      41 | 1.65803e-03 | 7.21744e-02
+     145 | 4.14699e-04 | 3.60851e-02
+     545 | 1.03688e-04 | 1.80423e-02
+    2113 | 2.59229e-05 | 9.02111e-03
+    8321 | 6.48078e-06 | 4.51055e-03
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity/">« 2D Adaptive Mesh Refinement (L-shape)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 3 March 2021 16:50">Wednesday 3 March 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
