@@ -117,12 +117,12 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
 
         Solution = FEVector{Float64}(&quot;Stokes velocity classical&quot;,FESpaceVelocity)
         append!(Solution,&quot;Stokes pressure (classical)&quot;,FESpacePressure)
-        solve!(Solution, StokesProblem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity)
+        solve!(Solution, StokesProblem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
         push!(NDofs,length(Solution.entries))
 
         Solution2 = FEVector{Float64}(&quot;Stokes velocity p-robust&quot;,FESpaceVelocity)
         append!(Solution2,&quot;Stokes pressure (p-robust)&quot;,FESpacePressure)
-        solve!(Solution2, StokesProblem2; maxIterations = maxIterations, maxResidual = maxResidual)
+        solve!(Solution2, StokesProblem2; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
 
         # solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation velocity&quot;,FESpaceVelocity)
@@ -186,7 +186,7 @@ end
 
 
 # everything is wrapped in a main function
-function main(; verbosity = 0, nlevels = 4, viscosity = 1e-2)
+function main(; verbosity = 0, nlevels = 3, viscosity = 1e-2)
     # set problem to solve
     #Problem = HydrostaticTestProblem
     Problem = PotentialFlowTestProblem
@@ -222,27 +222,24 @@ function test(; verbosity = 0)
     return maximum(error)
 end
 
-end</code></pre><pre><code class="language-none">Main.##280.Example_2DPressureRobustness</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DPressureRobustness.main()</code></pre><pre><code class="language-none">
+end</code></pre><pre><code class="language-none">Main.##279.Example_2DPressureRobustness</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DPressureRobustness.main()</code></pre><pre><code class="language-none">
          |   L2ERROR    |   L2ERROR    |   L2ERROR
    NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-L2BEST
-     122 | 9.596105e-01 | 1.222595e-01 | 2.574946e-02
+     122 | 1.103548e+00 | 1.222596e-01 | 2.574946e-02
      434 | 4.808788e-01 | 1.286621e-02 | 5.801888e-03
     1634 | 1.594519e-01 | 2.724361e-03 | 1.356292e-03
-    6338 | 4.623317e-02 | 6.822044e-04 | 3.264414e-04
 
          |   H1ERROR    |   H1ERROR    |   H1ERROR
    NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-H1BEST
-     122 | 1.806739e+01 | 2.120565e+00 | 6.762537e-01
+     122 | 1.989319e+01 | 2.120566e+00 | 6.762537e-01
      434 | 1.340065e+01 | 4.311147e-01 | 3.346274e-01
     1634 | 8.673708e+00 | 1.779165e-01 | 1.663399e-01
-    6338 | 4.839380e+00 | 8.484290e-02 | 8.292774e-02
 
          |   L2ERROR    |   L2ERROR    |   L2ERROR
    NDOF  | PRES-CLASSIC | PRES-PROBUST | PRES-L2BEST
-     122 | 1.615806e+00 | 1.074021e+00 | 1.070511e+00
+     122 | 1.698623e+00 | 1.074021e+00 | 1.070511e+00
      434 | 7.664283e-01 | 5.464693e-01 | 5.463668e-01
     1634 | 3.506343e-01 | 2.746146e-01 | 2.745972e-01
-    6338 | 1.560468e-01 | 1.374789e-01 | 1.374761e-01
 
 LEGEND
 ======
@@ -253,4 +250,4 @@ VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)
 PRES-CLASSIC : discrete Stokes pressure solution (H1P0{1} (broken)) with classical discretisation
 PRES-PROBUST : discrete Stokes pressure solution (H1BR{2}) with p-robust discretisation
 PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson/">« 2D Nonlinear Poisson-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 3 March 2021 10:40">Wednesday 3 March 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson/">« 2D Nonlinear Poisson-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 3 March 2021 15:19">Wednesday 3 March 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
