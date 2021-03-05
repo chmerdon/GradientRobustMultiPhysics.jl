@@ -2,7 +2,7 @@
 abstract type AbstractAction end
 
 struct InfNothingArray
-    val
+    val::Nothing
 end
 Base.getindex(::InfNothingArray,i) = nothing
 
@@ -13,7 +13,7 @@ mutable struct Action{T <: Real} <: AbstractAction
     cregion::Array{Int,1}
     bonus_quadorder::Int
     argsizes::SVector{2,Int}
-    xref
+    xref::Union{InfNothingArray,Array{Array{T,1},1}}
 end
 
 # actions that do depend on x
@@ -26,7 +26,7 @@ mutable struct TAction{T <: Real} <: AbstractAction
     ctime::Array{T,1}
     bonus_quadorder::Int
     argsizes::Array{Int,1}
-    xref
+    xref::Union{InfNothingArray,Array{Array{T,1},1}}
 end
 
 # actions that do depend on x
@@ -38,7 +38,7 @@ mutable struct XAction{T <: Real} <: AbstractAction
     cregion::Array{Int,1}
     bonus_quadorder::Int
     argsizes::SVector{2,Int}
-    xref
+    xref::Union{InfNothingArray,Array{Array{T,1},1}}
     x::Array{Array{T,1},1}
 end
 
@@ -52,7 +52,7 @@ mutable struct XTAction{T <: Real} <: AbstractAction
     ctime::Array{T,1}
     bonus_quadorder::Int
     argsizes::SVector{2,Int}
-    xref
+    xref::Union{InfNothingArray,Array{Array{T,1},1}}
     x::Array{Array{T,1},1}
 end
 

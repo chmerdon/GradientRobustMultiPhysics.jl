@@ -25,8 +25,8 @@ struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: Abstra
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler                       # function to call to get coefficients for finite element
-    subset_handler                       # function to call to get linear independent subset of basis on cell
+    coeffs_handler::Function             # function to call to get coefficients for finite element
+    subset_handler::Function             # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
@@ -40,16 +40,16 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
-    Dresult                              # DiffResults for ForwardDiff handling
-    Dcfg                                 # config for ForwardDiff handling
+    Dresult::DiffResults.DiffResult      # DiffResults for ForwardDiff handling
+    Dcfg::ForwardDiff.DerivativeConfig    # config for ForwardDiff handling
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
     citem::Array{Int,1}                  # current item
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler                       # function to call to get coefficients for finite element
-    subset_handler                       # function to call to get linear independent subset of basis on cell
+    coeffs_handler::Function             # function to call to get coefficients for finite element
+    subset_handler::Function             # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
@@ -71,9 +71,9 @@ struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: 
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler                       # function to call to get coefficients for finite element
-    reconstcoeffs_handler                # function to call to get reconstruction coefficients
-    subset_handler                       # function to call to get linear independent subset of basis on cell
+    coeffs_handler::Function             # function to call to get coefficients for finite element
+    reconstcoeffs_handler::Function      # function to call to get reconstruction coefficients
+    subset_handler::Function             # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
@@ -89,8 +89,8 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
-    Dresult                              # DiffResults for ForwardDiff handling
-    Dcfg                                 # config for ForwardDiff handling
+    Dresult::DiffResults.DiffResult      # DiffResults for ForwardDiff handling
+    Dcfg::ForwardDiff.DerivativeConfig    # config for ForwardDiff handling
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
     citem::Array{Int,1}                  # current item
@@ -98,11 +98,72 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler                       # function to call to get coefficients for finite element
-    reconstcoeffs_handler                # function to call to get reconstruction coefficients
-    subset_handler                       # function to call to get linear independent subset of basis on cell
+    coeffs_handler::Function             # function to call to get coefficients for finite element
+    reconstcoeffs_handler::Function      # function to call to get reconstruction coefficients
+    subset_handler::Function             # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
+end
+
+
+
+function prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndofs4item_all, ncomponents; Dcfg = "init", Dresult = "init")
+
+    # derivatives of the basis on the reference domain are computed
+    # by ForwardDiff, to minimise memory allocations and be able
+    # to rebase the quadrature points later (e.g. when evaluating cuts through cells)
+    # we use DiffResults and JacobianConfig of ForwardDiff and save these in the struct
+
+    if Dcfg == "init" || Dresult == "init"
+
+        edim = size(refbasisderivvals,2)
+        result_temp = zeros(Float64,ndofs4item_all,ncomponents)
+        result_temp2 = zeros(Real,ndofs4item_all,ncomponents)
+        input_temp = Vector{Float64}(undef,edim)
+        jac_temp = Matrix{Float64}(undef,ndofs4item_all*ncomponents,edim)
+        Dresult = DiffResults.DiffResult(result_temp,jac_temp)
+        Dcfg = ForwardDiff.JacobianConfig(refbasis, result_temp, input_temp)
+
+        function jacobian_wrap(x)
+            fill!(result_temp,0.0)
+            ForwardDiff.jacobian!(Dresult, refbasis, result_temp, x, Dcfg)
+            return DiffResults.jacobian(Dresult)
+        end
+        if derivorder == 1 ## first order derivatives
+            jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+        elseif derivorder == 2
+            # todo: use DiffResults for hessian evaluation 
+            function refbasis_wrap(xref)
+                refbasis(result_temp2,xref)
+                return result_temp2
+            end
+
+            function hessian_wrap(xref)
+                jac_function = x -> ForwardDiff.jacobian(refbasis_wrap, x)
+                return ForwardDiff.jacobian(jac_function, xref)
+            end
+        end
+    end
+
+    if derivorder == 1 ## first order derivatives
+        for i in eachindex(qf.w)
+            # evaluate gradients of basis function
+            # = list of vectors [du_k/dx_1; du_k,dx_2]
+
+            jac = jacobian_wrap(qf.xref[i])
+
+            for j = 1 : ndofs4item_all*ncomponents, k = 1 : edim
+                refbasisderivvals[j,k,i] = jac[j,k];
+            end
+        end
+    elseif derivorder == 2 # second order derivatives
+        for i in eachindex(qf.w)
+            # evaluate second derivatives of basis function
+            refbasisderivvals[:,:,i] = hessian_wrap(qf.xref[i])
+        end 
+    end
+
+    return Dresult, Dcfg, refbasisderivvals
 end
 
 
@@ -140,7 +201,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     # set coefficient handlers needed for basis evaluation
     coefficients = zeros(T,0,0)
-    coeff_handler = nothing
+    coeff_handler = (x) -> nothing
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
         coeff_handler = get_coefficients(FEAT, FE, EG)
@@ -166,8 +227,6 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         end
     end
     compressiontargets = zeros(T,0)
-    Dcfg = nothing
-    Dresult = nothing
     current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
     if derivorder == 0
         refbasisderivvals = zeros(T,0,0,0);
@@ -187,88 +246,33 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
                 current_eval[1,j,i] = refbasisvals[i][j,FEOP.parameters[1]]
             end
         end
+        Dcfg = nothing
+        Dresult = nothing
     elseif derivorder > 0
 
-        # derivatives of the basis on the reference domain are computed
-        # by ForwardDiff, to minimise memory allocations and be able
-        # to rebase the quadrature points later (e.g. when evaluating cuts through cells)
-        # we use DiffResults and JacobianConfig of ForwardDiff and save these in the struct
-
-            result_temp = zeros(Float64,ndofs4item_all,ncomponents)
-            result_temp2 = zeros(Real,ndofs4item_all,ncomponents)
-            input_temp = Vector{Float64}(undef,edim)
-            jac_temp = Matrix{Float64}(undef,ndofs4item_all*ncomponents,edim)
-            Dresult = DiffResults.DiffResult(result_temp,jac_temp)
-            Dcfg = ForwardDiff.JacobianConfig(refbasis, result_temp, input_temp)
-    
-            function jacobian_wrap(x)
-                fill!(result_temp,0.0)
-                ForwardDiff.jacobian!(Dresult, refbasis, result_temp, x, Dcfg)
-                return DiffResults.jacobian(Dresult)
-            end
-
-        if derivorder == 1 ## first order derivatives
-
-            jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+        # get derivatives of basis on reference geometry
+        if derivorder == 1
             refbasisderivvals = zeros(T,ndofs4item_all*ncomponents,edim,length(qf.w));
-            # current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
-            for i in eachindex(qf.w)
-                # evaluate gradients of basis function
-                # = list of vectors [du_k/dx_1; du_k,dx_2]
-
-                jac = jacobian_wrap(qf.xref[i])
-
-                for j = 1 : ndofs4item_all*ncomponents, k = 1 : edim
-                    refbasisderivvals[j,k,i] = jac[j,k];
-                end
-            end
-
-            if FEOP == TangentialGradient
-                coefficients3 = FE.xgrid[FaceNormals]
-            end
-            # specifications for compressed operator (Voigt notation)
-            if FEOP == SymmetricGradient
-                # the following mapping tells where each entry of the full gradient lands in the reduced vector
-                if edim == 1
-                    compressiontargets = [1,1]
-                elseif edim == 2
-                    # 2D Voigt accumulation positions of du1/dx1, du1/dx2, du2/dx1, d2/dx2
-                    compressiontargets = [1,3,3,2]
-                elseif edim == 3
-                    # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
-                    compressiontargets = [1,6,5,6,2,4,5,4,3] 
-                end
-            end
-        elseif derivorder == 2 # second order derivatives
-           # offsets = 0:edim:(ncomponents*edim*edim);
+        elseif deriveorder == 2
+            refbasisderivvals = zeros(T,ndofs4item_all*ncomponents*edim,edim,length(qf.w))
             offsets2 = 0:ndofs4item_all*edim:ncomponents*ndofs4item_all*edim;
+        end
+        Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndofs4item_all, ncomponents)
 
-            # todo: use DiffResults for hessian evaluation 
-            function refbasis_wrap(xref)
-                refbasis(result_temp2,xref)
-                return result_temp2
+        # specifications for special operators (e.g. compressing Voigt notation)
+        if FEOP == TangentialGradient
+            coefficients3 = FE.xgrid[FaceNormals]
+        elseif FEOP == SymmetricGradient
+            # the following mapping tells where each entry of the full gradient lands in the reduced vector
+            if edim == 1
+                compressiontargets = [1,1]
+            elseif edim == 2
+                # 2D Voigt accumulation positions of du1/dx1, du1/dx2, du2/dx1, d2/dx2
+                compressiontargets = [1,3,3,2]
+            elseif edim == 3
+                # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
+                compressiontargets = [1,6,5,6,2,4,5,4,3] 
             end
-
-            function hessian_wrap(xref)
-                jac_function = x -> ForwardDiff.jacobian(refbasis_wrap, x)
-                return ForwardDiff.jacobian(jac_function, xref)
-            end
-    
-            refbasisderivvals = zeros(T,ndofs4item_all*ncomponents*edim,edim,length(qf.w));
-            # current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
-            for i in eachindex(qf.w)
-                # evaluate gradients of basis function
-                # second derivatives
-                refbasisderivvals[:,:,i] = hessian_wrap(qf.xref[i])
-                #for dof_i = 1 : ndofs4item, c = 1: ncomponents
-                #        print("\n dof_i = $dof_i component = $c\n")
-                #        for k = 1 : xdim
-                #            for l = 1 : edim
-                #                    print("$(refbasisderivvals[dof_i + offsets2[k] + (c-1)*ndofs4item,l,i]) ")
-                #            end
-                #        end    
-                #end  
-            end 
         end
     end
 
@@ -344,41 +348,18 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     offsets = 0:edim:((ncomponents-1)*edim);
     offsets2 = 0:ndofs4item2_all:ncomponents*ndofs4item2_all;
     coefficients3 = zeros(T,0,0)
-    Dcfg = nothing
-    Dresult = nothing
     resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
     current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
     derivorder = NeededDerivative4Operator(FEOP)
     if derivorder == 0
-        # refbasisderivvals are used as a cache fpr the reconstruction basis
+        # refbasisderivvals are used as a cache for the reconstruction basis
         refbasisderivvals = zeros(T,ncomponents,ndofs4item2_all,length(qf.w));
+        Dcfg = nothing
+        Dresult = nothing
     elseif derivorder == 1
-
         # derivatives of the reconstruction basis on the reference domain are computed
-        # by ForwardDiff, to minimise memory allocations and be able
-        # to rebase the quadrature points later (e.g. when evaluating cuts through cells)
-        # we use DiffResults and JacobianConfig of ForwardDiff and save these in the struct
-        result_temp = zeros(Float64,ndofs4item2_all,ncomponents2)
-        result_temp2 = zeros(Real,ndofs4item2_all,ncomponents2)
-        input_temp = Vector{Float64}(undef,edim)
-        jac_temp = Matrix{Float64}(undef,ndofs4item2_all*ncomponents2,edim)
-        Dresult = DiffResults.DiffResult(result_temp,jac_temp)
-        jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-        Dcfg = ForwardDiff.JacobianConfig(refbasis_reconst, result_temp, input_temp)
-
         refbasisderivvals = zeros(T,ndofs4item2_all*ncomponents2,edim,length(qf.w));
-        # current_eval = zeros(T,ncomponents*edim,ndofs4item,length(qf.w));
-        for i in eachindex(qf.w)
-            # evaluate gradients of basis function
-            # = list of vectors [du_k/dx_1; du_k,dx_2]
-            fill!(result_temp,0.0)
-            ForwardDiff.jacobian!(Dresult, refbasis_reconst, result_temp, qf.xref[i], Dcfg)
-            jac = DiffResults.jacobian(Dresult)
-
-            for j = 1 : ndofs4item2_all*ncomponents2, k = 1 : edim
-                refbasisderivvals[j,k,i] = jac[j,k];
-            end
-        end
+        Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis_reconst, qf, derivorder, ndofs4item2_all, ncomponents2)
         coefficients3 = zeros(T,resultdim,ndofs4item2)
     end
 
@@ -872,7 +853,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
 
         for i = 1 : length(FEBE.xref)
             if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
+                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim

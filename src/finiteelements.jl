@@ -38,10 +38,10 @@ end
 
 A struct that has a finite element type as parameter and carries dofmaps (CellDofs, FaceDofs, BFaceDofs) plus additional grid information and access to arrays holding coefficients if needed.
 """
-mutable struct FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
+struct FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
-    ndofs::Int                            # total number of dofs
+    ndofs::Int64                            # total number of dofs
     xgrid::ExtendableGrid                 # link to xgrid 
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
 end
@@ -89,19 +89,15 @@ function FESpace{FEType,AT}(
     
     # first generate some empty FESpace
     dummyVTA = VariableTargetAdjacency(Int32)
-    FES = FESpace{FEType,AT}(name,broken,0,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
+    if name == ""
+        name = broken ? "$FEType (broken)" : "$FEType"
+    end
+    ndofs = count_ndofs(xgrid, FEType, broken)
+    FES = FESpace{FEType,AT}(name,broken,ndofs,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
 
     if verbosity > 0
         println("  Initialising FESpace $FEType...")
     end
-    if name == ""
-        FES.name = broken ? "$FEType (broken)" : "$FEType"
-    else
-        FES.name = name
-    end
-
-    # count ndofs
-    count_ndofs!(FES)
 
     # generate ordered dofmaps
     if dofmaps_needed != "auto"
@@ -199,8 +195,7 @@ value triggers type instability.
 Base.getindex(FES::FESpace,DM::Type{<:DofMap})=get!(FES,DM)
 
 
-function count_ndofs!(FES::FESpace{FEType,AT}) where {FEType <: AbstractFiniteElement, AT <: AbstractAssemblyType}
-    xgrid = FES.xgrid
+function count_ndofs(xgrid, FEType, broken)
     EG = xgrid[UniqueCellGeometries]
     xItemGeometries = xgrid[CellGeometries]
     ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
@@ -241,7 +236,7 @@ function count_ndofs!(FES::FESpace{FEType,AT}) where {FEType <: AbstractFiniteEl
         ndofs4EG[j] += nfaces_for_geometry(EG[j]) * (ncomponents * dofs4item4component[2] + dofs4item_single[2])
         ndofs4EG[j] += nedges_for_geometry(EG[j]) * (ncomponents * dofs4item4component[3] + dofs4item_single[3])
         ndofs4EG[j] += ncomponents * dofs4item4component[4] + dofs4item_single[4]
-        if FES.broken == true
+        if broken == true
             totaldofs += ndofs4EG[j] * ncells4EG[j][2]
         else
             # only count interior dofs on cell here
@@ -254,7 +249,7 @@ function count_ndofs!(FES::FESpace{FEType,AT}) where {FEType <: AbstractFiniteEl
         fill!(dofs4item4component,0)
         fill!(dofs4item_single,0)
     end
-    if FES.broken == false
+    if broken == false
         # add continuous dofs here
         if maxdofs4item4component[1] + maxdofs4item_single[1] > 0
             totaldofs += size(xgrid[Coordinates],2) * (ncomponents * maxdofs4item4component[1] + maxdofs4item_single[1])
@@ -266,7 +261,7 @@ function count_ndofs!(FES::FESpace{FEType,AT}) where {FEType <: AbstractFiniteEl
             totaldofs += num_sources(xgrid[EdgeNodes]) * (ncomponents * maxdofs4item4component[3] + maxdofs4item_single[3])
         end
     end
-    FES.ndofs = totaldofs
+    return totaldofs
 end
 
 

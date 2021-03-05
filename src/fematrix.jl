@@ -27,9 +27,8 @@ $(TYPEDEF)
 
 an AbstractMatrix (e.g. an ExtendableSparseMatrix) with an additional layer of several FEMatrixBlock subdivisions each carrying coefficients for their associated pair of FESpaces
 """
-struct FEMatrix{T} <: AbstractArray{T,1}
+struct FEMatrix{T,nbrow,nbcol,nbtotal} <: AbstractArray{T,1}
     FEMatrixBlocks::Array{FEMatrixBlock{T},1}
-    nFE::Int
     entries::AbstractMatrix
 end
 
@@ -49,11 +48,12 @@ end
 
 
 Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
-Base.getindex(FEF::FEMatrix,i,j) = FEF.FEMatrixBlocks[(i-1)*FEF.nFE+j]
+Base.getindex(FEF::FEMatrix{T,nbrow,nbcol},i,j) where {T,nbrow,nbcol} = FEF.FEMatrixBlocks[(i-1)*nbcol+j]
 Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
 Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
 Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = (FEB.entries[FEB.offsetX+i,FEB.offsetY+j] = v)
-Base.size(FEF::FEMatrix)=length(FEF.FEMatrixBlocks)
+Base.size(FEF::FEMatrix) = [typeof(FEF).parameters[2],typeof(FEF).parameters[3]]
+Base.length(FEF::FEMatrix) = typeof(FEF).parameters[4]
 Base.size(FEB::FEMatrixBlock)=[FEB.last_indexX-FEB.offsetX,FEB.last_indexY-FEB.offsetY]
 
 """
@@ -85,7 +85,7 @@ Creates FEMatrix with one square block (FES,FES).
 function FEMatrix{T}(name::String, FES::FESpace) where T <: Real
     entries = ExtendableSparseMatrix{T,Int64}(FES.ndofs,FES.ndofs)
     Block = FEMatrixBlock{T}(name, FES, FES, 0 , 0, FES.ndofs, FES.ndofs, entries)
-    return FEMatrix{T}([Block], 1, entries)
+    return FEMatrix{T,1,1,1}([Block], entries)
 end
 
 """
@@ -98,7 +98,7 @@ Creates FEMatrix with one rectangular block (FESX,FESY).
 function FEMatrix{T}(name::String, FESX::FESpace, FESY::FESpace) where T <: Real
     entries = ExtendableSparseMatrix{T,Int64}(FESX.ndofs,FESY.ndofs)
     Block = FEMatrixBlock{T}(name, FESX, FESY, 0 , 0, FESX.ndofs, FESY.ndofs, entries)
-    return FEMatrix{T}([Block], 2, entries)
+    return FEMatrix{T,1,1,1}([Block], entries)
 end
 
 """
@@ -127,7 +127,7 @@ function FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
         offsetX += FES[j].ndofs
     end    
     
-    return FEMatrix{T}(Blocks, length(FES), entries)
+    return FEMatrix{T,length(FES),length(FES),length(FES)^2}(Blocks, entries)
 end
 
 """
