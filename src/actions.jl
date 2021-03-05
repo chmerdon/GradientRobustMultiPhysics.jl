@@ -1,14 +1,19 @@
 
 abstract type AbstractAction end
 
+struct InfNothingArray
+    val
+end
+Base.getindex(::InfNothingArray,i) = nothing
+
 mutable struct Action{T <: Real} <: AbstractAction
     kernel::UserData{<:AbstractActionKernel}
     name::String
     citem::Array{Int,1}
     cregion::Array{Int,1}
     bonus_quadorder::Int
-    argsizes::Array{Int,1}
-    xref::Array{Array{T,1},1}
+    argsizes::SVector{2,Int}
+    xref
 end
 
 # actions that do depend on x
@@ -21,7 +26,7 @@ mutable struct TAction{T <: Real} <: AbstractAction
     ctime::Array{T,1}
     bonus_quadorder::Int
     argsizes::Array{Int,1}
-    xref::Array{Array{T,1},1}
+    xref
 end
 
 # actions that do depend on x
@@ -32,8 +37,8 @@ mutable struct XAction{T <: Real} <: AbstractAction
     citem::Array{Int,1}
     cregion::Array{Int,1}
     bonus_quadorder::Int
-    argsizes::Array{Int,1}
-    xref::Array{Array{T,1},1}
+    argsizes::SVector{2,Int}
+    xref
     x::Array{Array{T,1},1}
 end
 
@@ -46,8 +51,8 @@ mutable struct XTAction{T <: Real} <: AbstractAction
     cregion::Array{Int,1}
     ctime::Array{T,1}
     bonus_quadorder::Int
-    argsizes::Array{Int,1}
-    xref::Array{Array{T,1},1}
+    argsizes::SVector{2,Int}
+    xref
     x::Array{Array{T,1},1}
 end
 
@@ -65,15 +70,15 @@ that should match the number format of the used quadrature rules and grid coordi
 function Action(T, kernel::UserData{<:AbstractActionKernel}; name = "user action")
     if is_xdependent(kernel)
         if is_timedependent(kernel)
-            return XTAction{T}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0), Array{T,1}(undef,0))
+            return XTAction{T}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, InfNothingArray(nothing), Array{T,1}(undef,0))
         else
-            return XAction{T}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0), Array{T,1}(undef,0))
+            return XAction{T}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, InfNothingArray(nothing), Array{T,1}(undef,0))
         end
     else
         if is_timedependent(kernel)
-            return TAction{T}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0))
+            return TAction{T}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, InfNothingArray(nothing))
         else
-            return Action{T}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, Array{T,1}(undef,0))
+            return Action{T}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, InfNothingArray(nothing))
         end
     end
 end
@@ -127,14 +132,19 @@ end
 function update!(C::Union{Action{T}, TAction{T}}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
     C.cregion[1] = region
     C.citem[1] = vitem
-    C.xref = FEBE.xref
+    if is_ldependent(C.kernel)
+        C.xref = FEBE.xref
+    end
     return nothing
 end
 
 function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
     C.cregion[1] = region
     C.citem[1] = vitem
-    C.xref = FEBE.xref
+
+    if is_ldependent(C.kernel)
+        C.xref = FEBE.xref
+    end
 
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != qitem 

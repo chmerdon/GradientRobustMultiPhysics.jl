@@ -488,17 +488,18 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
             end
             # load quadrature rule for face
             qf4face = qf[EGfaceid]
+            xrefdim = dim_element(EGface) + 1
 
             # generate new quadrature rules on neighbouring cells
             # where quadrature points of face are mapped to quadrature points of cells
-            qf[EGoffset + j] = QuadratureRule{T,EGdofitem[j]}(qf4face.name * " (shape faces)",Array{Array{T,1},1}(undef,length(qf4face.xref)),qf4face.w)
+            qf[EGoffset + j] = SQuadratureRule{T,EGdofitem[j],xrefdim,length(qf4face.xref)}(qf4face.name * " (shape faces)",Array{Array{T,1},1}(undef,length(qf4face.xref)),qf4face.w)
             for k in discontinuous_operators
                 xrefFACE2CELL = xrefFACE2xrefCELL(EGdofitem[j])
                 EGface = facetype_of_cellface(EGdofitem[j], 1)
                 xrefFACE2OFACE = xrefFACE2xrefOFACE(EGface)
                 for f = 1 : nfaces4cell, orientation = 1 : length(xrefFACE2OFACE)
                     for i = 1 : length(qf4face.xref)
-                        qf[EGoffset + j].xref[i] = xrefFACE2CELL[f](xrefFACE2OFACE[orientation](qf4face.xref[i]))
+                        qf[EGoffset + j].xref[i] = SVector{xrefdim,T}(xrefFACE2CELL[f](xrefFACE2OFACE[orientation](qf4face.xref[i])))
                         #println("face $f orientation $orientation : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
                     basisevaler[EGoffset + j,k,f,orientation] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity - 1)

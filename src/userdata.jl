@@ -8,7 +8,7 @@ struct UserData{UST<: AbstractUserDataType}
     name::String
     dependencies::String
     quadorder::Int
-    dimensions::Array{Int,1}     # length of result and input arrays
+    dimensions::SVector{2,Int}     # length of result and input arrays
     user_function::Function
     negotiated_function::Function
 end
@@ -213,43 +213,43 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
     return UserData{AbstractExtendedDataFunction}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
-function eval!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)
+@inline function eval!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)
     UD.negotiated_function(result, input, X, T, R, I, L)
 end
 
-function eval!(result, UD::UserData{AbstractNLActionKernel}, input, input2, X, T, R, I, L)
+@inline function eval!(result, UD::UserData{AbstractNLActionKernel}, input, input2, X, T, R, I, L)
     UD.negotiated_function(result, input, input2, X, T, R, I, L)
 end
 
-function eval!(result, UD::UserData{AbstractExtendedDataFunction}, X, T, R, I, L)
+@inline function eval!(result, UD::UserData{AbstractExtendedDataFunction}, X, T, R, I, L)
     UD.negotiated_function(result, X, T, R, I, L)
 end
 
-function eval!(result, UD::UserData{AbstractDataFunction}, X, T)
+@inline function eval!(result, UD::UserData{AbstractDataFunction}, X, T)
     UD.negotiated_function(result, X, T)
 end
 
-function eval!(result, UD::UserData{AbstractDataFunction}, X, T, R, I, L)
+@inline function eval!(result, UD::UserData{AbstractDataFunction}, X, T, R, I, L)
     UD.negotiated_function(result, X, T)
 end
 
-function is_xdependent(UD::UserData)
+@inline function is_xdependent(UD::UserData)
     return occursin("X", UD.dependencies)
 end
 
-function is_timedependent(UD::UserData)
+@inline function is_timedependent(UD::UserData)
     return occursin("T", UD.dependencies)
 end
 
-function is_itemdependent(UD::UserData)
+@inline function is_itemdependent(UD::UserData)
     return occursin("I", UD.dependencies)
 end
 
-function is_regiondependent(UD::UserData)
+@inline function is_regiondependent(UD::UserData)
     return occursin("R", UD.dependencies)
 end
 
-function is_ldependent(UD::UserData)
+@inline function is_ldependent(UD::UserData)
     return occursin("L", UD.dependencies)
 end
 

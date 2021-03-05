@@ -6,7 +6,7 @@
 
 # GradientRobustMultiPhysics.jl
 
-finite element module for Julia focussing on gradient-robust finite element methods and multiphysics applications, part of the meta-package [PDELIB.jl](https://github.com/WIAS-BERLIN/PDELib.jl)\ 
+finite element module for Julia focussing on gradient-robust finite element methods and multiphysics applications, part of the meta-package [PDELIB.jl](https://github.com/WIAS-BERLIN/PDELib.jl)
 
 
 ### Features/Limitations:
@@ -36,7 +36,7 @@ via Julia package manager in Julia 1.5 or above:
 ```
 
 ### EXAMPLES 
-see documentation
+see [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html)
 
 
 ### Dependencies on other Julia packages:
@@ -48,4 +48,5 @@ see documentation
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
 [DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
 [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl)\
+[StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl)\
 [BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)

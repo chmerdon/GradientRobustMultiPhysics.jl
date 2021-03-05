@@ -79,7 +79,7 @@ function assemble!(
 
     # loop over items
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
-    indexmap = CartesianIndices(zeros(Int, Tuple(maxdofitems)))
+    indexmap = CartesianIndices(zeros(Int, (maxdofitems[1],maxdofitems[2],maxdofitems[3])))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1),get_basisevaler(AM, 2, 1),get_basisevaler(AM, 3, 1)]
     basisvals_testfunction::Array{T,3} = basisevaler[3].cvals
     nonfixed_ids::Array{Int,1} = setdiff([1,2,3], fixed_argument)
@@ -114,7 +114,6 @@ function assemble!(
             dofitem[3] = AM.dofitems[3][di[3]]
 
             if dofitem[1] > 0 && dofitem[2] > 0 && dofitem[3] > 0
-
                 # get number of dofs on this dofitem
                 ndofs4item[1] = get_ndofs(AM, 1, di[1])
                 ndofs4item[2] = get_ndofs(AM, 2, di[2])
@@ -139,13 +138,12 @@ function assemble!(
     
                         # evaluate fixed argument into action
                         fill!(action_input, 0)
-                        eval!(action_input, basisevaler[fixed_argument], coeffs, i, offsets[fixed_argument], AM.coeff4dofitem[fixed_argument][di[fixed_argument]])
+                        eval!(action_input, basisevaler[fixed_argument], coeffs, i, offsets[fixed_argument])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]], AM.coeff4dofitem[nonfixed_ids[1]][di[nonfixed_ids[1]]])
+                            eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]])
                             apply_action!(action_result, action_input, action, i)
-                            action_result .*= AM.coeff4dofitem[nonfixed_ids[2]][di[nonfixed_ids[2]]]
             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                                 temp = 0
@@ -161,16 +159,16 @@ function assemble!(
     
                         # evaluate fixed argument into separate vector
                         fill!(evalfixedFE, 0)
-                        eval!(evalfixedFE, basisevaler[fixed_argument], coeffs, i, 0, AM.coeff4dofitem[fixed_argument][di[fixed_argument]])
+                        eval!(evalfixedFE, basisevaler[fixed_argument], coeffs, i, 0)
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, 0, AM.coeff4dofitem[nonfixed_ids[1]][di[nonfixed_ids[1]]])
+                            eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, 0)
                             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
-                                eval!(action_input, basisevaler[nonfixed_ids[2]], dof_j, i, offsets[2], AM.coeff4dofitem[nonfixed_ids[2]][di[nonfixed_ids[2]]])
+                                eval!(action_input, basisevaler[nonfixed_ids[2]], dof_j, i, offsets[2])
                                 apply_action!(action_result, action_input, action, i)
-            
+
                                 temp = 0
                                 for k = 1 : action_resultdim
                                     temp += action_result[k] * evalfixedFE[k]
@@ -182,12 +180,13 @@ function assemble!(
                 end 
         
                 # copy localmatrix into global matrix
+                temp = AM.coeff4dofitem[fixed_argument][di[fixed_argument]] * AM.coeff4dofitem[nonfixed_ids[2]][di[nonfixed_ids[2]]] * AM.coeff4dofitem[nonfixed_ids[1]][di[nonfixed_ids[1]]] * xItemVolumes[item] * factor
                 for dof_i = 1 : ndofs4item[nonfixed_ids[1]], dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                     if localmatrix[dof_i,dof_j] != 0
                         if transposed_assembly == true
-                            _addnz(A,dofs3[dof_j],dofs2[dof_i],localmatrix[dof_i,dof_j] * xItemVolumes[item], factor)
+                            _addnz(A,dofs3[dof_j],dofs2[dof_i],localmatrix[dof_i,dof_j], temp)
                         else
-                            _addnz(A,dofs2[dof_i],dofs3[dof_j],localmatrix[dof_i,dof_j] * xItemVolumes[item], factor)
+                            _addnz(A,dofs2[dof_i],dofs3[dof_j],localmatrix[dof_i,dof_j], temp)
                         end
                     end
                 end
@@ -257,7 +256,7 @@ function assemble!(
 
     # loop over items
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
-    indexmap = CartesianIndices(zeros(Int, Tuple(maxdofitems)))
+    indexmap = CartesianIndices(zeros(Int, (maxdofitems[1],maxdofitems[2],maxdofitems[3])))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1),get_basisevaler(AM, 2, 1),get_basisevaler(AM, 3, 1)]
     basisvals_testfunction::Array{T,3} = basisevaler[3].cvals
     fixed_arguments::Array{Int,1} = [1,2]

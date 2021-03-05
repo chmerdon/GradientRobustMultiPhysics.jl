@@ -309,9 +309,8 @@ function assemble!(
                     update!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
-                    for j=1:get_ndofs(AM, FEid, di)
-                        coeffs[j] = FEB[FEid][get_dof(AM, FEid, di, j)] * AM.coeff4dofitem[FEid][di]
-                    end
+                    get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
+                    coeffs .*= AM.coeff4dofitem[FEid][di]
 
                     # write evaluation of operator of current FE into action_input
                     for i in eachindex(weights)

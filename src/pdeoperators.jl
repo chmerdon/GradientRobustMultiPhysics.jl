@@ -600,21 +600,66 @@ function RhsOperator(
                 for j = 1 : ncomponents
                     result[1] += temp[j]*input[j] 
                 end
+                return nothing
             end
         end    
         action_kernel = ActionKernel(rhs_function_ext(),[1, ncomponents]; dependencies = "XTRIL", quadorder = data.quadorder)
     else
-        function rhs_function() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(Float64,ncomponents)
-            function closure(result,input,x, t)
-                eval!(temp, data, x, t)
-                result[1] = 0
-                for j = 1 : ncomponents
-                    result[1] += temp[j]*input[j] 
+        if data.dependencies == "XT"
+            function rhs_function_xt() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,ncomponents)
+                function closure(result,input,x, t)
+                    eval!(temp, data, x, t)
+                    result[1] = 0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
+                    return nothing
                 end
-            end
-        end    
-        action_kernel = ActionKernel(rhs_function(),[1, ncomponents]; dependencies = "XT", quadorder = data.quadorder)
+            end    
+            action_kernel = ActionKernel(rhs_function_xt(),[1, ncomponents]; dependencies = "XT", quadorder = data.quadorder)
+        elseif data.dependencies == "X"
+            function rhs_function_x() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,ncomponents)
+                function closure(result,input,x)
+                    eval!(temp, data, x, nothing)
+                    result[1] = 0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
+                    return nothing
+                end
+            end    
+            action_kernel = ActionKernel(rhs_function_x(),[1, ncomponents]; dependencies = "X", quadorder = data.quadorder)
+        elseif data.dependencies == "T"
+
+            function rhs_function_t() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,ncomponents)
+                function closure(result,input,t)
+                    eval!(temp, data, nothing, t)
+                    result[1] = 0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
+                    return nothing
+                end
+            end    
+            action_kernel = ActionKernel(rhs_function_t(),[1, ncomponents]; dependencies = "T", quadorder = data.quadorder)
+        else
+
+            function rhs_function_c() # result = F(v) = f*operator(v) = f*input
+                temp = zeros(Float64,ncomponents)
+                function closure(result,input)
+                    eval!(temp, data, nothing, nothing)
+                    result[1] = 0
+                    for j = 1 : ncomponents
+                        result[1] += temp[j]*input[j] 
+                    end
+                    return nothing
+                end
+            end    
+            action_kernel = ActionKernel(rhs_function_c(),[1, ncomponents]; dependencies = "", quadorder = data.quadorder)
+        end
     end
     action = Action(Float64, action_kernel)
 

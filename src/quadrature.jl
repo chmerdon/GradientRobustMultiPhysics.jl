@@ -14,11 +14,14 @@ $(TYPEDEF)
 
 A struct that contains the name of the quadrature rule, the reference points and the weights for the parameter-determined element geometry.
 """
-struct QuadratureRule{T <: Real, ET <: AbstractElementGeometry}
+abstract type QuadratureRule{T <: Real, ET <: AbstractElementGeometry} end
+
+struct SQuadratureRule{T <: Real, ET <: AbstractElementGeometry, dim, npoints} <: QuadratureRule{T, ET}
     name::String
-    xref::Array{Array{T, 1}}
-    w::Array{T, 1}
+    xref::Array{SVector{dim,T},1}
+    w::Array{T,1}
 end
+
 
 """
 $(TYPEDSIGNATURES)
@@ -45,27 +48,27 @@ end
 function VertexRule(ET::Type{Edge1D})
     xref = [[0],[1]]
     w = [1//2, 1//2]
-    return QuadratureRule{Float64, ET}("vertex rule edge", xref, w)
+    return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule edge", xref, w)
 end
 function VertexRule(ET::Type{Triangle2D})
     xref = [[0, 0], [1,0], [0,1]]
     w = [1//3, 1//3, 1//3]
-    return QuadratureRule{Float64, ET}("vertex rule triangle", xref, w)
+    return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule triangle", xref, w)
 end
 function VertexRule(ET::Type{Parallelogram2D})
     xref = [[0, 0], [1,0], [1,1], [0,1]]
     w = [1//4, 1//4, 1//4, 1//4]
-    return QuadratureRule{Float64, ET}("vertex rule parallelogram", xref, w)
+    return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule parallelogram", xref, w)
 end
 function VertexRule(ET::Type{Tetrahedron3D})
     xref = [[0, 0, 0], [1, 0, 0], [1,1,0], [0,0,1]]
     w = [1//4, 1//4, 1//4, 1//4]
-    return QuadratureRule{Float64, ET}("vertex rule tetrahedron", xref, w)
+    return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule tetrahedron", xref, w)
 end
 function VertexRule(ET::Type{Parallelepiped3D})
     xref = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
     w = [1//4, 1//4, 1//4, 1//4, 1//4, 1//4, 1//4, 1//4]
-    return QuadratureRule{Float64, ET}("vertex rule parallelepiped", xref, w)
+    return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule parallelepiped", xref, w)
 end
 
 
@@ -93,7 +96,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementG
         name = "generic Gauss rule of order $order"
         xref, w = get_generic_quadrature_Gauss(order)
     end
-    return QuadratureRule{T, ET}(name, xref, w)
+    return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
 end
 
 """
@@ -108,7 +111,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementG
     xref = Vector{Array{T,1}}(undef,1);
     xref[1] = ones(T,1)
     w = [1]
-    return QuadratureRule{T, ET}(name, xref, w)
+    return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
 end
 
 
@@ -140,7 +143,7 @@ function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) wh
       name = "generic Stroud rule of order $order"
       xref, w = get_generic_quadrature_Stroud(order)
   end
-  return QuadratureRule{T, ET}(name, xref, w)
+  return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
 end
 
 
@@ -171,7 +174,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelogram2D}
         index += 1
       end
   end
-  return QuadratureRule{T, ET}(name, xref, w)
+  return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
 end
 
 
@@ -203,7 +206,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: Parallelepiped3D
         index += 1
       end
   end
-  return QuadratureRule{T, ET}(name, xref, w)
+  return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
 end
 
 
@@ -254,7 +257,7 @@ function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) wh
       println("no quadrature rule with that order available")  
       # no generic rule implemented yet
   end
-  return QuadratureRule{T, ET}(name, xref, w)
+  return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
 end
 
 

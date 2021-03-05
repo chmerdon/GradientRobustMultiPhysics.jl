@@ -6,6 +6,7 @@ export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D, num
 using ExtendableSparse
 using SuiteSparse
 using SparseArrays
+using StaticArrays
 using BenchmarkTools
 using IterativeSolvers
 using DiffResults
