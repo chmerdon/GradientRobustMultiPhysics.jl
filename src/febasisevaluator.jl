@@ -134,12 +134,13 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndof
         elseif derivorder == 2
             # todo: use DiffResults for hessian evaluation 
             function refbasis_wrap(xref)
+                fill!(result_temp2,0)
                 refbasis(result_temp2,xref)
                 return result_temp2
             end
 
+            jac_function = x -> ForwardDiff.jacobian(refbasis_wrap, x)
             function hessian_wrap(xref)
-                jac_function = x -> ForwardDiff.jacobian(refbasis_wrap, x)
                 return ForwardDiff.jacobian(jac_function, xref)
             end
         end
@@ -162,6 +163,7 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndof
             refbasisderivvals[:,:,i] = hessian_wrap(qf.xref[i])
         end 
     end
+
 
     return Dresult, Dcfg, refbasisderivvals
 end
@@ -217,7 +219,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     xref = copy(qf.xref)
     resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
     coefficients3 = zeros(T,0,0)
-    offsets = 0:edim:((ncomponents-1)*edim);
+    offsets = 0:edim:((ncomponents-1)*edim); # edim steps
     offsets2 = []
     if ndofs4item_all > 0
         offsets2 = 0:ndofs4item_all:ncomponents*ndofs4item_all
@@ -253,9 +255,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         # get derivatives of basis on reference geometry
         if derivorder == 1
             refbasisderivvals = zeros(T,ndofs4item_all*ncomponents,edim,length(qf.w));
-        elseif deriveorder == 2
+        elseif derivorder == 2
             refbasisderivvals = zeros(T,ndofs4item_all*ncomponents*edim,edim,length(qf.w))
-            offsets2 = 0:ndofs4item_all*edim:ncomponents*ndofs4item_all*edim;
+            offsets2 = 0:edim*edim:ncomponents*edim*edim;
         end
         Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndofs4item_all, ncomponents)
 
@@ -782,17 +784,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
 
         # update L2G (we need the matrix)
         update!(FEBE.L2G, item)
+        fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
             if FEBE.L2G.nonlinear || i == 1
                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : ndofs
-                for c = 1 : FEBE.ncomponents
+                for c = 1 : ncomponents
                     for k = 1 : edim, l = 1 : edim
-                        FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] = 0.0
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : edim, xj = 1 : edim
-                            FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c] + (xi-1)*ndofs,xj,i]
+                            FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[dof_i + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                         end
                     end    
                 end    
@@ -815,17 +817,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
         # update L2G (we need the matrix)
         update!(FEBE.L2G, item)
 
+        fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
             if FEBE.L2G.nonlinear || i == 1
                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
             end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents
-                    FEBE.cvals[c,dof_i,i] = 0.0;
                     for k = 1 : edim
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : edim, xj = 1 : edim
-                            FEBE.cvals[c,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[k,xj]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c] + (xi-1)*ndofs,xj,i]
+                            FEBE.cvals[c,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[k,xj]*FEBE.refbasisderivvals[dof_i + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                         end
                     end   
                 end    

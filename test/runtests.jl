@@ -28,10 +28,14 @@ function run_basis_tests()
         function gradient(result,x::Array{<:Real,1})
             result[1] = polyorder * x[1]^(polyorder-1)
         end
+        function hessian(result,x::Array{<:Real,1})
+            result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+        end
         exact_integral = 1 // (polyorder+1) + 1
         exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", quadorder = polyorder)
         exact_gradient = DataFunction(gradient, [1,1]; dependencies = "X", quadorder = polyorder - 1)
-        return exact_function, exact_integral, exact_gradient
+        exact_hessian = DataFunction(hessian, [1,1]; dependencies = "X", quadorder = polyorder - 2)
+        return exact_function, exact_integral, exact_gradient, exact_hessian
     end
 
     function exact_function2D(polyorder)
@@ -45,10 +49,21 @@ function run_basis_tests()
             result[3] = 3 * polyorder * x[1]^(polyorder-1)
             result[4] = - polyorder * x[2]^(polyorder - 1)
         end
+        function hessian(result,x::Array{<:Real,1})
+            result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+            result[2] = 0
+            result[3] = 0
+            result[4] = 2 * polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+            result[5] = 3 * polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+            result[6] = 0
+            result[7] = 0
+            result[8] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+        end
         exact_integral = [3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
         exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", quadorder = polyorder)
         exact_gradient = DataFunction(gradient, [4,2]; dependencies = "X", quadorder = polyorder - 1)
-        return exact_function, exact_integral, exact_gradient
+        exact_hessian = DataFunction(hessian, [8,2]; dependencies = "X", quadorder = polyorder - 2)
+        return exact_function, exact_integral, exact_gradient, exact_hessian
     end
 
     function exact_function3D(polyorder)
@@ -67,10 +82,20 @@ function run_basis_tests()
             result[8] = - polyorder * x[2]^(polyorder - 1)
             result[9] = 0
         end
+        function hessian(result,x::Array{<:Real,1})
+            fill!(result,0)
+            result[5] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+            result[9] = 2 * polyorder * (polyorder - 1) * x[3]^(polyorder-2)
+            result[10] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+            result[14] = 2 * polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+            result[19] = 3 * polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+            result[23] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+        end
         exact_integral = [1 // (polyorder + 1) - 1, 3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
         exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", quadorder = polyorder)
         exact_gradient = DataFunction(gradient, [9,3]; dependencies = "X", quadorder = polyorder - 1)
-        return exact_function, exact_integral, exact_gradient
+        exact_hessian = DataFunction(hessian, [27,3]; dependencies = "X", quadorder = polyorder - 2)
+        return exact_function, exact_integral, exact_gradient, exact_hessian
     end
 
     ############################
@@ -166,8 +191,9 @@ function run_basis_tests()
     TestCatalog1D = [
                     H1P0{1},
                     H1P1{1}, 
-                    H1P2{1,1}]
-    ExpectedOrders1D = [0,1,2]
+                    H1P2{1,1}, 
+                    H1P3{1,1}]
+    ExpectedOrders1D = [0,1,2,3]
     TestCatalog2D = [
                     HCURLN0{2},
                     HDIVRT0{2},
@@ -194,11 +220,11 @@ function run_basis_tests()
     function test_interpolation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
         if dim == 1
-            exact_function, exactvalue = exact_function1D(order)
+            exact_function, exactvalue, exact_gradient, exact_hessian = exact_function1D(order)
         elseif dim == 2
-            exact_function, exactvalue = exact_function2D(order)
+            exact_function, exactvalue, exact_gradient, exact_hessian = exact_function2D(order)
         elseif dim == 3
-            exact_function, exactvalue = exact_function3D(order)
+            exact_function, exactvalue, exact_gradient, exact_hessian = exact_function3D(order)
         end
 
         # choose FE and generate FESpace
@@ -209,11 +235,18 @@ function run_basis_tests()
         Solution = FEVector{Float64}("Interpolation",FES)
         interpolate!(Solution[1], exact_function)
 
-        # check error
+        # check errors
         L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity; AT = AT)
-        error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        H1ErrorEvaluator = L2ErrorIntegrator(Float64, exact_gradient, Gradient; AT = AT)
+        H2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_hessian, Hessian; AT = AT)
+        error = zeros(Float64,3)
+        error[1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        if FEType <: AbstractH1FiniteElement
+            error[2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+            error[3] = sqrt(evaluate(H2ErrorEvaluator,Solution[1]))
+        end
         println("FEType = $FEType $(broken ? "broken" : "") $AT | ndofs = $(FES.ndofs) | order = $order | error = $error")
-        @test error < tolerance
+        @test sum(error) < tolerance
     end
 
     @testset "Interpolations" begin

@@ -298,6 +298,8 @@ include("fedefs/h1v_br.jl"); # Bernardi--Raugel (only vector-valued, with coeffi
 # second order
 include("fedefs/h1_p2.jl");
 include("fedefs/h1_p2b.jl");
+# third order
+include("fedefs/h1_p3.jl");
 
 # Hcurl-conforming elements
 include("fedefs/hcurl_n0.jl");

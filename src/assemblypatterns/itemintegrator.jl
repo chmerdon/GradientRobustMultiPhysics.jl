@@ -31,6 +31,7 @@ Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations again
 function L2ErrorIntegrator(T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction},
     operator::Type{<:AbstractFunctionOperator};
+    quadorder = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     regions = [0],
     time = 0)
@@ -44,13 +45,17 @@ function L2ErrorIntegrator(T::Type{<:Real},
             result[1] += (temp[j] - input[j])^2
         end    
     end    
-    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = "L2 error kernel", dependencies = "X", quadorder = 2 * compare_data.quadorder)
+    if quadorder == "auto"
+        quadorder = 2 * compare_data.quadorder
+    end
+    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = "L2 error kernel", dependencies = "X", quadorder = quadorder)
     return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions)
 end
 function L2NormIntegrator(T::Type{<:Real},
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    quadorder = 2,
     regions = [0])
     function L2norm_function(result,input)
         result[1] = 0
@@ -65,6 +70,7 @@ function L2DifferenceIntegrator(T::Type{<:Real},
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    quadorder = 2,
     regions = [0])
     function L2difference_function(result,input)
         result[1] = 0

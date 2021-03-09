@@ -527,6 +527,7 @@ function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
             end    
             append!(xCellNodes,subitemnodes[1:size(refine_rules[iEG],2)])
             push!(xCellGeometries,itemEG)
+            push!(xCellRegions, oldCellRegions[cell])
         end    
         ncells += size(refine_rules[iEG],1)
     end

@@ -91,29 +91,62 @@ end
 
 # edge integral means
 # used e.g. for interpolation into P2, P2B finite elements
-function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function::UserData{AbstractDataFunction}; items = [], time = time) where {FEType <: AbstractFiniteElement}
+function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {FEType <: AbstractFiniteElement}
 
     xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemDofs = Dofmap4AssemblyType(FE, AT)
+
     nitems = num_sources(xItemNodes)
     if items == []
         items = 1 : nitems
     end
-
-    # compute exact edge means
     ncomponents = get_ncomponents(FEType)
-    edgemeans = zeros(Float64,ncomponents,nitems)
-    integrate!(edgemeans, FE.xgrid, AT, exact_function; items = items, time = time)
-    for item in items
-        for c = 1 : ncomponents
-            # subtract edge mean value of P1 part
-            for dof = 1 : 2
-                edgemeans[c,item] -= Target[xItemDofs[(c-1)*3 + dof,item]] * xItemVolumes[item] / 6
+    edim = get_edim(FEType)
+
+    # integrate moments of exact_function over edges
+    edgemoments = zeros(Float64,ncomponents,nitems)
+    if order == 0
+        nmoments = 1
+        mfactor = [1//6; 1//6] # = integral of nodal basis functions over edge
+        invdfactor = [3//2;] # = inverse integral of edge bubble over edge
+        coffset = 3
+    elseif order == 1
+        nmoments = 2
+        mfactor = 9//2 .* [-1//180 -2//135; 2//135 1//180] # = moments of nodal basis functions over edge
+        dfactor = 27//2 .* [-1//270 -7//540; 7//540 1//270]' # = integrals of interior edge functions over edge
+        invdfactor = inv(dfactor)
+        coffset = 4
+    end
+    function edgemoments_eval(m)
+        function closure(result, x, xref)
+            eval!(result, exact_function, x, time)
+            if order == 1
+                result .*= (xref[1] - m//3)
             end
-            # set P2 edge bubble such that edge mean is preserved
-            Target[xItemDofs[3*c,item]] = 3 // 2 * edgemeans[c,item] / xItemVolumes[item]
+        end   
+    end   
+    for item in items
+        for n = 1 : nmoments, c = 1 : ncomponents
+            Target[xItemDofs[coffset*(c-1)+2+n,item]] = 0
         end
+    end
+    for m = 1 : nmoments
+        edata_function = ExtendedDataFunction(edgemoments_eval(m), [ncomponents, edim]; dependencies = "XL", quadorder = exact_function.quadorder+1)
+        integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
+        for item in items
+            for c = 1 : ncomponents
+                # subtract edge mean value of P1 part
+                for dof = 1 : 2
+                    edgemoments[c,item] -= Target[xItemDofs[(c-1)*coffset + dof,item]] * xItemVolumes[item] * mfactor[dof, m]
+                end
+                # set P2 edge bubble such that edge mean is preserved
+                for n = 1 : nmoments
+                    Target[xItemDofs[coffset*(c-1)+2+n,item]] += invdfactor[n,m] * edgemoments[c,item] / xItemVolumes[item]
+                end
+            end
+        end
+        fill!(edgemoments,0)
     end
 end
 
