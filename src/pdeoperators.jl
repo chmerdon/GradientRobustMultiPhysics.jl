@@ -1138,9 +1138,9 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::BLF2RHS, CurrentSolu
             else
                 SC.RHS_AssemblyPatterns[j][o] = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions)    
             end
-            assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = false)
+            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = false)
         else
-            assemble!(b, CurrentSolution[O.data_id], BLF; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = true)
+            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = true)
         end
     end
 end

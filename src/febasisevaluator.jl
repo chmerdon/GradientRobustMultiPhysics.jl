@@ -11,13 +11,13 @@
 
 abstract type FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
 
-struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{SVector{edim,T},1}       # xref of quadrature formula
-    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T},1}    # basis evaluation on EG reference cell 
+    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
@@ -31,13 +31,13 @@ struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: Abstra
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     L2G::L2GTransformer                  # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{SVector{edim,T},1}       # xref of quadrature formula
-    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T},1}    # basis evaluation on EG reference cell 
+    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
     Dresult::DiffResults.DiffResult      # DiffResults for ForwardDiff handling
@@ -54,7 +54,7 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer                  # local2global mapper
@@ -62,7 +62,7 @@ struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: 
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{SVector{edim,T},1}            # xref of quadrature formula
-    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T},1}    # basis evaluation on EG reference cell 
+    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
@@ -78,7 +78,7 @@ struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: 
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer                  # local2global mapper
@@ -86,7 +86,7 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{SVector{edim,T},1}            # xref of quadrature formula
-    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T},1}    # basis evaluation on EG reference cell 
+    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
     Dresult::DiffResults.DiffResult      # DiffResults for ForwardDiff handling
@@ -284,9 +284,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
 
     if mutable
-        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all}(FE,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents}(FE,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     else
-        return StandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all}(FE,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return StandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents}(FE,L2G,L2GM,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     end
 end    
 
@@ -371,9 +371,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
     
     if mutable
-        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     else
-        return ReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return ReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     end
 end    
 
