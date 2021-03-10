@@ -8,7 +8,6 @@ using SuiteSparse
 using SparseArrays
 using StaticArrays
 using BenchmarkTools
-using IterativeSolvers
 using DiffResults
 using LinearAlgebra
 using ForwardDiff
@@ -211,8 +210,8 @@ export add_constraint!
 
 
 include("solvers.jl")
-export AbstractLinSolveType, LinearSystem
-export DirectUMFPACK, IterativeBigStabl_LUPC
+export AbstractLinearSystem
+
 export solve!, assemble!
 export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_time!
 export show_statistics

@@ -14,10 +14,7 @@
 #
 # also parameter to steer penalties and stopping criterarions are saved in SolverConfig
 
-abstract type AbstractLinSolveType end
-abstract type DirectUMFPACK <: AbstractLinSolveType end
-abstract type DirectPARDISO <: AbstractLinSolveType end # hopefully in future
-abstract type IterativeBigStabl_LUPC <: AbstractLinSolveType end # iterative solver with LU decomposition as preconditioner
+abstract type AbstractLinearSystem{T} end
 
 mutable struct SolverConfig{T <: Real}
     is_nonlinear::Bool      # PDE is nonlinear
@@ -32,100 +29,49 @@ mutable struct SolverConfig{T <: Real}
     RHS_AssemblyTimes::Array{Array{Float64,1},1}
     subiterations::Array{Array{Int,1},1} # combination of equations (= rows in PDE.LHS) that should be solved together
     maxIterations::Int          # maximum number of iterations
-    maxResidual::Real           # tolerance for residual
-    current_time::Real          # current time in a time-dependent setting
-    dirichlet_penalty::Real     # penalty for Dirichlet data
-    linsolver::Type{<:AbstractLinSolveType} # type for linear solver
+    maxResidual::T           # tolerance for residual
+    current_time::T          # current time in a time-dependent setting
+    dirichlet_penalty::T     # penalty for Dirichlet data
+    linsolver::Type{<:AbstractLinearSystem}
     anderson_iterations::Int    # number of Anderson iterations (= 0 normal fixed-point iterations, > 0 Anderson iterations)
-    maxlureuse::Array{Int,1}    # max number of solves the LU decomposition of linsolver is reused
-    damping::Real               # damping factor (only for nonlinear solves, 0 = no damping, must be < 1 !)
+    skip_update::Array{Int,1}    # max number of solves the LU decomposition of linsolver is reused
+    damping::T               # damping factor (only for nonlinear solves, 0 = no damping, must be < 1 !)
     verbosity::Int              # verbosity level (tha larger the more messaging)
 end
 
 
-mutable struct LinearSystem{T <: Real, ST <: AbstractLinSolveType}
+mutable struct LinearSystemDirectUMFPACK{T,verbosity} <: AbstractLinearSystem{T}
     x::AbstractVector{T}
-    A::AbstractMatrix{T}
+    A::ExtendableSparseMatrix{T,Int64}
     b::AbstractVector{T}
-    ALU     # LU factorization or nothing
-    update_after::Int # update LU decomposition after so many solves, updater_after = -1 means never
-    ### private fields
-    nluu::Int # number of LU updates so far
-    nsolves::Int # number of solvers so far
-    nliniter::Int # number of iterations for last solve
-    LinearSystem{T, ST}(x,A,b; update_after::Int = 1) where {T <: Real, ST <: AbstractLinSolveType} = new{T,ST}(x,A,b,nothing,update_after,0,0,0)
+    ALU::SuiteSparse.UMFPACK.UmfpackLU{T,Int64}     # LU factorization
+    LinearSystemDirectUMFPACK{T,verbosity}(x,A,b) where {T,verbosity} = new{T,verbosity}(x,A,b)
 end
 
-
-function linsolve!(
-    LS::LinearSystem{T,IterativeBigStabl_LUPC};
-    force_update::Bool = false,
-    verbosity::Int = 0
-) where {T<: Real}
-
-    flush!(LS.A)
-    if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
-        LS.nluu += 1
-        if verbosity > 1
-            println("\n  Updating LU decomposition (nluu = $(LS.nluu))...")
-            @time LS.ALU = lu(LS.A.cscmatrix)
-        else
-            LS.ALU = lu(LS.A.cscmatrix)
-        end
-    end
-
-    if verbosity > 1
-        println("\n  Solving iteratively with bigstabl (LU preconditioner)...")
-        @time (sol,history) = IterativeSolvers.bicgstabl!(values(LS.x),
-                                         LS.A,
-                                         values(LS.b),
-                                         1,
-                                         Pl=LS.ALU,
-                                         reltol=1e-10,
-                                         max_mv_products=20,
-                                         log=true)
-        LS.nliniter = history.iters
-        println("  Iterative solver took $(LS.nliniter) iterations to converge...")
-    else
-        (sol,history) = IterativeSolvers.bicgstabl!(values(LS.x),
-                                         LS.A,
-                                         values(LS.b),
-                                         1,
-                                         Pl=LS.ALU,
-                                         reltol=1e-10,
-                                         max_mv_products=20,
-                                         log=true)
-        LS.nliniter = history.iters
-    end
-    LS.nsolves += 1
+function update!(LS::AbstractLinearSystem{T}) where {T}
+    # do nothing for an abstract solver
 end
 
-
-function linsolve!(
-    LS::LinearSystem{T,DirectUMFPACK};
-    force_update::Bool = false,
-    verbosity::Int = 0
-) where {T<: Real}
-
-    flush!(LS.A)
-    if LS.nluu == 0 || (LS.nsolves % LS.update_after == 0 && LS.update_after != -1)
-        LS.nluu += 1
+function update!(LS::LinearSystemDirectUMFPACK{T,verbosity}) where {T, verbosity}
+    try
         if verbosity > 1
-            println("\n  Updating LU decomposition (nluu = $(LS.nluu))...")
-            @time LS.ALU = lu(LS.A.cscmatrix)
-        else
-            LS.ALU = lu(LS.A.cscmatrix)
+            println("\n  Updating LU decomposition...")
         end
+        lu!(LS.ALU,LS.A.cscmatrix)
+    catch
+        if verbosity > 1
+            println("\n  (Re)generating LU decomposition...")
+        end
+        LS.ALU = lu(LS.A.cscmatrix)
     end
+end
 
+function solve!(LS::LinearSystemDirectUMFPACK{T,verbosity}) where {T, verbosity}
     if verbosity > 1
         println("\n  Solving directly with UMFPACK...")
-        @time ldiv!(LS.x,LS.ALU,LS.b)
     else
         ldiv!(LS.x,LS.ALU,LS.b)
     end
-    LS.nliniter = 1
-    LS.nsolves += 1
 end
 
 
@@ -244,9 +190,9 @@ function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiter
                 end
             end
         end
-        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, subiterations, 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, subiterations, 10, 1e-10, 0.0, 1e60, LinearSystemDirectUMFPACK{T,0}, 0, [1], 0,verbosity)
     else
-        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, DirectUMFPACK, 0, [1], 0,verbosity)
+        return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, [1:size(PDE.LHSOperators,1)], 10, 1e-10, 0.0, 1e60, LinearSystemDirectUMFPACK{T,0}, 0, [1], 0,verbosity)
     end
 
 end
@@ -527,8 +473,10 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     end
 
     # SOLVE
-    LS =  LinearSystem{T, SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
-    linsolve!(LS; verbosity = verbosity - 1)
+    LS = SC.linsolver(Target.entries,A.entries,b.entries)
+    flush!(A.entries)
+    update!(LS)
+    solve!(LS)
 
     residuals = zeros(T, length(Target.FEVectorBlocks))
     # CHECK RESIDUAL
@@ -615,7 +563,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     resnorm::T = 0.0
 
     ## INIT SOLVER
-    LS = LinearSystem{T,SC.linsolver}(Target.entries,A.entries,b.entries; update_after = SC.maxlureuse[1])
+    LS = SC.linsolver(Target.entries,A.entries,b.entries)
 
     if verbosity > 1
         @printf("\n  initial assembly time = %.2e (s)\n",assembly_time)
@@ -641,7 +589,13 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         end
 
         # SOLVE
-        time_solver = @elapsed linsolve!(LS; verbosity = verbosity - 1)
+        time_solver = @elapsed begin
+            flush!(A.entries)
+            if j == 1 || (j % SC.skip_update[1] == 0 && SC.skip_update[1] != -1)
+                update!(LS)
+            end
+            solve!(LS)
+        end
 
         # CHECK LINEAR RESIDUAL
         if verbosity > 1
@@ -802,9 +756,9 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
 
 
     ## INIT SOLVERS
-    LS = Array{LinearSystem,1}(undef,nsubiterations)
+    LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        LS[s] = LinearSystem{T,SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
+        LS[s] = SC.linsolver(x[s].entries,A[s].entries,b[s].entries)
     end
 
 
@@ -847,7 +801,13 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             # SOLVE
-            time_solver += @elapsed linsolve!(LS[s]; verbosity = verbosity - 1)
+            time_solver = @elapsed begin
+                flush!(A[s].entries)
+                if iteration == 1 || (iteration % SC.skip_update[s] == 0 && SC.skip_update[s] != -1)
+                    update!(LS[s])
+                end
+                solve!(LS[s])
+            end
 
             # CHECK LINEAR RESIDUAL
             if verbosity > 1
@@ -938,8 +898,8 @@ function solve!(
     time::Real = 0,
     maxResidual::Real = 1e-12,
     maxIterations::Int = 10,
-    linsolver = DirectUMFPACK,
-    maxlureuse = [1],
+    linsolver = "UMFPACK",          # or Type{<:AbstractLinearSystem}
+    skip_update = [1],
     anderson_iterations = 0, #  0 = Picard iteration, >0 Anderson iteration (experimental feature)
     verbosity::Int = 0)
 ````
@@ -950,8 +910,8 @@ Further optional arguments:
 - subiterations :  specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once
 - dirichlet_penalty : Dirichlet data is enforced by penalties on the diagonal of the matrix.
 - time : If time-dependent data is involved, the time can be fixed to some value here.
-- linsolver : specifies the linear solver that is used to solver the linear system of equation in each fixpoint iteration
-- maxlureuse : specifies after how much iterations the lu decomposition should be recomputed (-1 = only once if e.g. the matrix stays the same for each fixpoint iteration)
+- linsolver : specifies the linear solver that is used to solver the linear system of equation in each fixpoint iteration, "UMFPACK" will use the default direct solver
+- skip_update : specifies after how much iterations the lu decomposition should be recomputed (-1 = only once if e.g. the matrix stays the same for each fixpoint iteration)
 
 Depending on the subiterations and detected/configured nonlinearties the whole system is either solved directly in one step
 or via a fixed-point iteration.
@@ -965,8 +925,8 @@ function solve!(
     time::Real = 0,
     maxResidual::Real = 1e-12,
     maxIterations::Int = 10,
-    linsolver = DirectUMFPACK,
-    maxlureuse = [1],
+    linsolver = "UMFPACK",
+    skip_update = [1],
     damping = 0,
     anderson_iterations = 0, #  0 = Picard iteration, >0 Anderson iteration
     verbosity::Int = 0) where {T <: Real}
@@ -974,8 +934,12 @@ function solve!(
     SolverConfig = generate_solver(PDE, T; subiterations = subiterations, verbosity = verbosity)
     SolverConfig.dirichlet_penalty = dirichlet_penalty
     SolverConfig.anderson_iterations = anderson_iterations
-    SolverConfig.linsolver = linsolver
-    SolverConfig.maxlureuse = maxlureuse
+    if linsolver == "UMFPACK"
+        SolverConfig.linsolver = LinearSystemDirectUMFPACK{T,verbosity-1}
+    else
+        SolverConfig.linsolver = linsolver
+    end
+    SolverConfig.skip_update = skip_update
     SolverConfig.damping = damping
     
     if verbosity > 0
@@ -1039,7 +1003,7 @@ abstract type BackwardEuler <: AbstractTimeIntegrationRule end
 mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
     PDE::PDEDescription      # PDE description (operators, data etc.)
     SC::SolverConfig         # solver configurations (subiterations, penalties etc.)
-    LS::Array{LinearSystem,1} # array for linear solvers of all subiterations
+    LS::Array{AbstractLinearSystem,1} # array for linear solvers of all subiterations
     ctime::Real              # current time
     cstep::Real              # current timestep count
     last_timestep::Real      # last timestep
@@ -1129,8 +1093,8 @@ function TimeControlSolver(
     nonlinear_dt = [],
     nonlinear_iterations::Int = 1,
     maxResidual = 1e-12,
-    linsolver = DirectUMFPACK,
-    maxlureuse = [1],
+    linsolver = "UMFPACK",
+    skip_update = [1],
     dirichlet_penalty = 1e60)
 
     # generate solver for time-independent problem
@@ -1143,8 +1107,12 @@ function TimeControlSolver(
     SC.dirichlet_penalty = dirichlet_penalty
     SC.maxIterations = nonlinear_iterations
     SC.maxResidual = maxResidual
-    SC.linsolver = linsolver
-    SC.maxlureuse = maxlureuse
+    if linsolver == "UMFPACK"
+        SC.linsolver = LinearSystemDirectUMFPACK{Float64,verbosity-1}
+    else
+        SC.linsolver = linsolver
+    end
+    SC.skip_update = skip_update
 
     if verbosity > 0
 
@@ -1252,12 +1220,12 @@ function TimeControlSolver(
     dt_testfunction_operator = Array{DataType,1}(dt_testfunction_operator)
 
     # INIT LINEAR SOLVERS
-    LS = Array{LinearSystem,1}(undef,nsubiterations)
+    LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        if length(SC.maxlureuse) < s
-            push!(SC.maxlureuse, 1)
+        if length(SC.skip_update) < s
+            push!(SC.skip_update, 1)
         end
-        LS[s] = LinearSystem{Float64,SC.linsolver}(x[s].entries,A[s].entries,b[s].entries; update_after = SC.maxlureuse[s])
+        LS[s] = SC.linsolver(x[s].entries,A[s].entries,b[s].entries)
     end
 
     # if nonlinear iterations are performed we need to remember the iterate from last timestep
@@ -1509,9 +1477,13 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             # SOLVE
             if SC.verbosity > 2
                 println("\n  Solving equation(s) $(SC.subiterations[s])")
-                linsolve!(TCS.LS[s]; verbosity = SC.verbosity - 2)
-            else
-                linsolve!(TCS.LS[s]; verbosity = SC.verbosity - 2)
+            end
+            time_solver = @elapsed begin
+                flush!(A[s].entries)
+                if iteration == 1 || (iteration % SC.skip_update[s] == 0 && SC.skip_update[s] != -1)
+                    update!(TCS.LS[s])
+                end
+                solve!(TCS.LS[s])
             end
 
             # CHECK LINEAR RESIDUAL

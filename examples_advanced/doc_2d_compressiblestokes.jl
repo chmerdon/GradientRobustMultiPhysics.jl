@@ -208,7 +208,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
     ## so we can reuse the other subiteration matrices in each timestep
-    TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], maxlureuse = [-1,1,-1], timedependent_equations = [2], verbosity = verbosity)
+    TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], skip_update = [-1,1,-1], timedependent_equations = [2], verbosity = verbosity)
     advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 
     ## compute error in mass constraint
