@@ -333,10 +333,14 @@ function GenerateNonlinearForm(
         # the action for the derivative matrix DG is calculated by automatic differentiation (AD)
         # from the given action_kernel of the operator G
 
+        if length(argsizes) == 2
+            push!(argsizes,argsizes[2])
+        end
+
         # for differentation other dependencies of the action_kernel are fixed
         result_temp = Vector{Float64}(undef,argsizes[1])
-        input_temp = Vector{Float64}(undef,argsizes[2])
-        jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[2])
+        input_temp = Vector{Float64}(undef,argsizes[3])
+        jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[3])
         Dresult = DiffResults.DiffResult(result_temp,jac_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
         cfg =ForwardDiff.JacobianConfig(action_kernel.user_function, result_temp, input_temp)

@@ -4,11 +4,11 @@ abstract type AbstractExtendedDataFunction <: AbstractDataFunction end
 abstract type AbstractActionKernel <: AbstractUserDataType end
 abstract type AbstractNLActionKernel <: AbstractActionKernel end
 
-struct UserData{UST<: AbstractUserDataType}
+struct UserData{UST<: AbstractUserDataType,ndim}
     name::String
     dependencies::String
     quadorder::Int
-    dimensions::SVector{2,Int}     # length of result and input arrays
+    dimensions::SVector{ndim,Int}     # length of result and input arrays
     user_function::Function
     negotiated_function::Function
 end
@@ -77,7 +77,7 @@ function ActionKernel(f::Function, dimensions::Array{Int,1}; name = "user action
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, R, I, L)
     end
 
-    return UserData{AbstractActionKernel}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractActionKernel,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -103,13 +103,15 @@ and, as usual, the operator evaluations of the ansatz function (input_ansatz).
 No further dependencies are allowed currently. Note, that this is a work-in-progress feature.
 """
 function NLActionKernel(f::Function, dimensions::Array{Int,1}; name = "user nonlinear action kernel", dependencies::String = "", quadorder::Int = 0)
-
+    if length(dimensions) == 2
+        push!(dimensions,dimensions[2])
+    end
     nf = (result, input_current, input_ansatz, X,T,R,I,L) -> f(result, input_current, input_ansatz) # no other dependencies
     if dependencies != ""
         println("nonlinear action kernels that depend on extra variables are not yet supported")
     end
 
-    return UserData{AbstractNLActionKernel}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractNLActionKernel,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -147,7 +149,7 @@ function DataFunction(f::Function, dimensions::Array{Int,1}; name = "user data f
         nf = (result,X,T) -> f(result, X, T)
     end
 
-    return UserData{AbstractDataFunction}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractDataFunction,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 """
@@ -210,7 +212,7 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
         nf = (result,X,T,R,I,L) -> f(result, X, T, R, I, L)
     end
 
-    return UserData{AbstractExtendedDataFunction}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractExtendedDataFunction,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 @inline function eval!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)

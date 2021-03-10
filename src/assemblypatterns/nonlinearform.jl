@@ -66,7 +66,7 @@ function assemble!(
     maxnweights = get_maxnqweights(AM)
     action_input = Array{Array{T,1},1}(undef,maxnweights)
     for j = 1 : maxnweights
-        action_input[j] = zeros(T,action.argsizes[2]) # heap for action input
+        action_input[j] = zeros(T,action.argsizes[3]) # heap for action input
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
@@ -252,7 +252,7 @@ function assemble!(
     maxnweights = get_maxnqweights(AM)
     action_input = Array{Array{T,1},1}(undef,maxnweights)
     for j = 1 : maxnweights
-        action_input[j] = zeros(T,action.argsizes[2]) # heap for action input
+        action_input[j] = zeros(T,action.argsizes[3]) # heap for action input
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
