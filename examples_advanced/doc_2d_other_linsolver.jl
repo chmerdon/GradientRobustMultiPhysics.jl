@@ -52,8 +52,7 @@ function rhs!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; Plotter = nothing, verbosity = 2, nrefinements = 7, FEType = H1P1{1}, testmode = false, skip_update = 2)
+function main(; Plotter = nothing, verbosity = 2, nrefinements = 5, FEType = H1P1{1}, testmode = false, skip_update = 2)
 
     ## choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
@@ -80,17 +79,11 @@ function main(; Plotter = nothing, verbosity = 2, nrefinements = 7, FEType = H1P
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
 
-    ## prepare error calculation
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
-    L2error = []; H1error = []; NDofs = []
-
-    ## create finite element space
+    ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
-
-    ## solve the problem
     Solution = FEVector{Float64}("Solution",FES)
-    push!(NDofs,length(Solution.entries))
+
+    ## solve the problem (here the newly defined linear solver type is used)
     solve!(Solution, Problem; verbosity = verbosity, linsolver = MySolver{Float64}, skip_update = [skip_update])
 
     ## calculate error

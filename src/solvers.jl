@@ -32,7 +32,7 @@ mutable struct SolverConfig{T <: Real}
     maxResidual::T           # tolerance for residual
     current_time::T          # current time in a time-dependent setting
     dirichlet_penalty::T     # penalty for Dirichlet data
-    linsolver::Type{<:AbstractLinearSystem}
+    linsolver::Union{Nothing,Module,Type{<:AbstractLinearSystem}}
     anderson_iterations::Int    # number of Anderson iterations (= 0 normal fixed-point iterations, > 0 Anderson iterations)
     skip_update::Array{Int,1}    # max number of solves the LU decomposition of linsolver is reused
     damping::T               # damping factor (only for nonlinear solves, 0 = no damping, must be < 1 !)
@@ -46,6 +46,10 @@ mutable struct LinearSystemDirectUMFPACK{T,verbosity} <: AbstractLinearSystem{T}
     b::AbstractVector{T}
     ALU::SuiteSparse.UMFPACK.UmfpackLU{T,Int64}     # LU factorization
     LinearSystemDirectUMFPACK{T,verbosity}(x,A,b) where {T,verbosity} = new{T,verbosity}(x,A,b)
+end
+
+function createsolver(ST::Type{<:AbstractLinearSystem{T}},x,A,b) where {T}
+    return ST(x,A,b)
 end
 
 function update!(LS::AbstractLinearSystem{T}) where {T}
@@ -473,7 +477,7 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     end
 
     # SOLVE
-    LS = SC.linsolver(Target.entries,A.entries,b.entries)
+    LS = createsolver(SC.linsolver,Target.entries,A.entries,b.entries)
     flush!(A.entries)
     update!(LS)
     solve!(LS)
@@ -563,7 +567,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     resnorm::T = 0.0
 
     ## INIT SOLVER
-    LS = SC.linsolver(Target.entries,A.entries,b.entries)
+    LS = createsolver(SC.linsolver,Target.entries,A.entries,b.entries)
 
     if verbosity > 1
         @printf("\n  initial assembly time = %.2e (s)\n",assembly_time)
@@ -758,7 +762,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     ## INIT SOLVERS
     LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        LS[s] = SC.linsolver(x[s].entries,A[s].entries,b[s].entries)
+        LS[s] = createsolver(SC.linsolver,x[s].entries,A[s].entries,b[s].entries)
     end
 
 
@@ -1225,7 +1229,7 @@ function TimeControlSolver(
         if length(SC.skip_update) < s
             push!(SC.skip_update, 1)
         end
-        LS[s] = SC.linsolver(x[s].entries,A[s].entries,b[s].entries)
+        LS[s] = createsolver(SC.linsolver,x[s].entries,A[s].entries,b[s].entries)
     end
 
     # if nonlinear iterations are performed we need to remember the iterate from last timestep
