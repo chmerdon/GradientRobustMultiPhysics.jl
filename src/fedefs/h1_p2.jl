@@ -108,7 +108,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
 end
 
 
-function get_basis(::Type{<:AbstractAssemblyType},::Type{<:H1P2}, ::Type{<:Vertex0D})
+function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Vertex0D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis,xref)
         for k = 1 : ncomponents

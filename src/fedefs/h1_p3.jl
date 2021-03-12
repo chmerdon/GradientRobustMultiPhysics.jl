@@ -22,7 +22,7 @@ get_polynomialorder(::Type{<:H1P3}, ::Type{<:Triangle2D}) = 3;
 get_polynomialorder(::Type{<:H1P3}, ::Type{<:Tetrahedron3D}) = 3;
 
 get_dofmap_pattern(FEType::Type{<:H1P3}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I2"
-get_dofmap_pattern(FEType::Type{<:H1P3}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry0D}) = "N1"
+get_dofmap_pattern(FEType::Type{<:H1P3}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry0D}) = "N1"
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P3}
     edim = get_edim(FEType)
