@@ -48,7 +48,7 @@ mutable struct LinearSystemDirectUMFPACK{T,verbosity} <: AbstractLinearSystem{T}
     LinearSystemDirectUMFPACK{T,verbosity}(x,A,b) where {T,verbosity} = new{T,verbosity}(x,A,b)
 end
 
-function createsolver(ST::Type{<:AbstractLinearSystem{T}},x,A,b) where {T}
+function createsolver(ST::Type{<:AbstractLinearSystem{T}},x::AbstractVector{T},A::ExtendableSparseMatrix{T,Int64},b::AbstractVector{T}) where {T}
     return ST(x,A,b)
 end
 
@@ -1484,7 +1484,8 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end
             time_solver = @elapsed begin
                 flush!(A[s].entries)
-                if iteration == 1 || (iteration % SC.skip_update[s] == 0 && SC.skip_update[s] != -1)
+                if (SC.skip_update[s] == -1 && TCS.cstep == 1) ||
+                   (SC.skip_update[s] > 0 && (iteration == 1 || (iteration % SC.skip_update[s] == 0)))
                     update!(TCS.LS[s])
                 end
                 solve!(TCS.LS[s])
