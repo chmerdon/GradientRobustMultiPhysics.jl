@@ -57,17 +57,17 @@ function update!(LS::AbstractLinearSystem{T}) where {T}
 end
 
 function update!(LS::LinearSystemDirectUMFPACK{T,verbosity}) where {T, verbosity}
-    try
-        if verbosity > 1
-            println("\n  Updating LU decomposition...")
-        end
-        lu!(LS.ALU,LS.A.cscmatrix)
-    catch
+    #try
+    #    if verbosity > 1
+    #        println("\n  Updating LU decomposition...")
+    #    end
+    #    lu!(LS.ALU,LS.A.cscmatrix)
+    #catch
         if verbosity > 1
             println("\n  (Re)generating LU decomposition...")
         end
         LS.ALU = lu(LS.A.cscmatrix)
-    end
+    #end
 end
 
 function solve!(LS::LinearSystemDirectUMFPACK{T,verbosity}) where {T, verbosity}
