@@ -5,7 +5,6 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using Printf
 
-
 # problem data and expected exact solution
 function exact_solution!(result,x::Array{&lt;:Real,1})
     result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
@@ -13,10 +12,6 @@ end
 function exact_solution_gradient!(result,x::Array{&lt;:Real,1})
     result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1
     result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
-end
-function beta!(result)
-    result[1] = 1
-    result[2] = 0
 end
 function exact_solution_rhs!(diffusion)
     function closure(result,x::Array{&lt;:Real,1})
@@ -29,7 +24,7 @@ function exact_solution_rhs!(diffusion)
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 6)
+function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
 
     # load a mesh of the unit square (this one has triangles and quads in it)
     # it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
@@ -40,21 +35,23 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
     user_function = DataFunction(exact_solution!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 4)
     user_function_gradient = DataFunction(exact_solution_gradient!, [2,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 3)
     user_function_rhs = DataFunction(exact_solution_rhs!(diffusion), [1,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-    user_function_convection = DataFunction(beta!, [2,2]; name = &quot;beta&quot;, dependencies = &quot;&quot;, quadorder = 0)
+    user_function_convection = DataFunction([1,0]; name = &quot;beta&quot;)
 
     # choose a finite element type, here we choose a second order H1-conforming one
     FEType = H1P2{1,2}
 
-    # create PDE description = start with Poisson problem and add convection operator to block [1,1] and change equation name
-    Problem = PoissonProblem(2; diffusion = diffusion)
-    add_operator!(Problem, [1,1], ConvectionOperator(Float64,user_function_convection,1); equation_name = &quot;convection diffusion equation&quot;)
+    # create PDE description
+    Problem = PDEDescription(&quot;convection-diffusion problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;unknown&quot;, equation_name = &quot;convection-diffusion equation&quot;)
+    add_operator!(Problem, [1,1], LaplaceOperator(diffusion,2,1))
+    add_operator!(Problem, [1,1], ConvectionOperator(Float64,user_function_convection,1))
 
     # add right-hand side data to equation 1 (there is only one in this example)
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], user_function_rhs))
 
     # add boundary data to unknown 1 (there is only one in this example)
-    # on boundary regions where the solution is linear only need to be interpolated
-    # on boundary regions where the solution is zero only homoegeneous boundary conditions are needed
+    # on boundary regions where the solution is linear the data only needs to be interpolated
+    # on boundary regions where the solution is zero homoegeneous boundary conditions can be used
     add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
@@ -69,16 +66,15 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
             end
             return nothing
         end
-        stab_action_kernel = ActionKernel(stabilisation_kernel, [2,2]; name = &quot;stabilisation action kernel&quot;, dependencies = &quot;I&quot;, quadorder = 0)
-        # ... which generates an action...
-        stab_action = Action(Float64,stab_action_kernel)
-        # ... which is given to an bilinear form constructor
+        # ... which generates an action
+        stab_action = Action(Float64,stabilisation_kernel, [2,2]; name = &quot;stabilisation action&quot;, dependencies = &quot;I&quot;, quadorder = 0 )
+        # ... which is given to a bilinear form constructor
         JumpStabilisation = AbstractBilinearForm(&quot;[grad(u)] [grad(v)]&quot;, GradientDisc{Jump}, GradientDisc{Jump}, stab_action; AT = ON_IFACES)
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 
-    # finally we have a look at the problem
-    show(Problem)
+    # finally we have a look at the defined problem
+    @show Problem
 
     # define ItemIntegrators for L2/H1 error computation and some arrays to store the errors
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
@@ -89,20 +85,18 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
     for level = 1 : nlevels
 
         # uniform mesh refinement
-        if (level &gt; 1)
-            xgrid = uniform_refine(xgrid)
-        end
-
-        # generate FESpace
-        FES = FESpace{FEType}(xgrid)
+        xgrid = uniform_refine(xgrid)
         xFaceVolumes = xgrid[FaceVolumes] # update xFaceVolumes used in stabilisation definition
 
-        # solve PDE
-        Solution = FEVector{Float64}(&quot;Problem solution&quot;,FES)
-        solve!(Solution, Problem; verbosity = verbosity)
+        # generate FESpace and solution vector
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
         push!(NDofs,length(Solution.entries))
 
-        # interpolate
+        # solve PDE
+        solve!(Solution, Problem; verbosity = verbosity)
+
+        # interpolate (just for comparison)
         Interpolation = FEVector{Float64}(&quot;Interpolation&quot;,FES)
         interpolate!(Interpolation[1], user_function; verbosity = verbosity)
 
@@ -112,36 +106,30 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
         append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Interpolation[1])))
 
-        if (level == nlevels)
-            # print error history
-            println(&quot;\n         |   L2ERROR   |   L2ERROR&quot;)
-            println(&quot;   NDOF  |   SOLUTION  |   INTERPOL&quot;);
-            for j=1:nlevels
-                @printf(&quot;  %6d |&quot;,NDofs[j]);
-                @printf(&quot; %.5e |&quot;,L2error[j])
-                @printf(&quot; %.5e\n&quot;,L2errorInterpolation[j])
-            end
-            println(&quot;\n         |   H1ERROR   |   H1ERROR&quot;)
-            println(&quot;   NDOF  |   SOLUTION  |   INTERPOL&quot;);
-            for j=1:nlevels
-                @printf(&quot;  %6d |&quot;,NDofs[j]);
-                @printf(&quot; %.5e |&quot;,H1error[j])
-                @printf(&quot; %.5e\n&quot;,H1errorInterpolation[j])
-            end
+        # plot
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+    end
 
-            # plot
-            GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
-        end
+    # print error history
+    println(&quot;\n         |   L2ERROR   |   L2ERROR&quot;)
+    println(&quot;   NDOF  |   SOLUTION  |   INTERPOL&quot;);
+    for j=1:nlevels
+        @printf(&quot;  %6d | %.5e | %.5e\n&quot;,NDofs[j],L2error[j],L2errorInterpolation[j]);
+    end
+    println(&quot;\n         |   H1ERROR   |   H1ERROR&quot;)
+    println(&quot;   NDOF  |   SOLUTION  |   INTERPOL&quot;);
+    for j=1:nlevels
+        @printf(&quot;  %6d | %.5e | %.5e\n&quot;,NDofs[j],H1error[j],H1errorInterpolation[j]);
     end
 end
 
 end</code></pre><pre><code class="language-none">Main.##256.Example_2DConvectionDiffusion</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DConvectionDiffusion.main()</code></pre><pre><code class="language-none">
 PDE-DESCRIPTION
 ===============
-  system name = Poisson problem
+  system name = convection-diffusion problem
 
      id   | unknown name / equation name
-    [1]   | unknown / convection diffusion equation 
+    [1]   | unknown / convection-diffusion equation 
 
   LHS block | PDEOperator(s)
     [1,1]   | Laplacian (regions = [0])
@@ -156,33 +144,16 @@ PDE-DESCRIPTION
                          HomogeneousDirichletBoundary -&gt; [4]
                           
 
+Problem = 
 
 SOLVER
 ======
-  system name = Poisson problem  @time = 0
+  system name = convection-diffusion problem  @time = 0
 
-  target (FE) = Problem solution (H1P2{1,2}, ndofs = 23)
+  target (FE) = u_h (H1P2{1,2}, ndofs = 73)
                 
   subiteration | equations that are solved together
-       [1]     | convection diffusion equation
-
-  residuals = [5.826916881297299e-32]
-
-INTERPOLATING
-=============
-     source = u_exact @time = 0
-     target = Interpolation
-         AT = ON_CELLS
-         FE = H1P2{1,2} (ndofs = 23)
-
-SOLVER
-======
-  system name = Poisson problem  @time = 0
-
-  target (FE) = Problem solution (H1P2{1,2}, ndofs = 73)
-                
-  subiteration | equations that are solved together
-       [1]     | convection diffusion equation
+       [1]     | convection-diffusion equation
 
   residuals = [6.093397806728578e-32]
 
@@ -195,12 +166,12 @@ INTERPOLATING
 
 SOLVER
 ======
-  system name = Poisson problem  @time = 0
+  system name = convection-diffusion problem  @time = 0
 
-  target (FE) = Problem solution (H1P2{1,2}, ndofs = 257)
+  target (FE) = u_h (H1P2{1,2}, ndofs = 257)
                 
   subiteration | equations that are solved together
-       [1]     | convection diffusion equation
+       [1]     | convection-diffusion equation
 
   residuals = [2.853504117115047e-32]
 
@@ -213,12 +184,12 @@ INTERPOLATING
 
 SOLVER
 ======
-  system name = Poisson problem  @time = 0
+  system name = convection-diffusion problem  @time = 0
 
-  target (FE) = Problem solution (H1P2{1,2}, ndofs = 961)
+  target (FE) = u_h (H1P2{1,2}, ndofs = 961)
                 
   subiteration | equations that are solved together
-       [1]     | convection diffusion equation
+       [1]     | convection-diffusion equation
 
   residuals = [2.4930373057977187e-32]
 
@@ -231,12 +202,12 @@ INTERPOLATING
 
 SOLVER
 ======
-  system name = Poisson problem  @time = 0
+  system name = convection-diffusion problem  @time = 0
 
-  target (FE) = Problem solution (H1P2{1,2}, ndofs = 3713)
+  target (FE) = u_h (H1P2{1,2}, ndofs = 3713)
                 
   subiteration | equations that are solved together
-       [1]     | convection diffusion equation
+       [1]     | convection-diffusion equation
 
   residuals = [1.368136694586893e-32]
 
@@ -249,12 +220,12 @@ INTERPOLATING
 
 SOLVER
 ======
-  system name = Poisson problem  @time = 0
+  system name = convection-diffusion problem  @time = 0
 
-  target (FE) = Problem solution (H1P2{1,2}, ndofs = 14593)
+  target (FE) = u_h (H1P2{1,2}, ndofs = 14593)
                 
   subiteration | equations that are solved together
-       [1]     | convection diffusion equation
+       [1]     | convection-diffusion equation
 
   residuals = [8.225431666041658e-33]
 
@@ -267,7 +238,6 @@ INTERPOLATING
 
          |   L2ERROR   |   L2ERROR
    NDOF  |   SOLUTION  |   INTERPOL
-      23 | 6.14399e-03 | 3.08193e-03
       73 | 5.06404e-04 | 2.63439e-04
      257 | 5.68101e-05 | 2.78520e-05
      961 | 6.48860e-06 | 3.30383e-06
@@ -276,10 +246,9 @@ INTERPOLATING
 
          |   H1ERROR   |   H1ERROR
    NDOF  |   SOLUTION  |   INTERPOL
-      23 | 4.74771e-02 | 3.42620e-02
       73 | 9.79278e-03 | 7.64421e-03
      257 | 2.25428e-03 | 1.84899e-03
      961 | 5.29959e-04 | 4.58288e-04
     3713 | 1.27610e-04 | 1.14323e-04
    14593 | 3.12912e-05 | 2.85652e-05
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« Commuting Interpolators (2D)</a><a class="docs-footer-nextpage" href="../doc_2d_cookmembrane/">2D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 14:56">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_commutinginterpolators/">« Commuting Interpolators (2D)</a><a class="docs-footer-nextpage" href="../doc_2d_cookmembrane/">2D Linear Elasticity »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

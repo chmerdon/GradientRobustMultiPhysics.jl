@@ -109,6 +109,10 @@ function main(; verbosity = 1, nlevels = 15, theta = 1//2, Plotter = nothing)
             println(&quot;     dual L2 error = $(Results[level,4])&quot;)
         end
 
+        if level == nlevels
+            break;
+        end
+
         # mesh refinement
         if theta &gt;= 1
             # uniform mesh refinement
@@ -122,7 +126,7 @@ function main(; verbosity = 1, nlevels = 15, theta = 1//2, Plotter = nothing)
     end
 
     # plot
-    GradientRobustMultiPhysics.plot(Solution, [0,1,2], [Identity,Identity,Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = false)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
 
     # print results
     @printf(&quot;\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   &quot;)
@@ -350,4 +354,4 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
     return DualSolution
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity_eq/">« 2D Equilibration Error Estimation (Global)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 14:56">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity_eq/">« 2D Equilibration Error Estimation (Global)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

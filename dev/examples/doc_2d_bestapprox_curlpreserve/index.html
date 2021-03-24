@@ -35,7 +35,7 @@ function main(; verbosity = 1, Plotter = nothing)
 
     # add the right-hand side data for the constraint and inspect the defined problem
     add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], user_function_curl))
-    Base.show(Problem)
+    @show Problem
 
     # choose some (inf-sup stable) finite element types
     FEType = [HCURLN0{2}, H1P0{1}]
@@ -52,7 +52,7 @@ function main(; verbosity = 1, Plotter = nothing)
     println(&quot;L2error(Curl2D) = $(sqrt(evaluate(L2CurlErrorEvaluator,Solution[1])))&quot;)
 
     # plot
-    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Curl2D]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Curl2D]; Plotter = Plotter, verbosity = verbosity)
 end
 
 end</code></pre><pre><code class="language-none">Main.##254.Example_2DBestapproxCurlpreserve</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DBestapproxCurlpreserve.main()</code></pre><pre><code class="language-none">
@@ -78,6 +78,7 @@ PDE-DESCRIPTION
                          
    BoundaryOperator[2] : 
 
+Problem = 
 
 SOLVER
 ======
@@ -94,4 +95,4 @@ SOLVER
 
 L2error(Id) = 0.031068414520129876
 L2error(Curl2D) = 0.051031036307982794
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_1d_bestapprox/">« 1D L2-Bestapproximation</a><a class="docs-footer-nextpage" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 14:56">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_1d_bestapprox/">« 1D L2-Bestapproximation</a><a class="docs-footer-nextpage" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -61,7 +61,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         return nothing
     end
     # kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
-    # note: f = 0 here, but integrand can depend on x to allow for non-homogeneous rhs
+    # note: f = 0 here, but integrand can also be made x-dpendent to allow for non-homogeneous rhs
     function L2vol_integrand(result, input, item)
         result[1] = 0
         for j = 1 : length(input)
@@ -69,16 +69,14 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         end
         return nothing
     end
-    eta_jumps_action_kernel = ActionKernel(L2jump_integrand, [1,2]; name = &quot;estimator kernel jumps&quot;, dependencies = &quot;I&quot;, quadorder = 2)
-    eta_vol_action_kernel = ActionKernel(L2vol_integrand, [1,2]; name = &quot;estimator kernel volume&quot;, dependencies = &quot;I&quot;, quadorder = 1)
     # ... which generates an action...
-    eta_jumps_action = Action(Float64,eta_jumps_action_kernel)
-    eta_vol_action = Action(Float64,eta_vol_action_kernel)
+    eta_jumps_action = Action(Float64, L2jump_integrand, [1,2]; name = &quot;estimator kernel jumps&quot;, dependencies = &quot;I&quot;, quadorder = 2)
+    eta_vol_action = Action(Float64, L2vol_integrand, [1,2]; name = &quot;estimator kernel volume&quot;, dependencies = &quot;I&quot;, quadorder = 1)
     # ... which is used inside an ItemIntegrator
     jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action)
     volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action)
 
-    # refinement loop (only uniform for now)
+    # refinement loop
     NDofs = zeros(Int, nlevels)
     Results = zeros(Float64, nlevels, 3)
     Solution = nothing
@@ -86,7 +84,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
 
         # create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}(&quot;Discrete Solution&quot;,FES)
+        Solution = FEVector{Float64}(&quot;u&quot;,FES)
         solve!(Solution, Problem; verbosity = verbosity - 1)
         NDofs[level] = length(Solution[1])
         if verbosity &gt; 0
@@ -94,8 +92,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
             println(&quot;    ndofs = $(NDofs[level])&quot;)
         end
 
-        # error estimator jump term
-        # complete error estimator
+        # calculate local error estimator contributions
         xFaceVolumes = xgrid[FaceVolumes]
         xFaceNormals = xgrid[FaceNormals]
         xCellVolumes = xgrid[CellVolumes]
@@ -104,7 +101,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         evaluate!(vol_error,volIntegrator,[Solution[1]])
         evaluate!(jump_error,jumpIntegrator,[Solution[1]])
 
-        # calculate L2 error, H1 error, estimator and H2 error Results and write to results
+        # calculate L2 error, H1 error, total estimator and H2 error
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
         Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
@@ -112,6 +109,10 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
             println(&quot;  ESTIMATE&quot;)
             println(&quot;    estim H1 error = $(Results[level,3])&quot;)
             println(&quot;    exact H1 error = $(Results[level,2])&quot;)
+        end
+
+        if level == nlevels
+            break;
         end
 
         # mesh refinement
@@ -139,7 +140,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
     end
 
     # plot
-    GradientRobustMultiPhysics.plot(Solution, [0,1], [Identity,Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = false)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
 
     # print results
     @printf(&quot;\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   &quot;)
@@ -335,10 +336,6 @@ end</code></pre><pre><code class="language-none">Main.##269.Example_Lshape</code
   ESTIMATE
     estim H1 error = 0.002711745116635645
     exact H1 error = 0.00047610409067246783
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 726 / 860
-    red/blueR/blueL/green/unrefined = [204, 158, 160, 443, 3613]
-    bisected bfaces = 29
 
   NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   
 =========|========================|========================|========================
@@ -360,4 +357,4 @@ end</code></pre><pre><code class="language-none">Main.##269.Example_Lshape</code
     5030 | 6.42595e-06    3.456   | 8.91134e-04    1.981   | 5.02543e-03    1.985   |
     6813 | 3.92810e-06    3.244   | 6.49039e-04    2.090   | 3.68793e-03    2.040   |
     9303 | 2.49173e-06    2.922   | 4.76104e-04    1.989   | 2.71175e-03    1.974   |
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson-Iteration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 14:56">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson-Iteration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
