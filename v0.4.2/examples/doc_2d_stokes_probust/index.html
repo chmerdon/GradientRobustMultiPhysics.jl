@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Pressure-robustness · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li class="is-active"><a class="tocitem" href>2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Pressure-robustness</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Pressure-robustness</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_stokes_probust.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Pressure-robustness"><a class="docs-heading-anchor" href="#D-Pressure-robustness">2D Pressure-robustness</a><a id="D-Pressure-robustness-1"></a><a class="docs-heading-anchor-permalink" href="#D-Pressure-robustness" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_stokes_probust.jl">source code</a>)</p><p>This example studies two benchmarks for pressure-robust discretisations of the stationary     Navier-Stokes equations that seek a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>with (possibly time-dependent) exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>Pressure-robustness is concerned with gradient forces that may appear in the right-hand side or the material derivative and should be balanced by the pressure (as divergence-free vector fields are orthogonal on gradient fields). Here, two test problems are considered:</p><ol><li>HydrostaticTestProblem() : Stokes (without convection term) and <span>$\mathbf{f} = \nabla p$</span> such that  <span>$\mathbf{u} = 0$</span></li><li>PotentialFlowTestProblem() : Navier-Stokes with <span>$\mathbf{f} = 0$</span> and <span>$\mathbf{u} = \nabla h$</span> for some harmonic function</li></ol><p>In both test problems the errors of non-pressure-robust discretisations scale with  <span>$1/\mu$</span>, while the pressure-robust discretisation solves <span>$\mathbf{u} = 0$</span> exactly in test problem 1 and gives much better results in test problem 2.</p><pre><code class="language-julia">module Example_2DPressureRobustness
+
+using GradientRobustMultiPhysics
+using Printf
+
+# problem data
+function HydrostaticTestProblem()
+    # Stokes problem with f = grad(p)
+    # u = 0
+    # p = x^3+y^3 - 1//2
+    function P1_pressure!(result,x::Array{&lt;:Real,1})
+        result[1] = x[1]^3 + x[2]^3 - 1//2
+    end
+    function P1_rhs!(result,x::Array{&lt;:Real,1})
+        result[1] = 3*x[1]^2
+        result[2] = 3*x[2]^2
+    end
+    user_function_velocity = DataFunction([0,0]; name = &quot;u_exact&quot;)
+    user_function_pressure = DataFunction(P1_pressure!, [1,2]; name = &quot;p_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    user_function_velocity_gradient = DataFunction([0,0,0,0]; name = &quot;grad(u_exact)&quot;)
+    user_function_rhs = DataFunction(P1_rhs!, [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+
+    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, false
+end
+
+function PotentialFlowTestProblem()
+    # NavierStokes with f = 0
+    # u = grad(h) with h = x^3 - 3xy^2
+    # p = - |grad(h)|^2 + 14//5
+    function P2_pressure!(result,x::Array{&lt;:Real,1})
+        result[1] = - 1//2 * (9*(x[1]^4 + x[2]^4) + 18*x[1]^2*x[2]^2) + 14//5
+    end
+    function P2_velo!(result,x::Array{&lt;:Real,1})
+        result[1] = 3*x[1]^2 - 3*x[2]^2;
+        result[2] = -6*x[1]*x[2];
+    end
+    function P2_velogradient!(result,x::Array{&lt;:Real,1})
+        result[1] = 6*x[1]
+        result[2] = -6*x[2];
+        result[3] = -6*x[2];
+        result[4] = -6*x[1];
+    end
+    user_function_velocity = DataFunction(P2_velo!, [2,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    user_function_pressure = DataFunction(P2_pressure!, [1,2]; name = &quot;p_exact&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+    user_function_velocity_gradient = DataFunction(P2_velogradient!, [4,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    user_function_rhs = DataFunction([0,0]; name = &quot;f&quot;)
+
+    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, true
+end
+
+
+function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1, maxResidual = 1e-11, maxIterations = 20)
+
+    # load problem data and set solver parameters
+    ReconstructionOperator = FETypes[3]
+    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = Problem()
+
+    # load Stokes problem prototype and assign data
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!)
+    add_rhsdata!(Problem, 1, RhsOperator(ReconstructionOperator, [0], rhs!))
+
+    # define bestapproximation problems
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!; bestapprox_boundary_regions = [])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
+
+    # define ItemIntegrators for L2/H1 error computation
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity!, Identity)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, exact_pressure!, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity_gradient!, Gradient)
+    L2error_velocity = []; L2error_pressure = []; L2error_velocity2 = []; L2error_pressure2 = []
+    L2errorInterpolation_velocity = []; L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
+    H1error_velocity = []; H1error_velocity2 = []; H1errorBestApproximation_velocity = []; NDofs = []
+
+    # setup classical (Problem) and pressure-robust scheme (Problem2)
+    Problem2 = deepcopy(Problem)
+    Problem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!)
+    Problem2.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!)
+    if nonlinear
+        Problem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
+        Problem2.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
+        Problem.LHSOperators[1,1][2] = ConvectionOperator(1, Identity, 2, 2)
+        Problem2.LHSOperators[1,1][2] = ConvectionOperator(1, ReconstructionOperator, 2, 2; testfunction_operator = ReconstructionOperator)
+    end
+
+    # loop over refinement levels
+    for level = 1 : nlevels
+
+        # uniform mesh refinement
+        xgrid = uniform_refine(xgrid)
+        xFaceVolumes = xgrid[FaceVolumes]
+
+        # get FESpaces
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
+
+        Solution = FEVector{Float64}([&quot;velocity classic&quot;, &quot;pressure classic&quot;],FES)
+        solve!(Solution, Problem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
+        push!(NDofs,length(Solution.entries))
+
+        Solution2 = FEVector{Float64}([&quot;velocity p-robust&quot;, &quot;pressure p-robust&quot;],FES)
+        solve!(Solution2, Problem2; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
+
+        # solve bestapproximation problems
+        L2VelocityBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation velocity&quot;,FES[1])
+        L2PressureBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation pressure&quot;,FES[2])
+        H1VelocityBestapproximation = FEVector{Float64}(&quot;H1-Bestapproximation velocity&quot;,FES[1])
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem)
+
+        # compute L2 and H1 error
+        append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
+        append!(L2error_velocity2,sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1])))
+        append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1])))
+        append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
+        append!(L2error_pressure2,sqrt(evaluate(L2PressureErrorEvaluator,Solution2[2])))
+        append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1])))
+        append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
+        append!(H1error_velocity2,sqrt(evaluate(H1VelocityErrorEvaluator,Solution2[1])))
+        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1])))
+
+        # print results
+        if (level == nlevels) &amp;&amp; (print_results)
+            println(&quot;\n         |   L2ERROR    |   L2ERROR    |   L2ERROR&quot;)
+            println(&quot;   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-L2BEST&quot;);
+            for j=1:nlevels
+                @printf(&quot;  %6d |&quot;,NDofs[j]);
+                @printf(&quot; %.6e |&quot;,L2error_velocity[j])
+                @printf(&quot; %.6e |&quot;,L2error_velocity2[j])
+                @printf(&quot; %.6e\n&quot;,L2errorBestApproximation_velocity[j])
+            end
+            println(&quot;\n         |   H1ERROR    |   H1ERROR    |   H1ERROR&quot;)
+            println(&quot;   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-H1BEST&quot;);
+            for j=1:nlevels
+                @printf(&quot;  %6d |&quot;,NDofs[j]);
+                @printf(&quot; %.6e |&quot;,H1error_velocity[j])
+                @printf(&quot; %.6e |&quot;,H1error_velocity2[j])
+                @printf(&quot; %.6e\n&quot;,H1errorBestApproximation_velocity[j])
+            end
+            println(&quot;\n         |   L2ERROR    |   L2ERROR    |   L2ERROR&quot;)
+            println(&quot;   NDOF  | PRES-CLASSIC | PRES-PROBUST | PRES-L2BEST&quot;);
+            for j=1:nlevels
+                @printf(&quot;  %6d |&quot;,NDofs[j]);
+                @printf(&quot; %.6e |&quot;,L2error_pressure[j])
+                @printf(&quot; %.6e |&quot;,L2error_pressure2[j])
+                @printf(&quot; %.6e\n&quot;,L2errorBestApproximation_pressure[j])
+            end
+            println(&quot;\nLEGEND\n======&quot;)
+            println(&quot;VELO-CLASSIC : discrete Stokes velocity solution ($(FES[1].name)) with classical discretisation&quot;)
+            println(&quot;VELO-PROBUST : discrete Stokes velocity solution ($(FES[1].name)) with p-robust discretisation&quot;)
+            println(&quot;VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)&quot;)
+            println(&quot;VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)&quot;)
+            println(&quot;PRES-CLASSIC : discrete Stokes pressure solution ($(FES[2].name)) with classical discretisation&quot;)
+            println(&quot;PRES-PROBUST : discrete Stokes pressure solution ($(FES[1].name)) with p-robust discretisation&quot;)
+            println(&quot;PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)&quot;)
+        end
+    end
+
+    # return last error for testing
+    return L2error_velocity2[end]
+end
+
+
+# everything is wrapped in a main function
+function main(; verbosity = 1, nlevels = 3, viscosity = 1e-2)
+    # set problem to solve
+    Problem = HydrostaticTestProblem
+    #Problem = PotentialFlowTestProblem
+
+    # set grid and problem parameters
+    xgrid = grid_unitsquare_mixedgeometries() # initial grid
+
+    # choose finite element discretisation
+    #FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
+    FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
+    #FETypes = [H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
+
+    # run
+    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, verbosity = verbosity)
+
+    return nothing
+end
+
+
+# test function that is called by test unit
+# tests if hydrostatic problem is solved exactly by pressure-robust methods
+function test(; verbosity = 0)
+    xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
+
+    testspaces = [[H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]]
+    error = []
+    for FETypes in testspaces
+        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false, verbosity = verbosity))
+        println(&quot;FETypes = $FETypes   error = $(error[end])&quot;)
+    end
+    return maximum(error)
+end
+
+end</code></pre><pre><code class="language-none">Main.##279.Example_2DPressureRobustness</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DPressureRobustness.main()</code></pre><pre><code class="language-none">
+SOLVER
+======
+  system name = incompressible Stokes-Problem  @time = 0
+
+  target (FE) = velocity classic (H1BR{2}, ndofs = 98)
+                pressure classic (H1P0{1} (broken), ndofs = 24)
+                
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+  residuals = [5.98992345019401e-33, 9.275159215443477e-34]
+
+SOLVER
+======
+  system name = incompressible Stokes-Problem  @time = 0
+
+  target (FE) = velocity p-robust (H1BR{2}, ndofs = 98)
+                pressure p-robust (H1P0{1} (broken), ndofs = 24)
+                
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+  residuals = [9.03529769919793e-33, 9.504166183237774e-61]
+
+SOLVER
+======
+  system name = incompressible Stokes-Problem  @time = 0
+
+  target (FE) = velocity classic (H1BR{2}, ndofs = 338)
+                pressure classic (H1P0{1} (broken), ndofs = 96)
+                
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+  residuals = [3.8832455056829804e-33, 3.798375697247265e-35]
+
+SOLVER
+======
+  system name = incompressible Stokes-Problem  @time = 0
+
+  target (FE) = velocity p-robust (H1BR{2}, ndofs = 338)
+                pressure p-robust (H1P0{1} (broken), ndofs = 96)
+                
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+  residuals = [4.269179519429504e-33, 3.5724999283854123e-60]
+
+SOLVER
+======
+  system name = incompressible Stokes-Problem  @time = 0
+
+  target (FE) = velocity classic (H1BR{2}, ndofs = 1250)
+                pressure classic (H1P0{1} (broken), ndofs = 384)
+                
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+  residuals = [3.560581554110464e-33, 1.904080991746102e-36]
+
+SOLVER
+======
+  system name = incompressible Stokes-Problem  @time = 0
+
+  target (FE) = velocity p-robust (H1BR{2}, ndofs = 1250)
+                pressure p-robust (H1P0{1} (broken), ndofs = 384)
+                
+  subiteration | equations that are solved together
+       [1]     | momentum equation
+               | incompressibility constraint
+
+  residuals = [3.4702210495737144e-33, 2.803709568168576e-57]
+
+         |   L2ERROR    |   L2ERROR    |   L2ERROR
+   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-L2BEST
+     122 | 1.734502e-01 | 5.245111e-16 | 0.000000e+00
+     434 | 5.761955e-02 | 2.472379e-16 | 0.000000e+00
+    1634 | 1.621346e-02 | 2.786656e-16 | 0.000000e+00
+
+         |   H1ERROR    |   H1ERROR    |   H1ERROR
+   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-H1BEST
+     122 | 2.027603e+00 | 5.556659e-15 | 0.000000e+00
+     434 | 1.077731e+00 | 4.845953e-15 | 0.000000e+00
+    1634 | 5.618291e-01 | 1.039240e-14 | 0.000000e+00
+
+         |   L2ERROR    |   L2ERROR    |   L2ERROR
+   NDOF  | PRES-CLASSIC | PRES-PROBUST | PRES-L2BEST
+     122 | 1.403670e-01 | 1.367773e-01 | 1.367773e-01
+     434 | 7.081355e-02 | 6.940565e-02 | 6.940565e-02
+    1634 | 3.535149e-02 | 3.483044e-02 | 3.483044e-02
+
+LEGEND
+======
+VELO-CLASSIC : discrete Stokes velocity solution (H1BR{2}) with classical discretisation
+VELO-PROBUST : discrete Stokes velocity solution (H1BR{2}) with p-robust discretisation
+VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)
+VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)
+PRES-CLASSIC : discrete Stokes pressure solution (H1P0{1} (broken)) with classical discretisation
+PRES-PROBUST : discrete Stokes pressure solution (H1BR{2}) with p-robust discretisation
+PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson/">« 2D Nonlinear Poisson-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 21:20">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

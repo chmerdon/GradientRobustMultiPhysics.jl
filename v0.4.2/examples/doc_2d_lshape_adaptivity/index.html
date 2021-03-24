@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Adaptive Mesh Refinement (L-shape) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration)</a></li><li class="is-active"><a class="tocitem" href>2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Adaptive Mesh Refinement (L-shape)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Adaptive Mesh Refinement (L-shape)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_lshape_adaptivity.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Adaptive-Mesh-Refinement-(L-shape)"><a class="docs-heading-anchor" href="#D-Adaptive-Mesh-Refinement-(L-shape)">2D Adaptive Mesh Refinement (L-shape)</a><a id="D-Adaptive-Mesh-Refinement-(L-shape)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Adaptive-Mesh-Refinement-(L-shape)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_lshape_adaptivity.jl">source code</a>)</p><p>This example computes the standard-residual error estimator for the <span>$H^1$</span> error of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
++ \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \mathbf{n}]] \|^2_{L^2(F)}\]</p><p>This example script showcases the evaluation of 2nd order derivatives like the Laplacian and adaptive mesh refinement.</p><pre><code class="language-julia">module Example_Lshape
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using Printf
+
+# exact solution u for the Poisson problem
+function exact_function!(result,x::Array{&lt;:Real,1})
+    result[1] = atan(x[2],x[1])
+    if result[1] &lt; 0
+        result[1] += 2*pi
+    end
+    result[1] = sin(2*result[1]/3)
+    result[1] *= (x[1]^2 + x[2]^2)^(1/3)
+end
+# ... and its gradient
+function exact_function_gradient!(result,x::Array{&lt;:Real,1})
+    result[1] = atan(x[2],x[1])
+    if result[1] &lt; 0
+        result[1] += 2*pi
+    end
+    # du/dy = du/dr * sin(phi) + (1/r) * du/dphi * cos(phi)
+    result[2] = sin(2*result[1]/3) * sin(result[1]) + cos(2*result[1]/3) * cos(result[1])
+    result[2] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3
+    # du/dx = du/dr * cos(phi) - (1/r) * du/dphi * sin(phi)
+    result[1] = sin(2*result[1]/3) * cos(result[1]) - cos(2*result[1]/3) * sin(result[1])
+    result[1] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
+
+    # initial grid
+    xgrid = uniform_refine(grid_lshape(Triangle2D),2)
+
+    # choose some finite element
+    FEType = H1P2{1,2}
+
+    # negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+
+    # setup Poisson problem
+    Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
+    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = user_function)
+    add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
+
+    # setup exact error evaluations
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+
+    # define error estimator
+    # kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
+    function L2jump_integrand(result, input, item)
+        result[1] = ((input[1]*xFaceNormals[1,item])^2 + (input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
+        return nothing
+    end
+    # kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
+    # note: f = 0 here, but integrand can also be made x-dpendent to allow for non-homogeneous rhs
+    function L2vol_integrand(result, input, item)
+        result[1] = 0
+        for j = 1 : length(input)
+            result[1] += input[j]^2 * xCellVolumes[item]
+        end
+        return nothing
+    end
+    # ... which generates an action...
+    eta_jumps_action = Action(Float64, L2jump_integrand, [1,2]; name = &quot;estimator kernel jumps&quot;, dependencies = &quot;I&quot;, quadorder = 2)
+    eta_vol_action = Action(Float64, L2vol_integrand, [1,2]; name = &quot;estimator kernel volume&quot;, dependencies = &quot;I&quot;, quadorder = 1)
+    # ... which is used inside an ItemIntegrator
+    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action)
+    volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action)
+
+    # refinement loop
+    NDofs = zeros(Int, nlevels)
+    Results = zeros(Float64, nlevels, 3)
+    Solution = nothing
+    for level = 1 : nlevels
+
+        # create a solution vector and solve the problem
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector{Float64}(&quot;u&quot;,FES)
+        solve!(Solution, Problem; verbosity = verbosity - 1)
+        NDofs[level] = length(Solution[1])
+        if verbosity &gt; 0
+            println(&quot;\n  SOLVE LEVEL $level&quot;)
+            println(&quot;    ndofs = $(NDofs[level])&quot;)
+        end
+
+        # calculate local error estimator contributions
+        xFaceVolumes = xgrid[FaceVolumes]
+        xFaceNormals = xgrid[FaceNormals]
+        xCellVolumes = xgrid[CellVolumes]
+        vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
+        jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
+        evaluate!(vol_error,volIntegrator,[Solution[1]])
+        evaluate!(jump_error,jumpIntegrator,[Solution[1]])
+
+        # calculate L2 error, H1 error, total estimator and H2 error
+        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
+        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
+        Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
+        if verbosity &gt; 0
+            println(&quot;  ESTIMATE&quot;)
+            println(&quot;    estim H1 error = $(Results[level,3])&quot;)
+            println(&quot;    exact H1 error = $(Results[level,2])&quot;)
+        end
+
+        if level == nlevels
+            break;
+        end
+
+        # mesh refinement
+        if theta &gt;= 1
+            # uniform mesh refinement
+            xgrid = uniform_refine(xgrid)
+        else
+            # adaptive mesh refinement
+            # compute refinement indicators
+            nfaces = num_sources(xgrid[FaceNodes])
+            refinement_indicators = sum(jump_error, dims = 1)
+            xFaceCells = xgrid[FaceCells]
+            cell::Int = 0
+            for face = 1 : nfaces, k = 1 : 2
+                cell = xFaceCells[k,face]
+                if cell &gt; 0
+                    refinement_indicators[face] += vol_error[1,cell]
+                end
+            end
+
+            # refine by red-green-blue refinement (incl. closuring)
+            facemarker = bulk_mark(xgrid, refinement_indicators, theta; verbosity = verbosity, indicator_AT = ON_FACES)
+            xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
+        end
+    end
+
+    # plot
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
+
+    # print results
+    @printf(&quot;\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   &quot;)
+    @printf(&quot;\n=========|========================|========================|========================\n&quot;)
+    order = 0
+    for j=1:nlevels
+        @printf(&quot;  %6d |&quot;,NDofs[j]);
+        for k = 1 : 3
+            if j &gt; 1
+                order = log(Results[j-1,k]/Results[j,k]) / (log(NDofs[j]/NDofs[j-1])/2)
+            end
+            @printf(&quot; %.5e &quot;,Results[j,k])
+            @printf(&quot;   %.3f   |&quot;,order)
+        end
+        @printf(&quot;\n&quot;)
+    end
+
+end
+
+end</code></pre><pre><code class="language-none">Main.##269.Example_Lshape</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_Lshape.main()</code></pre><pre><code class="language-none">
+  SOLVE LEVEL 1
+    ndofs = 225
+  ESTIMATE
+    estim H1 error = 0.46777423242210076
+    exact H1 error = 0.08242715274914716
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 5
+    red/blueR/blueL/green/unrefined = [1, 1, 1, 3, 90]
+    bisected bfaces = 0
+
+  SOLVE LEVEL 2
+    ndofs = 245
+  ESTIMATE
+    estim H1 error = 0.2705802579946867
+    exact H1 error = 0.051644476000358604
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 7
+    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 100]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 3
+    ndofs = 271
+  ESTIMATE
+    estim H1 error = 0.18078323133808996
+    exact H1 error = 0.03424675768909563
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 7
+    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 112]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 4
+    ndofs = 297
+  ESTIMATE
+    estim H1 error = 0.12898396625124253
+    exact H1 error = 0.024094430763383544
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 2 / 7
+    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 124]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 5
+    ndofs = 323
+  ESTIMATE
+    estim H1 error = 0.1014017064476887
+    exact H1 error = 0.01859272878859967
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 5 / 11
+    red/blueR/blueL/green/unrefined = [1, 3, 3, 5, 130]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 6
+    ndofs = 365
+  ESTIMATE
+    estim H1 error = 0.0816083377023947
+    exact H1 error = 0.014849577531524324
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 10 / 17
+    red/blueR/blueL/green/unrefined = [3, 4, 3, 9, 143]
+    bisected bfaces = 2
+
+  SOLVE LEVEL 7
+    ndofs = 431
+  ESTIMATE
+    estim H1 error = 0.06294474356717268
+    exact H1 error = 0.011439201479174287
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 16 / 22
+    red/blueR/blueL/green/unrefined = [5, 5, 4, 8, 172]
+    bisected bfaces = 3
+
+  SOLVE LEVEL 8
+    ndofs = 516
+  ESTIMATE
+    estim H1 error = 0.049857897128651296
+    exact H1 error = 0.00896293946437206
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 28 / 35
+    red/blueR/blueL/green/unrefined = [10, 4, 5, 19, 197]
+    bisected bfaces = 3
+
+  SOLVE LEVEL 9
+    ndofs = 653
+  ESTIMATE
+    estim H1 error = 0.03880567131571971
+    exact H1 error = 0.006946488559426678
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 39 / 53
+    red/blueR/blueL/green/unrefined = [11, 9, 10, 29, 243]
+    bisected bfaces = 6
+
+  SOLVE LEVEL 10
+    ndofs = 859
+  ESTIMATE
+    estim H1 error = 0.029623119977286828
+    exact H1 error = 0.005335533262266187
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 56 / 71
+    red/blueR/blueL/green/unrefined = [18, 13, 12, 35, 324]
+    bisected bfaces = 3
+
+  SOLVE LEVEL 11
+    ndofs = 1140
+  ESTIMATE
+    estim H1 error = 0.022625442861439696
+    exact H1 error = 0.004071904287572567
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 77 / 87
+    red/blueR/blueL/green/unrefined = [18, 16, 15, 54, 438]
+    bisected bfaces = 4
+
+  SOLVE LEVEL 12
+    ndofs = 1484
+  ESTIMATE
+    estim H1 error = 0.016852949810639405
+    exact H1 error = 0.0030249541117442977
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 105 / 129
+    red/blueR/blueL/green/unrefined = [29, 23, 22, 74, 563]
+    bisected bfaces = 7
+
+  SOLVE LEVEL 13
+    ndofs = 1993
+  ESTIMATE
+    estim H1 error = 0.012683741538462957
+    exact H1 error = 0.0022677290496275573
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 145 / 184
+    red/blueR/blueL/green/unrefined = [44, 33, 33, 88, 764]
+    bisected bfaces = 16
+
+  SOLVE LEVEL 14
+    ndofs = 2713
+  ESTIMATE
+    estim H1 error = 0.009471209815703248
+    exact H1 error = 0.0016782897379485585
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 198 / 253
+    red/blueR/blueL/green/unrefined = [56, 50, 47, 135, 1026]
+    bisected bfaces = 9
+
+  SOLVE LEVEL 15
+    ndofs = 3716
+  ESTIMATE
+    estim H1 error = 0.006786807375560992
+    exact H1 error = 0.0012027103913761147
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 273 / 334
+    red/blueR/blueL/green/unrefined = [71, 61, 69, 173, 1437]
+    bisected bfaces = 22
+
+  SOLVE LEVEL 16
+    ndofs = 5030
+  ESTIMATE
+    estim H1 error = 0.005025429556375832
+    exact H1 error = 0.0008911337662681598
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 384 / 449
+    red/blueR/blueL/green/unrefined = [90, 95, 91, 243, 1938]
+    bisected bfaces = 13
+
+  SOLVE LEVEL 17
+    ndofs = 6813
+  ESTIMATE
+    estim H1 error = 0.0036879331675181404
+    exact H1 error = 0.0006490386213459127
+  RGB-REFINEMENT
+    bisected faces before/after closuring = 532 / 627
+    red/blueR/blueL/green/unrefined = [139, 127, 119, 327, 2630]
+    bisected bfaces = 18
+
+  SOLVE LEVEL 18
+    ndofs = 9303
+  ESTIMATE
+    estim H1 error = 0.002711745116635645
+    exact H1 error = 0.00047610409067246783
+
+  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   
+=========|========================|========================|========================
+     225 | 3.51513e-03    0.000   | 8.24272e-02    0.000   | 4.67774e-01    0.000   |
+     245 | 1.54195e-03    19.353   | 5.16445e-02    10.980   | 2.70580e-01    12.857   |
+     271 | 7.05652e-04    15.500   | 3.42468e-02    8.146   | 1.80783e-01    7.997   |
+     297 | 4.41473e-04    10.239   | 2.40944e-02    7.676   | 1.28984e-01    7.370   |
+     323 | 3.71256e-04    4.128   | 1.85927e-02    6.178   | 1.01402e-01    5.734   |
+     365 | 2.88551e-04    4.123   | 1.48496e-02    3.678   | 8.16083e-02    3.553   |
+     431 | 2.02334e-04    4.271   | 1.14392e-02    3.140   | 6.29447e-02    3.125   |
+     516 | 1.72474e-04    1.774   | 8.96294e-03    2.711   | 4.98579e-02    2.590   |
+     653 | 1.38064e-04    1.890   | 6.94649e-03    2.165   | 3.88057e-02    2.129   |
+     859 | 8.87911e-05    3.220   | 5.33553e-03    1.925   | 2.96231e-02    1.970   |
+    1140 | 6.70427e-05    1.985   | 4.07190e-03    1.910   | 2.26254e-02    1.904   |
+    1484 | 4.42021e-05    3.159   | 3.02495e-03    2.254   | 1.68529e-02    2.234   |
+    1993 | 2.90202e-05    2.854   | 2.26773e-03    1.954   | 1.26837e-02    1.927   |
+    2713 | 1.62991e-05    3.741   | 1.67829e-03    1.952   | 9.47121e-03    1.894   |
+    3716 | 1.08439e-05    2.591   | 1.20271e-03    2.118   | 6.78681e-03    2.119   |
+    5030 | 6.42595e-06    3.456   | 8.91134e-04    1.981   | 5.02543e-03    1.985   |
+    6813 | 3.92810e-06    3.244   | 6.49039e-04    2.090   | 3.68793e-03    2.040   |
+    9303 | 2.49173e-06    2.922   | 4.76104e-04    1.989   | 2.71175e-03    1.974   |
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson-Iteration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 21:20">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
