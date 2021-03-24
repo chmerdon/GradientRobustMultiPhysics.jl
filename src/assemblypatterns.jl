@@ -519,7 +519,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
         println("          EG = $EG")
         println("\n  List of arguments FEType / operator / ndofs4EG:")
         for k = 1 : length(FE)
-            println("      ($k) $(FE[k].name) / $(operator[k]) / $(ndofs4EG[k]) / $(basisAT[k])")
+            println("      ($k) $(FE[k].name) / $(operator[k]) / $(ndofs4EG[k])")
         end    
         if verbosity > 1
             for j = 1 : length(EG)

@@ -143,6 +143,7 @@ export FEBasisEvaluator, update!, eval!
 
 include("actions.jl")
 export AbstractAction, Action, MultiplyScalarAction, DoNotChangeAction
+export set_time!
 
 
 include("accumvector.jl")
@@ -192,12 +193,14 @@ export LHSoperator_also_modifies_RHS
 include("boundarydata.jl")
 export BoundaryOperator
 export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary
+export boundarydata!
 
 
 include("globalconstraints.jl")
 export AbstractGlobalConstraint
 export FixedIntegralMean
 export CombineDofs
+export apply_constraint!
 
 
 include("pdedescription.jl")
@@ -217,6 +220,9 @@ export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_t
 export show_statistics
 export AbstractTimeIntegrationRule
 export BackwardEuler
+
+include("diffeq_interface.jl")
+export eval_rhs!, eval_jacobian!, mass_matrix, jac_prototype
 
 include("pdeprototypes.jl")
 export CompressibleNavierStokesProblem

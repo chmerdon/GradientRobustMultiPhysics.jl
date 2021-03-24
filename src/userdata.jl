@@ -61,6 +61,8 @@ function ActionKernel(f::Function, dimensions::Array{Int,1}; name = "user action
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, L)
     elseif dependencies == "TI"
         nf = (result, input,X,T,R,I,L) -> f(result, input, T, I)
+    elseif dependencies == "RI"
+        nf = (result, input,X,T,R,I,L) -> f(result, input, R, I)
     elseif dependencies == "XTR"
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, R)
     elseif dependencies == "XTI"
@@ -198,6 +200,8 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
         nf = (result,X,T,R,I,L) -> f(result, X, I)
     elseif dependencies == "XL"
         nf = (result,X,T,R,I,L) -> f(result, X, L)
+    elseif dependencies == "RI"
+        nf = (result,X,T,R,I,L) -> f(result, R, I)
     elseif dependencies == "XTR"
         nf = (result,X,T,R,I,L) -> f(result, X, T, R)
     elseif dependencies == "XTI"

@@ -1195,6 +1195,7 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::RhsOperator{AT}, Cur
             set_time!(O.action, time)
             assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = false)
         else
+            set_time!(O.action, time)
             assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = true)
         end
     end
@@ -1240,6 +1241,7 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::AbstractNonlinearFor
         set_time!(O.action_rhs, time)
         assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = false)
     else
+        set_time!(O.action_rhs, time)
         assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = true)
     end
 end
