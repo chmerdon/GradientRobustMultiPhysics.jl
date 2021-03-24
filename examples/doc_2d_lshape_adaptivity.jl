@@ -74,7 +74,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         return nothing
     end
     ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
-    ## note: f = 0 here, but integrand can depend on x to allow for non-homogeneous rhs
+    ## note: f = 0 here, but integrand can also be made x-dpendent to allow for non-homogeneous rhs
     function L2vol_integrand(result, input, item)
         result[1] = 0
         for j = 1 : length(input)
@@ -82,16 +82,14 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         end
         return nothing
     end
-    eta_jumps_action_kernel = ActionKernel(L2jump_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
-    eta_vol_action_kernel = ActionKernel(L2vol_integrand, [1,2]; name = "estimator kernel volume", dependencies = "I", quadorder = 1)
     ## ... which generates an action...
-    eta_jumps_action = Action(Float64,eta_jumps_action_kernel)
-    eta_vol_action = Action(Float64,eta_vol_action_kernel)
+    eta_jumps_action = Action(Float64, L2jump_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
+    eta_vol_action = Action(Float64, L2vol_integrand, [1,2]; name = "estimator kernel volume", dependencies = "I", quadorder = 1)
     ## ... which is used inside an ItemIntegrator
     jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action)
     volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action)
           
-    ## refinement loop (only uniform for now)
+    ## refinement loop
     NDofs = zeros(Int, nlevels)
     Results = zeros(Float64, nlevels, 3)
     Solution = nothing
@@ -99,7 +97,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
 
         ## create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("Discrete Solution",FES)
+        Solution = FEVector{Float64}("u",FES)
         solve!(Solution, Problem; verbosity = verbosity - 1)
         NDofs[level] = length(Solution[1])
         if verbosity > 0
@@ -107,8 +105,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
             println("    ndofs = $(NDofs[level])")
         end
 
-        ## error estimator jump term 
-        ## complete error estimator
+        ## calculate local error estimator contributions
         xFaceVolumes = xgrid[FaceVolumes]
         xFaceNormals = xgrid[FaceNormals]
         xCellVolumes = xgrid[CellVolumes]
@@ -117,7 +114,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         evaluate!(vol_error,volIntegrator,[Solution[1]])
         evaluate!(jump_error,jumpIntegrator,[Solution[1]])
 
-        ## calculate L2 error, H1 error, estimator and H2 error Results and write to results
+        ## calculate L2 error, H1 error, total estimator and H2 error
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
         Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
@@ -125,6 +122,10 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
             println("  ESTIMATE")
             println("    estim H1 error = $(Results[level,3])")
             println("    exact H1 error = $(Results[level,2])")
+        end
+
+        if level == nlevels
+            break;
         end
 
         ## mesh refinement
@@ -152,7 +153,7 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
     end
     
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [0,1], [Identity,Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = false)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
     
     ## print results
     @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   ")

@@ -93,7 +93,7 @@ function main(; Plotter = nothing, verbosity = 2, nrefinements = 5, FEType = H1P
     println("H1error = $(sqrt(evaluate(H1ErrorEvaluator,Solution[1])))")
 
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
 end
 
 

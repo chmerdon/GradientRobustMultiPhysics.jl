@@ -49,7 +49,7 @@ function main(; Plotter = nothing, verbosity = 1)
     solve!(Solution, Problem; verbosity = verbosity)
 
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [1], [Identity]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
     
     ## solve again with Hdiv-continuous element
     ## to see that we get the same result

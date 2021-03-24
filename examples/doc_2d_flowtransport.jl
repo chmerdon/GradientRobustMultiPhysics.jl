@@ -46,30 +46,26 @@ function inlet_concentration!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk = true)
+function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity = 1)
 
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_upipe.sg")
     xgrid = uniform_refine(xgrid,4)
-
-    ## problem parameters
-    viscosity = 1 # coefficient for Stokes equation
 
     ## choose one of these (inf-sup stable) finite element type pairs for the flow
     #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
     #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
     FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
     #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
-    
-    #####################################################################################    
+       
     #####################################################################################
 
     ## negotiate data functions to the package
     user_function_inlet_velocity = DataFunction(inlet_velocity!, [2,2]; name = "inflow", dependencies = "X", quadorder = 2)
     user_function_inlet_species = DataFunction(inlet_concentration!, [1,2]; name = "inlet concentration", dependencies = "X", quadorder = 1)
 
-    ## load Stokes problem prototype
-    ## and assign boundary data (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)
+    ## load Stokes problem prototype and assign boundary data
+    ## (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
     Problem.name = "Stokes + Transport"
     add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)
@@ -90,20 +86,16 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
     end
     ## with boundary data (i.e. inlet concentration)
     add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = user_function_inlet_species)
-    Base.show(Problem)
+    @show Problem
     
-    ## generate FESpaces
-    FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
-    FESpacePressure = FESpace{FETypes[2]}(xgrid)
-    FESpaceConcentration = FESpace{FETypeTransport}(xgrid)
+    ## generate FESpaces and a solution vector for all 3 unknowns
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypeTransport}(xgrid)]
+    Solution = FEVector{Float64}(["velocity", "pressure", "concentration"],FES)
 
-    ## solve the decoupled flow problem
-    Solution = FEVector{Float64}("velocity",FESpaceVelocity)
-    append!(Solution,"pressure",FESpacePressure)
-    append!(Solution,"species concentration",FESpaceConcentration)
+    ## first solve the decoupled flow problem equations [1,2]
     solve!(Solution, Problem; subiterations = [[1,2]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
 
-    ## solve the transport by finite volumes or finite elements
+    ## then solve the transport equation [3] by finite volumes or finite elements
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
         TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], verbosity = verbosity)
@@ -113,17 +105,11 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, write_vtk 
         solve!(Solution, Problem; subiterations = [[3]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
     end
 
-    ## print minimal and maximal concentration
-    ## (maximum principle says it should be [0,1])
+    ## print minimal and maximal concentration to check max principle (shoule be in [0,1])
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [0,1,2,3], [Identity, Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
-
-    if write_vtk
-        mkpath("data/example_flowtransport/")
-        writeVTK!("data/example_flowtransport/results.vtk", Solution)
-    end
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
 end
 
 end

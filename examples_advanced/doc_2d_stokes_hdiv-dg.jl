@@ -144,7 +144,7 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
     add_rhsdata!(Problem, 1, HdivBoundary2)
 
     ## show final problem description
-    Base.show(Problem)
+    @show Problem
 
     ## loop over levels
     for level = 1 : nlevels
@@ -168,7 +168,7 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
         solve!(Solution, Problem; verbosity = verbosity, time = T)
 
         ## plot
-        GradientRobustMultiPhysics.plot(Solution, [1, 1, 2], [IdentityComponent{1}, IdentityComponent{2}, Identity, ]; Plotter = Plotter, verbosity = verbosity, subplots_per_column = 3)
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter, verbosity = verbosity)
 
         ## compute L2 and H1 error of all solutions
         push!(L2VelocityError, sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))

@@ -63,13 +63,7 @@ function exact_density!(M,c)
     function closure(result,x::Array{<:Real,1})
         result[1] = M*(1.0 - (x[2] - 0.5)/c)
     end
-end 
-
-## the exact velocity (zero!)
-function exact_velocity!(result)
-    result[1] = 0.0
-    result[2] = 0.0
-end 
+end
 
 ## gravity right-hand side (just gravity but with opposite sign!)
 function rhs_gravity!(gamma,c)
@@ -87,18 +81,16 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true, c = 
     xgrid = simplexgrid("assets/2d_grid_mountainrange.sg")
     xgrid = uniform_refine(xgrid,1)
 
-    ## solve without and with reconstruction
+    ## solve without and with reconstruction and plot
     Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma, verbosity = verbosity)
-    ## plots
-    GradientRobustMultiPhysics.plot(Solution, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity - 1)
-
     Solution2 = setup_and_solve(xgrid; reconstruct = true, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma, verbosity = verbosity)
-    ## plots
-    GradientRobustMultiPhysics.plot(Solution2, [1,2,3], [Identity, Identity, Identity]; Plotter = Plotter, verbosity = verbosity - 1)
+
+    # plot everything
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2],Solution2[1],Solution2[2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity - 1)
 
     ## compare L2 error for velocity and density
-    user_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "", quadorder = 0)
-    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 3)
+    user_velocity = DataFunction([0,0]; name = "u_exact")
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 1)
     L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
     L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
     L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
@@ -115,15 +107,14 @@ end
 function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, shear_modulus = 1, lambda = 0, verbosity = 0)
 
     ## negotiate edata functions to the package
-    user_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "", quadorder = 0)
-    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 3)
-    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = "g", dependencies = "X", quadorder = 3)
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 1)
+    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = "g", dependencies = "X", quadorder = 1)
 
     ## solver parameters
-    timestep = shear_modulus / (2*c)
+    timestep = 2 * shear_modulus / c
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
     maxTimeSteps = 1000  # termination criterion 1
-    stationarity_threshold = 1e-13/shear_modulus # stop when change is below this treshold
+    stationarity_threshold = 1e-12/shear_modulus # stop when change is below this treshold
 
     ## set finite element type [velocity, density,  pressure]
     FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel
@@ -136,7 +127,6 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
         VeloIdentity = Identity
         VeloDivergence = Divergence
     end
-
 
     ## generate empty PDEDescription for three unknowns
     ## unknown 1 : velocity (vector-valued)
@@ -161,36 +151,30 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
             eval!(temp, user_gravity, x, t)
             result[1] = - temp[1] * input[1] - temp[2] * input[2]
         end
-        gravity_action_kernel = ActionKernel(closure, [1,2]; name = "gravity action kernel", dependencies = "XT", quadorder = user_gravity.quadorder)
-        return Action(Float64, gravity_action_kernel)
+        gravity_action = Action(Float64, closure, [1,2]; name = "gravity action", dependencies = "XT", quadorder = user_gravity.quadorder)
     end    
     add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*rho",VeloIdentity,Identity,gravity_action(); store = true))
 
-    ## continuity equation
-    ## here a finite volume upwind convection operator on triangles is used
+    ## continuity equation (by FV upwind on triangles)
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
 
-    ## equation of state
-    ## here we do some best-approximation of the pressure that comes out of the equation of state
+    ## equation of state (by best-approximation, P0 mass matrix is diagonal)
     eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = "", quadorder = 0)
     eos_action = Action(Float64, eos_action_kernel)
     add_operator!(Problem, [3,2], AbstractBilinearForm("p * eos(density)",Identity,Identity,eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1); store = true))
 
     ## show Problem definition
-    show(Problem)
+    @show Problem
 
     ## generate FESpaces and solution vector
-    FESpaceV = FESpace{FETypes[1]}(xgrid)
-    FESpacePD = FESpace{FETypes[2]}(xgrid)
-    Solution = FEVector{Float64}("velocity",FESpaceV)
-    append!(Solution,"density",FESpacePD)
-    append!(Solution,"pressure",FESpacePD)
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
+    Solution = FEVector{Float64}(["v (reconst=$reconstruct)", "ϱ (reconst=$reconstruct)", "p (reconst=$reconstruct)"],FES)
 
     ## initial values for density (bestapproximation or constant)
     if initial_density_bestapprox 
         L2DensityBestapproximationProblem = L2BestapproximationProblem(user_density; bestapprox_boundary_regions = [])
-        InitialDensity = FEVector{Float64}("L2-Bestapproximation density",FESpacePD)
+        InitialDensity = FEVector{Float64}("L2-Bestapproximation density",FES[2])
         solve!(InitialDensity, L2DensityBestapproximationProblem)
         Solution[2][:] = InitialDensity[1][:]
     else

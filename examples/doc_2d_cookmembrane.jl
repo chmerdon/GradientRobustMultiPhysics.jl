@@ -18,7 +18,7 @@ with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and t
 for isotropic media.
 
 The domain will be the Cook membrane and the displacement has homogeneous boundary conditions on the left side of the domain
-and Neumann boundary conditions (i.e. a force that pulls the domain upwards) on the right side.
+and Neumann boundary conditions (i.e. a constant force that pulls the domain upwards) on the right side.
 
 =#
 
@@ -27,12 +27,6 @@ module Example_2DCookMembrane
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using Printf
-
-## problem data for Neumann boundary
-function neumann_force_right!(result)
-    result[1] = 0
-    result[2] = 10
-end    
 
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing)
@@ -47,34 +41,22 @@ function main(; verbosity = 1, Plotter = nothing)
     shear_modulus = (1/(1+poisson_number))*elasticity_modulus
     lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
 
-    ## negotiate data function to the package
-    user_function_neumann_bnd = DataFunction(neumann_force_right!, [2,2]; name = "g", dependencies = "", quadorder = 0)
-
-    ## choose finite element type
-    FEType = H1P1{2} # P1-Courant
-    #FEType = H1P2{2,2} # P2
-
     ## PDE description via prototype
-    LinElastProblem = LinearElasticityProblem(2; shear_modulus = shear_modulus, lambda = lambda)
+    Problem = LinearElasticityProblem(2; shear_modulus = shear_modulus, lambda = lambda)
 
-    ## add Neumann boundary data
-    add_rhsdata!(LinElastProblem, 1,  RhsOperator(Identity, [2], user_function_neumann_bnd; AT = ON_BFACES))
+    ## add boundary data
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [2], DataFunction([0,10]; name = "g"); AT = ON_BFACES))
+    add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
 
-    ## add Dirichlet boundary data
-    add_boundarydata!(LinElastProblem, 1, [4], HomogeneousDirichletBoundary)
+    ## show and solve PDE
+    @show Problem
+    FEType = H1P1{2} # P1-Courant FEM will be used
+    Solution = FEVector{Float64}("displacement",FESpace{FEType}(xgrid))
+    solve!(Solution, Problem; verbosity = verbosity)
 
-    ## show problem definition
-    show(LinElastProblem)
-
-    ## generate FESpace
-    FES = FESpace{FEType}(xgrid)
-
-    ## solve PDE
-    Solution = FEVector{Float64}("displacement",FES)
-    solve!(Solution, LinElastProblem; verbosity = verbosity)
-
-    ## plot stress
-    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+    ## plot stress on displaced mesh
+    displace_mesh!(xgrid, Solution[1]; magnify = 4)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
 end
 
 end

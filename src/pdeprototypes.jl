@@ -173,9 +173,8 @@ function H1BestapproximationProblem(
     bestapprox_boundary_regions = [])
 
     ncomponents = uexact.dimensions[1]
-    xdim = uexact.dimensions[2]
+    xdim = Int(uexact_gradient.dimensions[1] / ncomponents)
 
-    @assert uexact_gradient.dimensions[1] == ncomponents * xdim
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("H1-Bestapproximation problem")
     add_unknown!(Problem; unknown_name = "H1-bestapproximation", equation_name = "H1-bestapproximation equation")

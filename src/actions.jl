@@ -83,6 +83,11 @@ function Action(T, kernel::UserData{<:AbstractActionKernel}; name = "user action
     end
 end
 
+function Action(T::Type{<:Real}, kernel_function::Function, dimensions; name = "user action", dependencies = "", quadorder = 0)
+    kernel =  ActionKernel(kernel_function, dimensions; name = name * " (kernel)", dependencies = dependencies, quadorder = quadorder)
+    return Action(T, kernel; name = name)
+end
+
 """
 ````
 function MultiplyScalarAction(value, ncomponents::Int)

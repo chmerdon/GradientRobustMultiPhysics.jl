@@ -64,9 +64,7 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1},
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
-
-    ## print problem description
-    Base.show(Problem)
+    @show Problem
 
     ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
@@ -79,12 +77,12 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1},
         ## uniform mesh refinement
         xgrid = uniform_refine(xgrid)
         
-        ## create finite element space
+        ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
-
-        ## solve the problem
         Solution = FEVector{Float64}("Solution",FES)
         push!(NDofs,length(Solution.entries))
+
+        ## solve
         solve!(Solution, Problem; verbosity = verbosity)
 
         ## calculate L2 and H1 error
@@ -102,7 +100,7 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1},
         end
     
         ## plot
-        GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
     end
 end
 

@@ -45,7 +45,7 @@ function main(; verbosity = 1)
 
     ## add the right-hand side data for the constraint and inspect the defined problem
     add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], user_function_div))
-    Base.show(Problem)
+    @show Problem
 
     ## choose some (inf-sup stable) finite element types
     #FEType = [HDIVRT0{3}, H1P0{1}]
@@ -61,7 +61,6 @@ function main(; verbosity = 1)
     L2DivergenceErrorEvaluator = L2ErrorIntegrator(Float64, user_function_div, Divergence)
     println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
     println("L2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
- 
 end
 
 end

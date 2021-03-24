@@ -1,4 +1,3 @@
-
 #= 
 
 # 2D Convection-Diffusion-Problem
@@ -24,7 +23,6 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using Printf
 
-
 ## problem data and expected exact solution
 function exact_solution!(result,x::Array{<:Real,1})
     result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
@@ -33,10 +31,6 @@ function exact_solution_gradient!(result,x::Array{<:Real,1})
     result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1
     result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
 end    
-function beta!(result)
-    result[1] = 1
-    result[2] = 0
-end
 function exact_solution_rhs!(diffusion)
     function closure(result,x::Array{<:Real,1})
         ## diffusion part
@@ -48,7 +42,7 @@ function exact_solution_rhs!(diffusion)
 end    
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 6)
+function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
     
     ## load a mesh of the unit square (this one has triangles and quads in it)
     ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
@@ -59,21 +53,23 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
     user_function = DataFunction(exact_solution!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
     user_function_gradient = DataFunction(exact_solution_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 3)
     user_function_rhs = DataFunction(exact_solution_rhs!(diffusion), [1,2]; name = "f", dependencies = "X", quadorder = 3)
-    user_function_convection = DataFunction(beta!, [2,2]; name = "beta", dependencies = "", quadorder = 0)
+    user_function_convection = DataFunction([1,0]; name = "beta")
 
     ## choose a finite element type, here we choose a second order H1-conforming one
     FEType = H1P2{1,2}
 
-    ## create PDE description = start with Poisson problem and add convection operator to block [1,1] and change equation name
-    Problem = PoissonProblem(2; diffusion = diffusion)
-    add_operator!(Problem, [1,1], ConvectionOperator(Float64,user_function_convection,1); equation_name = "convection diffusion equation")
+    ## create PDE description
+    Problem = PDEDescription("convection-diffusion problem")
+    add_unknown!(Problem; unknown_name = "unknown", equation_name = "convection-diffusion equation")
+    add_operator!(Problem, [1,1], LaplaceOperator(diffusion,2,1))
+    add_operator!(Problem, [1,1], ConvectionOperator(Float64,user_function_convection,1))
 
     ## add right-hand side data to equation 1 (there is only one in this example)
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], user_function_rhs))
 
     ## add boundary data to unknown 1 (there is only one in this example)
-    ## on boundary regions where the solution is linear only need to be interpolated
-    ## on boundary regions where the solution is zero only homoegeneous boundary conditions are needed
+    ## on boundary regions where the solution is linear the data only needs to be interpolated
+    ## on boundary regions where the solution is zero homoegeneous boundary conditions can be used
     add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
@@ -88,16 +84,15 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
             end
             return nothing
         end
-        stab_action_kernel = ActionKernel(stabilisation_kernel, [2,2]; name = "stabilisation action kernel", dependencies = "I", quadorder = 0)
-        ## ... which generates an action...
-        stab_action = Action(Float64,stab_action_kernel)
-        ## ... which is given to an bilinear form constructor
+        ## ... which generates an action
+        stab_action = Action(Float64,stabilisation_kernel, [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
+        ## ... which is given to a bilinear form constructor
         JumpStabilisation = AbstractBilinearForm("[grad(u)] [grad(v)]", GradientDisc{Jump}, GradientDisc{Jump}, stab_action; AT = ON_IFACES)
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 
-    ## finally we have a look at the problem
-    show(Problem)
+    ## finally we have a look at the defined problem
+    @show Problem
 
     ## define ItemIntegrators for L2/H1 error computation and some arrays to store the errors
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
@@ -108,20 +103,18 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
     for level = 1 : nlevels
 
         ## uniform mesh refinement
-        if (level > 1) 
-            xgrid = uniform_refine(xgrid)
-        end
-
-        ## generate FESpace
-        FES = FESpace{FEType}(xgrid)
+        xgrid = uniform_refine(xgrid)
         xFaceVolumes = xgrid[FaceVolumes] # update xFaceVolumes used in stabilisation definition
 
-        ## solve PDE
-        Solution = FEVector{Float64}("Problem solution",FES)
-        solve!(Solution, Problem; verbosity = verbosity)
+        ## generate FESpace and solution vector
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector{Float64}("u_h",FES)
         push!(NDofs,length(Solution.entries))
 
-        ## interpolate
+        ## solve PDE
+        solve!(Solution, Problem; verbosity = verbosity)
+
+        ## interpolate (just for comparison)
         Interpolation = FEVector{Float64}("Interpolation",FES)
         interpolate!(Interpolation[1], user_function; verbosity = verbosity)
 
@@ -131,27 +124,21 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
         append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Interpolation[1])))
         
-        if (level == nlevels)
-            ## print error history
-            println("\n         |   L2ERROR   |   L2ERROR")
-            println("   NDOF  |   SOLUTION  |   INTERPOL");
-            for j=1:nlevels
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e |",L2error[j])
-                @printf(" %.5e\n",L2errorInterpolation[j])
-            end
-            println("\n         |   H1ERROR   |   H1ERROR")
-            println("   NDOF  |   SOLUTION  |   INTERPOL");
-            for j=1:nlevels
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e |",H1error[j])
-                @printf(" %.5e\n",H1errorInterpolation[j])
-            end
-
-            ## plot
-            GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
-        end    
+        ## plot
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
     end    
+
+    ## print error history
+    println("\n         |   L2ERROR   |   L2ERROR")
+    println("   NDOF  |   SOLUTION  |   INTERPOL");
+    for j=1:nlevels
+        @printf("  %6d | %.5e | %.5e\n",NDofs[j],L2error[j],L2errorInterpolation[j]);
+    end
+    println("\n         |   H1ERROR   |   H1ERROR")
+    println("   NDOF  |   SOLUTION  |   INTERPOL");
+    for j=1:nlevels
+        @printf("  %6d | %.5e | %.5e\n",NDofs[j],H1error[j],H1errorInterpolation[j]);
+    end
 end
 
 end

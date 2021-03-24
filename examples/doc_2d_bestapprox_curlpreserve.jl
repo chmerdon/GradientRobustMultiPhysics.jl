@@ -45,7 +45,7 @@ function main(; verbosity = 1, Plotter = nothing)
 
     ## add the right-hand side data for the constraint and inspect the defined problem
     add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], user_function_curl))
-    Base.show(Problem)
+    @show Problem
 
     ## choose some (inf-sup stable) finite element types
     FEType = [HCURLN0{2}, H1P0{1}]
@@ -62,7 +62,7 @@ function main(; verbosity = 1, Plotter = nothing)
     println("L2error(Curl2D) = $(sqrt(evaluate(L2CurlErrorEvaluator,Solution[1])))")
        
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [1,1], [Identity, Curl2D]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Curl2D]; Plotter = Plotter, verbosity = verbosity)
 end
 
 end

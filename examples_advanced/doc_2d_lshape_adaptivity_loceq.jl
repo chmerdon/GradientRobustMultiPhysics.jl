@@ -136,6 +136,10 @@ function main(; verbosity = 1, nlevels = 15, theta = 1//2, Plotter = nothing)
             println("     dual L2 error = $(Results[level,4])")
         end
 
+        if level == nlevels
+            break;
+        end
+        
         ## mesh refinement
         if theta >= 1
             ## uniform mesh refinement
@@ -149,7 +153,7 @@ function main(; verbosity = 1, nlevels = 15, theta = 1//2, Plotter = nothing)
     end
     
     ## plot
-    GradientRobustMultiPhysics.plot(Solution, [0,1,2], [Identity,Identity,Identity]; Plotter = Plotter, verbosity = verbosity, use_subplots = false)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
     
     ## print results
     @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   ")

@@ -573,16 +573,16 @@ function run_basis_tests()
         end
 
         # Define Stokes problem via PDETooles_PDEProtoTypes
-        StokesProblem = IncompressibleNavierStokesProblem(dim; nonlinear = false)
-        add_boundarydata!(StokesProblem, 1, [1,2,3,4,5,6,7,8], BestapproxDirichletBoundary; data = exact_velocity)
-        add_rhsdata!(StokesProblem, 1, RhsOperator(RhsOp, [0], rhs))
+        Problem = IncompressibleNavierStokesProblem(dim; nonlinear = false)
+        add_boundarydata!(Problem, 1, [1,2,3,4,5,6,7,8], BestapproxDirichletBoundary; data = exact_velocity)
+        add_rhsdata!(Problem, 1, RhsOperator(RhsOp, [0], rhs))
 
         # choose FE and generate FESpace
         FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid; broken = broken_p)]
 
         # solve
         Solution = FEVector{Float64}("Stokes-Solution",FES)
-        solve!(Solution, StokesProblem)
+        solve!(Solution, Problem)
 
         # check error
         L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, exact_velocity, RhsOp)

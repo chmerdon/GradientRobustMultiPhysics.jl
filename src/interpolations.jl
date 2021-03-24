@@ -340,3 +340,12 @@ Discontinuous (continuous = false) quantities are averaged.
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
     nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, zero_target = zero_target, target_offset = target_offset)
 end
+
+
+function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 1)
+    nnodes = size(xgrid[Coordinates],2)
+    nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(Source.FES)),nnodes)
+    nodevalues!(nodevals, Source, Identity)
+    xgrid[Coordinates] .+= magnify * nodevals
+end
+

@@ -154,6 +154,16 @@ function DataFunction(f::Function, dimensions::Array{Int,1}; name = "user data f
     return UserData{AbstractDataFunction,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
+
+function DataFunction(c::Array{<:Real,1}; name = "constant user data", quadorder::Int = 0)
+    dimensions = [length(c),0]
+    function f_from_c(result)
+        result .= c
+    end
+
+    return DataFunction(f_from_c, dimensions; name = name, dependencies = "", quadorder = quadorder)
+end
+
 """
 ````
 function ExtendedDataFunction(

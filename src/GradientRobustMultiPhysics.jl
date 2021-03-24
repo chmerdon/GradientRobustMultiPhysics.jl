@@ -136,6 +136,8 @@ export fill!, addblock!, addblock_matmul!, lrmatmul
 
 export get_reconstruction_matrix
 
+export displace_mesh!
+
 
 include("febasisevaluator.jl")
 export FEBasisEvaluator, update!, eval!
@@ -225,7 +227,7 @@ include("diffeq_interface.jl")
 export eval_rhs!, eval_jacobian!, mass_matrix, jac_prototype
 
 include("pdeprototypes.jl")
-export CompressibleNavierStokesProblem
+export CompressibleNavierProblem
 export IncompressibleNavierStokesProblem
 export LinearElasticityProblem
 export PoissonProblem
