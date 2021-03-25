@@ -19,7 +19,7 @@ function exact_gradient!(result,x::Array{&lt;:Real,1})
 end
 
 # everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 1, nlevels = 4)
+function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
 
     # choose initial mesh
     # (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
@@ -74,54 +74,10 @@ function main(; Plotter = nothing, verbosity = 1, nlevels = 4)
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
 end
 
-end</code></pre><pre><code class="language-none">Main.##316.Example_3DPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_3DPoisson.main()</code></pre><pre><code class="language-none">
-SOLVER
-======
-  system name = Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 27)
-                
-  subiteration | equations that are solved together
-       [1]     | Poisson equation
-
-  residuals = [3.0814879110195774e-33]
-
-SOLVER
-======
-  system name = Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 125)
-                
-  subiteration | equations that are solved together
-       [1]     | Poisson equation
-
-  residuals = [4.329317953992819e-32]
-
-SOLVER
-======
-  system name = Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 729)
-                
-  subiteration | equations that are solved together
-       [1]     | Poisson equation
-
-  residuals = [7.113348201246023e-32]
-
-SOLVER
-======
-  system name = Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 4913)
-                
-  subiteration | equations that are solved together
-       [1]     | Poisson equation
-
-  residuals = [7.144024107614193e-32]
-
+end</code></pre><pre><code class="language-none">Main.##271.Example_3DPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_3DPoisson.main()</code></pre><pre><code class="language-none">
    NDOF  |   L2ERROR   |   H1ERROR
       27 | 3.38581e-02 | 4.38269e-01
      125 | 8.97264e-03 | 2.25880e-01
      729 | 2.28139e-03 | 1.13818e-01
     4913 | 5.73658e-04 | 5.70179e-02
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_3d_commutinginterpolators/">« Commuting Interpolators (3D)</a><a class="docs-footer-nextpage" href="../doc_rational_massmatrix/">Rational Mass Matrix »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_3d_commutinginterpolators/">« Commuting Interpolators (3D)</a><a class="docs-footer-nextpage" href="../doc_rational_massmatrix/">Rational Mass Matrix »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:54">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

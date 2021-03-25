@@ -59,12 +59,12 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true, c = 
     L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
     L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
     L2error2 = sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1]))
+    L2error3 = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))
+    L2error4 = sqrt(evaluate(L2DensityErrorEvaluator,Solution2[2]))
     @printf(&quot;\n        reconstruct     false    |    true\n&quot;)
     @printf(&quot;================================================\n&quot;)
     @printf(&quot;L2error(Velocity) | %.5e  | %.5e \n&quot;,L2error,L2error2)
-    L2error = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))
-    L2error2 = sqrt(evaluate(L2DensityErrorEvaluator,Solution2[2]))
-    @printf(&quot;L2error(Density)  | %.5e  | %.5e \n&quot;,L2error,L2error2)
+    @printf(&quot;L2error(Density)  | %.5e  | %.5e \n&quot;,L2error3,L2error4)
 
 end
 
@@ -93,13 +93,13 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     end
 
     # generate empty PDEDescription for three unknowns
-    # unknown 1 : velocity (vector-valued)
-    # unknown 2 : density
-    # unknown 3 : pressure
+    # unknown 1 : velocity v (vector-valued)
+    # unknown 2 : density ϱ
+    # unknown 3 : pressure p
     Problem = PDEDescription(&quot;compressible Stokes problem&quot;)
-    add_unknown!(Problem; unknown_name = &quot;velocity&quot;, equation_name = &quot;momentum equation&quot;)
-    add_unknown!(Problem; unknown_name = &quot;density&quot;, equation_name = &quot;continuity equation&quot;)
-    add_unknown!(Problem; unknown_name = &quot;pressure&quot;, equation_name = &quot;equation of state&quot;)
+    add_unknown!(Problem; unknown_name = &quot;v&quot;, equation_name = &quot;momentum equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;ϱ&quot;, equation_name = &quot;continuity equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;equation of state&quot;)
     add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     # momentum equation
@@ -117,7 +117,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
         end
         gravity_action = Action(Float64, closure, [1,2]; name = &quot;gravity action&quot;, dependencies = &quot;XT&quot;, quadorder = user_gravity.quadorder)
     end
-    add_operator!(Problem, [1,2], AbstractBilinearForm(&quot;g*v*rho&quot;,VeloIdentity,Identity,gravity_action(); store = true))
+    add_operator!(Problem, [1,2], AbstractBilinearForm(&quot;g*v*ϱ&quot;,VeloIdentity,Identity,gravity_action(); store = true))
 
     # continuity equation (by FV upwind on triangles)
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
@@ -125,15 +125,12 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     # equation of state (by best-approximation, P0 mass matrix is diagonal)
     eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = &quot;&quot;, quadorder = 0)
     eos_action = Action(Float64, eos_action_kernel)
-    add_operator!(Problem, [3,2], AbstractBilinearForm(&quot;p * eos(density)&quot;,Identity,Identity,eos_action; apply_action_to = 2))
+    add_operator!(Problem, [3,2], AbstractBilinearForm(&quot;p * eos(ϱ)&quot;,Identity,Identity,eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], AbstractBilinearForm(&quot;p*q&quot;,Identity,Identity,MultiplyScalarAction(-1,1); store = true))
-
-    # show Problem definition
-    @show Problem
 
     # generate FESpaces and solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-    Solution = FEVector{Float64}([&quot;v (reconst=$reconstruct)&quot;, &quot;ϱ (reconst=$reconstruct)&quot;, &quot;p (reconst=$reconstruct)&quot;],FES)
+    Solution = FEVector{Float64}([&quot;v_h (reconst=$reconstruct)&quot;, &quot;ϱ_h (reconst=$reconstruct)&quot;, &quot;p_h (reconst=$reconstruct)&quot;],FES)
 
     # initial values for density (bestapproximation or constant)
     if initial_density_bestapprox
@@ -166,4 +163,4 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     return Solution
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../examples/doc_rational_massmatrix/">« Rational Mass Matrix</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../examples/doc_rational_massmatrix/">« Rational Mass Matrix</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:53">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

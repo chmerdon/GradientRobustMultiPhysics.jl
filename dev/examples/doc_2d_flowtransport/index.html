@@ -20,7 +20,7 @@ function inlet_concentration!(result,x::Array{&lt;:Real,1})
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity = 1)
+function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity = 1)
 
     # load mesh and refine
     xgrid = simplexgrid(&quot;assets/2d_grid_upipe.sg&quot;)
@@ -64,7 +64,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity 
 
     # generate FESpaces and a solution vector for all 3 unknowns
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypeTransport}(xgrid)]
-    Solution = FEVector{Float64}([&quot;velocity&quot;, &quot;pressure&quot;, &quot;concentration&quot;],FES)
+    Solution = FEVector{Float64}([&quot;v_h&quot;, &quot;p_h&quot;, &quot;c_h&quot;],FES)
 
     # first solve the decoupled flow problem equations [1,2]
     solve!(Solution, Problem; subiterations = [[1,2]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
@@ -72,7 +72,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity 
     # then solve the transport equation [3] by finite volumes or finite elements
     if FVtransport == true
         # pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], verbosity = verbosity)
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], verbosity = verbosity + 1)
         advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
     else
         # solve directly
@@ -86,7 +86,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity 
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
 end
 
-end</code></pre><pre><code class="language-none">Main.##267.Example_2DFlowTransport</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DFlowTransport.main()</code></pre><pre><code class="language-none">
+end</code></pre><pre><code class="language-none">Main.##263.Example_2DFlowTransport</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DFlowTransport.main()</code></pre><pre><code class="language-none">
 PDE-DESCRIPTION
 ===============
   system name = Stokes + Transport
@@ -121,43 +121,18 @@ PDE-DESCRIPTION
 
 Problem = 
 
-SOLVER
-======
-  system name = Stokes + Transport  @time = 0
-
-  target (FE) = velocity (H1BR{2}, ndofs = 12666)
-                pressure (H1P0{1} (broken), ndofs = 4864)
-                concentration (H1P0{1} (broken), ndofs = 4864)
-                
-  subiteration | equations that are solved together
-       [1]     | momentum equation
-               | incompressibility constraint
-  converged (maxResidual of 1.0e-12 reached)
-
-PREPARING TIME-DEPENDENT SOLVER
-===============================
-  system name = Stokes + Transport  @starttime = 0
-
-  FEs = H1BR{2} (ndofs = 12666)
-        H1P0{1} (broken) (ndofs = 4864)
-        H1P0{1} (broken) (ndofs = 4864)
-        
-  subiteration | equations that are solved together
-       [1]     | transport equation
-
-
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                         
-          |            |  (total)   |  velocity    pressure    concentration  
-       1  | 1.0000e+04 | 1.7192e-16 | 0.0000e+00  0.0000e+00  3.9306e+01 
-       2  | 2.0000e+04 | 1.9445e-16 | 0.0000e+00  0.0000e+00  1.1471e-01 
-       3  | 3.0000e+04 | 1.9998e-16 | 0.0000e+00  0.0000e+00  1.4916e-03 
-       4  | 4.0000e+04 | 2.0560e-16 | 0.0000e+00  0.0000e+00  2.9985e-05 
-       5  | 5.0000e+04 | 1.9951e-16 | 0.0000e+00  0.0000e+00  5.9612e-07 
-       6  | 6.0000e+04 | 1.9501e-16 | 0.0000e+00  0.0000e+00  1.1638e-08 
-       7  | 7.0000e+04 | 2.0024e-16 | 0.0000e+00  0.0000e+00  2.2492e-10 
-       8  | 8.0000e+04 | 1.9843e-16 | 0.0000e+00  0.0000e+00  4.3259e-12 
-       9  | 9.0000e+04 | 2.0077e-16 | 0.0000e+00  0.0000e+00  8.2774e-14 
+          |            |  (total)   |  velocity    pressure   concentrat 
+       1  | 1.0000e+04 | 1.7581e-16 | 0.0000e+00  0.0000e+00  3.9306e+01 
+       2  | 2.0000e+04 | 2.0136e-16 | 0.0000e+00  0.0000e+00  1.1471e-01 
+       3  | 3.0000e+04 | 1.8622e-16 | 0.0000e+00  0.0000e+00  1.4916e-03 
+       4  | 4.0000e+04 | 2.0782e-16 | 0.0000e+00  0.0000e+00  2.9985e-05 
+       5  | 5.0000e+04 | 1.9684e-16 | 0.0000e+00  0.0000e+00  5.9612e-07 
+       6  | 6.0000e+04 | 2.0544e-16 | 0.0000e+00  0.0000e+00  1.1638e-08 
+       7  | 7.0000e+04 | 2.0470e-16 | 0.0000e+00  0.0000e+00  2.2492e-10 
+       8  | 8.0000e+04 | 2.0471e-16 | 0.0000e+00  0.0000e+00  4.3254e-12 
+       9  | 9.0000e+04 | 2.0500e-16 | 0.0000e+00  0.0000e+00  8.3415e-14 
   stationarity detected after 9 timesteps
 
-[min(c),max(c)] = [0.041666666666666616,0.9791666666666667]
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_fe_on_faces/">« 2D Finite Elements on Faces</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[min(c),max(c)] = [0.04166666666666663,0.9791666666666667]
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_fe_on_faces/">« 2D Finite Elements on Faces</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:54">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -11,19 +11,19 @@ function exact_function!(result,x::Array{&lt;:Real,1})
 end
 
 # everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 1)
+function main(; Plotter = nothing, verbosity = 0)
 
     # choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
 
     # define bestapproximation problem
     user_function = DataFunction(exact_function!, [2,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
+    Problem = L2BestapproximationProblem(user_function; name = &quot;constrained L2-bestapproximation problem&quot;, bestapprox_boundary_regions = [])
 
     # we want to use a broken space and give the constraint of no normal jumps on interior faces
     # in form of a Lagrange multiplier, since there is no NormalFluxDisc{Jump} operator yet,
     # we have to use the full identity and multiply the normal vector in an action
-    add_unknown!(Problem; unknown_name = &quot;Lagrange multiplier for face jumps&quot;, equation_name = &quot;face jump constraint&quot;)
+    add_unknown!(Problem; unknown_name = &quot;LM face jumps&quot;, equation_name = &quot;face jump constraint&quot;)
     add_operator!(Problem, [1,2], LagrangeMultiplier(NormalFluxDisc{Jump}; AT = ON_IFACES))
     # the diagonal operator sets the Lagrange multiplier on all face boundary regions to zero
     add_operator!(Problem, [2,2], DiagonalOperator(&quot;Diag(1)&quot;, 1.0, true, [1,2,3,4]))
@@ -35,7 +35,7 @@ function main(; Plotter = nothing, verbosity = 1)
     FES = [FESpace{FEType[1]}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
 
     # solve
-    Solution = FEVector{Float64}(&quot;Hdiv-broken solution&quot;,FES)
+    Solution = FEVector{Float64}([&quot;u_h (Hdiv-broken)&quot;, &quot;LM face jumps&quot;],FES)
     solve!(Solution, Problem; verbosity = verbosity)
 
     # plot
@@ -47,43 +47,18 @@ function main(; Plotter = nothing, verbosity = 1)
     FES = FESpace{FEType[1]}(xgrid)
 
     # solve
-    Solution2 = FEVector{Float64}(&quot;Hdiv-cont. solution&quot;,FES)
+    Solution2 = FEVector{Float64}(&quot;u_h (Hdiv-cont.)&quot;,FES)
     solve!(Solution2, Problem; verbosity = verbosity)
 
     # calculate L2 error of both solutions and their difference
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
     L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
-    println(&quot;\nL2error(Hdiv broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
-    println(&quot;L2error(Hdiv cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))&quot;)
-    println(&quot;L2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))&quot;)
+    println(&quot;\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
+    println(&quot;\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))&quot;)
+    println(&quot;\tL2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))&quot;)
 end
 
-end</code></pre><pre><code class="language-none">Main.##266.Example_2DFaceElements</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DFaceElements.main()</code></pre><pre><code class="language-none">
-SOLVER
-======
-  system name = L2-Bestapproximation problem  @time = 0
-
-  target (FE) = Hdiv-broken solution [1] (HDIVRT1{2} (broken), ndofs = 2048)
-                Hdiv-broken solution [2] (H1P1{1} (broken), ndofs = 800)
-                
-  subiteration | equations that are solved together
-       [1]     | L2-bestapproximation equation
-               | face jump constraint
-
-  residuals = [1.3400368843096256e-32, 8.963979548065315e-34]
-
-SOLVER
-======
-  system name = L2-Bestapproximation problem  @time = 0
-
-  target (FE) = Hdiv-cont. solution (HDIVRT1{2}, ndofs = 1312)
-                
-  subiteration | equations that are solved together
-       [1]     | L2-bestapproximation equation
-
-  residuals = [1.4496279910219797e-32]
-
-L2error(Hdiv broken) = 0.0004715248381994763
-L2error(Hdiv cont.) = 0.00047152483819947594
-L2error(difference) = 5.610414426352323e-16
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_cookmembrane/">« 2D Linear Elasticity</a><a class="docs-footer-nextpage" href="../doc_2d_flowtransport/">2D Flow + Transport »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre><code class="language-none">Main.##262.Example_2DFaceElements</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DFaceElements.main()</code></pre><pre><code class="language-none">	L2error(Hdiv-broken) = 0.0004715248381994763
+	L2error(Hdiv-cont.) = 0.00047152483819947594
+	L2error(difference) = 5.610414426352323e-16
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_cookmembrane/">« 2D Linear Elasticity</a><a class="docs-footer-nextpage" href="../doc_2d_flowtransport/">2D Flow + Transport »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:54">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

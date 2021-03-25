@@ -33,7 +33,7 @@ function exact_rhs!(viscosity)
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, nlevels = 4, timestep = 1e-3, T = 1e-2, viscosity = 1e-6, graddiv = 0)
+function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, T = 1e-2, viscosity = 1e-6, graddiv = 0)
 
     # initial grid
     xgrid = grid_unitsquare(Triangle2D);
@@ -106,15 +106,15 @@ function main(; verbosity = 1, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
         Solution[1][:] = L2VelocityBestapproximation[1][:]
 
         # generate time-dependent solver and chance rhs data
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1], skip_update = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity)
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1], skip_update = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity + 1)
         advance_until_time!(TCS, timestep, T)
 
         # solve bestapproximation problems at final time for comparison
         L2PressureBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation pressure&quot;,FES[2])
         H1VelocityBestapproximation = FEVector{Float64}(&quot;H1-Bestapproximation velocity&quot;,FES[1])
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = T)
-        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem;)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = T, verbosity = verbosity - 1)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem; verbosity = verbosity - 1)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T, verbosity = verbosity - 1)
 
         # compute L2 and H1 error of all solutions
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
@@ -177,19 +177,7 @@ function main(; verbosity = 1, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     end
 end
 
-end</code></pre><pre><code class="language-none">Main.##295.Example_2DTransientStokes</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DTransientStokes.main()</code></pre><pre><code class="language-none">
-PREPARING TIME-DEPENDENT SOLVER
-===============================
-  system name = incompressible Stokes-Problem  @starttime = 0
-
-  FEs = H1BR{2} (ndofs = 54)
-        H1P0{1} (broken) (ndofs = 16)
-        
-  subiteration | equations that are solved together
-       [1]     | momentum equation
-               | incompressibility constraint
-
-
+end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientStokes</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DTransientStokes.main()</code></pre><pre><code class="language-none">
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
        1  | 1.0000e-03 | 4.5842e-14 | 4.9651e-03  5.8441e+00 
@@ -204,18 +192,6 @@ PREPARING TIME-DEPENDENT SOLVER
       10  | 1.0000e-02 | 7.3911e-14 | 3.6022e-03  1.7946e+00 
 
   arrived at time T = 1.0000e-02...
-
-PREPARING TIME-DEPENDENT SOLVER
-===============================
-  system name = incompressible Stokes-Problem  @starttime = 0
-
-  FEs = H1BR{2} (ndofs = 186)
-        H1P0{1} (broken) (ndofs = 64)
-        
-  subiteration | equations that are solved together
-       [1]     | momentum equation
-               | incompressibility constraint
-
 
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
@@ -232,18 +208,6 @@ PREPARING TIME-DEPENDENT SOLVER
 
   arrived at time T = 1.0000e-02...
 
-PREPARING TIME-DEPENDENT SOLVER
-===============================
-  system name = incompressible Stokes-Problem  @starttime = 0
-
-  FEs = H1BR{2} (ndofs = 690)
-        H1P0{1} (broken) (ndofs = 256)
-        
-  subiteration | equations that are solved together
-       [1]     | momentum equation
-               | incompressibility constraint
-
-
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
        1  | 1.0000e-03 | 2.0162e-14 | 1.1430e-02  1.2810e+01 
@@ -259,30 +223,18 @@ PREPARING TIME-DEPENDENT SOLVER
 
   arrived at time T = 1.0000e-02...
 
-PREPARING TIME-DEPENDENT SOLVER
-===============================
-  system name = incompressible Stokes-Problem  @starttime = 0
-
-  FEs = H1BR{2} (ndofs = 2658)
-        H1P0{1} (broken) (ndofs = 1024)
-        
-  subiteration | equations that are solved together
-       [1]     | momentum equation
-               | incompressibility constraint
-
-
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
-       1  | 1.0000e-03 | 1.1088e-14 | 2.2993e-02  2.5094e+01 
-       2  | 2.0000e-03 | 1.1247e-14 | 2.3341e-02  2.3426e+01 
-       3  | 3.0000e-03 | 1.1183e-14 | 2.3341e-02  2.3424e+01 
-       4  | 4.0000e-03 | 1.0853e-14 | 2.3341e-02  2.3424e+01 
-       5  | 5.0000e-03 | 1.0954e-14 | 2.3341e-02  2.3424e+01 
-       6  | 6.0000e-03 | 1.1066e-14 | 2.3341e-02  2.3424e+01 
-       7  | 7.0000e-03 | 1.0838e-14 | 2.3341e-02  2.3424e+01 
-       8  | 8.0000e-03 | 1.0791e-14 | 2.3341e-02  2.3424e+01 
-       9  | 9.0000e-03 | 1.1131e-14 | 2.3341e-02  2.3424e+01 
-      10  | 1.0000e-02 | 1.1319e-14 | 2.3341e-02  2.3424e+01 
+       1  | 1.0000e-03 | 1.0853e-14 | 2.2993e-02  2.5094e+01 
+       2  | 2.0000e-03 | 1.1266e-14 | 2.3341e-02  2.3426e+01 
+       3  | 3.0000e-03 | 1.0957e-14 | 2.3341e-02  2.3424e+01 
+       4  | 4.0000e-03 | 1.0586e-14 | 2.3341e-02  2.3424e+01 
+       5  | 5.0000e-03 | 1.1339e-14 | 2.3341e-02  2.3424e+01 
+       6  | 6.0000e-03 | 1.1144e-14 | 2.3341e-02  2.3424e+01 
+       7  | 7.0000e-03 | 1.1077e-14 | 2.3341e-02  2.3424e+01 
+       8  | 8.0000e-03 | 1.1070e-14 | 2.3341e-02  2.3424e+01 
+       9  | 9.0000e-03 | 1.1001e-14 | 2.3341e-02  2.3424e+01 
+      10  | 1.0000e-02 | 1.0810e-14 | 2.3341e-02  2.3424e+01 
 
   arrived at time T = 1.0000e-02...
 
@@ -314,4 +266,4 @@ VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)
 VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)
 PRES-STOKES : discrete Stokes pressure solution (H1P0{1} (broken))
 PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:54">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

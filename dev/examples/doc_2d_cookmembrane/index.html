@@ -9,7 +9,7 @@ using ExtendableGrids
 using Printf
 
 # everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main(; verbosity = 0, Plotter = nothing)
 
     # load mesh and refine
     xgrid = simplexgrid(&quot;assets/2d_grid_cookmembrane.sg&quot;)
@@ -39,7 +39,7 @@ function main(; verbosity = 1, Plotter = nothing)
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
 end
 
-end</code></pre><pre><code class="language-none">Main.##265.Example_2DCookMembrane</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DCookMembrane.main()</code></pre><pre><code class="language-none">
+end</code></pre><pre><code class="language-none">Main.##261.Example_2DCookMembrane</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DCookMembrane.main()</code></pre><pre><code class="language-none">
 PDE-DESCRIPTION
 ===============
   system name = linear elasticity problem
@@ -57,15 +57,4 @@ PDE-DESCRIPTION
                           
 
 Problem = 
-
-SOLVER
-======
-  system name = linear elasticity problem  @time = 0
-
-  target (FE) = displacement (H1P1{2}, ndofs = 3738)
-                
-  subiteration | equations that are solved together
-       [1]     | displacement equation
-
-  residuals = [3.2577515114547844e-23]
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_convectiondiffusion/">« 2D Convection-Diffusion-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_convectiondiffusion/">« 2D Convection-Diffusion-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:54">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

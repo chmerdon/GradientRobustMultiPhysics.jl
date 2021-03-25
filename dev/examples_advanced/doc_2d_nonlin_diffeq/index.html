@@ -31,7 +31,7 @@ end
 # everything is wrapped in a main function
 # the last four parametes steer the solver from DifferentialEquations.jl
 # for beta = 0, abstol and reltol can be choosen much larger
-function main(; verbosity = 1, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, beta = 1,
+function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, beta = 1,
     use_diffeq::Bool = true, solver = Rosenbrock23(autodiff = false), adaptive_timestep = true,  abstol = 1e-3, reltol = 1e-3)
 
     # initial grid and final time
@@ -54,7 +54,7 @@ function main(; verbosity = 1, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
     # generate problem description and assign nonlinear operator and data
     Problem = PDEDescription(&quot;nonlinear Poisson problem&quot;)
-    add_unknown!(Problem; unknown_name = &quot;unknown&quot;, equation_name = &quot;nonlinear Poisson equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;nonlinear Poisson equation&quot;)
     add_operator!(Problem, [1,1], beta == 0 ? LaplaceOperator(1,2,1) : nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs))
@@ -72,7 +72,7 @@ function main(; verbosity = 1, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
         # generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}(&quot;discrete solution&quot;,FES)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
         push!(NDofs,length(Solution.entries))
 
         # set initial solution
@@ -122,4 +122,4 @@ function main(; verbosity = 1, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     end
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity_loceq/">« 2D Equilibration Error Estimation (Local)</a><a class="docs-footer-nextpage" href="../doc_2d_other_linsolver/">2D User-defined Linear Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity_loceq/">« 2D Equilibration Error Estimation (Local)</a><a class="docs-footer-nextpage" href="../doc_2d_other_linsolver/">2D User-defined Linear Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:53">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

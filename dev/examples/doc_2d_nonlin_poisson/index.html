@@ -23,7 +23,7 @@ end
 
 # everything is wrapped in a main function
 # default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1}, testmode = false)
+function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false)
 
     # choose initial mesh
     xgrid = grid_unitsquare(Triangle2D)
@@ -68,7 +68,7 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1},
         push!(NDofs,length(Solution.entries))
 
         # solve
-        solve!(Solution, Problem; verbosity = verbosity)
+        solve!(Solution, Problem; verbosity = 2)
 
         # calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
@@ -96,7 +96,7 @@ function test(; verbosity = 0)
     return main(; verbosity = 0, FEType = H1P2{1,2}, nlevels = 1, testmode = true)
 end
 
-end</code></pre><pre><code class="language-none">Main.##274.Example_2DNonlinearPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DNonlinearPoisson.main()</code></pre><pre><code class="language-none">
+end</code></pre><pre><code class="language-none">Main.##266.Example_2DNonlinearPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DNonlinearPoisson.main()</code></pre><pre><code class="language-none">
 PDE-DESCRIPTION
 ===============
   system name = nonlinear Poisson problem
@@ -116,113 +116,59 @@ PDE-DESCRIPTION
 
 Problem = 
 
-SOLVER
-======
-  system name = nonlinear Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 13)
-                
-  subiteration | equations that are solved together
-       [1]     | nonlinear Poisson equation
-
-  initial assembly time = 7.74e+00 (s)
+  initial assembly time = 3.59e+00 (s)
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 1.244445e-16 | 1.879348e-01 | 4.81e-01/8.27e-05/4.81e-01
-        2   | 3.830598e-16 | 2.427676e-03 | 2.42e-04/1.15e-04/4.08e-04
-        3   | 5.946535e-16 | 3.580510e-07 | 2.32e-04/5.63e-05/3.19e-04
-        4   | 4.571021e-16 | 7.822532e-15 | 2.21e-04/5.51e-05/3.05e-04  converged after 4 iterations (maxResidual reached)
+        1   | 1.244445e-16 | 1.879348e-01 | 4.28e-01/7.67e-05/4.28e-01
+        2   | 3.830598e-16 | 2.427676e-03 | 2.58e-04/1.04e-04/4.02e-04
+        3   | 5.946535e-16 | 3.580510e-07 | 2.42e-04/5.36e-05/3.24e-04
+        4   | 4.571021e-16 | 7.822532e-15 | 2.40e-04/5.18e-05/3.20e-04  converged after 4 iterations (maxResidual reached)
 
-SOLVER
-======
-  system name = nonlinear Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 41)
-                
-  subiteration | equations that are solved together
-       [1]     | nonlinear Poisson equation
-
-  initial assembly time = 5.67e-03 (s)
+  initial assembly time = 4.83e-03 (s)
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 4.017305e-16 | 1.552235e-01 | 7.10e-04/1.93e-04/1.01e-03
-        2   | 8.199530e-16 | 1.898915e-03 | 1.02e-03/1.50e-04/1.23e-03
-        3   | 1.120407e-15 | 4.461316e-07 | 7.19e-04/1.59e-04/9.22e-04
-        4   | 1.041823e-15 | 2.404969e-14 | 6.72e-04/1.28e-04/8.39e-04  converged after 4 iterations (maxResidual reached)
+        1   | 4.017305e-16 | 1.552235e-01 | 7.92e-04/1.81e-04/1.04e-03
+        2   | 8.199530e-16 | 1.898915e-03 | 7.55e-04/1.48e-04/9.42e-04
+        3   | 1.120407e-15 | 4.461316e-07 | 7.48e-04/1.41e-04/9.27e-04
+        4   | 1.041823e-15 | 2.404969e-14 | 7.50e-04/1.43e-04/9.31e-04  converged after 4 iterations (maxResidual reached)
 
-SOLVER
-======
-  system name = nonlinear Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 145)
-                
-  subiteration | equations that are solved together
-       [1]     | nonlinear Poisson equation
-
-  initial assembly time = 7.11e-03 (s)
+  initial assembly time = 6.97e-03 (s)
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 1.567534e-15 | 9.834582e-02 | 2.60e-03/4.52e-04/3.16e-03
-        2   | 2.138880e-15 | 1.307935e-03 | 2.34e-03/5.37e-04/3.00e-03
-        3   | 1.342240e-15 | 4.214647e-07 | 2.50e-03/4.89e-04/3.05e-03
-        4   | 2.284159e-15 | 3.004029e-14 | 2.40e-03/5.35e-04/3.00e-03  converged after 4 iterations (maxResidual reached)
+        1   | 1.567534e-15 | 9.834582e-02 | 2.75e-03/5.10e-04/3.36e-03
+        2   | 2.138880e-15 | 1.307935e-03 | 3.19e-03/5.59e-04/3.82e-03
+        3   | 1.342240e-15 | 4.214647e-07 | 2.76e-03/4.89e-04/3.32e-03
+        4   | 2.284159e-15 | 3.004029e-14 | 2.76e-03/4.89e-04/3.32e-03  converged after 4 iterations (maxResidual reached)
 
-SOLVER
-======
-  system name = nonlinear Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 545)
-                
-  subiteration | equations that are solved together
-       [1]     | nonlinear Poisson equation
-
-  initial assembly time = 2.03e-02 (s)
+  initial assembly time = 2.15e-02 (s)
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 2.375487e-15 | 5.522608e-02 | 1.06e-02/2.14e-03/1.29e-02
-        2   | 4.706613e-15 | 8.487585e-04 | 9.80e-03/1.90e-03/1.18e-02
-        3   | 4.518438e-15 | 2.555420e-07 | 1.10e-02/2.21e-02/3.32e-02
-        4   | 3.913519e-15 | 2.246544e-14 | 1.05e-02/2.21e-03/1.29e-02  converged after 4 iterations (maxResidual reached)
+        1   | 2.375487e-15 | 5.522608e-02 | 1.12e-02/1.61e-03/1.30e-02
+        2   | 4.706613e-15 | 8.487585e-04 | 1.18e-02/1.85e-03/1.38e-02
+        3   | 4.518438e-15 | 2.555420e-07 | 1.12e-02/2.16e-02/3.30e-02
+        4   | 3.913519e-15 | 2.246544e-14 | 1.17e-02/2.01e-03/1.38e-02  converged after 4 iterations (maxResidual reached)
 
-SOLVER
-======
-  system name = nonlinear Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 2113)
-                
-  subiteration | equations that are solved together
-       [1]     | nonlinear Poisson equation
-
-  initial assembly time = 7.18e-02 (s)
+  initial assembly time = 7.98e-02 (s)
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 4.711251e-15 | 2.924738e-02 | 4.39e-02/6.49e-03/5.08e-02
-        2   | 9.177122e-15 | 4.905172e-04 | 4.08e-02/8.55e-03/4.96e-02
-        3   | 9.667342e-15 | 1.346748e-07 | 4.20e-02/8.42e-03/5.06e-02
-        4   | 9.546177e-15 | 1.872157e-14 | 4.49e-02/7.32e-03/5.25e-02  converged after 4 iterations (maxResidual reached)
+        1   | 4.711251e-15 | 2.924738e-02 | 4.63e-02/6.49e-03/5.33e-02
+        2   | 9.177122e-15 | 4.905172e-04 | 4.55e-02/8.58e-03/5.43e-02
+        3   | 9.667342e-15 | 1.346748e-07 | 4.60e-02/7.64e-03/5.38e-02
+        4   | 9.546177e-15 | 1.872157e-14 | 5.05e-02/8.35e-03/5.91e-02  converged after 4 iterations (maxResidual reached)
 
-SOLVER
-======
-  system name = nonlinear Poisson problem  @time = 0
-
-  target (FE) = Solution (H1P1{1}, ndofs = 8321)
-                
-  subiteration | equations that are solved together
-       [1]     | nonlinear Poisson equation
-
-  initial assembly time = 3.09e-01 (s)
+  initial assembly time = 3.16e-01 (s)
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 1.000564e-14 | 1.504798e-02 | 1.81e-01/2.86e-02/2.11e-01
-        2   | 1.882970e-14 | 2.640269e-04 | 2.07e-01/3.62e-02/2.44e-01
-        3   | 1.947354e-14 | 6.824838e-08 | 1.70e-01/3.69e-02/2.07e-01
-        4   | 1.890684e-14 | 3.066989e-14 | 1.71e-01/4.31e-02/2.15e-01  converged after 4 iterations (maxResidual reached)
+        1   | 1.002490e-14 | 1.504798e-02 | 1.86e-01/4.33e-02/2.31e-01
+        2   | 1.809081e-14 | 2.640269e-04 | 1.84e-01/3.58e-02/2.20e-01
+        3   | 1.905173e-14 | 6.824838e-08 | 1.85e-01/4.63e-02/2.32e-01
+        4   | 1.870385e-14 | 3.202329e-14 | 1.93e-01/3.73e-02/2.31e-01  converged after 4 iterations (maxResidual reached)
 
    NDOF  |   L2ERROR   |   H1ERROR
       13 | 6.62330e-03 | 1.44378e-01
@@ -231,4 +177,4 @@ SOLVER
      545 | 1.03688e-04 | 1.80423e-02
     2113 | 2.59229e-05 | 9.02111e-03
     8321 | 6.48078e-06 | 4.51055e-03
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity/">« 2D Adaptive Mesh Refinement (L-shape)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity/">« 2D Adaptive Mesh Refinement (L-shape)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:53">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -30,10 +30,10 @@ function exact_function_gradient!(result,x::Array{&lt;:Real,1})
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
+function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
 
     # initial grid
-    xgrid = uniform_refine(grid_lshape(Triangle2D),2)
+    xgrid = grid_lshape(Triangle2D)
 
     # choose some finite element
     FEType = H1P2{1,2}
@@ -73,8 +73,8 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
     eta_jumps_action = Action(Float64, L2jump_integrand, [1,2]; name = &quot;estimator kernel jumps&quot;, dependencies = &quot;I&quot;, quadorder = 2)
     eta_vol_action = Action(Float64, L2vol_integrand, [1,2]; name = &quot;estimator kernel volume&quot;, dependencies = &quot;I&quot;, quadorder = 1)
     # ... which is used inside an ItemIntegrator
-    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action)
-    volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action)
+    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action; name = &quot;η_F&quot;)
+    volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = &quot;η_T&quot;)
 
     # refinement loop
     NDofs = zeros(Int, nlevels)
@@ -83,14 +83,11 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
     for level = 1 : nlevels
 
         # create a solution vector and solve the problem
-        FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}(&quot;u&quot;,FES)
-        solve!(Solution, Problem; verbosity = verbosity - 1)
+        println(&quot;------- LEVEL $level&quot;)
+        FES = FESpace{FEType}(xgrid; verbosity = verbosity - 1)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        solve!(Solution, Problem; verbosity = verbosity)
         NDofs[level] = length(Solution[1])
-        if verbosity &gt; 0
-            println(&quot;\n  SOLVE LEVEL $level&quot;)
-            println(&quot;    ndofs = $(NDofs[level])&quot;)
-        end
 
         # calculate local error estimator contributions
         xFaceVolumes = xgrid[FaceVolumes]
@@ -98,18 +95,14 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         xCellVolumes = xgrid[CellVolumes]
         vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
         jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
-        evaluate!(vol_error,volIntegrator,[Solution[1]])
-        evaluate!(jump_error,jumpIntegrator,[Solution[1]])
+        evaluate!(vol_error,volIntegrator,[Solution[1]]; verbosity = -1)
+        evaluate!(jump_error,jumpIntegrator,[Solution[1]]; verbosity = -1)
 
         # calculate L2 error, H1 error, total estimator and H2 error
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
         Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
-        if verbosity &gt; 0
-            println(&quot;  ESTIMATE&quot;)
-            println(&quot;    estim H1 error = $(Results[level,3])&quot;)
-            println(&quot;    exact H1 error = $(Results[level,2])&quot;)
-        end
+        @info &quot;\tη/exact = $(Results[level,3]) / $(Results[level,2])&quot;
 
         if level == nlevels
             break;
@@ -160,201 +153,47 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
 
 end
 
-end</code></pre><pre><code class="language-none">Main.##269.Example_Lshape</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_Lshape.main()</code></pre><pre><code class="language-none">
-  SOLVE LEVEL 1
-    ndofs = 225
-  ESTIMATE
-    estim H1 error = 0.46777423242210076
-    exact H1 error = 0.08242715274914716
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 2 / 5
-    red/blueR/blueL/green/unrefined = [1, 1, 1, 3, 90]
-    bisected bfaces = 0
-
-  SOLVE LEVEL 2
-    ndofs = 245
-  ESTIMATE
-    estim H1 error = 0.2705802579946867
-    exact H1 error = 0.051644476000358604
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 2 / 7
-    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 100]
-    bisected bfaces = 2
-
-  SOLVE LEVEL 3
-    ndofs = 271
-  ESTIMATE
-    estim H1 error = 0.18078323133808996
-    exact H1 error = 0.03424675768909563
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 2 / 7
-    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 112]
-    bisected bfaces = 2
-
-  SOLVE LEVEL 4
-    ndofs = 297
-  ESTIMATE
-    estim H1 error = 0.12898396625124253
-    exact H1 error = 0.024094430763383544
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 2 / 7
-    red/blueR/blueL/green/unrefined = [1, 2, 2, 1, 124]
-    bisected bfaces = 2
-
-  SOLVE LEVEL 5
-    ndofs = 323
-  ESTIMATE
-    estim H1 error = 0.1014017064476887
-    exact H1 error = 0.01859272878859967
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 5 / 11
-    red/blueR/blueL/green/unrefined = [1, 3, 3, 5, 130]
-    bisected bfaces = 2
-
-  SOLVE LEVEL 6
-    ndofs = 365
-  ESTIMATE
-    estim H1 error = 0.0816083377023947
-    exact H1 error = 0.014849577531524324
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 10 / 17
-    red/blueR/blueL/green/unrefined = [3, 4, 3, 9, 143]
-    bisected bfaces = 2
-
-  SOLVE LEVEL 7
-    ndofs = 431
-  ESTIMATE
-    estim H1 error = 0.06294474356717268
-    exact H1 error = 0.011439201479174287
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 16 / 22
-    red/blueR/blueL/green/unrefined = [5, 5, 4, 8, 172]
-    bisected bfaces = 3
-
-  SOLVE LEVEL 8
-    ndofs = 516
-  ESTIMATE
-    estim H1 error = 0.049857897128651296
-    exact H1 error = 0.00896293946437206
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 28 / 35
-    red/blueR/blueL/green/unrefined = [10, 4, 5, 19, 197]
-    bisected bfaces = 3
-
-  SOLVE LEVEL 9
-    ndofs = 653
-  ESTIMATE
-    estim H1 error = 0.03880567131571971
-    exact H1 error = 0.006946488559426678
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 39 / 53
-    red/blueR/blueL/green/unrefined = [11, 9, 10, 29, 243]
-    bisected bfaces = 6
-
-  SOLVE LEVEL 10
-    ndofs = 859
-  ESTIMATE
-    estim H1 error = 0.029623119977286828
-    exact H1 error = 0.005335533262266187
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 56 / 71
-    red/blueR/blueL/green/unrefined = [18, 13, 12, 35, 324]
-    bisected bfaces = 3
-
-  SOLVE LEVEL 11
-    ndofs = 1140
-  ESTIMATE
-    estim H1 error = 0.022625442861439696
-    exact H1 error = 0.004071904287572567
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 77 / 87
-    red/blueR/blueL/green/unrefined = [18, 16, 15, 54, 438]
-    bisected bfaces = 4
-
-  SOLVE LEVEL 12
-    ndofs = 1484
-  ESTIMATE
-    estim H1 error = 0.016852949810639405
-    exact H1 error = 0.0030249541117442977
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 105 / 129
-    red/blueR/blueL/green/unrefined = [29, 23, 22, 74, 563]
-    bisected bfaces = 7
-
-  SOLVE LEVEL 13
-    ndofs = 1993
-  ESTIMATE
-    estim H1 error = 0.012683741538462957
-    exact H1 error = 0.0022677290496275573
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 145 / 184
-    red/blueR/blueL/green/unrefined = [44, 33, 33, 88, 764]
-    bisected bfaces = 16
-
-  SOLVE LEVEL 14
-    ndofs = 2713
-  ESTIMATE
-    estim H1 error = 0.009471209815703248
-    exact H1 error = 0.0016782897379485585
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 198 / 253
-    red/blueR/blueL/green/unrefined = [56, 50, 47, 135, 1026]
-    bisected bfaces = 9
-
-  SOLVE LEVEL 15
-    ndofs = 3716
-  ESTIMATE
-    estim H1 error = 0.006786807375560992
-    exact H1 error = 0.0012027103913761147
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 273 / 334
-    red/blueR/blueL/green/unrefined = [71, 61, 69, 173, 1437]
-    bisected bfaces = 22
-
-  SOLVE LEVEL 16
-    ndofs = 5030
-  ESTIMATE
-    estim H1 error = 0.005025429556375832
-    exact H1 error = 0.0008911337662681598
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 384 / 449
-    red/blueR/blueL/green/unrefined = [90, 95, 91, 243, 1938]
-    bisected bfaces = 13
-
-  SOLVE LEVEL 17
-    ndofs = 6813
-  ESTIMATE
-    estim H1 error = 0.0036879331675181404
-    exact H1 error = 0.0006490386213459127
-  RGB-REFINEMENT
-    bisected faces before/after closuring = 532 / 627
-    red/blueR/blueL/green/unrefined = [139, 127, 119, 327, 2630]
-    bisected bfaces = 18
-
-  SOLVE LEVEL 18
-    ndofs = 9303
-  ESTIMATE
-    estim H1 error = 0.002711745116635645
-    exact H1 error = 0.00047610409067246783
+end</code></pre><pre><code class="language-none">Main.##265.Example_Lshape</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_Lshape.main()</code></pre><pre><code class="language-none">------- LEVEL 1
+------- LEVEL 2
+------- LEVEL 3
+------- LEVEL 4
+------- LEVEL 5
+------- LEVEL 6
+------- LEVEL 7
+------- LEVEL 8
+------- LEVEL 9
+------- LEVEL 10
+------- LEVEL 11
+------- LEVEL 12
+------- LEVEL 13
+------- LEVEL 14
+------- LEVEL 15
+------- LEVEL 16
+------- LEVEL 17
+------- LEVEL 18
+------- LEVEL 19
+------- LEVEL 20
 
   NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   
 =========|========================|========================|========================
-     225 | 3.51513e-03    0.000   | 8.24272e-02    0.000   | 4.67774e-01    0.000   |
-     245 | 1.54195e-03    19.353   | 5.16445e-02    10.980   | 2.70580e-01    12.857   |
-     271 | 7.05652e-04    15.500   | 3.42468e-02    8.146   | 1.80783e-01    7.997   |
-     297 | 4.41473e-04    10.239   | 2.40944e-02    7.676   | 1.28984e-01    7.370   |
-     323 | 3.71256e-04    4.128   | 1.85927e-02    6.178   | 1.01402e-01    5.734   |
-     365 | 2.88551e-04    4.123   | 1.48496e-02    3.678   | 8.16083e-02    3.553   |
-     431 | 2.02334e-04    4.271   | 1.14392e-02    3.140   | 6.29447e-02    3.125   |
-     516 | 1.72474e-04    1.774   | 8.96294e-03    2.711   | 4.98579e-02    2.590   |
-     653 | 1.38064e-04    1.890   | 6.94649e-03    2.165   | 3.88057e-02    2.129   |
-     859 | 8.87911e-05    3.220   | 5.33553e-03    1.925   | 2.96231e-02    1.970   |
-    1140 | 6.70427e-05    1.985   | 4.07190e-03    1.910   | 2.26254e-02    1.904   |
-    1484 | 4.42021e-05    3.159   | 3.02495e-03    2.254   | 1.68529e-02    2.234   |
-    1993 | 2.90202e-05    2.854   | 2.26773e-03    1.954   | 1.26837e-02    1.927   |
-    2713 | 1.62991e-05    3.741   | 1.67829e-03    1.952   | 9.47121e-03    1.894   |
-    3716 | 1.08439e-05    2.591   | 1.20271e-03    2.118   | 6.78681e-03    2.119   |
-    5030 | 6.42595e-06    3.456   | 8.91134e-04    1.981   | 5.02543e-03    1.985   |
-    6813 | 3.92810e-06    3.244   | 6.49039e-04    2.090   | 3.68793e-03    2.040   |
-    9303 | 2.49173e-06    2.922   | 4.76104e-04    1.989   | 2.71175e-03    1.974   |
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson-Iteration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 24 March 2021 20:54">Wednesday 24 March 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      21 | 2.51263e-02    0.000   | 2.07647e-01    0.000   | 1.18092e+00    0.000   |
+      33 | 1.90247e-02    1.231   | 1.60862e-01    1.130   | 7.57469e-01    1.965   |
+      41 | 1.26917e-02    3.730   | 1.27100e-01    2.171   | 5.06051e-01    3.716   |
+      67 | 4.79055e-03    3.968   | 8.20803e-02    1.781   | 3.33339e-01    1.700   |
+      93 | 2.38377e-03    4.257   | 5.50044e-02    2.441   | 2.33083e-01    2.182   |
+     119 | 1.78155e-03    2.362   | 3.94562e-02    2.695   | 1.78695e-01    2.156   |
+     159 | 1.24278e-03    2.486   | 2.93726e-02    2.037   | 1.39159e-01    1.726   |
+     215 | 7.86008e-04    3.037   | 2.23902e-02    1.799   | 1.09821e-01    1.569   |
+     287 | 4.04477e-04    4.600   | 1.57169e-02    2.450   | 8.17449e-02    2.044   |
+     377 | 3.33412e-04    1.417   | 1.16609e-02    2.189   | 6.16431e-02    2.069   |
+     527 | 1.95675e-04    3.182   | 8.39438e-03    1.963   | 4.51313e-02    1.862   |
+     729 | 1.14131e-04    3.323   | 6.11747e-03    1.950   | 3.30817e-02    1.914   |
+    1025 | 8.23682e-05    1.914   | 4.50887e-03    1.791   | 2.43236e-02    1.805   |
+    1403 | 4.27727e-05    4.175   | 3.19464e-03    2.195   | 1.77212e-02    2.018   |
+    1951 | 2.80610e-05    2.557   | 2.31109e-03    1.964   | 1.28651e-02    1.942   |
+    2685 | 1.67382e-05    3.236   | 1.68659e-03    1.973   | 9.42862e-03    1.946   |
+    3647 | 1.15905e-05    2.400   | 1.24442e-03    1.986   | 6.94215e-03    1.999   |
+    4953 | 6.26521e-06    4.020   | 8.97681e-04    2.134   | 5.07336e-03    2.049   |
+    6781 | 3.91776e-06    2.989   | 6.53996e-04    2.016   | 3.72282e-03    1.971   |
+    9271 | 2.50250e-06    2.866   | 4.76773e-04    2.021   | 2.72507e-03    1.995   |
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson-Iteration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 16:53">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
