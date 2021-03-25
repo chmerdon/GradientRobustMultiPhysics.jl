@@ -46,7 +46,7 @@ function inlet_concentration!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity = 1)
+function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity = 1)
 
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_upipe.sg")
@@ -90,7 +90,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity 
     
     ## generate FESpaces and a solution vector for all 3 unknowns
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypeTransport}(xgrid)]
-    Solution = FEVector{Float64}(["velocity", "pressure", "concentration"],FES)
+    Solution = FEVector{Float64}(["v_h", "p_h", "c_h"],FES)
 
     ## first solve the decoupled flow problem equations [1,2]
     solve!(Solution, Problem; subiterations = [[1,2]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
@@ -98,7 +98,7 @@ function main(; verbosity = 1, Plotter = nothing, FVtransport = true, viscosity 
     ## then solve the transport equation [3] by finite volumes or finite elements
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], verbosity = verbosity)
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], verbosity = verbosity + 1)
         advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
     else
         ## solve directly

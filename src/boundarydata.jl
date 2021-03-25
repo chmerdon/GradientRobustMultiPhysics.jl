@@ -123,7 +123,7 @@ function boundarydata!(
                 if FE.broken == true
                     # face interpolation expects continuous dofmaps
                     # quick and dirty fix: use face interpolation and remap dofs to broken dofs
-                    FESc = FESpace{FEType}(FE.xgrid; dofmaps_needed = [CellDofs,BFaceDofs])
+                    FESc = FESpace{FEType}(FE.xgrid; verbosity = verbosity - 1)
                     Targetc = FEVector{Float64}("auxiliary data",FESc)
                     interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
                     xBFaceDofsc = FESc[BFaceDofs]
@@ -138,7 +138,7 @@ function boundarydata!(
                     end
                 else
                     # use face interpolation
-                    interpolate!(Target, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
+                    interpolate!(Target, ON_BFACES, O.data4bregion[bregion]; items = ibfaces, time = time, verbosity = verbosity - 1)
                 end
             end
         end   

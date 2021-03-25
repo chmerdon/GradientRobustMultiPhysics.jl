@@ -69,8 +69,8 @@ function get_coeffs!(coeffs::Array{T,1}, FE::AbstractArray{T,1}, AM::AssemblyMan
     end
 end
 
-
 mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}
+    name::String
     FES::Array{FESpace,1}
     operators::Array{DataType,1}
     action::AbstractAction
@@ -78,7 +78,8 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Abst
     AM::AssemblyManager # hidden stuff needed for assembly
     AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS}()
     AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} = new{APT,T,AT}()
-    AssemblyPattern{APT, T, AT}(FES,operators,action,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}(FES,operators,action,regions)
+    AssemblyPattern{APT, T, AT}(name,FES,operators,action,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}(name, FES,operators,action,regions)
+    AssemblyPattern{APT, T, AT}(FES,operators,action,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}("$APT", FES,operators,action,regions)
 end 
 
 # this function decides which basis should be evaluated for the evaluation of an operator

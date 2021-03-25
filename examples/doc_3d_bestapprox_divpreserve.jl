@@ -26,7 +26,7 @@ function exact_divergence!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1)
+function main(; verbosity = 0)
 
     ## generate a unit square mesh and refine
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),4)
@@ -59,8 +59,8 @@ function main(; verbosity = 1)
     ## calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
     L2DivergenceErrorEvaluator = L2ErrorIntegrator(Float64, user_function_div, Divergence)
-    println("\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-    println("L2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
+    println("\tL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
+    println("\tL2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
 end
 
 end

@@ -59,7 +59,7 @@ function exact_function_gradient!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, nlevels = 15, theta = 1//2, Plotter = nothing)
+function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
 
     ## initial grid
     xgrid = grid_lshape(Triangle2D)
@@ -139,7 +139,7 @@ function main(; verbosity = 1, nlevels = 15, theta = 1//2, Plotter = nothing)
         if level == nlevels
             break;
         end
-        
+
         ## mesh refinement
         if theta >= 1
             ## uniform mesh refinement

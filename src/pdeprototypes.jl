@@ -112,7 +112,7 @@ function PoissonProblem(
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("Poisson problem")
-    add_unknown!(Problem; unknown_name = "unknown", equation_name = "Poisson equation")
+    add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
     add_operator!(Problem, [1,1], LaplaceOperator(diffusion,dimension,ncomponents; AT = AT))
 
     return Problem
@@ -133,14 +133,17 @@ Creates an PDEDescription for an L2-Bestapproximation problem for the given exac
 """
 function L2BestapproximationProblem(
     uexact::UserData{AbstractDataFunction};
+    name = "L2-Bestapproximation problem",
+    unknown_name = "L2-bestapproximation",
+    equation_name = "L2-bestapproximation equation",
     bestapprox_boundary_regions = [],
     AT::Type{<:AbstractAssemblyType} = ON_CELLS)
 
     ncomponents = uexact.dimensions[1]
     xdim = uexact.dimensions[2]
     # generate empty PDEDescription for one unknown
-    Problem = PDEDescription("L2-Bestapproximation problem")
-    add_unknown!(Problem; unknown_name = "L2-bestapproximation", equation_name = "L2-bestapproximation equation")
+    Problem = PDEDescription(name)
+    add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
     add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents); AT = AT))
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], uexact; AT = AT))
     if length(bestapprox_boundary_regions) > 0
@@ -170,14 +173,17 @@ Creates an PDEDescription for an H1-Bestapproximation problem for the given exac
 function H1BestapproximationProblem(
     uexact_gradient::UserData{AbstractDataFunction},
     uexact::UserData{AbstractDataFunction};
+    name = "H1-Bestapproximation problem",
+    unknown_name = "H1-bestapproximation",
+    equation_name = "H1-bestapproximation equation",
     bestapprox_boundary_regions = [])
 
     ncomponents = uexact.dimensions[1]
     xdim = Int(uexact_gradient.dimensions[1] / ncomponents)
 
     # generate empty PDEDescription for one unknown
-    Problem = PDEDescription("H1-Bestapproximation problem")
-    add_unknown!(Problem; unknown_name = "H1-bestapproximation", equation_name = "H1-bestapproximation equation")
+    Problem = PDEDescription(name)
+    add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
     add_operator!(Problem, [1,1], LaplaceOperator(1.0,xdim,ncomponents))
     add_rhsdata!(Problem, 1, RhsOperator(Gradient, [0], uexact_gradient))
     if length(bestapprox_boundary_regions) > 0

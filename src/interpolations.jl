@@ -150,6 +150,10 @@ function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FETyp
     end
 end
 
+# remap boundary face interpolation to faces by using BFaces (if there is no special function by the finite element defined)
+function interpolate!(Target::FEVectorBlock, FES::FESpace, ::Type{ON_BFACES}, source_data; items = items, time = time)
+    interpolate!(Target, FES, ON_FACES, source_data; items = FES.xgrid[BFaces][items], time = time)
+end
 
 """
 ````
@@ -170,17 +174,21 @@ function interpolate!(Target::FEVectorBlock,
      items = [],
      time = 0,
      verbosity::Int = 0)
+
+    if verbosity >= 0
+        if is_timedependent(source_data)
+            @info "Interpolating $(source_data.name) >> $(Target.name) ($(printout(AT)) at time $time)"
+        else
+            @info "Interpolating $(source_data.name) >> $(Target.name) ($(printout(AT)))"
+        end
+    end
     if verbosity > 0
-        println("\nINTERPOLATING")
-        println("=============")
-        println("     source = $(source_data.name) @time = $time")
-        println("     target = $(Target.name)")
-        println("         AT = $AT")
-        println("         FE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
+        println("\tAT = $AT")
+        println("\tFE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
     end
     FEType = eltype(Target.FES)
     if Target.FES.broken == true
-        FESc = FESpace{FEType}(Target.FES.xgrid; dofmaps_needed = [CellDofs])
+        FESc = FESpace{FEType}(Target.FES.xgrid; verbosity = verbosity - 1)
         Targetc = FEVector{Float64}("auxiliary data",FESc)
         interpolate!(Targetc[1], FESc, AT, source_data; items = items, time = time)
         xCellDofs = Target.FES[CellDofs]

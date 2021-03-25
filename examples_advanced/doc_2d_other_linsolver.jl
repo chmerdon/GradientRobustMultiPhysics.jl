@@ -7,7 +7,7 @@ This example revisits the nonlinear Poisson example from the introductory exampl
 
 =#
 
-module Example_2DNonlinearPoisson
+module Example_2DCustomLinSolver
 
 using GradientRobustMultiPhysics
 using ExtendableSparse
@@ -52,7 +52,7 @@ function rhs!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 2, nrefinements = 5, FEType = H1P1{1}, testmode = false, skip_update = 2)
+function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P1{1}, testmode = false, skip_update = 2)
 
     ## choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
@@ -74,23 +74,23 @@ function main(; Plotter = nothing, verbosity = 2, nrefinements = 5, FEType = H1P
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
-    add_unknown!(Problem; unknown_name = "unknown", equation_name = "nonlinear Poisson equation")
+    add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
 
     ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector{Float64}("Solution",FES)
+    Solution = FEVector{Float64}("u_h",FES)
 
     ## solve the problem (here the newly defined linear solver type is used)
-    solve!(Solution, Problem; verbosity = verbosity, linsolver = MySolver{Float64}, skip_update = [skip_update])
+    solve!(Solution, Problem; verbosity = 2, linsolver = MySolver{Float64}, skip_update = [skip_update])
 
     ## calculate error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
     H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
-    println("\nL2error = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-    println("H1error = $(sqrt(evaluate(H1ErrorEvaluator,Solution[1])))")
+    println("\tL2error = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
+    println("\tH1error = $(sqrt(evaluate(H1ErrorEvaluator,Solution[1])))")
 
     ## plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)

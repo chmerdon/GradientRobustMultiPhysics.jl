@@ -25,7 +25,7 @@ function exact_curl!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main(; verbosity = 0, Plotter = nothing)
 
     ## generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])

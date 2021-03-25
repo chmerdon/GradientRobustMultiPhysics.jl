@@ -71,7 +71,6 @@ The broken switch allows to generate a broken finite element space (that is piec
 function FESpace{FEType,AT}(
     xgrid::ExtendableGrid;
     name = "",
-    dofmaps_needed = "auto",
     broken::Bool = false,
     verbosity = 0 ) where {FEType <:AbstractFiniteElement, AT<:AbstractAssemblyType}
     # piecewise constants are always broken
@@ -95,23 +94,8 @@ function FESpace{FEType,AT}(
     ndofs = count_ndofs(xgrid, FEType, broken)
     FES = FESpace{FEType,AT}(name,broken,ndofs,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
 
-    if verbosity > 0
-        println("  Initialising FESpace $FEType...")
-    end
-
-    # generate ordered dofmaps
-    if dofmaps_needed != "auto"
-        # generate required dof maps
-        for j = 1 : length(dofmaps_needed)
-            if verbosity > 0
-                println("  ...generating dofmap for $(dofmaps_needed[j])")
-                @time init_dofmap!(FES, dofmaps_needed[j])
-            else
-                init_dofmap!(FES, dofmaps_needed[j])
-            end
-        end
-    else
-        # dofmaps are generated on demand
+    if verbosity >= 0
+        @info "Generated FESpace $name ($(printout(AT)), ndofs=$ndofs)"
     end
 
     return FES
@@ -120,10 +104,9 @@ end
 function FESpace{FEType}(
     xgrid::ExtendableGrid;
     name = "",
-    dofmaps_needed = "auto",
     broken::Bool = false,
     verbosity = 0 ) where {FEType <:AbstractFiniteElement}
-    return FESpace{FEType,ON_CELLS}(xgrid; name = name, dofmaps_needed = dofmaps_needed, broken = broken, verbosity = verbosity)
+    return FESpace{FEType,ON_CELLS}(xgrid; name = name, broken = broken, verbosity = verbosity)
 end
 
 """

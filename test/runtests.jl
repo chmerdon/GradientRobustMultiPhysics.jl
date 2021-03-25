@@ -1,7 +1,7 @@
 using Test
 using ExtendableGrids
 using GradientRobustMultiPhysics
-
+using Logging
 include("test_jumps.jl")
 
 function run_basis_tests()
@@ -701,4 +701,6 @@ function run_all_tests()
     end
 end
 
+Logging.disable_logging(Logging.Info) # suppress @info messages
 run_all_tests()
+Logging.disable_logging(Logging.Debug)

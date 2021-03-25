@@ -31,7 +31,7 @@ function exact_gradient!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 1, nlevels = 4)
+function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
 
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)

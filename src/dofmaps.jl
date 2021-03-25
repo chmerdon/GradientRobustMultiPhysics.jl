@@ -474,7 +474,11 @@ end
 
 
 
-function init_dofmap!(FES::FESpace, DM::Type{<:DofMap})
+function init_dofmap!(FES::FESpace, DM::Type{<:DofMap}; verbosity::Int = -1)
+    if verbosity >= 0
+        @info "Generating dofmap $DM for FESpace $(FES.name)"
+    end
+
     if (FES.broken == true) && (DM != CellDofs)
         init_broken_dofmap!(FES, DM)
     else

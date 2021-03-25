@@ -303,7 +303,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     # generate reconstruction space
     # avoid computation of full dofmap
     # we will just use local basis functions
-    FE2 = FESpace{FETypeReconst}(FE.xgrid; dofmaps_needed = [])
+    FE2 = FESpace{FETypeReconst}(FE.xgrid; verbosity = verbosity - 1)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)

@@ -20,7 +20,7 @@ function exact_function!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = false)
+function main(; Plotter = nothing, verbosity = 0, nrefs = 2, broken::Bool = false)
 
     ## generate mesh and uniform refine nrefs times
     xgrid = simplexgrid([0.0,1//3,2//3,1.0])
@@ -48,7 +48,7 @@ function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = fals
     
     ## calculate the L2 error
     L2error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-    println("\nL2error(BestApprox) = $L2error")
+    println("\tL2error(BestApprox) = $L2error")
 
     ## to compare our discrete solution with a finer one, we interpolate the exact function
     ## again on some more refined mesh and also compute the L2 error on this one
@@ -56,7 +56,7 @@ function main(; Plotter = nothing, verbosity = 1, nrefs = 2, broken::Bool = fals
     FES_fine = FESpace{FEType}(xgrid_fine)
     Interpolation = FEVector{Float64}("fine-grid interpolation",FES_fine)
     interpolate!(Interpolation[1], ON_CELLS, user_function; verbosity = verbosity)
-    println("\nL2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
+    println("\tL2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
         
     ## evaluate/interpolate function at nodes and plot
     if Plotter != nothing

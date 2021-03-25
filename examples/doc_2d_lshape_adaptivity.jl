@@ -43,10 +43,10 @@ function exact_function_gradient!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
+function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
 
     ## initial grid
-    xgrid = uniform_refine(grid_lshape(Triangle2D),2)
+    xgrid = grid_lshape(Triangle2D)
 
     ## choose some finite element
     FEType = H1P2{1,2}
@@ -86,8 +86,8 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
     eta_jumps_action = Action(Float64, L2jump_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
     eta_vol_action = Action(Float64, L2vol_integrand, [1,2]; name = "estimator kernel volume", dependencies = "I", quadorder = 1)
     ## ... which is used inside an ItemIntegrator
-    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action)
-    volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action)
+    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action; name = "η_F")
+    volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = "η_T")
           
     ## refinement loop
     NDofs = zeros(Int, nlevels)
@@ -96,14 +96,11 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
     for level = 1 : nlevels
 
         ## create a solution vector and solve the problem
-        FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("u",FES)
-        solve!(Solution, Problem; verbosity = verbosity - 1)
+        println("------- LEVEL $level")
+        FES = FESpace{FEType}(xgrid; verbosity = verbosity - 1)
+        Solution = FEVector{Float64}("u_h",FES)
+        solve!(Solution, Problem; verbosity = verbosity)
         NDofs[level] = length(Solution[1])
-        if verbosity > 0
-            println("\n  SOLVE LEVEL $level")
-            println("    ndofs = $(NDofs[level])")
-        end
 
         ## calculate local error estimator contributions
         xFaceVolumes = xgrid[FaceVolumes]
@@ -111,18 +108,14 @@ function main(; verbosity = 1, nlevels = 18, theta = 1//3, Plotter = nothing)
         xCellVolumes = xgrid[CellVolumes]
         vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
         jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
-        evaluate!(vol_error,volIntegrator,[Solution[1]])
-        evaluate!(jump_error,jumpIntegrator,[Solution[1]])
+        evaluate!(vol_error,volIntegrator,[Solution[1]]; verbosity = -1)
+        evaluate!(jump_error,jumpIntegrator,[Solution[1]]; verbosity = -1)
 
         ## calculate L2 error, H1 error, total estimator and H2 error
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
         Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
-        if verbosity > 0
-            println("  ESTIMATE")
-            println("    estim H1 error = $(Results[level,3])")
-            println("    exact H1 error = $(Results[level,2])")
-        end
+        @info "\tη/exact = $(Results[level,3]) / $(Results[level,2])"
 
         if level == nlevels
             break;

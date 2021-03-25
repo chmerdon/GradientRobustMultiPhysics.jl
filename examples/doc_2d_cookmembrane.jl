@@ -29,7 +29,7 @@ using ExtendableGrids
 using Printf
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main(; verbosity = 0, Plotter = nothing)
 
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_cookmembrane.sg")

@@ -95,12 +95,12 @@ function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true, c = 
     L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
     L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
     L2error2 = sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1]))
+    L2error3 = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))
+    L2error4 = sqrt(evaluate(L2DensityErrorEvaluator,Solution2[2]))
     @printf("\n        reconstruct     false    |    true\n")
     @printf("================================================\n")
     @printf("L2error(Velocity) | %.5e  | %.5e \n",L2error,L2error2)
-    L2error = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))
-    L2error2 = sqrt(evaluate(L2DensityErrorEvaluator,Solution2[2]))
-    @printf("L2error(Density)  | %.5e  | %.5e \n",L2error,L2error2)
+    @printf("L2error(Density)  | %.5e  | %.5e \n",L2error3,L2error4)
     
 end
 
@@ -129,13 +129,13 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     end
 
     ## generate empty PDEDescription for three unknowns
-    ## unknown 1 : velocity (vector-valued)
-    ## unknown 2 : density
-    ## unknown 3 : pressure
+    ## unknown 1 : velocity v (vector-valued)
+    ## unknown 2 : density ϱ
+    ## unknown 3 : pressure p
     Problem = PDEDescription("compressible Stokes problem")
-    add_unknown!(Problem; unknown_name = "velocity", equation_name = "momentum equation")
-    add_unknown!(Problem; unknown_name = "density", equation_name = "continuity equation")
-    add_unknown!(Problem; unknown_name = "pressure", equation_name = "equation of state")
+    add_unknown!(Problem; unknown_name = "v", equation_name = "momentum equation")
+    add_unknown!(Problem; unknown_name = "ϱ", equation_name = "continuity equation")
+    add_unknown!(Problem; unknown_name = "p", equation_name = "equation of state")
     add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     ## momentum equation
@@ -153,7 +153,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
         end
         gravity_action = Action(Float64, closure, [1,2]; name = "gravity action", dependencies = "XT", quadorder = user_gravity.quadorder)
     end    
-    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*rho",VeloIdentity,Identity,gravity_action(); store = true))
+    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*ϱ",VeloIdentity,Identity,gravity_action(); store = true))
 
     ## continuity equation (by FV upwind on triangles)
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
@@ -161,15 +161,12 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     ## equation of state (by best-approximation, P0 mass matrix is diagonal)
     eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = "", quadorder = 0)
     eos_action = Action(Float64, eos_action_kernel)
-    add_operator!(Problem, [3,2], AbstractBilinearForm("p * eos(density)",Identity,Identity,eos_action; apply_action_to = 2))
+    add_operator!(Problem, [3,2], AbstractBilinearForm("p * eos(ϱ)",Identity,Identity,eos_action; apply_action_to = 2))
     add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1); store = true))
-
-    ## show Problem definition
-    @show Problem
 
     ## generate FESpaces and solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-    Solution = FEVector{Float64}(["v (reconst=$reconstruct)", "ϱ (reconst=$reconstruct)", "p (reconst=$reconstruct)"],FES)
+    Solution = FEVector{Float64}(["v_h (reconst=$reconstruct)", "ϱ_h (reconst=$reconstruct)", "p_h (reconst=$reconstruct)"],FES)
 
     ## initial values for density (bestapproximation or constant)
     if initial_density_bestapprox 

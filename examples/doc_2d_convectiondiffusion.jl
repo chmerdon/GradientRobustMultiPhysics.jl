@@ -42,7 +42,7 @@ function exact_solution_rhs!(diffusion)
 end    
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
+function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
     
     ## load a mesh of the unit square (this one has triangles and quads in it)
     ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
@@ -115,7 +115,7 @@ function main(; verbosity = 1, Plotter = nothing, diffusion = 1e-5, stabilisatio
         solve!(Solution, Problem; verbosity = verbosity)
 
         ## interpolate (just for comparison)
-        Interpolation = FEVector{Float64}("Interpolation",FES)
+        Interpolation = FEVector{Float64}("I(u)",FES)
         interpolate!(Interpolation[1], user_function; verbosity = verbosity)
 
         ## compute L2 and H1 error

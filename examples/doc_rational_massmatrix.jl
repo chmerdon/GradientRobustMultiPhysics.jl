@@ -14,7 +14,7 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing)
+function main(; verbosity = 1, Plotter = nothing)
 
     ## reference domain as extendable grid
     xgrid = reference_domain(Triangle2D, Rational)
@@ -28,12 +28,10 @@ function main(; verbosity = 0, Plotter = nothing)
     ## assemble mass matrix and divide by area
     MAMA = FEMatrix{Rational}("mass matrix",FES)
     assemble!(MAMA[1],MAMA_BLF; verbosity = verbosity)
-    MAMA.entries ./= xgrid[CellVolumes][1]
+    MAMA = MAMA.entries ./ xgrid[CellVolumes][1]
 
     ## print matrix
-    for j = 1 : size(MAMA.entries,1)
-        println("$(MAMA.entries[j,:])")
-    end
+    @show MAMA
 end
 
 end

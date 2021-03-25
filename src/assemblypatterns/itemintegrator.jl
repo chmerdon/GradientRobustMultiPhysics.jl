@@ -12,8 +12,8 @@ function ItemIntegrator(
 
 Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
-function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action; regions = [0])
-    return AssemblyPattern{APT_ItemIntegrator, T, AT}([],operators,action,regions)
+function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action; regions = [0], name = "ItemIntegrator")
+    return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,[],operators,action,regions)
 end
 
 """
@@ -49,7 +49,7 @@ function L2ErrorIntegrator(T::Type{<:Real},
         quadorder = 2 * compare_data.quadorder
     end
     action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = "L2 error kernel", dependencies = "X", quadorder = quadorder)
-    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions)
+    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = "L2 error ($(compare_data.name))")
 end
 function L2NormIntegrator(T::Type{<:Real},
     ncomponents::Int,
@@ -64,7 +64,7 @@ function L2NormIntegrator(T::Type{<:Real},
         end    
     end    
     action_kernel = ActionKernel(L2norm_function, [1,ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = 2)
-    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions)
+    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = "L2 norm")
 end
 function L2DifferenceIntegrator(T::Type{<:Real},
     ncomponents::Int,
@@ -79,7 +79,7 @@ function L2DifferenceIntegrator(T::Type{<:Real},
         end    
     end    
     action_kernel = ActionKernel(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", quadorder = 2)
-    return ItemIntegrator(T,AT, [operator, operator], Action(T, action_kernel); regions = regions)
+    return ItemIntegrator(T,AT, [operator, operator], Action(T, action_kernel); regions = regions, name = "L2 difference")
 end
 
 
@@ -127,14 +127,19 @@ function evaluate!(
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
+    if verbosity >= 0
+        if AP.regions != [0]
+            @info "Evaluating $(AP.name) for $(FEB[1].name) ($(printout(AT)) in regions = $(AP.regions))"
+        else
+            @info "Evaluating $(AP.name) for $(FEB[1].name) ($(printout(AT)))"
+        end
+    end
     if verbosity > 0
-        println("  Evaluating ($APT,$AT,$T)")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       action = $(AP.action.name) (size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
-        
+        println("\tskip_preps = $skip_preps")
+        println("\t operators = $(AP.operators)")
+        println("\t   regions = $(AP.regions)")
+        println("\t    action = $(AP.action.name) (size = $(action.argsizes))")
+        println("\t     qf[1] = $(AM.qf[1].name) ")
     end
 
     # loop over items

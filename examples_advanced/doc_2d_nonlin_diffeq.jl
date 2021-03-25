@@ -50,7 +50,7 @@ end
 ## everything is wrapped in a main function
 ## the last four parametes steer the solver from DifferentialEquations.jl
 ## for beta = 0, abstol and reltol can be choosen much larger
-function main(; verbosity = 1, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, beta = 1,
+function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, beta = 1,
     use_diffeq::Bool = true, solver = Rosenbrock23(autodiff = false), adaptive_timestep = true,  abstol = 1e-3, reltol = 1e-3)
 
     ## initial grid and final time
@@ -73,7 +73,7 @@ function main(; verbosity = 1, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
-    add_unknown!(Problem; unknown_name = "unknown", equation_name = "nonlinear Poisson equation")
+    add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], beta == 0 ? LaplaceOperator(1,2,1) : nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs))
@@ -91,7 +91,7 @@ function main(; verbosity = 1, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("discrete solution",FES)
+        Solution = FEVector{Float64}("u_h",FES)
         push!(NDofs,length(Solution.entries))
 
         ## set initial solution

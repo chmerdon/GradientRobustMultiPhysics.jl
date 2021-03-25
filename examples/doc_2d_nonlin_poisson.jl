@@ -38,7 +38,7 @@ end
 
 ## everything is wrapped in a main function
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1}, testmode = false)
+function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false)
 
     ## choose initial mesh
     xgrid = grid_unitsquare(Triangle2D)
@@ -83,7 +83,7 @@ function main(; Plotter = nothing, verbosity = 2, nlevels = 6, FEType = H1P1{1},
         push!(NDofs,length(Solution.entries))
 
         ## solve
-        solve!(Solution, Problem; verbosity = verbosity)
+        solve!(Solution, Problem; verbosity = 2)
 
         ## calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))

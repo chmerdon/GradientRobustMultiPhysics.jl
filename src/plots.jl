@@ -38,9 +38,8 @@ function plot(
         # extract grid (assumed to be the same for all FEVectorBlocks)
         spacedim = size( xgrid[Coordinates],1)
 
-        if verbosity > 0
-            println("\nPLOTTING")
-            println("========\n")
+        if verbosity >= 0
+            @info "Plotting $(length(Sources)) quantities $(add_grid_plot ? "and the grid" : "")"
         end
 
         if xgrid[UniqueCellGeometries] != [Triangle2D] && xgrid[UniqueCellGeometries] != [Tetrahedron3D]
@@ -71,7 +70,7 @@ function plot(
             ## evaluate operator
             if typeof(Sources[j]) <: FEVectorBlock
                 if verbosity > 0
-                    println("   collecting data for plot $j : " * "$(operators[j])(" * Sources[j].name * ")")
+                    println("\tcollecting data for plot $j : " * "$(operators[j])(" * Sources[j].name * ")")
                 end
                 nodevalues!(nodevals, Sources[j], operators[j]; target_offset = offsets[j], zero_target = false)
             end
@@ -123,7 +122,7 @@ function plot(
                 Z[1] += 1e-16
             end
             if verbosity > 0
-                println("   plotting data into plot $j : " * title)
+                println("\tplotting data into plot $j : " * title)
             end
             scalarplot!(ctx[j], xgrid, Z) 
             if plottertype(Plotter) == PyPlotType
@@ -132,7 +131,7 @@ function plot(
         end
         if add_grid_plot
             if verbosity > 0
-                println("   plotting grid")
+                println("\tplotting grid")
             end
             gridplot!(ctx[nplots], xgrid,show=true) 
             if plottertype(Plotter) == PyPlotType

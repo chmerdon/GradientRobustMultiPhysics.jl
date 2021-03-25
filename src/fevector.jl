@@ -49,9 +49,7 @@ FEVector{T}(name::String, FES::FESpace) where T <: Real
 Creates FEVector that has one block.
 """
 function FEVector{T}(name::String, FES::FESpace) where T <: Real
-    entries = zeros(T,FES.ndofs)
-    Block = FEVectorBlock{T}(name, FES, 0 , size(entries,1), entries)
-    return FEVector{T}([Block], entries)
+    return FEVector{T}([name],[FES])
 end
 
 """
@@ -61,7 +59,10 @@ FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 
 Creates FEVector that has one block for each FESpace in FES.
 """
-function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace,1}) where T <: Real
+function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace,1}; verbosity::Int = 0) where T <: Real
+    if verbosity >= 1
+        @info "Creating FEVector"
+    end
     ndofs = 0
     for j = 1:length(FES)
         ndofs += FES[j].ndofs
@@ -72,6 +73,9 @@ function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace,1}) where T <: 
     for j = 1:length(FES)
         Blocks[j] = FEVectorBlock{T}(name[j], FES[j], offset , offset+FES[j].ndofs, entries)
         offset += FES[j].ndofs
+        if verbosity >= 1
+            @info "\t[$j] name = $(name[j]), FESpace = $(FES[j].name), ndofs = $(FES[j].ndofs)"
+        end
     end    
     return FEVector{T}(Blocks, entries)
 end

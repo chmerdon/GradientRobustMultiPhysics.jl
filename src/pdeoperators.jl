@@ -121,7 +121,7 @@ $(TYPEDEF)
 
 constructor for AbstractBilinearForm that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
 """
-function LaplaceOperator(diffusion::Real = 1.0, xdim::Int = 2, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
+function LaplaceOperator(diffusion = 1, xdim::Int = 2, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
     return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); AT = AT, regions = regions, store = store)
 end
 
@@ -132,7 +132,7 @@ constructor for AbstractBilinearForm that describes a(u,v) = (C grad(u), grad(v)
 C grad(u) = mu grad(u)
     
 """
-function HookStiffnessOperator1D(mu::Real; regions::Array{Int,1} = [0], gradient_operator = TangentialGradient)
+function HookStiffnessOperator1D(mu; regions::Array{Int,1} = [0], gradient_operator = TangentialGradient)
     function tensor_apply_1d(result, input)
         # just Hook law like a spring where mu is the elasticity modulus
         result[1] = mu*input[1]
@@ -157,7 +157,7 @@ C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
     where c33 = shear_modulus, c12 = lambda and c11 = 2*c33 + c12
     
 """
-function HookStiffnessOperator2D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
+function HookStiffnessOperator2D(mu, lambda; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_2d(result, input)
         result[1] = (lambda + 2*mu)*input[1] + lambda*input[2]
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
@@ -185,7 +185,7 @@ for isotropic media in Voigt notation, i.e. C eps(u) = 2 mu eps(u) + lambda tr(e
     where c44 = shear_modulus, c12 = lambda and c11 = 2*c44 + c12
     
 """
-function HookStiffnessOperator3D(mu::Real, lambda::Real; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
+function HookStiffnessOperator3D(mu, lambda; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
     function tensor_apply_3d(result, input)
         result[1] = (lambda + 2*mu)*input[1] + lambda*(input[2] + input[3])
         result[2] = (lambda + 2*mu)*input[2] + lambda*(input[1] + input[3])
@@ -213,27 +213,77 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) with some user-specified function beta with the
-interface beta(result,x::Array{<:Real,1}) (so it writes its result into result and returns nothing)
+constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) with some user-specified DataFunction beta that writes into
+an result array of type T and length ncomponents
     
 """
 function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction}, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     xdim = beta.dimensions[1]
-    function convection_function_func() # dot(convection!, input=Gradient)
-        convection_vector = zeros(T,xdim)
-        function closure(result, input, x, time)
-            # evaluate beta
-            eval!(convection_vector,beta,x,time)
-            # compute (beta*grad)u
-            for j = 1 : ncomponents
-                result[j] = 0.0
-                for k = 1 : xdim
-                    result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+    if is_timedependent(beta) && is_xdependent(beta)
+        function convection_function_func_xt() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input, x, time)
+                # evaluate beta
+                eval!(convection_vector,beta,x,time)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
                 end
-            end
+            end    
         end    
-    end    
-    action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "XT", quadorder = beta.quadorder)
+        action_kernel = ActionKernel(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "XT", quadorder = beta.quadorder)
+    elseif !is_timedependent(beta) && !is_xdependent(beta)
+        function convection_function_func() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input)
+                # evaluate beta
+                eval!(convection_vector,beta, nothing, nothing)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "", quadorder = beta.quadorder)
+    elseif !is_timedependent(beta) && is_xdependent(beta)
+        function convection_function_func_x() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input, x)
+                # evaluate beta
+                eval!(convection_vector,beta,x,nothing)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(convection_function_func_x(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "X", quadorder = beta.quadorder)
+    elseif is_timedependent(beta) && !is_xdependent(beta)
+        function convection_function_func_t() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input, t)
+                # evaluate beta
+                eval!(convection_vector,beta,nothing,t)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(convection_function_func_t(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "T", quadorder = beta.quadorder)
+    end
     return AbstractBilinearForm("($(beta.name) * Gradient) u * v", Gradient,testfunction_operator, Action(T, action_kernel); regions = regions, transposed_assembly = true)
 end
 

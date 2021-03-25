@@ -1,5 +1,6 @@
 using Documenter
 using Literate
+using Logging
 using ExtendableSparse
 using ExtendableGrids
 using GradientRobustMultiPhysics
@@ -59,6 +60,7 @@ function make_all()
     example_md_dir  = joinpath(@__DIR__,"src","examples")
     example_md_dir2  = joinpath(@__DIR__,"src","examples_advanced")
     
+    Logging.disable_logging(Logging.Warn) # suppress @info messages
     for example_source in readdir(example_jl_dir)
         base,ext=splitext(example_source)
         if example_source[1:4] == "doc_" && ext==".jl"
@@ -96,6 +98,7 @@ function make_all()
         end
     end
     generated_examples_advanced=joinpath.("examples_advanced",readdir(example_md_dir2))
+    Logging.disable_logging(Logging.Debug) # suppress @info messages
 
 
     pushfirst!(generated_examples, "examples_intro.md")

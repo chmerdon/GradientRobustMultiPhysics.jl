@@ -102,9 +102,8 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     nrefcounts = [0,0,0,0,0]
 
     # closuring
-    if verbosity > 0
-        println("  RGB-REFINEMENT")
-        print("    bisected faces before/after closuring = $(sum(facemarkers))")
+    if verbosity >= 0
+        @info ("RGB refinement (bisected faces before/after closuring = $(sum(facemarkers)))")
     end
     is_refined = true
     closure_finished = false
@@ -194,7 +193,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
         ncells += size(refine_rule,1)
     end
     if verbosity > 0
-        println("    red/blueR/blueL/green/unrefined = $nrefcounts")
+        @info "\tred/blueR/blueL/green/unrefined = $nrefcounts"
     end
 
     # assign new cells to grid

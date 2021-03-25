@@ -45,10 +45,9 @@ using Printf
     end
     function rhs(nu)
         function closure!(result,x::Array{<:Real,1},t::Real)
-            fill!(result,0)
             ## exact Laplacian
-            result[1] += 2*pi*pi*nu*cos(t)*(sin(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
-            result[2] += 2*pi*pi*nu*cos(t)*(cos(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+            result[1] = 2*pi*pi*nu*cos(t)*(sin(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+            result[2] = 2*pi*pi*nu*cos(t)*(cos(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
             ## exact pressure gradient
             result[1] += cos(t)*cos(x[1])*cos(x[2])
             result[2] -= cos(t)*sin(x[1])*sin(x[2])
@@ -56,7 +55,7 @@ using Printf
     end
 
 ## everything is wrapped in a main function
-function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, T = 1, lambda = 4)
+function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, lambda = 4)
 
     ## FEType (Hdiv-conforming)
     FETypes = [HDIVBDM1{2}, H1P0{1}]
@@ -94,8 +93,6 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
         result .*= lambda*viscosity / xFaceVolumes[item]
         return nothing
     end
-
-    HdivLaplace2 = AbstractBilinearForm("nu/h_F [u] [v]", IdentityDisc{Jump}, IdentityDisc{Jump}, Action(Float64, ActionKernel(hdiv_laplace2_kernel, [2,2]; dependencies = "I", quadorder = 0)); AT = ON_FACES)
     function hdiv_laplace3_kernel(result, input, item)
         result[1] = input[1] * xFaceNormals[1,item]
         result[2] = input[1] * xFaceNormals[2,item]
@@ -104,17 +101,16 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
         result .*= -viscosity
         return nothing
     end
-
-    HdivLaplace3 = AbstractBilinearForm("-nu [u] {grad(v)*n}", IdentityDisc{Jump}, GradientDisc{Average}, Action(Float64, ActionKernel(hdiv_laplace3_kernel, [4,2]; dependencies = "I", quadorder = 0)); AT = ON_FACES)
     function hdiv_laplace4_kernel(result, input, item)
         result[1] = input[1] * xFaceNormals[1,item] + input[2] * xFaceNormals[2,item]
         result[2] = input[3] * xFaceNormals[1,item] + input[4] * xFaceNormals[2,item]
         result .*= -viscosity
         return nothing
     end
-    HdivLaplace4 = AbstractBilinearForm("-nu {grad(u)*n} [v] ", GradientDisc{Average}, IdentityDisc{Jump}, Action(Float64, ActionKernel(hdiv_laplace4_kernel, [2,4]; dependencies = "I", quadorder = 0)); AT = ON_FACES)
+    HdivLaplace2 = AbstractBilinearForm("nu/h_F [u] [v]", IdentityDisc{Jump}, IdentityDisc{Jump}, Action(Float64, hdiv_laplace2_kernel, [2,2]; dependencies = "I", quadorder = 0); AT = ON_FACES)
+    HdivLaplace3 = AbstractBilinearForm("-nu [u] {grad(v)*n}", IdentityDisc{Jump}, GradientDisc{Average}, Action(Float64, hdiv_laplace3_kernel, [4,2]; dependencies = "I", quadorder = 0); AT = ON_FACES)
+    HdivLaplace4 = AbstractBilinearForm("-nu {grad(u)*n} [v] ", GradientDisc{Average}, IdentityDisc{Jump}, Action(Float64, hdiv_laplace4_kernel, [2,4]; dependencies = "I", quadorder = 0); AT = ON_FACES)
 
-    
     ## additional terms for tangential part at boundary
     ## note: we use average operators here to force evaluation of all basis functions and not only of the face basis functions
     ## (which in case of Hdiv would be only the ones with nonzero normal fluxes)
@@ -125,8 +121,6 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
         result[1] *= lambda*viscosity / xFaceVolumes[xBFaces[item]]
         return nothing
     end
-    HdivBoundary1 = RhsOperator("- nu lambda/h_F u_D v ",ON_BFACES, IdentityDisc{Average}, Action(Float64, ActionKernel(hdiv_boundary_kernel, [1,2]; dependencies = "XTI", quadorder = user_function_velocity.quadorder)))
-        
     function hdiv_boundary_kernel2(result, input, x, t, item)
         eval!(veloeval, user_function_velocity, x, t)
         result[1] = (input[1] * xFaceNormals[1,xBFaces[item]] + input[2] * xFaceNormals[2,xBFaces[item]]) * veloeval[1]
@@ -134,7 +128,8 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
         result[1] *= -viscosity
         return nothing
     end
-    HdivBoundary2 = RhsOperator("- nu u_D grad(v)*n ",ON_BFACES, GradientDisc{Average}, Action(Float64, ActionKernel(hdiv_boundary_kernel2, [1,4]; dependencies = "XTI", quadorder = user_function_velocity.quadorder)))
+    HdivBoundary1 = RhsOperator("- nu lambda/h_F u_D v ",ON_BFACES, IdentityDisc{Average}, Action(Float64, hdiv_boundary_kernel, [1,2]; dependencies = "XTI", quadorder = user_function_velocity.quadorder))
+    HdivBoundary2 = RhsOperator("- nu u_D grad(v)*n ",ON_BFACES, GradientDisc{Average}, Action(Float64, hdiv_boundary_kernel2, [1,4]; dependencies = "XTI", quadorder = user_function_velocity.quadorder))
 
     ## assign DG operators to problem descriptions
     add_operator!(Problem, [1,1], HdivLaplace2)       
@@ -156,12 +151,10 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
         xFaceNormals = xgrid[FaceNormals]
 
         ## generate FESpaces
-        FESpaceVelocity = FESpace{FETypes[1]}(xgrid)
-        FESpacePressure = FESpace{FETypes[2]}(xgrid)
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
 
         ## generate solution vector
-        Solution = FEVector{Float64}("velocity",FESpaceVelocity)
-        append!(Solution,"pressure",FESpacePressure)
+        Solution = FEVector{Float64}(["v_h", "p_h"],FES)
         push!(NDofs, length(Solution.entries))
 
         ## solve
@@ -184,7 +177,5 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 1, 
         @printf(" %.5e |",H1VelocityError[j])
         @printf(" %.5e\n",L2PressureError[j])
     end
-    
 end
-
 end

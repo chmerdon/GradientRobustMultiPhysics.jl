@@ -496,7 +496,7 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
 
     residuals = zeros(T, length(Target.FEVectorBlocks))
     # CHECK RESIDUAL
-    residual = (A.entries*Target.entries - b.entries).^2
+    residual = A.entries*Target.entries - b.entries
     residual[fixed_dofs] .= 0
     for j = 1 : length(Target.FEVectorBlocks)
         for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
@@ -518,7 +518,7 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     if verbosity > 1
         show_statistics(stdout,PDE,SC)
     end
-    return resnorm
+    return sqrt(resnorm)
 end
 
 
@@ -615,9 +615,9 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
 
         # CHECK LINEAR RESIDUAL
         if verbosity > 1
-            residual = (A.entries*Target.entries - b.entries).^2
+            residual = A.entries*Target.entries - b.entries
             residual[fixed_dofs] .= 0
-            linresnorm = (sqrt(sum(residual, dims = 1)[1]))
+            linresnorm = (sqrt(sum(residual.^2, dims = 1)[1]))
         end
 
         # POSTPRCOESS : ANDERSON ITERATE
@@ -675,9 +675,9 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         end
 
         # CHECK NONLINEAR RESIDUAL
-        residual = (A.entries*Target.entries - b.entries).^2
+        residual = A.entries*Target.entries - b.entries
         residual[fixed_dofs] .= 0
-        resnorm = (sqrt(sum(residual, dims = 1)[1]))
+        resnorm = (sqrt(sum(residual.^2, dims = 1)[1]))
 
         end #elapsed
 
@@ -827,7 +827,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
 
             # CHECK LINEAR RESIDUAL
             if verbosity > 1
-                residual[s].entries[:] = (A[s].entries*x[s].entries - b[s].entries).^2
+                residual[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
                 for j = 1 : length(fixed_dofs)
                     for eq = 1 : length(SC.subiterations[s])
                         # check if fixed_dof is necessary for subiteration
@@ -837,7 +837,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
                         end
                     end
                 end
-                linresnorm[s] = (sqrt(sum(residual[s].entries, dims = 1)[1]))
+                linresnorm[s] = (sqrt(sum(residual[s].entries.^2, dims = 1)[1]))
             end
 
             # WRITE INTO Target
@@ -857,7 +857,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
 
         # CHECK NONLINEAR RESIDUAL
         for s = 1 : nsubiterations
-            residual[s].entries[:] = (A[s].entries*x[s].entries - b[s].entries).^2
+            residual[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
             for j = 1 : length(fixed_dofs)
                 for eq = 1 : length(SC.subiterations[s])
                     if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
@@ -866,7 +866,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
                     end
                 end
             end
-            resnorm[s] = (sqrt(sum(residual[s].entries, dims = 1)[1]))
+            resnorm[s] = (sqrt(sum(residual[s].entries.^2, dims = 1)[1]))
         end
 
         if verbosity > 1
@@ -901,7 +901,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         show_statistics(stdout,PDE,SC)
     end
 
-    return resnorm
+    return sqrt(sum(resnorm.^2))
 end
 
 """
@@ -957,42 +957,24 @@ function solve!(
     end
     SolverConfig.skip_update = skip_update
     SolverConfig.damping = damping
-    
-    if verbosity > 0
-        println("\nSOLVER")
-        println("======")
-        print("  system name = $(PDE.name)")
-        println("  @time = $(time)")
-
-        FEs = Array{FESpace,1}([])
-        for j=1 : length(Target.FEVectorBlocks)
-            push!(FEs,Target.FEVectorBlocks[j].FES)
-        end    
-        if verbosity > 0
-            print("\n  target (FE) = ")
-            for j = 1 : length(Target)
-                print("$(Target[j].name) ($(Target[j].FES.name), ndofs = $(Target[j].FES.ndofs))\n                ");
-            end
-        end
-        println("\n  subiteration | equations that are solved together")
-        for j=1:length(SolverConfig.subiterations)
-            print("       [$j]     | ")
-            for o = 1 : length(SolverConfig.subiterations[j])
-                print("$(PDE.equation_names[SolverConfig.subiterations[j][o]])")
-                if o == length(SolverConfig.subiterations[j])
-                    println("")
-                else
-                    print("\n               | ")
-                end
-            end
-        end
-    end
-
     SolverConfig.maxResidual = maxResidual
     SolverConfig.maxIterations = maxIterations
-    if verbosity > 2
-        Base.show(SolverConfig)
+
+    if verbosity >= 0
+        if SolverConfig.is_timedependent
+            @info "Solving $(PDE.name) (at fixed time $time)"
+        else
+            @info "Solving $(PDE.name)"
+        end
+        for s = 1 : length(SolverConfig.subiterations), o = 1 : length(SolverConfig.subiterations[s])
+            d = SolverConfig.subiterations[s][o]
+            @info "\tSubIt/Eq $s/$d : $(PDE.unknown_names[d]) >> $(Target[d].name) ($(Target[d].FES.name), ndofs = $(Target[d].FES.ndofs))"
+        end
+        if verbosity > 2
+            @show SolverConfig
+        end
     end
+
 
 
     # check if PDE can be solved directly
@@ -1004,6 +986,14 @@ function solve!(
         end
     else
         residual = solve_fixpoint_subiterations!(Target, PDE, SolverConfig; time = time)
+    end
+
+    if verbosity >= 0
+        if residual > SolverConfig.maxResidual
+            @warn "\tfinished solve with residual = $residual\n\t\t(warning because residual is larger than $maxResidual)"
+        else
+            @info "\tfinished solve with residual = $residual"
+        end
     end
     return residual
 end
@@ -1132,39 +1122,16 @@ function TimeControlSolver(
     end
     SC.skip_update = skip_update
 
-    if verbosity > 0
 
-        println("\nPREPARING TIME-DEPENDENT SOLVER")
-        println("===============================")
-        print("  system name = $(PDE.name)")
-        println("  @starttime = $(start_time)")
 
-        FEs = Array{FESpace,1}([])
-        for j=1 : length(InitialValues.FEVectorBlocks)
-            push!(FEs,InitialValues.FEVectorBlocks[j].FES)
-        end    
-        if verbosity > 0
-            print("\n  FEs = ")
-            for j = 1 : length(InitialValues)
-                print("$(InitialValues[j].FES.name) (ndofs = $(InitialValues[j].FES.ndofs))\n        ");
-            end
-        end
-        println("\n  subiteration | equations that are solved together")
-        for j=1:length(SC.subiterations)
-            print("       [$j]     | ")
-            for o = 1 : length(SC.subiterations[j])
-                print("$(PDE.equation_names[SC.subiterations[j][o]])")
-                if o == length(SC.subiterations[j])
-                    println("")
-                else
-                    print("\n               | ")
-                end
-            end
+    if verbosity >= 0
+        @info "Preparing time control solver for $(PDE.name)"
+        for s = 1 : length(SC.subiterations), o = 1 : length(SC.subiterations[s])
+            d = SC.subiterations[s][o]
+            @info "\tSubIt/Eq $s/$d : $(PDE.unknown_names[d]) >> $(InitialValues[d].name) ($(InitialValues[d].FES.name), ndofs = $(InitialValues[d].FES.ndofs)), timedependent = $(d in timedependent_equations ? "yes" : "no")"
         end
         if verbosity > 2
-            Base.show(SC)
-        else
-            println("")
+            @show SolverConfig
         end
     end
 
@@ -1477,6 +1444,19 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     return sqrt.(statistics)
 end
 
+function center_string(S::String, L::Int = 8)
+    if length(S) > L
+        S = S[1:L]
+    end
+    while length(S) < L-1
+        S = " " * S * " "
+    end
+    if length(S) < L
+        S = " " * S
+    end
+    return S
+end
+
 """
 ````
 advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
@@ -1487,8 +1467,8 @@ The function do_after_timestep is called after each timestep and can be used to 
 """
 function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
-    if TCS.SC.verbosity > 1
-        @printf("\n  advancing in time until stationarity...\n")
+    if TCS.SC.verbosity >= 0
+        @info "Advancing in time until stationarity..."
     end
     if TCS.SC.verbosity > 0
         if TCS.SC.maxIterations > 1 || TCS.SC.check_nonlinear_residual
@@ -1511,7 +1491,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             @printf("\n          |            |  (total)   |")
         end
         for j = 1 : size(statistics,1)
-            @printf("  %s  ",TCS.PDE.unknown_names[j])
+            @printf(" %s ",center_string(TCS.PDE.unknown_names[j],10))
         end
     end
     for iteration = 1 : maxTimeSteps
@@ -1555,8 +1535,8 @@ The function do_after_timestep is called after each timestep and can be used to 
 """
 function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
-    if TCS.SC.verbosity > 1
-        @printf("\n  advancing in time until T = %.4e...\n",finaltime)
+    if TCS.SC.verbosity >= 0
+        @info "Advancing in time from $(TCS.ctime) until $finaltime"
     end
     if TCS.SC.verbosity > 0
         if TCS.SC.maxIterations > 1 || TCS.SC.check_nonlinear_residual
@@ -1579,7 +1559,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             @printf("\n          |            |  (total)   |")
         end
         for j = 1 : size(statistics,1)
-            @printf("  %s  ",TCS.PDE.unknown_names[j])
+            @printf(" %s ",center_string(TCS.PDE.unknown_names[j],10))
         end
     end
     while TCS.ctime < finaltime - finaltime_tolerance
@@ -1619,16 +1599,20 @@ with the given exterior time integration module. The only valid Module here is D
 If solver == nothing the solver Rosenbrock23(autodiff = false) will be chosen. For more choices please consult the documentation of DifferentialEquations.jl.
 
 Also note that this is a highly experimental feature and will not work for general TimeControlSolvers configuration (e.g. in the case of several subiterations or, it seems,
-saddle point problems). Also have a look at coressponding the example in the advanced examples section.
+saddle point problems). Also have a look at corressponding the example in the advanced examples section.
 """
 function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver, timestep, finaltime; solver = nothing, abstol = 1e-1, reltol = 1e-1, dtmin = 0, adaptive::Bool = true)
     if solver == nothing 
         solver = DiffEQ.Rosenbrock23(autodiff = false)
     end
 
+    if sys.SC.verbosity >= 0
+        @info "Advancing in time from $(sys.ctime) until $finaltime using $DiffEQ with solver = $solver"
+    end
+
     ## generate ODE problem
     f = DiffEQ.ODEFunction(eval_rhs!, jac=eval_jacobian!, jac_prototype=jac_prototype(sys), mass_matrix=mass_matrix(sys))
-    prob = DiffEQ.ODEProblem(f,sys.X.entries, (0,finaltime),sys)
+    prob = DiffEQ.ODEProblem(f,sys.X.entries, (sys.ctime,finaltime),sys)
 
     ## solve ODE problem
     sol = DiffEQ.solve(prob,solver, abstol=abstol, reltol=reltol, dt = timestep, dtmin = dtmin, initializealg=DiffEQ.NoInit(), adaptive = adaptive)

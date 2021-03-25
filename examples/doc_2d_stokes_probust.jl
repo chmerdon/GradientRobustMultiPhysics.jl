@@ -77,16 +77,28 @@ function PotentialFlowTestProblem()
 end
 
 
-function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1, maxResidual = 1e-11, maxIterations = 20)
+function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1, maxResidual = 1e-10, maxIterations = 20)
 
     ## load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]
     exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = Problem()
 
-    ## load Stokes problem prototype and assign data
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = nonlinear)
+    ## setup classical (Problem) and pressure-robust scheme (Problem2)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!)
-    add_rhsdata!(Problem, 1, RhsOperator(ReconstructionOperator, [0], rhs!))
+    Problem2 = deepcopy(Problem)
+    Problem.name = "Stokes problem (classical)"
+    Problem2.name = "Stokes problem (p-robust)"
+
+    ## assign right-hand side
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], rhs!))
+    add_rhsdata!(Problem2, 1, RhsOperator(ReconstructionOperator, [0], rhs!))
+
+    ## assign convection term
+    if nonlinear
+        add_operator!(Problem,[1,1], ConvectionOperator(1, Identity, 2, 2))
+        add_operator!(Problem2,[1,1], ConvectionOperator(1, ReconstructionOperator, 2, 2; testfunction_operator = ReconstructionOperator))
+    end
 
     ## define bestapproximation problems
     L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
@@ -101,17 +113,6 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
     L2errorInterpolation_velocity = []; L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
     H1error_velocity = []; H1error_velocity2 = []; H1errorBestApproximation_velocity = []; NDofs = []
     
-    ## setup classical (Problem) and pressure-robust scheme (Problem2)
-    Problem2 = deepcopy(Problem)
-    Problem.RHSOperators[1][1] = RhsOperator(Identity, [0], rhs!)
-    Problem2.RHSOperators[1][1] = RhsOperator(ReconstructionOperator, [0], rhs!)
-    if nonlinear
-        Problem.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
-        Problem2.LHSOperators[1,1][1].store_operator = true # store matrix of Laplace operator
-        Problem.LHSOperators[1,1][2] = ConvectionOperator(1, Identity, 2, 2)
-        Problem2.LHSOperators[1,1][2] = ConvectionOperator(1, ReconstructionOperator, 2, 2; testfunction_operator = ReconstructionOperator)
-    end
-    
     ## loop over refinement levels
     for level = 1 : nlevels
 
@@ -121,21 +122,21 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
 
         ## get FESpaces
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-
-        Solution = FEVector{Float64}(["velocity classic", "pressure classic"],FES)
-        solve!(Solution, Problem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
+        Solution2 = FEVector{Float64}(["u_h (p-robust)", "p_h (p-robust)"],FES)
+        Solution = FEVector{Float64}(["u_h (classic)", "p_h (classic)"],FES)
         push!(NDofs,length(Solution.entries))
 
-        Solution2 = FEVector{Float64}(["velocity p-robust", "pressure p-robust"],FES)
+        ## solve both problems
+        solve!(Solution, Problem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
         solve!(Solution2, Problem2; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
 
         ## solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FES[1])
         L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FES[2])
         H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FES[1])
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem)
-        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; verbosity = verbosity - 1)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem; verbosity = verbosity - 1)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; verbosity = verbosity - 1)
 
         ## compute L2 and H1 error
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
@@ -153,26 +154,17 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
             println("\n         |   L2ERROR    |   L2ERROR    |   L2ERROR")
             println("   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-L2BEST");
             for j=1:nlevels
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.6e |",L2error_velocity[j])
-                @printf(" %.6e |",L2error_velocity2[j])
-                @printf(" %.6e\n",L2errorBestApproximation_velocity[j])
+                @printf("  %6d | %.6e | %.6e | %.6e\n",NDofs[j],L2error_velocity[j],L2error_velocity2[j],L2errorBestApproximation_velocity[j])
             end
             println("\n         |   H1ERROR    |   H1ERROR    |   H1ERROR")
             println("   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-H1BEST");
             for j=1:nlevels
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.6e |",H1error_velocity[j])
-                @printf(" %.6e |",H1error_velocity2[j])
-                @printf(" %.6e\n",H1errorBestApproximation_velocity[j])
+                @printf("  %6d | %.6e | %.6e | %.6e\n",NDofs[j],H1error_velocity[j],H1error_velocity2[j],H1errorBestApproximation_velocity[j])
             end
             println("\n         |   L2ERROR    |   L2ERROR    |   L2ERROR")
             println("   NDOF  | PRES-CLASSIC | PRES-PROBUST | PRES-L2BEST");
             for j=1:nlevels
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.6e |",L2error_pressure[j])
-                @printf(" %.6e |",L2error_pressure2[j])
-                @printf(" %.6e\n",L2errorBestApproximation_pressure[j])
+                @printf("  %6d | %.6e | %.6e | %.6e\n",NDofs[j],L2error_pressure[j],L2error_pressure2[j],L2errorBestApproximation_pressure[j])
             end
             println("\nLEGEND\n======")
             println("VELO-CLASSIC : discrete Stokes velocity solution ($(FES[1].name)) with classical discretisation")
@@ -191,10 +183,10 @@ end
 
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, nlevels = 3, viscosity = 1e-2)
+function main(; verbosity = 0, nlevels = 3, viscosity = 1e-2)
     ## set problem to solve
-    Problem = HydrostaticTestProblem
-    #Problem = PotentialFlowTestProblem
+    #Problem = HydrostaticTestProblem
+    Problem = PotentialFlowTestProblem
 
     ## set grid and problem parameters
     xgrid = grid_unitsquare_mixedgeometries() # initial grid

@@ -15,8 +15,8 @@ function SymmetricBilinearForm(
 
 Creates a symmetric BilinearForm assembly pattern with the given FESpaces, operators and action etc. Symmetry is not checked automatically, but is assumed during assembly!
 """
-function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
-    return AssemblyPattern{APT_SymmetricBilinearForm, T, AT}(FES,operators,action,regions)
+function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; name = "Symmetric BLF", regions = [0])
+    return AssemblyPattern{APT_SymmetricBilinearForm, T, AT}(name, FES,operators,action,regions)
 end
 
 """
@@ -32,8 +32,8 @@ function BilinearForm(
 
 Creates a (unsymmetric) BilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
-function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
-    return AssemblyPattern{APT_BilinearForm, T, AT}(FES,operators,action,regions)
+function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; name = "BLF", regions = [0])
+    return AssemblyPattern{APT_BilinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
 
