@@ -59,7 +59,6 @@ via Julia package manager in Julia 1.5 or above:
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
 [DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
-[BenchmarkTools.jl](https://github.com/JuliaCI/BenchmarkTools.jl)
 
 
 

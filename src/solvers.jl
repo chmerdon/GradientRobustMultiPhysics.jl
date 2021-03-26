@@ -823,12 +823,12 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             @printf(" | %.2e/%.2e/%.2e\n",time_reassembly,time_solver, time_total)
         end
 
-        if iteration == SC.maxIterations
-            @warn "maxIterations reached"
+        if sqrt(sum(resnorm.^2)) < SC.maxResidual
             break
         end
 
-        if sqrt(sum(resnorm.^2)) < SC.maxResidual
+        if iteration == SC.maxIterations
+            @warn "maxIterations reached"
             break
         end
     end

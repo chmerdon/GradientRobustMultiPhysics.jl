@@ -74,9 +74,9 @@ function assemble!(
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     if AP.regions != [0]
-        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT in regions = $(AP.regions)) into matrix"
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into matrix ($AT in regions = $(AP.regions))"
     else
-        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT) into matrix"
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into matrix ($AT)"
     end
     @debug AP
 

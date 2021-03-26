@@ -7,7 +7,6 @@ using ExtendableSparse
 using SuiteSparse
 using SparseArrays
 using StaticArrays
-using BenchmarkTools
 using DiffResults
 using LinearAlgebra
 using ForwardDiff
@@ -41,7 +40,6 @@ Logging.disable_logging(Logging.BelowMinLevel)
 
 function set_verbosity(verbosity::Int)
     logger = current_logger()
-    println("$(logger.min_level)")
     if verbosity < 0
         if logger.min_level != Logging.Warn
             logger = ConsoleLogger(stdout, Logging.Warn)
