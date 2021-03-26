@@ -75,22 +75,25 @@ function rhs_gravity!(gamma,c)
 end   
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing, reconstruct::Bool = true, c = 10, gamma = 1.4, M = 1, shear_modulus = 1e-3, lambda = -1e-3/3)
+function main(; verbosity = 0, Plotter = nothing, reconstruct::Bool = true, c = 10, gamma = 1.4, M = 1, shear_modulus = 1e-3, lambda = -1e-3/3)
+
+    ## set log level
+    set_verbosity(verbosity)
 
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_mountainrange.sg")
     xgrid = uniform_refine(xgrid,1)
 
     ## solve without and with reconstruction and plot
-    Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma, verbosity = verbosity)
-    Solution2 = setup_and_solve(xgrid; reconstruct = true, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma, verbosity = verbosity)
+    Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)
+    Solution2 = setup_and_solve(xgrid; reconstruct = true, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)
 
     # plot everything
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2],Solution2[1],Solution2[2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity - 1)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2],Solution2[1],Solution2[2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
 
     ## compare L2 error for velocity and density
-    user_velocity = DataFunction([0,0]; name = "u_exact")
-    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 1)
+    user_velocity = DataFunction([0,0]; name = "u")
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "ϱ", dependencies = "X", quadorder = 1)
     L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
     L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
     L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
@@ -107,7 +110,7 @@ end
 function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, shear_modulus = 1, lambda = 0, verbosity = 0)
 
     ## negotiate edata functions to the package
-    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "rho_exact", dependencies = "X", quadorder = 1)
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = "ϱ", dependencies = "X", quadorder = 1)
     user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = "g", dependencies = "X", quadorder = 1)
 
     ## solver parameters
@@ -171,7 +174,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     ## initial values for density (bestapproximation or constant)
     if initial_density_bestapprox 
         L2DensityBestapproximationProblem = L2BestapproximationProblem(user_density; bestapprox_boundary_regions = [])
-        InitialDensity = FEVector{Float64}("L2-Bestapproximation density",FES[2])
+        InitialDensity = FEVector{Float64}("ϱ_best",FES[2])
         solve!(InitialDensity, L2DensityBestapproximationProblem)
         Solution[2][:] = InitialDensity[1][:]
     else
@@ -189,7 +192,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     ## that are set to be iterated one after another via the subiterations argument
     ## only the density equation is made time-dependent via the timedependent_equations argument
     ## so we can reuse the other subiteration matrices in each timestep
-    TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], skip_update = [-1,1,-1], timedependent_equations = [2], verbosity = verbosity)
+    TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[1],[2],[3]], skip_update = [-1,1,-1], timedependent_equations = [2])
     advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 
     ## compute error in mass constraint

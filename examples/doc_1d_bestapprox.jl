@@ -22,12 +22,15 @@ end
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, nrefs = 2, broken::Bool = false)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## generate mesh and uniform refine nrefs times
     xgrid = simplexgrid([0.0,1//3,2//3,1.0])
     xgrid = uniform_refine(xgrid,nrefs)
 
     ## negotiate exact_function! to the package
-    user_function = DataFunction(exact_function!, [1,1]; name = "u_exact", dependencies = "X", quadorder = 4)
+    user_function = DataFunction(exact_function!, [1,1]; name = "u", dependencies = "X", quadorder = 4)
     
     ## setup a bestapproximation problem via a predefined prototype
     ## and an L2ErrorEvaluator that can be used later to compute the L2 error
@@ -43,20 +46,20 @@ function main(; Plotter = nothing, verbosity = 0, nrefs = 2, broken::Bool = fals
     ## generate a solution vector and solve the problem
     ## (the verbosity argument that many functions have steers the talkativity,
     ##  the larger the number, the more details)
-    Solution = FEVector{Float64}("L2-Bestapproximation",FES)
-    solve!(Solution, Problem; verbosity = verbosity)
+    Solution = FEVector{Float64}("u_h",FES)
+    solve!(Solution, Problem)
     
     ## calculate the L2 error
     L2error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-    println("\tL2error(BestApprox) = $L2error")
+    println("\t|| u - u_h || = $L2error")
 
     ## to compare our discrete solution with a finer one, we interpolate the exact function
     ## again on some more refined mesh and also compute the L2 error on this one
     xgrid_fine = uniform_refine(xgrid,2)
     FES_fine = FESpace{FEType}(xgrid_fine)
-    Interpolation = FEVector{Float64}("fine-grid interpolation",FES_fine)
-    interpolate!(Interpolation[1], ON_CELLS, user_function; verbosity = verbosity)
-    println("\tL2error(FineInterpol) = $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
+    Interpolation = FEVector{Float64}("u_h (fine)",FES_fine)
+    interpolate!(Interpolation[1], ON_CELLS, user_function)
+    println("\t|| u - u_h (fine) ||= $(sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))")
         
     ## evaluate/interpolate function at nodes and plot
     if Plotter != nothing

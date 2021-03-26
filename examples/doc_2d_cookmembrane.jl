@@ -31,6 +31,9 @@ using Printf
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_cookmembrane.sg")
     xgrid = uniform_refine(xgrid,2)
@@ -52,11 +55,11 @@ function main(; verbosity = 0, Plotter = nothing)
     @show Problem
     FEType = H1P1{2} # P1-Courant FEM will be used
     Solution = FEVector{Float64}("displacement",FESpace{FEType}(xgrid))
-    solve!(Solution, Problem; verbosity = verbosity)
+    solve!(Solution, Problem)
 
     ## plot stress on displaced mesh
     displace_mesh!(xgrid, Solution[1]; magnify = 4)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
 end
 
 end

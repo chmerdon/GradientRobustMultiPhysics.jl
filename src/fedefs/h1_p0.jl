@@ -9,6 +9,10 @@ allowed on every ElementGeometry
 """
 abstract type H1P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
+function Base.show(io::Core.IO, FEType::Type{<:H1P0})
+    print(io,"H1P0{$(FEType.parameters[1])}")
+end
+
 get_ncomponents(FEType::Type{<:H1P0}) = FEType.parameters[1]
 get_ndofs(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
 

@@ -1,5 +1,9 @@
 abstract type APT_NonlinearForm <: AssemblyPatternType end # nonlinear form whose action also gets a current solution as input to evaluate some linearised form
 
+function Base.show(io::IO, ::Type{APT_NonlinearForm})
+    print(io, "NonlinearForm")
+end
+
 """
 ````
 function NonlinearForm(
@@ -18,9 +22,10 @@ function NonlinearForm(
     FES::Array{FESpace,1}, 
     operators::Array{DataType,1},  
     action::AbstractAction;
+    name = "NLF",
     regions::Array{Int,1} = [0])
 
-    return AssemblyPattern{APT_NonlinearForm, T, AT}(FES,operators,action,regions)
+    return AssemblyPattern{APT_NonlinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
 
@@ -31,7 +36,6 @@ assemble!(
     A::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT};
     FEB::Array{<:FEVectorBlock,1};         # coefficients of current solution for each operator
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false
 ````
@@ -42,7 +46,6 @@ function assemble!(
     A::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false,
     skip_preps::Bool = false,
@@ -53,7 +56,7 @@ function assemble!(
     FE = AP.FES
     nFE = length(FE)
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -70,16 +73,12 @@ function assemble!(
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into matrix (transposed = $transposed_assembly)")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (apply_to = [operators(FEB),operators(argument 1)] size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
-        
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT in regions = $(AP.regions)) into matrix"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT) into matrix"
     end
+    @debug AP
 
     # loop over items
     offsets = zeros(Int,nFE+1)
@@ -201,12 +200,11 @@ function assemble!(
     A::FEMatrixBlock,
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false,
     skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    assemble!(A.entries, AP, FEB; verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
+    assemble!(A.entries, AP, FEB; factor = factor, transposed_assembly = transposed_assembly, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
 end
 
 
@@ -218,7 +216,6 @@ assemble!(
     b::AbstractVector,
     AP::NonlinearForm{T, AT},
     FEB::Array{<:FEVectorBlock,1};         # coefficients of current solution for each operator
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false
 ````
@@ -229,7 +226,6 @@ function assemble!(
     b::AbstractVector,
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false,
     skip_preps::Bool = false,
@@ -239,7 +235,7 @@ function assemble!(
     FE = AP.FES
     nFE = length(FE)
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -256,16 +252,12 @@ function assemble!(
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into vector (action evaluated with given coefficients)")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
-        
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT in regions = $(AP.regions))"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT)"
     end
+    @debug AP
 
     # loop over items
     offsets = zeros(Int,nFE+1)
@@ -361,10 +353,9 @@ function assemble!(
     b::FEVectorBlock,
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false,
     skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    assemble!(b.entries, AP, FEB; verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, offset = b.offset, skip_preps = skip_preps)
+    assemble!(b.entries, AP, FEB; factor = factor, transposed_assembly = transposed_assembly, offset = b.offset, skip_preps = skip_preps)
 end

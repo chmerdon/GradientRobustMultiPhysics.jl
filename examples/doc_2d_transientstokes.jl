@@ -58,6 +58,9 @@ end
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, T = 1e-2, viscosity = 1e-6, graddiv = 0)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## initial grid
     xgrid = grid_unitsquare(Triangle2D);
 
@@ -129,15 +132,15 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
         Solution[1][:] = L2VelocityBestapproximation[1][:]
 
         ## generate time-dependent solver and chance rhs data
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1], skip_update = [-1], dt_testfunction_operator = [testfunction_operator], verbosity = verbosity + 1)
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1], skip_update = [-1], dt_testfunction_operator = [testfunction_operator])
         advance_until_time!(TCS, timestep, T)
 
         ## solve bestapproximation problems at final time for comparison
         L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FES[2])
         H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FES[1])
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = T, verbosity = verbosity - 1)
-        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem; verbosity = verbosity - 1)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T, verbosity = verbosity - 1)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = T)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T)
 
         ## compute L2 and H1 error of all solutions
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
@@ -195,7 +198,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
             println("PRES-STOKES : discrete Stokes pressure solution ($(FES[2].name))")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
 
-            GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
+            GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
         end    
     end    
 end

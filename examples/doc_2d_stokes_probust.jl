@@ -127,16 +127,16 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
         push!(NDofs,length(Solution.entries))
 
         ## solve both problems
-        solve!(Solution, Problem; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
-        solve!(Solution2, Problem2; maxIterations = maxIterations, maxResidual = maxResidual, verbosity = verbosity, anderson_iterations = 5)
+        solve!(Solution, Problem; maxIterations = maxIterations, maxResidual = maxResidual, anderson_iterations = 5)
+        solve!(Solution2, Problem2; maxIterations = maxIterations, maxResidual = maxResidual, anderson_iterations = 5)
 
         ## solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FES[1])
         L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FES[2])
         H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FES[1])
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; verbosity = verbosity - 1)
-        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem; verbosity = verbosity - 1)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; verbosity = verbosity - 1)
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem)
 
         ## compute L2 and H1 error
         append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
@@ -184,6 +184,10 @@ end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, nlevels = 3, viscosity = 1e-2)
+
+    ## set log level
+    set_verbosity(verbosity)
+    
     ## set problem to solve
     #Problem = HydrostaticTestProblem
     Problem = PotentialFlowTestProblem
@@ -197,7 +201,7 @@ function main(; verbosity = 0, nlevels = 3, viscosity = 1e-2)
     #FETypes = [H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
 
     ## run
-    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, verbosity = verbosity)
+    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels)
 
     return nothing
 end
@@ -205,7 +209,7 @@ end
 
 ## test function that is called by test unit
 ## tests if hydrostatic problem is solved exactly by pressure-robust methods
-function test(; verbosity = 0)
+function test()
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
 
     testspaces = [[H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
@@ -213,7 +217,7 @@ function test(; verbosity = 0)
                   [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]]
     error = []
     for FETypes in testspaces
-        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false, verbosity = verbosity))
+        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false))
         println("FETypes = $FETypes   error = $(error[end])")
     end
     return maximum(error)

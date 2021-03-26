@@ -57,6 +57,9 @@ using Printf
 ## everything is wrapped in a main function
 function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, lambda = 4)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## FEType (Hdiv-conforming)
     FETypes = [HDIVBDM1{2}, H1P0{1}]
     
@@ -158,10 +161,10 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         push!(NDofs, length(Solution.entries))
 
         ## solve
-        solve!(Solution, Problem; verbosity = verbosity, time = T)
+        solve!(Solution, Problem; time = T)
 
         ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter, verbosity = verbosity)
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter)
 
         ## compute L2 and H1 error of all solutions
         push!(L2VelocityError, sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
@@ -170,7 +173,7 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     end    
 
     ## output errors in a nice table
-    println("\n   NDOF  | L2ERROR(v) | H1ERROR(v) | L2ERROR(p)")
+    println("\n   NDOF  | L2ERROR(v_h) | H1ERROR(v_h) | L2ERROR(p_h)")
     for j=1:nlevels
         @printf("  %6d |",NDofs[j]);
         @printf(" %.5e |",L2VelocityError[j])

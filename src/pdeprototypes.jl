@@ -79,7 +79,7 @@ function LinearElasticityProblem(
     # generate empty PDEDescription for one unknown
     # unknown 1 : displacement (vector-valued)
     Problem = PDEDescription("linear elasticity problem")
-    add_unknown!(Problem; unknown_name = "displacement", equation_name = "displacement equation")
+    add_unknown!(Problem; unknown_name = "u", equation_name = "displacement equation")
     if dimension == 3
         add_operator!(Problem, [1,1], HookStiffnessOperator3D(shear_modulus,lambda))
     elseif dimension == 2
@@ -134,11 +134,14 @@ Creates an PDEDescription for an L2-Bestapproximation problem for the given exac
 function L2BestapproximationProblem(
     uexact::UserData{AbstractDataFunction};
     name = "L2-Bestapproximation problem",
-    unknown_name = "L2-bestapproximation",
+    unknown_name = "auto",
     equation_name = "L2-bestapproximation equation",
     bestapprox_boundary_regions = [],
     AT::Type{<:AbstractAssemblyType} = ON_CELLS)
 
+    if unknown_name == "auto"
+        unknown_name = uexact.name
+    end
     ncomponents = uexact.dimensions[1]
     xdim = uexact.dimensions[2]
     # generate empty PDEDescription for one unknown
@@ -174,12 +177,16 @@ function H1BestapproximationProblem(
     uexact_gradient::UserData{AbstractDataFunction},
     uexact::UserData{AbstractDataFunction};
     name = "H1-Bestapproximation problem",
-    unknown_name = "H1-bestapproximation",
+    unknown_name = "auto",
     equation_name = "H1-bestapproximation equation",
     bestapprox_boundary_regions = [])
 
     ncomponents = uexact.dimensions[1]
     xdim = Int(uexact_gradient.dimensions[1] / ncomponents)
+
+    if unknown_name == "auto"
+        unknown_name = uexact.name
+    end
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription(name)

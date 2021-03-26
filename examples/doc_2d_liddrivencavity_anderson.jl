@@ -28,6 +28,9 @@ using Printf
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10, maxResidual = 1e-10, maxIterations = 50, switch_to_newton_tolerance = 1e-4)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## grid
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4);
 
@@ -47,16 +50,16 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     Solution = FEVector{Float64}(["velocity", "pressure"],FES)
 
     ## solve with anderson iterations until 1e-4
-    solve!(Solution, Problem; verbosity = 2, anderson_iterations = anderson_iterations, maxIterations = maxIterations, maxResidual = switch_to_newton_tolerance)
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxIterations = maxIterations, maxResidual = switch_to_newton_tolerance)
 
     ## solve rest with Newton
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
-    solve!(Solution, Problem; verbosity = 2, anderson_iterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2]], [Identity, Identity]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2]], [Identity, Identity]; Plotter = Plotter)
 end
 
 end

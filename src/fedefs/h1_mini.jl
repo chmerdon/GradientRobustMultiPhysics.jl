@@ -13,6 +13,10 @@ allowed element geometries:
 """
 abstract type H1MINI{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
+function Base.show(io::Core.IO, FEType::Type{<:H1MINI})
+    print(io,"H1MINI{$(FEType.parameters[1]),$(FEType.parameters[2])}")
+end
+
 get_ncomponents(FEType::Type{<:H1MINI}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1MINI}) = FEType.parameters[2]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
@@ -27,39 +31,6 @@ get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{CellDofs}, EG::Type{<:Abstract
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
 
-function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
-
-    xgrid = FE.xgrid
-    xItemVolumes = xgrid[CellVolumes]
-    xItemNodes = xgrid[CellNodes]
-    xItemDofs = FE[CellDofs]
-    xCellGeometries = xgrid[CellGeometries]
-    ncells = num_sources(xItemNodes)
-    nnodes = size(xgrid[Coordinates],2)
-    ncomponents = get_ncomponents(FEType)
-    offset4component = 0:(nnodes+ncells):ncomponents*(nnodes+ncells)
-    if items == []
-        items = 1 : ncells
-    end
-
-    # compute exact cell integrals
-    cellintegrals = zeros(Float64,ncomponents,ncells)
-    integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = 0)
-    cellEG = Triangle2D
-    nitemnodes::Int = 0
-    for item in items
-        cellEG = xCellGeometries[item]
-        nitemnodes = nnodes_for_geometry(cellEG)
-        for c = 1 : ncomponents
-            # subtract integral of P1 part
-            for dof = 1 : nitemnodes
-                cellintegrals[c,item] -= Target[xItemDofs[(c-1)*(nitemnodes+1) + dof,item]] * xItemVolumes[item] / nitemnodes
-            end
-            # set cell bubble such that cell mean is preserved
-            Target[offset4component[c]+nnodes+item] = cellintegrals[c,item] / xItemVolumes[item]
-        end
-    end
-end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
     nnodes = size(FE.xgrid[Coordinates],2)

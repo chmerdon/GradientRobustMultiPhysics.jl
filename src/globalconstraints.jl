@@ -56,12 +56,10 @@ function apply_constraint!(
     b::FEVector,
     Constraint::FixedIntegralMean,
     Target::FEVector;
-    current_equations = "all",
-    verbosity::Int = 0)
+    current_equations = "all")
+
     c = Constraint.component
-    if verbosity > 0
-        println("\n  Ensuring fixed integral mean for component $c...")
-    end
+    @logmsg DeepInfo "Ensuring fixed integral mean for component $c..."
 
     if current_equations != "all"
         c = findfirst(isequal(c), current_equations)
@@ -80,16 +78,14 @@ function apply_constraint!(
     b::FEVector,
     Constraint::CombineDofs,
     Target::FEVector;
-    current_equations = "all",
-    verbosity::Int = 0)
+    current_equations = "all")
 
     fixed_dofs = []
 
     c = Constraint.componentX
     c2 = Constraint.componentY
-    if verbosity > 0 
-        println("\n  Combining dofs of component $c and $c2...")
-    end
+    @logmsg DeepInfo "Combining dofs of component $c and $c2..."
+    
     # add subblock [dofsY,dofsY] of block [c2,c2] to subblock [dofsX,dofsX] of block [c,c]
     # and penalize dofsY dofs
     rows = rowvals(A.entries.cscmatrix)
@@ -133,17 +129,15 @@ end
 
 function realize_constraint!(
     Target::FEVector,
-    Constraint::FixedIntegralMean;
-    verbosity::Int = 0)
+    Constraint::FixedIntegralMean)
 
     c = Constraint.component
-    if verbosity > 0
-        println("\n  Moving integral mean for component $c to value $(Constraint.value)")
-    end
+    
+    @logmsg MoreInfo "Moving integral mean for component $c to value $(Constraint.value)"
 
     # move integral mean
     pmeanIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity], DoNotChangeAction(1))
-    meanvalue =  evaluate(pmeanIntegrator,Target[c]; verbosity = verbosity - 1)
+    meanvalue =  evaluate(pmeanIntegrator,Target[c])
     total_area = sum(Target.FEVectorBlocks[c].FES.xgrid[CellVolumes], dims=1)[1]
     meanvalue /= total_area
     for dof=1:Target.FEVectorBlocks[c].FES.ndofs
@@ -154,14 +148,12 @@ end
 
 function realize_constraint!(
     Target::FEVector,
-    Constraint::CombineDofs;
-    verbosity::Int = 0)
+    Constraint::CombineDofs)
 
     c = Constraint.componentX
     c2 = Constraint.componentY
-    if verbosity > 0
-        println("\n  Moving entries of combined dofs from component $c to component $c2")
-    end
+    @debug "Moving entries of combined dofs from component $c to component $c2"
+
     for dof = 1 : length(Constraint.dofsX)
         Target[c2][Constraint.dofsY[dof]] = Target[c][Constraint.dofsX[dof]]
     end 

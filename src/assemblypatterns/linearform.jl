@@ -1,5 +1,9 @@
 abstract type APT_LinearForm <: AssemblyPatternType end
 
+function Base.show(io::IO, ::Type{APT_LinearForm})
+    print(io, "LinearForm")
+end
+
 """
 ````
 function LinearForm(
@@ -13,15 +17,14 @@ function LinearForm(
 
 Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
-function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0])
-    return AssemblyPattern{APT_LinearForm, T, AT}(FES,operators,action,regions)
+function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0], name = "LF")
+    return AssemblyPattern{APT_LinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
 
 function assemble!(
     b::Union{AbstractArray{T,1},AbstractArray{T,2}},
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     skip_preps::Bool = false,
     factor = 1,
     offset = 0) where {APT <: APT_LinearForm, T <: Real, AT <: AbstractAssemblyType}
@@ -29,7 +32,7 @@ function assemble!(
     # prepare assembly
     FE = AP.FES[1]
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -48,15 +51,12 @@ function assemble!(
         onedimensional = false
     end
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into vector")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) ($AT in regions = $(AP.regions))"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) ($AT)"
     end
+    @debug AP
 
     # loop over items
     weights::Array{T,1} = get_qweights(AM)
@@ -127,11 +127,10 @@ end
 function assemble!(
     b::FEVectorBlock{T},
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     skip_preps::Bool = false,
     factor = 1) where {APT <: APT_LinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     @assert b.FES == AP.FES[1]
 
-    assemble!(b.entries, AP; verbosity = verbosity, factor = factor, offset = b.offset, skip_preps = skip_preps)
+    assemble!(b.entries, AP; factor = factor, offset = b.offset, skip_preps = skip_preps)
 end

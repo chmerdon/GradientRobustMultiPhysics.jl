@@ -33,6 +33,9 @@ end
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## choose initial mesh
     ## (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
     xgrid = grid_unitcube(Tetrahedron3D)
@@ -41,8 +44,8 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     FEType = H1P1{1}
 
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,3]; name = "u_exact", dependencies = "X", quadorder = 2)
-    user_function_gradient = DataFunction(exact_gradient!, [3,3]; name = "grad(u_exact)", dependencies = "X", quadorder = 1)
+    user_function = DataFunction(exact_function!, [1,3]; name = "u", dependencies = "X", quadorder = 2)
+    user_function_gradient = DataFunction(exact_gradient!, [3,3]; name = "∇(u)", dependencies = "X", quadorder = 1)
     user_function_rhs = DataFunction([-2]; name = "f")
 
     ## create Poisson problem via prototype and add data
@@ -63,11 +66,11 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
         
         ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("Solution",FES)
+        Solution = FEVector{Float64}("u_h",FES)
         push!(NDofs,length(Solution.entries))
 
         ## solve the problem
-        solve!(Solution, Problem; verbosity = verbosity)
+        solve!(Solution, Problem)
 
         ## calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
@@ -83,7 +86,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     end
 
     ## plot (Plotter = Makie should work)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 end
 
 end

@@ -1,7 +1,7 @@
 
 using ExtendableSparse
 
-function test_qpmatchup(xgrid; verbosity = 0)
+function test_qpmatchup(xgrid)
 
     AT = ON_IFACES
     ncomponents = 1
@@ -12,7 +12,7 @@ function test_qpmatchup(xgrid; verbosity = 0)
     AP = LinearForm(Float64, AT, [FE], [GradientDisc{Jump}], action)
 
     # prepare assembly
-    prepare_assembly!(AP; verbosity = verbosity)
+    prepare_assembly!(AP)
     ndofs4EG = AP.AM.ndofs4EG
     qf = AP.AM.qf
     basisevaler = AP.AM.basisevaler
@@ -70,7 +70,7 @@ function test_qpmatchup(xgrid; verbosity = 0)
 end
 
 
-function test_disc_LF(xgrid, discontinuity, verbosity = 0)
+function test_disc_LF(xgrid, discontinuity)
 
     # generate constant P0 function with no jumps
     ncomponents = 1
@@ -96,7 +96,7 @@ function test_disc_LF(xgrid, discontinuity, verbosity = 0)
     return error
 end
 
-function test_disc_BLF(xgrid, discontinuity, verbosity = 0)
+function test_disc_BLF(xgrid, discontinuity)
 
     # generate constant P0 function with no jumps
     ncomponents = 1
@@ -141,7 +141,7 @@ function test_disc_BLF(xgrid, discontinuity, verbosity = 0)
  end
 
 
-function test_disc_TLF(xgrid, discontinuity, verbosity = 0)
+function test_disc_TLF(xgrid, discontinuity)
 
     # generate constant P0 function with no jumps
     ncomponents = 1

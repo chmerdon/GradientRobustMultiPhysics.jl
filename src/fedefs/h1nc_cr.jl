@@ -13,6 +13,9 @@ allowed ElementGeometries:
 """
 abstract type H1CR{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
+function Base.show(io::Core.IO, FEType::Type{<:H1CR})
+    print(io,"H1CR{$(FEType.parameters[1])}")
+end
 
 get_ncomponents(FEType::Type{<:H1CR}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]

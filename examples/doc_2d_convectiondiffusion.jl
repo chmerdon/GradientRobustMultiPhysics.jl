@@ -43,6 +43,9 @@ end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
+
+    ## set log level
+    set_verbosity(verbosity)
     
     ## load a mesh of the unit square (this one has triangles and quads in it)
     ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
@@ -50,17 +53,17 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
     xgrid = grid_unitsquare_mixedgeometries(); # initial grid
 
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_solution!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
-    user_function_gradient = DataFunction(exact_solution_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 3)
+    user_function = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "X", quadorder = 4)
+    user_function_gradient = DataFunction(exact_solution_gradient!, [2,2]; name = "∇(u)", dependencies = "X", quadorder = 3)
     user_function_rhs = DataFunction(exact_solution_rhs!(diffusion), [1,2]; name = "f", dependencies = "X", quadorder = 3)
-    user_function_convection = DataFunction([1,0]; name = "beta")
+    user_function_convection = DataFunction([1,0]; name = "β")
 
     ## choose a finite element type, here we choose a second order H1-conforming one
     FEType = H1P2{1,2}
 
     ## create PDE description
     Problem = PDEDescription("convection-diffusion problem")
-    add_unknown!(Problem; unknown_name = "unknown", equation_name = "convection-diffusion equation")
+    add_unknown!(Problem; unknown_name = "u", equation_name = "convection-diffusion equation")
     add_operator!(Problem, [1,1], LaplaceOperator(diffusion,2,1))
     add_operator!(Problem, [1,1], ConvectionOperator(Float64,user_function_convection,1))
 
@@ -87,7 +90,7 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
         ## ... which generates an action
         stab_action = Action(Float64,stabilisation_kernel, [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
         ## ... which is given to a bilinear form constructor
-        JumpStabilisation = AbstractBilinearForm("[grad(u)] [grad(v)]", GradientDisc{Jump}, GradientDisc{Jump}, stab_action; AT = ON_IFACES)
+        JumpStabilisation = AbstractBilinearForm("s |F|^2 [∇(u)]⋅[∇(v)]", GradientDisc{Jump}, GradientDisc{Jump}, stab_action; AT = ON_IFACES)
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 
@@ -112,11 +115,11 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
         push!(NDofs,length(Solution.entries))
 
         ## solve PDE
-        solve!(Solution, Problem; verbosity = verbosity)
+        solve!(Solution, Problem)
 
         ## interpolate (just for comparison)
         Interpolation = FEVector{Float64}("I(u)",FES)
-        interpolate!(Interpolation[1], user_function; verbosity = verbosity)
+        interpolate!(Interpolation[1], user_function)
 
         ## compute L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
@@ -125,7 +128,7 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
         append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Interpolation[1])))
         
         ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
     end    
 
     ## print error history

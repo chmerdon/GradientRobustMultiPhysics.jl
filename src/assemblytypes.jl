@@ -14,12 +14,24 @@ abstract type ON_BFACES <: AbstractAssemblyType end # on boundary faces
 abstract type ON_EDGES <: AbstractAssemblyType end  # on all edges
 abstract type ON_BEDGES <: AbstractAssemblyType end # on boundary edges
 
-printout(::Type{ON_CELLS}) = "on cells"
-printout(::Type{ON_FACES}) = "on faces"
-printout(::Type{ON_IFACES}) = "on interior faces"
-printout(::Type{ON_BFACES}) = "on boundary faces"
-printout(::Type{ON_EDGES}) = "on edges"
-printout(::Type{ON_BEDGES}) = "on boundary edges"
+function Base.show(io::Core.IO, ::Type{ON_CELLS})
+    print(io,"on cells")
+end
+function Base.show(io::Core.IO, ::Type{ON_FACES})
+    print(io,"on faces")
+end
+function Base.show(io::Core.IO, ::Type{ON_BFACES})
+    print(io,"on boundary faces")
+end
+function Base.show(io::Core.IO, ::Type{ON_IFACES})
+    print(io,"on interior faces")
+end
+function Base.show(io::Core.IO, ::Type{ON_EDGES})
+    print(io,"on edges")
+end
+function Base.show(io::Core.IO, ::Type{ON_BEDGES})
+    print(io,"on boundary edges")
+end
 
 ItemType4AssemblyType(::Type{ON_CELLS}) = ITEMTYPE_CELL
 ItemType4AssemblyType(::Type{<:ON_FACES}) = ITEMTYPE_FACE

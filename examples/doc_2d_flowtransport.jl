@@ -48,6 +48,9 @@ end
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity = 1)
 
+    ## set log level
+    set_verbosity(verbosity)
+    
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_upipe.sg")
     xgrid = uniform_refine(xgrid,4)
@@ -93,23 +96,23 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
     Solution = FEVector{Float64}(["v_h", "p_h", "c_h"],FES)
 
     ## first solve the decoupled flow problem equations [1,2]
-    solve!(Solution, Problem; subiterations = [[1,2]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
+    solve!(Solution, Problem; subiterations = [[1,2]], maxIterations = 5, maxResidual = 1e-12)
 
     ## then solve the transport equation [3] by finite volumes or finite elements
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], verbosity = verbosity + 1)
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3])
         advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
     else
         ## solve directly
-        solve!(Solution, Problem; subiterations = [[3]], verbosity = verbosity, maxIterations = 5, maxResidual = 1e-12)
+        solve!(Solution, Problem; subiterations = [[3]], maxIterations = 5, maxResidual = 1e-12)
     end
 
     ## print minimal and maximal concentration to check max principle (shoule be in [0,1])
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
 end
 
 end

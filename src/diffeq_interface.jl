@@ -16,15 +16,13 @@ function diffeq_assembly!(sys::TimeControlSolver, ctime)
     X =sys.X
     fixed_dofs = sys.fixed_dofs
 
-    if sys.SC.verbosity > 1
-        println("DEQI: assembly t = $ctime")
-    end
+    @debug "DiffEQ-interface: assembly at t = $ctime"
 
     nsubiterations = length(SC.subiterations)
     for s = 1 : nsubiterations
 
         ## REASSEMBLE NONLINEAR AND TIME-DEPENDENT DATA
-        lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = SC.subiterations[s], min_trigger = AssemblyEachTimeStep, verbosity = SC.verbosity - 2, time = ctime)
+        lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = SC.subiterations[s], min_trigger = AssemblyEachTimeStep, time = ctime)
 
         # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA at current (already updated) time ctime
         # needs to be done after adding the time derivative, since it overwrittes Data from last timestep
@@ -32,12 +30,7 @@ function diffeq_assembly!(sys::TimeControlSolver, ctime)
         for k = 1 : length(SC.subiterations[s])
             d = SC.subiterations[s][k]
             if any(PDE.BoundaryOperators[d].timedependent) == true
-                if SC.verbosity > 2
-                    println("\n  Assembling boundary data for block [$d] at time $(TCS.ctime)...")
-                    @time boundarydata!(X[d],PDE.BoundaryOperators[d]; time =sys.ctime, verbosity = SC.verbosity - 2)
-                else
-                    boundarydata!(X[d],PDE.BoundaryOperators[d]; time = ctime, verbosity = SC.verbosity - 2)
-                end    
+                boundarydata!(X[d],PDE.BoundaryOperators[d]; time = ctime)
             else
                 # nothing todo as all boundary data for block d is time-independent
             end
@@ -69,9 +62,7 @@ rhs function for DifferentialEquations.jl.
 """
 function eval_rhs!(du, x, sys::TimeControlSolver, ctime)
     # (re)assemble system
-    if sys.SC.verbosity > 0
-        println("  evaluating ODE rhs @time = $ctime")
-    end
+    @debug println("DiffEQ-interface: evaluating ODE rhs @time = $ctime")
 
     diffeq_assembly!(sys, ctime)
 
@@ -114,9 +105,7 @@ jacobi matrix calculation function for DifferentialEquations.jl.
 """
 function eval_jacobian!(J, u, sys::TimeControlSolver, ctime)
     # _eval_res_jac!(sys,u)
-    if sys.SC.verbosity > 1
-        println("DEQI: eval_jac t = $ctime")
-    end
+    @debug "DiffEQ-interface: eval_jacobian at t = $ctime"
     sys.X.entries .= u
     diffeq_assembly!(sys, ctime)
     J.=-sys.A[1].entries.cscmatrix
@@ -127,9 +116,7 @@ end
 Get the mass matrix for use with DifferentialEquations.jl.
 """
 function mass_matrix(sys::TimeControlSolver)
-    if sys.SC.verbosity > 1
-        println("DEQI: mass")
-    end
+    @debug "DiffEQ-interface: mass_matrix"
     flush!(sys.AM[1].entries)
     return sys.AM[1].entries.cscmatrix
 end
@@ -138,9 +125,7 @@ end
 Provide the system matrix as prototype for the Jacobian.
 """
 function jac_prototype(sys::TimeControlSolver)
-    if sys.SC.verbosity > 1
-        println("DEQI: jac_proto")
-    end
+    @debug "DiffEQ-interface: jac_prototype"
     ExtendableSparse.flush!(sys.A[1].entries)
     sys.A[1].entries.cscmatrix
 end

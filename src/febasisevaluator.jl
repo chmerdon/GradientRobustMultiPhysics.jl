@@ -171,7 +171,7 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndof
 end
 
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0, mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)
@@ -180,9 +180,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     # depending on the AT and the AT of the FESpace
     FEAT = EffAT4AssemblyType(typeof(FE).parameters[2],AT)
 
-    if verbosity > 0
-        println("  ...constructing FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT, AT =$AT")
-    end
+    @debug "Creating FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT, AT =$AT"
 
     # collect basis function information
     ncomponents::Int = get_ncomponents(FEType)
@@ -227,9 +225,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     if ndofs4item_all > 0
         offsets2 = 0:ndofs4item_all:ncomponents*ndofs4item_all
     else
-        if verbosity > 0
-            println("warning: ndofs = 0 for FEType = $FEType on EG = $EG")
-        end
+        @warn "ndofs = 0 for FEType = $FEType on EG = $EG"
     end
     compressiontargets = zeros(T,0)
     current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
@@ -281,11 +277,6 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         end
     end
 
-    if verbosity > 0
-        println("     size(cvals) = $(size(current_eval))")
-        println("ndofs_all/ndofs = $ndofs4item_all/$ndofs4item")
-    end
-
     if mutable
         return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     else
@@ -294,16 +285,14 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; verbosity::Int = 0, mutable = false) where {T, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
     
-    if verbosity > 0
-        println("  ...constructing FEBasisEvaluator for $FEOP operator of $FEType on $EG")
-    end
+    @debug "Creating FEBasisEvaluator for $FEOP operator of $FEType on $EG"
 
     # generate reconstruction space
     # avoid computation of full dofmap
     # we will just use local basis functions
-    FE2 = FESpace{FETypeReconst}(FE.xgrid; verbosity = verbosity - 1)
+    FE2 = FESpace{FETypeReconst}(FE.xgrid)
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)
@@ -367,11 +356,6 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis_reconst, qf, derivorder, ndofs4item2_all, ncomponents2)
         coefficients3 = zeros(T,resultdim,ndofs4item2)
     end
-
-    if verbosity > 0
-        println("     size(cvals) = $(size(current_eval))")
-        println("ndofs_all2/ndofs2 = $ndofs4item2_all/$ndofs4item2")
-    end
     
     if mutable
         return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
@@ -383,8 +367,19 @@ end
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType}, item) where {T}
-    FEBE.citem[1] = item
+function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+    if FEBE.citem[1] != item
+        FEBE.citem[1] = item
+        #if FEBE.subset_handler != nothing
+        #    fill!(FEBE.cvals,0.0)
+        #    FEBE.subset_handler(FEBE.current_subset, item)
+        #    for i = 1 : length(FEBE.xref)
+        #        for dof_i = 1 : ndofs, k = 1 : ncomponents
+        #            FEBE.cvals[k,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k]
+        #        end
+        #    end
+        #end
+    end
     return nothing
 end
 

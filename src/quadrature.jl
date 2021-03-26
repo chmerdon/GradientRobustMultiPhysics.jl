@@ -508,7 +508,6 @@ function integrate!(
     grid::ExtendableGrid,
     AT::Type{<:AbstractAssemblyType},
     integrand::UserData{<:Union{AbstractDataFunction,AbstractExtendedDataFunction}};
-    verbosity::Int = 0,
     index_offset::Int = 0,
     time = 0,
     items = [],
@@ -537,15 +536,6 @@ function integrate!(
         end
         local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid,AT)
     end    
-    if verbosity > 0
-        println("INTEGRATE")
-        println("=========")
-        println("nitems = $nitems")
-        for j = 1 : length(EG)
-            println("QuadratureRule [$j] for $(EG[j]):")
-            show(qf[j])
-        end
-    end
 
     # loop over items
     if items == []
@@ -604,7 +594,6 @@ function integrate(
     AT::Type{<:AbstractAssemblyType},
     integrand!::UserData{<:AbstractDataFunction},
     resultdim::Int;
-    verbosity::Int = 0,
     items = [],
     force_quadrature_rule = nothing)
 
@@ -612,7 +601,7 @@ function integrate(
     # and use the itemwise integration above
     AV = AccumulatingVector{Float64}(zeros(Float64,resultdim), 0)
 
-    integrate!(AV, grid, AT, integrand!; verbosity = verbosity, items = items, force_quadrature_rule = force_quadrature_rule)
+    integrate!(AV, grid, AT, integrand!; items = items, force_quadrature_rule = force_quadrature_rule)
 
     if resultdim == 1
         return AV.entries[1]

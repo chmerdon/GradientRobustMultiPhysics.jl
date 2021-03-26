@@ -54,6 +54,9 @@ end
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P1{1}, testmode = false, skip_update = 2)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
 
@@ -84,7 +87,7 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     Solution = FEVector{Float64}("u_h",FES)
 
     ## solve the problem (here the newly defined linear solver type is used)
-    solve!(Solution, Problem; verbosity = 2, linsolver = MySolver{Float64}, skip_update = [skip_update])
+    solve!(Solution, Problem; linsolver = MySolver{Float64}, skip_update = [skip_update])
 
     ## calculate error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
@@ -93,7 +96,7 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     println("\tH1error = $(sqrt(evaluate(H1ErrorEvaluator,Solution[1])))")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 end
 
 

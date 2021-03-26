@@ -59,6 +59,9 @@ end
 ## everything is wrapped in a main function
 function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## initial grid
     xgrid = grid_lshape(Triangle2D)
 
@@ -67,8 +70,8 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
     FETypeDual = [HDIVBDM1{2},H1P0{1}]
     
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 5)
-    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 4)
+    user_function = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "∇(u)", dependencies = "X", quadorder = 4)
 
     ## setup Poisson problem
     Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
@@ -77,7 +80,7 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
 
     ## setup dual mixed Poisson problem
     DualProblem = PDEDescription("dual mixed formulation")
-    add_unknown!(DualProblem; unknown_name = "Stress", equation_name = "stress equation")
+    add_unknown!(DualProblem; unknown_name = "σ", equation_name = "stress equation")
     add_operator!(DualProblem, [1,1], ReactionOperator(DoNotChangeAction(2)))
     add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], user_function; AT = ON_BFACES))
     add_unknown!(DualProblem; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
@@ -111,15 +114,15 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
 
         ## create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("Discrete Solution",FES)
-        solve!(Solution, Problem; verbosity = verbosity - 1)
+        Solution = FEVector{Float64}("u_h",FES)
+        solve!(Solution, Problem)
         NDofs[level] = length(Solution[1])
 
         ## solve the dual problem
         FESDual = [FESpace{FETypeDual[1]}(xgrid),FESpace{FETypeDual[2]}(xgrid)]
-        DualSolution = FEVector{Float64}("Discrete Dual Solution",FESDual)
+        DualSolution = FEVector{Float64}("σ_h",FESDual)
         NDofsDual[level] = length(DualSolution.entries)
-        solve!(DualSolution, DualProblem; verbosity = verbosity - 1)
+        solve!(DualSolution, DualProblem)
 
         if verbosity > 0
             println("\n  SOLVE LEVEL $level")
@@ -154,13 +157,13 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
         else
             ## adaptive mesh refinement
             ## refine by red-green-blue refinement (incl. closuring)
-            facemarker = bulk_mark(xgrid, view(error4cell,1,:), theta; verbosity = verbosity)
-            xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
+            facemarker = bulk_mark(xgrid, view(error4cell,1,:), theta)
+            xgrid = RGB_refine(xgrid, facemarker)
         end
     end
     
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
     
     ## print results
     @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   ")

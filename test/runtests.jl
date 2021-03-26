@@ -1,7 +1,7 @@
 using Test
 using ExtendableGrids
 using GradientRobustMultiPhysics
-using Logging
+
 include("test_jumps.jl")
 
 function run_basis_tests()
@@ -203,8 +203,10 @@ function run_basis_tests()
                     H1CR{2},
                     H1MINI{2,2},
                     H1BR{2},
-                    H1P2{2,2}]
-    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2]
+                    H1P2{2,2}, 
+                    #H1P3{2,2}
+                    ]
+    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -701,6 +703,4 @@ function run_all_tests()
     end
 end
 
-Logging.disable_logging(Logging.Info) # suppress @info messages
 run_all_tests()
-Logging.disable_logging(Logging.Debug)

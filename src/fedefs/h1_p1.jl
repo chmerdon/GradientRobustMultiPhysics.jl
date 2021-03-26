@@ -15,6 +15,11 @@ allowed ElementGeometries:
 """
 abstract type H1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
+
+function Base.show(io::Core.IO, FEType::Type{<:H1P1})
+    print(io,"H1P1{$(FEType.parameters[1])}")
+end
+
 get_ncomponents(FEType::Type{<:H1P1}) = FEType.parameters[1] # is this okay?
 get_ndofs(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
 

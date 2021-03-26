@@ -113,7 +113,7 @@ function AbstractBilinearForm(name,
     return AbstractBilinearForm{AT}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,store,zeros(Float64,0,0))
 end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm("$operator1 x $operator2",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
+    return AbstractBilinearForm(apply_action_to == 1 ? "A($operator1(u))⋅$operator2(v)" : "$operator1(u)⋅A($operator2(v))",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
 end
 
 """
@@ -122,7 +122,7 @@ $(TYPEDEF)
 constructor for AbstractBilinearForm that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
 """
 function LaplaceOperator(diffusion = 1, xdim::Int = 2, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
-    return AbstractBilinearForm("Laplacian",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); AT = AT, regions = regions, store = store)
+    return AbstractBilinearForm(ncomponents == 1 ? "∇(u)⋅∇(v)" : "∇(u):∇(v)",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); AT = AT, regions = regions, store = store)
 end
 
 """
@@ -139,7 +139,7 @@ function HookStiffnessOperator1D(mu; regions::Array{Int,1} = [0], gradient_opera
     end   
     action_kernel = ActionKernel(tensor_apply_1d, [1,1]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return AbstractBilinearForm("Hookian1D",gradient_operator, gradient_operator, action; regions = regions)
+    return AbstractBilinearForm("C∇u⋅∇v",gradient_operator, gradient_operator, action; regions = regions)
 end
 
 """
@@ -165,7 +165,7 @@ function HookStiffnessOperator2D(mu, lambda; regions::Array{Int,1} = [0], gradie
     end   
     action_kernel = ActionKernel(tensor_apply_2d, [3,3]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return AbstractBilinearForm("Hookian2D",gradient_operator, gradient_operator, action; regions = regions)
+    return AbstractBilinearForm("Cϵ(u):ϵ(v)",gradient_operator, gradient_operator, action; regions = regions)
 end
 
 """
@@ -196,7 +196,7 @@ function HookStiffnessOperator3D(mu, lambda; regions::Array{Int,1} = [0], gradie
     end   
     action_kernel = ActionKernel(tensor_apply_3d, [6,6]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return AbstractBilinearForm("Hookian3D", gradient_operator, gradient_operator, action; regions = regions)
+    return AbstractBilinearForm("Cϵ(u):ϵ(v)", gradient_operator, gradient_operator, action; regions = regions)
 end
 
 
@@ -206,7 +206,10 @@ $(TYPEDSIGNATURES)
 constructor for AbstractBilinearForm that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
     
 """
-function ReactionOperator(action::AbstractAction; name = "Reaction", AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
+function ReactionOperator(action::AbstractAction; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
+    if name == "auto"
+        name = apply_action_to == 1 ? "A(u) ⋅ v" : "u ⋅ A(v)"
+    end
     return AbstractBilinearForm(name,identity_operator, identity_operator, action; AT = AT, apply_action_to = apply_action_to, regions = regions)
 end
 
@@ -217,7 +220,7 @@ constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) wi
 an result array of type T and length ncomponents
     
 """
-function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction}, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
+function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction}, ncomponents::Int; name = "auto", testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
     xdim = beta.dimensions[1]
     if is_timedependent(beta) && is_xdependent(beta)
         function convection_function_func_xt() # dot(convection!, input=Gradient)
@@ -284,7 +287,10 @@ function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction
         end    
         action_kernel = ActionKernel(convection_function_func_t(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "T", quadorder = beta.quadorder)
     end
-    return AbstractBilinearForm("($(beta.name) * Gradient) u * v", Gradient,testfunction_operator, Action(T, action_kernel); regions = regions, transposed_assembly = true)
+    if name == "auto"
+        name = "(β ⋅ ∇) u ⋅ $testfunction_operator(v)"
+    end
+    return AbstractBilinearForm(name, Gradient,testfunction_operator, Action(T, action_kernel); regions = regions, transposed_assembly = true)
 end
 
 
@@ -454,7 +460,7 @@ struct LagrangeMultiplier <: AbstractPDEOperatorLHS
     AT::Type{<:AbstractAssemblyType}
 end
 function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = DoNotChangeAction(1))
-    return LagrangeMultiplier("LagrangeMultiplier($operator)",operator, action, AT)
+    return LagrangeMultiplier("$operator(v) ⋅ q",operator, action, AT)
 end
 
 
@@ -552,17 +558,17 @@ function ConvectionOperator(
     action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = quadorder)
     if auto_newton
         ## generates a nonlinear form with automatic Newton operators by AD
-        return GenerateNonlinearForm("(u * grad) u  * v", [beta_operator, Gradient], [a_from,a_from], testfunction_operator, action_kernel; ADnewton = true)     
+        return GenerateNonlinearForm("(u ⋅ ∇) u ⋅ v", [beta_operator, Gradient], [a_from,a_from], testfunction_operator, action_kernel; ADnewton = true)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
         convection_action = Action(Float64, action_kernel)
         a_to = fixed_argument
         if a_to == 1
-            name = "(a(=unknown $(a_from)) * Gradient) u * v"
+            name = "(a ⋅ ∇) u ⋅ v"
         elseif a_to == 2
-            name = "(u * Gradient) a(=unknown $(a_from)) * v"
+            name = "(u ⋅ ∇) a ⋅ v"
         elseif a_to == 3
-            name = "(u * Gradient) v * a(=unknown $(a_from))"
+            name = "(u ⋅ ∇) v ⋅ a"
         end
         
         return AbstractTrilinearForm{ON_CELLS}(name,beta_operator,Gradient,testfunction_operator,a_from,a_to,convection_action, regions, true)
@@ -590,7 +596,7 @@ function ConvectionRotationFormOperator(beta::Int, beta_operator::Type{<:Abstrac
     end    
     action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", quadorder = 0)
     convection_action = Action(Float64, action_kernel)
-    return AbstractTrilinearForm{ON_CELLS}("(a(=unknown $beta) x Curl2D u ) * v",beta_operator,Curl2D,testfunction_operator,beta, 1, convection_action, regions, true)
+    return AbstractTrilinearForm{ON_CELLS}("(β × ∇) u ⋅ v",beta_operator,Curl2D,testfunction_operator,beta, 1, convection_action, regions, true)
 end
 
 
@@ -641,7 +647,7 @@ function RhsOperator(
     store::Bool = false)
 
     if name == "auto"
-        name = "$(data.name) * $operator(v_h)"
+        name = "$(data.name)⋅$operator(v)"
     end
 
     ncomponents = data.dimensions[1]
@@ -952,10 +958,8 @@ end
 
 
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
-    if verbosity > 0 
-        println("  Assembling FVConvectionOperator $(O.name)...")
-    end
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0)
+    @debug "Assembling DiagonalOperator $(O.name)"
     FE1 = A.FESX
     FE2 = A.FESY
     @assert FE1 == FE2
@@ -983,10 +987,8 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOpe
 end
 
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
-    if verbosity > 0 
-        println("  Assembling FVConvectionOperator $(O.name)...")
-    end
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0)
+    @debug "Assembling FVConvectionOperator $(O.name)"
     T = Float64
     FE1 = A.FESX
     FE2 = A.FESY
@@ -1009,13 +1011,11 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
     c::Int = O.beta_from
     fill!(O.fluxes,0)
     if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        if verbosity > 0 
-            println("  Creating assembly pattern for convection fluxes $(O.name)...")
-        end
-        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux], DoNotChangeAction(1))
-        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]]; verbosity = verbosity - 1, skip_preps = false)
+        @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux], DoNotChangeAction(1); name = "u ⋅ n")
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = false)
     else
-        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]]; verbosity = verbosity - 1, skip_preps = true)
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = true)
     end
 
     fluxes::Array{T,2} = O.fluxes
@@ -1055,11 +1055,9 @@ end
 
 
 
-function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector, j::Int, k::Int; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector, j::Int, k::Int; factor = 1, time::Real = 0) where {AT<:AbstractAssemblyType}
 
-    if verbosity > 0
-        println("  Updating storage of operator $(O.name)")
-    end
+    @debug "Updating storage of operator $(O.name)"
 
     # ensure that storage is large_enough
     FE1 = CurrentSolution[j].FES
@@ -1067,231 +1065,207 @@ function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector,
     O.storage = ExtendableSparseMatrix{Float64,Int32}(FE1.ndofs,FE2.ndofs)
 
     if FE1 == FE2 && O.operator1 == O.operator2
-        BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
+        BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions, name = O.name)    
     else
-        BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
+        BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions, name = O.name)    
     end
 
-    assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor, verbosity = verbosity)
+    assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor)
     flush!(O.storage)
 end
 
 
-function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; factor = 1, time::Real = 0) where {AT<:AbstractAssemblyType}
 
-    if verbosity > 0
-        println("  Updating storage of RhsOperator")
-    end
+    @debug "Updating storage of RhsOperator"
 
     # ensure that storage is large_enough
     FE = CurrentSolution[j].FES
     O.storage = zeros(Float64,FE.ndofs)
     set_time!(O.action, time)
-    RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions)
-    assemble!(O.storage, RHS; factor = factor, verbosity = verbosity)
+    RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions, name = O.name)
+    assemble!(O.storage, RHS; factor = factor)
 end
 
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}    
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; time::Real = 0) where {AT<:AbstractAssemblyType}    
     if O.store_operator == true
-        if verbosity > 0 
-            println("  Adding Bilinearform $(O.name) from storage...")
-        end
+        @debug "Adding Bilinearform $(O.name) from storage"
         addblock!(A,O.storage)
     else
         set_time!(O.action, time)
         if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-            if verbosity > 0 
-                println("  Creating assembly pattern for Bilinearform $(O.name)...")
-            end
+            @debug "Creating assembly pattern for Bilinearform $(O.name)"
             FE1 = A.FESX
             FE2 = A.FESY
             if FE1 == FE2 && O.operator1 == O.operator2
-                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
+                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions, name = O.name)    
             else
-                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
+                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions, name = O.name)    
             end 
-            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = false, transposed_assembly = O.transposed_assembly)
+            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], apply_action_to = O.apply_action_to, skip_preps = false, transposed_assembly = O.transposed_assembly)
         else
-            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, apply_action_to = O.apply_action_to, skip_preps = true, transposed_assembly = O.transposed_assembly)
+            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], apply_action_to = O.apply_action_to, skip_preps = true, transposed_assembly = O.transposed_assembly)
         end
     end
 end
 
 
-function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0, fixed_component::Int = 1) where {AT<:AbstractAssemblyType}    
+function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component::Int = 1) where {AT<:AbstractAssemblyType}    
     if O.store_operator == true
         addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
         set_time!(O.action, time)
         if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-            if verbosity > 0 
-                println("  Creating assembly pattern for Bilinearform $(O.name)...")
-            end
+            @debug "Creating assembly pattern for Bilinearform $(O.name)"
             FE1 = b.FES
             FE2 = CurrentSolution[fixed_component].FES
             if FE1 == FE2 && O.operator1 == O.operator2
-                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions)    
+                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions, name = O.name)    
             else
-                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions)    
+                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions, name = O.name)    
             end 
-            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, verbosity = verbosity - 1, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
+            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
         else
-            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, verbosity = verbosity - 1, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
+            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
         end
     end
 end
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::TLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0) 
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::TLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0) 
     set_time!(O.TLF.action, time)
     if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-        if verbosity > 0 
-            println("  Creating assembly pattern for Trilinearform $(O.name)...")
-        end
+        @debug "Creating assembly pattern for Trilinearform $(O.name)"
         FE1 = CurrentSolution[O.data_ids[1]].FES
         FE2 = CurrentSolution[O.data_ids[1]].FES
         FE3 = b.FES
-        SC.RHS_AssemblyPatterns[j][o] = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions)
-        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
+        SC.RHS_AssemblyPatterns[j][o] = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions, name = O.TLF.name)
+        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, skip_preps = false)
     else
-        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
+        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, skip_preps = true)
     end
 end
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::MLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0)  
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::MLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0)  
     set_time!(O.MLF.action, time)
     if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-        if verbosity > 0 
-            println("  Creating assembly pattern for Multilinearform $(O.name)...")
-        end
+        @debug "Creating assembly pattern for Multilinearform $(O.name)"
         FES = []
         for k = 1 : length(O.data_ids)
             push!(FES, CurrentSolution[O.data_ids[k]].FES)
         end
         push!(FES, b.FES)
-        SC.RHS_AssemblyPatterns[j][o] = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions) 
-        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = false)
+        SC.RHS_AssemblyPatterns[j][o] = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions, name = O.MLF.name) 
+        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, skip_preps = false)
     else
-        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, verbosity = verbosity, skip_preps = true)
+        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, skip_preps = true)
     end
 end
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::BLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0)  
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::BLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0)  
     if O.BLF.store_operator == true
         addblock_matmul!(b,O.BLF.storage,CurrentSolution[O.data_id]; factor = factor)
     else
         set_time!(O.BLF.action, time)
         if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-            if verbosity > 0 
-                println("  Creating assembly pattern for Multilinearform $(O.name)...")
-            end
+            @debug "Creating assembly pattern for Multilinearform $(O.name)"
             FE1 = b.FES
             FE2 = CurrentSolution[O.data_id].FES
             if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
-                SC.RHS_AssemblyPatterns[j][o] = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE1], [O.BLF.operator1, O.BLF.operator1], O.BLF.action; regions = O.BLF.regions)    
+                SC.RHS_AssemblyPatterns[j][o] = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE1], [O.BLF.operator1, O.BLF.operator1], O.BLF.action; regions = O.BLF.regions, name = O.BLF.name)    
             else
-                SC.RHS_AssemblyPatterns[j][o] = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions)    
+                SC.RHS_AssemblyPatterns[j][o] = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions, name = O.BLF.name)    
             end
-            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = false)
+            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, fixed_argument = O.fixed_argument, skip_preps = false)
         else
-            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, verbosity = verbosity, fixed_argument = O.fixed_argument, skip_preps = true)
+            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, fixed_argument = O.fixed_argument, skip_preps = true)
         end
     end
 end
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractTrilinearForm, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractTrilinearForm, CurrentSolution::FEVector; time::Real = 0)
     set_time!(O.action, time)
     if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        if verbosity > 0 
-            println("  Creating assembly pattern for Trilinearform $(O.name)...")
-        end
+        @debug "Creating assembly pattern for Trilinearform $(O.name)"
         FE1 = CurrentSolution[O.a_from].FES
         FE2 = A.FESX
         FE3 = A.FESY
-        SC.LHS_AssemblyPatterns[j,k][o] = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions)   
-        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = false, transposed_assembly = O.transposed_assembly)
+        SC.LHS_AssemblyPatterns[j,k][o] = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions, name = O.name)   
+        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o], skip_preps = false, transposed_assembly = O.transposed_assembly)
     else
-        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, skip_preps = true, transposed_assembly = O.transposed_assembly)
+        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o], skip_preps = true, transposed_assembly = O.transposed_assembly)
     end
 end
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::LagrangeMultiplier, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0, At::FEMatrixBlock)
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::LagrangeMultiplier, CurrentSolution::FEVector; time::Real = 0, At::FEMatrixBlock)
     if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        if verbosity > 0 
-            println("  Creating assembly pattern for LagrangeMultiplier $(O.name)...")
-        end
+        @debug "Creating assembly pattern for LagrangeMultiplier $(O.name)"
         FE1 = A.FESX
         FE2 = A.FESY
         @assert At.FESX == FE2
         @assert At.FESY == FE1
-        SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, O.AT, [FE1, FE2], [O.operator, Identity], O.action)   
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = false, factor = -1)
+        SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, O.AT, [FE1, FE2], [O.operator, Identity], O.action; name = O.name)   
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], transpose_copy = At, skip_preps = false, factor = -1)
     else
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o]; verbosity = verbosity - 1, transpose_copy = At, skip_preps = true, factor = -1)
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], transpose_copy = At, skip_preps = true, factor = -1)
     end
 end
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::RhsOperator{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0, verbosity::Int = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::RhsOperator{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0) where {AT<:AbstractAssemblyType}
     if O.store_operator == true
         addblock!(b, O.storage; factor = factor)
     else
         if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-            if verbosity > 0 
-                println("  Creating assembly pattern for RhsOperator $(O.name)...")
-            end
+            @debug "Creating assembly pattern for RhsOperator $(O.name)..."
             FE = b.FES
-            SC.RHS_AssemblyPatterns[j][o] = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions) 
+            SC.RHS_AssemblyPatterns[j][o] = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions, name = O.name) 
 
             set_time!(O.action, time)
-            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = false)
+            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, skip_preps = false)
         else
             set_time!(O.action, time)
-            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, verbosity = verbosity, skip_preps = true)
+            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, skip_preps = true)
         end
     end
 end
 
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0) 
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0) 
     for j = 1 : length(b)
         b[j] = CurrentSolution[O.copy_from][j] * O.factor
     end
 end
 
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0)
     set_time!(O.action, time)
     if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        if verbosity > 0 
-            println("  Creating assembly pattern for nonlinear operator $(O.name)...")
-        end
+        @debug "Creating assembly pattern for nonlinear operator $(O.name)"
         FE = Array{FESpace,1}(undef, length(O.coeff_from))
         for j = 1 : length(O.coeff_from)
             FE[j] = CurrentSolution[O.coeff_from[j]].FES
         end
         push!(FE,A.FESY)
-        SC.LHS_AssemblyPatterns[j,k][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action; regions = O.regions) 
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = false)
+        SC.LHS_AssemblyPatterns[j,k][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action; regions = O.regions, name = O.name) 
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from], transposed_assembly = O.transposed_assembly, skip_preps = false)
     else
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from]; verbosity = verbosity - 1, transposed_assembly = O.transposed_assembly, skip_preps = true)
+        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from], transposed_assembly = O.transposed_assembly, skip_preps = true)
     end
 end
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0, verbosity::Int = 0)
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0)
     if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-        if verbosity > 0 
-            println("  Creating assembly pattern for RHS of nonlinear operator $(O.name)...")
-        end
+        @debug "Creating assembly pattern for RHS of nonlinear operator $(O.name)"
         FE = Array{FESpace,1}(undef, length(O.coeff_from))
         for j = 1 : length(O.coeff_from)
             FE[j] = CurrentSolution[O.coeff_from[j]].FES
         end
         push!(FE,b.FES)
-        SC.RHS_AssemblyPatterns[j][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action_rhs; regions = O.regions)  
+        SC.RHS_AssemblyPatterns[j][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action_rhs; regions = O.regions, name = O.name)  
         set_time!(O.action_rhs, time)
-        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = false)
+        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; skip_preps = false)
     else
         set_time!(O.action_rhs, time)
-        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; verbosity = verbosity, skip_preps = true)
+        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; skip_preps = true)
     end
 end

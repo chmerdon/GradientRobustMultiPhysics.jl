@@ -79,8 +79,7 @@ function boundarydata!(
     Target::FEVectorBlock,
     O::BoundaryOperator;
     time = 0,
-    dirichlet_penalty::Float64 = 1e60,
-    verbosity::Int = 0)
+    dirichlet_penalty::Float64 = 1e60)
     fixed_dofs = []
   
     FE = Target.FES
@@ -123,7 +122,7 @@ function boundarydata!(
                 if FE.broken == true
                     # face interpolation expects continuous dofmaps
                     # quick and dirty fix: use face interpolation and remap dofs to broken dofs
-                    FESc = FESpace{FEType}(FE.xgrid; verbosity = verbosity - 1)
+                    FESc = FESpace{FEType}(FE.xgrid)
                     Targetc = FEVector{Float64}("auxiliary data",FESc)
                     interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
                     xBFaceDofsc = FESc[BFaceDofs]
@@ -138,16 +137,12 @@ function boundarydata!(
                     end
                 else
                     # use face interpolation
-                    interpolate!(Target, ON_BFACES, O.data4bregion[bregion]; items = ibfaces, time = time, verbosity = verbosity - 1)
+                    interpolate!(Target, ON_BFACES, O.data4bregion[bregion]; items = ibfaces, time = time)
                 end
             end
         end   
 
-        if verbosity > 0
-            println("   Int-DBnd = $InterDirichletBoundaryRegions (ndofs = $(length(fixed_dofs)))")
-        end    
-
-        
+        @debug "Int-DBnd = $InterDirichletBoundaryRegions (ndofs = $(length(fixed_dofs)))"
     end
 
     # HOMOGENEOUS DIRICHLET BOUNDARY
@@ -170,10 +165,7 @@ function boundarydata!(
             Target[j] = 0
         end    
 
-        if verbosity > 0
-            println("   Hom-DBnd = $HomDirichletBoundaryRegions (ndofs = $(length(hom_dofs)))")
-        end    
-        
+        @debug "Hom-DBnd = $HomDirichletBoundaryRegions (ndofs = $(length(hom_dofs)))"
     end
 
     # BEST-APPROXIMATION DIRICHLET BOUNDARY
@@ -192,10 +184,7 @@ function boundarydata!(
         end
         BAdofs = Base.unique(BAdofs)
 
-        if verbosity > 0
-            println("    BA-DBnd = $BADirichletBoundaryRegions (ndofs = $(length(BAdofs)))")
-                
-        end    
+        @debug "BA-DBnd = $BADirichletBoundaryRegions (ndofs = $(length(BAdofs)))"
 
         bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
         FEType = eltype(FE)
@@ -215,10 +204,10 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_h1(), [1, ncomponents]; dependencies = "XR", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
-            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions)    
-            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
+            assemble!(b, RHS_bnd)
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(ncomponents); regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
+            assemble!(A[1],L2ProductBnd)
         elseif Dboperator == NormalFlux
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hdiv()
@@ -233,10 +222,10 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
-            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
-            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data NormalFlux bestapprox")
+            assemble!(b, RHS_bnd)
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = BADirichletBoundaryRegions, name = "LHS bnd data NormalFlux bestapprox")    
+            assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hcurl2d()
@@ -249,11 +238,12 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions)
-            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = BADirichletBoundaryRegions)    
-            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
+            assemble!(b, RHS_bnd)
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
+            assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains, does not work properly yet
+            @warn "Hcurl boundary data in 3D may not work properly yet"
             xEdgeTangents = FE.xgrid[EdgeTangents]
             xBEdgeRegions = FE.xgrid[BEdgeRegions]
             xBEdges = FE.xgrid[BEdges]
@@ -270,10 +260,10 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BEDGES, [FE], [Dboperator], Action(Float64, action_kernel); regions = [0])
-            assemble!(b, RHS_bnd; verbosity = verbosity - 1)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = [0])    
-            assemble!(A[1],L2ProductBnd; verbosity = verbosity - 1)
+            RHS_bnd = LinearForm(Float64, ON_BEDGES, [FE], [Dboperator], Action(Float64, action_kernel); regions = [0], name = "RHS bnd data TangentFlux bestapprox")
+            assemble!(b, RHS_bnd)
+            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, [FE, FE], [Dboperator, Dboperator], DoNotChangeAction(1); regions = [0], name = "LHS bnd data TangentFlux bestapprox")    
+            assemble!(A[1],L2ProductBnd)
         end    
 
         # fix already set dofs by other boundary conditions
@@ -288,6 +278,7 @@ function boundarydata!(
         fixed_dofs = Base.unique(fixed_dofs)
 
         # solve best approximation problem on boundary and write into Target
+        @debug "solving for best-approximation boundary data"
 
         if (true) # compress matrix by removing all dofs in the interior
             dof2sparsedof = zeros(Int32,FE.ndofs)
@@ -316,19 +307,10 @@ function boundarydata!(
             push!(newcolptr,A.entries.cscmatrix.colptr[end])
             A.entries.cscmatrix = SparseMatrixCSC{Float64,Int32}(dof,dof,newcolptr,newrowval,A.entries.cscmatrix.nzval)
 
-            if verbosity > 0
-                println("    ...solving")
-                try
-                    @time Target[sparsedof2dof] = SparseArrays.SparseMatrixCSC{Float64,Int64}(A.entries)\smallb
-                catch
-                    @time Target[sparsedof2dof] = A.entries\smallb
-                end
-            else
-                try
-                    Target[sparsedof2dof] = SparseArrays.SparseMatrixCSC{Float64,Int64}(A.entries)\smallb
-                catch
-                    Target[sparsedof2dof] = A.entries\smallb
-                end
+            try
+                Target[sparsedof2dof] = SparseArrays.SparseMatrixCSC{Float64,Int64}(A.entries)\smallb
+            catch
+                Target[sparsedof2dof] = A.entries\smallb
             end
         else # old way: penalize all interior dofs
 
@@ -337,12 +319,7 @@ function boundarydata!(
                 b[j] = 0
             end
 
-            if verbosity > 0
-                println("    ...solving")
-                @time Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
-            else
-                Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
-            end
+            Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
         end
 
 

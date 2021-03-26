@@ -61,6 +61,9 @@ end
 ## everything is wrapped in a main function
 function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## initial grid
     xgrid = grid_lshape(Triangle2D)
 
@@ -70,8 +73,8 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
     FETypeDual = HDIVBDM1{2}
     
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 5)
-    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 4)
+    user_function = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "∇(u)", dependencies = "X", quadorder = 4)
 
     ## setup Poisson problem
     Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
@@ -103,15 +106,15 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
 
         ## create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("Discrete Solution",FES)
-        solve!(Solution, Problem; verbosity = verbosity - 1)
+        Solution = FEVector{Float64}("u_h",FES)
+        solve!(Solution, Problem)
         NDofs[level] = length(Solution[1])
 
         ## evaluate eqilibration error estimator adn append it to Solution vector (for plotting etc.)
-        DualSolution = get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosity = verbosity - 1)
+        DualSolution = get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
         NDofsDual[level] = length(DualSolution.entries)
         FES_eta = FESpace{H1P0{1}}(xgrid)
-        append!(Solution, "estimator",FES_eta)
+        append!(Solution, "σ_h",FES_eta)
         error4cell = zeros(Float64,2,num_sources(xgrid[CellNodes]))
         evaluate!(error4cell, EQIntegrator, [DualSolution[1], DualSolution[1], Solution[1]])
         for j = 1 : num_sources(xgrid[CellNodes])
@@ -147,13 +150,13 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         else
             ## adaptive mesh refinement
             ## refine by red-green-blue refinement (incl. closuring)
-            facemarker = bulk_mark(xgrid, Solution[2], theta; verbosity = verbosity)
-            xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
+            facemarker = bulk_mark(xgrid, Solution[2], theta)
+            xgrid = RGB_refine(xgrid, facemarker)
         end
     end
     
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
     
     ## print results
     @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   ")
@@ -199,7 +202,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
     xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = FESDual[CellDofs]
     xFaceDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = FESDual[FaceDofs]
     xItemDofs_uh::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Solution[1].FES[CellDofs]
-    DualSolution = FEVector{Float64}("Discrete Dual Solution",FESDual)
+    DualSolution = FEVector{Float64}("σ_h",FESDual)
     
     ## partition of unity and their gradients
     POUFEType = H1P1{1}
@@ -230,9 +233,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
 
     Threads.@threads for group in groups
         grouptime = @elapsed begin
-        if verbosity > 0
-            println("  Starting equilibrating patch group $group on thread $(Threads.threadid())... ")
-        end
+        @info "  Starting equilibrating patch group $group on thread $(Threads.threadid())... "
         ## temporary variables
         localnode::Int = 0
         graduh = zeros(Float64,2)
@@ -368,9 +369,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
         X[group] .= A\b
     end
 
-    if verbosity > 0
-        println("  Finished equilibration patch group $group on thread $(Threads.threadid()) in $(grouptime)s ")
-    end
+    @info "Finished equilibration patch group $group on thread $(Threads.threadid()) in $(grouptime)s "
     end
 
     ## write local solutions to global vector

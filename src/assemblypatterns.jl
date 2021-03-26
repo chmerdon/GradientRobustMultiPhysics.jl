@@ -82,6 +82,16 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Abst
     AssemblyPattern{APT, T, AT}(FES,operators,action,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}("$APT", FES,operators,action,regions)
 end 
 
+function Base.show(io::IO, AP::AssemblyPattern)
+    println(io,"\n\tpattern name = $(AP.name)")
+	println(io,"\tpattern type = $(typeof(AP).parameters[1]) (T = $(typeof(AP).parameters[2]))")
+    println(io,"\tpattern span = $(typeof(AP).parameters[3]) (regions = $(AP.regions))")
+    println(io,"\tpattern oprs = $(AP.operators)")
+    println(io,"\tpattern actn = $(AP.action.name) (size = $(AP.action.argsizes))")
+    println(io,"\tpattern quad = $(AP.AM.qf[1].name) ")
+end
+
+
 # this function decides which basis should be evaluated for the evaluation of an operator
 # e.g. Hdiv elements can use the face basis for the evaluation of the normal flux operator,
 # but an H1 element must evaluate the cell basis for GradientDisc{Jump} ON_FACES
@@ -347,7 +357,7 @@ end
 
 
 
-function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbosity::Int = 0) where {APT <: AssemblyPatternType, T<: Real, AT <: AbstractAssemblyType}
+function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where {APT <: AssemblyPatternType, T<: Real, AT <: AbstractAssemblyType}
 
     if FES != "from AP"
         FE = FES
@@ -461,7 +471,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
                 elseif k > 2 && FE[k] == FE[2] && operator[k] == operator[2]
                     basisevaler[j,k,1,1] = basisevaler[j,2,1,1]
                 else    
-                    basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j]; verbosity = verbosity - 1)
+                    basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
                 end    
                 ndofs4EG[k][j] = size(basisevaler[j,k,1,1].cvals,2)
          #   end
@@ -503,7 +513,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
                         qf[EGoffset + j].xref[i] = SVector{xrefdim,T}(xrefFACE2CELL[f](xrefFACE2OFACE[orientation](qf4face.xref[i])))
                         #println("face $f orientation $orientation : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
-                    basisevaler[EGoffset + j,k,f,orientation] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j]; verbosity = verbosity - 1)
+                    basisevaler[EGoffset + j,k,f,orientation] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j])
                 end
                 ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j,k,1,1].cvals,2)
             end
@@ -511,23 +521,6 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP", verbo
 
         # append EGdofitem to EG
         EG = [EG, EGdofitem]
-    end
-
-    if verbosity > 0
-        println("  Preparing assembly for $APT")
-        println("     regions = $(AP.regions)")
-        println("      action = $(typeof(AP.action))")
-        println("          EG = $EG")
-        println("\n  List of arguments FEType / operator / ndofs4EG:")
-        for k = 1 : length(FE)
-            println("      ($k) $(FE[k].name) / $(operator[k]) / $(ndofs4EG[k])")
-        end    
-        if verbosity > 1
-            for j = 1 : length(EG)
-                println("\nQuadratureRule [$j] for $(EG[j]):")
-                Base.show(qf[j])
-            end
-        end
     end
 
     # generate assembly manager

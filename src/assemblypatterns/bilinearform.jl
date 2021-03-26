@@ -2,6 +2,13 @@
 abstract type APT_BilinearForm <: AssemblyPatternType end
 abstract type APT_SymmetricBilinearForm <: APT_BilinearForm end
 
+function Base.show(io::IO, ::Type{APT_BilinearForm})
+    print(io, "BilinearForm")
+end
+function Base.show(io::IO, ::Type{APT_SymmetricBilinearForm})
+    print(io, "SymmetricBilinearForm")
+end
+
 """
 ````
 function SymmetricBilinearForm(
@@ -43,7 +50,6 @@ assemble!(
     A::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT};
     apply_action_to::Int = 1,
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false,
     transpose_copy = Nothing)  where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
@@ -55,7 +61,6 @@ function assemble!(
     A::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT};
     apply_action_to::Int = 1,
-    verbosity::Int = 0,
     factor = 1,
     transposed_assembly::Bool = false,
     transpose_copy = nothing,
@@ -66,7 +71,7 @@ function assemble!(
     # prepare assembly
     FE = AP.FES
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -79,15 +84,12 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into matrix (transposed_assembly = $transposed_assembly)")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (apply_to = $apply_action_to, size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) ($AT in regions = $(AP.regions)) into matrix"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) ($AT) into matrix"
     end
+    @debug AP
  
     # loop over items
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
@@ -224,16 +226,15 @@ function assemble!(
     A::FEMatrixBlock,
     AP::AssemblyPattern{APT,T,AT};
     apply_action_to::Int = 1,
-    verbosity::Int = 0,
     factor = 1,
     skip_preps::Bool = false,
     transposed_assembly::Bool = false,
     transpose_copy = nothing) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     if typeof(transpose_copy) <: FEMatrixBlock
-        assemble!(A.entries, AP; apply_action_to = apply_action_to, verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy.entries, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
+        assemble!(A.entries, AP; apply_action_to = apply_action_to, factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy.entries, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
     else
-        assemble!(A.entries, AP; apply_action_to = apply_action_to, verbosity = verbosity, factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
+        assemble!(A.entries, AP; apply_action_to = apply_action_to, factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
     end
 end
 
@@ -247,8 +248,7 @@ assemble!(
     AP::AssemblyPattern{APT,T,AT};
     apply_action_to::Int = 1,
     fixed_argument::Int = 2,
-    factor = 1,
-    verbosity::Int = 0) where where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    factor = 1) where where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
 ````
 
 Assembly of a BilinearForm BLF into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
@@ -263,13 +263,12 @@ function assemble!(
     fixed_argument::Int = 2,
     factor = 1,
     skip_preps::Bool = false,
-    verbosity::Int = 0,
     offsets::Array{Int,1} = [0,0]) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     # prepare assembly
     FE = AP.FES
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -282,16 +281,12 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into vector with fixed argument $fixed_argument")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (apply_to = $apply_action_to, size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
-        
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) with fixed $(fixedFE.name) ($AT in regions = $(AP.regions))"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) with fixed $(fixedFE.name) ($AT)"
     end
+    @debug AP
 
     # loop over items
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
@@ -409,10 +404,9 @@ function assemble!(
     apply_action_to::Int = 1,
     fixed_argument::Int = 2,
     skip_preps::Bool = false,
-    factor = 1,
-    verbosity::Int = 0) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    factor = 1) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     @assert fixedFE.FES == AP.FES[fixed_argument]
 
-    assemble!(b.entries, fixedFE.entries, AP; apply_action_to = apply_action_to, factor = factor, fixed_argument = fixed_argument, verbosity = verbosity, offsets = [b.offset, fixedFE.offset], skip_preps = skip_preps)
+    assemble!(b.entries, fixedFE.entries, AP; apply_action_to = apply_action_to, factor = factor, fixed_argument = fixed_argument, offsets = [b.offset, fixedFE.offset], skip_preps = skip_preps)
 end

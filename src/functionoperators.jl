@@ -158,31 +158,36 @@ NeededDerivative4Operator(::Type{<:Divergence}) = 1
 NeededDerivative4Operator(::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{Deviator}) = 0
 
+DefaultName4Operator(::Type{<:AbstractFunctionOperator}) = "??"
 DefaultName4Operator(::Type{Identity}) = "id"
 DefaultName4Operator(::Type{IdentityDisc{Jump}}) = "[[id]]"
 DefaultName4Operator(::Type{IdentityDisc{Average}}) = "{{id}}"
-DefaultName4Operator(::Type{<:ReconstructionIdentity}) = "id R"
+DefaultName4Operator(::Type{<:ReconstructionIdentity}) = "R"
 DefaultName4Operator(IC::Type{<:IdentityComponent}) = "id_$(IC.parameters[1])"
-DefaultName4Operator(::Type{NormalFlux}) = "*n"
-DefaultName4Operator(::Type{NormalFluxDisc{Jump}}) = "[[*n]]"
-DefaultName4Operator(::Type{NormalFluxDisc{Average}}) = "{{*n}}"
+DefaultName4Operator(::Type{NormalFlux}) = "NormalFlux"
+DefaultName4Operator(::Type{NormalFluxDisc{Jump}}) = "[[NormalFlux]]"
+DefaultName4Operator(::Type{NormalFluxDisc{Average}}) = "{{NormalFlux}}"
 DefaultName4Operator(::Type{<:ReconstructionNormalFlux}) = "R NormalFlux"
-DefaultName4Operator(::Type{TangentFlux}) = "*t"
-DefaultName4Operator(::Type{TangentFluxDisc{Jump}}) = "[[*t]]"
-DefaultName4Operator(::Type{TangentFluxDisc{Average}}) = "{{*t}}"
-DefaultName4Operator(::Type{<:Gradient}) = "grad"
-DefaultName4Operator(::Type{SymmetricGradient}) = "symgrad"
+DefaultName4Operator(::Type{TangentFlux}) = "TangentialFlux"
+DefaultName4Operator(::Type{TangentFluxDisc{Jump}}) = "[[TangentialFlux]]"
+DefaultName4Operator(::Type{TangentFluxDisc{Average}}) = "{{TangentialFlux}}"
+DefaultName4Operator(::Type{<:Gradient}) = "∇"
+DefaultName4Operator(::Type{SymmetricGradient}) = "ϵ"
 DefaultName4Operator(::Type{TangentialGradient}) = "TangentialGradient"
-DefaultName4Operator(::Type{Laplacian}) = "Laplace"
-DefaultName4Operator(::Type{Hessian}) = "Hessian"
-DefaultName4Operator(::Type{CurlScalar}) = "Curl"
+DefaultName4Operator(::Type{Laplacian}) = "Δ"
+DefaultName4Operator(::Type{Hessian}) = "H"
+DefaultName4Operator(::Type{CurlScalar}) = "curl"
 DefaultName4Operator(::Type{Curl2D}) = "Curl"
-DefaultName4Operator(::Type{Curl3D}) = "Curl"
+DefaultName4Operator(::Type{Curl3D}) = "∇×"
 DefaultName4Operator(::Type{Divergence}) = "div"
 DefaultName4Operator(::Type{<:ReconstructionDivergence}) = "div R"
-DefaultName4Operator(::Type{<:ReconstructionGradient}) = "grad R"
+DefaultName4Operator(::Type{<:ReconstructionGradient}) = "∇ R"
 DefaultName4Operator(::Type{Trace}) = "tr"
 DefaultName4Operator(::Type{Deviator}) = "dev"
+
+function Base.show(io::Core.IO, FO::Type{<:AbstractFunctionOperator})
+    print(io,"$(DefaultName4Operator(FO))")
+end
 
 # length for operator result
 Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents

@@ -13,6 +13,10 @@ allowed ElementGeometries:
 """
 abstract type HDIVRT0{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
+function Base.show(io::Core.IO, FEType::Type{<:HDIVRT0})
+    print(io,"HDIVRT0{$(FEType.parameters[1])}")
+end
+
 get_ncomponents(FEType::Type{<:HDIVRT0}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) = 1
 get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)

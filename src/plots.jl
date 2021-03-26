@@ -23,7 +23,6 @@ function plot(
     show=true,
     clear=true,
     cbar=true,
-    verbosity::Int = 0,
     cmap = "hot",
     maintitle = "",
     fsize = 10)
@@ -38,14 +37,10 @@ function plot(
         # extract grid (assumed to be the same for all FEVectorBlocks)
         spacedim = size( xgrid[Coordinates],1)
 
-        if verbosity >= 0
-            @info "Plotting $(length(Sources)) quantities $(add_grid_plot ? "and the grid" : "")"
-        end
+        @info "Plotting $(length(Sources)) quantities $(add_grid_plot ? "and the grid" : "")"
 
         if xgrid[UniqueCellGeometries] != [Triangle2D] && xgrid[UniqueCellGeometries] != [Tetrahedron3D]
-            if verbosity > 0
-                println("   need simplices, splitting into simplices")
-            end
+            @debug "need simplices, splitting into simplices"
             xgrid = deepcopy(xgrid)
             if spacedim == 2
                 xgrid = split_grid_into(xgrid,Triangle2D)
@@ -69,9 +64,7 @@ function plot(
         for j = 1 : nplots - add_grid_plot
             ## evaluate operator
             if typeof(Sources[j]) <: FEVectorBlock
-                if verbosity > 0
-                    println("\tcollecting data for plot $j : " * "$(operators[j])(" * Sources[j].name * ")")
-                end
+                @logmsg DeepInfo "collecting data for plot $j : " * "$(operators[j])(" * Sources[j].name * ")"
                 nodevalues!(nodevals, Sources[j], operators[j]; target_offset = offsets[j], zero_target = false)
             end
         end
@@ -113,26 +106,22 @@ function plot(
         for j = 1 : nplots - add_grid_plot
             if offsets[j+1] - offsets[j] > 1
                 Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
-                title = maintitle * " | $(DefaultName4Operator(operators[j]))(" * Sources[j].name * ") |"
+                title = maintitle * " | $(operators[j])(" * Sources[j].name * ") |"
             else
                 Z[:] = view(nodevals,offsets[j]+1,:)
-                title = maintitle * " $(DefaultName4Operator(operators[j]))(" * Sources[j].name * ")"
+                title = maintitle * " $(operators[j])(" * Sources[j].name * ")"
             end
             if minimum(Z) == maximum(Z)
                 Z[1] += 1e-16
             end
-            if verbosity > 0
-                println("\tplotting data into plot $j : " * title)
-            end
+            @logmsg DeepInfo "plotting data into plot $j : " * title
             scalarplot!(ctx[j], xgrid, Z) 
             if plottertype(Plotter) == PyPlotType
                 Plotter.title(title)
             end
         end
         if add_grid_plot
-            if verbosity > 0
-                println("\tplotting grid")
-            end
+            @logmsg DeepInfo "plotting grid"
             gridplot!(ctx[nplots], xgrid,show=true) 
             if plottertype(Plotter) == PyPlotType
                 Plotter.title(maintitle * " grid")

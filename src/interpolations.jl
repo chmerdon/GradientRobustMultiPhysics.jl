@@ -89,9 +89,49 @@ function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{FETyp
 end
 
 
+function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {FEType <: AbstractH1FiniteElement}
+    # note: assumes that cell dof is always the last one
+    xgrid = FE.xgrid
+    xItemVolumes = xgrid[CellVolumes]
+    xItemNodes = xgrid[CellNodes]
+    xItemDofs = FE[CellDofs]
+    xCellGeometries = xgrid[CellGeometries]
+    xCellDofs = Dofmap4AssemblyType(FE, ON_CELLS)
+    ncells = num_sources(xItemNodes)
+    nnodes = size(xgrid[Coordinates],2)
+    ncomponents = get_ncomponents(FEType)
+    if items == []
+        items = 1 : ncells
+    end
+
+    # compute exact cell integrals
+    cellintegrals = zeros(Float64,ncomponents,ncells)
+    integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = 0)
+    cellEG = Triangle2D
+    nitemnodes::Int = 0
+    nitemfaces::Int = 0
+    nitemedges::Int = 0
+    offset::Int = 0
+    for item in items
+        cellEG = xCellGeometries[item]
+        nitemnodes = nnodes_for_geometry(cellEG)
+        nitemfaces = nfaces_for_geometry(cellEG)
+        nitemedges = nedges_for_geometry(cellEG)
+        offset = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
+        for c = 1 : ncomponents
+            # subtract integral of P1 part
+            for dof = 1 : nitemnodes
+                cellintegrals[c,item] -= Target[xItemDofs[(c-1)*(nitemnodes+1) + dof,item]] * xItemVolumes[item] / nitemnodes
+            end
+            # set cell bubble such that cell mean is preserved
+            Target[xCellDofs[c*offset,item]] = cellintegrals[c,item] / xItemVolumes[item]
+        end
+    end
+end
+
 # edge integral means
 # used e.g. for interpolation into P2, P2B finite elements
-function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {FEType <: AbstractFiniteElement}
+function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {FEType <: AbstractH1FiniteElement}
 
     xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
@@ -161,8 +201,7 @@ function interpolate!(Target::FEVectorBlock,
      AT::Type{<:AbstractAssemblyType},
      source_data::UserData{AbstractDataFunction};
      items = [],
-     time = 0,
-     verbosity::Int = 0)
+     time = 0)
 ````
 
 Interpolates the given source_data into the finite elements space assigned to the Target FEVectorBlock with the specified AbstractAssemblyType
@@ -172,23 +211,16 @@ function interpolate!(Target::FEVectorBlock,
      AT::Type{<:AbstractAssemblyType},
      source_data::UserData{AbstractDataFunction};
      items = [],
-     time = 0,
-     verbosity::Int = 0)
+     time = 0)
 
-    if verbosity >= 0
-        if is_timedependent(source_data)
-            @info "Interpolating $(source_data.name) >> $(Target.name) ($(printout(AT)) at time $time)"
-        else
-            @info "Interpolating $(source_data.name) >> $(Target.name) ($(printout(AT)))"
-        end
-    end
-    if verbosity > 0
-        println("\tAT = $AT")
-        println("\tFE = $(Target.FES.name) (ndofs = $(Target.FES.ndofs))")
+    if is_timedependent(source_data)
+        @logmsg MoreInfo "Interpolating $(source_data.name) >> $(Target.name) ($AT at time $time)"
+    else
+        @logmsg MoreInfo "Interpolating $(source_data.name) >> $(Target.name) ($AT)"
     end
     FEType = eltype(Target.FES)
     if Target.FES.broken == true
-        FESc = FESpace{FEType}(Target.FES.xgrid; verbosity = verbosity - 1)
+        FESc = FESpace{FEType}(Target.FES.xgrid)
         Targetc = FEVector{Float64}("auxiliary data",FESc)
         interpolate!(Targetc[1], FESc, AT, source_data; items = items, time = time)
         xCellDofs = Target.FES[CellDofs]
@@ -215,15 +247,14 @@ end
 function interpolate!(Target::FEVectorBlock,
      source_data::UserData{AbstractDataFunction};
      items = [],
-     time = 0,
-     verbosity::Int = 0)
+     time = 0)
 ````
 
 Interpolates the given source_data into the finite element space assigned to the Target FEVectorBlock. The optional time argument
 is only used if the source_data depends on time.
 """
-function interpolate!(Target::FEVectorBlock, source_data::UserData{AbstractDataFunction}; verbosity::Int = 0, time = 0)
-    interpolate!(Target, ON_CELLS, source_data; verbosity = verbosity, time = time)
+function interpolate!(Target::FEVectorBlock, source_data::UserData{AbstractDataFunction}; time = 0)
+    interpolate!(Target, ON_CELLS, source_data; time = time)
 end
 
 
@@ -238,21 +269,21 @@ function nodevalues!(Target::AbstractArray{<:Real,2},
     zero_target::Bool = true,
     continuous::Bool = false)
 
-  xItemGeometries = FE.xgrid[CellGeometries]
-  xItemRegions = FE.xgrid[CellRegions]
-  xItemDofs = FE[CellDofs]
-  xItemNodes = FE.xgrid[CellNodes]
+    xItemGeometries = FE.xgrid[CellGeometries]
+    xItemRegions = FE.xgrid[CellRegions]
+    xItemDofs = FE[CellDofs]
+    xItemNodes = FE.xgrid[CellNodes]
 
-  T = Base.eltype(Target)
-  if regions == [0]
-      try
-          regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
-      catch
-          regions = [xItemRegions[1]]
-      end        
-  else
-      regions = Array{Int32,1}(regions)    
-  end
+    T = Base.eltype(Target)
+    if regions == [0]
+        try
+            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end        
+    else
+        regions = Array{Int32,1}(regions)    
+    end
 
     # setup basisevaler for each unique cell geometries
     EG = FE.xgrid[UniqueCellGeometries]

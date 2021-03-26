@@ -1,5 +1,9 @@
 abstract type APT_ItemIntegrator <: AssemblyPatternType end
 
+function Base.show(io::IO, ::Type{APT_ItemIntegrator})
+    print(io, "ItemIntegrator")
+end
+
 """
 ````
 function ItemIntegrator(
@@ -89,8 +93,7 @@ end
 function evaluate!(
     b::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT},
-    FEB::FEVectorBlock;
-    verbosity::Int = 0) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    FEB::FEVectorBlock) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
 ````
 
 Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlocks FEB into given two-dimensional Array b.
@@ -99,8 +102,7 @@ function evaluate!(
     b::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
-    skip_preps::Bool = false,
-    verbosity::Int = 0) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
 
     # prepare assembly
     nFE = length(FEB)
@@ -110,7 +112,7 @@ function evaluate!(
             FE[j] = FEB[j].FES
         end
         @assert length(FEB) == length(AP.operators)
-        prepare_assembly!(AP; FES = FE, verbosity = verbosity - 1)
+        prepare_assembly!(AP; FES = FE)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FEB[1].FES.xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -127,20 +129,12 @@ function evaluate!(
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity >= 0
-        if AP.regions != [0]
-            @info "Evaluating $(AP.name) for $(FEB[1].name) ($(printout(AT)) in regions = $(AP.regions))"
-        else
-            @info "Evaluating $(AP.name) for $(FEB[1].name) ($(printout(AT)))"
-        end
+    if AP.regions != [0]
+        @logmsg MoreInfo "Evaluating $(AP.name) for $((p->p.name).(FEB)) ($AT in regions = $(AP.regions))"
+    else
+        @logmsg MoreInfo "Evaluating $(AP.name) for $((p->p.name).(FEB)) ($AT)"
     end
-    if verbosity > 0
-        println("\tskip_preps = $skip_preps")
-        println("\t operators = $(AP.operators)")
-        println("\t   regions = $(AP.regions)")
-        println("\t    action = $(AP.action.name) (size = $(action.argsizes))")
-        println("\t     qf[1] = $(AM.qf[1].name) ")
-    end
+    @debug AP
 
     # loop over items
     offsets = zeros(Int,nFE+1)
@@ -211,8 +205,7 @@ end
 ````
 function evaluate(
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Array{<:FEVectorBlock,1};
-    verbosity::Int = 0) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    FEB::Array{<:FEVectorBlock,1}) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
 
 ````
 
@@ -221,8 +214,7 @@ Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlocks FEB, 
 function evaluate(
     AP::AssemblyPattern{APT,T,AT},
     FEB;
-    skip_preps::Bool = false,
-    verbosity::Int = 0) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
 
     # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
     # and use the itemwise evaluation above
@@ -230,9 +222,9 @@ function evaluate(
     AV = AccumulatingVector{T}(zeros(T,resultdim), 0)
 
     if typeof(FEB) <: Array{<:FEVectorBlock,1}
-        evaluate!(AV, AP, FEB; verbosity = verbosity, skip_preps = skip_preps)
+        evaluate!(AV, AP, FEB; skip_preps = skip_preps)
     else
-        evaluate!(AV, AP, [FEB]; verbosity = verbosity, skip_preps = skip_preps)
+        evaluate!(AV, AP, [FEB]; skip_preps = skip_preps)
     end
 
     if resultdim == 1

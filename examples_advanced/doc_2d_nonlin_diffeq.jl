@@ -53,12 +53,15 @@ end
 function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, beta = 1,
     use_diffeq::Bool = true, solver = Rosenbrock23(autodiff = false), adaptive_timestep = true,  abstol = 1e-3, reltol = 1e-3)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## initial grid and final time
     xgrid = grid_unitsquare(Triangle2D);
 
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_solution!, [1,1]; name = "u_exact", dependencies = "XT", quadorder = 5)
-    user_function_gradient = DataFunction(exact_gradient!, [2,1]; name = "grad(u_exact)", dependencies = "XT", quadorder = 4)
+    user_function = DataFunction(exact_solution!, [1,1]; name = "u", dependencies = "XT", quadorder = 5)
+    user_function_gradient = DataFunction(exact_gradient!, [2,1]; name = "∇(u)", dependencies = "XT", quadorder = 4)
     user_function_rhs = DataFunction(rhs!(beta), [1,1]; name = "f", dependencies = "XT", quadorder = 5)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
@@ -69,7 +72,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         return nothing
     end 
     action_kernel = ActionKernel(nonlin_kernel, [2,3]; dependencies = "", quadorder = 2)
-    nonlin_diffusion = GenerateNonlinearForm("((1+u^2)*grad(u))*grad(v)", [Identity, Gradient], [1,1], Gradient, action_kernel; ADnewton = true)   
+    nonlin_diffusion = GenerateNonlinearForm("(1+ β u^2) ∇(u)⋅∇(v)", [Identity, Gradient], [1,1], Gradient, action_kernel; ADnewton = true)   
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
@@ -98,7 +101,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         interpolate!(Solution[1], user_function) 
 
         ## generate time-dependent solver
-        sys = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1], skip_update = [beta == 0 ? -1 : 1], verbosity = verbosity, nonlinear_iterations = beta == 0 ? 1 : 5)
+        sys = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1], skip_update = [beta == 0 ? -1 : 1], nonlinear_iterations = beta == 0 ? 1 : 5)
 
         if use_diffeq == true
             ## use time integration by DifferentialEquations
@@ -109,7 +112,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         end
 
         ## plot solution at final time
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 
         ## compute L2 and H1 error of all solutions
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))

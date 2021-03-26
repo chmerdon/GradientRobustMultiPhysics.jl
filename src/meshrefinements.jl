@@ -177,14 +177,11 @@ if multiple geometries are in the mesh uniform refinement will only work
 if all refinement rules refine faces and edges (in 3D) equally
 (so no hanging nodes are created)
 """
-function uniform_refine(source_grid::ExtendableGrid{T,K}; verbosity::Int = 0) where {T,K}
-    if verbosity >= 0
-        @info "Uniform refinement of $(num_sources(source_grid[CellNodes])) cells"
-    end
-
+function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
+    @logmsg MoreInfo "Uniform refinement of $(num_sources(source_grid[CellNodes])) cells"
+    
     xgrid = ExtendableGrid{T,K}()
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
-
 
     # unpack stuff from source grid
     oldCoordinates = source_grid[Coordinates]
@@ -443,10 +440,10 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}; verbosity::Int = 0) wh
 end
 
 
-function uniform_refine(source_grid::ExtendableGrid{T,K}, nrefinements::Int; verbosity::Int = 0) where {T,K}
+function uniform_refine(source_grid::ExtendableGrid{T,K}, nrefinements::Int) where {T,K}
     xgrid = source_grid
     for j=1:nrefinements
-        xgrid = uniform_refine(xgrid; verbosity = verbosity)
+        xgrid = uniform_refine(xgrid)
     end
     return xgrid
 end
@@ -466,10 +463,9 @@ barycentric refinement is available for these ElementGeometries
 - Quadrilateral2D (first split into Triangle2D)
 - Triangle2D
 """
-function barycentric_refine(source_grid::ExtendableGrid{T,K}; verbosity::Int = 0) where {T,K}
-    if verbosity >= 0
-        @info "Barycentric refinement of $(num_sources(source_grid[CellNodes])) cells"
-    end
+function barycentric_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
+    @logmsg MoreInfo "Barycentric refinement of $(num_sources(source_grid[CellNodes])) cells"
+    
     # split first into triangles
     source_grid = split_grid_into(source_grid,Triangle2D)
 

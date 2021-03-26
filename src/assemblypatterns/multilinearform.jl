@@ -1,5 +1,8 @@
 abstract type APT_MultilinearForm <: AssemblyPatternType end
 
+function Base.show(io::IO, ::Type{APT_MultilinearForm})
+    print(io, "MultilinearForm")
+end
 
 """
 ````
@@ -20,10 +23,11 @@ function MultilinearForm(
     FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
+    name = "MLF",
     regions::Array{Int,1} = [0])
 
     @assert length(FE) == length(operators)
-    return AssemblyPattern{APT_MultilinearForm, T, AT}(FE,operators,action,regions)
+    return AssemblyPattern{APT_MultilinearForm, T, AT}(name,FE,operators,action,regions)
 end
 
 """
@@ -33,7 +37,6 @@ assemble!(
     b::AbstractVector,
     FE::Array{<:FEVectorBlock,1},
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     factor = 1)
 ````
 
@@ -44,7 +47,6 @@ function assemble!(
     b::AbstractVector,
     FEB::Array{AbstractVector,1},
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     skip_preps::Bool = false,
     factor = 1,
     offset = 0,
@@ -54,7 +56,7 @@ function assemble!(
     FE = AP.FES
     action = AP.action
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -71,16 +73,12 @@ function assemble!(
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into vector with fixed_arguments = [1:$(nFE-1)]")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (apply_to = [1:$(nFE-1)], size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
-        
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) for given $((p->p.name).(FEB)) into vector ($AT in regions = $(AP.regions)) into matrix"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) for given $((p->p.name).(FEB)) into vector ($AT) into matrix"
     end
+    @debug AP
 
     # loop over items
     offsets = zeros(Int,nFE+1)
@@ -176,7 +174,6 @@ function assemble!(
     b::FEVectorBlock,
     FEB::Array{<:FEVectorBlock,1},
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     skip_preps::Bool = false,
     factor = 1) where {APT <: APT_MultilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
@@ -187,5 +184,5 @@ function assemble!(
         offsets[j] = FEB[j].offset
     end
 
-    assemble!(b.entries, FEBarrays, AP; verbosity = verbosity, factor = factor, offset = b.offset, offsets2 = offsets, skip_preps = skip_preps)
+    assemble!(b.entries, FEBarrays, AP; factor = factor, offset = b.offset, offsets2 = offsets, skip_preps = skip_preps)
 end

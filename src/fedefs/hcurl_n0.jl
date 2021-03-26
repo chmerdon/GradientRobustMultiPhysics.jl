@@ -12,6 +12,10 @@ allowed ElementGeometries:
 """
 abstract type HCURLN0{edim} <: AbstractHcurlFiniteElement where {edim<:Int} end
 
+function Base.show(io::Core.IO, FEType::Type{<:HCURLN0})
+    print(io,"HCURLN0{$(FEType.parameters[1])}")
+end
+
 get_ncomponents(FEType::Type{<:HCURLN0}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}, Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HCURLN0}, EG::Type{<:AbstractElementGeometry}) = 1
 get_ndofs(::Type{ON_CELLS}, FEType::Type{HCURLN0{2}}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)

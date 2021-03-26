@@ -40,6 +40,9 @@ end
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
 function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false)
 
+    ## set log level
+    set_verbosity(verbosity)
+
     ## choose initial mesh
     xgrid = grid_unitsquare(Triangle2D)
 
@@ -83,7 +86,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         push!(NDofs,length(Solution.entries))
 
         ## solve
-        solve!(Solution, Problem; verbosity = 2)
+        solve!(Solution, Problem)
 
         ## calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
@@ -100,15 +103,15 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         end
     
         ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter, verbosity = verbosity)
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
     end
 end
 
 
 ## test function that is called by test unit
 ## tests if the above problem is solved exactly by P2-FEM
-function test(; verbosity = 0)
-    return main(; verbosity = 0, FEType = H1P2{1,2}, nlevels = 1, testmode = true)
+function test()
+    return main(; FEType = H1P2{1,2}, nlevels = 1, testmode = true)
 end
 
 end

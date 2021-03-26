@@ -3,7 +3,7 @@
 # 2D Adaptive Mesh Refinement (L-shape)
 ([source code](SOURCE_URL))
 
-This example computes the standard-residual error estimator for the $H^1$ error of some $H^1$-conforming
+This example computes the standard-residual error estimator for the $H^1$ error ``e = u - u_h`` of some $H^1$-conforming
 approximation ``u_h`` to the solution ``u`` of some Poisson problem ``-\Delta u = f`` on an L-shaped domain, i.e.
 ```math
 \eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
@@ -44,6 +44,9 @@ end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
+
+    ## set log level
+    set_verbosity(verbosity)
 
     ## initial grid
     xgrid = grid_lshape(Triangle2D)
@@ -97,9 +100,9 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
 
         ## create a solution vector and solve the problem
         println("------- LEVEL $level")
-        FES = FESpace{FEType}(xgrid; verbosity = verbosity - 1)
+        FES = FESpace{FEType}(xgrid)
         Solution = FEVector{Float64}("u_h",FES)
-        solve!(Solution, Problem; verbosity = verbosity)
+        solve!(Solution, Problem)
         NDofs[level] = length(Solution[1])
 
         ## calculate local error estimator contributions
@@ -108,14 +111,14 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
         xCellVolumes = xgrid[CellVolumes]
         vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
         jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
-        evaluate!(vol_error,volIntegrator,[Solution[1]]; verbosity = -1)
-        evaluate!(jump_error,jumpIntegrator,[Solution[1]]; verbosity = -1)
+        evaluate!(vol_error,volIntegrator,[Solution[1]])
+        evaluate!(jump_error,jumpIntegrator,[Solution[1]])
 
-        ## calculate L2 error, H1 error, total estimator and H2 error
+        ## calculate exact L2 error, H1 error and total estimator
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
         Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
-        @info "\tη/exact = $(Results[level,3]) / $(Results[level,2])"
+        println("\tη = $(Results[level,3])\n\te = $(Results[level,2])")
 
         if level == nlevels
             break;
@@ -140,13 +143,13 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
             end
 
             ## refine by red-green-blue refinement (incl. closuring)
-            facemarker = bulk_mark(xgrid, refinement_indicators, theta; verbosity = verbosity, indicator_AT = ON_FACES)
-            xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
+            facemarker = bulk_mark(xgrid, refinement_indicators, theta; indicator_AT = ON_FACES)
+            xgrid = RGB_refine(xgrid, facemarker)
         end
     end
     
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
     
     ## print results
     @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   ")

@@ -23,6 +23,9 @@ end
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0)
 
+    ## set log level
+    set_verbosity(verbosity)
+    
     ## choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
 
@@ -46,10 +49,10 @@ function main(; Plotter = nothing, verbosity = 0)
 
     ## solve
     Solution = FEVector{Float64}(["u_h (Hdiv-broken)", "LM face jumps"],FES)
-    solve!(Solution, Problem; verbosity = verbosity)
+    solve!(Solution, Problem)
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
     
     ## solve again with Hdiv-continuous element
     ## to see that we get the same result
@@ -58,7 +61,7 @@ function main(; Plotter = nothing, verbosity = 0)
 
     ## solve
     Solution2 = FEVector{Float64}("u_h (Hdiv-cont.)",FES)
-    solve!(Solution2, Problem; verbosity = verbosity)
+    solve!(Solution2, Problem)
 
     ## calculate L2 error of both solutions and their difference
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)

@@ -61,8 +61,7 @@ Base.setindex!(FES::FESpace,v,DM::Type{<:DofMap}) = FES.dofmaps[DM] = v
 function FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}(
     xgrid::ExtendableGrid;
     name = "",
-    broken::Bool = false,
-    verbosity = 0)
+    broken::Bool = false)
 ````
 
 Constructor for FESpace of the given FEType, AT = ON_CELLS/ON_FACES/ON_EDGES generates a finite elements space on the cells/faces/edges of the provided xgrid (if omitted ON_CELLS is used as default).
@@ -71,8 +70,7 @@ The broken switch allows to generate a broken finite element space (that is piec
 function FESpace{FEType,AT}(
     xgrid::ExtendableGrid;
     name = "",
-    broken::Bool = false,
-    verbosity = 0 ) where {FEType <:AbstractFiniteElement, AT<:AbstractAssemblyType}
+    broken::Bool = false) where {FEType <:AbstractFiniteElement, AT<:AbstractAssemblyType}
     # piecewise constants are always broken
     if FEType <: H1P0
         broken = true
@@ -94,9 +92,7 @@ function FESpace{FEType,AT}(
     ndofs = count_ndofs(xgrid, FEType, broken)
     FES = FESpace{FEType,AT}(name,broken,ndofs,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
 
-    if verbosity >= 0
-        @info "Generated FESpace $name ($(printout(AT)), ndofs=$ndofs)"
-    end
+    @logmsg DeepInfo "Generated FESpace $name ($AT, ndofs=$ndofs)"
 
     return FES
 end
@@ -104,9 +100,8 @@ end
 function FESpace{FEType}(
     xgrid::ExtendableGrid;
     name = "",
-    broken::Bool = false,
-    verbosity = 0 ) where {FEType <:AbstractFiniteElement}
-    return FESpace{FEType,ON_CELLS}(xgrid; name = name, broken = broken, verbosity = verbosity)
+    broken::Bool = false) where {FEType <:AbstractFiniteElement}
+    return FESpace{FEType,ON_CELLS}(xgrid; name = name, broken = broken)
 end
 
 """

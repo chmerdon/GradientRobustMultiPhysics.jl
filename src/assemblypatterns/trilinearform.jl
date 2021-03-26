@@ -1,5 +1,9 @@
 abstract type APT_TrilinearForm <: AssemblyPatternType end
 
+function Base.show(io::IO, ::Type{APT_TrilinearForm})
+    print(io, "TrilinearForm")
+end
+
 """
 ````
 function TrilinearForm(
@@ -18,8 +22,9 @@ function TrilinearForm(
     FES::Array{FESpace,1},
     operators::Array{DataType,1},
     action::AbstractAction;
+    name = "TLF",
     regions::Array{Int,1} = [0])
-    return  AssemblyPattern{APT_TrilinearForm, T, AT}(FES,operators,action,regions)
+    return  AssemblyPattern{APT_TrilinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
 
@@ -30,7 +35,6 @@ assemble!(
     A::AbstractArray{T,2},
     FE1::FEVectorBlock,
     AP::TrilinearForm{T, AT};
-    verbosity::Int = 0,
     fixed_argument::Int = 1,
     transposed_assembly::Bool = false,
     factor = 1)
@@ -44,7 +48,6 @@ function assemble!(
     A::AbstractArray{T,2},
     FE1::FEVectorBlock,
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     fixed_argument::Int = 1,
     transposed_assembly::Bool = false,
     skip_preps::Bool = false,
@@ -53,7 +56,7 @@ function assemble!(
     # prepare assembly
     FE = AP.FES
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -66,16 +69,12 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into matrix (transposed_assembly = $transposed_assembly) with fixed_argument = $fixed_argument")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (apply_to = [1,2], size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
-        
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) for given $(FE1.name) into vector ($AT in regions = $(AP.regions))"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) for given $(FE1.name) into vector ($AT)"
     end
+    @debug AP
 
     # loop over items
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
@@ -209,7 +208,6 @@ assemble!(
     FE1::FEVectorBlock,
     FE2::FEVectorBlock.
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     factor = 1)
 ````
 
@@ -221,7 +219,6 @@ function assemble!(
     FE1::FEVectorBlock,
     FE2::FEVectorBlock,
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     skip_preps::Bool = false,
     factor::Real = 1,
     offset::Int = 0) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
@@ -229,7 +226,7 @@ function assemble!(
     # prepare assembly
     FE = AP.FES
     if !skip_preps
-        prepare_assembly!(AP; verbosity = verbosity - 1)
+        prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
@@ -242,17 +239,12 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
-    if verbosity > 0
-        println("  Assembling ($APT,$AT,$T) into vector with fixed_arguments = [1,2]")
-        println("   skip_preps = $skip_preps")
-        println("    operators = $(AP.operators)")
-        println("      regions = $(AP.regions)")
-        println("       factor = $factor")
-        println("       action = $(AP.action.name) (apply_to = [1,2], size = $(action.argsizes))")
-        println("        qf[1] = $(AM.qf[1].name) ")
-        
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) for given $((p->p.name).([FE1,FE2])) into vector ($AT in regions = $(AP.regions)) into vector"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) for given $((p->p.name).([FE1,FE2])) into vector ($AT) into vector"
     end
-
+    @debug AP
 
     # loop over items
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
@@ -347,9 +339,8 @@ function assemble!(
     FE1::FEVectorBlock,
     FE2::FEVectorBlock,
     AP::AssemblyPattern{APT,T,AT};
-    verbosity::Int = 0,
     skip_preps::Bool = false,
     factor::Real = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    assemble!(b.entries, FE1, FE2, AP; verbosity = verbosity, factor = factor, offset = b.offset, skip_preps = skip_preps)
+    assemble!(b.entries, FE1, FE2, AP; factor = factor, offset = b.offset, skip_preps = skip_preps)
 end

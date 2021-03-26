@@ -26,21 +26,24 @@ function exact_divergence!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0)
+function main()
+
+    ## set log level
+    set_verbosity(verbosity)
 
     ## generate a unit square mesh and refine
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),4)
     
     ## negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [3,3]; name = "u_exact", dependencies = "X", quadorder = 3)
-    user_function_div = DataFunction(exact_divergence!, [1,3]; name = "div(u_exact)", dependencies = "X", quadorder = 2)
+    user_function = DataFunction(exact_function!, [3,3]; name = "u", dependencies = "X", quadorder = 3)
+    user_function_div = DataFunction(exact_divergence!, [1,3]; name = "div(u)", dependencies = "X", quadorder = 2)
 
     ## setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
 
     ## add a new unknown (Lagrange multiplier that handles the divergence constraint)
     ## here 1 is the number of components (it is scalar-valued) and 3 is the space dimension
-    add_unknown!(Problem; unknown_name = "Lagrange multiplier for divergence", equation_name = "divergence constraint")
+    add_unknown!(Problem; unknown_name = "LM (div(u) = 0)", equation_name = "divergence constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
     ## add the right-hand side data for the constraint and inspect the defined problem
@@ -53,8 +56,8 @@ function main(; verbosity = 0)
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid; broken = true)]
 
     ## create a solution vector and solve the problem
-    Solution = FEVector{Float64}("L2-Bestapproximation",FES)
-    solve!(Solution, Problem; verbosity = verbosity)
+    Solution = FEVector{Float64}(["u_h","p_h"],FES)
+    solve!(Solution, Problem)
 
     ## calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)

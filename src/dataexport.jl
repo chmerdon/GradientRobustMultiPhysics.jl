@@ -104,7 +104,7 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
             if length(names) >= b
                 fieldname = names[b]
             else
-                fieldname = DefaultName4Operator(operators[b]) * "(" * Data[block].name * ")"
+                fieldname = "$(operators[b])" * "(" * Data[block].name * ")"
                 if ncomponents == 1
                     fieldname = fieldname[1:min(30,length(fieldname))]
                     fieldname = replace(String(fieldname), " " => "_")
@@ -124,7 +124,7 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
         # add data for absolute value of vector quantity
         if vectorabs && ncomponents > 1
             nfields += 1
-            fieldname = DefaultName4Operator(operators[b]) * "(" * Data[block].name * ")"
+            fieldname = "$(operators[b])" * "(" * Data[block].name * ")"
             fieldname = fieldname[1:min(28,length(fieldname))]
             fieldname = replace(String(fieldname), " " => "_")
             fieldname = "$(b)_$fieldname.a"
@@ -148,17 +148,14 @@ Writes the specified FEVector into a CSV datafile with the given filename. First
 with the evaluations of the operators where operator[j] is applied to Source[blockids[j]].
 
 """
-function writeCSV!(filename::String, Source::FEVector; blockids = [], operators = [], names = [], seperator::String = "\t", verbosity::Int = 0)
+function writeCSV!(filename::String, Source::FEVector; blockids = [], operators = [], names = [], seperator::String = "\t")
     if blockids == []
         blockids = 1:length(Data)
     end
 
     # open file and write VTK header
     io = open(filename, "w")
-    if verbosity > 0
-        println("\nDATAEXPORT (CSV)")
-        println("===============\n")
-    end
+    @logmsg MoreInfo "data export to csv file $filename"
     
     # open grid
     xgrid = Source[1].FES.xgrid
@@ -190,9 +187,7 @@ function writeCSV!(filename::String, Source::FEVector; blockids = [], operators 
         @printf(io, "%s %s",name,seperator)
         ## evaluate operator
         if blockids[j] > 0
-            if verbosity > 0
-                println("   collecting data for block $j : " * "$(operators[j])(" * Source[blockids[j]].name * ")")
-            end
+            @debug "collecting data for block $j : " * "$(operators[j])(" * Source[blockids[j]].name * ")"
             nodevalues!(nodevals, Source[blockids[j]], operators[j]; target_offset = offsets[j], zero_target = false)
         end
     end

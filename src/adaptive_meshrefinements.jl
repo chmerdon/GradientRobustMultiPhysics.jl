@@ -1,4 +1,4 @@
-function bulk_mark(xgrid, refinement_indicators, theta = 0.5; verbosity::Int = 0, indicator_AT = ON_CELLS)
+function bulk_mark(xgrid, refinement_indicators, theta = 0.5; indicator_AT = ON_CELLS)
 
     xFaceCells = xgrid[FaceCells]
     xFaceNodes = xgrid[FaceNodes]
@@ -76,7 +76,7 @@ The bool array facemarkers determines which faces should be bisected. Note, that
 such that the first face in every triangle with a marked face is also refined.
 """
 # 
-function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}; verbosity = 0) where {T,K}
+function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}) where {T,K}
     
     xgrid = ExtendableGrid{T,K}()
     xgrid[CoordinateSystem]=source_grid[CoordinateSystem]
@@ -102,9 +102,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     nrefcounts = [0,0,0,0,0]
 
     # closuring
-    if verbosity >= 0
-        @info ("RGB refinement (bisected faces before/after closuring = $(sum(facemarkers)))")
-    end
+    @logmsg MoreInfo "RGB refinement with $(sum(facemarkers)) marked faces"
     is_refined = true
     closure_finished = false
     while closure_finished == false
@@ -124,9 +122,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
             end
         end
     end
-    if verbosity > 0
-        println(" / $(sum(facemarkers))")
-    end
+    @logmsg DeepInfo "marked faces after closure = $(sum(facemarkers))"
 
 
     # determine number of new vertices
@@ -192,9 +188,8 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
         end    
         ncells += size(refine_rule,1)
     end
-    if verbosity > 0
-        @info "\tred/blueR/blueL/green/unrefined = $nrefcounts"
-    end
+
+    @logmsg DeepInfo "\tred/blueR/blueL/green/unrefined = $nrefcounts"
 
     # assign new cells to grid
     xgrid[Coordinates] = xCoordinates
@@ -266,9 +261,7 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
             push!(xBFaceRegions,oldBFaceRegions[bface])
         end
     end
-    if verbosity > 0
-        println("    bisected bfaces = $newbfaces")
-    end
+    @debug "bisected bfaces = $newbfaces"
     
     xgrid[BFaceNodes] = Array{Int32,2}(reshape(xBFaceNodes,(2,nbfaces+newbfaces)))
     xgrid[BFaceRegions] = xBFaceRegions

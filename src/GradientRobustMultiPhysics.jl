@@ -13,6 +13,45 @@ using LinearAlgebra
 using ForwardDiff
 using DocStringExtensions
 using Printf
+using Logging
+
+## add two more log levels between Debug = LogLevel(-1000) and Info = LogLevel(0)
+struct GRMPLogLevel
+    level::Int32
+end
+
+const DeepInfo = GRMPLogLevel(-200)
+const MoreInfo = GRMPLogLevel(-100)
+const RegInfo = GRMPLogLevel(0)
+
+Base.isless(a::GRMPLogLevel, b::LogLevel) = isless(a.level, b.level)
+Base.isless(a::LogLevel, b::GRMPLogLevel) = isless(a.level, b.level)
+Base.convert(::Type{LogLevel}, level::GRMPLogLevel) = LogLevel(level.level)
+Base.show(io::IO, level::GRMPLogLevel) =
+    if level == DeepInfo
+        print(io, "deepinfo")
+    elseif level == MoreInfo
+        print(io, "moreinfo")
+    elseif level == RegInfo
+        print(io, "info")
+    else
+        show(io, LogLevel(level))
+    end
+
+Logging.disable_logging(Logging.BelowMinLevel)
+
+function set_verbosity(verbosity::Int)
+    if verbosity < 0
+        Logging.disable_logging(Logging.Info)
+    elseif verbosity == 0
+        Logging.disable_logging(LogLevel(-100))
+    elseif verbosity == 1
+        Logging.disable_logging(LogLevel(-200))
+    elseif verbosity == 2
+        Logging.disable_logging(Logging.Debug)
+    end 
+end
+export MoreInfo, DeepInfo, set_verbosity
 
 ## stuff that may go to ExtendableGrids
 
@@ -98,7 +137,6 @@ export Trace, Deviator
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator
 export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
-export DefaultName4Operator
 
 export DiscontinuityTreatment, Jump, Average
 export IdentityDisc, GradientDisc

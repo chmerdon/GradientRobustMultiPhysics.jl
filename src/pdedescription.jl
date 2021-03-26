@@ -87,6 +87,12 @@ function PDEDescription(name::String, nunknowns::Int; unknown_names::Array{Strin
     # GLOBAL CONSTRAINTS
     MyGlobalConstraints = Array{AbstractGlobalConstraint,1}(undef,0)
 
+    if nunknowns == 0
+        @logmsg DeepInfo "Created empty PDEDescription $name"
+    else
+        @logmsg DeepInfo "Created PDEDescription $name with $nunknowns unknowns $unknown_names"
+    end
+
     return PDEDescription(name, equation_names, unknown_names, MyLHS, MyRHS, MyBoundary, MyGlobalConstraints)
 end
 
@@ -118,6 +124,7 @@ function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_n
         end
     end
     PDE.LHSOperators = NewLHS
+    @logmsg DeepInfo "Added unknown $unknown_name to PDEDescription $(PDE.name)"
 end
 
 """
@@ -133,6 +140,7 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDE
     if LHSoperator_also_modifies_RHS(O)
         push!(PDE.RHSOperators[position[1]],O)
     end
+    @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
 end
 
 """
@@ -142,6 +150,7 @@ Adds the given PDEOperator to the right-hand side of the PDEDescription at the s
 """
 function add_rhsdata!(PDE::PDEDescription,position::Int,O::AbstractPDEOperator)
     push!(PDE.RHSOperators[position],O)
+    @logmsg DeepInfo "Added operator $(O.name) to RHS block $position of PDEDescription $(PDE.name)"
 end
 
 """
@@ -153,6 +162,7 @@ If timedependent == true, that data function depends also on time t and is reass
 """
 function add_boundarydata!(PDE::PDEDescription,position::Int,regions, btype::Type{<:AbstractBoundaryType}; data = Nothing)
     Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data)
+    @logmsg DeepInfo "Added boundary_data for unknown $(PDE.unknown_names[position]) in region(s) $regions to PDEDescription $(PDE.name)"
 end
 
 
@@ -163,6 +173,7 @@ Adds the given global constraint to the PDEDescription.
 """
 function add_constraint!(PDE::PDEDescription,GC::AbstractGlobalConstraint)
     Base.push!(PDE.GlobalConstraints,GC)
+    @logmsg DeepInfo "Added global constraint to PDEDescription $(PDE.name)"
 end
 
 

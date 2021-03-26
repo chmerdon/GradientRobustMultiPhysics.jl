@@ -27,7 +27,7 @@ function main(; verbosity = 1, Plotter = nothing)
 
     ## assemble mass matrix and divide by area
     MAMA = FEMatrix{Rational}("mass matrix",FES)
-    assemble!(MAMA[1],MAMA_BLF; verbosity = verbosity)
+    assemble!(MAMA[1],MAMA_BLF)
     MAMA = MAMA.entries ./ xgrid[CellVolumes][1]
 
     ## print matrix
