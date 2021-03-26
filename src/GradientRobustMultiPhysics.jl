@@ -22,7 +22,6 @@ end
 
 const DeepInfo = GRMPLogLevel(-200)
 const MoreInfo = GRMPLogLevel(-100)
-const RegInfo = GRMPLogLevel(0)
 
 Base.isless(a::GRMPLogLevel, b::LogLevel) = isless(a.level, b.level)
 Base.isless(a::LogLevel, b::GRMPLogLevel) = isless(a.level, b.level)
@@ -41,14 +40,36 @@ Base.show(io::IO, level::GRMPLogLevel) =
 Logging.disable_logging(Logging.BelowMinLevel)
 
 function set_verbosity(verbosity::Int)
+    logger = current_logger()
+    println("$(logger.min_level)")
     if verbosity < 0
-        Logging.disable_logging(Logging.Info)
+        if logger.min_level != Logging.Warn
+            logger = ConsoleLogger(stdout, Logging.Warn)
+            global_logger(logger)
+        end
     elseif verbosity == 0
-        Logging.disable_logging(LogLevel(-100))
+        if logger.min_level != Logging.Info
+            logger = ConsoleLogger(stdout, Logging.Info)
+            global_logger(logger)
+        end
     elseif verbosity == 1
-        Logging.disable_logging(LogLevel(-200))
+        if logger.min_level != MoreInfo
+            logger = ConsoleLogger(stdout, MoreInfo)
+            global_logger(logger)
+            @logmsg MoreInfo "you can now see more info messages"
+        end
     elseif verbosity == 2
-        Logging.disable_logging(Logging.Debug)
+        if logger.min_level != DeepInfo
+            logger = ConsoleLogger(stdout, DeepInfo)
+            global_logger(logger)
+            @logmsg DeepInfo "you can now see deep info messages"
+        end
+    elseif verbosity >= 3
+        if logger.min_level != Logging.Debug
+            logger = ConsoleLogger(stdout, Logging.Debug)
+            global_logger(logger)
+            @logmsg Logging.Debug "you can now see debug messages"
+        end
     end 
 end
 export MoreInfo, DeepInfo, set_verbosity

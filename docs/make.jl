@@ -1,6 +1,5 @@
 using Documenter
 using Literate
-using Logging
 using ExtendableSparse
 using ExtendableGrids
 using GradientRobustMultiPhysics
@@ -97,6 +96,7 @@ function make_all()
         end
     end
     generated_examples_advanced=joinpath.("examples_advanced",readdir(example_md_dir2))
+
 
     pushfirst!(generated_examples, "examples_intro.md")
 

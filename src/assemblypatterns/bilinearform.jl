@@ -282,9 +282,9 @@ function assemble!(
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     if AP.regions != [0]
-        @logmsg MoreInfo "Assembling $(AP.name) with fixed $(fixedFE.name) ($AT in regions = $(AP.regions))"
+        @logmsg MoreInfo "Assembling $(AP.name) with fixed argument $fixed_argument ($AT in regions = $(AP.regions))"
     else
-        @logmsg MoreInfo "Assembling $(AP.name) with fixed $(fixedFE.name) ($AT)"
+        @logmsg MoreInfo "Assembling $(AP.name) with fixed argument $fixed_argument ($AT)"
     end
     @debug AP
 
