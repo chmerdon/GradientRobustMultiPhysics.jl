@@ -199,39 +199,38 @@ function test()
     return maximum(error)
 end
 
-end</code></pre><pre><code class="language-none">Main.##267.Example_2DPressureRobustness</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DPressureRobustness.main()</code></pre><pre><code class="language-none">Info
-┌ Info: ----- Solving Stokes problem (classical) -----
+end</code></pre><pre><code class="language-none">Main.##267.Example_2DPressureRobustness</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DPressureRobustness.main()</code></pre><pre><code class="language-none">┌ Info: ----- Solving Stokes problem (classical) -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (classic) (H1BR{2}, ndofs = 98)
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; p_h (classic) (H1P0{1} (broken), ndofs = 24)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 2.174278e-16 | 2.895609e+00 | 1.75e-03/7.78e-04/3.14e-03
-        2   | 1.363061e-15 | 1.067347e+00 | 1.53e-03/6.66e-04/3.19e-03
-        3   | 1.404897e-15 | 7.087535e-01 | 1.51e-03/6.29e-04/3.14e-03
-        4   | 1.318179e-15 | 5.499006e-01 | 1.53e-03/6.70e-04/3.24e-03
-        5   | 1.021241e-15 | 4.736254e-01 | 1.52e-03/5.96e-04/3.23e-03
-        6   | 1.476936e-15 | 1.652921e-01 | 1.59e-03/6.67e-04/3.41e-03
-        7   | 1.336060e-15 | 3.831433e-01 | 1.55e-03/6.32e-04/3.39e-03
-        8   | 1.563999e-15 | 1.127895e-01 | 1.55e-03/6.61e-04/3.46e-03
-        9   | 1.198933e-15 | 4.110841e-02 | 1.50e-03/6.40e-04/3.44e-03
-       10   | 1.460461e-15 | 2.561907e-02 | 1.53e-03/6.40e-04/3.47e-03
-       11   | 1.243970e-15 | 1.383777e-02 | 1.51e-03/7.37e-04/3.58e-03
-       12   | 1.626333e-15 | 6.254046e-03 | 1.52e-03/6.40e-04/3.49e-03
-       13   | 1.261669e-15 | 3.089310e-03 | 1.52e-03/6.63e-04/3.52e-03
-       14   | 1.522737e-15 | 1.889634e-03 | 2.11e-02/6.48e-04/2.31e-02
-       15   | 1.238271e-15 | 1.335549e-03 | 1.54e-03/7.48e-04/3.54e-03
-       16   | 1.259397e-15 | 1.057768e-03 | 1.57e-03/6.52e-04/3.38e-03
-       17   | 1.284683e-15 | 7.201438e-04 | 1.52e-03/6.43e-04/3.32e-03
-       18   | 1.392643e-15 | 6.749472e-04 | 1.57e-03/6.77e-04/3.40e-03
-       19   | 1.533180e-15 | 3.676311e-04 | 1.53e-03/6.33e-04/3.33e-03
-       20   | 1.592400e-15 | 8.352983e-05 | 1.52e-03/6.39e-04/3.34e-03
+        1   | 2.174278e-16 | 2.895609e+00 | 1.98e-03/1.03e-03/3.73e-03
+        2   | 1.363061e-15 | 1.067347e+00 | 1.74e-03/8.13e-04/3.60e-03
+        3   | 1.404897e-15 | 7.087535e-01 | 1.70e-03/8.73e-04/3.67e-03
+        4   | 1.318179e-15 | 5.499006e-01 | 1.74e-03/7.16e-04/3.63e-03
+        5   | 1.021241e-15 | 4.736254e-01 | 3.70e-03/6.61e-04/5.64e-03
+        6   | 1.476936e-15 | 1.652921e-01 | 1.97e-03/1.12e-03/4.76e-03
+        7   | 1.336060e-15 | 3.831433e-01 | 1.85e-03/7.90e-04/4.05e-03
+        8   | 1.563999e-15 | 1.127895e-01 | 1.80e-03/7.37e-04/4.02e-03
+        9   | 1.198933e-15 | 4.110841e-02 | 1.62e-03/9.34e-04/4.11e-03
+       10   | 1.460461e-15 | 2.561907e-02 | 1.98e-03/7.89e-04/4.43e-03
+       11   | 1.243970e-15 | 1.383777e-02 | 1.69e-03/9.81e-04/4.24e-03
+       12   | 1.626333e-15 | 6.254046e-03 | 1.76e-03/7.25e-04/3.97e-03
+       13   | 1.261669e-15 | 3.089310e-03 | 1.68e-03/7.72e-04/3.95e-03
+       14   | 1.522737e-15 | 1.889634e-03 | 1.65e-03/7.36e-04/3.91e-03
+       15   | 1.238271e-15 | 1.335549e-03 | 1.67e-03/7.55e-04/3.89e-03
+       16   | 1.259397e-15 | 1.057768e-03 | 1.77e-03/7.20e-04/4.05e-03
+       17   | 1.284683e-15 | 7.201438e-04 | 1.71e-03/7.26e-04/3.99e-03
+       18   | 1.392643e-15 | 6.749472e-04 | 1.64e-03/7.49e-04/3.92e-03
+       19   | 1.533180e-15 | 3.676311e-04 | 1.67e-03/7.55e-04/3.87e-03
+       20   | 1.592400e-15 | 8.352983e-05 | 3.00e-03/7.16e-04/6.81e-03
 ┌ Warning: maxIterations reached
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:659
 ┌ Info: ----- solve finished -----
 │ 	residual = 8.352982838401054e-5
-│ 	totaltime = 4.432193014s
+│ 	totaltime = 4.930097496s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Warning: residual was larger than desired tolerance!
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:948
@@ -242,49 +241,49 @@ end</code></pre><pre><code class="language-none">Main.##267.Example_2DPressureRo
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 2.174278e-16 | 3.534926e+00 | 1.80e-03/7.53e-04/3.15e-03
-        2   | 9.083091e-16 | 5.313220e-02 | 1.67e-03/7.50e-04/3.38e-03
-        3   | 1.355930e-15 | 3.608510e-02 | 1.68e-03/7.02e-04/3.39e-03
-        4   | 9.557520e-16 | 2.774510e-02 | 1.88e-03/6.82e-04/3.65e-03
-        5   | 1.031000e-15 | 6.944741e-03 | 1.70e-03/6.83e-04/3.46e-03
-        6   | 1.105831e-15 | 4.833762e-03 | 1.71e-03/6.80e-04/3.52e-03
-        7   | 1.553911e-15 | 1.766911e-03 | 1.71e-03/6.78e-04/3.87e-03
-        8   | 1.221009e-15 | 7.211386e-04 | 1.70e-03/6.85e-04/3.51e-03
-        9   | 1.151481e-15 | 1.358392e-04 | 1.69e-03/7.12e-04/3.62e-03
-       10   | 1.236733e-15 | 2.553529e-05 | 1.67e-03/6.97e-04/3.50e-03
-       11   | 9.777853e-16 | 1.493993e-05 | 1.68e-03/7.24e-04/3.53e-03
-       12   | 1.417598e-15 | 2.823598e-06 | 1.69e-03/7.07e-04/3.53e-03
-       13   | 1.240988e-15 | 7.986703e-07 | 1.69e-03/6.89e-04/5.59e-03
-       14   | 1.347442e-15 | 9.531717e-08 | 1.68e-03/6.90e-04/3.51e-03
-       15   | 1.285152e-15 | 2.429137e-08 | 1.76e-03/6.88e-04/3.69e-03
-       16   | 1.621811e-15 | 1.121518e-08 | 1.67e-03/7.27e-04/3.69e-03
-       17   | 1.123596e-15 | 1.075877e-09 | 1.68e-03/7.69e-04/3.73e-03
-       18   | 1.180549e-15 | 4.628018e-10 | 1.68e-03/7.17e-04/3.69e-03
-       19   | 9.083568e-16 | 3.909030e-11 | 1.69e-03/7.12e-04/3.72e-03
+        1   | 2.174278e-16 | 3.534926e+00 | 1.99e-03/9.12e-04/3.59e-03
+        2   | 9.083091e-16 | 5.313220e-02 | 1.94e-03/8.92e-04/4.19e-03
+        3   | 1.355930e-15 | 3.608510e-02 | 1.93e-03/8.17e-04/3.90e-03
+        4   | 9.557520e-16 | 2.774510e-02 | 1.92e-03/8.32e-04/4.00e-03
+        5   | 1.031000e-15 | 6.944741e-03 | 1.97e-03/8.00e-04/4.03e-03
+        6   | 1.105831e-15 | 4.833762e-03 | 1.90e-03/8.03e-04/4.11e-03
+        7   | 1.553911e-15 | 1.766911e-03 | 1.93e-03/8.06e-04/4.15e-03
+        8   | 1.221009e-15 | 7.211386e-04 | 1.87e-03/8.23e-04/4.01e-03
+        9   | 1.151481e-15 | 1.358392e-04 | 1.77e-03/8.02e-04/3.95e-03
+       10   | 1.236733e-15 | 2.553529e-05 | 2.27e-03/1.27e-03/5.67e-03
+       11   | 9.777853e-16 | 1.493993e-05 | 1.76e-03/8.71e-04/4.12e-03
+       12   | 1.417598e-15 | 2.823598e-06 | 1.93e-03/8.67e-04/4.22e-03
+       13   | 1.240988e-15 | 7.986703e-07 | 1.80e-03/8.16e-04/6.10e-03
+       14   | 1.347442e-15 | 9.531717e-08 | 1.88e-03/9.44e-04/4.30e-03
+       15   | 1.285152e-15 | 2.429137e-08 | 1.94e-03/8.87e-04/4.28e-03
+       16   | 1.621811e-15 | 1.121518e-08 | 1.90e-03/8.13e-04/4.25e-03
+       17   | 1.123596e-15 | 1.075877e-09 | 1.71e-03/8.21e-04/4.00e-03
+       18   | 1.180549e-15 | 4.628018e-10 | 1.90e-03/8.15e-04/4.24e-03
+       19   | 9.083568e-16 | 3.909030e-11 | 1.98e-03/8.49e-04/4.28e-03
 ┌ Info: ----- solve finished -----
 │ 	residual = 3.909029710864849e-11
-│ 	totaltime = 2.54156935s
+│ 	totaltime = 2.80406536s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 98)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 9.731922447785996e-17
-│ 	totaltime = 0.666935955s
+│ 	totaltime = 0.748755457s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : p_exact &gt;&gt; L2-Bestapproximation pressure (H1P0{1} (broken), ndofs = 24)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 6.397344083151129e-17
-│ 	totaltime = 0.44578234s
+│ 	totaltime = 0.500314173s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving H1-Bestapproximation problem -----
 │ 	Equation (1.1) H1-bestapproximation equation : u_exact &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 98)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 3.882271193999027e-15
-│ 	totaltime = 0.296713127s
+│ 	totaltime = 0.312806547s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving Stokes problem (classical) -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (classic) (H1BR{2}, ndofs = 338)
@@ -293,29 +292,29 @@ end</code></pre><pre><code class="language-none">Main.##267.Example_2DPressureRo
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 2.577267e-16 | 1.841178e+00 | 5.81e-03/2.77e-03/9.37e-03
-        2   | 1.470483e-15 | 3.084639e-01 | 5.63e-03/2.67e-03/1.00e-02
-        3   | 1.255682e-15 | 1.612209e-01 | 6.07e-03/2.72e-03/1.06e-02
-        4   | 1.553636e-15 | 2.140978e-02 | 5.67e-03/2.62e-03/9.89e-03
-        5   | 1.245053e-15 | 7.493525e-03 | 5.61e-03/2.66e-03/1.01e-02
-        6   | 1.628339e-15 | 6.700983e-03 | 5.71e-03/2.60e-03/1.03e-02
-        7   | 1.378316e-15 | 2.690351e-03 | 5.74e-03/2.56e-03/1.03e-02
-        8   | 1.310319e-15 | 1.436958e-03 | 6.14e-03/1.84e-02/2.68e-02
-        9   | 1.313919e-15 | 2.477526e-04 | 5.72e-03/2.72e-03/1.04e-02
-       10   | 1.254723e-15 | 3.067998e-05 | 5.74e-03/2.67e-03/1.04e-02
-       11   | 1.356973e-15 | 2.047806e-05 | 5.72e-03/2.60e-03/1.03e-02
-       12   | 1.313153e-15 | 2.817850e-06 | 6.18e-03/2.88e-03/1.10e-02
-       13   | 1.393361e-15 | 6.860903e-07 | 5.77e-03/3.01e-03/1.07e-02
-       14   | 1.426387e-15 | 1.139044e-07 | 5.64e-03/2.63e-03/1.02e-02
-       15   | 1.479196e-15 | 3.277873e-08 | 5.74e-03/2.62e-03/1.04e-02
-       16   | 1.297434e-15 | 6.170044e-09 | 5.62e-03/2.60e-03/1.02e-02
-       17   | 1.436980e-15 | 2.812674e-09 | 5.61e-03/2.70e-03/1.03e-02
-       18   | 1.666445e-15 | 1.072299e-09 | 6.05e-03/2.68e-03/1.07e-02
-       19   | 1.426219e-15 | 2.455609e-10 | 6.08e-03/2.89e-03/1.09e-02
-       20   | 1.589886e-15 | 9.960883e-11 | 5.67e-03/2.70e-03/1.04e-02
+        1   | 2.577267e-16 | 1.841178e+00 | 6.19e-03/3.19e-03/1.03e-02
+        2   | 1.470483e-15 | 3.084639e-01 | 5.97e-03/2.36e-02/3.13e-02
+        3   | 1.255682e-15 | 1.612209e-01 | 5.78e-03/3.24e-03/1.08e-02
+        4   | 1.553636e-15 | 2.140978e-02 | 6.13e-03/3.02e-03/1.11e-02
+        5   | 1.245053e-15 | 7.493525e-03 | 6.08e-03/3.02e-03/1.12e-02
+        6   | 1.628339e-15 | 6.700983e-03 | 6.77e-03/4.09e-03/1.35e-02
+        7   | 1.378316e-15 | 2.690351e-03 | 5.91e-03/3.34e-03/1.17e-02
+        8   | 1.310319e-15 | 1.436958e-03 | 6.26e-03/3.16e-03/1.19e-02
+        9   | 1.313919e-15 | 2.477526e-04 | 6.53e-03/3.02e-03/1.20e-02
+       10   | 1.254723e-15 | 3.067998e-05 | 6.67e-03/3.29e-03/1.26e-02
+       11   | 1.356973e-15 | 2.047806e-05 | 6.08e-03/3.08e-03/1.15e-02
+       12   | 1.313153e-15 | 2.817850e-06 | 6.28e-03/3.17e-03/1.41e-02
+       13   | 1.393361e-15 | 6.860903e-07 | 6.46e-03/3.05e-03/1.18e-02
+       14   | 1.426387e-15 | 1.139044e-07 | 8.44e-03/2.98e-03/1.38e-02
+       15   | 1.479196e-15 | 3.277873e-08 | 6.34e-03/3.10e-03/1.19e-02
+       16   | 1.297434e-15 | 6.170044e-09 | 6.34e-03/3.18e-03/1.20e-02
+       17   | 1.436980e-15 | 2.812674e-09 | 6.46e-03/3.04e-03/1.20e-02
+       18   | 1.666445e-15 | 1.072299e-09 | 8.54e-03/3.07e-03/1.40e-02
+       19   | 1.426219e-15 | 2.455609e-10 | 6.44e-03/3.21e-03/1.21e-02
+       20   | 1.589886e-15 | 9.960883e-11 | 1.04e-02/3.04e-03/1.58e-02
 ┌ Info: ----- solve finished -----
 │ 	residual = 9.960883263568988e-11
-│ 	totaltime = 0.240327098s
+│ 	totaltime = 0.285366292s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving Stokes problem (p-robust) -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (p-robust) (H1BR{2}, ndofs = 338)
@@ -324,46 +323,46 @@ end</code></pre><pre><code class="language-none">Main.##267.Example_2DPressureRo
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 2.577267e-16 | 2.190743e+00 | 7.56e-03/2.72e-03/1.11e-02
-        2   | 1.178890e-15 | 4.811935e-03 | 6.28e-03/3.12e-03/1.09e-02
-        3   | 1.516538e-15 | 1.375984e-03 | 6.27e-03/3.20e-03/1.09e-02
-        4   | 1.458409e-15 | 5.942557e-04 | 6.57e-03/2.99e-03/1.12e-02
-        5   | 1.428942e-15 | 2.647194e-04 | 6.56e-03/2.97e-03/1.13e-02
-        6   | 1.598058e-15 | 1.365080e-04 | 6.72e-03/3.11e-03/2.34e-02
-        7   | 1.342173e-15 | 4.475999e-05 | 6.49e-03/3.25e-03/1.22e-02
-        8   | 1.275286e-15 | 1.072202e-05 | 6.41e-03/2.94e-03/1.14e-02
-        9   | 1.404208e-15 | 2.004208e-06 | 6.35e-03/2.97e-03/1.13e-02
-       10   | 1.398927e-15 | 4.362334e-07 | 6.26e-03/3.97e-03/1.47e-02
-       11   | 1.513582e-15 | 7.984069e-08 | 8.52e-03/2.86e-03/1.36e-02
-       12   | 1.323453e-15 | 2.400910e-08 | 6.33e-03/3.21e-03/1.16e-02
-       13   | 1.463632e-15 | 5.485776e-09 | 6.41e-03/2.99e-03/1.14e-02
-       14   | 1.363656e-15 | 1.780734e-09 | 6.34e-03/2.96e-03/1.13e-02
-       15   | 1.286277e-15 | 2.332759e-10 | 6.31e-03/3.07e-03/1.14e-02
-       16   | 1.220083e-15 | 7.315823e-11 | 6.55e-03/2.91e-03/1.14e-02
+        1   | 2.577267e-16 | 2.190743e+00 | 7.16e-03/3.18e-03/1.13e-02
+        2   | 1.178890e-15 | 4.811935e-03 | 6.77e-03/3.49e-03/1.18e-02
+        3   | 1.516538e-15 | 1.375984e-03 | 2.20e-02/3.40e-03/2.72e-02
+        4   | 1.458409e-15 | 5.942557e-04 | 7.32e-03/3.79e-03/1.70e-02
+        5   | 1.428942e-15 | 2.647194e-04 | 6.78e-03/3.64e-03/1.24e-02
+        6   | 1.598058e-15 | 1.365080e-04 | 9.24e-03/3.45e-03/1.51e-02
+        7   | 1.342173e-15 | 4.475999e-05 | 8.76e-03/3.34e-03/1.45e-02
+        8   | 1.275286e-15 | 1.072202e-05 | 7.21e-03/3.51e-03/1.77e-02
+        9   | 1.404208e-15 | 2.004208e-06 | 6.88e-03/3.58e-03/1.32e-02
+       10   | 1.398927e-15 | 4.362334e-07 | 9.80e-03/3.29e-03/1.55e-02
+       11   | 1.513582e-15 | 7.984069e-08 | 6.99e-03/3.54e-03/1.30e-02
+       12   | 1.323453e-15 | 2.400910e-08 | 6.94e-03/3.33e-03/1.27e-02
+       13   | 1.463632e-15 | 5.485776e-09 | 6.67e-03/3.80e-03/1.29e-02
+       14   | 1.363656e-15 | 1.780734e-09 | 6.78e-03/4.80e-03/1.40e-02
+       15   | 1.286277e-15 | 2.332759e-10 | 6.86e-03/3.58e-03/1.28e-02
+       16   | 1.220083e-15 | 7.315823e-11 | 6.65e-03/3.43e-03/1.25e-02
 ┌ Info: ----- solve finished -----
 │ 	residual = 7.315823302181618e-11
-│ 	totaltime = 0.215319529s
+│ 	totaltime = 0.253877384s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 338)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 5.551913967021561e-17
-│ 	totaltime = 0.009338588s
+│ 	totaltime = 0.012424261s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : p_exact &gt;&gt; L2-Bestapproximation pressure (H1P0{1} (broken), ndofs = 96)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 2.9079327530521867e-17
-│ 	totaltime = 0.001571998s
+│ 	totaltime = 0.001371517s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving H1-Bestapproximation problem -----
 │ 	Equation (1.1) H1-bestapproximation equation : u_exact &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 338)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 8.961735053730369e-15
-│ 	totaltime = 0.007213891s
+│ 	totaltime = 0.007655899s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving Stokes problem (classical) -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (classic) (H1BR{2}, ndofs = 1250)
@@ -372,26 +371,26 @@ end</code></pre><pre><code class="language-none">Main.##267.Example_2DPressureRo
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 3.167163e-16 | 1.037693e+00 | 2.45e-02/1.24e-02/3.83e-02
-        2   | 1.494717e-15 | 6.040282e-02 | 2.28e-02/2.56e-02/5.10e-02
-        3   | 1.394392e-15 | 1.688297e-02 | 2.28e-02/1.20e-02/3.75e-02
-        4   | 1.592185e-15 | 2.705987e-03 | 2.30e-02/1.19e-02/3.84e-02
-        5   | 1.461460e-15 | 8.003207e-04 | 2.33e-02/1.20e-02/3.94e-02
-        6   | 1.444184e-15 | 1.724117e-04 | 2.29e-02/1.33e-02/4.10e-02
-        7   | 1.473189e-15 | 5.220901e-05 | 2.30e-02/1.28e-02/5.65e-02
-        8   | 1.500387e-15 | 2.005934e-05 | 2.28e-02/1.22e-02/4.01e-02
-        9   | 1.462190e-15 | 2.960550e-06 | 2.53e-02/1.21e-02/4.40e-02
-       10   | 1.422951e-15 | 6.212559e-07 | 2.29e-02/1.27e-02/4.05e-02
-       11   | 1.340708e-15 | 1.569856e-07 | 2.37e-02/1.19e-02/4.01e-02
-       12   | 1.610228e-15 | 3.820714e-08 | 2.31e-02/1.19e-02/4.65e-02
-       13   | 1.448042e-15 | 6.794621e-09 | 2.26e-02/1.20e-02/3.97e-02
-       14   | 1.473270e-15 | 2.661088e-09 | 2.28e-02/1.24e-02/3.98e-02
-       15   | 1.493829e-15 | 7.657452e-10 | 2.30e-02/1.21e-02/3.97e-02
-       16   | 1.487638e-15 | 1.535831e-10 | 2.27e-02/1.20e-02/3.95e-02
-       17   | 1.475783e-15 | 2.661799e-11 | 2.98e-02/1.24e-02/4.68e-02
+        1   | 3.167163e-16 | 1.037693e+00 | 3.87e-02/1.53e-02/5.57e-02
+        2   | 1.494717e-15 | 6.040282e-02 | 2.74e-02/1.46e-02/4.50e-02
+        3   | 1.394392e-15 | 1.688297e-02 | 2.59e-02/1.40e-02/4.34e-02
+        4   | 1.592185e-15 | 2.705987e-03 | 2.64e-02/1.40e-02/4.45e-02
+        5   | 1.461460e-15 | 8.003207e-04 | 2.52e-02/1.39e-02/4.59e-02
+        6   | 1.444184e-15 | 1.724117e-04 | 2.40e-02/1.40e-02/4.36e-02
+        7   | 1.473189e-15 | 5.220901e-05 | 2.59e-02/1.67e-02/4.90e-02
+        8   | 1.500387e-15 | 2.005934e-05 | 2.57e-02/2.35e-02/5.48e-02
+        9   | 1.462190e-15 | 2.960550e-06 | 2.67e-02/1.42e-02/4.67e-02
+       10   | 1.422951e-15 | 6.212559e-07 | 2.72e-02/1.45e-02/4.74e-02
+       11   | 1.340708e-15 | 1.569856e-07 | 2.49e-02/1.48e-02/4.53e-02
+       12   | 1.610228e-15 | 3.820714e-08 | 2.52e-02/1.67e-02/4.76e-02
+       13   | 1.448042e-15 | 6.794621e-09 | 2.48e-02/1.64e-02/4.69e-02
+       14   | 1.473270e-15 | 2.661088e-09 | 2.66e-02/2.34e-02/5.80e-02
+       15   | 1.493829e-15 | 7.657452e-10 | 2.66e-02/1.53e-02/4.78e-02
+       16   | 1.487638e-15 | 1.535831e-10 | 2.33e-02/1.48e-02/4.35e-02
+       17   | 1.475783e-15 | 2.661799e-11 | 2.33e-02/1.39e-02/4.50e-02
 ┌ Info: ----- solve finished -----
 │ 	residual = 2.6617991041558696e-11
-│ 	totaltime = 0.764957893s
+│ 	totaltime = 0.862053552s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving Stokes problem (p-robust) -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (p-robust) (H1BR{2}, ndofs = 1250)
@@ -400,43 +399,43 @@ end</code></pre><pre><code class="language-none">Main.##267.Example_2DPressureRo
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 3.167163e-16 | 1.217573e+00 | 2.66e-02/1.22e-02/4.03e-02
-        2   | 1.580555e-15 | 5.548361e-04 | 2.51e-02/1.27e-02/4.01e-02
-        3   | 1.487302e-15 | 1.232500e-04 | 2.63e-02/1.53e-02/4.45e-02
-        4   | 1.578965e-15 | 3.734644e-05 | 2.54e-02/1.29e-02/4.17e-02
-        5   | 1.476926e-15 | 1.028287e-05 | 2.53e-02/1.26e-02/4.18e-02
-        6   | 1.468847e-15 | 4.044284e-06 | 2.50e-02/1.98e-02/4.98e-02
-        7   | 1.430772e-15 | 1.608543e-06 | 2.52e-02/1.28e-02/4.27e-02
-        8   | 1.425254e-15 | 1.748116e-07 | 2.52e-02/1.25e-02/4.24e-02
-        9   | 1.531738e-15 | 2.973147e-08 | 2.54e-02/1.24e-02/4.26e-02
-       10   | 1.529181e-15 | 7.339263e-09 | 3.35e-02/1.25e-02/5.06e-02
-       11   | 1.611424e-15 | 1.224165e-09 | 2.74e-02/1.28e-02/4.51e-02
-       12   | 1.676729e-15 | 2.559248e-10 | 2.53e-02/1.26e-02/4.29e-02
-       13   | 1.547856e-15 | 4.919623e-11 | 2.65e-02/1.26e-02/4.40e-02
+        1   | 3.167163e-16 | 1.217573e+00 | 2.90e-02/1.51e-02/4.60e-02
+        2   | 1.580555e-15 | 5.548361e-04 | 3.67e-02/1.71e-02/5.68e-02
+        3   | 1.487302e-15 | 1.232500e-04 | 2.79e-02/2.45e-02/5.58e-02
+        4   | 1.578965e-15 | 3.734644e-05 | 2.79e-02/1.66e-02/4.85e-02
+        5   | 1.476926e-15 | 1.028287e-05 | 2.78e-02/1.71e-02/4.97e-02
+        6   | 1.468847e-15 | 4.044284e-06 | 2.88e-02/1.69e-02/5.14e-02
+        7   | 1.430772e-15 | 1.608543e-06 | 2.98e-02/1.70e-02/5.26e-02
+        8   | 1.425254e-15 | 1.748116e-07 | 2.83e-02/1.43e-02/4.82e-02
+        9   | 1.531738e-15 | 2.973147e-08 | 2.94e-02/2.68e-02/6.20e-02
+       10   | 1.529181e-15 | 7.339263e-09 | 2.93e-02/1.40e-02/4.89e-02
+       11   | 1.611424e-15 | 1.224165e-09 | 3.07e-02/1.44e-02/5.07e-02
+       12   | 1.676729e-15 | 2.559248e-10 | 2.92e-02/1.42e-02/4.94e-02
+       13   | 1.547856e-15 | 4.919623e-11 | 3.09e-02/1.45e-02/5.12e-02
 ┌ Info: ----- solve finished -----
 │ 	residual = 4.919622897128644e-11
-│ 	totaltime = 0.613857711s
+│ 	totaltime = 0.723355058s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 1250)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 2.981555851611611e-17
-│ 	totaltime = 0.031245054s
+│ 	totaltime = 0.034029241s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : p_exact &gt;&gt; L2-Bestapproximation pressure (H1P0{1} (broken), ndofs = 384)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 1.452710330354492e-17
-│ 	totaltime = 0.002672796s
+│ 	totaltime = 0.003131641s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving H1-Bestapproximation problem -----
 │ 	Equation (1.1) H1-bestapproximation equation : u_exact &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 1250)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 1.6920134088660273e-14
-│ 	totaltime = 0.024342265s
+│ 	totaltime = 0.037210481s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 
          |   L2ERROR    |   L2ERROR    |   L2ERROR
@@ -466,4 +465,4 @@ VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)
 PRES-CLASSIC : discrete Stokes pressure solution (H1P0{1} (broken)) with classical discretisation
 PRES-PROBUST : discrete Stokes pressure solution (H1BR{2}) with p-robust discretisation
 PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson/">« 2D Nonlinear Poisson-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 19:09">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson/">« 2D Nonlinear Poisson-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 19:48">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

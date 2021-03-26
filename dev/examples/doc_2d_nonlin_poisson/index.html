@@ -99,8 +99,7 @@ function test()
     return main(; FEType = H1P2{1,2}, nlevels = 1, testmode = true)
 end
 
-end</code></pre><pre><code class="language-none">Main.##266.Example_2DNonlinearPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DNonlinearPoisson.main()</code></pre><pre><code class="language-none">Info
-
+end</code></pre><pre><code class="language-none">Main.##266.Example_2DNonlinearPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DNonlinearPoisson.main()</code></pre><pre><code class="language-none">
 PDE-DESCRIPTION
 ===============
   system name = nonlinear Poisson problem
@@ -125,13 +124,13 @@ Problem =
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 1.244445e-16 | 1.879348e-01 | 1.04e+00/7.86e-05/1.04e+00
-        2   | 3.830598e-16 | 2.427676e-03 | 2.63e-04/1.28e-04/4.36e-04
-        3   | 5.946535e-16 | 3.580510e-07 | 2.48e-04/5.61e-05/3.34e-04
-        4   | 4.571021e-16 | 7.822532e-15 | 2.45e-04/5.42e-05/3.28e-04
+        1   | 1.244445e-16 | 1.879348e-01 | 1.22e+00/7.98e-05/1.22e+00
+        2   | 3.830598e-16 | 2.427676e-03 | 3.21e-04/1.14e-04/4.79e-04
+        3   | 5.946535e-16 | 3.580510e-07 | 2.99e-04/6.42e-05/3.99e-04
+        4   | 4.571021e-16 | 7.822532e-15 | 3.09e-04/6.17e-05/4.02e-04
 ┌ Info: ----- solve finished -----
 │ 	residual = 7.822531967406364e-15
-│ 	totaltime = 4.726808103s
+│ 	totaltime = 5.367932812s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving nonlinear Poisson problem -----
 │ 	Equation (1.1) nonlinear Poisson equation : unknown &gt;&gt; Solution (H1P1{1}, ndofs = 41)
@@ -139,13 +138,13 @@ Problem =
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 4.017305e-16 | 1.552235e-01 | 7.79e-04/1.88e-04/1.04e-03
-        2   | 8.199530e-16 | 1.898915e-03 | 7.81e-04/1.51e-04/9.73e-04
-        3   | 1.120407e-15 | 4.461316e-07 | 7.61e-04/1.45e-04/9.47e-04
-        4   | 1.041823e-15 | 2.404969e-14 | 7.56e-04/1.43e-04/9.38e-04
+        1   | 4.017305e-16 | 1.552235e-01 | 8.57e-04/1.81e-04/1.12e-03
+        2   | 8.199530e-16 | 1.898915e-03 | 8.66e-04/1.59e-04/1.08e-03
+        3   | 1.120407e-15 | 4.461316e-07 | 8.53e-04/1.69e-04/1.07e-03
+        4   | 1.041823e-15 | 2.404969e-14 | 8.68e-04/1.54e-04/1.07e-03
 ┌ Info: ----- solve finished -----
 │ 	residual = 2.404969396866907e-14
-│ 	totaltime = 0.008937391s
+│ 	totaltime = 0.009678973s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving nonlinear Poisson problem -----
 │ 	Equation (1.1) nonlinear Poisson equation : unknown &gt;&gt; Solution (H1P1{1}, ndofs = 145)
@@ -153,13 +152,13 @@ Problem =
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 1.567534e-15 | 9.834582e-02 | 2.79e-03/4.86e-04/3.39e-03
-        2   | 2.138880e-15 | 1.307935e-03 | 2.81e-03/5.72e-04/3.45e-03
-        3   | 1.342240e-15 | 4.214647e-07 | 2.78e-03/5.23e-04/3.38e-03
-        4   | 2.284159e-15 | 3.004029e-14 | 2.79e-03/5.18e-04/3.45e-03
+        1   | 1.567534e-15 | 9.834582e-02 | 5.32e-03/5.95e-04/6.06e-03
+        2   | 2.138880e-15 | 1.307935e-03 | 3.10e-03/6.83e-04/3.88e-03
+        3   | 1.342240e-15 | 4.214647e-07 | 3.18e-03/6.00e-04/3.87e-03
+        4   | 2.284159e-15 | 3.004029e-14 | 2.96e-03/5.97e-04/3.66e-03
 ┌ Info: ----- solve finished -----
 │ 	residual = 3.0040288912068795e-14
-│ 	totaltime = 0.021053281s
+│ 	totaltime = 0.02789441s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving nonlinear Poisson problem -----
 │ 	Equation (1.1) nonlinear Poisson equation : unknown &gt;&gt; Solution (H1P1{1}, ndofs = 545)
@@ -167,13 +166,13 @@ Problem =
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 2.375487e-15 | 5.522608e-02 | 1.12e-02/1.68e-03/1.31e-02
-        2   | 4.706613e-15 | 8.487585e-04 | 1.18e-02/2.08e-03/1.40e-02
-        3   | 4.518438e-15 | 2.555420e-07 | 1.12e-02/1.91e-03/1.33e-02
-        4   | 3.913519e-15 | 2.246544e-14 | 1.17e-02/2.02e-03/1.38e-02
+        1   | 2.375487e-15 | 5.522608e-02 | 1.22e-02/1.91e-03/1.45e-02
+        2   | 4.706613e-15 | 8.487585e-04 | 1.22e-02/2.29e-03/1.46e-02
+        3   | 4.518438e-15 | 2.555420e-07 | 1.44e-02/2.13e-03/1.67e-02
+        4   | 3.913519e-15 | 2.246544e-14 | 1.21e-02/2.20e-03/1.44e-02
 ┌ Info: ----- solve finished -----
 │ 	residual = 2.2465441141422078e-14
-│ 	totaltime = 0.07534563s
+│ 	totaltime = 0.085292341s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving nonlinear Poisson problem -----
 │ 	Equation (1.1) nonlinear Poisson equation : unknown &gt;&gt; Solution (H1P1{1}, ndofs = 2113)
@@ -181,13 +180,13 @@ Problem =
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 4.711251e-15 | 2.924738e-02 | 4.53e-02/6.64e-03/5.25e-02
-        2   | 9.177122e-15 | 4.905172e-04 | 4.47e-02/2.32e-02/6.81e-02
-        3   | 9.667342e-15 | 1.346748e-07 | 4.55e-02/7.63e-03/5.34e-02
-        4   | 9.546177e-15 | 1.872157e-14 | 4.48e-02/7.49e-03/5.25e-02
+        1   | 4.711251e-15 | 2.924738e-02 | 5.16e-02/7.42e-03/5.97e-02
+        2   | 9.177122e-15 | 4.905172e-04 | 4.80e-02/6.90e-02/1.17e-01
+        3   | 9.667342e-15 | 1.346748e-07 | 5.06e-02/8.60e-03/5.96e-02
+        4   | 9.546177e-15 | 1.872157e-14 | 4.93e-02/9.00e-03/5.86e-02
 ┌ Info: ----- solve finished -----
 │ 	residual = 1.8721573414338057e-14
-│ 	totaltime = 0.31020731s
+│ 	totaltime = 0.395332169s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Solving nonlinear Poisson problem -----
 │ 	Equation (1.1) nonlinear Poisson equation : unknown &gt;&gt; Solution (H1P1{1}, ndofs = 8321)
@@ -195,13 +194,13 @@ Problem =
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 1.002490e-14 | 1.504798e-02 | 1.89e-01/3.84e-02/2.29e-01
-        2   | 1.809081e-14 | 2.640269e-04 | 1.90e-01/3.47e-02/2.25e-01
-        3   | 1.905173e-14 | 6.824838e-08 | 1.86e-01/3.57e-02/2.22e-01
-        4   | 1.870385e-14 | 3.202329e-14 | 1.82e-01/4.42e-02/2.27e-01
+        1   | 1.002490e-14 | 1.504798e-02 | 2.15e-01/3.46e-02/2.52e-01
+        2   | 1.809081e-14 | 2.640269e-04 | 1.98e-01/5.87e-02/2.57e-01
+        3   | 1.905173e-14 | 6.824838e-08 | 2.12e-01/4.44e-02/2.57e-01
+        4   | 1.870385e-14 | 3.202329e-14 | 2.03e-01/4.65e-02/2.50e-01
 ┌ Info: ----- solve finished -----
 │ 	residual = 3.202329131159297e-14
-│ 	totaltime = 1.230671851s
+│ 	totaltime = 1.412293008s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 
    NDOF  |   L2ERROR   |   H1ERROR
@@ -211,4 +210,4 @@ Problem =
      545 | 1.03688e-04 | 1.80423e-02
     2113 | 2.59229e-05 | 9.02111e-03
     8321 | 6.48078e-06 | 4.51055e-03
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity/">« 2D Adaptive Mesh Refinement (L-shape)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 19:09">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity/">« 2D Adaptive Mesh Refinement (L-shape)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 19:48">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
