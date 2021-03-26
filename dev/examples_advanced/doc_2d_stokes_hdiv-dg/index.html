@@ -38,6 +38,9 @@ using Printf
 # everything is wrapped in a main function
 function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, lambda = 4)
 
+    # set log level
+    set_verbosity(verbosity)
+
     # FEType (Hdiv-conforming)
     FETypes = [HDIVBDM1{2}, H1P0{1}]
 
@@ -139,10 +142,10 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         push!(NDofs, length(Solution.entries))
 
         # solve
-        solve!(Solution, Problem; verbosity = verbosity, time = T)
+        solve!(Solution, Problem; time = T)
 
         # plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter, verbosity = verbosity)
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter)
 
         # compute L2 and H1 error of all solutions
         push!(L2VelocityError, sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
@@ -151,7 +154,7 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     end
 
     # output errors in a nice table
-    println(&quot;\n   NDOF  | L2ERROR(v) | H1ERROR(v) | L2ERROR(p)&quot;)
+    println(&quot;\n   NDOF  | L2ERROR(v_h) | H1ERROR(v_h) | L2ERROR(p_h)&quot;)
     for j=1:nlevels
         @printf(&quot;  %6d |&quot;,NDofs[j]);
         @printf(&quot; %.5e |&quot;,L2VelocityError[j])
@@ -159,4 +162,4 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         @printf(&quot; %.5e\n&quot;,L2PressureError[j])
     end
 end
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_other_linsolver/">« 2D User-defined Linear Solvers</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 17:02">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_other_linsolver/">« 2D User-defined Linear Solvers</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 17:15">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

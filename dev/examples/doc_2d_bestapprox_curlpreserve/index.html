@@ -17,20 +17,23 @@ end
 # everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing)
 
+    # set log level
+    set_verbosity(verbosity)
+
     # generate a unit square mesh and refine
     xgrid = simplexgrid([0.0,1.0],[0.0,1.0])
     xgrid = uniform_refine(xgrid,4)
 
     # negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [2,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-    user_function_curl = DataFunction(exact_curl!, [1,2]; name = &quot;curl(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    user_function = DataFunction(exact_function!, [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    user_function_curl = DataFunction(exact_curl!, [1,2]; name = &quot;curl(u)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
 
     # setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [1,2,3,4])
 
     # add a new unknown (Lagrange multiplier that handles the curl constraint)
     # here 1 is the number of components (it is scalar-valued) and 2 is the space dimension
-    add_unknown!(Problem; unknown_name = &quot;Lagrange multiplier for curl&quot;, equation_name = &quot;curl constraint&quot;)
+    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;curl constraint&quot;)
     add_operator!(Problem, [1,2], LagrangeMultiplier(Curl2D))
 
     # add the right-hand side data for the constraint and inspect the defined problem
@@ -42,17 +45,17 @@ function main(; verbosity = 0, Plotter = nothing)
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
 
     # create a solution vector and solve the problem
-    Solution = FEVector{Float64}(&quot;L2-Bestapproximation&quot;,FES)
-    solve!(Solution, Problem; verbosity = verbosity)
+    Solution = FEVector{Float64}([&quot;u_h&quot;,&quot;p_h&quot;],FES)
+    solve!(Solution, Problem)
 
     # calculate L2 error and L2 curl error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
     L2CurlErrorEvaluator = L2ErrorIntegrator(Float64, user_function_curl, Curl2D)
-    println(&quot;\nL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
-    println(&quot;L2error(Curl2D) = $(sqrt(evaluate(L2CurlErrorEvaluator,Solution[1])))&quot;)
+    println(&quot;|| u - u_h || = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
+    println(&quot;|| curl(u - u_h) || = $(sqrt(evaluate(L2CurlErrorEvaluator,Solution[1])))&quot;)
 
     # plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Curl2D]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Curl2D]; Plotter = Plotter)
 end
 
 end</code></pre><pre><code class="language-none">Main.##258.Example_2DBestapproxCurlpreserve</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DBestapproxCurlpreserve.main()</code></pre><pre><code class="language-none">
@@ -61,25 +64,32 @@ PDE-DESCRIPTION
   system name = L2-Bestapproximation problem
 
      id   | unknown name / equation name
-    [1]   | L2-bestapproximation / L2-bestapproximation equation 
-    [2]   | Lagrange multiplier for curl / curl constraint 
+    [1]   | u / L2-bestapproximation equation 
+    [2]   | p / curl constraint 
 
   LHS block | PDEOperator(s)
-    [1,1]   | Reaction (regions = [0])
-    [1,2]   | LagrangeMultiplier(Curl2D) (regions = [0])
+    [1,1]   | A(u) ⋅ v (regions = [0])
+    [1,2]   | Curl(v) ⋅ q (regions = [0])
     [2,1]   | none
     [2,2]   | none
 
   RHS block | PDEOperator(s)
-     [1]    | u_exact * Identity(v_h) (regions = [0])
-     [2]    | curl(u_exact) * Identity(v_h) (regions = [0])
+     [1]    | u⋅id(v) (regions = [0])
+     [2]    | curl(u)⋅id(v) (regions = [0])
 
    BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
                          
    BoundaryOperator[2] : 
 
 Problem = 
-
-L2error(Id) = 0.031068414520129876
-L2error(Curl2D) = 0.051031036307982794
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_1d_bestapprox/">« 1D L2-Bestapproximation</a><a class="docs-footer-nextpage" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 17:02">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+┌ Info: ----- Solving L2-Bestapproximation problem -----
+│ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; u_h (HCURLN0{2}, ndofs = 800)
+│ 	Equation (1.2) curl constraint : p &gt;&gt; p_h (H1P0{1} (broken), ndofs = 512)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
+┌ Info: ----- solve finished -----
+│ 	residual = 2.6574434680338784e-15
+│ 	totaltime = 18.663012996s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
+|| u - u_h || = 0.031068414520129876
+|| curl(u - u_h) || = 0.051031036307982794
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_1d_bestapprox/">« 1D L2-Bestapproximation</a><a class="docs-footer-nextpage" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 17:15">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -16,21 +16,24 @@ function exact_divergence!(result,x::Array{&lt;:Real,1})
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 0)
+function main()
+
+    # set log level
+    set_verbosity(verbosity)
 
     # generate a unit square mesh and refine
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),4)
 
     # negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [3,3]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-    user_function_div = DataFunction(exact_divergence!, [1,3]; name = &quot;div(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    user_function = DataFunction(exact_function!, [3,3]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    user_function_div = DataFunction(exact_divergence!, [1,3]; name = &quot;div(u)&quot;, dependencies = &quot;X&quot;, quadorder = 2)
 
     # setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
 
     # add a new unknown (Lagrange multiplier that handles the divergence constraint)
     # here 1 is the number of components (it is scalar-valued) and 3 is the space dimension
-    add_unknown!(Problem; unknown_name = &quot;Lagrange multiplier for divergence&quot;, equation_name = &quot;divergence constraint&quot;)
+    add_unknown!(Problem; unknown_name = &quot;LM (div(u) = 0)&quot;, equation_name = &quot;divergence constraint&quot;)
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
     # add the right-hand side data for the constraint and inspect the defined problem
@@ -43,8 +46,8 @@ function main(; verbosity = 0)
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid; broken = true)]
 
     # create a solution vector and solve the problem
-    Solution = FEVector{Float64}(&quot;L2-Bestapproximation&quot;,FES)
-    solve!(Solution, Problem; verbosity = verbosity)
+    Solution = FEVector{Float64}([&quot;u_h&quot;,&quot;p_h&quot;],FES)
+    solve!(Solution, Problem)
 
     # calculate L2 error and L2 divergence error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
@@ -53,29 +56,4 @@ function main(; verbosity = 0)
     println(&quot;\tL2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))&quot;)
 end
 
-end</code></pre><pre><code class="language-none">Main.##269.Example_3DBestapproxDivpreserve</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_3DBestapproxDivpreserve.main()</code></pre><pre><code class="language-none">
-PDE-DESCRIPTION
-===============
-  system name = L2-Bestapproximation problem
-
-     id   | unknown name / equation name
-    [1]   | L2-bestapproximation / L2-bestapproximation equation 
-    [2]   | Lagrange multiplier for divergence / divergence constraint 
-
-  LHS block | PDEOperator(s)
-    [1,1]   | Reaction (regions = [0])
-    [1,2]   | LagrangeMultiplier(Divergence) (regions = [0])
-    [2,1]   | none
-    [2,2]   | none
-
-  RHS block | PDEOperator(s)
-     [1]    | u_exact * Identity(v_h) (regions = [0])
-     [2]    | div(u_exact) * Identity(v_h) (regions = [0])
-
-   BoundaryOperator[1] : 
-   BoundaryOperator[2] : 
-
-Problem = 
-	L2error(Id) = 0.00017706474627459634
-	L2error(div) = 0.00987828043623493
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_transientstokes/">« 2D Transient Stokes-Problem</a><a class="docs-footer-nextpage" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 17:02">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_3DBestapproxDivpreserve.main()</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_transientstokes/">« 2D Transient Stokes-Problem</a><a class="docs-footer-nextpage" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 17:15">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

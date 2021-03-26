@@ -33,6 +33,9 @@ end
 # everything is wrapped in a main function
 function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
 
+    # set log level
+    set_verbosity(verbosity)
+
     # initial grid
     xgrid = grid_lshape(Triangle2D)
 
@@ -41,8 +44,8 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
     FETypeDual = [HDIVBDM1{2},H1P0{1}]
 
     # negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 5)
-    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = &quot;∇(u)&quot;, dependencies = &quot;X&quot;, quadorder = 4)
 
     # setup Poisson problem
     Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
@@ -51,7 +54,7 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
 
     # setup dual mixed Poisson problem
     DualProblem = PDEDescription(&quot;dual mixed formulation&quot;)
-    add_unknown!(DualProblem; unknown_name = &quot;Stress&quot;, equation_name = &quot;stress equation&quot;)
+    add_unknown!(DualProblem; unknown_name = &quot;σ&quot;, equation_name = &quot;stress equation&quot;)
     add_operator!(DualProblem, [1,1], ReactionOperator(DoNotChangeAction(2)))
     add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], user_function; AT = ON_BFACES))
     add_unknown!(DualProblem; unknown_name = &quot;Lagrange multiplier for divergence&quot;, equation_name = &quot;divergence constraint&quot;)
@@ -85,15 +88,15 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
 
         # create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}(&quot;Discrete Solution&quot;,FES)
-        solve!(Solution, Problem; verbosity = verbosity - 1)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        solve!(Solution, Problem)
         NDofs[level] = length(Solution[1])
 
         # solve the dual problem
         FESDual = [FESpace{FETypeDual[1]}(xgrid),FESpace{FETypeDual[2]}(xgrid)]
-        DualSolution = FEVector{Float64}(&quot;Discrete Dual Solution&quot;,FESDual)
+        DualSolution = FEVector{Float64}(&quot;σ_h&quot;,FESDual)
         NDofsDual[level] = length(DualSolution.entries)
-        solve!(DualSolution, DualProblem; verbosity = verbosity - 1)
+        solve!(DualSolution, DualProblem)
 
         if verbosity &gt; 0
             println(&quot;\n  SOLVE LEVEL $level&quot;)
@@ -128,13 +131,13 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
         else
             # adaptive mesh refinement
             # refine by red-green-blue refinement (incl. closuring)
-            facemarker = bulk_mark(xgrid, view(error4cell,1,:), theta; verbosity = verbosity)
-            xgrid = RGB_refine(xgrid, facemarker; verbosity = verbosity)
+            facemarker = bulk_mark(xgrid, view(error4cell,1,:), theta)
+            xgrid = RGB_refine(xgrid, facemarker)
         end
     end
 
     # plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
 
     # print results
     @printf(&quot;\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   &quot;)
@@ -158,4 +161,4 @@ function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
 
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_compressiblestokes/">« 2D Compressible Stokes</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 17:02">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_compressiblestokes/">« 2D Compressible Stokes</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 17:15">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

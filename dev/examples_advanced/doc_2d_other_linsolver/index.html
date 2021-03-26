@@ -46,6 +46,9 @@ end
 # everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P1{1}, testmode = false, skip_update = 2)
 
+    # set log level
+    set_verbosity(verbosity)
+
     # choose initial mesh
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
 
@@ -76,7 +79,7 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
 
     # solve the problem (here the newly defined linear solver type is used)
-    solve!(Solution, Problem; verbosity = 2, linsolver = MySolver{Float64}, skip_update = [skip_update])
+    solve!(Solution, Problem; linsolver = MySolver{Float64}, skip_update = [skip_update])
 
     # calculate error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
@@ -85,8 +88,8 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     println(&quot;\tH1error = $(sqrt(evaluate(H1ErrorEvaluator,Solution[1])))&quot;)
 
     # plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter, verbosity = verbosity)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 end
 
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_diffeq/">« 2D Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 25 March 2021 17:02">Thursday 25 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_diffeq/">« 2D Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 17:15">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
