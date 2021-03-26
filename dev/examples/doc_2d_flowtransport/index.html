@@ -89,7 +89,8 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
 end
 
-end</code></pre><pre><code class="language-none">Main.##263.Example_2DFlowTransport</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DFlowTransport.main()</code></pre><pre><code class="language-none">
+end</code></pre><pre><code class="language-none">Main.##263.Example_2DFlowTransport</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DFlowTransport.main()</code></pre><pre><code class="language-none">Info
+
 PDE-DESCRIPTION
 ===============
   system name = Stokes + Transport
@@ -129,7 +130,7 @@ Problem =
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
 ┌ Info: ----- solve finished -----
 │ 	residual = 7.670343345756659e-14
-│ 	totaltime = 10.461302254s
+│ 	totaltime = 10.390347353s
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
 ┌ Info: ----- Preparing time control solver for Stokes + Transport -----
 │ 	Equation (1.3) transport equation : concentration &gt;&gt; c_h (H1P0{1} (broken), ndofs = 4864), timedependent = yes
@@ -152,4 +153,4 @@ Problem =
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1444
 
 [min(c),max(c)] = [0.04166666666666663,0.9791666666666667]
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_fe_on_faces/">« 2D Finite Elements on Faces</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 17:15">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_fe_on_faces/">« 2D Finite Elements on Faces</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 19:09">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
