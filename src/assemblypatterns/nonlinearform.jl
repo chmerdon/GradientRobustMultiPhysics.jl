@@ -174,14 +174,14 @@ function assemble!(
         for dof_i = 1 : get_ndofs(AM, 1, 1)
             arow = get_dof(AM, 1, 1, dof_i) + offsetX
             for dof_j = 1 : get_ndofs(AM, nFE, 1)
-                if localmatrix[dof_i,dof_j] != 0
+               # if localmatrix[dof_i,dof_j] != 0
                     acol = get_dof(AM, nFE, 1, dof_j) + offsetY
                     if transposed_assembly == true
                         _addnz(A,acol,arow,localmatrix[dof_i,dof_j],itemfactor)
                     else 
                         _addnz(A,arow,acol,localmatrix[dof_i,dof_j],itemfactor)  
                     end
-                end
+               # end
             end
         end
         

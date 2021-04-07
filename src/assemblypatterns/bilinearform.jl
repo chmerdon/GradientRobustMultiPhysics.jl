@@ -173,7 +173,7 @@ function assemble!(
                     for dof_i = 1 : ndofs4dofitem[1]
                         arow = get_dof(AM, 1, di[1], dof_i) + offsetX
                         for dof_j = 1 : ndofs4dofitem[2]
-                            if localmatrix[dof_i,dof_j] != 0
+                          #  if localmatrix[dof_i,dof_j] != 0
                                 acol = get_dof(AM, 2, di[2], dof_j) + offsetY
                                 if transposed_assembly == true
                                     _addnz(A,acol,arow,localmatrix[dof_i,dof_j] * itemfactor,1)
@@ -187,20 +187,20 @@ function assemble!(
                                         _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j] * itemfactor,-1)
                                     end
                                 end
-                            end
+                          #  end
                         end
                     end
                 else # symmetric case
                     for dof_i = 1 : ndofs4dofitem[1]
                         for dof_j = dof_i+1 : ndofs4dofitem[2]
-                            if localmatrix[dof_i,dof_j] != 0 
+                          #  if localmatrix[dof_i,dof_j] != 0 
                                 arow = get_dof(AM, 1, di[1], dof_i) + offsetX
                                 acol = get_dof(AM, 2, di[2], dof_j) + offsetY
                                 _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)
                                 arow = get_dof(AM, 1, di[1], dof_j) + offsetX
                                 acol = get_dof(AM, 2, di[2], dof_i) + offsetY
                                 _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)
-                            end
+                           # end
                         end
                     end    
                     for dof_i = 1 : ndofs4dofitem[1]

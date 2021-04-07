@@ -988,7 +988,7 @@ end
 
 
 function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0)
-    @debug "Assembling FVConvectionOperator $(O.name)"
+    @logmsg MoreInfo "Assembling FVConvectionOperator $(O.name) into matrix"
     T = Float64
     FE1 = A.FESX
     FE2 = A.FESY
@@ -1039,12 +1039,16 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
                 _addnz(A,cell,cell,flux,1)
                 if other_cell > 0
                     _addnz(A,other_cell,cell,-flux,1)
+                    _addnz(A,other_cell,other_cell,1e-16,1) # add zero to keep pattern for LU
+                    _addnz(A,cell,other_cell,1e-16,1) # add zero to keep pattern for LU
                     # otherwise flow goes out of domain
                 end    
             else # flow from other_cell into cell
+                _addnz(A,cell,cell,1e-16,1) # add zero to keep pattern for LU
                 if other_cell > 0 # flow comes from neighbour cell
                     _addnz(A,other_cell,other_cell,-flux,1)
                     _addnz(A,cell,other_cell,flux,1)
+                    _addnz(A,other_cell,cell,1e-16,1) # add zero to keep pattern for LU
                 else # flow comes from outside domain
                    #  A[cell,cell] += flux
                 end 

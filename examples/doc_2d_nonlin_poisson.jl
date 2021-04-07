@@ -63,7 +63,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
-    add_unknown!(Problem; unknown_name = "unknown", equation_name = "nonlinear Poisson equation")
+    add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
@@ -82,7 +82,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         
         ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("Solution",FES)
+        Solution = FEVector{Float64}("u_h",FES)
         push!(NDofs,length(Solution.entries))
 
         ## solve

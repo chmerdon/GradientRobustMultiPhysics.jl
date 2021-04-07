@@ -181,13 +181,13 @@ function assemble!(
                 # copy localmatrix into global matrix
                 temp = AM.coeff4dofitem[fixed_argument][di[fixed_argument]] * AM.coeff4dofitem[nonfixed_ids[2]][di[nonfixed_ids[2]]] * AM.coeff4dofitem[nonfixed_ids[1]][di[nonfixed_ids[1]]] * xItemVolumes[item] * factor
                 for dof_i = 1 : ndofs4item[nonfixed_ids[1]], dof_j = 1 : ndofs4item[nonfixed_ids[2]]
-                    if localmatrix[dof_i,dof_j] != 0
+                   # if localmatrix[dof_i,dof_j] != 0
                         if transposed_assembly == true
                             _addnz(A,dofs3[dof_j],dofs2[dof_i],localmatrix[dof_i,dof_j], temp)
                         else
                             _addnz(A,dofs2[dof_i],dofs3[dof_j],localmatrix[dof_i,dof_j], temp)
                         end
-                    end
+                   # end
                 end
                 fill!(localmatrix,0.0)
             end

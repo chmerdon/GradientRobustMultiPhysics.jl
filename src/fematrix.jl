@@ -46,6 +46,16 @@ end
     end
 end
 
+function apply_nonzero_pattern!(B::FEMatrixBlock,AT::Type{<:AbstractAssemblyType})
+    dofmapX = Dofmap4AssemblyType(B.FESX,AT)
+    dofmapY = Dofmap4AssemblyType(B.FESY,AT)
+    @assert num_sources(dofmapX) == num_sources(dofmapY)
+    for item = 1 : num_sources(dofmapX)
+        for j = 1 : num_targets(dofmapX,item), k = 1 : num_targets(dofmapY,item)
+            updateindex!(B.entries,+,1e-16,B.offsetX+dofmapX[j,item],B.offsetY+dofmapY[k,item])
+        end
+    end
+end
 
 Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
 Base.getindex(FEF::FEMatrix{T,nbrow,nbcol},i,j) where {T,nbrow,nbcol} = FEF.FEMatrixBlocks[(i-1)*nbcol+j]
@@ -148,6 +158,7 @@ function Base.fill!(B::FEMatrixBlock, value)
     end
     return nothing
 end
+
 
 """
 $(TYPEDSIGNATURES)

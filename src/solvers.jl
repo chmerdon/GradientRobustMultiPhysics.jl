@@ -57,20 +57,31 @@ function update!(LS::AbstractLinearSystem{T}) where {T}
 end
 
 function update!(LS::LinearSystemDirectUMFPACK{T}) where {T}
-    #try
-    #    lu!(LS.ALU,LS.A.cscmatrix)
-    #catch
-        @logmsg DeepInfo "(Re)generating LU decomposition..."
+    if isdefined(LS,:ALU)
+        try
+            @logmsg MoreInfo "Updating LU decomposition..."
+            lu!(LS.ALU,LS.A.cscmatrix; check = false)
+        catch
+            @logmsg MoreInfo "Computing LU decomposition (pattern changed)..."
+            GC()
+        end
+    else
+        @logmsg MoreInfo "Computing LU decomposition..."
         LS.ALU = lu(LS.A.cscmatrix)
-    #end
+    end
 end
 
 function solve!(LS::LinearSystemDirectUMFPACK{T}) where {T}
-    @logmsg DeepInfo "\n  Solving directly with UMFPACK..."
+    @logmsg MoreInfo "Solving directly with UMFPACK..."
     ldiv!(LS.x,LS.ALU,LS.b)
 end
 
-
+function set_nonzero_pattern!(A::FEMatrix, AT::Type{<:AbstractAssemblyType} = ON_CELLS)
+    @debug "Setting nonzero pattern for FEMatrix..."
+    for block = 1 : length(A)
+        apply_nonzero_pattern!(A[block],AT)
+    end
+end
 
 # check if PDE is nonlinear or time-dependent and which blocks require recalculation
 # and devise some initial solver strategy
@@ -326,6 +337,7 @@ function assemble!(
 
     elapsedtime::Float64 = 0
     # force (re)assembly of stored bilinearforms and RhsOperators
+    @logmsg DeepInfo "Locking for triggered storage updates..."
     if (min_trigger == AssemblyInitial) == true && !only_rhs
         for j = 1:length(equations)
             for k = 1 : size(PDE.LHSOperators,2)
@@ -366,10 +378,11 @@ function assemble!(
     # (re)assembly right-hand side
     rhs_block_has_been_erased = zeros(Bool,length(equations))
     for j = 1 : length(equations)
-        if (min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) == true
+        if (min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) && (length(PDE.RHSOperators[equations[j]]) > 0)
             @debug "Erasing rhs block [$j]"
             fill!(b[j],0.0)
             rhs_block_has_been_erased[j] = true
+            @logmsg DeepInfo "Locking what to assemble in rhs block [$(equations[j])]..."
             for o = 1 : length(PDE.RHSOperators[equations[j]])
                 PDEOperator = PDE.RHSOperators[equations[j]][o]
                 elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time)
@@ -387,10 +400,11 @@ function assemble!(
                 if (k in equations) && !only_rhs
                     subblock += 1
                     #println("\n  Equation $j, subblock $subblock")
-                    if (min_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) == true
+                    if (min_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) && (length(PDE.LHSOperators[equations[j],k]) > 0)
                         @debug "Erasing lhs block [$j,$subblock]"
                         fill!(A[j,subblock],0)
                         lhs_block_has_been_erased[j, subblock] = true
+                        @logmsg DeepInfo "Locking what to assemble in lhs block [$(equations[j]),$k]..."
                         for o = 1 : length(PDE.LHSOperators[equations[j],k])
                             PDEOperator = PDE.LHSOperators[equations[j],k][o]
                             if typeof(PDEOperator) <: LagrangeMultiplier
@@ -506,6 +520,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     # ASSEMBLE SYSTEM INIT
     A = FEMatrix{T}("SystemMatrix", FEs)
     b = FEVector{T}("SystemRhs", FEs)
+    set_nonzero_pattern!(A)
     assembly_time = @elapsed assemble!(A,b,PDE,SC,Target; time = time, equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial)
 
     # ASSEMBLE BOUNDARY DATA
@@ -695,6 +710,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
             b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
             x[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
+            set_nonzero_pattern!(A[i])
             assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = SC.subiterations[i], min_trigger = AssemblyInitial)
             eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
             for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(SC.subiterations[i])
@@ -1101,6 +1117,7 @@ function TimeControlSolver(
         b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
         x[i] = FEVector{Float64}("Solution subiteration $i", FEs[SC.subiterations[i]])
         res[i] = FEVector{Float64}("Residual subiteration $i", FEs[SC.subiterations[i]])
+        set_nonzero_pattern!(A[i])
         assemble!(A[i],b[i],PDE,SC,InitialValues; time = start_time, equations = SC.subiterations[i], min_trigger = AssemblyInitial)
         eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
         for j= 1 : length(FEs), eq = 1 : length(SC.subiterations[i])
@@ -1240,7 +1257,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
         # UPDATE SYSTEM
         if SC.skip_update[s] != -1 || TCS.cstep == 1 # update matrix
-            fill!(A[s].entries,0)
+            fill!(A[s].entries.cscmatrix.nzval,0)
             fill!(b[s].entries,0)
             assemble!(A[s],b[s],PDE,SC,LastIterate; equations = SC.subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
 
@@ -1315,7 +1332,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
             ## REASSEMBLE NONLINEAR PARTS
             if SC.maxIterations > 1 || SC.check_nonlinear_residual
-                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,x[s]; equations = SC.subiterations[s], min_trigger = AssemblyAlways, time = TCS.ctime)
+                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = SC.subiterations[s], min_trigger = AssemblyAlways, time = TCS.ctime)
 
                 ## REPAIR TIME DERIVATIVE IF NEEDED
                 for k = 1 : length(SC.subiterations[s])
@@ -1351,15 +1368,16 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             else
                 statistics[SC.subiterations[s][:],3] .= 1e99 # nonlinear residual has not been checked !
             end
-        end
 
-        # WRITE x[s] INTO X and COMPUTE CHANGE
-        for j = 1 : length(SC.subiterations[s])
-            for k = 1 : length(LastIterate[SC.subiterations[s][j]])
-                statistics[SC.subiterations[s][j],2] += (LastIterate[SC.subiterations[s][j]][k] - x[s][j][k])^2
-                X[SC.subiterations[s][j]][k] = x[s][j][k]
+            # WRITE x[s] INTO X and COMPUTE CHANGE
+            for j = 1 : length(SC.subiterations[s])
+                for k = 1 : length(LastIterate[SC.subiterations[s][j]])
+                    statistics[SC.subiterations[s][j],2] += (LastIterate[SC.subiterations[s][j]][k] - x[s][j][k])^2
+                    X[SC.subiterations[s][j]][k] = x[s][j][k]
+                end
             end
         end
+
     end
     
     # REALIZE GLOBAL GLOBALCONSTRAINTS 

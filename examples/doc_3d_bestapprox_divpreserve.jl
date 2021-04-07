@@ -26,7 +26,7 @@ function exact_divergence!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main()
+function main(; verbosity = 0)
 
     ## set log level
     set_verbosity(verbosity)
@@ -42,8 +42,8 @@ function main()
     Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
 
     ## add a new unknown (Lagrange multiplier that handles the divergence constraint)
-    ## here 1 is the number of components (it is scalar-valued) and 3 is the space dimension
-    add_unknown!(Problem; unknown_name = "LM (div(u) = 0)", equation_name = "divergence constraint")
+    ## here 1 is the number of components (it is scalarvalued) and 3 is the space dimension
+    add_unknown!(Problem; unknown_name = "p", equation_name = "divergence constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
     ## add the right-hand side data for the constraint and inspect the defined problem
