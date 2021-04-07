@@ -77,7 +77,7 @@ function PotentialFlowTestProblem()
 end
 
 
-function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1, maxResidual = 1e-10, maxIterations = 20)
+function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1, target_residual = 1e-10, maxiterations = 20)
 
     ## load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]
@@ -127,8 +127,8 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
         push!(NDofs,length(Solution.entries))
 
         ## solve both problems
-        solve!(Solution, Problem; maxIterations = maxIterations, maxResidual = maxResidual, anderson_iterations = 5)
-        solve!(Solution2, Problem2; maxIterations = maxIterations, maxResidual = maxResidual, anderson_iterations = 5)
+        solve!(Solution, Problem; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
+        solve!(Solution2, Problem2; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
 
         ## solve bestapproximation problems
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FES[1])

@@ -35,14 +35,14 @@ end
 #Add value to matrix if it is nonzero
 @inline function _addnz(ESM::ExtendableSparseMatrix,i,j,v::Tv,fac) where Tv
     if v!=zero(Tv)
-        updateindex!(ESM,+,v*fac,i,j)
+        rawupdateindex!(ESM,+,v*fac,i,j)
     end
 end
 
 #Add value to matrix if it is nonzero
 @inline function _addnz(FEB::FEMatrixBlock,i,j,v::Tv,fac) where Tv
     if v!=zero(Tv)
-        updateindex!(FEB.entries,+,v*fac,FEB.offsetX+i,FEB.offsetY+j)
+       rawupdateindex!(FEB.entries,+,v*fac,FEB.offsetX+i,FEB.offsetY+j)
     end
 end
 
@@ -52,7 +52,7 @@ function apply_nonzero_pattern!(B::FEMatrixBlock,AT::Type{<:AbstractAssemblyType
     @assert num_sources(dofmapX) == num_sources(dofmapY)
     for item = 1 : num_sources(dofmapX)
         for j = 1 : num_targets(dofmapX,item), k = 1 : num_targets(dofmapY,item)
-            updateindex!(B.entries,+,1e-16,B.offsetX+dofmapX[j,item],B.offsetY+dofmapY[k,item])
+            rawupdateindex!(B.entries,+,0,B.offsetX+dofmapX[j,item],B.offsetY+dofmapY[k,item])
         end
     end
 end

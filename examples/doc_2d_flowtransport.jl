@@ -96,7 +96,7 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
     Solution = FEVector{Float64}(["v_h", "p_h", "c_h"],FES)
 
     ## first solve the decoupled flow problem equations [1,2]
-    solve!(Solution, Problem; subiterations = [[1,2]], maxIterations = 5, maxResidual = 1e-12)
+    solve!(Solution, Problem; subiterations = [[1,2]], maxiterations = 5, target_residual = 1e-12)
 
     ## then solve the transport equation [3] by finite volumes or finite elements
     if FVtransport == true
@@ -105,7 +105,7 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
         advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
     else
         ## solve directly
-        solve!(Solution, Problem; subiterations = [[3]], maxIterations = 5, maxResidual = 1e-12)
+        solve!(Solution, Problem; subiterations = [[3]], maxiterations = 5, target_residual = 1e-12)
     end
 
     ## print minimal and maximal concentration to check max principle (shoule be in [0,1])

@@ -14,8 +14,8 @@ function plot(
     operators::Array{DataType,1};
     add_grid_plot::Bool = false,
     Plotter = nothing,
-    resolution = (800,500),
     subplots_per_column = 2,
+    resolution = (800,500),
     use_subplots::Bool = true,
     colorlevels=51,
     isolines=11,
@@ -87,7 +87,7 @@ function plot(
             end
             ctx = Array{SubVis,1}(undef, nplots)
             # figure=fig, cbar=true
-            vis=GridVisualizer(Plotter=Plotter, layout=(subplots_per_column,(nplots-1)÷subplots_per_column+1), clear=false, legend=false, edges=true,cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+            vis=GridVisualizer(Plotter=Plotter, layout=(subplots_per_column,(nplots-1)÷subplots_per_column+1), clear=false, legend=false, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
             for j = 1 : nplots
                 #                subplot = subplots_per_column * 100 + (length(layout)-1) * 10 + j
                 ctx[j] = vis[(j-1)%subplots_per_column+1,(j-1)÷subplots_per_column+1]
@@ -96,7 +96,7 @@ function plot(
             ctx = Array{SubVis,1}(undef, nplots)
             for j = 1 : nplots
                 #cbar = cbar, 
-                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, legend=false, edges=true, cmap = cmap, show = show,isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, legend=false, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
                 ctx[j] = vis[1,1]
             end
         end

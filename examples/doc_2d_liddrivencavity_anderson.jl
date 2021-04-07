@@ -1,6 +1,6 @@
 #= 
 
-# 2D Lid-driven cavity (Anderson-Iteration)
+# 2D Lid-driven cavity (Anderson Acceleration)
 ([source code](SOURCE_URL))
 
 This example solves the lid-driven cavity problem where one seeks
@@ -26,7 +26,7 @@ using ExtendableGrids
 using Printf
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10, maxResidual = 1e-10, maxIterations = 50, switch_to_newton_tolerance = 1e-4)
+function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10, target_residual = 1e-14, maxiterations = 50, switch_to_newton_tolerance = 1e-4)
 
     ## set log level
     set_verbosity(verbosity)
@@ -34,8 +34,7 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     ## grid
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4);
 
-    ## choose one of these (inf-sup stable) finite element type pairs
-    broken_p = false
+    ## finite element type
     FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
   
     #####################################################################################
@@ -46,17 +45,17 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
 
     ## generate FESpaces
-    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = broken_p)]
-    Solution = FEVector{Float64}(["velocity", "pressure"],FES)
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+    Solution = FEVector{Float64}(["u_h", "p_h"],FES)
 
     ## solve with anderson iterations until 1e-4
-    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxIterations = maxIterations, maxResidual = switch_to_newton_tolerance)
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
 
     ## solve rest with Newton
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
-    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxIterations = maxIterations, maxResidual = maxResidual)
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual)
 
     ## plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2]], [Identity, Identity]; Plotter = Plotter)

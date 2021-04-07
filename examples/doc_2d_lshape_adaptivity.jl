@@ -7,7 +7,7 @@ This example computes the standard-residual error estimator for the $H^1$ error 
 approximation ``u_h`` to the solution ``u`` of some Poisson problem ``-\Delta u = f`` on an L-shaped domain, i.e.
 ```math
 \eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
-+ \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \mathbf{n}]] \|^2_{L^2(F)}
++ \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \cdot \mathbf{n}]] \|^2_{L^2(F)}
 ```
 This example script showcases the evaluation of 2nd order derivatives like the Laplacian and adaptive mesh refinement.
 

@@ -27,16 +27,48 @@ mutable struct SolverConfig{T <: Real}
     RHS_AssemblyPatterns::Array{Array{AssemblyPattern,1},1} # last used assembly pattern (and assembly pattern preps to avoid their recomputation)
     LHS_AssemblyTimes::Array{Array{Float64,1},2}
     RHS_AssemblyTimes::Array{Array{Float64,1},1}
-    subiterations::Array{Array{Int,1},1} # combination of equations (= rows in PDE.LHS) that should be solved together
-    maxIterations::Int          # maximum number of iterations
-    maxResidual::T           # tolerance for residual
-    current_time::T          # current time in a time-dependent setting
-    dirichlet_penalty::T     # penalty for Dirichlet data
-    linsolver::Union{Nothing,Module,Type{<:AbstractLinearSystem}}
-    anderson_iterations::Int    # number of Anderson iterations (= 0 normal fixed-point iterations, > 0 Anderson iterations)
-    skip_update::Array{Int,1}    # max number of solves the LU decomposition of linsolver is reused
-    check_nonlinear_residual::Bool    # check nonlinear residual (only used in time-dependent solver)
-    damping::T               # damping factor (only for nonlinear solves, 0 = no damping, must be < 1 !)
+    user_params::Union{Dict{Symbol,Any},Nothing} # dictionary with user parameters
+end
+
+#
+# Default context information with help info.
+#
+default_solver_kwargs()=Dict{Symbol,Pair{Any,String}}(
+    :subiterations => Pair("auto", "an array of equation subsets (each an array) that should be solved together in each fixpoint iteration"),
+    :timedependent_equations => Pair([], "array of the equations that should get a time derivative (only for TimeControlSolver)"),
+    :target_residual => Pair(1e-10, "stop fixpoint iterations if the (nonlinear) residual is smaller than this number"),
+    :maxiterations => Pair("auto", "maximal number of nonlinear iterations (TimeControlSolver runs that many in each time step)"),
+    :check_nonlinear_residual => Pair("auto", "check the nonlinear residual in last nonlinear iteration (causes one more reassembly of nonlinear terms)"),
+    :time => Pair(0, "time at which time-dependent data functions are evaluated or initial time for TimeControlSolver"),
+    :skip_update => Pair([1], "matrix update (for the j-th sub-iteration) will be performed each skip_update[j] iteration; -1 means only in the first iteration"),
+    :damping => Pair(0, "damp the new iteration with this part of the old iteration"),
+    :anderson_iterations => Pair(0, "use Anderson acceleration with this many previous iterates (to hopefully speed up/enable convergence of fixpoint iterations), current limitations: only for single equations, convergence metric is first PDEoperator"),
+    :fixed_penalty => Pair(1e60, "penalty that is used for the values of fixed degrees of freedom (e.g. by Dirichlet boundary data or global constraints)"),
+    :linsolver => Pair("UMFPACK", "String that encodes the linear solver (or type name of self-defined solver, see corressponding example)"),
+    :show_solver_config => Pair(false, "show the complete solver configuration before starting to solve"),
+    :show_iteration_details => Pair(true, "show details (residuals etc.) of each iteration"),
+    :show_statistics => Pair(false, "show some statistics like assembly times")
+)
+
+#
+# Print default dict for solver parameters into docstrings
+#
+function _myprint(dict::Dict{Symbol,Pair{Any,String}})
+    lines_out=IOBuffer()
+    for (k,v) in dict
+        println(lines_out,"  - $(k): $(v[2]). Default: $(v[1])\n")
+    end
+    String(take!(lines_out))
+end
+
+#
+# Update solver params from dict
+#
+function _update_solver_params!(user_params,kwargs)
+    for (k,v) in kwargs
+        user_params[Symbol(k)]=v
+    end
+    return nothing
 end
 
 
@@ -85,11 +117,18 @@ end
 
 # check if PDE is nonlinear or time-dependent and which blocks require recalculation
 # and devise some initial solver strategy
-function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiterations = "auto")
+function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Float64)
 
     ## declare subiterations
-    if subiterations == "auto"
-        subiterations = [1:size(PDE.LHSOperators,1)]
+    if user_params[:subiterations] == "auto"
+        user_params[:subiterations] = [1:size(PDE.LHSOperators,1)]
+    end
+    ## declare linear solver
+    if user_params[:linsolver] == "UMFPACK"
+        user_params[:linsolver] = LinearSystemDirectUMFPACK{T}
+    end
+    while length(user_params[:skip_update]) < length(user_params[:subiterations])
+        push!(user_params[:skip_update], 1)
     end
 
     ## check if subiterations are nonlinear or time-dependent
@@ -103,6 +142,7 @@ function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiter
     LHS_dep = Array{Array{Int,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
     current_dep::Array{Int,1} = []
     all_equations = []
+    subiterations = user_params[:subiterations]
     for s = 1 : length(subiterations)
         append!(all_equations, subiterations[s])
     end
@@ -217,66 +257,65 @@ function generate_solver(PDE::PDEDescription, T::Type{<:Real} = Float64; subiter
         end
     end
 
-    return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, subiterations, 10, 1e-10, 0.0, 1e60, LinearSystemDirectUMFPACK{T}, 0, [1], false, 0)
+    ## declare linear solver
+    if user_params[:maxiterations] == "auto"
+        user_params[:maxiterations] = nonlinear ? 10 : 1
+    end
+    if user_params[:check_nonlinear_residual] == "auto"
+        user_params[:check_nonlinear_residual] = nonlinear ? true : false
+    end
+
+    return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, user_params)
 end
 
 function Base.show(io::IO, SC::SolverConfig)
 
-    println("\nSOLVER-CONFIGURATION")
-    println("======================")
-    #println("              type = $(SC.parameters[1])")
-    println("         nonlinear = $(SC.is_nonlinear)")
-    println("     timedependent = $(SC.is_timedependent)")
-    println("         linsolver = $(SC.linsolver)")
+    println(io, "\nSOLVER-CONFIGURATION")
+    println(io, "======================")
+    println(io, "  nonlinear = $(SC.is_nonlinear)")
+    println(io, "  timedependent = $(SC.is_timedependent)")
 
-    println("     subiterations = $(SC.subiterations)")
-    println("     maxIterations = $(SC.maxIterations)")
-    println("       maxResidual = $(SC.maxResidual)")
-
-    if SC.anderson_iterations > 0
-        println("       AndersonIts = $(SC.anderson_iterations)")
+    for (k,v) in SC.user_params
+        println(io, "  $(k) = $(v)")
     end
 
-    println("  AssemblyTriggers = ")
+    println(io, "  AssemblyTriggers = ")
     for j = 1 : size(SC.LHS_AssemblyTriggers,1)
-        print("         LHS_AT[$j] : ")
+        print(io, "         LHS_AT[$j] : ")
         for k = 1 : size(SC.LHS_AssemblyTriggers,2)
             if SC.LHS_AssemblyTriggers[j,k] == AssemblyInitial
-                print(" I ")
+                print(io, " I ")
             elseif SC.LHS_AssemblyTriggers[j,k] == AssemblyAlways
-                print(" A ")
+                print(io, " A ")
             elseif SC.LHS_AssemblyTriggers[j,k] == AssemblyEachTimeStep
-                print(" T ")
+                print(io, " T ")
             elseif SC.LHS_AssemblyTriggers[j,k] == AssemblyNever
-                print(" N ")
+                print(io, " N ")
             end
         end
-        println("")
+        println(io, "")
     end
 
     for j = 1 : size(SC.RHS_AssemblyTriggers,1)
-        print("         RHS_AT[$j] : ")
+        print(io, "         RHS_AT[$j] : ")
         if SC.RHS_AssemblyTriggers[j] == AssemblyInitial
-            print(" I ")
+            print(io, " I ")
         elseif SC.RHS_AssemblyTriggers[j] == AssemblyAlways
-            print(" A ")
+            print(io, " A ")
         elseif SC.RHS_AssemblyTriggers[j] == AssemblyEachTimeStep
-            print(" T ")
+            print(io, " T ")
         elseif SC.RHS_AssemblyTriggers[j] == AssemblyNever
-            print(" N ")
+            print(io, " N ")
         end
-        println("")
+        println(io, "")
     end
-    println("                     (I = Once, T = EachTimeStep, A = Always, N = Never)")
-    println("\n  LHS_dependencies = $(SC.LHS_dependencies)\n")
-
+    println(io, "                     (I = Once, T = EachTimeStep, A = Always, N = Never)")
+    println(io, "\n  LHS_dependencies = $(SC.LHS_dependencies)\n")
 end
-
-
 
 function show_statistics(PDE::PDEDescription, SC::SolverConfig)
 
-    subiterations = SC.subiterations
+    subiterations = SC.user_params[:subiterations]
 
     info_msg = ""
     info_msg *= "\n\tACCUMULATED ASSEMBLY TIMES"
@@ -301,7 +340,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
             end
         end
     end
-    @logmsg MoreInfo info_msg
+    @info info_msg
 end
 
 
@@ -471,13 +510,14 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     # PENALIZE FIXED DOFS
     # (from boundary conditions and constraints)
     fixed_dofs = Base.unique(fixed_dofs)
+    fixed_penalty = SC.user_params[:fixed_penalty]
     for j = 1 : length(fixed_dofs)
-        b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
-        A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
+        b.entries[fixed_dofs[j]] = fixed_penalty * Target.entries[fixed_dofs[j]]
+        A[1][fixed_dofs[j],fixed_dofs[j]] = fixed_penalty
     end
 
     # SOLVE
-    LS = createsolver(SC.linsolver,Target.entries,A.entries,b.entries)
+    LS = createsolver(SC.user_params[:linsolver], Target.entries, A.entries, b.entries)
     flush!(A.entries)
     update!(LS)
     solve!(LS)
@@ -500,7 +540,7 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
         realize_constraint!(Target,PDE.GlobalConstraints[j])
     end
 
-    if show_details
+    if SC.user_params[:show_statistics]
         show_statistics(PDE,SC)
     end
     return sqrt(resnorm)
@@ -508,16 +548,21 @@ end
 
 
 # solve full system iteratively until fixpoint is reached
-function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0, show_details::Bool = false) where {T <: Real}
+function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0) where {T <: Real}
 
-    anderson_iterations = SC.anderson_iterations
-
-    FEs = Array{FESpace,1}([])
-    for j=1 : length(Target.FEVectorBlocks)
-        push!(FEs,Target.FEVectorBlocks[j].FES)
-    end    
+    ## get relevant solver parameters
+    anderson_iterations = SC.user_params[:anderson_iterations]
+    fixed_penalty = SC.user_params[:fixed_penalty]
+    damping = SC.user_params[:damping]
+    maxiterations = SC.user_params[:maxiterations]
+    target_residual = SC.user_params[:target_residual]
+    skip_update = SC.user_params[:skip_update]
 
     # ASSEMBLE SYSTEM INIT
+    FEs = Array{FESpace,1}([])
+    for j = 1 : length(Target.FEVectorBlocks)
+        push!(FEs,Target.FEVectorBlocks[j].FES)
+    end    
     A = FEMatrix{T}("SystemMatrix", FEs)
     b = FEVector{T}("SystemRhs", FEs)
     set_nonzero_pattern!(A)
@@ -548,7 +593,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             AIOMatrix[anderson_iterations+2,j] = 1
         end
     end
-    if SC.damping > 0
+    if damping > 0
         LastIterate = deepcopy(Target)
     end
 
@@ -557,14 +602,16 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     resnorm::T = 0.0
 
     ## INIT SOLVER
-    LS = createsolver(SC.linsolver,Target.entries,A.entries,b.entries)
+    LS = createsolver(SC.user_params[:linsolver],Target.entries,A.entries,b.entries)
 
-    if show_details
-        @logmsg MoreInfo "initial assembly time = $(assembly_time)s"
+    if SC.user_params[:show_iteration_details]
+        @info "initial assembly time = $(assembly_time)s"
+    end
+    if SC.user_params[:show_iteration_details]
         @printf("\n  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
         @printf("\n  -----------------------------------------------------------------------\n")
     end
-    for j = 1 : SC.maxIterations
+    for j = 1 : maxiterations
         time_total = @elapsed begin
 
         # PREPARE GLOBALCONSTRAINTS
@@ -578,21 +625,21 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         # (from boundary conditions and constraints)
         fixed_dofs = Base.unique(fixed_dofs)
         for j = 1 : length(fixed_dofs)
-            b.entries[fixed_dofs[j]] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
-            A[1][fixed_dofs[j],fixed_dofs[j]] = SC.dirichlet_penalty
+            b.entries[fixed_dofs[j]] = fixed_penalty * Target.entries[fixed_dofs[j]]
+            A[1][fixed_dofs[j],fixed_dofs[j]] = fixed_penalty
         end
 
         # SOLVE
         time_solver = @elapsed begin
             flush!(A.entries)
-            if j == 1 || (j % SC.skip_update[1] == 0 && SC.skip_update[1] != -1)
+            if j == 1 || (j % skip_update[1] == 0 && skip_update[1] != -1)
                 update!(LS)
             end
             solve!(LS)
         end
 
         # CHECK LINEAR RESIDUAL
-        if show_details
+        if SC.user_params[:show_iteration_details]
             residual = A.entries*Target.entries - b.entries
             residual[fixed_dofs] .= 0
             linresnorm = (sqrt(sum(residual.^2, dims = 1)[1]))
@@ -639,9 +686,9 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         end
 
         # POSTPROCESS : DAMPING
-        if SC.damping > 0
+        if damping > 0
             for j = 1 : length(Target.entries)
-                Target.entries[j] = SC.damping*LastIterate.entries[j] + (1-SC.damping)*Target.entries[j]
+                Target.entries[j] = damping*LastIterate.entries[j] + (1-SC.damping)*Target.entries[j]
             end
             LastIterate = deepcopy(Target)
         end
@@ -659,19 +706,19 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
 
         end #elapsed
 
-        if show_details
+        if SC.user_params[:show_iteration_details]
             @printf("     %4d  ", j)
             @printf(" | %e", linresnorm)
             @printf(" | %e", resnorm)
             @printf(" | %.2e/%.2e/%.2e\n",time_reassembly,time_solver, time_total)
         end
 
-        if resnorm < SC.maxResidual
+        if resnorm < target_residual
             break
         end
 
-        if j == SC.maxIterations
-            @warn "maxIterations reached"
+        if j == maxiterations
+            @warn "maxiterations reached!"
             break
         end
     end
@@ -682,7 +729,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         realize_constraint!(Target,PDE.GlobalConstraints[j])
     end
 
-    if show_details
+    if SC.user_params[:show_statistics]
         show_statistics(PDE,SC)
     end
 
@@ -692,29 +739,37 @@ end
 
 # solve system iteratively until fixpoint is reached
 # by solving each equation on its own
-function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time = 0, show_details::Bool = false) where {T <: Real}
+function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time = 0) where {T <: Real}
 
-    FEs = Array{FESpace,1}([])
-    for j=1 : length(Target.FEVectorBlocks)
-        push!(FEs,Target.FEVectorBlocks[j].FES)
-    end    
+    ## get relevant solver parameters
+    subiterations = SC.user_params[:subiterations]
+    anderson_iterations = SC.user_params[:anderson_iterations]
+    fixed_penalty = SC.user_params[:fixed_penalty]
+    damping = SC.user_params[:damping]
+    maxiterations = SC.user_params[:maxiterations]
+    target_residual = SC.user_params[:target_residual]
+    skip_update = SC.user_params[:skip_update]
 
+    # ASSEMBLE SYSTEM INIT
     assembly_time = @elapsed begin
-        # ASSEMBLE SYSTEM INIT
-        nsubiterations = length(SC.subiterations)
+        FEs = Array{FESpace,1}([])
+        for j=1 : length(Target.FEVectorBlocks)
+            push!(FEs,Target.FEVectorBlocks[j].FES)
+        end    
+        nsubiterations = length(subiterations)
         eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
         A = Array{FEMatrix{T},1}(undef,nsubiterations)
         b = Array{FEVector{T},1}(undef,nsubiterations)
         x = Array{FEVector{T},1}(undef,nsubiterations)
         for i = 1 : nsubiterations
-            A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
-            b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
-            x[i] = FEVector{T}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
+            A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[subiterations[i]])
+            b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[subiterations[i]])
+            x[i] = FEVector{T}("SystemRhs subiteration $i", FEs[subiterations[i]])
             set_nonzero_pattern!(A[i])
-            assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = SC.subiterations[i], min_trigger = AssemblyInitial)
-            eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
-            for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(SC.subiterations[i])
-                if j < SC.subiterations[i][eq]
+            assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = subiterations[i], min_trigger = AssemblyInitial)
+            eqoffsets[i] = zeros(Int,length(subiterations[i]))
+            for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(subiterations[i])
+                if j < subiterations[i][eq]
                     eqoffsets[i][eq] += FEs[j].ndofs
                 end
             end
@@ -731,7 +786,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     
     residual = Array{FEVector{T},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        residual[s] = FEVector{T}("residual subiteration $s", FEs[SC.subiterations[s]])
+        residual[s] = FEVector{T}("residual subiteration $s", FEs[subiterations[s]])
     end
     linresnorm = zeros(T,nsubiterations)
     resnorm = zeros(T,nsubiterations)
@@ -740,16 +795,18 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     ## INIT SOLVERS
     LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        LS[s] = createsolver(SC.linsolver,x[s].entries,A[s].entries,b[s].entries)
+        LS[s] = createsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
 
 
-    if show_details
-        @logmsg MoreInfo "initial assembly time = $(assembly_time)s"
+    if SC.user_params[:show_statistics]
+        @info "initial assembly time = $(assembly_time)s"
+    end
+    if SC.user_params[:show_iteration_details]
         @printf("\n  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
         @printf("\n  -----------------------------------------------------------------------\n")
     end
-    for iteration = 1 : SC.maxIterations
+    for iteration = 1 : maxiterations
 
         time_reassembly = 0
         time_solver = 0
@@ -759,8 +816,8 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             # known bug: this will only work if no components in front of the constrained component(s)
             # are missing in the subiteration
             for j = 1 : length(PDE.GlobalConstraints)
-                if PDE.GlobalConstraints[j].component in SC.subiterations[s]
-                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; current_equations = SC.subiterations[s])
+                if PDE.GlobalConstraints[j].component in subiterations[s]
+                   additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],Target; current_equations = subiterations[s])
                    append!(fixed_dofs, additional_fixed_dofs)
                 end
             end
@@ -768,13 +825,13 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             # PENALIZE FIXED DOFS
             # (from boundary conditions and constraints)
             for j = 1 : length(fixed_dofs)
-                for eq = 1 : length(SC.subiterations[s])
+                for eq = 1 : length(subiterations[s])
                     # check if fixed_dof is necessary for subiteration
-                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
+                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[subiterations[s][eq]].ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
                         #println("fixing dof $eqdof (global $(fixed_dofs[j])) of unknown $eq with value $(Target.entries[fixed_dofs[j]])")
-                        b[s][eq][eqdof] = SC.dirichlet_penalty * Target.entries[fixed_dofs[j]]
-                        A[s][eq,eq][eqdof,eqdof] = SC.dirichlet_penalty
+                        b[s][eq][eqdof] = fixed_penalty * Target.entries[fixed_dofs[j]]
+                        A[s][eq,eq][eqdof,eqdof] = fixed_penalty
                     end
                 end
             end
@@ -789,12 +846,12 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             # CHECK LINEAR RESIDUAL
-            if show_details
+            if SC.user_params[:show_iteration_details]
                 residual[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
                 for j = 1 : length(fixed_dofs)
-                    for eq = 1 : length(SC.subiterations[s])
+                    for eq = 1 : length(subiterations[s])
                         # check if fixed_dof is necessary for subiteration
-                        if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
+                        if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[subiterations[s][eq]].ndofs
                             eqdof = fixed_dofs[j] - eqoffsets[s][eq]
                             residual[s][eq][eqdof] = 0
                         end
@@ -804,16 +861,16 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             # WRITE INTO Target
-            for j = 1 : length(SC.subiterations[s])
-                for k = 1 : length(Target[SC.subiterations[s][j]])
-                    Target[SC.subiterations[s][j]][k] = x[s][j][k]
+            for j = 1 : length(subiterations[s])
+                for k = 1 : length(Target[subiterations[s][j]])
+                    Target[subiterations[s][j]][k] = x[s][j][k]
                 end
             end
 
             # REASSEMBLE PARTS FOR NEXT SUBITERATION
             time_reassembly += @elapsed begin
                 next_eq = (s == nsubiterations) ? 1 : s+1
-                assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = SC.subiterations[next_eq], min_trigger = AssemblyEachTimeStep)
+                assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = subiterations[next_eq], min_trigger = AssemblyEachTimeStep)
             end
 
         end
@@ -822,8 +879,8 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         for s = 1 : nsubiterations
             residual[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
             for j = 1 : length(fixed_dofs)
-                for eq = 1 : length(SC.subiterations[s])
-                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[SC.subiterations[s][eq]].ndofs
+                for eq = 1 : length(subiterations[s])
+                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[subiterations[s][eq]].ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
                         residual[s][eq][eqdof] = 0
                     end
@@ -832,19 +889,19 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             resnorm[s] = (sqrt(sum(residual[s].entries.^2, dims = 1)[1]))
         end
 
-        if show_details
+        if SC.user_params[:show_iteration_details]
             @printf("     %4d  ", iteration)
             @printf(" | %e", sqrt(sum(linresnorm.^2)))
             @printf(" | %e", sqrt(sum(resnorm.^2)))
             @printf(" | %.2e/%.2e/%.2e\n",time_reassembly,time_solver, time_total)
         end
 
-        if sqrt(sum(resnorm.^2)) < SC.maxResidual
+        if sqrt(sum(resnorm.^2)) < target_residual
             break
         end
 
-        if iteration == SC.maxIterations
-            @warn "maxIterations reached"
+        if iteration == maxiterations
+            @warn "maxiterations reached"
             break
         end
     end
@@ -855,7 +912,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         realize_constraint!(Target,PDE.GlobalConstraints[j])
     end
 
-    if show_details
+    if SC.user_params[:show_statistics]
         show_statistics(PDE,SC)
     end
 
@@ -867,100 +924,63 @@ end
 function solve!(
     Target::FEVector,
     PDE::PDEDescription;
-    subiterations = "auto",
-    dirichlet_penalty::Real = 1e60,
-    time::Real = 0,
-    maxResidual::Real = 1e-12,
-    maxIterations::Int = 10,
-    linsolver = "UMFPACK",          # or Type{<:AbstractLinearSystem}
-    skip_update = [1],
-    anderson_iterations = 0)
+    kwargs)
 ````
 
-Solves a given PDE (provided as a PDEDescription) and writes the solution into the FEVector Target. The ansatz spaces are taken from the of this vector.
+Solves a given PDE (provided as a PDEDescription) and writes the solution into the FEVector Target (which knows the discrete ansatz spaces).
 
-Further optional arguments:
-- subiterations :  specifies subsets of equations that are solved together in the given order; "auto" tries to solve the whole system at once
-- dirichlet_penalty : Dirichlet data is enforced by penalties on the diagonal of the matrix.
-- time : If time-dependent data is involved, the time can be fixed to some value here.
-- linsolver : specifies the linear solver that is used to solver the linear system of equation in each fixpoint iteration, "UMFPACK" will use the default direct solver
-- skip_update : specifies after how much iterations the lu decomposition should be recomputed (-1 = only once if e.g. the matrix stays the same for each fixpoint iteration)
+Keyword arguments:
+$(_myprint(default_solver_kwargs()))
 
-Depending on the subiterations and detected/configured nonlinearties the whole system is either solved directly in one step
-or via a fixed-point iteration.
+Depending on the subiterations and detected/configured nonlinearities the whole system is either solved directly in one step or via a fixed-point iteration.
 
 """
 function solve!(
     Target::FEVector{T},
     PDE::PDEDescription;
-    subiterations = "auto",
-    dirichlet_penalty::Real = 1e60,
-    time::Real = 0,
-    maxResidual::Real = 1e-10,
-    maxIterations::Int = 10,
-    linsolver = "UMFPACK",
-    show_solver_config::Bool = false,
-    show_details = "auto",
-    skip_update = [1],
-    damping = 0,
-    anderson_iterations = 0) where {T <: Real}
+    kwargs...) where {T <: Real}
 
     ## generate solver configurations
-    SolverConfig = generate_solver(PDE, T; subiterations = subiterations)
-    SolverConfig.dirichlet_penalty = dirichlet_penalty
-    SolverConfig.anderson_iterations = anderson_iterations
-    if linsolver == "UMFPACK"
-        SolverConfig.linsolver = LinearSystemDirectUMFPACK{T}
-    else
-        SolverConfig.linsolver = linsolver
-    end
-    SolverConfig.skip_update = skip_update
-    SolverConfig.damping = damping
-    SolverConfig.maxResidual = maxResidual
-    SolverConfig.maxIterations = maxIterations
+    user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
+    _update_solver_params!(user_params,kwargs)
+    SC = generate_solver(PDE, user_params, T)
 
     ## logging stuff
-    if SolverConfig.is_timedependent
+    if SC.is_timedependent
         moreinfo_string = "----- Solving $(PDE.name) (at fixed time $time) -----"
     else
         moreinfo_string = "----- Solving $(PDE.name) -----"
     end
     nsolvedofs = 0
-    for s = 1 : length(SolverConfig.subiterations), o = 1 : length(SolverConfig.subiterations[s])
-        d = SolverConfig.subiterations[s][o]
+    subiterations = user_params[:subiterations]
+    for s = 1 : length(subiterations), o = 1 : length(subiterations[s])
+        d = subiterations[s][o]
         moreinfo_string *= "\n\tEquation ($s.$d) $(PDE.equation_names[d]) : $(PDE.unknown_names[d]) >> $(Target[d].name) ($(Target[d].FES.name), ndofs = $(Target[d].FES.ndofs))"
         nsolvedofs += Target[d].FES.ndofs
     end
     @info moreinfo_string
-    if show_solver_config
-        @show SolverConfig
+    if user_params[:show_solver_config]
+        @show SC
     else
-        @debug SolverConfig
+        @debug SC
     end
 
     ## choose solver strategy
     totaltime = @elapsed begin
-        if show_details == "auto"
-            if SolverConfig.is_nonlinear == true
-                show_details = true
+        if user_params[:subiterations] == [1:size(PDE.LHSOperators,1)] # full problem is solved
+            if SC.is_nonlinear == false
+                residual = solve_direct!(Target, PDE, SC; time = user_params[:time])
             else
-                show_details = false
+                residual = solve_fixpoint_full!(Target, PDE, SC; time = user_params[:time])
             end
-        end
-        if subiterations == "auto"
-            if SolverConfig.is_nonlinear == false
-                residual = solve_direct!(Target, PDE, SolverConfig; time = time, show_details = show_details)
-            else
-                residual = solve_fixpoint_full!(Target, PDE, SolverConfig; time = time, show_details = show_details)
-            end
-        else
-            residual = solve_fixpoint_subiterations!(Target, PDE, SolverConfig; time = time, show_details = show_details)
+        else # only part of the problem is solved
+            residual = solve_fixpoint_subiterations!(Target, PDE, SC; time = user_params[:time])
         end
     end
 
-    ## check final residual
+    ## report and check final residual
     @info "----- solve finished -----\n\tresidual = $residual\n\ttotaltime = $(totaltime)s"
-    if residual > SolverConfig.maxResidual
+    if residual > user_params[:target_residual]
         @warn "residual was larger than desired tolerance!"
     end
     return residual
@@ -991,7 +1011,7 @@ mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
     x::Array{FEVector,1}     # heap for current solution for each equation package
     res::Array{FEVector,1}   # residual vector
     X::FEVector              # full solution vector
-    LastIterate::FEVector    # helper variable if nonlinear_iterations > 1
+    LastIterate::FEVector    # helper variable if maxiterations > 1
     fixed_dofs::Array{Int,1}            # fixed dof numbes (values are stored in X)
     eqoffsets::Array{Array{Int,1},1}    # offsets for subblocks of each equation package
     ALU::Array{Any,1}  # LU decompositions of matrices A
@@ -1000,11 +1020,12 @@ end
 
 
 function assemble_massmatrix4subiteration!(TCS::TimeControlSolver, i::Int; force::Bool = false)
-    for j = 1 : length(TCS.SC.subiterations[i])
-        if (TCS.SC.subiterations[i][j] in TCS.which) == true 
+    subiterations = TCS.SC.user_params[:subiterations]
+    for j = 1 : length(subiterations[i])
+        if (subiterations[i][j] in TCS.which) == true 
 
             # assembly mass matrix into AM block
-            pos = findall(x->x==TCS.SC.subiterations[i][j], TCS.which)[1]
+            pos = findall(x->x==subiterations[i][j], TCS.which)[1]
 
             if TCS.nonlinear_dt[pos] == true || force == true
                 @logmsg DeepInfo "Assembling mass matrix for block [$j,$j] of subiteration $i with action of type $(typeof(TCS.dt_actions[pos]))"
@@ -1028,72 +1049,60 @@ function TimeControlSolver(
     PDE::PDEDescription,
     Solution::FEVector,    # contains initial values and stores solution of advance method below
     TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
-    timedependent_equations = [],
-    subiterations = "auto",
-    start_time::Real = 0,
     dt_testfunction_operator = [],
     dt_action = [],
-    nonlinear_dt::Bool = false,
-    dirichlet_penalty = 1e60)
+    nonlinear_dt = [],
+    kwargs...)
 ````
 
 Creates a time-dependent solver that can be advanced in time with advance!.
-The FEVector Solution stores the initial state but also the solutions of each timestep that are computed via any of the advance! methods.
+The FEVector Solution stores the initial state but also the solution at the current time.
 The argument TIR carries the time integration rule (currently there is only BackwardEuler).
 
-Further optional arguments (that are not listed in the description of solve!):
-- timedependent_equations : contains the equation numbers (=rows in PDEDescription) that are time-dependent and should get a time derivative (currently only time derivatives of order 1)
-- start_time : initial time
-- dt_test_function_operator : operator applied to testfunctions in time derivative
-- dt_action : additional actions that are applied to the ansatz function in the time derivative (to include parameters etc.)
+Keyword arguments:
+$(_myprint(default_solver_kwargs()))
+
+Further (very experimental) optional arguments for TimeControlSolver are:
+- dt_test_function_operator : (array of) operators applied to testfunctions in time derivative (default: Identity)
+- dt_action : (array of) actions that are applied to the ansatz function in the time derivative (to include parameters etc.)
+- nonlinear_dt : (array of) booleans to decide which time derivatives should be recomputed in each iteration/timestep
 
 """
 function TimeControlSolver(
     PDE::PDEDescription,
     InitialValues::FEVector,    # contains initial values and stores solution of advance! methods
     TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
-    timedependent_equations = [],
-    subiterations = "auto",
-    start_time::Real = 0,
     dt_testfunction_operator = [],
     dt_action = [],
     nonlinear_dt = [],
-    nonlinear_iterations::Int = 1,
-    check_nonlinear_residual::Bool = false,
-    show_solver_config::Bool = false,
-    maxResidual = 1e-12,
-    linsolver = "UMFPACK",
-    skip_update = [1],
-    dirichlet_penalty = 1e60)
+    kwargs...)
+
+    ## generate solver configurations
+    user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
+    _update_solver_params!(user_params,kwargs)
+    SC = generate_solver(PDE, user_params, Float64)
+    start_time = user_params[:time]
 
     # generate solver for time-independent problem
-    SC = generate_solver(PDE; subiterations = subiterations)
     for j = 1 : length(InitialValues.FEVectorBlocks)
         if (SC.RHS_AssemblyTriggers[j] <: AssemblyEachTimeStep)
             SC.RHS_AssemblyTriggers[j] = AssemblyEachTimeStep
         end
     end
-    SC.dirichlet_penalty = dirichlet_penalty
-    SC.maxIterations = nonlinear_iterations
-    SC.maxResidual = maxResidual
-    SC.check_nonlinear_residual = check_nonlinear_residual
-    if linsolver == "UMFPACK"
-        SC.linsolver = LinearSystemDirectUMFPACK{Float64}
-    else
-        SC.linsolver = linsolver
-    end
-    SC.skip_update = skip_update
 
     ## logging stuff
     moreinfo_string = "----- Preparing time control solver for $(PDE.name) -----"
     nsolvedofs = 0
-    for s = 1 : length(SC.subiterations), o = 1 : length(SC.subiterations[s])
-        d = SC.subiterations[s][o]
+    subiterations = SC.user_params[:subiterations]
+    nsubiterations = length(subiterations)
+    timedependent_equations = SC.user_params[:timedependent_equations]
+    for s = 1 : nsubiterations, o = 1 : length(subiterations[s])
+        d = subiterations[s][o]
         moreinfo_string *= "\n\tEquation ($s.$d) $(PDE.equation_names[d]) : $(PDE.unknown_names[d]) >> $(InitialValues[d].name) ($(InitialValues[d].FES.name), ndofs = $(InitialValues[d].FES.ndofs)), timedependent = $(d in timedependent_equations ? "yes" : "no")"
         nsolvedofs += InitialValues[d].FES.ndofs
     end
     @info moreinfo_string
-    if show_solver_config
+    if user_params[:show_solver_config]
         @show SC
     else
         @debug SC
@@ -1104,7 +1113,6 @@ function TimeControlSolver(
     for j = 1 : length(InitialValues.FEVectorBlocks)
         push!(FEs,InitialValues.FEVectorBlocks[j].FES)
     end    
-    nsubiterations = length(SC.subiterations)
     eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
     AM = Array{FEMatrix{Float64},1}(undef,nsubiterations)
     A = Array{FEMatrix{Float64},1}(undef,nsubiterations)
@@ -1112,16 +1120,16 @@ function TimeControlSolver(
     x = Array{FEVector{Float64},1}(undef,nsubiterations)
     res = Array{FEVector{Float64},1}(undef,nsubiterations)
     for i = 1 : nsubiterations
-        A[i] = FEMatrix{Float64}("SystemMatrix subiteration $i", FEs[SC.subiterations[i]])
-        AM[i] = FEMatrix{Float64}("MassMatrix subiteration $i", FEs[SC.subiterations[i]])
-        b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[SC.subiterations[i]])
-        x[i] = FEVector{Float64}("Solution subiteration $i", FEs[SC.subiterations[i]])
-        res[i] = FEVector{Float64}("Residual subiteration $i", FEs[SC.subiterations[i]])
+        A[i] = FEMatrix{Float64}("SystemMatrix subiteration $i", FEs[subiterations[i]])
+        AM[i] = FEMatrix{Float64}("MassMatrix subiteration $i", FEs[subiterations[i]])
+        b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[subiterations[i]])
+        x[i] = FEVector{Float64}("Solution subiteration $i", FEs[subiterations[i]])
+        res[i] = FEVector{Float64}("Residual subiteration $i", FEs[subiterations[i]])
         set_nonzero_pattern!(A[i])
-        assemble!(A[i],b[i],PDE,SC,InitialValues; time = start_time, equations = SC.subiterations[i], min_trigger = AssemblyInitial)
-        eqoffsets[i] = zeros(Int,length(SC.subiterations[i]))
-        for j= 1 : length(FEs), eq = 1 : length(SC.subiterations[i])
-            if j < SC.subiterations[i][eq]
+        assemble!(A[i],b[i],PDE,SC,InitialValues; time = start_time, equations = subiterations[i], min_trigger = AssemblyInitial)
+        eqoffsets[i] = zeros(Int,length(subiterations[i]))
+        for j= 1 : length(FEs), eq = 1 : length(subiterations[i])
+            if j < subiterations[i][eq]
                 eqoffsets[i][eq] += FEs[j].ndofs
             end
         end
@@ -1143,21 +1151,21 @@ function TimeControlSolver(
         # known bug: this will only work if no components in front of the constrained component(s)
         # are missing in the subiteration
         for j = 1 : length(PDE.GlobalConstraints)
-            if PDE.GlobalConstraints[j].component in SC.subiterations[s]
-                additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],InitialValues; current_equations = SC.subiterations[s])
+            if PDE.GlobalConstraints[j].component in subiterations[s]
+                additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],InitialValues; current_equations = subiterations[s])
                 append!(fixed_dofs, additional_fixed_dofs)
             end
         end
 
         # COPY INITIAL VALUES TO SUB-PROBLEM SOLUTIONS
-        for j = 1 : length(x[s].entries), k = 1 : length(SC.subiterations[s])
-            d = SC.subiterations[s][k]
+        for j = 1 : length(x[s].entries), k = 1 : length(subiterations[s])
+            d = subiterations[s][k]
             x[s][k][:] = InitialValues[d][:]
         end
 
         # prepare and configure mass matrices
-        for j = 1 : length(SC.subiterations[s])
-            d = SC.subiterations[s][j] # equation of subiteration
+        for j = 1 : length(subiterations[s])
+            d = subiterations[s][j] # equation of subiteration
             if (d in timedependent_equations) == true 
                 pos = findall(x->x==d, timedependent_equations)[1] # position in timedependent_equations
                 if length(nonlinear_dt) < pos
@@ -1184,14 +1192,11 @@ function TimeControlSolver(
     # INIT LINEAR SOLVERS
     LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        if length(SC.skip_update) < s
-            push!(SC.skip_update, 1)
-        end
-        LS[s] = createsolver(SC.linsolver,x[s].entries,A[s].entries,b[s].entries)
+        LS[s] = createsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
 
     # if nonlinear iterations are performed we need to remember the iterate from last timestep
-    if nonlinear_iterations > 1
+    if user_params[:maxiterations] > 1
         # two vectors to store intermediate approximations
         LastIterate = deepcopy(InitialValues)
     else
@@ -1200,7 +1205,7 @@ function TimeControlSolver(
     end
 
     # generate TimeControlSolver
-    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(SC.subiterations)))
+    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)))
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
@@ -1237,14 +1242,27 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     LS = TCS.LS
     LastIterate = TCS.LastIterate
     fixed_dofs = TCS.fixed_dofs
+    eqdof = 0
     eqoffsets = TCS.eqoffsets
     T = eltype(res[1].entries)
     statistics = zeros(Float64,length(X),4)
+    linresnorm = 1e30
+    resnorm = 1e30
+
+    ## get relevant solver parameters
+    subiterations = SC.user_params[:subiterations]
+    anderson_iterations = SC.user_params[:anderson_iterations]
+    fixed_penalty = SC.user_params[:fixed_penalty]
+    damping = SC.user_params[:damping]
+    maxiterations = SC.user_params[:maxiterations]
+    check_nonlinear_residual = SC.user_params[:check_nonlinear_residual]
+    target_residual = SC.user_params[:target_residual]
+    skip_update = SC.user_params[:skip_update]
 
     # save current solution if nonlinear iterations are needed
     # X will then contain the current nonlinear iterate
     # LastIterate contains the solution from last time step (for reassembly of time derivatives)
-    if SC.maxIterations > 1
+    if maxiterations > 1
         for j = 1 : length(X.entries)
             LastIterate.entries[j] = X.entries[j]
         end
@@ -1252,55 +1270,54 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
 
 
     ## LOOP OVER ALL SUBITERATIONS
-    for s = 1 : length(SC.subiterations)
+    for s = 1 : length(subiterations)
 
 
         # UPDATE SYSTEM
-        if SC.skip_update[s] != -1 || TCS.cstep == 1 # update matrix
+        if skip_update[s] != -1 || TCS.cstep == 1 # update matrix
             fill!(A[s].entries.cscmatrix.nzval,0)
             fill!(b[s].entries,0)
-            assemble!(A[s],b[s],PDE,SC,LastIterate; equations = SC.subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
+            assemble!(A[s],b[s],PDE,SC,LastIterate; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
 
             ## update mass matrix and add time derivative
             assemble_massmatrix4subiteration!(TCS, s; force = false)
-            for k = 1 : length(SC.subiterations[s])
-                d = SC.subiterations[s][k]
+            for k = 1 : length(subiterations[s])
+                d = subiterations[s][k]
                 addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
                 addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
             end
             flush!(A[s].entries)
         else # only update rhs
             fill!(b[s].entries,0)
-            assemble!(A[s],b[s],PDE,SC,LastIterate; equations = SC.subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
+            assemble!(A[s],b[s],PDE,SC,LastIterate; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
 
             ## add time derivative
-            for k = 1 : length(SC.subiterations[s])
-                d = SC.subiterations[s][k]
+            for k = 1 : length(subiterations[s])
+                d = subiterations[s][k]
                 addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
             end
         end
 
         # ASSEMBLE (TIME-DEPENDENT) BOUNDARY DATA
-        for k = 1 : length(SC.subiterations[s])
-            d = SC.subiterations[s][k]
+        for k = 1 : length(subiterations[s])
+            d = subiterations[s][k]
             if any(PDE.BoundaryOperators[d].timedependent) == true
                 boundarydata!(x[s][k],PDE.BoundaryOperators[d]; time = TCS.ctime)
             end
         end    
 
         ## START (NONLINEAR) ITERATION(S)
-        for iteration = 1 : SC.maxIterations
+        for iteration = 1 : maxiterations
             statistics[s,4] = iteration.^2 # will be square-rooted later
 
             # PENALIZE FIXED DOFS (IN CASE THE MATRIX CHANGED)
             # (from boundary conditions and global constraints)
-            eqdof = 0
             for j = 1 : length(fixed_dofs)
-                for eq = 1 : length(SC.subiterations[s])
-                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
+                for eq = 1 : length(subiterations[s])
+                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
-                        b[s][eq][eqdof] = SC.dirichlet_penalty * x[s][eq][eqdof]
-                        A[s][eq,eq][eqdof,eqdof] = SC.dirichlet_penalty
+                        b[s][eq][eqdof] = fixed_penalty * x[s][eq][eqdof]
+                        A[s][eq,eq][eqdof,eqdof] = fixed_penalty
                     end
                 end
             end
@@ -1308,7 +1325,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             ## SOLVE for x[s]
             time_solver = @elapsed begin
                 flush!(A[s].entries)
-                if TCS.cstep == 1 || (TCS.cstep % SC.skip_update[s] == 0 && SC.skip_update[s] != -1)
+                if TCS.cstep == 1 || (TCS.cstep % skip_update[s] == 0 && skip_update[s] != -1)
                     update!(LS[s])
                 end
                 solve!(LS[s])
@@ -1317,26 +1334,34 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             ## CHECK LINEAR RESIDUAL
             res[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
             for j = 1 : length(fixed_dofs)
-                for eq = 1 : length(SC.subiterations[s])
-                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
+                for eq = 1 : length(subiterations[s])
+                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
                         eqdof = fixed_dofs[j] - eqoffsets[s][eq]
                         res[s][eq][eqdof] = 0
                     end
                 end
             end
-            statistics[SC.subiterations[s][:],1] .= 0
-            for j = 1 : length(SC.subiterations[s])
-                statistics[SC.subiterations[s][j],1] += sum(res[s][j][:].^2)
+            statistics[subiterations[s][:],1] .= 0
+            for j = 1 : length(subiterations[s])
+                statistics[subiterations[s][j],1] += sum(res[s][j][:].^2)
             end
             linresnorm = norm(res[s].entries)
 
+            # WRITE x[s] INTO X and COMPUTE CHANGE
+            for j = 1 : length(subiterations[s])
+                for k = 1 : length(LastIterate[subiterations[s][j]])
+                    statistics[subiterations[s][j],2] += (LastIterate[subiterations[s][j]][k] - x[s][j][k])^2
+                    X[subiterations[s][j]][k] = x[s][j][k]
+                end
+            end
+
             ## REASSEMBLE NONLINEAR PARTS
-            if SC.maxIterations > 1 || SC.check_nonlinear_residual
-                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = SC.subiterations[s], min_trigger = AssemblyAlways, time = TCS.ctime)
+            if maxiterations > 1 || check_nonlinear_residual
+                lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], min_trigger = AssemblyAlways, time = TCS.ctime)
 
                 ## REPAIR TIME DERIVATIVE IF NEEDED
-                for k = 1 : length(SC.subiterations[s])
-                    d = SC.subiterations[s][k]
+                for k = 1 : length(subiterations[s])
+                    d = subiterations[s][k]
                     if lhs_erased[k,k]
                         addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
                     end
@@ -1350,31 +1375,27 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
                     flush!(A[s].entries)
                     res[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
                     for j = 1 : length(fixed_dofs)
-                        for eq = 1 : length(SC.subiterations[s])
-                            if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
+                        for eq = 1 : length(subiterations[s])
+                            if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
                                 eqdof = fixed_dofs[j] - eqoffsets[s][eq]
                                 res[s][eq][eqdof] = 0
                             end
                         end
                     end
-                    statistics[SC.subiterations[s][:],3] .= 0
-                    for j = 1 : length(SC.subiterations[s])
-                        statistics[SC.subiterations[s][j],3] += sum(res[s][j][:].^2)
+                    statistics[subiterations[s][:],3] .= 0
+                    for j = 1 : length(subiterations[s])
+                        statistics[subiterations[s][j],3] += sum(res[s][j][:].^2)
                     end
                     resnorm = norm(res[s].entries)
                 else
-                    statistics[SC.subiterations[s][:],3] .= statistics[SC.subiterations[s][:],1]
+                    statistics[subiterations[s][:],3] .= statistics[subiterations[s][:],1]
                 end
             else
-                statistics[SC.subiterations[s][:],3] .= 1e99 # nonlinear residual has not been checked !
+                statistics[subiterations[s][:],3] .= 1e99 # nonlinear residual has not been checked !
             end
 
-            # WRITE x[s] INTO X and COMPUTE CHANGE
-            for j = 1 : length(SC.subiterations[s])
-                for k = 1 : length(LastIterate[SC.subiterations[s][j]])
-                    statistics[SC.subiterations[s][j],2] += (LastIterate[SC.subiterations[s][j]][k] - x[s][j][k])^2
-                    X[SC.subiterations[s][j]][k] = x[s][j][k]
-                end
+            if sqrt(sum(resnorm.^2)) < target_residual
+                break
             end
         end
 
@@ -1415,9 +1436,11 @@ The function do_after_timestep is called after each timestep and can be used to 
 """
 function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing, show_details = true)
     statistics = zeros(Float64,length(TCS.X),3)
+    maxiterations = TCS.SC.user_params[:maxiterations]
+    check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
     @info "Advancing in time until stationarity..."
     if show_details
-        if TCS.SC.maxIterations > 1 || TCS.SC.check_nonlinear_residual
+        if maxiterations > 1 || check_nonlinear_residual
             @printf("\n    STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
             for j = 1 : size(statistics,1)
                 @printf("        ")
@@ -1447,7 +1470,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             @printf("    %4d  ",iteration)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
-            if TCS.SC.maxIterations > 1 || TCS.SC.check_nonlinear_residual
+            if maxiterations > 1 || check_nonlinear_residual
                 @printf(" %.4e (%d) |",sqrt(sum(statistics[:,3].^2)), statistics[1,4])
             end
             for j = 1 : size(statistics,1)
@@ -1483,9 +1506,11 @@ The function do_after_timestep is called after each timestep and can be used to 
 """
 function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing, show_details = true)
     statistics = zeros(Float64,length(TCS.X),3)
+    maxiterations = TCS.SC.user_params[:maxiterations]
+    check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
     @info "Advancing in time from $(TCS.ctime) until $finaltime"
     if show_details
-        if TCS.SC.maxIterations > 1 || TCS.SC.check_nonlinear_residual
+        if maxiterations > 1 || check_nonlinear_residual
             @printf("\n    STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
             for j = 1 : size(statistics,1)
                 @printf("        ")
@@ -1515,7 +1540,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             @printf("    %4d  ",TCS.cstep)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
-            if TCS.SC.maxIterations > 1 || TCS.SC.check_nonlinear_residual
+            if maxiterations > 1 || check_nonlinear_residual
                 @printf(" %.4e (%d) |",sqrt(sum(statistics[:,3].^2)), statistics[1,4])
             end
             for j = 1 : size(statistics,1)

@@ -15,20 +15,22 @@ function diffeq_assembly!(sys::TimeControlSolver, ctime)
     res =sys.res
     X =sys.X
     fixed_dofs = sys.fixed_dofs
+    fixed_penalty = SC.user_params[:fixed_penalty]
+    subiterations = SC.user_params[:subiterations]
 
     @debug "DiffEQ-interface: assembly at t = $ctime"
 
-    nsubiterations = length(SC.subiterations)
+    nsubiterations = length(subiterations)
     for s = 1 : nsubiterations
 
         ## REASSEMBLE NONLINEAR AND TIME-DEPENDENT DATA
-        lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = SC.subiterations[s], min_trigger = AssemblyEachTimeStep, time = ctime)
+        lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], min_trigger = AssemblyEachTimeStep, time = ctime)
 
         # ASSEMBLE TIME-DEPENDENT BOUNDARY DATA at current (already updated) time ctime
         # needs to be done after adding the time derivative, since it overwrittes Data from last timestep
-        # if SC.maxiterations > 1 (because X = LastIterate in this case)
-        for k = 1 : length(SC.subiterations[s])
-            d = SC.subiterations[s][k]
+        # if maxiterations > 1 (because X = LastIterate in this case)
+        for k = 1 : length(subiterations[s])
+            d = subiterations[s][k]
             if any(PDE.BoundaryOperators[d].timedependent) == true
                 boundarydata!(X[d],PDE.BoundaryOperators[d]; time = ctime)
             else
@@ -41,11 +43,11 @@ function diffeq_assembly!(sys::TimeControlSolver, ctime)
         eqdof = 0
         eqoffsets =sys.eqoffsets
         for j = 1 : length(fixed_dofs)
-            for eq = 1 : length(SC.subiterations[s])
-                if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
+            for eq = 1 : length(subiterations[s])
+                if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
                     eqdof = fixed_dofs[j] - eqoffsets[s][eq]
-                    b[s][eq][eqdof] = SC.dirichlet_penalty * X.entries[fixed_dofs[j]]
-                    A[s][eq,eq][eqdof,eqdof] = SC.dirichlet_penalty
+                    b[s][eq][eqdof] = fixed_penalty * X.entries[fixed_dofs[j]]
+                    A[s][eq,eq][eqdof,eqdof] = fixed_penalty
 
                     x[s].entries[fixed_dofs[j]] = X.entries[fixed_dofs[j]]
                 end
@@ -77,15 +79,16 @@ function eval_rhs!(du, x, sys::TimeControlSolver, ctime)
     fixed_dofs = sys.fixed_dofs
     eqoffsets =sys.eqoffsets
     eqdof = 0
+    subiterations = SC.user_params[:subiterations]
 
-    for s = 1 : length(SC.subiterations)
+    for s = 1 : length(subiterations)
         # set Dirichlet data and other fixed dofs
         for j = 1 : length(fixed_dofs)
-            for eq = 1 : length(SC.subiterations[s])
-                if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[SC.subiterations[s][eq]].FES.ndofs
+            for eq = 1 : length(subiterations[s])
+                if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
                     eqdof = fixed_dofs[j] - eqoffsets[s][eq]
                     res[s][eq][eqdof] = 0
-                    x[fixed_dofs[j]] = X[SC.subiterations[s][eq]][eqdof]
+                    x[fixed_dofs[j]] = X[subiterations[s][eq]][eqdof]
                 end
             end
         end

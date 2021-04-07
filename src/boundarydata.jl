@@ -79,7 +79,7 @@ function boundarydata!(
     Target::FEVectorBlock,
     O::BoundaryOperator;
     time = 0,
-    dirichlet_penalty::Float64 = 1e60)
+    fixed_penalty::Float64 = 1e60)
     fixed_dofs = []
   
     FE = Target.FES
@@ -268,8 +268,8 @@ function boundarydata!(
 
         # fix already set dofs by other boundary conditions
         for j in fixed_dofs
-            A[1][j,j] = dirichlet_penalty
-            b[j] = Target[j]*dirichlet_penalty
+            A[1][j,j] = fixed_penalty
+            b[j] = Target[j]*fixed_penalty
         end
 
         flush!(A.entries)
@@ -315,7 +315,7 @@ function boundarydata!(
         else # old way: penalize all interior dofs
 
             for j in setdiff(1:FE.ndofs,fixed_dofs)
-                A[1][j,j] = dirichlet_penalty
+                A[1][j,j] = fixed_penalty
                 b[j] = 0
             end
 
