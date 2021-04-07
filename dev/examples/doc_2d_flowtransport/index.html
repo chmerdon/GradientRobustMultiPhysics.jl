@@ -126,30 +126,30 @@ Problem =
 ┌ Info: ----- Solving Stokes + Transport -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; v_h (H1BR{2}, ndofs = 12666)
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; p_h (H1P0{1} (broken), ndofs = 4864)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:934
 ┌ Info: ----- solve finished -----
-│ 	residual = 7.670343345756659e-14
-│ 	totaltime = 9.624979296s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
+│ 	residual = 7.807117780348604e-14
+│ 	totaltime = 10.222265688s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:962
 ┌ Info: ----- Preparing time control solver for Stokes + Transport -----
 │ 	Equation (1.3) transport equation : concentration &gt;&gt; c_h (H1P0{1} (broken), ndofs = 4864), timedependent = yes
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1079
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1095
 ┌ Info: Advancing in time until stationarity...
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1400
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1418
 
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                         
           |            |  (total)   |  velocity    pressure   concentrat 
-       1  | 1.0000e+04 | 1.7581e-16 | 0.0000e+00  0.0000e+00  3.9306e+01 
-       2  | 2.0000e+04 | 2.0136e-16 | 0.0000e+00  0.0000e+00  1.1471e-01 
-       3  | 3.0000e+04 | 1.8622e-16 | 0.0000e+00  0.0000e+00  1.4916e-03 
-       4  | 4.0000e+04 | 2.0782e-16 | 0.0000e+00  0.0000e+00  2.9985e-05 
-       5  | 5.0000e+04 | 1.9684e-16 | 0.0000e+00  0.0000e+00  5.9612e-07 
-       6  | 6.0000e+04 | 2.0544e-16 | 0.0000e+00  0.0000e+00  1.1638e-08 
-       7  | 7.0000e+04 | 2.0470e-16 | 0.0000e+00  0.0000e+00  2.2492e-10 
-       8  | 8.0000e+04 | 2.0471e-16 | 0.0000e+00  0.0000e+00  4.3254e-12 
-       9  | 9.0000e+04 | 2.0500e-16 | 0.0000e+00  0.0000e+00  8.3415e-14 
+       1  | 1.0000e+04 | 1.9423e-16 | 0.0000e+00  0.0000e+00  3.9306e+01 
+       2  | 2.0000e+04 | 2.2100e-16 | 0.0000e+00  0.0000e+00  1.1471e-01 
+       3  | 3.0000e+04 | 2.2679e-16 | 0.0000e+00  0.0000e+00  1.4916e-03 
+       4  | 4.0000e+04 | 2.2643e-16 | 0.0000e+00  0.0000e+00  2.9985e-05 
+       5  | 5.0000e+04 | 2.0498e-16 | 0.0000e+00  0.0000e+00  5.9612e-07 
+       6  | 6.0000e+04 | 2.2335e-16 | 0.0000e+00  0.0000e+00  1.1638e-08 
+       7  | 7.0000e+04 | 2.0462e-16 | 0.0000e+00  0.0000e+00  2.2492e-10 
+       8  | 8.0000e+04 | 2.0126e-16 | 0.0000e+00  0.0000e+00  4.3253e-12 
+       9  | 9.0000e+04 | 2.2451e-16 | 0.0000e+00  0.0000e+00  8.8067e-14 
 ┌ Info: stationarity detected after 9 timesteps
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1444
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1462
 
 [min(c),max(c)] = [0.04166666666666663,0.9791666666666667]
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_fe_on_faces/">« 2D Finite Elements on Faces</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 20:12">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_fe_on_faces/">« 2D Finite Elements on Faces</a><a class="docs-footer-nextpage" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson-Iteration) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 7 April 2021 14:37">Wednesday 7 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

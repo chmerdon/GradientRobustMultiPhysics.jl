@@ -48,37 +48,37 @@ end
 end</code></pre><pre><code class="language-none">Main.##264.Example_2DLidDrivenCavityAnderson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DLidDrivenCavityAnderson.main()</code></pre><pre><code class="language-none">┌ Info: ----- Solving incompressible Navier-Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; velocity (H1P2{2,2}, ndofs = 4226)
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; pressure (H1P1{1}, ndofs = 545)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:934
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 1.988873e-17 | 1.450425e-02 | 1.02e+00/8.03e-02/1.19e+00
-        2   | 2.193060e-17 | 3.942125e-03 | 5.09e-02/7.14e-02/2.64e-01
-        3   | 2.640810e-17 | 2.530007e-03 | 4.50e-02/6.97e-02/1.22e-01
-        4   | 2.591572e-17 | 1.695559e-03 | 4.12e-02/8.48e-02/1.35e-01
-        5   | 2.721707e-17 | 1.277923e-03 | 4.07e-02/6.96e-02/1.29e-01
-        6   | 2.821058e-17 | 4.651758e-04 | 4.53e-02/7.44e-02/1.32e-01
-        7   | 2.925138e-17 | 4.893202e-04 | 4.22e-02/7.94e-02/1.36e-01
-        8   | 2.896907e-17 | 2.291879e-04 | 3.90e-02/7.10e-02/1.32e-01
-        9   | 3.079898e-17 | 1.906036e-04 | 4.15e-02/7.00e-02/1.37e-01
-       10   | 3.117588e-17 | 1.033791e-04 | 4.14e-02/6.75e-02/1.36e-01
-       11   | 2.788022e-17 | 6.131382e-05 | 3.94e-02/6.89e-02/1.37e-01
+        1   | 2.156830e-17 | 1.450425e-02 | 1.29e+00/4.26e-02/1.42e+00
+        2   | 2.125999e-17 | 3.942125e-03 | 4.06e-02/3.50e-02/2.02e-01
+        3   | 2.717856e-17 | 2.530007e-03 | 4.04e-02/4.82e-02/9.58e-02
+        4   | 2.467113e-17 | 1.695559e-03 | 4.96e-02/3.71e-02/9.51e-02
+        5   | 3.045254e-17 | 1.277923e-03 | 4.08e-02/3.71e-02/8.76e-02
+        6   | 2.842475e-17 | 4.651758e-04 | 3.96e-02/3.62e-02/9.48e-02
+        7   | 2.733267e-17 | 4.893202e-04 | 4.15e-02/3.56e-02/9.56e-02
+        8   | 2.988621e-17 | 2.291879e-04 | 4.87e-02/3.60e-02/1.00e-01
+        9   | 2.855142e-17 | 1.906036e-04 | 4.19e-02/3.64e-02/9.76e-02
+       10   | 2.920104e-17 | 1.033791e-04 | 4.47e-02/4.38e-02/1.11e-01
+       11   | 3.023511e-17 | 6.131382e-05 | 3.90e-02/3.68e-02/1.04e-01
 ┌ Info: ----- solve finished -----
-│ 	residual = 6.131381624365918e-5
-│ 	totaltime = 11.158535963s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
+│ 	residual = 6.13138162435046e-5
+│ 	totaltime = 10.819396178s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:962
 ┌ Info: ----- Solving incompressible Navier-Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; velocity (H1P2{2,2}, ndofs = 4226)
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; pressure (H1P1{1}, ndofs = 545)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:918
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:934
 
   ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
   -----------------------------------------------------------------------
-        1   | 2.842126e-17 | 8.051372e-07 | 8.83e-02/9.09e-02/1.84e-01
-        2   | 2.840849e-17 | 4.297195e-09 | 8.80e-02/6.82e-02/1.63e-01
-        3   | 2.971953e-17 | 2.010708e-12 | 8.72e-02/8.21e-02/1.77e-01
+        1   | 2.710785e-17 | 8.051372e-07 | 8.95e-02/4.39e-02/1.36e-01
+        2   | 2.995432e-17 | 4.297195e-09 | 8.55e-02/4.87e-02/1.40e-01
+        3   | 3.012038e-17 | 2.010709e-12 | 8.52e-02/3.60e-02/1.28e-01
 ┌ Info: ----- solve finished -----
-│ 	residual = 2.0107078103533617e-12
-│ 	totaltime = 4.988188244s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:946
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 26 March 2021 20:12">Friday 26 March 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	residual = 2.0107089977791136e-12
+│ 	totaltime = 4.779077871s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:962
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 7 April 2021 14:37">Wednesday 7 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
