@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Compressible Stokes · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../../examples/doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../../examples/doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../../examples/doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../../examples/doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../../examples/doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../../examples/doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../../examples/doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../../examples/doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../../examples/doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../../examples/doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../../examples/doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../../examples/doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../../examples/doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li class="is-active"><a class="tocitem" href>2D Compressible Stokes</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Advanced)</a></li><li class="is-active"><a href>2D Compressible Stokes</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Compressible Stokes</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples_advanced/doc_2d_compressiblestokes.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Compressible-Stokes"><a class="docs-heading-anchor" href="#D-Compressible-Stokes">2D Compressible Stokes</a><a id="D-Compressible-Stokes-1"></a><a class="docs-heading-anchor-permalink" href="#D-Compressible-Stokes" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples_advanced/doc_2d_compressiblestokes.jl">source code</a>)</p><p>This example solves the compressible Stokes equations where one seeks a (vector-valued) velocity <span>$\mathbf{u}$</span>, a density <span>$\varrho$</span> and a pressure <span>$p$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + \lambda \nabla(\mathrm{div}(\mathbf{u})) + \nabla p &amp; = \mathbf{f} + \varrho \mathbf{g}\\
+\mathrm{div}(\varrho \mathbf{u}) &amp; = 0\\
+        p &amp; = eos(\varrho)\\
+        \int_\Omega \varrho \, dx &amp; = M\\
+        \varrho &amp; \geq 0.
+\end{aligned}\]</p><p>Here eos <span>$eos$</span> is some equation of state function that describes the dependence of the pressure on the density (and further physical quantities like temperature in a more general setting). Moreover, <span>$\mu$</span> and <span>$\lambda$</span> are Lame parameters and <span>$\mathbf{f}$</span> and <span>$\mathbf{g}$</span> are given right-hand side data.</p><p>In this example we solve a analytical toy problem with the prescribed solution</p><p class="math-container">\[\begin{aligned}
+\mathbf{u}(\mathbf{x}) &amp; =0\\
+\varrho(\mathbf{x}) &amp; = 1 - (x_2 - 0.5)/c\\
+p &amp;= eos(\varrho) := c \varrho^\gamma
+\end{aligned}\]</p><p>such that <span>$\mathbf{f} = 0$</span> and <span>$\mathbf{g}$</span> nonzero to match the prescribed solution. This example is designed to study the well-balanced property of a discretisation. Note that a gradient-robust discretisation (set reconstruct = true below) has a much smaller L2 velocity error (i.e. approximatse the well-balanced state much better). For larger c the problem gets more incompressible which reduces the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density. See reference below for more details.</p><div class="admonition is-category-reference"><header class="admonition-header">Reference</header><div class="admonition-body"><p>&quot;A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem&quot;,<br/>M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon,<br/>Computer Methods in Applied Mechanics and Engineering 367 (2020),<br/><a href="https://doi.org/10.1016/j.cma.2020.113069">&gt;Journal-Link&lt;</a> <a href="https://arxiv.org/abs/1911.01295">&gt;Preprint-Link&lt;</a></p></div></div><pre><code class="language-julia">module Example_2DCompressibleStokes
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using Printf
+
+
+# the equation of state
+function equation_of_state!(c,gamma)
+    function closure(pressure,density)
+        for j = 1 : length(density)
+            pressure[j] = c*density[j]^gamma
+        end
+    end
+end
+
+# the exact density (used for initial value of density if configured so)
+function exact_density!(M,c)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[1] = M*(1.0 - (x[2] - 0.5)/c)
+    end
+end
+
+# gravity right-hand side (just gravity but with opposite sign!)
+function rhs_gravity!(gamma,c)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[1] = 1.0 - (x[2] - 0.5)/c # = density
+        result[2] = - result[1]^(gamma-2) * gamma
+        result[1] = 0.0
+    end
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, Plotter = nothing, reconstruct::Bool = true, c = 10, gamma = 1.4, M = 1, shear_modulus = 1e-3, lambda = -1e-3/3)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load mesh and refine
+    xgrid = simplexgrid(&quot;assets/2d_grid_mountainrange.sg&quot;)
+    xgrid = uniform_refine(xgrid,1)
+
+    # solve without and with reconstruction and plot
+    Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)
+    Solution2 = setup_and_solve(xgrid; reconstruct = true, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)</code></pre><p>plot everything</p><pre><code class="language-julia">    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2],Solution2[1],Solution2[2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
+
+    # compare L2 error for velocity and density
+    user_velocity = DataFunction([0,0]; name = &quot;u&quot;)
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = &quot;ϱ&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_velocity, Identity)
+    L2DensityErrorEvaluator = L2ErrorIntegrator(Float64, user_density, Identity)
+    L2error = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
+    L2error2 = sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1]))
+    L2error3 = sqrt(evaluate(L2DensityErrorEvaluator,Solution[2]))
+    L2error4 = sqrt(evaluate(L2DensityErrorEvaluator,Solution2[2]))
+    @printf(&quot;\n        reconstruct     false    |    true\n&quot;)
+    @printf(&quot;================================================\n&quot;)
+    @printf(&quot;L2error(Velocity) | %.5e  | %.5e \n&quot;,L2error,L2error2)
+    @printf(&quot;L2error(Density)  | %.5e  | %.5e \n&quot;,L2error3,L2error4)
+
+end
+
+function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, shear_modulus = 1, lambda = 0, verbosity = 0)
+
+    # negotiate edata functions to the package
+    user_density = DataFunction(exact_density!(M,c), [1,2]; name = &quot;ϱ&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = &quot;g&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+
+    # solver parameters
+    timestep = 2 * shear_modulus / c
+    initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
+    maxTimeSteps = 1000  # termination criterion 1
+    stationarity_threshold = 1e-12/shear_modulus # stop when change is below this treshold
+
+    # set finite element type [velocity, density,  pressure]
+    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel
+
+    # set function operators depending on reconstruct
+    if reconstruct
+        VeloIdentity = ReconstructionIdentity{HDIVBDM1{2}} # identity operator for gradient-robust scheme
+        VeloDivergence = ReconstructionDivergence{HDIVBDM1{2}} # divergence operator for gradient-robust scheme
+    else # classical choices
+        VeloIdentity = Identity
+        VeloDivergence = Divergence
+    end
+
+    # generate empty PDEDescription for three unknowns
+    # unknown 1 : velocity v (vector-valued)
+    # unknown 2 : density ϱ
+    # unknown 3 : pressure p
+    Problem = PDEDescription(&quot;compressible Stokes problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;v&quot;, equation_name = &quot;momentum equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;ϱ&quot;, equation_name = &quot;continuity equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;equation of state&quot;)
+    add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
+
+    # momentum equation
+    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2; store = true))
+    if lambda != 0
+        add_operator!(Problem, [1,1], AbstractBilinearForm(&quot;lambda * div(u) * div(v) (lambda = $lambda)&quot;,VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1); store = true))
+    end
+    add_operator!(Problem, [1,3], AbstractBilinearForm(&quot;div(v)*p&quot;,Divergence,Identity,MultiplyScalarAction(-1.0, 1); store = true))
+
+    function gravity_action()
+        temp = zeros(Float64,2)
+        function closure(result,input,x, t)
+            eval!(temp, user_gravity, x, t)
+            result[1] = - temp[1] * input[1] - temp[2] * input[2]
+        end
+        gravity_action = Action(Float64, closure, [1,2]; name = &quot;gravity action&quot;, dependencies = &quot;XT&quot;, quadorder = user_gravity.quadorder)
+    end
+    add_operator!(Problem, [1,2], AbstractBilinearForm(&quot;g*v*ϱ&quot;,VeloIdentity,Identity,gravity_action(); store = true))
+
+    # continuity equation (by FV upwind on triangles)
+    add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
+
+    # equation of state (by best-approximation, P0 mass matrix is diagonal)
+    eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = &quot;&quot;, quadorder = 0)
+    eos_action = Action(Float64, eos_action_kernel)
+    add_operator!(Problem, [3,2], AbstractBilinearForm(&quot;p * eos(ϱ)&quot;,Identity,Identity,eos_action; apply_action_to = 2))
+    add_operator!(Problem, [3,3], AbstractBilinearForm(&quot;p*q&quot;,Identity,Identity,MultiplyScalarAction(-1,1); store = true))
+
+    # generate FESpaces and solution vector
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
+    Solution = FEVector{Float64}([&quot;v_h (reconst=$reconstruct)&quot;, &quot;ϱ_h (reconst=$reconstruct)&quot;, &quot;p_h (reconst=$reconstruct)&quot;],FES)
+
+    # initial values for density (bestapproximation or constant)
+    if initial_density_bestapprox
+        L2DensityBestapproximationProblem = L2BestapproximationProblem(user_density; bestapprox_boundary_regions = [])
+        InitialDensity = FEVector{Float64}(&quot;ϱ_best&quot;,FES[2])
+        solve!(InitialDensity, L2DensityBestapproximationProblem)
+        Solution[2][:] = InitialDensity[1][:]
+    else
+        for j = 1 : FESpacePD.ndofs
+            Solution[2][j] = M
+        end
+    end
+
+    # initial values for pressure obtained from equation of state
+    equation_of_state!(c,gamma)(Solution[3],Solution[2])
+    Minit = M * sum(Solution[2][:] .* xgrid[CellVolumes])
+
+    # generate time-dependent solver
+    # we have three equations [1] for velocity, [2] for density, [3] for pressure
+    # that are set to be iterated one after another via the subiterations argument
+    # only the density equation is made time-dependent via the timedependent_equations argument
+    # so we can reuse the other subiteration matrices in each timestep
+    TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
+                                        subiterations = [[1],[2],[3]],
+                                        skip_update = [-1,1,-1],
+                                        timedependent_equations = [2],
+                                        maxiterations = 1,
+                                        check_nonlinear_residual = false)
+    advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
+
+    # compute error in mass constraint
+    Md = sum(Solution[2][:] .* xgrid[CellVolumes])
+    @printf(&quot;  mass_error = %.4e - %.4e = %.4e \n&quot;,Minit, Md, abs(Minit-Md))
+
+    return Solution
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../examples/doc_rational_massmatrix/">« Rational Mass Matrix</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 8 April 2021 18:58">Thursday 8 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

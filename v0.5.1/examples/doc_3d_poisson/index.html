@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>3D Poisson-Problem · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li class="is-active"><a class="tocitem" href>3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>3D Poisson-Problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>3D Poisson-Problem</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_3d_poisson.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Poisson-Problem"><a class="docs-heading-anchor" href="#D-Poisson-Problem">3D Poisson-Problem</a><a id="D-Poisson-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#D-Poisson-Problem" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_3d_poisson.jl">source code</a>)</p><p>This example computes the solution <span>$u$</span> of the three dimensional Poisson problem</p><p class="math-container">\[\begin{aligned}
+-\Delta u &amp; = f \quad \text{in } \Omega
+\end{aligned}\]</p><p>with some right-hand side <span>$f$</span> on the unit cube domain <span>$\Omega$</span> on a series of uniform refined meshes (tetrahedra or parallelepipeds).</p><pre><code class="language-julia">module Example_3DPoisson
+
+using GradientRobustMultiPhysics
+using Printf
+
+# problem data
+function exact_function!(result,x::Array{&lt;:Real,1})
+    result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
+    return nothing
+end
+function exact_gradient!(result,x::Array{&lt;:Real,1})
+    result[1] = x[3] - x[2]
+    result[2] = - x[1] + 2*x[2]
+    result[3] = x[1]
+    return nothing
+end
+
+# everything is wrapped in a main function
+function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # choose initial mesh
+    # (replace Parallelepiped3D by Tetrahedron3D to change the cell geometries)
+    xgrid = grid_unitcube(Tetrahedron3D)
+
+    # set finite element type used for discretisation
+    FEType = H1P1{1}
+
+    # negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,3]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    user_function_gradient = DataFunction(exact_gradient!, [3,3]; name = &quot;∇(u)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    user_function_rhs = DataFunction([-2]; name = &quot;f&quot;)
+
+    # create Poisson problem via prototype and add data
+    Problem = PoissonProblem(3; diffusion = 1.0)
+    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = user_function)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs))
+
+    # prepare error calculation
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2error = []; H1error = []; NDofs = []
+
+    # loop over levels
+    Solution = nothing
+    for level = 1 : nlevels
+        # uniform mesh refinement
+        xgrid = uniform_refine(xgrid)
+
+        # create finite element space and solution vector
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        push!(NDofs,length(Solution.entries))
+
+        # solve the problem
+        solve!(Solution, Problem)
+
+        # calculate L2 and H1 error
+        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
+        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+    end
+
+    # output errors in a nice table
+    println(&quot;\n   NDOF  |   L2ERROR   |   H1ERROR&quot;)
+    for j=1:nlevels
+        @printf(&quot;  %6d |&quot;,NDofs[j]);
+        @printf(&quot; %.5e |&quot;,L2error[j])
+        @printf(&quot; %.5e\n&quot;,H1error[j])
+    end
+
+    # plot (Plotter = Makie should work)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
+end
+
+end</code></pre><pre><code class="language-none">Main.##271.Example_3DPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_3DPoisson.main()</code></pre><pre><code class="language-none">┌ Info: ----- Solving Poisson problem -----
+│ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 27)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
+┌ Info: ----- Solving Poisson problem -----
+│ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 125)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
+┌ Info: ----- Solving Poisson problem -----
+│ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 729)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
+┌ Info: ----- Solving Poisson problem -----
+│ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 4913)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
+
+   NDOF  |   L2ERROR   |   H1ERROR
+      27 | 3.38581e-02 | 4.38269e-01
+     125 | 8.97264e-03 | 2.25880e-01
+     729 | 2.28139e-03 | 1.13818e-01
+    4913 | 5.73658e-04 | 5.70179e-02
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_3d_commutinginterpolators/">« Commuting Interpolators (3D)</a><a class="docs-footer-nextpage" href="../doc_rational_massmatrix/">Rational Mass Matrix »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 8 April 2021 18:58">Thursday 8 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
