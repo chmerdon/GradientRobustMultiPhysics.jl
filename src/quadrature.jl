@@ -61,7 +61,7 @@ function VertexRule(ET::Type{Parallelogram2D})
     return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule parallelogram", xref, w)
 end
 function VertexRule(ET::Type{Tetrahedron3D})
-    xref = [[0, 0, 0], [1, 0, 0], [1,1,0], [0,0,1]]
+    xref = [[0, 0, 0], [1, 0, 0], [0,1,0], [0,0,1]]
     w = [1//4, 1//4, 1//4, 1//4]
     return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule tetrahedron", xref, w)
 end

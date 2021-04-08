@@ -125,6 +125,9 @@ function evaluate!(
     if typeof(action) <: NoAction
         action_resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
         action_input = Array{Array{T,1},1}(undef,maxnweights)
+        if length(FEB) > 1
+            @warn "NoAction() used in ItemIntegrator with more than one argument!"
+        end
         for j = 1 : maxnweights
             action_input[j] = zeros(T,action_resultdim) # heap for action input
         end

@@ -65,6 +65,9 @@ function assemble!(
 
     # prepare action
     action = AP.action
+    if typeof(action) <: NoAction
+        @warn "TrilinearForm does not work with no action."
+    end
     action_resultdim::Int = action.argsizes[1]
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
@@ -235,6 +238,9 @@ function assemble!(
 
     # prepare action
     action = AP.action
+    if typeof(action) <: NoAction
+        @warn "TrilinearForm does not work with no action."
+    end
     action_resultdim::Int = action.argsizes[1]
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
