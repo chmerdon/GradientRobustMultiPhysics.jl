@@ -182,17 +182,13 @@ end
 
 end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientStokes</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DTransientStokes.main()</code></pre><pre><code class="language-none">┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 54)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 7.32959159974282e-17
-│ 	totaltime = 0.35708124s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; velocity (H1BR{2}, ndofs = 54), timedependent = yes
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; pressure (H1P0{1} (broken), ndofs = 16), timedependent = no
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1104
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1178
 ┌ Info: Advancing in time from 0 until 0.01
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1511
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1585
 
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
@@ -209,44 +205,28 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 ┌ Info: 
 │ 	ACCUMULATED ASSEMBLY TIMES
 │ 	==========================
-│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.123045961s
-│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.10643221s
-│ 	RHS[1][1] (f⋅R(v)) = 0.5071832249999997s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:343
+│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.181014057s
+│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.193815029s
+│ 	RHS[1][1] (f⋅R(v)) = 0.6256328399999999s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:346
 ┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 54)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 9.685755166760366e-17
-│ 	totaltime = 2.199963478s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : p_exact &gt;&gt; L2-Bestapproximation pressure (H1P0{1} (broken), ndofs = 16)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 0.0
-│ 	totaltime = 0.027318136s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving H1-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) H1-bestapproximation equation : u_exact &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 54)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 1.6812755215541402e-15
-│ 	totaltime = 0.059096474s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 186)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 2.817012007587094e-17
-│ 	totaltime = 0.008119167s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; velocity (H1BR{2}, ndofs = 186), timedependent = yes
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; pressure (H1P0{1} (broken), ndofs = 64), timedependent = no
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1104
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1178
 ┌ Info: Advancing in time from 0 until 0.01
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1511
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1585
 
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
@@ -263,44 +243,28 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 ┌ Info: 
 │ 	ACCUMULATED ASSEMBLY TIMES
 │ 	==========================
-│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.001282558s
-│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.000832537s
-│ 	RHS[1][1] (f⋅R(v)) = 0.030086959s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:343
+│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.0018321099999999999s
+│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.001420709s
+│ 	RHS[1][1] (f⋅R(v)) = 0.043186353999999996s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:346
 ┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 186)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 4.561773393386278e-17
-│ 	totaltime = 0.006356188s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : p_exact &gt;&gt; L2-Bestapproximation pressure (H1P0{1} (broken), ndofs = 64)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 0.0
-│ 	totaltime = 0.000754334s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving H1-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) H1-bestapproximation equation : u_exact &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 186)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 2.094688294431526e-15
-│ 	totaltime = 0.004879621s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 690)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 1.5430725674244905e-17
-│ 	totaltime = 0.023123846s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; velocity (H1BR{2}, ndofs = 690), timedependent = yes
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; pressure (H1P0{1} (broken), ndofs = 256), timedependent = no
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1104
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1178
 ┌ Info: Advancing in time from 0 until 0.01
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1511
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1585
 
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
@@ -317,44 +281,28 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 ┌ Info: 
 │ 	ACCUMULATED ASSEMBLY TIMES
 │ 	==========================
-│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.0045349050000000005s
-│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.002117196s
-│ 	RHS[1][1] (f⋅R(v)) = 0.11745391800000002s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:343
+│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.004810628000000001s
+│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.00346622s
+│ 	RHS[1][1] (f⋅R(v)) = 0.18111316100000005s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:346
 ┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 690)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 1.6159684533672803e-17
-│ 	totaltime = 0.021502673s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : p_exact &gt;&gt; L2-Bestapproximation pressure (H1P0{1} (broken), ndofs = 256)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 0.0
-│ 	totaltime = 0.00178488s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving H1-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) H1-bestapproximation equation : u_exact &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 690)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 4.445798702212148e-15
-│ 	totaltime = 0.017107574s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 2658)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 8.069641234669953e-18
-│ 	totaltime = 0.085679277s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; velocity (H1BR{2}, ndofs = 2658), timedependent = yes
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; pressure (H1P0{1} (broken), ndofs = 1024), timedependent = no
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1104
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1178
 ┌ Info: Advancing in time from 0 until 0.01
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1511
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1585
 
     STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
           |            |  (total)   |  velocity    pressure  
@@ -371,31 +319,19 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 ┌ Info: 
 │ 	ACCUMULATED ASSEMBLY TIMES
 │ 	==========================
-│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.018888755s
-│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.007659945999999999s
-│ 	RHS[1][1] (f⋅R(v)) = 0.5378745380000001s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:343
+│ 	LHS[1,1][1] (∇(u):∇(v)) = 0.019878317s
+│ 	LHS[1,2][1] (div(v) ⋅ q) = 0.010482460999999998s
+│ 	RHS[1][1] (f⋅R(v)) = 0.664925292s
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:346
 ┌ Info: ----- Solving L2-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 2658)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 8.726922207978228e-18
-│ 	totaltime = 0.115867743s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : p_exact &gt;&gt; L2-Bestapproximation pressure (H1P0{1} (broken), ndofs = 1024)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 0.0
-│ 	totaltime = 0.005785361s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Solving H1-Bestapproximation problem (at fixed time time) -----
 │ 	Equation (1.1) H1-bestapproximation equation : u_exact &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 2658)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:961
-┌ Info: ----- solve finished -----
-│ 	residual = 9.318525475286216e-15
-│ 	totaltime = 0.065718474s
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:982
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 
          |   L2ERROR      order   |   L2ERROR      order   
    NDOF  | VELO-STOKES            | VELO-L2BEST            
@@ -425,4 +361,4 @@ VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)
 VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)
 PRES-STOKES : discrete Stokes pressure solution (H1P0{1} (broken))
 PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 7 April 2021 18:43">Wednesday 7 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 8 April 2021 09:05">Thursday 8 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
