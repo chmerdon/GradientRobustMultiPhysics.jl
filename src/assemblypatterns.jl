@@ -87,8 +87,9 @@ function Base.show(io::IO, AP::AssemblyPattern)
 	println(io,"\tpattern type = $(typeof(AP).parameters[1]) (T = $(typeof(AP).parameters[2]))")
     println(io,"\tpattern span = $(typeof(AP).parameters[3]) (regions = $(AP.regions))")
     println(io,"\tpattern oprs = $(AP.operators)")
-    println(io,"\tpattern actn = $(AP.action.name) (size = $(AP.action.argsizes))")
-    println(io,"\tpattern quad = $(AP.AM.qf[1].name) ")
+    if !(typeof(AP.action) <: NoAction)
+        println(io,"\tpattern actn = $(AP.action.name) (size = $(AP.action.argsizes))")
+    end
 end
 
 

@@ -1,6 +1,24 @@
 
 abstract type AbstractAction end
 
+# dummy action that does nothing (but can be only used with certain assembly patterns)
+struct NoAction <: AbstractAction
+    name::String
+    bonus_quadorder::Int
+end
+
+"""
+````
+function NoAction()
+````
+
+Creates a NoAction that causes the assembly pattern to ignore the action assembly.
+"""
+function NoAction(; name = "no action", quadorder = 0)
+    return NoAction(name,quadorder)
+end
+
+# dummy array that is infinitely long and only has nothing entries
 struct InfNothingArray
     val::Nothing
 end
@@ -16,8 +34,7 @@ mutable struct Action{T <: Real,nsizes} <: AbstractAction
     xref::Union{InfNothingArray,Array{Array{T,1},1}}
 end
 
-# actions that do depend on x
-# and require additional managament of global evaluation points
+# actions that do depend on t
 mutable struct TAction{T <: Real,nsizes} <: AbstractAction
     kernel::UserData{<:AbstractActionKernel}
     name::String
@@ -42,7 +59,7 @@ mutable struct XAction{T <: Real,nsizes} <: AbstractAction
     x::Array{Array{T,1},1}
 end
 
-# actions that do depend on x
+# actions that do depend on x and t
 # and require additional managament of global evaluation points
 mutable struct XTAction{T <: Real,nsizes} <: AbstractAction
     kernel::UserData{<:AbstractActionKernel}
@@ -61,7 +78,7 @@ end
 function Action(
     T::Type{<:Real},
     kernel::UserData{<:AbstractActionKernel};
-    name::String = "user action"
+    name::String = "user action")
 ````
 
 Creates an Action from a given specified action kernel that then can be used in an assembly pattern. T specifies the number format
@@ -83,6 +100,20 @@ function Action(T, kernel::UserData{<:AbstractActionKernel}; name = "user action
     end
 end
 
+"""
+````
+function Action(
+    T::Type{<:Real},
+    kernel_function::Function,
+    dimensions::Array{Int,1};
+    name = "user action",
+    dependencies = "",
+    quadorder = 0)
+````
+
+Creates an Action directly from a kernel function (plus additional information to complement the action kernel) that then can be used in an assembly pattern. T specifies the number format
+that should match the number format of the used quadrature rules and grid coordinates in the mesh (usually Float64).
+"""
 function Action(T::Type{<:Real}, kernel_function::Function, dimensions; name = "user action", dependencies = "", quadorder = 0)
     kernel =  ActionKernel(kernel_function, dimensions; name = name * " (kernel)", dependencies = dependencies, quadorder = quadorder)
     return Action(T, kernel; name = name)
@@ -106,24 +137,6 @@ function MultiplyScalarAction(value, ncomponents::Int, T::Type{<:Real} = Float64
     return Action(T, kernel; name = "multiply scalar action")
 end
 
-"""
-````
-function MultiplyScalarAction(value, ncomponents::Int)
-````
-
-Directly creates an Action that just copies the input to the result.
-"""
-function DoNotChangeAction(ncomponents::Int, T::Type{<:Real} = Float64)
-    function do_nothing_kernel(result, input)
-        for j = 1 : ncomponents
-            result[j] = input[j]
-        end
-        return nothing
-    end
-    kernel = ActionKernel(do_nothing_kernel,[ncomponents, ncomponents]; dependencies = "", quadorder = 0)
-    return Action(T, kernel; name = "do nothing action")
-end
-
 # set_time! is called in the beginning of every operator assembly
 function set_time!(C::AbstractAction, time)
     return nothing
@@ -131,6 +144,10 @@ end
 
 function set_time!(C::Union{XTAction{T},TAction{T}}, time) where {T <: Real}
     C.ctime[1] = time
+    return nothing
+end
+
+function update!(C::AbstractAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
     return nothing
 end
 
@@ -163,6 +180,10 @@ function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qite
     for i = 1 : length(FEBE.xref) 
         eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
+    return nothing
+end
+
+function apply_action!(result::Array{T,1}, input::Array{T,1}, C::AbstractAction, i::Int) where {T <: Real}
     return nothing
 end
 

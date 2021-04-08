@@ -22,7 +22,7 @@ function SymmetricBilinearForm(
 
 Creates a symmetric BilinearForm assembly pattern with the given FESpaces, operators and action etc. Symmetry is not checked automatically, but is assumed during assembly!
 """
-function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; name = "Symmetric BLF", regions = [0])
+function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "Symmetric BLF", regions = [0])
     return AssemblyPattern{APT_SymmetricBilinearForm, T, AT}(name, FES,operators,action,regions)
 end
 
@@ -39,7 +39,7 @@ function BilinearForm(
 
 Creates a (unsymmetric) BilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
-function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; name = "BLF", regions = [0])
+function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "BLF", regions = [0])
     return AssemblyPattern{APT_BilinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
@@ -80,8 +80,12 @@ function assemble!(
 
     # prepare action
     action = AP.action
-    action_resultdim::Int = action.argsizes[1]
-    action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
+    if typeof(action) <: NoAction
+        action_resultdim = size(get_basisevaler(AM, apply_action_to, 1).cvals,1)
+    else
+        action_resultdim::Int = action.argsizes[1]
+        action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
+    end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     if AP.regions != [0]
@@ -106,7 +110,7 @@ function assemble!(
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     indexmap = CartesianIndices(zeros(Int, maxdofitems[1],maxdofitems[2]))
 
-    other_id::Int = apply_action_to == 1 ? 2 : 1
+    other_id::Int = apply_action_to == 2 ? 1 : 2
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
@@ -139,13 +143,23 @@ function assemble!(
                 basisvals = basisevaler[other_id].cvals
 
                 # update action on dofitem
-                update!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                if apply_action_to > 0
+                    update!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                    ndofs4dofitem_action = ndofs4dofitem[apply_action_to]
+                else
+                    ndofs4dofitem_action = ndofs4dofitem[1]
+                end
 
                 for i in eachindex(weights)
-                    for dof_i = 1 : ndofs4dofitem[apply_action_to]
-                        eval!(action_input, basisevaler[apply_action_to], dof_i, i)
-                        action_input .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
-                        apply_action!(action_result, action_input, action, i)
+                    for dof_i = 1 : ndofs4dofitem_action
+                        if typeof(action) <: NoAction
+                            eval!(action_result, basisevaler[1], dof_i, i)
+                            action_result .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
+                        else
+                            eval!(action_input, basisevaler[apply_action_to], dof_i, i)
+                            action_input .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
+                            apply_action!(action_result, action_input, action, i)
+                        end
                         if is_locally_symmetric == false
                             for dof_j = 1 : ndofs4dofitem[other_id]
                                 temp = 0
@@ -277,9 +291,14 @@ function assemble!(
 
     # prepare action
     action = AP.action
-    action_resultdim::Int = action.argsizes[1]
-    action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
-    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
+    if typeof(action) <: NoAction
+        apply_action_to = 0
+        action_resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
+    else
+        action_resultdim::Int = action.argsizes[1]
+        action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
+        action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
+    end
 
     if AP.regions != [0]
         @logmsg MoreInfo "Assembling $(AP.name) with fixed argument $fixed_argument ($AT in regions = $(AP.regions))"
@@ -304,7 +323,7 @@ function assemble!(
     if apply_action_to == fixed_argument
         fixedval = zeros(T, action.argsizes[2]) # some temporary variable
     else
-        fixedval = zeros(T, action.argsizes[1]) # some temporary variable
+        fixedval = zeros(T, action_resultdim) # some temporary variable
     end
     free_argument::Int = fixed_argument == 1 ? 2 : 1
     localb::Array{T,2} = zeros(T,get_maxndofs(AM)[free_argument],action_resultdim)
@@ -338,7 +357,9 @@ function assemble!(
                 basisvals = basisevaler[free_argument].cvals
 
                 # update action on dofitem
-                update!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                if apply_action_to > 0
+                    update!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                end
 
                 # update dofs
                 get_coeffs!(fixed_coeffs, fixedFE, AM, fixed_argument, di[fixed_argument], offsets[2])
@@ -349,7 +370,17 @@ function assemble!(
                     eval!(fixedval, basisevaler[fixed_argument], fixed_coeffs, i)
                     fixedval .*= AM.coeff4dofitem[fixed_argument][di[fixed_argument]]
 
-                    if apply_action_to == fixed_argument
+                    if apply_action_to == 0
+                        # multiply free argument
+                        fixedval .*= AM.coeff4dofitem[free_argument][di[free_argument]]
+                        for dof_i = 1 : ndofs4dofitem[free_argument]
+                            temp = 0
+                            for k = 1 : action_resultdim
+                                temp += fixedval[k] * basisvals[k,dof_i,i]
+                            end
+                            localb[dof_i] += temp * weights[i]
+                        end 
+                    elseif apply_action_to == fixed_argument
                         # apply action to fixed argument
                         apply_action!(action_result, fixedval, action, i)
 

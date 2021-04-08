@@ -16,7 +16,7 @@ function ItemIntegrator(
 
 Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
-function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action; regions = [0], name = "ItemIntegrator")
+function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action = NoAction(); regions = [0], name = "ItemIntegrator")
     return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,[],operators,action,regions)
 end
 
@@ -121,11 +121,19 @@ function evaluate!(
 
     # prepare action
     action = AP.action
-    action_resultdim::Int = action.argsizes[1]
     maxnweights = get_maxnqweights(AM)
-    action_input = Array{Array{T,1},1}(undef,maxnweights)
-    for j = 1 : maxnweights
-        action_input[j] = zeros(T,action.argsizes[2]) # heap for action input
+    if typeof(action) <: NoAction
+        action_resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
+        action_input = Array{Array{T,1},1}(undef,maxnweights)
+        for j = 1 : maxnweights
+            action_input[j] = zeros(T,action_resultdim) # heap for action input
+        end
+    else
+        action_resultdim::Int = action.argsizes[1]
+        action_input = Array{Array{T,1},1}(undef,maxnweights)
+        for j = 1 : maxnweights
+            action_input[j] = zeros(T,action.argsizes[2]) # heap for action input
+        end
     end
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
@@ -181,18 +189,26 @@ function evaluate!(
             end
         end
 
-        # update action on item/dofitem (of first operator)
-        basisevaler4dofitem = get_basisevaler(AM, 1, 1)
-        update!(action, basisevaler4dofitem, AM.dofitems[1][1], item, regions[r])
-
-        # apply action to FEVector and accumulate
-        for i in eachindex(weights)
-            apply_action!(action_result, action_input[i], action, i)
-            for j = 1 : action_resultdim
-                b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
-            end
-            fill!(action_input[i], 0)
-        end  
+        if typeof(action) <: NoAction
+            for i in eachindex(weights)
+                for j = 1 : action_resultdim
+                    b[j,item] += action_input[i][j] * weights[i] * xItemVolumes[item]
+                end
+                fill!(action_input[i], 0)
+            end  
+        else
+            # update action on item/dofitem (of first operator)
+            basisevaler4dofitem = get_basisevaler(AM, 1, 1)
+            update!(action, basisevaler4dofitem, AM.dofitems[1][1], item, regions[r])
+            # apply action to FEVector and accumulate
+            for i in eachindex(weights)
+                apply_action!(action_result, action_input[i], action, i)
+                for j = 1 : action_resultdim
+                    b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
+                end
+                fill!(action_input[i], 0)
+            end  
+        end
 
         break; # region for loop
     end # if in region    
@@ -216,17 +232,33 @@ function evaluate(
     FEB;
     skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
 
-    # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
-    # and use the itemwise evaluation above
-    resultdim = AP.action.argsizes[1]
-    AV = AccumulatingVector{T}(zeros(T,resultdim), 0)
-
-    if typeof(FEB) <: Array{<:FEVectorBlock,1}
-        evaluate!(AV, AP, FEB; skip_preps = skip_preps)
-    else
-        evaluate!(AV, AP, [FEB]; skip_preps = skip_preps)
+    if typeof(FEB) <: FEVectorBlock
+        FEB = [FEB]
     end
 
+    # prepare assembly
+    nFE = length(FEB)
+    if !skip_preps
+        FE = Array{FESpace,1}(undef, nFE)
+        for j = 1 : nFE
+            FE[j] = FEB[j].FES
+        end
+        @assert length(FEB) == length(AP.operators)
+        prepare_assembly!(AP; FES = FE)
+    end
+    AM::AssemblyManager{T} = AP.AM
+
+    # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
+    # and use the itemwise evaluation above
+    if typeof(AP.action) <: NoAction
+        resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
+    else
+        resultdim = AP.action.argsizes[1]
+    end
+    AV = AccumulatingVector{T}(zeros(T,resultdim), 0)
+
+    evaluate!(AV, AP, FEB; skip_preps = false)
+    
     if resultdim == 1
         return AV.entries[1]
     else

@@ -17,7 +17,7 @@ function LinearForm(
 
 Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
-function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action; regions = [0], name = "LF")
+function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); regions = [0], name = "LF")
     return AssemblyPattern{APT_LinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
@@ -41,9 +41,15 @@ function assemble!(
 
     # prepare action
     action = AP.action
-    action_resultdim::Int = action.argsizes[1]
-    action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
-    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
+    if typeof(action) <: NoAction
+        action_resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
+        action_result = zeros(T,action_resultdim) # heap for action output
+        action_input = action_result
+    else
+        action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
+        action_resultdim::Int = action.argsizes[1]
+        action_result = zeros(T,action_resultdim) # heap for action output
+    end
     if typeof(b) <: AbstractArray{T,1}
         @assert action_resultdim == 1
         onedimensional = true

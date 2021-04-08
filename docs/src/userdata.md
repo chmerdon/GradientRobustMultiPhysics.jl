@@ -63,6 +63,6 @@ Action
 Moreover, there are some shortcut action constructors that can be used directly without defining an action kernel first.
 
 ```@docs
+NoAction
 MultiplyScalarAction
-DoNotChangeAction
 ```

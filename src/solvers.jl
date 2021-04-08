@@ -892,7 +892,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             # SOLVE
             time_solver = @elapsed begin
                 flush!(A[s].entries)
-                if iteration == 1 || (iteration % SC.skip_update[s] == 0 && SC.skip_update[s] != -1)
+                if iteration == 1 || (iteration % skip_update[s] == 0 && skip_update[s] != -1)
                     update!(LS[s])
                 end
                 solve!(LS[s])
@@ -1246,7 +1246,7 @@ function TimeControlSolver(
                     push!(nonlinear_dt, false)
                 end
                 if length(dt_action) < pos
-                    push!(dt_action, DoNotChangeAction(get_ncomponents(eltype(FEs[d]))))
+                    push!(dt_action, NoAction())
                 end
                 if length(dt_testfunction_operator) < pos
                     push!(dt_testfunction_operator, Identity)

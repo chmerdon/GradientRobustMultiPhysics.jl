@@ -113,7 +113,7 @@ function AbstractBilinearForm(name,
     return AbstractBilinearForm{AT}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,store,zeros(Float64,0,0))
 end
 function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm(apply_action_to == 1 ? "A($operator1(u))⋅$operator2(v)" : "$operator1(u)⋅A($operator2(v))",operator1, operator2, DoNotChangeAction(1); apply_action_to = apply_action_to, regions = regions)
+    return AbstractBilinearForm(apply_action_to == 1 ? "A($operator1(u))⋅$operator2(v)" : "$operator1(u)⋅A($operator2(v))",operator1, operator2, NoAction(); apply_action_to = apply_action_to, regions = regions)
 end
 
 """
@@ -122,7 +122,11 @@ $(TYPEDEF)
 constructor for AbstractBilinearForm that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
 """
 function LaplaceOperator(diffusion = 1, xdim::Int = 2, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
-    return AbstractBilinearForm(ncomponents == 1 ? "∇(u)⋅∇(v)" : "∇(u):∇(v)",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); AT = AT, regions = regions, store = store)
+    if diffusion == 1
+        return AbstractBilinearForm(ncomponents == 1 ? "∇(u)⋅∇(v)" : "∇(u):∇(v)",gradient_operator, gradient_operator, NoAction(); AT = AT, regions = regions, store = store)
+    else
+        return AbstractBilinearForm(ncomponents == 1 ? "∇(u)⋅∇(v)" : "∇(u):∇(v)",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); AT = AT, regions = regions, store = store)
+    end
 end
 
 """
@@ -206,9 +210,13 @@ $(TYPEDSIGNATURES)
 constructor for AbstractBilinearForm that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
     
 """
-function ReactionOperator(action::AbstractAction; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
+function ReactionOperator(action::AbstractAction = NoAction(); name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
     if name == "auto"
-        name = apply_action_to == 1 ? "A(u) ⋅ v" : "u ⋅ A(v)"
+        if typeof(action) <: NoAction
+            name = "u ⋅ v"
+        else
+            name = apply_action_to == 1 ? "A(u) ⋅ v" : "u ⋅ A(v)"
+        end
     end
     return AbstractBilinearForm(name,identity_operator, identity_operator, action; AT = AT, apply_action_to = apply_action_to, regions = regions)
 end
@@ -459,7 +467,7 @@ struct LagrangeMultiplier <: AbstractPDEOperatorLHS
     action::AbstractAction
     AT::Type{<:AbstractAssemblyType}
 end
-function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = DoNotChangeAction(1))
+function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = NoAction())
     return LagrangeMultiplier("$operator(v) ⋅ q",operator, action, AT)
 end
 
@@ -1012,7 +1020,7 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
     fill!(O.fluxes,0)
     if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
         @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
-        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux], DoNotChangeAction(1); name = "u ⋅ n")
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux]; name = "u ⋅ n")
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = false)
     else
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = true)

@@ -19,7 +19,7 @@ function run_basis_tests()
         return uniform_refine(grid_unitsquare_mixedgeometries(),1)
     end
 
-    tolerance = 2e-12
+    tolerance = 5e-12
 
     function exact_function1D(polyorder)
         function polynomial(result,x::Array{<:Real,1})

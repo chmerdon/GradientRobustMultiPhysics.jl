@@ -201,7 +201,7 @@ export FEBasisEvaluator, update!, eval!
 
 
 include("actions.jl")
-export AbstractAction, Action, MultiplyScalarAction, DoNotChangeAction
+export AbstractAction, Action, MultiplyScalarAction, NoAction
 export set_time!
 
 

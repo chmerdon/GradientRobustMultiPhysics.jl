@@ -23,7 +23,7 @@ function main(; verbosity = 1, Plotter = nothing)
     FES = FESpace{H1P1{1}}(xgrid)
 
     ## define mass matrix bilinear form
-    MAMA_BLF = SymmetricBilinearForm(Rational,ON_CELLS,[FES,FES],[Identity,Identity],DoNotChangeAction(1,Rational))
+    MAMA_BLF = SymmetricBilinearForm(Rational,ON_CELLS,[FES,FES],[Identity,Identity])
 
     ## assemble mass matrix and divide by area
     MAMA = FEMatrix{Rational}("mass matrix",FES)

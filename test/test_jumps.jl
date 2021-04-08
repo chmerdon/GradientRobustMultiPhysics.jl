@@ -8,7 +8,7 @@ function test_qpmatchup(xgrid)
     FE = FESpace{H1P0{ncomponents}}(xgrid)
     T = Float64
 
-    action = DoNotChangeAction(ncomponents)
+    action = NoAction()
     AP = LinearForm(Float64, AT, [FE], [GradientDisc{Jump}], action)
 
     # prepare assembly
@@ -78,7 +78,7 @@ function test_disc_LF(xgrid, discontinuity)
     FEFunction = FEVector{Float64}("velocity",FE)
     fill!(FEFunction[1],1)
 
-    action = DoNotChangeAction(ncomponents)
+    action = NoAction()
     TestForm = LinearForm(Float64,ON_IFACES, [FE], [IdentityDisc{discontinuity}], action)
     b = zeros(Float64,FE.ndofs)
     assemble!(b, TestForm)
@@ -104,7 +104,7 @@ function test_disc_BLF(xgrid, discontinuity)
     FEFunction = FEVector{Float64}("velocity",FE)
     fill!(FEFunction[1],1)
  
-    action = DoNotChangeAction(ncomponents)
+    action = NoAction()
     TestForm = BilinearForm(Float64,ON_IFACES,[FE, FE], [IdentityDisc{discontinuity}, IdentityDisc{discontinuity}], action)
     A = FEMatrix{Float64}("test",FE)
     assemble!(A[1,1], TestForm)

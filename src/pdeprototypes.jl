@@ -147,7 +147,7 @@ function L2BestapproximationProblem(
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription(name)
     add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
-    add_operator!(Problem, [1,1], ReactionOperator(DoNotChangeAction(ncomponents); AT = AT))
+    add_operator!(Problem, [1,1], ReactionOperator(; AT = AT))
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], uexact; AT = AT))
     if length(bestapprox_boundary_regions) > 0
         if xdim == 1 # in 1D Dirichlet boundary can be interpolated
@@ -191,7 +191,7 @@ function H1BestapproximationProblem(
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription(name)
     add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
-    add_operator!(Problem, [1,1], LaplaceOperator(1.0,xdim,ncomponents))
+    add_operator!(Problem, [1,1], LaplaceOperator(1,xdim,ncomponents))
     add_rhsdata!(Problem, 1, RhsOperator(Gradient, [0], uexact_gradient))
     if length(bestapprox_boundary_regions) > 0
         if xdim == 1 # in 1D Dirichlet boundary can be interpolated
