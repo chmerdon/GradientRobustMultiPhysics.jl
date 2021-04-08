@@ -33,30 +33,34 @@ end
 #
 # Default context information with help info.
 #
-default_solver_kwargs()=Dict{Symbol,Pair{Any,String}}(
-    :subiterations => Pair("auto", "an array of equation subsets (each an array) that should be solved together in each fixpoint iteration"),
-    :timedependent_equations => Pair([], "array of the equations that should get a time derivative (only for TimeControlSolver)"),
-    :target_residual => Pair(1e-10, "stop fixpoint iterations if the (nonlinear) residual is smaller than this number"),
-    :maxiterations => Pair("auto", "maximal number of nonlinear iterations (TimeControlSolver runs that many in each time step)"),
-    :check_nonlinear_residual => Pair("auto", "check the nonlinear residual in last nonlinear iteration (causes one more reassembly of nonlinear terms)"),
-    :time => Pair(0, "time at which time-dependent data functions are evaluated or initial time for TimeControlSolver"),
-    :skip_update => Pair([1], "matrix update (for the j-th sub-iteration) will be performed each skip_update[j] iteration; -1 means only in the first iteration"),
-    :damping => Pair(0, "damp the new iteration with this part of the old iteration"),
-    :anderson_iterations => Pair(0, "use Anderson acceleration with this many previous iterates (to hopefully speed up/enable convergence of fixpoint iterations), current limitations: only for single equations, convergence metric is first PDEoperator"),
-    :fixed_penalty => Pair(1e60, "penalty that is used for the values of fixed degrees of freedom (e.g. by Dirichlet boundary data or global constraints)"),
-    :linsolver => Pair("UMFPACK", "String that encodes the linear solver (or type name of self-defined solver, see corressponding example)"),
-    :show_solver_config => Pair(false, "show the complete solver configuration before starting to solve"),
-    :show_iteration_details => Pair(true, "show details (residuals etc.) of each iteration"),
-    :show_statistics => Pair(false, "show some statistics like assembly times")
+default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
+    :subiterations => ("auto", "an array of equation subsets (each an array) that should be solved together in each fixpoint iteration",true,true),
+    :timedependent_equations => ([], "array of the equations that should get a time derivative (only for TimeControlSolver)",false,true),
+    :target_residual => (1e-10, "stop fixpoint iterations if the (nonlinear) residual is smaller than this number",true,true),
+    :maxiterations => ("auto", "maximal number of nonlinear iterations (TimeControlSolver runs that many in each time step)",true,true),
+    :check_nonlinear_residual => ("auto", "check the nonlinear residual in last nonlinear iteration (causes one more reassembly of nonlinear terms)",true,true),
+    :time => (0, "time at which time-dependent data functions are evaluated or initial time for TimeControlSolver",true,true),
+    :skip_update => ([1], "matrix update (for the j-th sub-iteration) will be performed each skip_update[j] iteration; -1 means only in the first iteration",true,true),
+    :damping => (0, "damp the new iteration with this part of the old iteration",true,false),
+    :anderson_iterations => (0, "use Anderson acceleration with this many previous iterates (to hopefully speed up/enable convergence of fixpoint iterations)",true,false),
+    :anderson_metric => ("l2", "String that encodes the desired convergence metric for the Anderson acceleration (possible values: ''l2'' or ''L2'')",true,false),
+    :anderson_unknowns => ([1], "an array of unknown numbers that should be included in the Anderson acceleration",true,false),
+    :fixed_penalty => (1e60, "penalty that is used for the values of fixed degrees of freedom (e.g. by Dirichlet boundary data or global constraints)",true,true),
+    :linsolver => ("UMFPACK", "String that encodes the linear solver (or type name of self-defined solver, see corressponding example)",true,true),
+    :show_solver_config => (false, "show the complete solver configuration before starting to solve",true,true),
+    :show_iteration_details => (true, "show details (residuals etc.) of each iteration",true,true),
+    :show_statistics => (false, "show some statistics like assembly times",true,true)
 )
 
 #
 # Print default dict for solver parameters into docstrings
 #
-function _myprint(dict::Dict{Symbol,Pair{Any,String}})
+function _myprint(dict::Dict{Symbol,Tuple{Any,String,Bool,Bool}},instationary::Bool)
     lines_out=IOBuffer()
     for (k,v) in dict
-        println(lines_out,"  - $(k): $(v[2]). Default: $(v[1])\n")
+        if (instationary && v[4]) || (!instationary && v[3])
+            println(lines_out,"  - $(k): $(v[2]). Default: $(v[1])\n")
+        end
     end
     String(take!(lines_out))
 end
@@ -317,8 +321,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
 
     subiterations = SC.user_params[:subiterations]
 
-    info_msg = ""
-    info_msg *= "\n\tACCUMULATED ASSEMBLY TIMES"
+    info_msg = "\n\tACCUMULATED ASSEMBLY TIMES"
     info_msg *= "\n\t=========================="
 
     for s = 1 : length(subiterations)
@@ -552,6 +555,8 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
 
     ## get relevant solver parameters
     anderson_iterations = SC.user_params[:anderson_iterations]
+    anderson_metric = SC.user_params[:anderson_metric]
+    anderson_unknowns = SC.user_params[:anderson_unknowns]
     fixed_penalty = SC.user_params[:fixed_penalty]
     damping = SC.user_params[:damping]
     maxiterations = SC.user_params[:maxiterations]
@@ -576,21 +581,40 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     end    
 
     # ANDERSON ITERATIONS
+    anderson_time = 0
     if anderson_iterations > 0
-        # we need to save the last iterates
-        LastAndersonIterates = Array{FEVector,1}(undef, anderson_iterations+1) # actual iterates u_k
-        LastAndersonIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
-        PDE.LHSOperators[1,1][1].store_operator = true # use the first operator to compute norm in which Anderson iterations are optimised
-        AIONormOperator = PDE.LHSOperators[1,1][1].storage
-        AIOMatrix = zeros(T, anderson_iterations+2, anderson_iterations+2)
-        AIORhs = zeros(T, anderson_iterations+2)
-        AIORhs[anderson_iterations+2] = 1 # sum of all coefficients should equal 1
-        AIOalpha = zeros(T, anderson_iterations+2)
-        for j = 1 : anderson_iterations+1
-            LastAndersonIterates[j] = deepcopy(Target)
-            LastAndersonIteratesTilde[j] = deepcopy(Target)
-            AIOMatrix[j,anderson_iterations+2] = 1
-            AIOMatrix[anderson_iterations+2,j] = 1
+        anderson_time += @elapsed begin    
+            @logmsg MoreInfo "Preparing Anderson acceleration for unknown(s) = $anderson_unknowns with convergence metric $anderson_metric and $anderson_iterations iterations"
+            # we need to save the last iterates
+            LastAndersonIterates = Array{FEVector,1}(undef, anderson_iterations+1) # actual iterates u_k
+            LastAndersonIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
+            PDE.LHSOperators[1,1][1].store_operator = true # use the first operator to compute norm in which Anderson iterations are optimised
+
+            ## assemble convergence metric
+            AIONormOperator = FEMatrix{T}("AA-Metric",FEs)
+            for u in anderson_unknowns
+                if anderson_metric == "L2"
+                    AA_METRIC = SymmetricBilinearForm(Float64, ON_CELLS, [FEs[u], FEs[u]], [Identity, Identity], MultiplyScalarAction(1,get_ncomponents(typeof(FEs[u]).parameters[1])))
+                    assemble!(AIONormOperator[u], AA_METRIC)
+                elseif anderson_metric == "l2"
+                    for j = 1 : FEs[u].ndofs
+                        AIONormOperator[u][j,j] = 1
+                    end
+                end
+            end
+            AIONormOperator = AIONormOperator.entries
+            flush!(AIONormOperator)
+            
+            AIOMatrix = zeros(T, anderson_iterations+2, anderson_iterations+2)
+            AIORhs = zeros(T, anderson_iterations+2)
+            AIORhs[anderson_iterations+2] = 1 # sum of all coefficients should equal 1
+            AIOalpha = zeros(T, anderson_iterations+2)
+            for j = 1 : anderson_iterations+1
+                LastAndersonIterates[j] = deepcopy(Target)
+                LastAndersonIteratesTilde[j] = deepcopy(Target)
+                AIOMatrix[j,anderson_iterations+2] = 1
+                AIOMatrix[anderson_iterations+2,j] = 1
+            end
         end
     end
     if damping > 0
@@ -604,12 +628,17 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     ## INIT SOLVER
     LS = createsolver(SC.user_params[:linsolver],Target.entries,A.entries,b.entries)
 
-    if SC.user_params[:show_iteration_details]
+    if SC.user_params[:show_statistics]
         @info "initial assembly time = $(assembly_time)s"
     end
     if SC.user_params[:show_iteration_details]
-        @printf("\n  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
-        @printf("\n  -----------------------------------------------------------------------\n")
+        if SC.user_params[:show_statistics]
+            @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
+            @printf("\n\t-----------------------------------------------------------------------\n")
+        else
+            @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL")
+            @printf("\n\t--------------------------------------\n")
+        end
     end
     for j = 1 : maxiterations
         time_total = @elapsed begin
@@ -647,41 +676,45 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
 
         # POSTPRCOESS : ANDERSON ITERATE
         if anderson_iterations > 0
-            depth = min(anderson_iterations,j-1)
+            anderson_time += @elapsed begin
+                depth = min(anderson_iterations,j-1)
 
-            # move last tilde iterates to the front in memory
-            for j = 1 : anderson_iterations
-                LastAndersonIteratesTilde[j] = deepcopy(LastAndersonIteratesTilde[j+1])
-            end
-            # save fixpoint iterate as new tilde iterate
-            LastAndersonIteratesTilde[anderson_iterations+1] = deepcopy(Target)
-
-            if depth > 0
-                # fill matrix
-                for j = 1 : depth+1, k = 1 : depth+1
-                    AIOMatrix[j,k] = lrmatmul(LastAndersonIteratesTilde[anderson_iterations+2-j][1][:] .- LastAndersonIterates[anderson_iterations+2-j][1][:],
-                    AIONormOperator, LastAndersonIteratesTilde[anderson_iterations+2-k][1][:] .- LastAndersonIterates[anderson_iterations+2-k][1][:])
-                end
-                # solve for alpha coefficients
-                ind = union(1:depth+1,anderson_iterations+2)
-                AIOalpha[ind] = AIOMatrix[ind,ind]\AIORhs[ind]
-
-                # move last iterates to the front in memory
+                # move last tilde iterates to the front in memory
                 for j = 1 : anderson_iterations
-                    LastAndersonIterates[j] = deepcopy(LastAndersonIterates[j+1])
+                    LastAndersonIteratesTilde[j].entries .= LastAndersonIteratesTilde[j+1].entries
                 end
+                # save fixpoint iterate as new tilde iterate
+                LastAndersonIteratesTilde[anderson_iterations+1].entries .= Target.entries
 
-                #println("alpha = $(AIOalpha)")
-                # compute next iterates
-                fill!(Target[1],0.0)
-                for a = 1 : depth+1
-                    for j = 1 : FEs[1].ndofs
-                        Target[1][j] += AIOalpha[a] * LastAndersonIteratesTilde[anderson_iterations+2-a][1][j]
+                if depth > 0
+                    # fill matrix
+                    for j = 1 : depth+1, k = 1 : depth+1
+                        AIOMatrix[j,k] = lrmatmul(LastAndersonIteratesTilde[anderson_iterations+2-j].entries .- LastAndersonIterates[anderson_iterations+2-j].entries,
+                                                AIONormOperator,
+                                                LastAndersonIteratesTilde[anderson_iterations+2-k].entries .- LastAndersonIterates[anderson_iterations+2-k].entries)
                     end
+                    # solve for alpha coefficients
+                    ind = union(1:depth+1,anderson_iterations+2)
+                    AIOalpha[ind] = AIOMatrix[ind,ind]\AIORhs[ind]
+
+                    # move last iterates to the front in memory
+                    for j = 1 : anderson_iterations
+                        LastAndersonIterates[j].entries .= LastAndersonIterates[j+1].entries
+                    end
+
+                    # compute next iterates
+                    fill!(Target[1],0.0)
+                    for a = 1 : depth+1
+                        for u in anderson_unknowns
+                            for j = 1 : FEs[u].ndofs
+                                Target[u][j] += AIOalpha[a] * LastAndersonIteratesTilde[anderson_iterations+2-a][u][j]
+                            end
+                        end
+                    end
+                    LastAndersonIterates[anderson_iterations+1].entries .= Target.entries
+                else
+                    LastAndersonIterates[anderson_iterations+1].entries .= Target.entries
                 end
-                LastAndersonIterates[anderson_iterations+1] = deepcopy(Target)
-            else
-                LastAndersonIterates[anderson_iterations+1] = deepcopy(Target)
             end
         end
 
@@ -690,7 +723,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             for j = 1 : length(Target.entries)
                 Target.entries[j] = damping*LastIterate.entries[j] + (1-SC.damping)*Target.entries[j]
             end
-            LastIterate = deepcopy(Target)
+            LastIterate.entries .= Target.entries
         end
 
 
@@ -707,10 +740,13 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         end #elapsed
 
         if SC.user_params[:show_iteration_details]
-            @printf("     %4d  ", j)
+            @printf("\t   %4d  ", j)
             @printf(" | %e", linresnorm)
             @printf(" | %e", resnorm)
-            @printf(" | %.2e/%.2e/%.2e\n",time_reassembly,time_solver, time_total)
+            if SC.user_params[:show_statistics]
+                @printf(" | %.2e/%.2e/%.2e",time_reassembly,time_solver, time_total)
+            end
+            @printf("\n")
         end
 
         if resnorm < target_residual
@@ -723,6 +759,10 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         end
     end
 
+    if SC.user_params[:show_iteration_details]
+        @printf("\n")
+    end
+
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
     for j = 1 : length(PDE.GlobalConstraints)
@@ -730,6 +770,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     end
 
     if SC.user_params[:show_statistics]
+        @info "anderson acceleration took $(anderson_time)s"
         show_statistics(PDE,SC)
     end
 
@@ -738,7 +779,7 @@ end
 
 
 # solve system iteratively until fixpoint is reached
-# by solving each equation on its own
+# by consecutively solving subiterations
 function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time = 0) where {T <: Real}
 
     ## get relevant solver parameters
@@ -749,6 +790,10 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     maxiterations = SC.user_params[:maxiterations]
     target_residual = SC.user_params[:target_residual]
     skip_update = SC.user_params[:skip_update]
+
+    if anderson_iterations > 0
+        @warn "Sorry, Anderson acceleration not yet available for this solver mode."
+    end
 
     # ASSEMBLE SYSTEM INIT
     assembly_time = @elapsed begin
@@ -797,14 +842,22 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     for s = 1 : nsubiterations
         LS[s] = createsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
+    if damping > 0
+        LastIterate = deepcopy(Target)
+    end
 
 
     if SC.user_params[:show_statistics]
         @info "initial assembly time = $(assembly_time)s"
     end
     if SC.user_params[:show_iteration_details]
-        @printf("\n  ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
-        @printf("\n  -----------------------------------------------------------------------\n")
+        if SC.user_params[:show_statistics]
+            @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
+            @printf("\n\t-----------------------------------------------------------------------\n")
+        else
+            @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL")
+            @printf("\n\t--------------------------------------\n")
+        end
     end
     for iteration = 1 : maxiterations
 
@@ -861,9 +914,18 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             # WRITE INTO Target
-            for j = 1 : length(subiterations[s])
-                for k = 1 : length(Target[subiterations[s][j]])
-                    Target[subiterations[s][j]][k] = x[s][j][k]
+            if damping > 0
+                for j = 1 : length(subiterations[s])
+                    for k = 1 : length(Target[subiterations[s][j]])
+                        Target[subiterations[s][j]][k] = (1-SC.damping)*x[s][j][k] + damping*LastIterate[subiterations[s][j]][k] 
+                    end
+                end
+                LastIterate.entries .= Target.entries
+            else
+                for j = 1 : length(subiterations[s])
+                    for k = 1 : length(Target[subiterations[s][j]])
+                        Target[subiterations[s][j]][k] = x[s][j][k]
+                    end
                 end
             end
 
@@ -890,10 +952,13 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         end
 
         if SC.user_params[:show_iteration_details]
-            @printf("     %4d  ", iteration)
+            @printf("\t   %4d  ", iteration)
             @printf(" | %e", sqrt(sum(linresnorm.^2)))
             @printf(" | %e", sqrt(sum(resnorm.^2)))
-            @printf(" | %.2e/%.2e/%.2e\n",time_reassembly,time_solver, time_total)
+            if SC.user_params[:show_statistics]
+                @printf(" | %.2e/%.2e/%.2e",time_reassembly,time_solver, time_total)
+            end
+            @printf("\n")
         end
 
         if sqrt(sum(resnorm.^2)) < target_residual
@@ -901,9 +966,13 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         end
 
         if iteration == maxiterations
-            @warn "maxiterations reached"
+            @warn "maxiterations reached!"
             break
         end
+    end
+
+    if SC.user_params[:show_iteration_details]
+        @printf("\n")
     end
 
     # REALIZE GLOBALCONSTRAINTS 
@@ -930,7 +999,7 @@ function solve!(
 Solves a given PDE (provided as a PDEDescription) and writes the solution into the FEVector Target (which knows the discrete ansatz spaces).
 
 Keyword arguments:
-$(_myprint(default_solver_kwargs()))
+$(_myprint(default_solver_kwargs(),false))
 
 Depending on the subiterations and detected/configured nonlinearities the whole system is either solved directly in one step or via a fixed-point iteration.
 
@@ -973,15 +1042,20 @@ function solve!(
             else
                 residual = solve_fixpoint_full!(Target, PDE, SC; time = user_params[:time])
             end
-        else # only part of the problem is solved
+        else # only part(s) of the problem is solved
             residual = solve_fixpoint_subiterations!(Target, PDE, SC; time = user_params[:time])
         end
     end
 
+    if user_params[:show_statistics]
+        @info "totaltime = $(totaltime)s"
+    end
     ## report and check final residual
-    @info "----- solve finished -----\n\tresidual = $residual\n\ttotaltime = $(totaltime)s"
+    if !user_params[:show_iteration_details]
+        @info "reached residual = $residual"
+    end
     if residual > user_params[:target_residual]
-        @warn "residual was larger than desired tolerance!"
+        @warn "residual was larger than desired target_residual = $(user_params[:target_residual])!"
     end
     return residual
 end
@@ -1060,7 +1134,7 @@ The FEVector Solution stores the initial state but also the solution at the curr
 The argument TIR carries the time integration rule (currently there is only BackwardEuler).
 
 Keyword arguments:
-$(_myprint(default_solver_kwargs()))
+$(_myprint(default_solver_kwargs(),true))
 
 Further (very experimental) optional arguments for TimeControlSolver are:
 - dt_test_function_operator : (array of) operators applied to testfunctions in time derivative (default: Identity)

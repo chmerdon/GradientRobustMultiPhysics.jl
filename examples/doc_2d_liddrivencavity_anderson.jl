@@ -49,7 +49,7 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     Solution = FEVector{Float64}(["u_h", "p_h"],FES)
 
     ## solve with anderson iterations until 1e-4
-    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = "l2", anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
 
     ## solve rest with Newton
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true)
