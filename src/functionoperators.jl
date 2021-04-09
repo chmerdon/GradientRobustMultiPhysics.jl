@@ -153,7 +153,7 @@ Jump(::Type{<:AbstractFunctionOperator}) = UndefInitializer
 
 """
 ````
-function Jump(::Type{<:AbstractFunctionOperator})
+function Average::Type{<:AbstractFunctionOperator})
 ````
 
 Transforms operator inito its average evaluation.

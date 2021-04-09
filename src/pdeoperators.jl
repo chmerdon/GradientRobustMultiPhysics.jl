@@ -1120,6 +1120,7 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
         addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
         set_time!(O.action, time)
+        fixed_argument = fixed_component == j ? 1 : 2
         if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
             @debug "Creating assembly pattern for Bilinearform $(O.name)"
             FE1 = b.FES
@@ -1129,9 +1130,9 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBili
             else
                 SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions, name = O.name)    
             end 
-            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
+            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_argument)
         else
-            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_component)
+            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_argument)
         end
     end
 end

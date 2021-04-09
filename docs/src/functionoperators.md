@@ -1,7 +1,7 @@
 
 # Function Operators
 
-FunctionOperators are building blocks for the weak form and define the operations that should be applied to the trial and test functions (and their discrete representatives) inside some PDEOperator. Below is a list of currently available FunctionOperators. Note, that not all operators an be applied to all finite element types.
+FunctionOperators are building blocks for the weak form and define the operations that should be applied to the trial and test functions (and their discrete representatives) inside some PDEOperator. Below is a list of currently available FunctionOperators. Note, that not all operators can be applied to all finite element types.
 
 
 | Function operator                                    | Description                                             |
@@ -25,8 +25,10 @@ FunctionOperators are building blocks for the weak form and define the operation
 
 !!! note
 
-    Especially note the operators Reconstruction...{FEType} operators that allow to evaluate operators of some
-    reconstructed version of a vector-valued testfunction that maps its discrete divergence to the divergence and so allows e.g. gradient-robust discretisations with classical non divergence-conforming ansatz spaces. So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
+    Especially note the operators ReconstructionIdentity{FEType} etc. that allow to evaluate operators of some
+    reconstructed version of a vector-valued testfunction. These operators keep the discrete divergence and so allow
+    for gradient-robust discretisations with classical non divergence-conforming ansatz spaces.
+    So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
 
 !!! note
 

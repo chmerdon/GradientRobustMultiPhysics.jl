@@ -30,7 +30,7 @@ Order   = [:type, :function]
 The following DofMap subtypes are available and are used as keys to access the dofmap via FESpace[DofMap] (which is equivalent to FESpace.dofmaps[DofMap]).
 
 | DofMap             | Explanation                                       |
-| :----------------: | :-----------------------------------------------: | 
+| :----------------: | :------------------------------------------------ | 
 | CellDofs           | degrees of freedom for on each cell               | 
 | FaceDofs           | degrees of freedom for each face                  | 
 | EdgeDofs           | degrees of freedom for each edge (in 3D)          | 
