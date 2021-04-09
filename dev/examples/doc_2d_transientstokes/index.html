@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Transient Stokes-Problem · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li class="is-active"><a class="tocitem" href>2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Transient Stokes-Problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Transient Stokes-Problem</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_transientstokes.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Transient-Stokes-Problem"><a class="docs-heading-anchor" href="#D-Transient-Stokes-Problem">2D Transient Stokes-Problem</a><a id="D-Transient-Stokes-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#D-Transient-Stokes-Problem" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_transientstokes.jl">source code</a>)</p><p>This example computes a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Transient Stokes-Problem · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li class="is-active"><a class="tocitem" href>2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Transient Stokes-Problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Transient Stokes-Problem</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_transientstokes.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Transient-Stokes-Problem"><a class="docs-heading-anchor" href="#D-Transient-Stokes-Problem">2D Transient Stokes-Problem</a><a id="D-Transient-Stokes-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#D-Transient-Stokes-Problem" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_transientstokes.jl">source code</a>)</p><p>This example computes a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
 \mathbf{u}_t - \mu \Delta \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
 \mathrm{div}(u) &amp; = 0
 \end{aligned}\]</p><p>with (possibly time-dependent) exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>In this example we solve an analytical toy problem with prescribed solution</p><p class="math-container">\[\begin{aligned}
@@ -180,7 +180,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     end
 end
 
-end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientStokes</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DTransientStokes.main()</code></pre><pre><code class="language-none">┌ Info: ----- Solving L2-Bestapproximation problem -----
+end</code></pre><pre><code class="language-none">Main.##269.Example_2DTransientStokes</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DTransientStokes.main()</code></pre><pre><code class="language-none">┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 54)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
 ┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem -----
@@ -192,16 +192,16 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
 	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 7.9287e-14 | 4.9651e-03  3.0773e+00 
-	     2  | 2.0000e-03 | 6.8660e-14 | 3.6022e-03  2.3073e+00 
-	     3  | 3.0000e-03 | 6.4342e-14 | 3.6022e-03  1.1207e-10 
-	     4  | 4.0000e-03 | 8.1233e-14 | 3.6022e-03  1.1171e-10 
-	     5  | 5.0000e-03 | 5.9534e-14 | 3.6022e-03  1.1202e-10 
-	     6  | 6.0000e-03 | 7.0385e-14 | 3.6022e-03  1.1169e-10 
-	     7  | 7.0000e-03 | 8.4582e-14 | 3.6022e-03  1.1220e-10 
-	     8  | 8.0000e-03 | 6.5268e-14 | 3.6022e-03  1.1181e-10 
-	     9  | 9.0000e-03 | 8.6987e-14 | 3.6022e-03  1.1210e-10 
-	    10  | 1.0000e-02 | 6.9619e-14 | 3.6022e-03  1.1180e-10 
+	     1  | 1.0000e-03 | 6.1688e-14 | 4.9651e-03  3.0773e+00 
+	     2  | 2.0000e-03 | 5.9455e-14 | 3.6022e-03  2.3073e+00 
+	     3  | 3.0000e-03 | 8.8591e-14 | 3.6022e-03  1.1209e-10 
+	     4  | 4.0000e-03 | 6.0735e-14 | 3.6022e-03  1.1175e-10 
+	     5  | 5.0000e-03 | 9.9512e-14 | 3.6022e-03  1.1203e-10 
+	     6  | 6.0000e-03 | 7.4273e-14 | 3.6022e-03  1.1175e-10 
+	     7  | 7.0000e-03 | 6.3609e-14 | 3.6022e-03  1.1206e-10 
+	     8  | 8.0000e-03 | 7.0860e-14 | 3.6022e-03  1.1186e-10 
+	     9  | 9.0000e-03 | 5.9049e-14 | 3.6022e-03  1.1216e-10 
+	    10  | 1.0000e-02 | 8.9565e-14 | 3.6022e-03  1.1168e-10 
 
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 54)
@@ -224,16 +224,16 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
 	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 4.2420e-14 | 5.6702e-03  2.8195e+00 
-	     2  | 2.0000e-03 | 3.9699e-14 | 6.4012e-03  1.1598e+00 
-	     3  | 3.0000e-03 | 4.1321e-14 | 6.4012e-03  1.4695e-10 
-	     4  | 4.0000e-03 | 4.0197e-14 | 6.4012e-03  1.4498e-10 
-	     5  | 5.0000e-03 | 3.9602e-14 | 6.4012e-03  1.4613e-10 
-	     6  | 6.0000e-03 | 3.8764e-14 | 6.4012e-03  1.4585e-10 
-	     7  | 7.0000e-03 | 3.9580e-14 | 6.4012e-03  1.4587e-10 
-	     8  | 8.0000e-03 | 4.4734e-14 | 6.4012e-03  1.4600e-10 
-	     9  | 9.0000e-03 | 4.0968e-14 | 6.4012e-03  1.4607e-10 
-	    10  | 1.0000e-02 | 4.2265e-14 | 6.4012e-03  1.4540e-10 
+	     1  | 1.0000e-03 | 3.9035e-14 | 5.6702e-03  2.8195e+00 
+	     2  | 2.0000e-03 | 3.8440e-14 | 6.4012e-03  1.1598e+00 
+	     3  | 3.0000e-03 | 4.4418e-14 | 6.4012e-03  1.4682e-10 
+	     4  | 4.0000e-03 | 3.5915e-14 | 6.4012e-03  1.4509e-10 
+	     5  | 5.0000e-03 | 3.6267e-14 | 6.4012e-03  1.4608e-10 
+	     6  | 6.0000e-03 | 4.0487e-14 | 6.4012e-03  1.4591e-10 
+	     7  | 7.0000e-03 | 4.0260e-14 | 6.4012e-03  1.4573e-10 
+	     8  | 8.0000e-03 | 3.5752e-14 | 6.4012e-03  1.4607e-10 
+	     9  | 9.0000e-03 | 4.5102e-14 | 6.4012e-03  1.4621e-10 
+	    10  | 1.0000e-02 | 3.4323e-14 | 6.4012e-03  1.4535e-10 
 
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 186)
@@ -256,16 +256,16 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
 	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 2.0974e-14 | 1.1430e-02  4.0417e+00 
-	     2  | 2.0000e-03 | 2.1543e-14 | 1.2040e-02  5.7953e-01 
-	     3  | 3.0000e-03 | 2.2778e-14 | 1.2040e-02  9.5561e-11 
-	     4  | 4.0000e-03 | 2.1817e-14 | 1.2040e-02  9.4403e-11 
-	     5  | 5.0000e-03 | 2.1931e-14 | 1.2040e-02  9.5659e-11 
-	     6  | 6.0000e-03 | 2.0687e-14 | 1.2040e-02  9.4704e-11 
-	     7  | 7.0000e-03 | 2.0931e-14 | 1.2040e-02  9.5582e-11 
-	     8  | 8.0000e-03 | 2.1496e-14 | 1.2040e-02  9.4667e-11 
-	     9  | 9.0000e-03 | 2.1339e-14 | 1.2040e-02  9.5814e-11 
-	    10  | 1.0000e-02 | 2.0883e-14 | 1.2040e-02  9.4782e-11 
+	     1  | 1.0000e-03 | 2.0588e-14 | 1.1430e-02  4.0417e+00 
+	     2  | 2.0000e-03 | 2.0924e-14 | 1.2040e-02  5.7953e-01 
+	     3  | 3.0000e-03 | 2.2657e-14 | 1.2040e-02  9.5574e-11 
+	     4  | 4.0000e-03 | 2.2356e-14 | 1.2040e-02  9.4404e-11 
+	     5  | 5.0000e-03 | 2.2169e-14 | 1.2040e-02  9.5670e-11 
+	     6  | 6.0000e-03 | 2.1307e-14 | 1.2040e-02  9.4656e-11 
+	     7  | 7.0000e-03 | 2.1689e-14 | 1.2040e-02  9.5565e-11 
+	     8  | 8.0000e-03 | 2.2611e-14 | 1.2040e-02  9.4700e-11 
+	     9  | 9.0000e-03 | 2.2781e-14 | 1.2040e-02  9.5764e-11 
+	    10  | 1.0000e-02 | 2.2896e-14 | 1.2040e-02  9.4857e-11 
 
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 690)
@@ -288,16 +288,16 @@ end</code></pre><pre><code class="language-none">Main.##268.Example_2DTransientS
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
 	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 1.1128e-14 | 2.2993e-02  7.3187e+00 
-	     2  | 2.0000e-03 | 1.1125e-14 | 2.3341e-02  2.8899e-01 
-	     3  | 3.0000e-03 | 1.0720e-14 | 2.3341e-02  6.5471e-09 
-	     4  | 4.0000e-03 | 1.0848e-14 | 2.3341e-02  6.5268e-09 
-	     5  | 5.0000e-03 | 1.1290e-14 | 2.3341e-02  6.4975e-09 
-	     6  | 6.0000e-03 | 1.0965e-14 | 2.3341e-02  6.4758e-09 
-	     7  | 7.0000e-03 | 1.1399e-14 | 2.3341e-02  6.4483e-09 
-	     8  | 8.0000e-03 | 1.0808e-14 | 2.3341e-02  6.4273e-09 
-	     9  | 9.0000e-03 | 1.0978e-14 | 2.3341e-02  6.3970e-09 
-	    10  | 1.0000e-02 | 1.1124e-14 | 2.3341e-02  6.3797e-09 
+	     1  | 1.0000e-03 | 1.1115e-14 | 2.2993e-02  7.3187e+00 
+	     2  | 2.0000e-03 | 1.1169e-14 | 2.3341e-02  2.8899e-01 
+	     3  | 3.0000e-03 | 1.1381e-14 | 2.3341e-02  6.5463e-09 
+	     4  | 4.0000e-03 | 1.0841e-14 | 2.3341e-02  6.5270e-09 
+	     5  | 5.0000e-03 | 1.1116e-14 | 2.3341e-02  6.4975e-09 
+	     6  | 6.0000e-03 | 1.1554e-14 | 2.3341e-02  6.4760e-09 
+	     7  | 7.0000e-03 | 1.0916e-14 | 2.3341e-02  6.4475e-09 
+	     8  | 8.0000e-03 | 1.1074e-14 | 2.3341e-02  6.4276e-09 
+	     9  | 9.0000e-03 | 1.1018e-14 | 2.3341e-02  6.3971e-09 
+	    10  | 1.0000e-02 | 1.0903e-14 | 2.3341e-02  6.3795e-09 
 
 ┌ Info: ----- Solving L2-Bestapproximation problem -----
 │ 	Equation (1.1) L2-bestapproximation equation : u_exact &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 2658)
@@ -337,4 +337,4 @@ VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)
 VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)
 PRES-STOKES : discrete Stokes pressure solution (H1P0{1} (broken))
 PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 9 April 2021 13:31">Friday 9 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_stokes_probust/">« 2D Pressure-robustness</a><a class="docs-footer-nextpage" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 9 April 2021 18:26">Friday 9 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
