@@ -2,7 +2,14 @@
 # AbstractAssemblyPatterns #
 ############################
 
+
+"""
+$(TYPEDEF)
+
+root type for assembly pattern types
+"""
 abstract type AssemblyPatternType end
+
 abstract type APT_Undefined <: AssemblyPatternType end
 
 # backpack to save all the information needed for assembly
@@ -69,6 +76,13 @@ function get_coeffs!(coeffs::Array{T,1}, FE::AbstractArray{T,1}, AM::AssemblyMan
     end
 end
 
+"""
+$(TYPEDEF)
+
+each assembly pattern has one of the assembly pattern types (APT) that trigger different assemblies for the involved
+finite element spaces, operators and an assigned action. The assembly type (AT) determines if the assembly takes
+place on cells, faces or edges etc. (relatively to the assembly type of the first argument of the pattern)
+"""
 mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}
     name::String
     FES::Array{FESpace,1}

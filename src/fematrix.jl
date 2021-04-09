@@ -62,8 +62,27 @@ Base.getindex(FEF::FEMatrix{T,nbrow,nbcol},i,j) where {T,nbrow,nbcol} = FEF.FEMa
 Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
 Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
 Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = (FEB.entries[FEB.offsetX+i,FEB.offsetY+j] = v)
+
+"""
+$(TYPEDSIGNATURES)
+
+Custom `size` function for `FEMatrix` that gives the number of rows and columns of the FEBlock overlay
+"""
 Base.size(FEF::FEMatrix) = [typeof(FEF).parameters[2],typeof(FEF).parameters[3]]
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Custom `length` function for `FEMatrix` that gives the total number of defined FEMatrixBlocks in it
+"""
 Base.length(FEF::FEMatrix) = typeof(FEF).parameters[4]
+
+"""
+$(TYPEDSIGNATURES)
+
+Custom `size` function for `FEMatrixBlock` that gives the size of the block (that coressponds to the number of degrees of freedoms in X and Y)
+"""
 Base.size(FEB::FEMatrixBlock)=[FEB.last_indexX-FEB.offsetX,FEB.last_indexY-FEB.offsetY]
 
 """

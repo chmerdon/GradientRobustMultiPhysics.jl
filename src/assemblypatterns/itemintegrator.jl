@@ -1,3 +1,9 @@
+
+"""
+$(TYPEDEF)
+
+itemintegrator assembly pattern type
+"""
 abstract type APT_ItemIntegrator <: AssemblyPatternType end
 
 function Base.show(io::IO, ::Type{APT_ItemIntegrator})
@@ -91,9 +97,10 @@ end
 """
 ````
 function evaluate!(
-    b::AbstractArray{T,2},
-    AP::AssemblyPattern{APT,T,AT},
-    FEB::FEVectorBlock) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    b::AbstractArray{T,2},          # target vector
+    AP::AssemblyPattern{APT,T,AT},  # ItemIntegrator pattern
+    FEB::Array{<:FEVectorBlock,1}   # coefficients for arguments
+    where {APT <: APT_ItemIntegrator, T, AT}
 ````
 
 Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlocks FEB into given two-dimensional Array b.
@@ -223,8 +230,9 @@ end
 """
 ````
 function evaluate(
-    AP::AssemblyPattern{APT,T,AT},
-    FEB::Array{<:FEVectorBlock,1}) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    AP::AssemblyPattern{APT,T,AT},  # ItemIntegrator pattern
+    FEB::Array{<:FEVectorBlock,1})  # coefficients for arguments
+    where {APT <: APT_ItemIntegrator, T, AT}
 
 ````
 

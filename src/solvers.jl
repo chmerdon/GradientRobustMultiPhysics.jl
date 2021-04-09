@@ -17,8 +17,8 @@
 abstract type AbstractLinearSystem{T} end
 
 mutable struct SolverConfig{T <: Real}
-    is_nonlinear::Bool      # PDE is nonlinear
-    is_timedependent::Bool  # PDE is time_dependent
+    is_nonlinear::Bool      # (subiterations pf) PDE were detected to be nonlinear
+    is_timedependent::Bool  # (subiterations pf) PDE were detected to be time_dependent
     LHS_AssemblyTriggers::Array{DataType,2} # assembly triggers for blocks in LHS
     LHS_dependencies::Array{Array{Int,1},2} # dependencies on components
     RHS_AssemblyTriggers::Array{DataType,1} # assembly triggers for blocks in RHS
@@ -145,7 +145,7 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
     LHS_ATs = Array{DataType,2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
     LHS_dep = Array{Array{Int,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
     current_dep::Array{Int,1} = []
-    all_equations = []
+    all_equations::Array{Int,1} = []
     subiterations = user_params[:subiterations]
     for s = 1 : length(subiterations)
         append!(all_equations, subiterations[s])
@@ -160,7 +160,7 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
         current_dep = [j,k]
         for o = 1 : length(PDE.LHSOperators[j,k])
             # check nonlinearity and time-dependency of operator
-            op_nonlinear, op_timedependent = check_PDEoperator(PDE.LHSOperators[j,k][o])
+            op_nonlinear, op_timedependent = check_PDEoperator(PDE.LHSOperators[j,k][o],all_equations)
             # check dependency on components
             for beta = 1:size(PDE.LHSOperators,2)
                 if check_dependency(PDE.LHSOperators[j,k][o],beta) == true
@@ -203,7 +203,7 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
         block_timedependent = false
         current_dep = []
         for o = 1 : length(PDE.RHSOperators[j])
-            op_nonlinear, op_timedependent = check_PDEoperator(PDE.RHSOperators[j][o])
+            op_nonlinear, op_timedependent = check_PDEoperator(PDE.RHSOperators[j][o],all_equations)
             for beta = 1:size(PDE.LHSOperators,2)
                 if check_dependency(PDE.RHSOperators[j][o],beta) == true
                     push!(current_dep,beta)
@@ -321,7 +321,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
 
     subiterations = SC.user_params[:subiterations]
 
-    info_msg = "\n\tACCUMULATED ASSEMBLY TIMES"
+    info_msg = "ACCUMULATED ASSEMBLY TIMES"
     info_msg *= "\n\t=========================="
 
     for s = 1 : length(subiterations)
@@ -1269,14 +1269,8 @@ function TimeControlSolver(
         LS[s] = createsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
 
-    # if nonlinear iterations are performed we need to remember the iterate from last timestep
-    if user_params[:maxiterations] > 1
-        # two vectors to store intermediate approximations
-        LastIterate = deepcopy(InitialValues)
-    else
-        # same vector, only one is needed
-        LastIterate = InitialValues
-    end
+    # storage for last iterate (to compute change properly)
+    LastIterate = deepcopy(InitialValues)
 
     # generate TimeControlSolver
     TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)))
@@ -1314,14 +1308,9 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     res = TCS.res
     X = TCS.X
     LS = TCS.LS
-    LastIterate = TCS.LastIterate
     fixed_dofs = TCS.fixed_dofs
-    eqdof = 0
     eqoffsets = TCS.eqoffsets
     T = eltype(res[1].entries)
-    statistics = zeros(Float64,length(X),4)
-    linresnorm = 1e30
-    resnorm = 1e30
 
     ## get relevant solver parameters
     subiterations = SC.user_params[:subiterations]
@@ -1333,42 +1322,44 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     target_residual = SC.user_params[:target_residual]
     skip_update = SC.user_params[:skip_update]
 
-    # save current solution if nonlinear iterations are needed
-    # X will then contain the current nonlinear iterate
-    # LastIterate contains the solution from last time step (for reassembly of time derivatives)
-    if maxiterations > 1
-        for j = 1 : length(X.entries)
-            LastIterate.entries[j] = X.entries[j]
-        end
-    end
-
+    # save current solution to LastIterate
+    LastIterate = TCS.LastIterate
+    LastIterate.entries .= X.entries
 
     ## LOOP OVER ALL SUBITERATIONS
+    statistics = zeros(T,length(X),4)
+    linresnorm::T = 1e30
+    resnorm::T = 1e30
+    eqdof::Int = 0
+    d::Int = 0
+    update_matrix::Bool = true
     for s = 1 : length(subiterations)
 
+        # decide if matrix needs to be updated
+        update_matrix = skip_update[s] != -1 || TCS.cstep == 1 || TCS.last_timestep != timestep
 
         # UPDATE SYSTEM
-        if skip_update[s] != -1 || TCS.cstep == 1 # update matrix
+        if update_matrix # update matrix
             fill!(A[s].entries.cscmatrix.nzval,0)
             fill!(b[s].entries,0)
-            assemble!(A[s],b[s],PDE,SC,LastIterate; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
+            assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
 
             ## update mass matrix and add time derivative
             assemble_massmatrix4subiteration!(TCS, s; force = false)
             for k = 1 : length(subiterations[s])
                 d = subiterations[s][k]
                 addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
-                addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
+                addblock_matmul!(b[s][k],AM[s][k,k],LastIterate[d]; factor = 1.0/timestep)
             end
             flush!(A[s].entries)
         else # only update rhs
             fill!(b[s].entries,0)
-            assemble!(A[s],b[s],PDE,SC,LastIterate; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
+            assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
 
             ## add time derivative
             for k = 1 : length(subiterations[s])
                 d = subiterations[s][k]
-                addblock_matmul!(b[s][k],AM[s][k,k],X[d]; factor = 1.0/timestep)
+                addblock_matmul!(b[s][k],AM[s][k,k],LastIterate[d]; factor = 1.0/timestep)
             end
         end
 
@@ -1399,7 +1390,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             ## SOLVE for x[s]
             time_solver = @elapsed begin
                 flush!(A[s].entries)
-                if TCS.cstep == 1 || (TCS.cstep % skip_update[s] == 0 && skip_update[s] != -1)
+                if update_matrix || (TCS.cstep % skip_update[s] == 0 && skip_update[s] != -1)
                     update!(LS[s])
                 end
                 solve!(LS[s])
@@ -1421,10 +1412,9 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
             end
             linresnorm = norm(res[s].entries)
 
-            # WRITE x[s] INTO X and COMPUTE CHANGE
+            # WRITE x[s] INTO X
             for j = 1 : length(subiterations[s])
                 for k = 1 : length(LastIterate[subiterations[s][j]])
-                    statistics[subiterations[s][j],2] += (LastIterate[subiterations[s][j]][k] - x[s][j][k])^2
                     X[subiterations[s][j]][k] = x[s][j][k]
                 end
             end
@@ -1476,12 +1466,18 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     end
     
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
-    # known bug: this will only work if no components in front of the constrained component(s)
-    # are missing in the subiteration
     for j = 1 : length(PDE.GlobalConstraints)
         realize_constraint!(X,PDE.GlobalConstraints[j])
     end
 
+    # COMPUTE CHANGE
+    for j = 1 : length(X)
+        for k = 1 : length(X[j])
+            statistics[j,2] += (LastIterate[j][k] - X[j][k])^2
+        end
+    end
+
+    # remember last timestep
     TCS.last_timestep = timestep
 
     return sqrt.(statistics)
@@ -1508,40 +1504,41 @@ advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_thres
 Advances a TimeControlSolver in time with the given (initial) timestep until stationarity is detected (change of variables below threshold) or a maximal number of time steps is exceeded.
 The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
 """
-function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing, show_details = true)
+function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
     maxiterations = TCS.SC.user_params[:maxiterations]
+    show_details = TCS.SC.user_params[:show_iteration_details]
     check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
     @info "Advancing in time until stationarity..."
     if show_details
         if maxiterations > 1 || check_nonlinear_residual
-            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
             for j = 1 : size(statistics,1)
                 @printf("        ")
             end
             if do_after_each_timestep != nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n          |            |  (total)   |    (total)     |")
+            @printf("\n\t        |            |  (total)   |  (total,nits)  |")
         else
-            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
             for j = 1 : size(statistics,1)
                 @printf("        ")
             end
             if do_after_each_timestep != nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n          |            |  (total)   |")
+            @printf("\n\t        |            |  (total)   |")
         end
         for j = 1 : size(statistics,1)
             @printf(" %s ",center_string(TCS.PDE.unknown_names[j],10))
         end
         @printf("\n")
     end
-    for iteration = 1 : maxTimeSteps
+    totaltime = @elapsed for iteration = 1 : maxTimeSteps
         statistics = advance!(TCS, timestep)
         if show_details
-            @printf("    %4d  ",iteration)
+            @printf("\t  %4d  ",iteration)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
             if maxiterations > 1 || check_nonlinear_residual
@@ -1563,10 +1560,16 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             @warn "maxTimeSteps reached"
         end
     end
-
+    
     if show_details
-        show_statistics(TCS.PDE,TCS.SC)
+        @printf("\n")
     end
+
+    if TCS.SC.user_params[:show_statistics]
+        show_statistics(TCS.PDE,TCS.SC)
+        @info "totaltime = $(totaltime)s"
+    end
+
 end
 
 
@@ -1578,40 +1581,42 @@ advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_toler
 Advances a TimeControlSolver in time with the given (initial) timestep until the specified finaltime is reached (up to the specified tolerance).
 The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
 """
-function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing, show_details = true)
+function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
     statistics = zeros(Float64,length(TCS.X),3)
     maxiterations = TCS.SC.user_params[:maxiterations]
+    show_details = TCS.SC.user_params[:show_iteration_details]
+    show_statistics = TCS.SC.user_params[:show_statistics]
     check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
     @info "Advancing in time from $(TCS.ctime) until $finaltime"
     if show_details
         if maxiterations > 1 || check_nonlinear_residual
-            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
             for j = 1 : size(statistics,1)
                 @printf("        ")
             end
             if do_after_each_timestep != nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n          |            |  (total)   |    (total)     |")
+            @printf("\n\t        |            |  (total)   |    (total)     |")
         else
-            @printf("\n    STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
             for j = 1 : size(statistics,1)
                 @printf("        ")
             end
             if do_after_each_timestep != nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n          |            |  (total)   |")
+            @printf("\n\t        |            |  (total)   |")
         end
         for j = 1 : size(statistics,1)
             @printf(" %s ",center_string(TCS.PDE.unknown_names[j],10))
         end
         @printf("\n")
     end
-    while TCS.ctime < finaltime - finaltime_tolerance
+    totaltime = @elapsed while TCS.ctime < finaltime - finaltime_tolerance
         statistics = advance!(TCS, timestep)
         if show_details
-            @printf("    %4d  ",TCS.cstep)
+            @printf("\t  %4d  ",TCS.cstep)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
             if maxiterations > 1 || check_nonlinear_residual
@@ -1628,7 +1633,16 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
     end
 
     if show_details
+        @printf("\n")
+    end
+
+    if TCS.SC.user_params[:show_statistics]
         show_statistics(TCS.PDE,TCS.SC)
+        @info "totaltime = $(totaltime)s"
+    end
+
+    if  abs(TCS.ctime - finaltime) > finaltime_tolerance
+        @warn "final time not reached within tolerance! (consider another timestep)"
     end
 end
 

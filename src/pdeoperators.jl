@@ -899,44 +899,36 @@ end
 
 
 # check if operator causes nonlinearity or time-dependence
-function check_PDEoperator(O::AbstractPDEOperator)
+function check_PDEoperator(O::AbstractPDEOperator, involved_equations::Array{Int})
     return false, false
 end
-function check_PDEoperator(O::AbstractBilinearForm)
-    try
-        return false, is_timedependent(O.action.kernel)
-    catch
+function check_PDEoperator(O::AbstractBilinearForm, involved_equations::Array{Int})
+    if typeof(O.action) <: NoAction
         return false, false
+    else
+        return false, is_timedependent(O.action.kernel)
     end
 end
-function check_PDEoperator(O::AbstractTrilinearForm)
-    try
-        return true, is_timedependent(O.action.kernel)
-    catch
-        return true, false
-    end
+function check_PDEoperator(O::AbstractTrilinearForm, involved_equations::Array{Int})
+    return O.a_from in involved_equations, is_timedependent(O.action.kernel)
 end
-function check_PDEoperator(O::FVConvectionDiffusionOperator)
-    return O.beta_from != 0, false
+function check_PDEoperator(O::FVConvectionDiffusionOperator, involved_equations::Array{Int})
+    return O.beta_from in involved_equations, false
 end
-function check_PDEoperator(O::CopyOperator)
+function check_PDEoperator(O::CopyOperator, involved_equations::Array{Int})
     return true, true
 end
-function check_PDEoperator(O::BLF2RHS)
+function check_PDEoperator(O::BLF2RHS, involved_equations::Array{Int})
     return O.nonlinear, O.timedependent
 end
-function check_PDEoperator(O::TLF2RHS)
+function check_PDEoperator(O::TLF2RHS, involved_equations::Array{Int})
     return O.nonlinear, O.timedependent
 end
-function check_PDEoperator(O::MLF2RHS)
+function check_PDEoperator(O::MLF2RHS, involved_equations::Array{Int})
     return O.nonlinear, O.timedependent
 end
-function check_PDEoperator(O::AbstractNonlinearForm)
-    try
-        return true, is_timedependent(O.action.kernel)
-    catch
-        return true, false
-    end
+function check_PDEoperator(O::AbstractNonlinearForm, involved_equations::Array{Int})
+    return true, is_timedependent(O.action.kernel)
 end
 
 # check if operator also depends on arg (additional to the argument relative to position in PDEDescription)

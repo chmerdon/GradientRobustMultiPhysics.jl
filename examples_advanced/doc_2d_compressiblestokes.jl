@@ -81,8 +81,7 @@ function main(; verbosity = 0, Plotter = nothing, reconstruct::Bool = true, c = 
     set_verbosity(verbosity)
 
     ## load mesh and refine
-    xgrid = simplexgrid("assets/2d_grid_mountainrange.sg")
-    xgrid = uniform_refine(xgrid,1)
+    xgrid = uniform_refine(simplexgrid("assets/2d_grid_mountainrange.sg"),1)
 
     ## solve without and with reconstruction and plot
     Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)
@@ -114,7 +113,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     user_gravity = DataFunction(rhs_gravity!(gamma,c), [2,2]; name = "g", dependencies = "X", quadorder = 1)
 
     ## solver parameters
-    timestep = 2 * shear_modulus / c
+    timestep = 2 * shear_modulus / c 
     initial_density_bestapprox = true # otherwise we start with a constant density which also works but takes longer
     maxTimeSteps = 1000  # termination criterion 1
     stationarity_threshold = 1e-12/shear_modulus # stop when change is below this treshold
@@ -144,9 +143,9 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     ## momentum equation
     add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2; store = true))
     if lambda != 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm("lambda * div(u) * div(v) (lambda = $lambda)",VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1); store = true))
+        add_operator!(Problem, [1,1], AbstractBilinearForm("λ (div(u),div(v))",VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1); store = true))
     end
-    add_operator!(Problem, [1,3], AbstractBilinearForm("div(v)*p",Divergence,Identity,MultiplyScalarAction(-1.0, 1); store = true))
+    add_operator!(Problem, [1,3], AbstractBilinearForm("(div(v),p)",Divergence,Identity,MultiplyScalarAction(-1.0, 1); store = true))
 
     function gravity_action()
         temp = zeros(Float64,2)
@@ -156,7 +155,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
         end
         gravity_action = Action(Float64, closure, [1,2]; name = "gravity action", dependencies = "XT", quadorder = user_gravity.quadorder)
     end    
-    add_operator!(Problem, [1,2], AbstractBilinearForm("g*v*ϱ",VeloIdentity,Identity,gravity_action(); store = true))
+    add_operator!(Problem, [1,2], AbstractBilinearForm("ϱ(g ⋅ v)",VeloIdentity,Identity,gravity_action(); store = true))
 
     ## continuity equation (by FV upwind on triangles)
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
@@ -164,8 +163,8 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     ## equation of state (by best-approximation, P0 mass matrix is diagonal)
     eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = "", quadorder = 0)
     eos_action = Action(Float64, eos_action_kernel)
-    add_operator!(Problem, [3,2], AbstractBilinearForm("p * eos(ϱ)",Identity,Identity,eos_action; apply_action_to = 2))
-    add_operator!(Problem, [3,3], AbstractBilinearForm("p*q",Identity,Identity,MultiplyScalarAction(-1,1); store = true))
+    add_operator!(Problem, [3,2], AbstractBilinearForm("(p,eos(ϱ))",Identity,Identity,eos_action; apply_action_to = 2))
+    add_operator!(Problem, [3,3], AbstractBilinearForm("(p,q)",Identity,Identity,MultiplyScalarAction(-1,1); store = true))
 
     ## generate FESpaces and solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
@@ -197,6 +196,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
                                         skip_update = [-1,1,-1],
                                         timedependent_equations = [2],
                                         maxiterations = 1,
+                                        show_solver_config = true,
                                         check_nonlinear_residual = false)
     advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 

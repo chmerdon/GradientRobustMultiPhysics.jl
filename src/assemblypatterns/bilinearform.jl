@@ -1,5 +1,16 @@
 
+"""
+$(TYPEDEF)
+
+bilinearform assembly pattern type
+"""
 abstract type APT_BilinearForm <: AssemblyPatternType end
+
+"""
+$(TYPEDEF)
+
+symmetric bilinearform assembly pattern type
+"""
 abstract type APT_SymmetricBilinearForm <: APT_BilinearForm end
 
 function Base.show(io::IO, ::Type{APT_BilinearForm})
@@ -23,6 +34,8 @@ function SymmetricBilinearForm(
 Creates a symmetric BilinearForm assembly pattern with the given FESpaces, operators and action etc. Symmetry is not checked automatically, but is assumed during assembly!
 """
 function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "Symmetric BLF", regions = [0])
+    @assert length(operators) == 2
+    @assert length(FES) == 2
     return AssemblyPattern{APT_SymmetricBilinearForm, T, AT}(name, FES,operators,action,regions)
 end
 
@@ -37,9 +50,11 @@ function BilinearForm(
     regions::Array{Int,1} = [0])
 ````
 
-Creates a (unsymmetric) BilinearForm assembly pattern with the given FESpaces, operators and action etc.
+Creates a general BilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "BLF", regions = [0])
+    @assert length(operators) == 2
+    @assert length(FES) == 2
     return AssemblyPattern{APT_BilinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
@@ -47,15 +62,16 @@ end
 """
 ````
 assemble!(
-    A::AbstractArray{T,2},
-    AP::AssemblyPattern{APT,T,AT};
-    apply_action_to::Int = 1,
-    factor = 1,
-    transposed_assembly::Bool = false,
-    transpose_copy = Nothing)  where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    A::AbstractArray{T,2},                  # target matrix
+    AP::AssemblyPattern{APT,T,AT};          # BilinearForm Pattern
+    apply_action_to::Int = 1,               # action is applied to which argument?
+    factor = 1,                             # factor that is multiplied
+    transposed_assembly::Bool = false,      # transpose result?
+    transpose_copy = Nothing)               # copy a transposed block to this matrix
+    where {APT <: APT_BilinearForm, T, AT}
 ````
 
-Assembly of a BilinearForm BLF into given two-dimensional AbstractArray (e.g. FEMatrixBlock).
+Assembly of a BilinearForm BLF into given two-dimensional AbstractArray (e.g. FEMatrixBlock or a ExtendableSparseMatrix).
 """
 function assemble!(
     A::AbstractArray{T,2},
@@ -257,21 +273,22 @@ end
 """
 ````
 assemble!(
-    b::AbstractArray{T,1},
-    fixedFE::FEVectorBlock,    # coefficient for fixed 2nd component
-    AP::AssemblyPattern{APT,T,AT};
-    apply_action_to::Int = 1,
-    fixed_argument::Int = 2,
-    factor = 1) where where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    b::AbstractArray{T,1},          # target vector
+    fixedFE::FEVectorBlock,         # coefficients for fixed argument
+    AP::AssemblyPattern{APT,T,AT};  # BilinearForm Pattern
+    apply_action_to::Int = 1,       # action is applied to 1st or 2nd argument?
+    fixed_argument::Int = 2,        # which argument is fixed?
+    factor = 1)                     # factor that is multiplied
+    where {APT <: APT_BilinearForm, T, AT}
 ````
 
-Assembly of a BilinearForm BLF into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
+Assembly of a BilinearForm AP into given one-dimensional AbstractArray (e.g. a FEVectorBlock).
 Here, the second argument is fixed (default) by the given coefficients in fixedFE.
 With apply_action_to=2 the action can be also applied to the second argument instead of the first one (default).
 """
 function assemble!(
     b::AbstractArray{T,1},
-    fixedFE::AbstractArray{T,1},    # coefficient for fixed 2nd component
+    fixedFE::AbstractArray{T,1},    # coefficients for fixed argument
     AP::AssemblyPattern{APT,T,AT};
     apply_action_to::Int = 1,
     fixed_argument::Int = 2,
@@ -437,7 +454,7 @@ function assemble!(
     skip_preps::Bool = false,
     factor = 1) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    @assert fixedFE.FES == AP.FES[fixed_argument]
+   # @assert fixedFE.FES == AP.FES[fixed_argument]
 
     assemble!(b.entries, fixedFE.entries, AP; apply_action_to = apply_action_to, factor = factor, fixed_argument = fixed_argument, offsets = [b.offset, fixedFE.offset], skip_preps = skip_preps)
 end

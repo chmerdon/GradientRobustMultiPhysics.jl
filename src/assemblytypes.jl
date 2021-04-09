@@ -6,12 +6,54 @@
 # mainly if it lives on CELLs, FACEs or BFACEs
 
 abstract type AbstractAssemblyType end 
+
+"""
+$(TYPEDEF)
+
+causes interpolation at vertices of the grid (only for H1-conforming interpolations)
+"""
 abstract type AT_NODES <: AbstractAssemblyType end  # at nodes (only available for H1 conforming interpolation)
+
+"""
+$(TYPEDEF)
+
+causes assembly/interpolation on cells of the grid
+"""
 abstract type ON_CELLS <: AbstractAssemblyType end  # on all cells 
+
+"""
+$(TYPEDEF)
+
+causes assembly/interpolation on faces of the grid
+"""
 abstract type ON_FACES <: AbstractAssemblyType end  # on all faces
+
+"""
+$(TYPEDEF)
+
+causes assembly/interpolation on interior faces of the grid
+"""
 abstract type ON_IFACES <: ON_FACES end  # on interior faces
+
+"""
+$(TYPEDEF)
+
+causes assembly/interpolation on boundary faces of the grid
+"""
 abstract type ON_BFACES <: AbstractAssemblyType end # on boundary faces
+
+"""
+$(TYPEDEF)
+
+causes assembly/interpolation on edges of the grid (only in 3D)
+"""
 abstract type ON_EDGES <: AbstractAssemblyType end  # on all edges
+
+"""
+$(TYPEDEF)
+
+causes assembly/interpolation on boundary edges of the grid (only in 3D)
+"""
 abstract type ON_BEDGES <: AbstractAssemblyType end # on boundary edges
 
 function Base.show(io::Core.IO, ::Type{ON_CELLS})

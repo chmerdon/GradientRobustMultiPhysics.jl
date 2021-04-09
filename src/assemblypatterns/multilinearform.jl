@@ -1,3 +1,9 @@
+
+"""
+$(TYPEDEF)
+
+multilinearform assembly pattern type
+"""
 abstract type APT_MultilinearForm <: AssemblyPatternType end
 
 function Base.show(io::IO, ::Type{APT_MultilinearForm})
@@ -33,11 +39,11 @@ end
 """
 ````
 assemble!(
-    assemble!(
-    b::AbstractVector,
-    FE::Array{<:FEVectorBlock,1},
-    AP::AssemblyPattern{APT,T,AT};
-    factor = 1)
+    b::AbstractVector,                        # target vector
+    FE::Array{<:FEVectorBlock,1},             # coefficients of all but last argument
+    AP::AssemblyPattern{APT,T,AT};            # Multilinearform pattern
+    factor = 1)                               # factor that is multiplied
+    where {APT <: APT_MultilinearForm, T, AT}
 ````
 
 Assembly of a MultilinearForm AP into given one-dimensional AbstractArray (e.g. a FEVectorBlock).

@@ -1,3 +1,9 @@
+
+"""
+$(TYPEDEF)
+
+linearform assembly pattern type
+"""
 abstract type APT_LinearForm <: AssemblyPatternType end
 
 function Base.show(io::IO, ::Type{APT_LinearForm})
@@ -18,10 +24,23 @@ function LinearForm(
 Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
 function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); regions = [0], name = "LF")
+    @assert length(operators) == 1
+    @assert length(FES) == 1
     return AssemblyPattern{APT_LinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
 
+"""
+````
+assemble!(
+    b::Union{AbstractArray{T,1},AbstractArray{T,2}},    # target vector/matrix
+    AP::AssemblyPattern{APT,T,AT};                      # LinearForm pattern
+    factor = 1)                                         # factor that is multiplied
+    where {APT <: APT_LinearForm, T, AT}
+````
+
+Assembly of a LinearForm pattern AP into a vector or matrix (if action is vetor-valued).
+"""
 function assemble!(
     b::Union{AbstractArray{T,1},AbstractArray{T,2}},
     AP::AssemblyPattern{APT,T,AT};

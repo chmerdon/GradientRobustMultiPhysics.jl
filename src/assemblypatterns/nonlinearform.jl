@@ -1,3 +1,9 @@
+
+"""
+$(TYPEDEF)
+
+nonlinearform assembly pattern type
+"""
 abstract type APT_NonlinearForm <: AssemblyPatternType end # nonlinear form whose action also gets a current solution as input to evaluate some linearised form
 
 function Base.show(io::IO, ::Type{APT_NonlinearForm})
@@ -33,11 +39,12 @@ end
 """
 ````
 assemble!(
-    A::AbstractArray{T,2},
-    AP::AssemblyPattern{APT,T,AT};
+    A::AbstractArray{T,2},                 # target matrix
+    AP::AssemblyPattern{APT,T,AT};         # NonlinearForm pattern
     FEB::Array{<:FEVectorBlock,1};         # coefficients of current solution for each operator
-    factor = 1,
-    transposed_assembly::Bool = false
+    factor = 1,                            # factor that is multiplied
+    transposed_assembly::Bool = false)     # transpose result?
+    where {APT <: APT_NonlinearForm, T, AT}
 ````
 
 Assembly of a NonlinearForm assembly pattern into given two-dimensional AbstractArray (e.g. FEMatrixBlock).
@@ -213,11 +220,11 @@ end
 """
 ````
 assemble!(
-    b::AbstractVector,
-    AP::NonlinearForm{T, AT},
+    b::AbstractVector,                     # target vector
+    AP::AssemblyPattern{APT,T,AT},         # NonlinearForm pattern
     FEB::Array{<:FEVectorBlock,1};         # coefficients of current solution for each operator
-    factor = 1,
-    transposed_assembly::Bool = false
+    factor = 1)                            # factor that is multiplied
+    where {APT <: APT_NonlinearForm, T, AT}
 ````
 
 Assembly of a NonlinearForm AP into given AbstractVector (e.g. FEMatrixBlock).
@@ -227,7 +234,6 @@ function assemble!(
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
     factor = 1,
-    transposed_assembly::Bool = false,
     skip_preps::Bool = false,
     offset = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
 
@@ -354,8 +360,7 @@ function assemble!(
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
     factor = 1,
-    transposed_assembly::Bool = false,
     skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    assemble!(b.entries, AP, FEB; factor = factor, transposed_assembly = transposed_assembly, offset = b.offset, skip_preps = skip_preps)
+    assemble!(b.entries, AP, FEB; factor = factor, offset = b.offset, skip_preps = skip_preps)
 end

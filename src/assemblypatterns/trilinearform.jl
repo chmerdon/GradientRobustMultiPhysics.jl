@@ -1,3 +1,9 @@
+
+"""
+$(TYPEDEF)
+
+trilinearform assembly pattern type
+"""
 abstract type APT_TrilinearForm <: AssemblyPatternType end
 
 function Base.show(io::IO, ::Type{APT_TrilinearForm})
@@ -24,6 +30,8 @@ function TrilinearForm(
     action::AbstractAction;
     name = "TLF",
     regions::Array{Int,1} = [0])
+    @assert length(operators) == 3
+    @assert length(FES) == 3
     return  AssemblyPattern{APT_TrilinearForm, T, AT}(name,FES,operators,action,regions)
 end
 
@@ -32,12 +40,13 @@ end
 ````
 assemble!(
     assemble!(
-    A::AbstractArray{T,2},
-    FE1::FEVectorBlock,
-    AP::TrilinearForm{T, AT};
-    fixed_argument::Int = 1,
-    transposed_assembly::Bool = false,
-    factor = 1)
+    A::AbstractArray{T,2},                  # target matrix
+    FE1::FEVectorBlock,                     # coefficients for fixed argument
+    AP::AssemblyPattern{APT,T,AT};          # TrilinearForm pattern
+    fixed_argument::Int = 1,                # position of fixed argument
+    transposed_assembly::Bool = false,      # transpose result?
+    factor = 1)                             # factor that is multiplied
+    where {APT <: APT_TrilinearForm, T, AT}
 ````
 
 Assembly of a TrilinearForm AP into given two-dimensional AbstractArray (e.g. a FEMatrixBlock).
@@ -207,11 +216,12 @@ end
 ````
 assemble!(
     assemble!(
-    b::AbstractVector,
-    FE1::FEVectorBlock,
-    FE2::FEVectorBlock.
-    AP::AssemblyPattern{APT,T,AT};
-    factor = 1)
+    b::AbstractVector,                      # target vector
+    FE1::FEVectorBlock,                     # coefficients for first fixed argument
+    FE2::FEVectorBlock.                     # coefficients for second fixed argument
+    AP::AssemblyPattern{APT,T,AT};          # TrilinearForm pattern
+    factor = 1)                             # factor that is multiplied
+    where {APT <: APT_TrilinearForm, T, AT}
 ````
 
 Assembly of a TrilinearForm AP into given one-dimensional AbstractArray (e.g. a FEVectorBlock).

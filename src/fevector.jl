@@ -38,7 +38,19 @@ Base.setindex!(FEB::FEVectorBlock, v, ::Colon) = (FEB.entries[FEB.offset+1:FEB.l
 Base.setindex!(FEB::FEVectorBlock, v, i::AbstractArray) = (FEB.entries[FEB.offset.+i] = v)
 Base.size(FEF::FEVector)=size(FEF.FEVectorBlocks)
 Base.size(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
+
+"""
+$(TYPEDSIGNATURES)
+
+Custom `length` function for `FEVector` that gives the number of defined FEMatrixBlocks in it
+"""
 Base.length(FEF::FEVector)=length(FEF.FEVectorBlocks)
+
+"""
+$(TYPEDSIGNATURES)
+
+Custom `length` function for `FEVectorBlock` that gives the coressponding number of degrees of freedoms of the associated FESpace
+"""
 Base.length(FEB::FEVectorBlock)=FEB.last_index-FEB.offset
 
 """
