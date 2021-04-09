@@ -89,7 +89,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
     eta_jumps_action = Action(Float64, L2jump_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
     eta_vol_action = Action(Float64, L2vol_integrand, [1,2]; name = "estimator kernel volume", dependencies = "I", quadorder = 1)
     ## ... which is used inside an ItemIntegrator
-    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[GradientDisc{Jump}],eta_jumps_action; name = "η_F")
+    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = "η_F")
     volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = "η_T")
           
     ## refinement loop

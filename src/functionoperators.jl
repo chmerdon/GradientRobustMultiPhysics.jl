@@ -142,6 +142,37 @@ abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 
 
+"""
+````
+function Jump(::Type{<:AbstractFunctionOperator})
+````
+
+Transforms operator inito its jump evaluation.
+"""
+Jump(::Type{<:AbstractFunctionOperator}) = UndefInitializer
+
+"""
+````
+function Jump(::Type{<:AbstractFunctionOperator})
+````
+
+Transforms operator inito its average evaluation.
+"""
+Average(::Type{<:AbstractFunctionOperator}) = UndefInitializer
+
+Jump(::Type{Identity}) = IdentityDisc{Jump}
+Average(::Type{Identity}) = IdentityDisc{Average}
+Jump(::Type{ReconstructionIdentity{FER}}) where {FER} = ReconstructionIdentityDisc{FER,Jump}
+Average(::Type{ReconstructionIdentity{FER}}) where {FER} = ReconstructionIdentityDisc{FER,Average}
+Jump(::Type{NormalFlux}) = NormalFluxDisc{Jump}
+Average(::Type{NormalFlux}) = NormalFluxDisc{Average}
+Jump(::Type{TangentFlux}) = TangentFluxDisc{Jump}
+Average(::Type{TangentFlux}) = TangentFluxDisc{Average}
+Jump(::Type{Gradient}) = GradientDisc{Jump}
+Average(::Type{Gradient}) = GradientDisc{Average}
+Jump(::Type{ReconstructionGradient{FER}}) where {FER} = ReconstructionGradientDisc{FER,Jump}
+Average(::Type{ReconstructionGradient{FER}}) where {FER} = ReconstructionGradientDisc{FER,Average}
+
 NeededDerivative4Operator(::Type{<:Identity}) = 0
 NeededDerivative4Operator(::Type{<:IdentityComponent}) = 0
 NeededDerivative4Operator(::Type{<:NormalFlux}) = 0

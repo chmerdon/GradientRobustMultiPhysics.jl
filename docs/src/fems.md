@@ -61,9 +61,9 @@ The following table lists all curently implemented finite elements. Click on the
 
 ## H1-conforming finite elements
 
-### P1 finite element
+### P0 finite element
 
-Piecewise constant finite element that has one degree of freedom on each cell of the grid.
+Piecewise constant finite element that has one degree of freedom on each cell of the grid. (It is masked as a H1-conforming finite element, because it uses the same transformations.)
 
 The interpolation of a given function into this space preserves the cell integrals.
 

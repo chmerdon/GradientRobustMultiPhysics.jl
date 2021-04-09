@@ -90,7 +90,7 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
         ## ... which generates an action
         stab_action = Action(Float64,stabilisation_kernel, [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
         ## ... which is given to a bilinear form constructor
-        JumpStabilisation = AbstractBilinearForm("s |F|^2 [∇(u)]⋅[∇(v)]", GradientDisc{Jump}, GradientDisc{Jump}, stab_action; AT = ON_IFACES)
+        JumpStabilisation = AbstractBilinearForm("s |F|^2 [∇(u)]⋅[∇(v)]", Jump(Gradient), Jump(Gradient), stab_action; AT = ON_IFACES)
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 

@@ -7,14 +7,10 @@ FunctionOperators are building blocks for the weak form and define the operation
 | Function operator                                    | Description                                             |
 | :--------------------------------------------------- | :------------------------------------------------------ |
 | [`Identity`](@ref)                                   | identity                                                |
-| [`IdentityDisc{Jump}`](@ref)                         | jumps of identity (only over faces)                     |
-| [`IdentityDisc{Average}`](@ref)                      | average of identity (only over faces)                   |
 | [`IdentityComponent{c}`](@ref)                       | identity of c-th component                              |
 | [`NormalFlux`](@ref)                                 | normal flux (function times normal)                     |
 | [`TangentFlux`](@ref)                                | tangent flux (function times tangent)                   | 
 | [`Gradient`](@ref)                                   | gradient/Jacobian (as a vector)                         |
-| [`GradientDisc{Jump}`](@ref)                         | jumps of gradient/Jacobian (only over faces)            |
-| [`GradientDisc{Average}`](@ref)                      | average of gradient/Jacobian (only over faces)          |
 | [`SymmetricGradient`](@ref)                          | symmetric part of the gradient                          |
 | [`Divergence`](@ref)                                 | divergence                                              |
 | [`CurlScalar`](@ref)                                 | curl operator 1D to 2D (rotated gradient)               |
@@ -23,13 +19,8 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`Hessian`](@ref)                                    | Hesse matrix = all 2nd order derivatives (as a vector)  |
 | [`Laplacian`](@ref)                                  | Laplace Operator                                        |
 | [`ReconstructionIdentity{FEType}`](@ref)             | reconstruction operator into specified FEType           |
-| [`ReconstructionIdentityDisc{FEType,Jump}`](@ref)    | jump of reconstruction operator (over faces)            |
-| [`ReconstructionIdentityDisc{FEType,Average}`](@ref) | average of reconstruction operator (over faces)         |
 | [`ReconstructionDivergence{FEType}`](@ref)           | divergence of FEType reconstruction operator            |
 | [`ReconstructionGradient{FEType}`](@ref)             | gradient of FEType reconstruction operator              |
-| [`ReconstructionGradientDisc{FEType,Jump}`](@ref)    | jump of reconstruction operator gradient (over faces)   |
-| [`ReconstructionGradientDisc{FEType,Average}`](@ref) | average of reconstruction operator gadient (over faces) |
-|                                                      |                                                         |
 
 
 !!! note
@@ -45,3 +36,18 @@ FunctionOperators are building blocks for the weak form and define the operation
     are added as soon as they are needed (and possibly upon request).
 
 
+## Jumps and Averages
+
+If one of the operators above is evaluted ON_FACES for a finite element that is not continuous there, the code usual will crash or produce weird results. However, some operators can be transformed into a
+Jump- or Average operator and then either the jumps or the average of this operator along the face is assembled. The operator Jump(Identity) for example gives the jump of the
+identity evaluation on both sides of the face.
+
+```@docs
+Jump
+Average
+```
+
+!!! note
+
+    Currently this feature is only available for assembly on faces (2D and 3D) and certain function operators like Identity, Gradient, ReconstructionIdentity, ReconstructionGradient, NormalFlux, TangentFlux, but more
+    are added as soon as they are needed (and possibly upon request).
