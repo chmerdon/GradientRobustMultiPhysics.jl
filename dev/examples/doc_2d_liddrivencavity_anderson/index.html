@@ -23,9 +23,11 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     #####################################################################################
 
     # load Navier-Stokes problem prototype and assign data
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false, store = false)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
+
+    @show Problem
 
     # generate FESpaces
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
@@ -35,7 +37,7 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = &quot;l2&quot;, anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
 
     # solve rest with Newton
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true, store = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual)
@@ -44,36 +46,63 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2]], [Identity, Identity]; Plotter = Plotter)
 end
 
-end</code></pre><pre><code class="language-none">Main.##264.Example_2DLidDrivenCavityAnderson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DLidDrivenCavityAnderson.main()</code></pre><pre><code class="language-none">┌ Info: ----- Solving incompressible Navier-Stokes-Problem -----
+end</code></pre><pre><code class="language-none">Main.##264.Example_2DLidDrivenCavityAnderson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DLidDrivenCavityAnderson.main()</code></pre><pre><code class="language-none">
+PDE-DESCRIPTION
+===============
+  system name = incompressible Navier-Stokes-Problem
+
+     id   | unknown name / equation name
+    [1]   | velocity / momentum equation 
+    [2]   | pressure / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 0.0005 ∇(u):∇(v) (regions = [0])
+            | (a ⋅ ∇) u ⋅ v (regions = [0])
+    [1,2]   | div(v) ⋅ q (regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | none
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [3]
+                         HomogeneousDirichletBoundary -&gt; [1, 2, 4]
+                          
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+┌ Info: ----- Solving incompressible Navier-Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (H1P2{2,2}, ndofs = 4226)
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; p_h (H1P1{1}, ndofs = 545)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1019
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.237024e-17 | 1.450425e-02
-	      2   | 2.242230e-17 | 4.291459e-03
-	      3   | 2.615988e-17 | 2.650715e-03
-	      4   | 2.584839e-17 | 2.267851e-03
-	      5   | 2.779917e-17 | 1.383457e-03
-	      6   | 2.952213e-17 | 9.457914e-04
-	      7   | 2.883602e-17 | 9.117724e-04
-	      8   | 2.985000e-17 | 6.267249e-04
-	      9   | 2.857004e-17 | 2.907289e-04
-	     10   | 2.910628e-17 | 1.343655e-04
-	     11   | 2.858893e-17 | 1.093283e-04
-	     12   | 3.023007e-17 | 5.484240e-05
+	      1   | 2.325706e-17 | 1.450425e-02
+	      2   | 2.101188e-17 | 4.291459e-03
+	      3   | 2.485982e-17 | 2.650715e-03
+	      4   | 2.599135e-17 | 2.267851e-03
+	      5   | 2.681192e-17 | 1.383457e-03
+	      6   | 2.734009e-17 | 9.457914e-04
+	      7   | 2.818772e-17 | 9.117724e-04
+	      8   | 3.049118e-17 | 6.267249e-04
+	      9   | 2.815674e-17 | 2.907289e-04
+	     10   | 2.835452e-17 | 1.343655e-04
+	     11   | 2.965853e-17 | 1.093283e-04
+	     12   | 2.847382e-17 | 5.484240e-05
 
 ┌ Info: ----- Solving incompressible Navier-Stokes-Problem -----
 │ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (H1P2{2,2}, ndofs = 4226)
 │ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; p_h (H1P1{1}, ndofs = 545)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1030
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1019
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.963618e-17 | 3.084478e-07
-	      2   | 3.030185e-17 | 5.965529e-10
-	      3   | 2.993674e-17 | 4.658683e-13
-	      4   | 2.959955e-17 | 2.214792e-16
+	      1   | 2.839883e-17 | 3.084478e-07
+	      2   | 2.722260e-17 | 5.965529e-10
+	      3   | 2.766773e-17 | 4.658674e-13
+	      4   | 2.846586e-17 | 2.212798e-16
 
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 9 April 2021 18:26">Friday 9 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 12 April 2021 21:24">Monday 12 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

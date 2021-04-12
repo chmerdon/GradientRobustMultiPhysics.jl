@@ -91,9 +91,9 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         result .*= -viscosity
         return nothing
     end
-    HdivLaplace2 = AbstractBilinearForm(&quot;nu/h_F [u] [v]&quot;, Jump(Identity), Jump(Identity), Action(Float64, hdiv_laplace2_kernel, [2,2]; dependencies = &quot;I&quot;, quadorder = 0); AT = ON_FACES)
-    HdivLaplace3 = AbstractBilinearForm(&quot;-nu [u] {grad(v)*n}&quot;, Jump(Identity), Average(Gradient), Action(Float64, hdiv_laplace3_kernel, [4,2]; dependencies = &quot;I&quot;, quadorder = 0); AT = ON_FACES)
-    HdivLaplace4 = AbstractBilinearForm(&quot;-nu {grad(u)*n} [v] &quot;, Average(Gradient), Jump(Identity), Action(Float64, hdiv_laplace4_kernel, [2,4]; dependencies = &quot;I&quot;, quadorder = 0); AT = ON_FACES)
+    HdivLaplace2 = AbstractBilinearForm([Jump(Identity), Jump(Identity)], Action(Float64, hdiv_laplace2_kernel, [2,2]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;nu/h_F [u] [v]&quot;, AT = ON_FACES)
+    HdivLaplace3 = AbstractBilinearForm([Jump(Identity), Average(Gradient)], Action(Float64, hdiv_laplace3_kernel, [4,2]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;-nu [u] {grad(v)*n}&quot;, AT = ON_FACES)
+    HdivLaplace4 = AbstractBilinearForm([Average(Gradient), Jump(Identity)], Action(Float64, hdiv_laplace4_kernel, [2,4]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;-nu {grad(u)*n} [v] &quot;, AT = ON_FACES)
 
     # additional terms for tangential part at boundary
     # note: we use average operators here to force evaluation of all basis functions and not only of the face basis functions
@@ -112,8 +112,8 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         result[1] *= -viscosity
         return nothing
     end
-    HdivBoundary1 = RhsOperator(&quot;- nu lambda/h_F u_D v &quot;,ON_BFACES, Average(Identity), Action(Float64, hdiv_boundary_kernel, [1,2]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder))
-    HdivBoundary2 = RhsOperator(&quot;- nu u_D grad(v)*n &quot;,ON_BFACES, Average(Gradient), Action(Float64, hdiv_boundary_kernel2, [1,4]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder))
+    HdivBoundary1 = RhsOperator(Average(Identity), Action(Float64, hdiv_boundary_kernel, [1,2]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder); name = &quot;- nu lambda/h_F u_D v&quot;, AT = ON_BFACES)
+    HdivBoundary2 = RhsOperator(Average(Gradient), Action(Float64, hdiv_boundary_kernel2, [1,4]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder); name = &quot;- nu u_D grad(v)*n&quot;, AT = ON_BFACES)
 
     # assign DG operators to problem descriptions
     add_operator!(Problem, [1,1], HdivLaplace2)
@@ -157,9 +157,9 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     println(&quot;\n   NDOF  | L2ERROR(v_h) | H1ERROR(v_h) | L2ERROR(p_h)&quot;)
     for j=1:nlevels
         @printf(&quot;  %6d |&quot;,NDofs[j]);
-        @printf(&quot; %.5e |&quot;,L2VelocityError[j])
-        @printf(&quot; %.5e |&quot;,H1VelocityError[j])
-        @printf(&quot; %.5e\n&quot;,L2PressureError[j])
+        @printf(&quot; %.6e |&quot;,L2VelocityError[j])
+        @printf(&quot; %.6e |&quot;,H1VelocityError[j])
+        @printf(&quot; %.6e\n&quot;,L2PressureError[j])
     end
 end
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_other_linsolver/">« 2D User-defined Linear Solvers</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 9 April 2021 18:26">Friday 9 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_other_linsolver/">« 2D User-defined Linear Solvers</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 12 April 2021 21:24">Monday 12 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
