@@ -26,7 +26,7 @@ Creates a LinearForm assembly pattern with the given FESpaces, operators and act
 function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); regions = [0], name = "LF")
     @assert length(operators) == 1
     @assert length(FES) == 1
-    return AssemblyPattern{APT_LinearForm, T, AT}(name,FES,operators,action,regions)
+    return AssemblyPattern{APT_LinearForm, T, AT}(name,FES,operators,action,[1],regions)
 end
 
 

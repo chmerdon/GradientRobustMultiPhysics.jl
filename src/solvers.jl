@@ -385,16 +385,11 @@ function assemble!(
             for k = 1 : size(PDE.LHSOperators,2)
                 if (storage_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) == true
                     for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                        PDEOperator = PDE.LHSOperators[equations[j],k][o]
-                        try
-                            if PDEOperator.store_operator == false
-                                continue
-                            end
-                        catch
-                            continue
+                        O = PDE.LHSOperators[equations[j],k][o]
+                        if has_storage(O)
+                            elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j], k; time = time)
+                            SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                         end
-                        elapsedtime = @elapsed update_storage!(PDEOperator, CurrentSolution, equations[j], k; time = time)
-                        SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                     end
                 end
             end
@@ -402,16 +397,11 @@ function assemble!(
         for j = 1:length(equations)
             if (storage_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) == true
                 for o = 1 : length(PDE.RHSOperators[equations[j]])
-                    PDEOperator = PDE.RHSOperators[equations[j]][o]
-                    try
-                        if PDEOperator.store_operator == false
-                            continue
-                        end
-                    catch
-                        continue
+                    O = PDE.RHSOperators[equations[j]][o]
+                    if has_storage(O)
+                        elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j] ; time = time)
+                        SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
                     end
-                    elapsedtime = @elapsed update_storage!(PDEOperator, CurrentSolution, equations[j] ; time = time)
-                    SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
                 end
             end
         end
@@ -426,8 +416,8 @@ function assemble!(
             rhs_block_has_been_erased[j] = true
             @logmsg DeepInfo "Locking what to assemble in rhs block [$(equations[j])]..."
             for o = 1 : length(PDE.RHSOperators[equations[j]])
-                PDEOperator = PDE.RHSOperators[equations[j]][o]
-                elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, PDE.RHSOperators[equations[j]][o], CurrentSolution; time = time)
+                O = PDE.RHSOperators[equations[j]][o]
+                elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, O, CurrentSolution; time = time)
                 SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
             end
         end
@@ -448,11 +438,11 @@ function assemble!(
                         lhs_block_has_been_erased[j, subblock] = true
                         @logmsg DeepInfo "Locking what to assemble in lhs block [$(equations[j]),$k]..."
                         for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                            PDEOperator = PDE.LHSOperators[equations[j],k][o]
-                            if typeof(PDEOperator) <: LagrangeMultiplier
-                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time, At = A[subblock,j])
+                            O = PDE.LHSOperators[equations[j],k][o]
+                            if has_copy_block(O)
+                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time, At = A[subblock,j])
                             else
-                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, PDEOperator, CurrentSolution; time = time)
+                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time)
                             end  
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                         end  
@@ -467,9 +457,9 @@ function assemble!(
                             end
                         end
                         for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                            PDEOperator = PDE.LHSOperators[equations[j],k][o]
-                            @debug "Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(PDEOperator.name)"
-                            elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, PDEOperator, CurrentSolution; factor = -1.0, time = time, fixed_component = k)
+                            O = PDE.LHSOperators[equations[j],k][o]
+                            @debug "Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(O.name)"
+                            elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, O, CurrentSolution; factor = -1.0, time = time, fixed_component = k)
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                         end
                     end
@@ -588,7 +578,6 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             # we need to save the last iterates
             LastAndersonIterates = Array{FEVector,1}(undef, anderson_iterations+1) # actual iterates u_k
             LastAndersonIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
-            PDE.LHSOperators[1,1][1].store_operator = true # use the first operator to compute norm in which Anderson iterations are optimised
 
             ## assemble convergence metric
             AIONormOperator = FEMatrix{T}("AA-Metric",FEs)

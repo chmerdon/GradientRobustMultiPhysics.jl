@@ -88,12 +88,13 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Abst
     FES::Array{FESpace,1}
     operators::Array{DataType,1}
     action::AbstractAction
+    apply_action_to::Array{Int,1}
     regions::Array{Int,1}
     AM::AssemblyManager # hidden stuff needed for assembly
     AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS}()
     AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} = new{APT,T,AT}()
-    AssemblyPattern{APT, T, AT}(name,FES,operators,action,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}(name, FES,operators,action,regions)
-    AssemblyPattern{APT, T, AT}(FES,operators,action,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}("$APT", FES,operators,action,regions)
+    AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}(name, FES,operators,action,apply_to,regions)
+    AssemblyPattern{APT, T, AT}(FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}("$APT", FES,operators,action,apply_to,regions)
 end 
 
 function Base.show(io::IO, AP::AssemblyPattern)
@@ -102,7 +103,7 @@ function Base.show(io::IO, AP::AssemblyPattern)
     println(io,"\tpattern span = $(typeof(AP).parameters[3]) (regions = $(AP.regions))")
     println(io,"\tpattern oprs = $(AP.operators)")
     if !(typeof(AP.action) <: NoAction)
-        println(io,"\tpattern actn = $(AP.action.name) (size = $(AP.action.argsizes))")
+        println(io,"\tpattern actn = $(AP.action.name) (apply_to = $(AP.apply_action_to) size = $(AP.action.argsizes))")
     end
 end
 

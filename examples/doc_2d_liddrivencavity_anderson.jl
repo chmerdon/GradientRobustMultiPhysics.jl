@@ -40,9 +40,11 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     #####################################################################################
 
     ## load Navier-Stokes problem prototype and assign data
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false, store = false)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
+
+    @show Problem
 
     ## generate FESpaces
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
@@ -52,7 +54,7 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = "l2", anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
 
     ## solve rest with Newton
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true, store = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual)

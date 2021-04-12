@@ -75,9 +75,9 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     nonlin_diffusion = GenerateNonlinearForm("(1+ β u^2) ∇(u)⋅∇(v)", [Identity, Gradient], [1,1], Gradient, action_kernel; ADnewton = true)   
 
     ## generate problem description and assign nonlinear operator and data
-    Problem = PDEDescription("nonlinear Poisson problem")
-    add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
-    add_operator!(Problem, [1,1], beta == 0 ? LaplaceOperator(1,2,1) : nonlin_diffusion)
+    Problem = PDEDescription(beta == 0 ? "linear Poisson problem" : "nonlinear Poisson problem")
+    add_unknown!(Problem; unknown_name = "u", equation_name = beta == 0 ? "linear Poisson problem" : "nonlinear Poisson equation")
+    add_operator!(Problem, [1,1], beta == 0 ? LaplaceOperator() : nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs))
 

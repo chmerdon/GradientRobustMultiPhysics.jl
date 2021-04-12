@@ -67,8 +67,8 @@ function main(;order::Int = 1, testmode = false)
 
     ## evaluate the bilinear forms in the respective interpolations and subtract them from each other
     ## note that in these calls always the second argument of the bilinearform is fixed by the given FEVectorBlock
-    assemble!(error[1], HdivCurlInterpolation[1], BLF1)
-    assemble!(error[1], HcurlInterpolation[1], BLF2; factor = -1)
+    assemble!(error[1], BLF1, HdivCurlInterpolation[1]; fixed_arguments = [2])
+    assemble!(error[1], BLF2, HcurlInterpolation[1]; factor = -1, fixed_arguments = [2])
 
     ## do some norm that recognizes a nonzero in the vector
     error = sqrt(sum(error[1][:].^2, dims = 1)[1])

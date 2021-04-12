@@ -44,7 +44,7 @@ function exact_velocity!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty = 1e4, viscosity = 1)
+function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty = 1e4, viscosity = 1.0)
 
     ## set verbosity level
     set_verbosity(verbosity)
@@ -69,21 +69,23 @@ function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty
     add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = user_function_velocity)
 
     ## velocity update equation
-    add_operator!(Problem, [1,1], LaplaceOperator(viscosity,2,2; store = true))
-    add_operator!(Problem, [1,2], AbstractBilinearForm("(div(v),p)", Divergence, Identity, MultiplyScalarAction(-1,1); store = true))
+    add_operator!(Problem, [1,1], LaplaceOperator(viscosity; store = true))
+    add_operator!(Problem, [1,2], AbstractBilinearForm([Divergence, Identity]; name = "(div(v),p)", store = true, factor = -1))
     add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; auto_newton = true))
-    add_operator!(Problem, [1,1], AbstractBilinearForm("ϵ (div(u),div(v))", Divergence, Divergence, MultiplyScalarAction(div_penalty,1); store = true))
+    add_operator!(Problem, [1,1], AbstractBilinearForm([Divergence, Divergence]; name = "ϵ (div(u),div(v))", store = true, factor = div_penalty))
 
     ## pressure update equation
-    BLF_MAMA = AbstractBilinearForm("(p,q)", Identity, Identity, NoAction(); store = true)
-    add_operator!(Problem, [2,1], AbstractBilinearForm("(q,div(u))", Identity, Divergence, MultiplyScalarAction(div_penalty,1); store = true))
+    BLF_MAMA = AbstractBilinearForm([Identity, Identity]; name = "(p,q)")
+    add_operator!(Problem, [2,1], AbstractBilinearForm([Identity, Divergence]; name = "(q,div(u))", store = true, factor = div_penalty))
     add_operator!(Problem, [2,2], BLF_MAMA)
-    add_rhsdata!(Problem, 2, BLF2RHS(BLF_MAMA,2,1; nonlinear = true))
+    add_rhsdata!(Problem, 2, restrict_operator(BLF_MAMA; fixed_arguments = [1], fixed_arguments_ids = [2]))
+
+    @show Problem
 
     ## discretise and solve problem
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
     Solution = FEVector{Float64}(["u_h","p_h"],[FES[1],FES[2]])
-    solve!(Solution, Problem; subiterations = [[1],[2]], maxiterations = 20)
+    solve!(Solution, Problem; subiterations = [[1],[2]], maxiterations = 20, show_solver_config = true)
 
     ## calculate L2 error and L2 curl error
     L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, user_function_velocity, Identity)

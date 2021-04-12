@@ -141,11 +141,11 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     ## momentum equation
-    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus,2,2; store = true))
+    add_operator!(Problem, [1,1], LaplaceOperator(2*shear_modulus; store = true))
     if lambda != 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm("λ (div(u),div(v))",VeloDivergence,VeloDivergence,MultiplyScalarAction(lambda,1); store = true))
+        add_operator!(Problem, [1,1], AbstractBilinearForm([VeloDivergence,VeloDivergence]; name = "λ (div(u),div(v))", factor = lambda, store = true))
     end
-    add_operator!(Problem, [1,3], AbstractBilinearForm("(div(v),p)",Divergence,Identity,MultiplyScalarAction(-1.0, 1); store = true))
+    add_operator!(Problem, [1,3], AbstractBilinearForm([Divergence,Identity]; name = "(div(v),p)", factor = -1, store = true))
 
     function gravity_action()
         temp = zeros(Float64,2)
@@ -155,7 +155,7 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
         end
         gravity_action = Action(Float64, closure, [1,2]; name = "gravity action", dependencies = "XT", quadorder = user_gravity.quadorder)
     end    
-    add_operator!(Problem, [1,2], AbstractBilinearForm("ϱ(g ⋅ v)",VeloIdentity,Identity,gravity_action(); store = true))
+    add_operator!(Problem, [1,2], AbstractBilinearForm([VeloIdentity,Identity],gravity_action(); name = "ϱ(g ⋅ v)", store = true))
 
     ## continuity equation (by FV upwind on triangles)
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
@@ -163,8 +163,8 @@ function setup_and_solve(xgrid; reconstruct = true, c = 1, gamma = 1, M = 1, she
     ## equation of state (by best-approximation, P0 mass matrix is diagonal)
     eos_action_kernel = ActionKernel(equation_of_state!(c,gamma),[1,1]; dependencies = "", quadorder = 0)
     eos_action = Action(Float64, eos_action_kernel)
-    add_operator!(Problem, [3,2], AbstractBilinearForm("(p,eos(ϱ))",Identity,Identity,eos_action; apply_action_to = 2))
-    add_operator!(Problem, [3,3], AbstractBilinearForm("(p,q)",Identity,Identity,MultiplyScalarAction(-1,1); store = true))
+    add_operator!(Problem, [3,2], AbstractBilinearForm([Identity,Identity],eos_action; name = "(p,eos(ϱ))", apply_action_to = [2]))
+    add_operator!(Problem, [3,3], AbstractBilinearForm([Identity,Identity]; name = "(p,q)", factor = -1, store = true))
 
     ## generate FESpaces and solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]

@@ -184,18 +184,30 @@ $(TYPEDSIGNATURES)
 
 Adds FEMatrixBlock B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1)
+function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1, transpose::Bool = false)
     cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
     arow::Int = 0
     acol::Int = 0
-    for col = B.offsetY+1:B.last_indexY
-        acol = col - B.offsetY + A.offsetY
-        for r in nzrange(cscmat, col)
-            if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                arow = rows[r] - B.offsetX + A.offsetX
-               _addnz(A.entries,arow,acol,valsB[r],factor)
+    if transpose
+        for col = B.offsetY+1:B.last_indexY
+            acol = col - B.offsetY + A.offsetY
+            for r in nzrange(cscmat, col)
+                if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
+                    arow = rows[r] - B.offsetX + A.offsetX
+                _addnz(A.entries,acol,arow,valsB[r],factor)
+                end
+            end
+        end
+    else
+        for col = B.offsetY+1:B.last_indexY
+            acol = col - B.offsetY + A.offsetY
+            for r in nzrange(cscmat, col)
+                if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
+                    arow = rows[r] - B.offsetX + A.offsetX
+                _addnz(A.entries,arow,acol,valsB[r],factor)
+                end
             end
         end
     end
@@ -207,18 +219,29 @@ $(TYPEDSIGNATURES)
 
 Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1) where {Tv, Ti <: Integer}
+function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv, Ti} = B.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
     arow::Int = 0
     acol::Int = 0
-    for col = 1:size(B,2)
-        acol = col + A.offsetY
-        for r in nzrange(cscmat, col)
-            arow = rows[r] + A.offsetX
-            _addnz(A.entries,arow,acol,valsB[r],factor)
-            #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
+    if transpose
+        for col = 1:size(B,2)
+            acol = col + A.offsetY
+            for r in nzrange(cscmat, col)
+                arow = rows[r] + A.offsetX
+                _addnz(A.entries,acol,arow,valsB[r],factor)
+                #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
+            end
+        end
+    else
+        for col = 1:size(B,2)
+            acol = col + A.offsetY
+            for r in nzrange(cscmat, col)
+                arow = rows[r] + A.offsetX
+                _addnz(A.entries,arow,acol,valsB[r],factor)
+                #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
+            end
         end
     end
     return nothing

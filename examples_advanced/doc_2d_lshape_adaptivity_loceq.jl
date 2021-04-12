@@ -77,7 +77,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
     user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "∇(u)", dependencies = "X", quadorder = 4)
 
     ## setup Poisson problem
-    Problem = PoissonProblem(2; ncomponents = 1, diffusion = 1.0)
+    Problem = PoissonProblem()
     add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = user_function)
     add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
 

@@ -124,7 +124,7 @@ function test_disc_BLF(xgrid, discontinuity)
     # once again as a bilinear form where one component is fixed
     for c = 1 : 2
         b = zeros(Float64,FE.ndofs)
-        assemble!(b,FEFunction[1], TestForm; fixed_argument = c)
+        assemble!(b, TestForm, FEFunction[1]; fixed_arguments = [c])
         for j = 1 : FE.ndofs
             error[1+c] += b[j] * FEFunction[1][j]
         end
@@ -161,7 +161,7 @@ function test_disc_TLF(xgrid, discontinuity)
     error = zeros(Float64,4)
     for c = 1 : 3
         A = FEMatrix{Float64}("test",FE)
-        assemble!(A[1,1], FEFunction[1], TestForm; fixed_argument = c)
+        assemble!(A[1,1], TestForm, [FEFunction[1]]; fixed_arguments = [c])
         flush!(A[1,1].entries)
         error[c] = lrmatmul(FEFunction[1].entries, A[1,1].entries, FEFunction[1].entries; factor = 1)
         if discontinuity == Average

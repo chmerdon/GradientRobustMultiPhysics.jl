@@ -132,15 +132,28 @@ $(TYPEDSIGNATURES)
 
 Adds the given PDEOperator to the left-hand side of the PDEDescription at the specified position.
 """
-function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDEOperatorLHS; equation_name::String = "")
+function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDEOperator; equation_name::String = "")
     push!(PDE.LHSOperators[position[1],position[2]],O)
     if equation_name != ""
         PDE.equation_names[position[1]] = equation_name
     end
-    if LHSoperator_also_modifies_RHS(O)
-        push!(PDE.RHSOperators[position[1]],O)
+    @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
+end
+"""
+$(TYPEDSIGNATURES)
+
+Adds the given PDEOperator to the left-hand side of the PDEDescription at the specified position. Optionally, the name of the equation can be changed.
+"""
+function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator; equation_name::String = "")
+    push!(PDE.LHSOperators[position[1],position[2]],O)
+    if equation_name != ""
+        PDE.equation_names[position[1]] = equation_name
     end
     @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
+    if typeof(O).parameters[2] <: APT_NonlinearForm
+        push!(PDE.RHSOperators[position[1]],O)
+        @logmsg DeepInfo "Added operator $(O.name) also to RHS block $(position[1]) of PDEDescription $(PDE.name)"
+    end
 end
 
 """

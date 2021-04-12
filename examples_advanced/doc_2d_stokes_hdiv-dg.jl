@@ -110,9 +110,9 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         result .*= -viscosity
         return nothing
     end
-    HdivLaplace2 = AbstractBilinearForm("nu/h_F [u] [v]", Jump(Identity), Jump(Identity), Action(Float64, hdiv_laplace2_kernel, [2,2]; dependencies = "I", quadorder = 0); AT = ON_FACES)
-    HdivLaplace3 = AbstractBilinearForm("-nu [u] {grad(v)*n}", Jump(Identity), Average(Gradient), Action(Float64, hdiv_laplace3_kernel, [4,2]; dependencies = "I", quadorder = 0); AT = ON_FACES)
-    HdivLaplace4 = AbstractBilinearForm("-nu {grad(u)*n} [v] ", Average(Gradient), Jump(Identity), Action(Float64, hdiv_laplace4_kernel, [2,4]; dependencies = "I", quadorder = 0); AT = ON_FACES)
+    HdivLaplace2 = AbstractBilinearForm([Jump(Identity), Jump(Identity)], Action(Float64, hdiv_laplace2_kernel, [2,2]; dependencies = "I", quadorder = 0); name = "nu/h_F [u] [v]", AT = ON_FACES)
+    HdivLaplace3 = AbstractBilinearForm([Jump(Identity), Average(Gradient)], Action(Float64, hdiv_laplace3_kernel, [4,2]; dependencies = "I", quadorder = 0); name = "-nu [u] {grad(v)*n}", AT = ON_FACES)
+    HdivLaplace4 = AbstractBilinearForm([Average(Gradient), Jump(Identity)], Action(Float64, hdiv_laplace4_kernel, [2,4]; dependencies = "I", quadorder = 0); name = "-nu {grad(u)*n} [v] ", AT = ON_FACES)
 
     ## additional terms for tangential part at boundary
     ## note: we use average operators here to force evaluation of all basis functions and not only of the face basis functions
@@ -131,8 +131,8 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         result[1] *= -viscosity
         return nothing
     end
-    HdivBoundary1 = RhsOperator("- nu lambda/h_F u_D v ",ON_BFACES, Average(Identity), Action(Float64, hdiv_boundary_kernel, [1,2]; dependencies = "XTI", quadorder = user_function_velocity.quadorder))
-    HdivBoundary2 = RhsOperator("- nu u_D grad(v)*n ",ON_BFACES, Average(Gradient), Action(Float64, hdiv_boundary_kernel2, [1,4]; dependencies = "XTI", quadorder = user_function_velocity.quadorder))
+    HdivBoundary1 = RhsOperator(Average(Identity), Action(Float64, hdiv_boundary_kernel, [1,2]; dependencies = "XTI", quadorder = user_function_velocity.quadorder); name = "- nu lambda/h_F u_D v", AT = ON_BFACES)
+    HdivBoundary2 = RhsOperator(Average(Gradient), Action(Float64, hdiv_boundary_kernel2, [1,4]; dependencies = "XTI", quadorder = user_function_velocity.quadorder); name = "- nu u_D grad(v)*n", AT = ON_BFACES)
 
     ## assign DG operators to problem descriptions
     add_operator!(Problem, [1,1], HdivLaplace2)       
@@ -176,9 +176,9 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     println("\n   NDOF  | L2ERROR(v_h) | H1ERROR(v_h) | L2ERROR(p_h)")
     for j=1:nlevels
         @printf("  %6d |",NDofs[j]);
-        @printf(" %.5e |",L2VelocityError[j])
-        @printf(" %.5e |",H1VelocityError[j])
-        @printf(" %.5e\n",L2PressureError[j])
+        @printf(" %.6e |",L2VelocityError[j])
+        @printf(" %.6e |",H1VelocityError[j])
+        @printf(" %.6e\n",L2PressureError[j])
     end
 end
 end

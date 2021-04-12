@@ -23,7 +23,7 @@ function ItemIntegrator(
 Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
 function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action = NoAction(); regions = [0], name = "ItemIntegrator")
-    return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,[],operators,action,regions)
+    return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,[],operators,action,1:length(operators),regions)
 end
 
 """

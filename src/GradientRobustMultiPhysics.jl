@@ -242,9 +242,7 @@ export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
 
 export RhsOperator
-export BLF2RHS
-export TLF2RHS
-export MLF2RHS
+export restrict_operator
 
 export LHSoperator_also_modifies_RHS
 

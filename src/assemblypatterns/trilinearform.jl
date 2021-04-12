@@ -32,7 +32,7 @@ function TrilinearForm(
     regions::Array{Int,1} = [0])
     @assert length(operators) == 3
     @assert length(FES) == 3
-    return  AssemblyPattern{APT_TrilinearForm, T, AT}(name,FES,operators,action,regions)
+    return  AssemblyPattern{APT_TrilinearForm, T, AT}(name,FES,operators,action,[1,2],regions)
 end
 
 
@@ -41,23 +41,23 @@ end
 assemble!(
     assemble!(
     A::AbstractArray{T,2},                  # target matrix
-    FE1::FEVectorBlock,                     # coefficients for fixed argument
-    AP::AssemblyPattern{APT,T,AT};          # TrilinearForm pattern
-    fixed_argument::Int = 1,                # position of fixed argument
+    AP::AssemblyPattern{APT,T,AT},          # TrilinearForm pattern
+    fixedFE::Array{<:FEVectorBlock,1};      # coefficients for fixed argument
+    fixed_argument = [1],                   # position of fixed argument (as an array)
     transposed_assembly::Bool = false,      # transpose result?
     factor = 1)                             # factor that is multiplied
     where {APT <: APT_TrilinearForm, T, AT}
 ````
 
 Assembly of a TrilinearForm AP into given two-dimensional AbstractArray (e.g. a FEMatrixBlock).
-Here, one argument (specified by fixed_argument) is fixed by the given coefficients in FE1. Note, that the action is
+Here, one argument (specified by fixed_argument) is fixed by the given coefficients in fixedFE[1]. Note, that the action is
 (currently) always applied to the first and second argument.
 """
 function assemble!(
     A::AbstractArray{T,2},
-    FE1::FEVectorBlock,
-    AP::AssemblyPattern{APT,T,AT};
-    fixed_argument::Int = 1,
+    AP::AssemblyPattern{APT,T,AT},
+    fixedFE::Array{<:FEVectorBlock,1};
+    fixed_arguments = [1],
     transposed_assembly::Bool = false,
     skip_preps::Bool = false,
     factor = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
@@ -74,6 +74,7 @@ function assemble!(
 
     # prepare action
     action = AP.action
+    @assert AP.apply_action_to == [1,2] "Currently it is only allowed to apply to the action to arguments [1,2] (consider changing the order of the arguments and work with fixed_argument instead)"
     if typeof(action) <: NoAction
         @warn "TrilinearForm does not work with no action."
     end
@@ -82,10 +83,12 @@ function assemble!(
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     if AP.regions != [0]
-        @logmsg MoreInfo "Assembling $(AP.name) for given $(FE1.name) into vector ($AT in regions = $(AP.regions))"
+        @logmsg MoreInfo "Assembling $(AP.name) for given $(fixedFE[1].name) into vector ($AT in regions = $(AP.regions))"
     else
-        @logmsg MoreInfo "Assembling $(AP.name) for given $(FE1.name) into vector ($AT)"
+        @logmsg MoreInfo "Assembling $(AP.name) for given $(fixedFE[1].name) into vector ($AT)"
     end
+    @assert length(fixed_arguments) == 1 "Matrix assembly for Trilinearform needs exactly one fixed argument"
+    fixed_argument = fixed_arguments[1]
     @debug AP
 
     # loop over items
@@ -139,7 +142,7 @@ function assemble!(
                 update!(action, basisevaler[2], dofitem[2], item, regions[r])
 
                 # update dofs of free arguments
-                get_coeffs!(coeffs, FE1, AM, fixed_argument, di[fixed_argument])
+                get_coeffs!(coeffs, fixedFE[1], AM, fixed_argument, di[fixed_argument])
                 get_dofs!(dofs2, AM, nonfixed_ids[1], di[nonfixed_ids[1]])
                 get_dofs!(dofs3, AM, nonfixed_ids[2], di[nonfixed_ids[2]])
 

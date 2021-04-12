@@ -29,22 +29,22 @@ Order   = [:type, :function]
 
 ## PDE Operators
 
-The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE. The following table lists all available operators and physics-motivated constructors for them. Click on them to find out more details.
+The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE. 
+The following table lists all available operators and physics-motivated constructors for them. Click on them or scroll down to find out more details.
 
 
-| PDEOperator subtype                 | Special constructors                     | Mathematically                                                                                                 |
+| Main constructors                   | Special constructors                     | Mathematically                                                                                                 |
 | :---------------------------------- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
 | [`AbstractBilinearForm`](@ref)      |                                          | ``(\mathrm{A}(\mathrm{FO}_1(u)),\mathrm{FO}_2(v))`` or ``(\mathrm{FO}_1(u),\mathrm{A}(\mathrm{FO}_2(v)))``     |
 |                                     | [`LaplaceOperator`](@ref)                | ``(\kappa \nabla u,\nabla v)``                                                                                 |
 |                                     | [`ReactionOperator`](@ref)               | ``(\alpha u, v)``                                                                                              |
 |                                     | [`ConvectionOperator`](@ref)             | ``(\beta \cdot \nabla u, v)`` (beta is function)                                                               |
-|                                     | [`HookStiffnessOperator2D`](@ref)        | ``(\mathbb{C} \epsilon(u),\epsilon(v))``                                                                       |
+|                                     | [`HookStiffnessOperator2D`](@ref)        | ``(\mathbb{C} \epsilon(u),\epsilon(v))`` (also 1D or 3D variants exist)                                        |
 | [`AbstractTrilinearForm`](@ref)     |                                          | ``(\mathrm{A}(\mathrm{FO}_1(a),\mathrm{FO}_2(u)),\mathrm{FO}_3(v))``                                           |
-|                                     | [`ConvectionOperator`](@ref)             | ``(a \cdot \nabla u, v)`` (a is registered unknown)                                                            |
-|                                     | [`ConvectionRotationFormOperator`](@ref) | ``(a \times curl(u),v)`` (a is registered unknown, only 2D for now)                                                 |
-| [`AbstractMultilinearForm`](@ref)   |                                          |                                                                                                                |
+|                                     | [`ConvectionOperator`](@ref)             | ``((a \cdot \nabla) u, v)`` (a is registered unknown)                                                            |
+|                                     | [`ConvectionRotationFormOperator`](@ref) | ``((a \times \nabla) u,v)`` (a is registered unknown, only 2D for now)                                            |
 | [`GenerateNonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
-| [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))``                                                                                   |
+| [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))``                                                                               |
 
 Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Actions](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Actions](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
 
@@ -54,7 +54,6 @@ Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``
 ```@docs
 AbstractBilinearForm
 AbstractTrilinearForm
-AbstractMultilinearForm
 LaplaceOperator
 ReactionOperator
 ConvectionOperator
@@ -62,9 +61,6 @@ ConvectionRotationFormOperator
 HookStiffnessOperator1D
 HookStiffnessOperator2D
 HookStiffnessOperator3D
-BLF2RHS
-TLF2RHS
-MLF2RHS
 RhsOperator
 ```
 
@@ -74,6 +70,17 @@ Nonlinear Operators can be setup in two ways. The manual way requires the user t
 
 ```@docs
 GenerateNonlinearForm
+```
+
+
+## Other Operators
+
+There are some more operators that do not fit into the structures above. Also, in the future, the goal is to open up the operator level for exterior code to setup operators that are assembled elsewhere.
+
+```@docs
+FVConvectionDiffusionOperator
+DiagonalOperator
+CopyOperator
 ```
 
 

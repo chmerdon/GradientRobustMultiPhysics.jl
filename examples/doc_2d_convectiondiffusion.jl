@@ -64,8 +64,8 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
     ## create PDE description
     Problem = PDEDescription("convection-diffusion problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "convection-diffusion equation")
-    add_operator!(Problem, [1,1], LaplaceOperator(diffusion,2,1))
-    add_operator!(Problem, [1,1], ConvectionOperator(Float64,user_function_convection,1))
+    add_operator!(Problem, [1,1], LaplaceOperator(diffusion))
+    add_operator!(Problem, [1,1], ConvectionOperator(user_function_convection,1))
 
     ## add right-hand side data to equation 1 (there is only one in this example)
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], user_function_rhs))
@@ -90,7 +90,7 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
         ## ... which generates an action
         stab_action = Action(Float64,stabilisation_kernel, [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
         ## ... which is given to a bilinear form constructor
-        JumpStabilisation = AbstractBilinearForm("s |F|^2 [∇(u)]⋅[∇(v)]", Jump(Gradient), Jump(Gradient), stab_action; AT = ON_IFACES)
+        JumpStabilisation = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, name = "s |F|^2 [∇(u)]⋅[∇(v)]")
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 

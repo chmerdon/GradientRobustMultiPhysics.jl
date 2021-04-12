@@ -31,7 +31,7 @@ function NonlinearForm(
     name = "NLF",
     regions::Array{Int,1} = [0])
 
-    return AssemblyPattern{APT_NonlinearForm, T, AT}(name,FES,operators,action,regions)
+    return AssemblyPattern{APT_NonlinearForm, T, AT}(name,FES,operators,action,1:(length(operators)-1),regions)
 end
 
 
@@ -160,6 +160,7 @@ function assemble!(
                 end
 
                 # apply nonlinear action
+
                 apply_action!(action_result, action_input[i], action_input2, action, i)  
                 action_result .*= weights[i]
 

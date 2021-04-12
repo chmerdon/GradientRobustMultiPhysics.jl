@@ -22,8 +22,8 @@ abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)
 # might be included if they implement the following interfaces
 #
 #   (1) to specify what is assembled into the corressponding MatrixBlock:
-#       assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractPDEOperatorLHS)
-#       assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractPDEOperatorRHS)
+#       assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractPDEOperator)
+#       assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractPDEOperator)
 #
 #   (2) to allow SolverConfig to check if operator is nonlinear, timedependent:
 #       Bool, Bool = check_PDEoperator(O::AbstractPDEOperator)
@@ -32,12 +32,19 @@ abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)
 
 abstract type AbstractPDEOperator end
 abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
-abstract type AbstractPDEOperatorRHS  <: AbstractPDEOperator end # can be used in RHS (and LHS when one component is fixed)
-abstract type AbstractPDEOperatorLHS  <: AbstractPDEOperator end # can be used in RHS (and LHS when one component is fixed)
 
+has_copy_block(::AbstractPDEOperator) = false
+has_storage(::AbstractPDEOperator) = false
+
+struct DiagonalOperator <: AbstractPDEOperator
+    name::String
+    value::Real
+    onlyz::Bool
+    regions::Array{Int,1}
+end
 
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 puts _value_ on the diagonal entries of the cell dofs within given _regions_
 
@@ -45,111 +52,382 @@ if _onlyz_ == true only values that are zero are changed
 
 can only be applied in PDE LHS
 """
-struct DiagonalOperator <: AbstractPDEOperatorLHS
-    name::String
-    value::Real
-    onlyz::Bool
-    regions::Array{Int,1}
-end
 function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [0])
     return DiagonalOperator("Diag($value)",value, onlynz, regions)
 end
 
 
+struct CopyOperator <: AbstractPDEOperator
+    name::String
+    copy_from::Int
+    factor::Real
+end
+
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
 
 copies entries from TargetVector to rhs block
 
 can only be applied in PDE RHS
 """
-struct CopyOperator <: AbstractPDEOperatorRHS
-    name::String
-    copy_from::Int
-    factor::Real
-end
 function CopyOperator(copy_from, factor)
     return CopyOperator("CopyOperator",copy_from, factor)
 end
 
-mutable struct AbstractBilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
+
+
+mutable struct FVConvectionDiffusionOperator <: AbstractPDEOperator
     name::String
-    operator1::Type{<:AbstractFunctionOperator}
-    operator2::Type{<:AbstractFunctionOperator}
-    action::AbstractAction
-    apply_action_to::Int
-    regions::Array{Int,1}
-    transposed_assembly::Bool
-    store_operator::Bool                    # should the matrix repsentation of the operator be stored?
-    storage::AbstractArray{<:Real,2}  # matrix can be stored here to allow for fast matmul operations in iterative settings
+    diffusion::Float64               # diffusion coefficient
+    beta_from::Int                   # component that determines
+    fluxes::Array{Float64,2}         # saves normalfluxes of beta here
 end
+
 
 """
-````
-function AbstractBilinearForm(name,
-    operator1::Type{<:AbstractFunctionOperator},
-    operator2::Type{<:AbstractFunctionOperator},
-    action::AbstractAction;
-    apply_action_to = 1,
-    regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = false)
-````
+$(TYPEDSIGNATURES)
 
-abstract bilinearform operator that assembles
-- b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
-- b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
+ finite-volume convection diffusion operator (for cell-wise P0 rho)
 
-can only be applied in PDE LHS
+ - div(diffusion * grad(rho) + beta rho)
+
+ For diffusion = 0, the upwind divergence: div_upw(beta*rho) is generated
+ For diffusion > 0, TODO
+                   
 """
-function AbstractBilinearForm(name,
-    operator1::Type{<:AbstractFunctionOperator},
-    operator2::Type{<:AbstractFunctionOperator},
-    action::AbstractAction;
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
-    apply_action_to = 1,
-    regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = false,
-    store::Bool = false)
-    return AbstractBilinearForm{AT}(name,operator1, operator2, action, apply_action_to, regions,transposed_assembly,store,zeros(Float64,0,0))
+function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
+    @assert beta_from > 0
+    fluxes = zeros(Float64,0,1)
+    return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
 end
-function AbstractBilinearForm(operator1,operator2; apply_action_to = 1, regions::Array{Int,1} = [0])
-    return AbstractBilinearForm(apply_action_to == 1 ? "A($operator1(u))⋅$operator2(v)" : "$operator1(u)⋅A($operator2(v))",operator1, operator2, NoAction(); apply_action_to = apply_action_to, regions = regions)
+
+
+################ ASSEMBLY SPECIFICATIONS ################
+
+
+
+# check if operator causes nonlinearity or time-dependence
+function check_PDEoperator(O::AbstractPDEOperator, involved_equations::Array{Int})
+    return false, false
 end
+function check_PDEoperator(O::FVConvectionDiffusionOperator, involved_equations::Array{Int})
+    return O.beta_from in involved_equations, false
+end
+function check_PDEoperator(O::CopyOperator, involved_equations::Array{Int})
+    return true, true
+end
+
+# check if operator also depends on arg (additional to the argument relative to position in PDEDescription)
+function check_dependency(O::AbstractPDEOperator, arg::Int)
+    return false
+end
+
+function check_dependency(O::FVConvectionDiffusionOperator, arg::Int)
+    return O.beta_from == arg
+end
+
+# check if operator on the LHS also needs to modify the RHS
+function LHSoperator_also_modifies_RHS(O::AbstractPDEOperator)
+    return false
+end
+
+
+
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0)
+    @debug "Assembling DiagonalOperator $(O.name)"
+    FE1 = A.FESX
+    FE2 = A.FESY
+    @assert FE1 == FE2
+    xCellDofs = FE1[CellDofs]
+    xCellRegions = FE1.xgrid[CellRegions]
+    ncells = num_sources(xCellDofs)
+    dof::Int = 0
+    for item = 1 : ncells
+        for r = 1 : length(O.regions) 
+            # check if item region is in regions
+            if xCellRegions[item] == O.regions[r] || O.regions[r] == 0
+                for k = 1 : num_targets(xCellDofs,item)
+                    dof = xCellDofs[k,item]
+                    if O.onlyz == true
+                        if A[dof,dof] == 0
+                            A[dof,dof] = O.value
+                        end
+                    else
+                        A[dof,dof] = O.value
+                    end    
+                end
+            end
+        end
+    end
+end
+
+
+
+#= (1) calculate normalfluxes from component at _beta_from_
+(2) compute FV flux on each face and put coefficients on neighbouring cells in matrix
+
+    if kappa == 0:
+          div_upw(beta*rho)|_T = sum_{F face of T} normalflux(F) * rho(F)
+
+          where rho(F) is the rho in upwind direction 
+
+    and put it into P0xP0 matrix block like this:
+
+          Loop over cell, face of cell
+
+              other_cell = other face neighbour cell
+              if flux := normalflux(F_j) * CellFaceSigns[face,cell] > 0
+                  A(cell,cell) += flux
+                  A(other_cell,cell) -= flux
+              else
+                  A(other_cell,other_cell) -= flux
+                  A(cell,other_cell) += flux =#
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0)
+    @logmsg MoreInfo "Assembling FVConvectionOperator $(O.name) into matrix"
+    T = Float64
+    FE1 = A.FESX
+    FE2 = A.FESY
+    @assert FE1 == FE2
+    xFaceNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceNodes]
+    xFaceNormals::Array{T,2} = FE1.xgrid[FaceNormals]
+    xFaceCells::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceCells]
+    xFaceVolumes::Array{T,1} = FE1.xgrid[FaceVolumes]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaces]
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaceSigns]
+    nfaces::Int = num_sources(xFaceNodes)
+    ncells::Int = num_sources(xCellFaceSigns)
+    nnodes::Int = num_sources(FE1.xgrid[Coordinates])
+    
+    # ensure that flux field is long enough
+    if length(O.fluxes) < nfaces
+        O.fluxes = zeros(Float64,1,nfaces)
+    end
+    # compute normal fluxes of component beta
+    c::Int = O.beta_from
+    fill!(O.fluxes,0)
+    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+        @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux]; name = "u ⋅ n")
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = false)
+    else
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = true)
+    end
+
+    fluxes::Array{T,2} = O.fluxes
+    nfaces4cell::Int = 0
+    face::Int = 0
+    flux::T = 0.0
+    other_cell::Int = 0
+    for cell = 1 : ncells
+        nfaces4cell = num_targets(xCellFaces,cell)
+        for cf = 1 : nfaces4cell
+            face = xCellFaces[cf,cell]
+            other_cell = xFaceCells[1,face]
+            if other_cell == cell
+                other_cell = xFaceCells[2,face]
+            end
+            flux = fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
+            if (other_cell > 0) 
+                flux *= 1 // 2 # because it will be accumulated on two cells
+            end       
+            if flux > 0 # flow from cell to other_cell
+                _addnz(A,cell,cell,flux,1)
+                if other_cell > 0
+                    _addnz(A,other_cell,cell,-flux,1)
+                    _addnz(A,other_cell,other_cell,1e-16,1) # add zero to keep pattern for LU
+                    _addnz(A,cell,other_cell,1e-16,1) # add zero to keep pattern for LU
+                    # otherwise flow goes out of domain
+                end    
+            else # flow from other_cell into cell
+                _addnz(A,cell,cell,1e-16,1) # add zero to keep pattern for LU
+                if other_cell > 0 # flow comes from neighbour cell
+                    _addnz(A,other_cell,other_cell,-flux,1)
+                    _addnz(A,cell,other_cell,flux,1)
+                    _addnz(A,other_cell,cell,1e-16,1) # add zero to keep pattern for LU
+                else # flow comes from outside domain
+                   #  A[cell,cell] += flux
+                end 
+            end
+        end
+    end
+end
+
+
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0) 
+    for j = 1 : length(b)
+        b[j] = CurrentSolution[O.copy_from][j] * O.factor
+    end
+end
+
 
 """
 $(TYPEDEF)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
+common structures for all finite element operators that are assembled with GradientRobustMultiPhysics; better look at the AssemblyPatternType and the constructors
+    
 """
-function LaplaceOperator(diffusion = 1, xdim::Int = 2, ncomponents::Int = 1; AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
-    if diffusion == 1
-        return AbstractBilinearForm(ncomponents == 1 ? "∇(u)⋅∇(v)" : "∇(u):∇(v)",gradient_operator, gradient_operator, NoAction(); AT = AT, regions = regions, store = store)
-    else
-        return AbstractBilinearForm(ncomponents == 1 ? "∇(u)⋅∇(v)" : "∇(u):∇(v)",gradient_operator, gradient_operator, MultiplyScalarAction(diffusion, ncomponents*xdim); AT = AT, regions = regions, store = store)
+mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} <: AbstractPDEOperator
+    name::String
+    operators4arguments::Array{DataType,1}
+    action::AbstractAction
+    action_rhs::AbstractAction
+    apply_action_to::Array{Int,1}
+    fixed_arguments::Array{Int,1}
+    fixed_arguments_ids::Array{Int,1}
+    factor::T
+    regions::Array{Int,1}
+    transposed_assembly::Bool
+    transposed_copy::Bool
+    store_operator::Bool
+    store_reassembly_trigger::Type{<:AbstractAssemblyTrigger}
+    storage::Union{<:AbstractVector,<:AbstractMatrix}
+    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],1,[0],false,false,false)
+    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],factor,[0],false,false,false,AssemblyNever)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,[0],false,false,false,AssemblyNever)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,false,AssemblyNever)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,AssemblyInitial)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,store_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,store_trigger)
+end 
+
+function Base.show(io::IO, O::PDEOperator)
+    println(io,"\n\toperator name = $(O.name)")
+	println(io,"\toperator type = $(typeof(O).parameters[2]) (T = $(typeof(O).parameters[1]))")
+    println(io,"\toperator span = $(typeof(O).parameters[3]) (regions = $(O.regions))")
+    println(io,"\toperator oprs = $(O.operators4arguments)")
+    if !(typeof(O.action) <: NoAction)
+        println(io,"\toperator actn = $(O.action.name) (apply_to = $(O.apply_action_to) size = $(O.action.argsizes))")
+    end
+    println(io,"\ttranspose A = $(O.transposed_assembly)")
+    println(io,"\ttranspose C = $(O.transposed_copy)")
+    println(io,"\tfixed ar/id = $(O.fixed_arguments) / $(O.fixed_arguments_ids)")
+    
+end
+
+has_copy_block(O::PDEOperator) = O.transposed_copy
+has_storage(O::PDEOperator) = O.store_operator
+function check_PDEoperator(O::PDEOperator, involved_equations::Array{Int})
+    if typeof(O.action) <: NoAction
+        return length(O.fixed_arguments_ids) > 0, false
+    else 
+        return length(O.fixed_arguments_ids) > 0, is_timedependent(O.action.kernel)
     end
 end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (C grad(u), grad(v)) where C is the 1D stiffness tensor
+restricts a PDEOperator by fixing arguments with the arguments of the full PDEDescription that match the specified argument ids.
+"""
+function restrict_operator(O::PDEOperator; fixed_arguments = [], fixed_arguments_ids = [])
+    Or = deepcopy(O)
+    Or.store_operator = false
+    APT = typeof(O).parameters[2]
+    if APT <: APT_BilinearForm
+        Or.fixed_arguments = fixed_arguments
+        Or.fixed_arguments_ids = fixed_arguments_ids
+    else
+        @error "not possible"
+    end
+    return Or
+end
+
+# check if operator also depends on arg (additional to the argument relative to position in PDEDescription)
+function check_dependency(O::PDEOperator, arg::Int)
+    return arg in O.fixed_arguments_ids
+end
+
+mutable struct ExteriorPDEOperator{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} <: AbstractPDEOperator
+    name::String
+    factor::T
+    storage::AbstractMatrix
+    init_assemble::Function
+    reassembly_trigger::Type{<:AbstractAssemblyTrigger}
+    reassemble::Function
+end 
+
+
+
+"""
+$(TYPEDSIGNATURES)
+
+constructor for a bilinearform that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
+"""
+function LaplaceOperator(diffusion = 1.0; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
+    if name == "auto"
+        name = "∇(u):∇(v)"
+        if typeof(diffusion) <: Real
+            if diffusion != 1
+                name = "$diffusion " * name
+            end
+        end
+    end
+    if typeof(diffusion) <: Real
+        O = PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[gradient_operator, gradient_operator], NoAction(), [1], diffusion, regions, store, AssemblyInitial)
+        return O
+    else
+        @error "No standard Laplace operator definition for this diffusion type available, please define your own action and PDEOperator with it."
+    end
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+constructor for a bilinearform that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
+    
+"""
+function ReactionOperator(coefficient = 1.0; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, identity_operator = Identity, regions::Array{Int,1} = [0], store::Bool = false)
+    if name == "auto"
+        name = "u ⋅ v"
+        if typeof(coefficient) <: Float64
+            if coefficient != 1.0
+                name = "$coefficient " * name
+            end
+        end
+    end
+    if typeof(coefficient) <: Float64
+        return PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[identity_operator,identity_operator], NoAction(), [1], coefficient, regions, store, AssemblyInitial)
+    else
+        @error "No standard reaction operator definition for this coefficient type available, please define your own action and PDEOperator with it."
+    end
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+constructor for a bilinearform that describes a(u,v) = (A(operator(u)), v) and assembles a second transposed block at the block of the transposed PDE coordinates
+"""
+function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = NoAction(), regions::Array{Int,1} = [0], store::Bool = false)
+    if name == "auto"
+        name = "$operator(v) ⋅ q"
+    end
+    O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[operator, Identity], action, [1], -1, regions, store, AssemblyInitial)
+    O.transposed_copy = true
+    return O
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+constructor for a bilinearform that describes a(u,v) = (C grad(u), grad(v)) where C is the 1D stiffness tensor
 C grad(u) = mu grad(u)
     
 """
-function HookStiffnessOperator1D(mu; regions::Array{Int,1} = [0], gradient_operator = TangentialGradient)
+function HookStiffnessOperator1D(mu; name = "C∇u⋅∇v", regions::Array{Int,1} = [0], gradient_operator = TangentialGradient, store::Bool = false)
     function tensor_apply_1d(result, input)
         # just Hook law like a spring where mu is the elasticity modulus
         result[1] = mu*input[1]
     end   
     action_kernel = ActionKernel(tensor_apply_1d, [1,1]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return AbstractBilinearForm("C∇u⋅∇v",gradient_operator, gradient_operator, action; regions = regions)
+    return PDEOperator{Float64, APT_BilinearForm, ON_CELLS}(name,[gradient_operator, gradient_operator], action, [1], 1, regions, store, AssemblyInitial)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
+constructor for a bilinearform that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
 for isotropic media in Voigt notation, i.e.
 C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
     
@@ -161,7 +439,13 @@ C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
     where c33 = shear_modulus, c12 = lambda and c11 = 2*c33 + c12
     
 """
-function HookStiffnessOperator2D(mu, lambda; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
+function HookStiffnessOperator2D(mu, lambda; 
+    name = "Cϵ(u):ϵ(v)", 
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    regions::Array{Int,1} = [0], 
+    gradient_operator = SymmetricGradient, 
+    store::Bool = false)
+
     function tensor_apply_2d(result, input)
         result[1] = (lambda + 2*mu)*input[1] + lambda*input[2]
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
@@ -169,13 +453,13 @@ function HookStiffnessOperator2D(mu, lambda; regions::Array{Int,1} = [0], gradie
     end   
     action_kernel = ActionKernel(tensor_apply_2d, [3,3]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return AbstractBilinearForm("Cϵ(u):ϵ(v)",gradient_operator, gradient_operator, action; regions = regions)
+    return PDEOperator{Float64, APT_BilinearForm, AT}(name,[gradient_operator, gradient_operator], action, [1], 1, regions, store, AssemblyInitial)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
+constructor for a bilinearform that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
 for isotropic media in Voigt notation, i.e. C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
 
     In Voigt notation C is a 6 x 6 matrix
@@ -189,7 +473,13 @@ for isotropic media in Voigt notation, i.e. C eps(u) = 2 mu eps(u) + lambda tr(e
     where c44 = shear_modulus, c12 = lambda and c11 = 2*c44 + c12
     
 """
-function HookStiffnessOperator3D(mu, lambda; regions::Array{Int,1} = [0], gradient_operator = SymmetricGradient)
+function HookStiffnessOperator3D(mu, lambda;
+    name = "Cϵ(u):ϵ(v)", 
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    regions::Array{Int,1} = [0],
+    gradient_operator = SymmetricGradient,
+    store::Bool = false)
+
     function tensor_apply_3d(result, input)
         result[1] = (lambda + 2*mu)*input[1] + lambda*(input[2] + input[3])
         result[2] = (lambda + 2*mu)*input[2] + lambda*(input[1] + input[3])
@@ -200,142 +490,224 @@ function HookStiffnessOperator3D(mu, lambda; regions::Array{Int,1} = [0], gradie
     end   
     action_kernel = ActionKernel(tensor_apply_3d, [6,6]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return AbstractBilinearForm("Cϵ(u):ϵ(v)", gradient_operator, gradient_operator, action; regions = regions)
+    return PDEOperator{Float64, APT_BilinearForm, AT}(name,[gradient_operator, gradient_operator], action, [1], 1, regions, store, AssemblyInitial)
+end
+
+
+
+
+"""
+````
+function AbstractBilinearForm(
+    operators::Array{AbstractFunctionOperator,1},
+    action::AbstractAction;
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    apply_action_to = 1,
+    regions::Array{Int,1} = [0],
+    transposed_assembly::Bool = false,
+    store::Bool = false)
+````
+
+abstract bilinearform constructor that assembles
+- b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
+- b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
+
+"""
+function AbstractBilinearForm(
+    operators::Array{DataType,1},
+    action::AbstractAction = NoAction();
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    apply_action_to = [1],
+    factor = 1,
+    regions::Array{Int,1} = [0],
+    transposed_assembly::Bool = false,
+    store::Bool = false)
+
+    # check formalities
+    @assert length(operators) == 2 "BilinearForm needs exactly 2 operators!"
+    @assert apply_action_to in [[1],[2]] "Action must be applied to [1] or [2]"
+
+    # construct PDEoperator
+    if name == "auto"
+        apply_action_to == 1 ? "A($operator1(u)):$operator2(v)" : "$operator1(u):A($operator2(v))"
+    end
+    O = PDEOperator{Float64, APT_BilinearForm, AT}(name,operators, action, apply_action_to, factor, regions, store, AssemblyInitial)
+    O.transposed_assembly = transposed_assembly
+    return O
 end
 
 
 """
-$(TYPEDSIGNATURES)
+````
+function AbstractTrilinearForm(
+    operators::Array{AbstractFunctionOperator,1},
+    a_from::Int,
+    a_to::Int,
+    action::AbstractAction;
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    regions::Array{Int,1} = [0],
+    transposed_assembly::Bool = false)
+````
 
-constructor for AbstractBilinearForm that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
-    
+abstract trilinearform constructor that assembles
+- c(a,u,v) = int_regions action(operator1(a),operator2(u)) * operator3(v)
+
+The argument a can be moved to the other positions with a_to and gets it data from unknown a_from of the full PDEdescription.
 """
-function ReactionOperator(action::AbstractAction = NoAction(); name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, apply_action_to = 1, identity_operator = Identity, regions::Array{Int,1} = [0])
+function AbstractTrilinearForm(
+    operators::Array{DataType,1},
+    a_from::Int,
+    a_to::Int,
+    action::AbstractAction;
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    regions::Array{Int,1} = [0],
+    transposed_assembly::Bool = true)
+
     if name == "auto"
-        if typeof(action) <: NoAction
-            name = "u ⋅ v"
-        else
-            name = apply_action_to == 1 ? "A(u) ⋅ v" : "u ⋅ A(v)"
+        if a_to == 1
+            name = "A($(operators[1])(a),$(operators[2])(u)) ⋅ $(operators[3])(v)"
+        elseif a_to == 2
+            name = "A($(operators[1])(u),$(operators[2])(a)) ⋅ $(operators[3])(v)"
+        elseif a_to == 3
+            name = "A($(operators[1])(u),$(operators[2])(v)) ⋅ $(operators[3])(a)"
         end
     end
-    return AbstractBilinearForm(name,identity_operator, identity_operator, action; AT = AT, apply_action_to = apply_action_to, regions = regions)
+        
+    O = PDEOperator{Float64, APT_TrilinearForm, AT}(name,operators, action, [1,2], factor, regions)
+    O.fixed_arguments = [a_to]
+    O.fixed_arguments_ids = [a_from]
+    O.transposed_assembly = transposed_assembly
+    return O
+end
+
+"""
+````
+function ConvectionOperator(
+    a_from::Int, 
+    beta_operator,
+    xdim::Int,
+    ncomponents::Int;
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    fixed_argument::Int = 1,
+    factor = 1,
+    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    regions::Array{Int,1} = [0],
+    auto_newton::Bool = false,
+    quadorder = 0)
+````
+
+constructs an PDE operator for a convection term of the form c(a,u,v) = (beta_operator(a)*grad(u),v) where a_from is the id of some unknown of the PDEDescription.
+xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
+With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v). 
+With auto_newton = true a Newton scheme for a(u,v) = (u*grad(u),v) is automatically derived (and fixed_argument is ignored).
+
+"""
+function ConvectionOperator(
+    a_from::Int, 
+    beta_operator::Type{<:AbstractFunctionOperator},
+    xdim::Int,
+    ncomponents::Int;
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    fixed_argument::Int = 1,
+    factor = 1,
+    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    regions::Array{Int,1} = [0],
+    auto_newton::Bool = false,
+    quadorder = 0)
+
+    # action input consists of two inputs
+    # input[1:xdim] = operator1(a)
+    # input[xdim+1:end] = grad(u)
+    function convection_function_fe()
+        function closure(result::Array{<:Real,1}, input::Array{<:Real,1})
+            for j = 1 : ncomponents
+                result[j] = 0
+                for k = 1 : xdim
+                    result[j] += input[k]*input[xdim+(j-1)*xdim+k]
+                end
+            end
+        end    
+    end    
+    action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = quadorder)
+    if auto_newton
+        ## generates a nonlinear form with automatic Newton operators by AD
+        if name == "auto"
+            name = "(u ⋅ ∇) u ⋅ v"
+        end
+        return GenerateNonlinearForm(name, [beta_operator, Gradient], [a_from,a_from], testfunction_operator, action_kernel; ADnewton = true)     
+    else
+        ## returns linearised convection operators as a trilinear form (Picard iteration)
+        convection_action = Action(Float64, action_kernel)
+        a_to = fixed_argument
+        if name == "auto"
+            if a_to == 1
+                name = "(a ⋅ ∇) u ⋅ v"
+            elseif a_to == 2
+                name = "(u ⋅ ∇) a ⋅ v"
+            elseif a_to == 3
+                name = "(u ⋅ ∇) v ⋅ a"
+            end
+        end
+        
+        O = PDEOperator{Float64, APT_TrilinearForm, AT}(name,[beta_operator,Gradient,testfunction_operator], convection_action, [1,2], factor, regions)
+        O.fixed_arguments = [a_to]
+        O.fixed_arguments_ids = [a_from]
+        O.transposed_assembly = true
+        return O
+    end
 end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (beta*grad(u),v) with some user-specified DataFunction beta that writes into
-an result array of type T and length ncomponents
+constructor for a trilinearform that describes a(u,v) = (beta x curl(u),v)
+where beta is the id of some unknown vector field of the PDEDescription, u and v
+are also vector-fields and x is the cross product (so far this is only implemented in 2D)
     
 """
-function ConvectionOperator(T::Type{<:Real}, beta::UserData{AbstractDataFunction}, ncomponents::Int; name = "auto", testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
-    xdim = beta.dimensions[1]
-    if is_timedependent(beta) && is_xdependent(beta)
-        function convection_function_func_xt() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
-            function closure(result, input, x, time)
-                # evaluate beta
-                eval!(convection_vector,beta,x,time)
-                # compute (beta*grad)u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
-            end    
-        end    
-        action_kernel = ActionKernel(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "XT", quadorder = beta.quadorder)
-    elseif !is_timedependent(beta) && !is_xdependent(beta)
-        function convection_function_func() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
+function ConvectionRotationFormOperator(
+    beta::Int,
+    beta_operator::Type{<:AbstractFunctionOperator},
+    xdim::Int, ncomponents::Int;
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    factor = 1,
+    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    regions::Array{Int,1} = [0])
+    if xdim == 2
+        # action input consists of two inputs
+        # input[1:xdim] = operator1(a)
+        # input[xdim+1:end] = curl(u)
+        function rotationform_2d()
             function closure(result, input)
-                # evaluate beta
-                eval!(convection_vector,beta, nothing, nothing)
-                # compute (beta*grad)u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
+                result[1] = input[2] * input[3]
+                result[2] = - input[1] * input[3]
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "", quadorder = beta.quadorder)
-    elseif !is_timedependent(beta) && is_xdependent(beta)
-        function convection_function_func_x() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
-            function closure(result, input, x)
-                # evaluate beta
-                eval!(convection_vector,beta,x,nothing)
-                # compute (beta*grad)u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
-            end    
-        end    
-        action_kernel = ActionKernel(convection_function_func_x(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "X", quadorder = beta.quadorder)
-    elseif is_timedependent(beta) && !is_xdependent(beta)
-        function convection_function_func_t() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
-            function closure(result, input, t)
-                # evaluate beta
-                eval!(convection_vector,beta,nothing,t)
-                # compute (beta*grad)u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
-            end    
-        end    
-        action_kernel = ActionKernel(convection_function_func_t(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "T", quadorder = beta.quadorder)
+        action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", quadorder = 0)
+        convection_action = Action(Float64, action_kernel)
+        if name == "auto"
+            name = "(β × ∇) u ⋅ v"
+        end
+        O = PDEOperator{Float64, APT_TrilinearForm, AT}(name,[beta_operator,Curl2D,testfunction_operator], convection_action, [1,2], factor, regions)
+        O.fixed_arguments = [1]
+        O.fixed_arguments_ids = [beta]
+        O.transposed_assembly = true
+        return O
+    else
+        @error "The rotation form of the convection operator is currently only available in 2D (in 3D please implement it yourself using AbstractTrilinearForm and a user-defined action)"
     end
-    if name == "auto"
-        name = "(β ⋅ ∇) u ⋅ $testfunction_operator(v)"
-    end
-    return AbstractBilinearForm(name, Gradient,testfunction_operator, Action(T, action_kernel); regions = regions, transposed_assembly = true)
 end
 
 
-"""
-````
-mutable struct AbstractMultilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
-    name::String
-    operators::Array{DataType,1}
-    action::AbstractAction
-    regions::Array{Int,1}
-end
-````
-
-abstract multi-linearform with arbitrary many argument of the form
-
-m(v1,v2,...,vk) = (A(O(v1),O(v2),...,O(vk-1)),Ok(vk))
-
-(so far only intended for use as RHSOperator together with MLF2RHS)
-"""
-mutable struct AbstractMultilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
-    name::String
-    operators::Array{DataType,1}
-    action::AbstractAction
-    regions::Array{Int,1}
-end
 
 
-mutable struct AbstractNonlinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
-    name::String
-    operators::Array{DataType,1}
-    coeff_from::Array{Int,1}     # unknown id where coefficient for each operator in operators are taken from, remaining ones are for the test function
-    action::AbstractAction
-    action_rhs
-    regions::Array{Int,1}
-    ADnewton::Bool
-    transposed_assembly::Bool
-end
 
 """
 ````
@@ -412,7 +784,6 @@ function GenerateNonlinearForm(
         function newton_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1})
             ForwardDiff.jacobian!(Dresult, func, result, input_current, cfg)
             jac = DiffResults.jacobian(Dresult)
-            
             for j = 1 : argsizes[1]
                 result[j] = 0
                 for k = 1 : argsizes[2]
@@ -447,211 +818,50 @@ function GenerateNonlinearForm(
     end
 
     append!(operator1, [operator2])
-    return AbstractNonlinearForm{AT}(name, operator1, coeff_from, action, action_rhs, regions, ADnewton, true)
+    O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, action, 1:(length(coeff_from)), 1, regions)
+    O.fixed_arguments = 1:length(coeff_from)
+    O.fixed_arguments_ids = coeff_from
+    O.action_rhs = action_rhs
+    O.transposed_assembly = true
+    return O
 end
 
-
-
-
-"""
-$(TYPEDEF)
-
-considers the second argument to be a Lagrange multiplier for operator(first argument) = 0,
-automatically triggers copy of transposed operator in transposed block, hence only needs to be assigned and assembled once!
-
-can only be applied in PDE LHS
-"""
-struct LagrangeMultiplier <: AbstractPDEOperatorLHS
-    name::String
-    operator::Type{<:AbstractFunctionOperator} # e.g. Divergence, automatically aligns with transposed block
-    action::AbstractAction
-    AT::Type{<:AbstractAssemblyType}
-end
-function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = NoAction())
-    return LagrangeMultiplier("$operator(v) ⋅ q",operator, action, AT)
-end
-
-
-
-"""
-````
-mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
-    name::String
-    operator1::Type{<:AbstractFunctionOperator} # operator for argument 1
-    operator2::Type{<:AbstractFunctionOperator} # operator for argument 1
-    operator3::Type{<:AbstractFunctionOperator} # operator for argument 1
-    a_from::Int     # unknown id where fixed argument takes its values from
-    a_to::Int       # position of fixed argument
-    action::AbstractAction # is applied to argument 1 and 2
-    regions::Array{Int,1}
-    transposed_assembly::Bool
-end
-````
-
-abstract trilinearform operator that assembles
-- c(a,u,v) = int_regions action(operator1(a) * operator2(u))*operator3(v)   (if a_to = 1)
-- c(u,a,v) = int_regions action(operator1(u) * operator2(a))*operator3(v)   (if a_to = 2)
-
-where a_from is the id of one of the unknowns of the PDEsystem
-
-can only be applied in PDE LHS
-"""
-mutable struct AbstractTrilinearForm{AT<:AbstractAssemblyType} <: AbstractPDEOperatorLHS
-    name::String
-    operator1::Type{<:AbstractFunctionOperator} # operator for argument 1
-    operator2::Type{<:AbstractFunctionOperator} # operator for argument 2
-    operator3::Type{<:AbstractFunctionOperator} # operator for argument 3
-    a_from::Int     # unknown id where fixed argument takes its values from
-    a_to::Int       # position of fixed argument
-    action::AbstractAction # is applied to argument 1 and 2
-    regions::Array{Int,1}
-    transposed_assembly::Bool
-end
-function AbstractTrilinearForm(name,
-    operator1::Type{<:AbstractFunctionOperator},
-    operator2::Type{<:AbstractFunctionOperator},
-    operator3::Type{<:AbstractFunctionOperator},
-    a_from::Int,
-    a_to::Int,
-    action::AbstractAction;
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
-    regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = false)
-    return AbstractTrilinearForm{AT}(name, operator1, operator2, operator3, a_from, a_to, action, regions,transposed_assembly)
-end
-
-"""
-````
-function ConvectionOperator(
-    a_from::Int, 
-    beta_operator,
-    xdim::Int,
-    ncomponents::Int;
-    fixed_argument::Int = 1,
-    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
-    regions::Array{Int,1} = [0],
-    auto_newton::Bool = false)
-````
-
-constructs an PDE operator for a convection term of the form c(a,u,v) = (beta_operator(a)*grad(u),v) where a_from is the id of some unknown of the PDEDescription.
-xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
-With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v). 
-With auto_newton = true a Newton scheme for a(u,v) = (u*grad(u),v) is automatically derived (and fixed_argument is ignored).
-
-"""
-function ConvectionOperator(
-    a_from::Int, 
-    beta_operator,
-    xdim::Int,
-    ncomponents::Int;
-    fixed_argument::Int = 1,
-    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
-    regions::Array{Int,1} = [0],
-    auto_newton::Bool = false,
-    quadorder = 0)
-
-    # action input consists of two inputs
-    # input[1:xdim] = operator1(a)
-    # input[xdim+1:end] = grad(u)
-    function convection_function_fe()
-        function closure(result::Array{<:Real,1}, input::Array{<:Real,1})
-            for j = 1 : ncomponents
-                result[j] = 0
-                for k = 1 : xdim
-                    result[j] += input[k]*input[xdim+(j-1)*xdim+k]
-                end
-            end
-        end    
-    end    
-    action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = quadorder)
-    if auto_newton
-        ## generates a nonlinear form with automatic Newton operators by AD
-        return GenerateNonlinearForm("(u ⋅ ∇) u ⋅ v", [beta_operator, Gradient], [a_from,a_from], testfunction_operator, action_kernel; ADnewton = true)     
-    else
-        ## returns linearised convection operators as a trilinear form (Picard iteration)
-        convection_action = Action(Float64, action_kernel)
-        a_to = fixed_argument
-        if a_to == 1
-            name = "(a ⋅ ∇) u ⋅ v"
-        elseif a_to == 2
-            name = "(u ⋅ ∇) a ⋅ v"
-        elseif a_to == 3
-            name = "(u ⋅ ∇) v ⋅ a"
-        end
-        
-        return AbstractTrilinearForm{ON_CELLS}(name,beta_operator,Gradient,testfunction_operator,a_from,a_to,convection_action, regions, true)
-    end
-
-end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for AbstractBilinearForm that describes a(u,v) = (beta x curl(u),v)
-where beta is the id of some unknown vector field of the PDEDescription, u and v
-are also vector-fields and x is the cross product (so far this is only implemented in 2D)
+generates a linearform from an action
     
 """
-function ConvectionRotationFormOperator(beta::Int, beta_operator::Type{<:AbstractFunctionOperator}, xdim::Int, ncomponents::Int; testfunction_operator::Type{<:AbstractFunctionOperator} = Identity, regions::Array{Int,1} = [0])
-    # action input consists of two inputs
-    # input[1:xdim] = operator1(a)
-    # input[xdim+1:end] = curl(u)
-    function rotationform_2d()
-        function closure(result, input)
-            result[1] = input[2] * input[3]
-            result[2] = - input[1] * input[3]
-        end    
-    end    
-    action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", quadorder = 0)
-    convection_action = Action(Float64, action_kernel)
-    return AbstractTrilinearForm{ON_CELLS}("(β × ∇) u ⋅ v",beta_operator,Curl2D,testfunction_operator,beta, 1, convection_action, regions, true)
-end
-
-
-"""
-````
-mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
-    name::String
-    data::UserData{AbstractDataFunction}
-    testfunction_operator::Type{<:AbstractFunctionOperator}
-    regions::Array{Int,1}
-    store_operator::Bool               # should the matrix representation of the operator be stored?
-    storage::AbstractArray{Float64,1}  # matrix can be stored here to allow for fast matmul operations in iterative settings
-end
-````
-
-right-hand side operator
-
-can only be applied in PDE RHS
-"""
-mutable struct RhsOperator{AT<:AbstractAssemblyType} <: AbstractPDEOperatorRHS
-    name::String
-    action::AbstractAction
-    testfunction_operator::Type{<:AbstractFunctionOperator}
-    regions::Array{Int,1}
-    timedependent::Bool
-    store_operator::Bool               # should the matrix representation of the operator be stored?
-    storage::AbstractArray{Float64,1}  # matrix can be stored here to allow for fast matmul operations in iterative settings
-end
-
-
-function RhsOperator(name::String, 
-    AT::Type{<:AbstractAssemblyType},
+function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
     action::AbstractAction;
+    name = "auto",
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0],
+    factor = 1,
     store::Bool = false)
 
-    RhsOperator{AT}(name, action, operator, regions, is_timedependent(action.kernel), store, [])
+    if name == "auto"
+        name = "A($operator(v))"
+    end
+    PDEOperator{Float64, APT_LinearForm, AT}(name, [operator], action, [1], 1, regions, store, AssemblyInitial)
 end
 
 
+"""
+$(TYPEDSIGNATURES)
+
+generates a linearform from a given UserData{<:DataFunction} (whose result dimension has to be 1)
+    
+"""
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
     regions::Array{Int,1},
     data::UserData{<:AbstractDataFunction};
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    factor = 1,
     store::Bool = false)
 
     if name == "auto"
@@ -731,546 +941,287 @@ function RhsOperator(
     end
     action = Action(Float64, action_kernel)
 
-    return RhsOperator{AT}(name, action, operator, regions, is_timedependent(data), store, [])
+    PDEOperator{Float64, APT_LinearForm, AT}(name,[operator], action, [1], 1, regions, store, AssemblyInitial)
 end
 
-
-"""
-````
-struct BLF2RHS <: AbstractPDEOperatorRHS
-    name::String
-    BLF::AbstractBilinearForm
-    data_id::Int
-    factor::Real
-    nonlinear::Bool
-    timedependent::Bool
-end
-````
-
-evaluation of a AbstractBilinearForm BLF (multiplied by a factor) where the second argument is fixed by the given FEVectorBlock of the current solution coressponding to the given data_id.
-
-The operator must be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
-
-can only be applied in PDE RHS
-"""
-struct BLF2RHS <: AbstractPDEOperatorRHS
-    name::String
-    BLF::AbstractBilinearForm
-    data_id::Int
-    factor::Real
-    fixed_argument::Int
-    nonlinear::Bool
-    timedependent::Bool
-end
-
-function BLF2RHS(BLF, data_id, factor; name = "auto", fixed_argument::Int = 2, nonlinear::Bool = false, timedependent::Bool = false)
-    if name == "auto"
-        if fixed_argument == 1
-            name = "BLF($(BLF.name)(#$(data_id),*)"
-        elseif fixed_argument == 2
-            name = "BLF($(BLF.name)(*,#$(data_id))"
-        end
-    end
-    return BLF2RHS(name, BLF, data_id, factor, fixed_argument, nonlinear, timedependent)
-end
-
-"""
-````
-struct TLF2RHS <: AbstractPDEOperatorRHS
-    name::String
-    TLF::AbstractTrilinearForm
-    data_ids::Array{Int,1}
-    factor::Real
-    nonlinear::Bool
-    timedependent::Bool
-end
-````
-
-evaluation of a AbstractTrilinearForm TLF (multiplied by a factor) where the first and second argument are fixed by the FEVectorBlocks of the current solution coressponding to the given data_ids.
-
-The operator must be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
-
-can only be applied in PDE RHS
-"""
-struct TLF2RHS <: AbstractPDEOperatorRHS
-    name::String
-    TLF::AbstractTrilinearForm
-    data_ids::Array{Int,1}
-    factor::Real
-    nonlinear::Bool
-    timedependent::Bool
-end
-
-function TLF2RHS(TLF, data_ids, factor::Real = 1; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
-    if name == "auto"
-        name = "TLF($(TLF.name))(#$(data_ids[1]),#$(data_ids[2]), *)"
-    end
-    return TLF2RHS(name, TLF, data_ids, factor, nonlinear, timedependent)
-end
 
 
 
 """
-````
-struct MLF2RHS <: AbstractPDEOperatorRHS
-    name::String
-    MLF::AbstractMultilinearForm
-    data_ids::Array{Int,1}
-    factor::Real
-    nonlinear::Bool
-    timedependent::Bool
-end
-````
+$(TYPEDSIGNATURES)
 
-evaluation of a AbstractMultilinearForm MLF (multiplied by a factor) where all but the last argument are fixed by the FEVectorBlocks of the current solution coressponding to the given data_ids.
-
-The operator must be manually marked as nonlinear or time-dependent to trigger reassembly at each iteration or each timestep.
-
-can only be applied in PDE RHS
-"""
-struct MLF2RHS <: AbstractPDEOperatorRHS
-    name::String
-    MLF::AbstractMultilinearForm
-    data_ids::Array{Int,1}
-    factor::Real
-    nonlinear::Bool
-    timedependent::Bool
-end
-
-function MLF2RHS(MLF, data_ids, factor; name = "auto", nonlinear::Bool = false, timedependent::Bool = false)
-    if name == "auto"
-        name = "MLF2RHS($(MLF.name))"
-    end
-    return MLF2RHS(name, MLF, data_ids, factor, nonlinear, timedependent)
-end
-
-
-#####################################
-### FVConvectionDiffusionOperator ###
-#####################################
-#
-# finite-volume convection diffusion operator (for cell-wise P0 rho)
-#
-# - div(\kappa \nabla \rho + beta*rho)
-#
-# For kappa = 0, the upwind divergence: div_upw(beta*rho) is generated
-# For kappa > 0, TODO
-# 
-# (1) calculate normalfluxes from component at _beta_from_
-# (2) compute FV flux on each face and put coefficients on neighbouring cells in matrix
-#
-#     if kappa == 0:
-#           div_upw(beta*rho)|_T = sum_{F face of T} normalflux(F) * rho(F)
-#
-#           where rho(F) is the rho in upwind direction 
-#
-#     and put it into P0xP0 matrix block like this:
-#
-#           Loop over cell, face of cell
-#
-#               other_cell = other face neighbour cell
-#               if flux := normalflux(F_j) * CellFaceSigns[face,cell] > 0
-#                   A(cell,cell) += flux
-#                   A(other_cell,cell) -= flux
-#               else
-#                   A(other_cell,other_cell) -= flux
-#                   A(cell,other_cell) += flux
-#                   
-# see coressponding assemble! routine
-
-mutable struct FVConvectionDiffusionOperator <: AbstractPDEOperatorLHS
-    name::String
-    diffusion::Float64               # diffusion coefficient
-    beta_from::Int                   # component that determines
-    fluxes::Array{Float64,2}         # saves normalfluxes of beta here
-end
-function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
-    @assert beta_from > 0
-    fluxes = zeros(Float64,0,1)
-    return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
-end
-function check_PDEoperator(O::RhsOperator)
-    return false, O.timedependent
-end
-
-
-################ ASSEMBLY SPECIFICATIONS ################
-
-
-
-# check if operator causes nonlinearity or time-dependence
-function check_PDEoperator(O::AbstractPDEOperator, involved_equations::Array{Int})
-    return false, false
-end
-function check_PDEoperator(O::AbstractBilinearForm, involved_equations::Array{Int})
-    if typeof(O.action) <: NoAction
-        return false, false
-    else
-        return false, is_timedependent(O.action.kernel)
-    end
-end
-function check_PDEoperator(O::AbstractTrilinearForm, involved_equations::Array{Int})
-    return O.a_from in involved_equations, is_timedependent(O.action.kernel)
-end
-function check_PDEoperator(O::FVConvectionDiffusionOperator, involved_equations::Array{Int})
-    return O.beta_from in involved_equations, false
-end
-function check_PDEoperator(O::CopyOperator, involved_equations::Array{Int})
-    return true, true
-end
-function check_PDEoperator(O::BLF2RHS, involved_equations::Array{Int})
-    return O.nonlinear, O.timedependent
-end
-function check_PDEoperator(O::TLF2RHS, involved_equations::Array{Int})
-    return O.nonlinear, O.timedependent
-end
-function check_PDEoperator(O::MLF2RHS, involved_equations::Array{Int})
-    return O.nonlinear, O.timedependent
-end
-function check_PDEoperator(O::AbstractNonlinearForm, involved_equations::Array{Int})
-    return true, is_timedependent(O.action.kernel)
-end
-
-# check if operator also depends on arg (additional to the argument relative to position in PDEDescription)
-function check_dependency(O::AbstractPDEOperator, arg::Int)
-    return false
-end
-
-function check_dependency(O::FVConvectionDiffusionOperator, arg::Int)
-    return O.beta_from == arg
-end
-
-function check_dependency(O::AbstractTrilinearForm, arg::Int)
-    return O.a_from == arg
-end
-function check_dependency(O::AbstractNonlinearForm, arg::Int)
-    return arg in O.coeff_from
-end
-
-# check if operator on the LHS also needs to modify the RHS
-function LHSoperator_also_modifies_RHS(O::AbstractPDEOperator)
-    return false
-end
-function LHSoperator_also_modifies_RHS(O::AbstractNonlinearForm)
-    return O.action_rhs != nothing
-end
-
-
-
-
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0)
-    @debug "Assembling DiagonalOperator $(O.name)"
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert FE1 == FE2
-    xCellDofs = FE1[CellDofs]
-    xCellRegions = FE1.xgrid[CellRegions]
-    ncells = num_sources(xCellDofs)
-    dof::Int = 0
-    for item = 1 : ncells
-        for r = 1 : length(O.regions) 
-            # check if item region is in regions
-            if xCellRegions[item] == O.regions[r] || O.regions[r] == 0
-                for k = 1 : num_targets(xCellDofs,item)
-                    dof = xCellDofs[k,item]
-                    if O.onlyz == true
-                        if A[dof,dof] == 0
-                            A[dof,dof] = O.value
-                        end
-                    else
-                        A[dof,dof] = O.value
-                    end    
-                end
-            end
-        end
-    end
-end
-
-
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0)
-    @logmsg MoreInfo "Assembling FVConvectionOperator $(O.name) into matrix"
-    T = Float64
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert FE1 == FE2
-    xFaceNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceNodes]
-    xFaceNormals::Array{T,2} = FE1.xgrid[FaceNormals]
-    xFaceCells::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceCells]
-    xFaceVolumes::Array{T,1} = FE1.xgrid[FaceVolumes]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaces]
-    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaceSigns]
-    nfaces::Int = num_sources(xFaceNodes)
-    ncells::Int = num_sources(xCellFaceSigns)
-    nnodes::Int = num_sources(FE1.xgrid[Coordinates])
+constructor for a bilinearform that describes a(u,v) = (beta*grad(u),v) with some user-specified DataFunction beta that writes into
+an result array of length ncomponents
     
-    # ensure that flux field is long enough
-    if length(O.fluxes) < nfaces
-        O.fluxes = zeros(Float64,1,nfaces)
+"""
+function ConvectionOperator(
+    beta::UserData{AbstractDataFunction},
+    ncomponents::Int; 
+    name = "auto", 
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    regions::Array{Int,1} = [0])
+
+    T = Float64
+    xdim = beta.dimensions[1]
+    if is_timedependent(beta) && is_xdependent(beta)
+        function convection_function_func_xt() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input, x, time)
+                # evaluate beta
+                eval!(convection_vector,beta,x,time)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "XT", quadorder = beta.quadorder)
+    elseif !is_timedependent(beta) && !is_xdependent(beta)
+        function convection_function_func() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input)
+                # evaluate beta
+                eval!(convection_vector,beta, nothing, nothing)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "", quadorder = beta.quadorder)
+    elseif !is_timedependent(beta) && is_xdependent(beta)
+        function convection_function_func_x() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input, x)
+                # evaluate beta
+                eval!(convection_vector,beta,x,nothing)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(convection_function_func_x(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "X", quadorder = beta.quadorder)
+    elseif is_timedependent(beta) && !is_xdependent(beta)
+        function convection_function_func_t() # dot(convection!, input=Gradient)
+            convection_vector = zeros(T,xdim)
+            function closure(result, input, t)
+                # evaluate beta
+                eval!(convection_vector,beta,nothing,t)
+                # compute (beta*grad)u
+                for j = 1 : ncomponents
+                    result[j] = 0.0
+                    for k = 1 : xdim
+                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
+                    end
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(convection_function_func_t(), [ncomponents, ncomponents*xdim]; name = "L2 error kernel", dependencies = "T", quadorder = beta.quadorder)
     end
-    # compute normal fluxes of component beta
-    c::Int = O.beta_from
-    fill!(O.fluxes,0)
-    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
-        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux]; name = "u ⋅ n")
-        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = false)
-    else
-        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = true)
+    if name == "auto"
+        name = "(β ⋅ ∇) u ⋅ $testfunction_operator(v)"
     end
 
-    fluxes::Array{T,2} = O.fluxes
-    nfaces4cell::Int = 0
-    face::Int = 0
-    flux::T = 0.0
-    other_cell::Int = 0
-    for cell = 1 : ncells
-        nfaces4cell = num_targets(xCellFaces,cell)
-        for cf = 1 : nfaces4cell
-            face = xCellFaces[cf,cell]
-            other_cell = xFaceCells[1,face]
-            if other_cell == cell
-                other_cell = xFaceCells[2,face]
-            end
-            flux = fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
-            if (other_cell > 0) 
-                flux *= 1 // 2 # because it will be accumulated on two cells
-            end       
-            if flux > 0 # flow from cell to other_cell
-                _addnz(A,cell,cell,flux,1)
-                if other_cell > 0
-                    _addnz(A,other_cell,cell,-flux,1)
-                    _addnz(A,other_cell,other_cell,1e-16,1) # add zero to keep pattern for LU
-                    _addnz(A,cell,other_cell,1e-16,1) # add zero to keep pattern for LU
-                    # otherwise flow goes out of domain
-                end    
-            else # flow from other_cell into cell
-                _addnz(A,cell,cell,1e-16,1) # add zero to keep pattern for LU
-                if other_cell > 0 # flow comes from neighbour cell
-                    _addnz(A,other_cell,other_cell,-flux,1)
-                    _addnz(A,cell,other_cell,flux,1)
-                    _addnz(A,other_cell,cell,1e-16,1) # add zero to keep pattern for LU
-                else # flow comes from outside domain
-                   #  A[cell,cell] += flux
-                end 
-            end
-        end
-    end
+    O = PDEOperator{Float64, APT_BilinearForm, AT}(name, [Gradient, testfunction_operator], Action(T, action_kernel), [1], 1, regions)
+    O.transposed_assembly = true
+    return O
 end
 
 
 
-function update_storage!(O::AbstractBilinearForm{AT}, CurrentSolution::FEVector, j::Int, k::Int; factor = 1, time::Real = 0) where {AT<:AbstractAssemblyType}
+function update_storage!(O::PDEOperator, CurrentSolution::FEVector, j::Int, k::Int; factor = 1, time::Real = 0)
+    @logmsg DeepInfo "Updating storage of PDEOperator $(O.name)"
 
-    @debug "Updating storage of operator $(O.name)"
-
-    # ensure that storage is large_enough
-    FE1 = CurrentSolution[j].FES
-    FE2 = CurrentSolution[k].FES
-    O.storage = ExtendableSparseMatrix{Float64,Int32}(FE1.ndofs,FE2.ndofs)
-
-    if FE1 == FE2 && O.operator1 == O.operator2
-        BLF = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions, name = O.name)    
+    set_time!(O.action, time)
+    T = typeof(O).parameters[1]
+    APT = typeof(O).parameters[2]
+    AT = typeof(O).parameters[3]
+    if APT <: APT_BilinearForm
+        FES = Array{FESpace,1}(undef, 2)
+        FES[1] = CurrentSolution[j].FES
+        FES[2] = CurrentSolution[k].FES
     else
-        BLF = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions, name = O.name)    
+        @error "No storage functionality available for this operator!"
     end
-
-    assemble!(O.storage, BLF; apply_action_to = O.apply_action_to, factor = factor)
+    O.storage = ExtendableSparseMatrix{Float64,Int64}(FES[1].ndofs,FES[2].ndofs)
+    Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    assemble!(O.storage, Pattern; factor = factor * O.factor, skip_preps = false)
     flush!(O.storage)
 end
 
+function update_storage!(O::PDEOperator, CurrentSolution::FEVector, j::Int; factor = 1, time::Real = 0)
 
-function update_storage!(O::RhsOperator{AT}, CurrentSolution::FEVector, j::Int; factor = 1, time::Real = 0) where {AT<:AbstractAssemblyType}
+    @logmsg DeepInfo "Updating storage of PDEOperator $(O.name)"
 
-    @debug "Updating storage of RhsOperator"
-
-    # ensure that storage is large_enough
-    FE = CurrentSolution[j].FES
-    O.storage = zeros(Float64,FE.ndofs)
     set_time!(O.action, time)
-    RHS = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions, name = O.name)
-    assemble!(O.storage, RHS; factor = factor)
+    T = typeof(O).parameters[1]
+    APT = typeof(O).parameters[2]
+    AT = typeof(O).parameters[3]
+    if APT <: APT_LinearForm
+        FES = Array{FESpace,1}(undef, 1)
+        FES[1] = CurrentSolution[j].FES
+    else
+        @error "No storage functionality available for this operator!"
+    end
+    O.storage = zeros(Float64,FES[1].ndofs)
+    Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
+    assemble!(O.storage, Pattern; factor = factor * O.factor, skip_preps = false)
 end
 
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; time::Real = 0) where {AT<:AbstractAssemblyType}    
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; time::Real = 0, At = nothing)  
     if O.store_operator == true
-        @debug "Adding Bilinearform $(O.name) from storage"
+        @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
         addblock!(A,O.storage)
+        if At !== nothing
+            addblock!(A,O.storage; transpose = true)
+        end
     else
         set_time!(O.action, time)
         if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-            @debug "Creating assembly pattern for Bilinearform $(O.name)"
-            FE1 = A.FESX
-            FE2 = A.FESY
-            if FE1 == FE2 && O.operator1 == O.operator2
-                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions, name = O.name)    
-            else
-                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions, name = O.name)    
-            end 
-            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], apply_action_to = O.apply_action_to, skip_preps = false, transposed_assembly = O.transposed_assembly)
-        else
-            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], apply_action_to = O.apply_action_to, skip_preps = true, transposed_assembly = O.transposed_assembly)
-        end
-    end
-end
-
-
-function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::AbstractBilinearForm{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component::Int = 1) where {AT<:AbstractAssemblyType}    
-    if O.store_operator == true
-        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
-    else
-        set_time!(O.action, time)
-        fixed_argument = fixed_component == j ? 1 : 2
-        if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-            @debug "Creating assembly pattern for Bilinearform $(O.name)"
-            FE1 = b.FES
-            FE2 = CurrentSolution[fixed_component].FES
-            if FE1 == FE2 && O.operator1 == O.operator2
-                SC.LHS_AssemblyPatterns[j,k][o] = SymmetricBilinearForm(Float64, AT, [FE1, FE1], [O.operator1, O.operator1], O.action; regions = O.regions, name = O.name)    
-            else
-                SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, AT, [FE1, FE2], [O.operator1, O.operator2], O.action; regions = O.regions, name = O.name)    
-            end 
-            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = false, apply_action_to = O.apply_action_to, fixed_argument = fixed_argument)
-        else
-            assemble!(b, CurrentSolution[fixed_component], SC.LHS_AssemblyPatterns[j,k][o]; factor = factor, skip_preps = true, apply_action_to = O.apply_action_to, fixed_argument = fixed_argument)
-        end
-    end
-end
-
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::TLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0) 
-    set_time!(O.TLF.action, time)
-    if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for Trilinearform $(O.name)"
-        FE1 = CurrentSolution[O.data_ids[1]].FES
-        FE2 = CurrentSolution[O.data_ids[1]].FES
-        FE3 = b.FES
-        SC.RHS_AssemblyPatterns[j][o] = TrilinearForm(Float64, typeof(O.TLF).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.TLF.operator1, O.TLF.operator2, O.TLF.operator3], O.TLF.action; regions = O.TLF.regions, name = O.TLF.name)
-        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, skip_preps = false)
-    else
-        assemble!(b, CurrentSolution[O.data_ids[1]], CurrentSolution[O.data_ids[2]], SC.RHS_AssemblyPatterns[j][o]; factor = factor * O.factor, skip_preps = true)
-    end
-end
-
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::MLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0)  
-    set_time!(O.MLF.action, time)
-    if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for Multilinearform $(O.name)"
-        FES = []
-        for k = 1 : length(O.data_ids)
-            push!(FES, CurrentSolution[O.data_ids[k]].FES)
-        end
-        push!(FES, b.FES)
-        SC.RHS_AssemblyPatterns[j][o] = MultilinearForm(Float64, typeof(O.MLF).parameters[1], Array{FESpace,1}(FES), O.MLF.operators, O.MLF.action; regions = O.MLF.regions, name = O.MLF.name) 
-        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, skip_preps = false)
-    else
-        assemble!(b, CurrentSolution[O.data_ids], SC.RHS_AssemblyPatterns[j][o]F; factor = factor * O.factor, skip_preps = true)
-    end
-end
-
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::BLF2RHS, CurrentSolution::FEVector; factor = 1, time::Real = 0)  
-    if O.BLF.store_operator == true
-        addblock_matmul!(b,O.BLF.storage,CurrentSolution[O.data_id]; factor = factor)
-    else
-        set_time!(O.BLF.action, time)
-        if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-            @debug "Creating assembly pattern for Multilinearform $(O.name)"
-            FE1 = b.FES
-            FE2 = CurrentSolution[O.data_id].FES
-            if FE1 == FE2 && O.BLF.operator1 == O.BLF.operator2
-                SC.RHS_AssemblyPatterns[j][o] = SymmetricBilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE1], [O.BLF.operator1, O.BLF.operator1], O.BLF.action; regions = O.BLF.regions, name = O.BLF.name)    
-            else
-                SC.RHS_AssemblyPatterns[j][o] = BilinearForm(Float64, typeof(O.BLF).parameters[1], [FE1, FE2], [O.BLF.operator1, O.BLF.operator2], O.BLF.action; regions = O.BLF.regions, name = O.BLF.name)    
+            T = typeof(O).parameters[1]
+            APT = typeof(O).parameters[2]
+            AT = typeof(O).parameters[3]
+            @debug "Creating assembly pattern for PDEOperator $(O.name)"
+            if APT <: APT_BilinearForm
+                FES = Array{FESpace,1}(undef, 2)
+                FES[1] = A.FESX
+                FES[2] = A.FESY
+            elseif APT <: APT_TrilinearForm
+                FES = Array{FESpace,1}(undef, 3)
+                FES[O.fixed_arguments[1]] = CurrentSolution[O.fixed_arguments_ids[1]].FES
+                if O.fixed_arguments == [1]
+                    FES[2] = A.FESX
+                    FES[3] = A.FESY
+                elseif O.fixed_arguments == [2]
+                    FES[1] = A.FESX
+                    FES[3] = A.FESY
+                elseif O.fixed_arguments == [3]
+                    FES[2] = A.FESX
+                    FES[3] = A.FESY
+                end
+            elseif APT <: APT_NonlinearForm
+                FES = Array{FESpace,1}(undef, length(O.fixed_arguments))
+                for j = 1 : length(O.fixed_arguments)
+                    FES[j] = CurrentSolution[O.fixed_arguments_ids[j]].FES
+                end
+                push!(FES,A.FESY)
             end
-            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, fixed_argument = O.fixed_argument, skip_preps = false)
+            skip_preps = false
+            SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
         else
-            assemble!(b, CurrentSolution[O.data_id], SC.RHS_AssemblyPatterns[j][o]; apply_action_to = O.BLF.apply_action_to, factor = factor * O.factor, fixed_argument = O.fixed_argument, skip_preps = true)
+            skip_preps = true
+        end
+        if At !== nothing
+            assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], skip_preps = skip_preps, transposed_assembly = O.transposed_assembly, factor = O.factor, transpose_copy = At)
+        else
+            if length(O.fixed_arguments_ids) > 0
+                assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.fixed_arguments_ids], skip_preps = skip_preps, transposed_assembly = O.transposed_assembly, factor = O.factor)
+            else
+                assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], skip_preps = skip_preps, transposed_assembly = O.transposed_assembly, factor = O.factor)
+            end
         end
     end
 end
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractTrilinearForm, CurrentSolution::FEVector; time::Real = 0)
-    set_time!(O.action, time)
-    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for Trilinearform $(O.name)"
-        FE1 = CurrentSolution[O.a_from].FES
-        FE2 = A.FESX
-        FE3 = A.FESY
-        SC.LHS_AssemblyPatterns[j,k][o] = TrilinearForm(Float64, typeof(O).parameters[1], Array{FESpace,1}([FE1, FE2, FE3]), [O.operator1, O.operator2, O.operator3], O.action; regions = O.regions, name = O.name)   
-        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o], skip_preps = false, transposed_assembly = O.transposed_assembly)
-    else
-        assemble!(A, CurrentSolution[O.a_from], SC.LHS_AssemblyPatterns[j,k][o], skip_preps = true, transposed_assembly = O.transposed_assembly)
-    end
-end
 
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::LagrangeMultiplier, CurrentSolution::FEVector; time::Real = 0, At::FEMatrixBlock)
-    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for LagrangeMultiplier $(O.name)"
-        FE1 = A.FESX
-        FE2 = A.FESY
-        @assert At.FESX == FE2
-        @assert At.FESY == FE1
-        SC.LHS_AssemblyPatterns[j,k][o] = BilinearForm(Float64, O.AT, [FE1, FE2], [O.operator, Identity], O.action; name = O.name)   
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], transpose_copy = At, skip_preps = false, factor = -1)
-    else
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], transpose_copy = At, skip_preps = true, factor = -1)
-    end
-end
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::RhsOperator{AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0) where {AT<:AbstractAssemblyType}
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0)
     if O.store_operator == true
+        @debug "Adding PDEOperator $(O.name) from storage"
         addblock!(b, O.storage; factor = factor)
     else
+        set_time!(O.action_rhs, time)
+        skip_preps = true
         if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-            @debug "Creating assembly pattern for RhsOperator $(O.name)..."
-            FE = b.FES
-            SC.RHS_AssemblyPatterns[j][o] = LinearForm(Float64,AT, [FE], [O.testfunction_operator], O.action; regions = O.regions, name = O.name) 
-
-            set_time!(O.action, time)
-            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, skip_preps = false)
+            T = typeof(O).parameters[1]
+            APT = typeof(O).parameters[2]
+            AT = typeof(O).parameters[3]
+            @debug "Creating assembly pattern for PDEOperator $(O.name)"
+            if APT <: APT_BilinearForm
+                FES = Array{FESpace,1}(undef, 2)
+                FES[1] = b.FES
+                FES[2] = CurrentSolution[j].FES
+            elseif APT <: APT_LinearForm
+                FES = Array{FESpace,1}(undef, 1)
+                FES[1] = b.FES
+            elseif APT <: APT_NonlinearForm
+                FES = Array{FESpace,1}(undef, length(O.fixed_arguments))
+                for j = 1 : length(O.fixed_arguments)
+                    FES[j] = CurrentSolution[O.fixed_arguments_ids[j]].FES
+                end
+                push!(FES,b.FES)
+            end
+            skip_preps = false
+            SC.RHS_AssemblyPatterns[j][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
+        end
+        if length(O.fixed_arguments_ids) > 0
+            assemble!(b, SC.RHS_AssemblyPatterns[j][o],CurrentSolution[O.fixed_arguments_ids]; skip_preps = skip_preps, factor = O.factor*factor)
         else
-            set_time!(O.action, time)
-            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; factor = factor, skip_preps = true)
+            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; skip_preps = skip_preps, factor = O.factor*factor)
         end
     end
 end
 
 
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0) 
-    for j = 1 : length(b)
-        b[j] = CurrentSolution[O.copy_from][j] * O.factor
-    end
-end
 
-
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0)
-    set_time!(O.action, time)
-    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for nonlinear operator $(O.name)"
-        FE = Array{FESpace,1}(undef, length(O.coeff_from))
-        for j = 1 : length(O.coeff_from)
-            FE[j] = CurrentSolution[O.coeff_from[j]].FES
-        end
-        push!(FE,A.FESY)
-        SC.LHS_AssemblyPatterns[j,k][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action; regions = O.regions, name = O.name) 
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from], transposed_assembly = O.transposed_assembly, skip_preps = false)
-    else
-        assemble!(A, SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.coeff_from], transposed_assembly = O.transposed_assembly, skip_preps = true)
-    end
-end
-
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::AbstractNonlinearForm, CurrentSolution::FEVector; time::Real = 0)
-    if typeof(SC.RHS_AssemblyPatterns[j][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for RHS of nonlinear operator $(O.name)"
-        FE = Array{FESpace,1}(undef, length(O.coeff_from))
-        for j = 1 : length(O.coeff_from)
-            FE[j] = CurrentSolution[O.coeff_from[j]].FES
-        end
-        push!(FE,b.FES)
-        SC.RHS_AssemblyPatterns[j][o] = NonlinearForm(Float64, ON_CELLS, FE, O.operators, O.action_rhs; regions = O.regions, name = O.name)  
-        set_time!(O.action_rhs, time)
-        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; skip_preps = false)
+function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
+    if O.store_operator == true
+        @debug "Adding PDEOperator $(O.name) from storage"
+        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
         set_time!(O.action_rhs, time)
-        assemble!(b, SC.RHS_AssemblyPatterns[j][o], CurrentSolution[O.coeff_from]; skip_preps = true)
+        skip_preps = true
+        if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+            T = typeof(O).parameters[1]
+            APT = typeof(O).parameters[2]
+            AT = typeof(O).parameters[3]
+            @debug "Creating assembly pattern for PDEOperator $(O.name)"
+            if APT <: APT_BilinearForm
+                FES = Array{FESpace,1}(undef, 2)
+                if fixed_component == j
+                    FES[1] = CurrentSolution[fixed_component].FES
+                    FES[2] = b.FES
+                    fixed_arguments = [1]
+                elseif fixed_component == k
+                    FES[1] = b.FES
+                    FES[2] = CurrentSolution[fixed_component].FES
+                    fixed_arguments = [2]
+                else
+                    @error "Something went severely wrong..."
+                end
+            end
+            skip_preps = false
+            SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
+        end
+
+        if typeof(O).parameters[2] <: APT_BilinearForm
+            FES = Array{FESpace,1}(undef, 2)
+            if fixed_component == j
+                fixed_arguments = [1]
+            elseif fixed_component == k
+                fixed_arguments = [2]
+            else
+                @error "Something went severely wrong..."
+            end
+            fixed_arguments_ids = [fixed_component]
+        end
+        append!(fixed_arguments_ids,O.fixed_arguments_ids)
+        if length(fixed_arguments_ids) > 0
+            assemble!(b, SC.LHS_AssemblyPatterns[j,k][o],CurrentSolution[fixed_arguments_ids]; skip_preps = skip_preps, factor = O.factor*factor, fixed_arguments = fixed_arguments)
+        else
+            assemble!(b, SC.LHS_AssemblyPatterns[j,k][o]; skip_preps = skip_preps, factor = O.factor*factor)
+        end
     end
 end

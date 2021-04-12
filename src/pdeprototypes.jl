@@ -20,6 +20,7 @@ function IncompressibleNavierStokesProblem(
     nonlinear::Bool = true,
     auto_newton::Bool = true, # Newton by AD
     no_pressure_constraint::Bool = false,
+    store::Bool = true,
     pmean = 0)
 
     if nonlinear == true
@@ -36,10 +37,10 @@ function IncompressibleNavierStokesProblem(
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "pressure")
 
     # add Laplacian for velocity
-    add_operator!(Problem, [1,1], LaplaceOperator(viscosity,dimension,dimension; store = true))
+    add_operator!(Problem, [1,1], LaplaceOperator(viscosity; store = store))
 
     # add Lagrange multiplier for divergence of velocity
-    add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
+    add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence; store = store))
     
     if nonlinear
         add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, dimension, dimension; auto_newton = auto_newton))
@@ -94,26 +95,21 @@ end
 
 """
 ````
-function PoissonProblem(
-    dimension::Int = 2;
-    ncomponents::Int = 1,
-    diffusion = 1.0)
+function PoissonProblem(diffusion = 1.0)
 ````
 
-Creates a PDEDescription for a Poisson problem with specified number of components and globally constant diffusion parameter.
+Creates a PDEDescription for a Poisson problem with globally constant diffusion parameter.
     
 Boundary and right-hand side data or other modifications have to be added afterwards.
 """
 function PoissonProblem(
-    dimension::Int = 2;
-    ncomponents::Int = 1,
     diffusion = 1.0,
     AT::Type{<:AbstractAssemblyType} = ON_CELLS)
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("Poisson problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
-    add_operator!(Problem, [1,1], LaplaceOperator(diffusion,dimension,ncomponents; AT = AT))
+    add_operator!(Problem, [1,1], LaplaceOperator(diffusion; AT = AT))
 
     return Problem
 end
@@ -122,9 +118,7 @@ end
 """
 ````
 function L2BestapproximationProblem(
-    uexact::UserData{AbstractDataFunction},
-    dimension::Int = 2,
-    ncomponents::Int = 1;
+    uexact::UserData{AbstractDataFunction};
     bonus_quadorder::Int = 0,
     bestapprox_boundary_regions = [])
 ````
@@ -191,7 +185,7 @@ function H1BestapproximationProblem(
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription(name)
     add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
-    add_operator!(Problem, [1,1], LaplaceOperator(1,xdim,ncomponents))
+    add_operator!(Problem, [1,1], LaplaceOperator())
     add_rhsdata!(Problem, 1, RhsOperator(Gradient, [0], uexact_gradient))
     if length(bestapprox_boundary_regions) > 0
         if xdim == 1 # in 1D Dirichlet boundary can be interpolated

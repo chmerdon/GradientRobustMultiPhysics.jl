@@ -1,6 +1,7 @@
 
 abstract type AbstractAction end
 
+
 # dummy action that does nothing (but can be only used with certain assembly patterns)
 struct NoAction <: AbstractAction
     name::String
