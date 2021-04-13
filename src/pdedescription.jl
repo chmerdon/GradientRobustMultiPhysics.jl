@@ -101,7 +101,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds another unknown of specified dimensions to the PDEDescription.
+Adds another unknown to the PDEDescription.
 """
 function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_name::String = "")
     nunknowns = length(PDE.RHSOperators)+1
@@ -130,7 +130,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds the given PDEOperator to the left-hand side of the PDEDescription at the specified position.
+Adds the given abstract PDEOperator to the left-hand side of the PDEDescription at the specified position.
 """
 function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDEOperator; equation_name::String = "")
     push!(PDE.LHSOperators[position[1],position[2]],O)
@@ -139,6 +139,7 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDE
     end
     @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
 end
+
 """
 $(TYPEDSIGNATURES)
 
@@ -150,6 +151,8 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator
         PDE.equation_names[position[1]] = equation_name
     end
     @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
+
+    ## nonlinear forms may push additional right-hand side operators to the description
     if typeof(O).parameters[2] <: APT_NonlinearForm
         push!(PDE.RHSOperators[position[1]],O)
         @logmsg DeepInfo "Added operator $(O.name) also to RHS block $(position[1]) of PDEDescription $(PDE.name)"

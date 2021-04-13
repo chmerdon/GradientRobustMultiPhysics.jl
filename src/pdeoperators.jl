@@ -1,6 +1,7 @@
 
 # type to steer when a PDE block is (re)assembled
 abstract type AbstractAssemblyTrigger end
+abstract type AssemblyAuto <: AbstractAssemblyTrigger end # triggers automatic decision when block is reassembled at solver configuration level
 abstract type AssemblyFinal <: AbstractAssemblyTrigger end   # is only assembled after solving
 abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)assembled
     abstract type AssemblyEachTimeStep <: AssemblyAlways end     # is (re)assembled in each timestep
@@ -16,17 +17,22 @@ abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)
 # to describe operators in the (weak form of the) PDE
 #
 # some intermediate layer that knows nothing of the FE discretisatons
-# but triggers certain AssemblyPatterns/AbstractActions when called for assembly!
+# but know about their connectivities to help devide fixpoint iterations
+# and triggers certain AssemblyPatterns when called for assembly!
 #
 # USER-DEFINED ABSTRACTPDEOPERATORS
 # might be included if they implement the following interfaces
 #
 #   (1) to specify what is assembled into the corressponding MatrixBlock:
-#       assemble!(A::FEMatrixBlock, CurrentSolution::FEVector, O::AbstractPDEOperator)
-#       assemble!(b::FEVectorBlock, CurrentSolution::FEVector, O::AbstractPDEOperator)
+#       assemble!(A::FEMatrixBlock, SC::SolverConfig, j::Int, k::Int, o::Int, O::AbstractPDEOperator, CurrentSolution::FEVector; time, factor)
+#       assemble!(b::FEVectorBlock, SC::SolverConfig, j::Int, k::Int, o::Int, O::AbstractPDEOperator, CurrentSolution::FEVector; time, factor)
+#       assemble!(b::FEVectorBlock, SC::SolverConfig, j::Int, o::Int, O::AbstractPDEOperator, CurrentSolution::FEVector; time, factor)
 #
 #   (2) to allow SolverConfig to check if operator is nonlinear, timedependent:
-#       Bool, Bool = check_PDEoperator(O::AbstractPDEOperator)
+#       Bool, Bool, AssemblyTrigger = check_PDEoperator(O::AbstractPDEOperator)
+#
+#   (3) to allow SolverConfig to check if operator depends on unknown number arg:
+#       Bool = check_dependency(O::AbstractPDEOperator, arg::Int)
 # 
 
 
@@ -36,85 +42,9 @@ abstract type NoConnection <: AbstractPDEOperator end # => empy block in matrix
 has_copy_block(::AbstractPDEOperator) = false
 has_storage(::AbstractPDEOperator) = false
 
-struct DiagonalOperator <: AbstractPDEOperator
-    name::String
-    value::Real
-    onlyz::Bool
-    regions::Array{Int,1}
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-puts _value_ on the diagonal entries of the cell dofs within given _regions_
-
-if _onlyz_ == true only values that are zero are changed
-
-can only be applied in PDE LHS
-"""
-function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [0])
-    return DiagonalOperator("Diag($value)",value, onlynz, regions)
-end
-
-
-struct CopyOperator <: AbstractPDEOperator
-    name::String
-    copy_from::Int
-    factor::Real
-end
-
-"""
-$(TYPEDSIGNATURES)
-
-copies entries from TargetVector to rhs block
-
-can only be applied in PDE RHS
-"""
-function CopyOperator(copy_from, factor)
-    return CopyOperator("CopyOperator",copy_from, factor)
-end
-
-
-
-mutable struct FVConvectionDiffusionOperator <: AbstractPDEOperator
-    name::String
-    diffusion::Float64               # diffusion coefficient
-    beta_from::Int                   # component that determines
-    fluxes::Array{Float64,2}         # saves normalfluxes of beta here
-end
-
-
-"""
-$(TYPEDSIGNATURES)
-
- finite-volume convection diffusion operator (for cell-wise P0 rho)
-
- - div(diffusion * grad(rho) + beta rho)
-
- For diffusion = 0, the upwind divergence: div_upw(beta*rho) is generated
- For diffusion > 0, TODO
-                   
-"""
-function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
-    @assert beta_from > 0
-    fluxes = zeros(Float64,0,1)
-    return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
-end
-
-
-################ ASSEMBLY SPECIFICATIONS ################
-
-
-
 # check if operator causes nonlinearity or time-dependence
-function check_PDEoperator(O::AbstractPDEOperator, involved_equations::Array{Int})
-    return false, false
-end
-function check_PDEoperator(O::FVConvectionDiffusionOperator, involved_equations::Array{Int})
-    return O.beta_from in involved_equations, false
-end
-function check_PDEoperator(O::CopyOperator, involved_equations::Array{Int})
-    return true, true
+function check_PDEoperator(O::AbstractPDEOperator, involved_equations)
+    return false, false, AssemblyInitial
 end
 
 # check if operator also depends on arg (additional to the argument relative to position in PDEDescription)
@@ -122,149 +52,12 @@ function check_dependency(O::AbstractPDEOperator, arg::Int)
     return false
 end
 
-function check_dependency(O::FVConvectionDiffusionOperator, arg::Int)
-    return O.beta_from == arg
-end
-
-# check if operator on the LHS also needs to modify the RHS
-function LHSoperator_also_modifies_RHS(O::AbstractPDEOperator)
-    return false
-end
-
-
-
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0)
-    @debug "Assembling DiagonalOperator $(O.name)"
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert FE1 == FE2
-    xCellDofs = FE1[CellDofs]
-    xCellRegions = FE1.xgrid[CellRegions]
-    ncells = num_sources(xCellDofs)
-    dof::Int = 0
-    for item = 1 : ncells
-        for r = 1 : length(O.regions) 
-            # check if item region is in regions
-            if xCellRegions[item] == O.regions[r] || O.regions[r] == 0
-                for k = 1 : num_targets(xCellDofs,item)
-                    dof = xCellDofs[k,item]
-                    if O.onlyz == true
-                        if A[dof,dof] == 0
-                            A[dof,dof] = O.value
-                        end
-                    else
-                        A[dof,dof] = O.value
-                    end    
-                end
-            end
-        end
-    end
-end
-
-
-
-#= (1) calculate normalfluxes from component at _beta_from_
-(2) compute FV flux on each face and put coefficients on neighbouring cells in matrix
-
-    if kappa == 0:
-          div_upw(beta*rho)|_T = sum_{F face of T} normalflux(F) * rho(F)
-
-          where rho(F) is the rho in upwind direction 
-
-    and put it into P0xP0 matrix block like this:
-
-          Loop over cell, face of cell
-
-              other_cell = other face neighbour cell
-              if flux := normalflux(F_j) * CellFaceSigns[face,cell] > 0
-                  A(cell,cell) += flux
-                  A(other_cell,cell) -= flux
-              else
-                  A(other_cell,other_cell) -= flux
-                  A(cell,other_cell) += flux =#
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0)
-    @logmsg MoreInfo "Assembling FVConvectionOperator $(O.name) into matrix"
-    T = Float64
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert FE1 == FE2
-    xFaceNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceNodes]
-    xFaceNormals::Array{T,2} = FE1.xgrid[FaceNormals]
-    xFaceCells::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceCells]
-    xFaceVolumes::Array{T,1} = FE1.xgrid[FaceVolumes]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaces]
-    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaceSigns]
-    nfaces::Int = num_sources(xFaceNodes)
-    ncells::Int = num_sources(xCellFaceSigns)
-    nnodes::Int = num_sources(FE1.xgrid[Coordinates])
-    
-    # ensure that flux field is long enough
-    if length(O.fluxes) < nfaces
-        O.fluxes = zeros(Float64,1,nfaces)
-    end
-    # compute normal fluxes of component beta
-    c::Int = O.beta_from
-    fill!(O.fluxes,0)
-    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-        @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
-        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux]; name = "u ⋅ n")
-        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = false)
-    else
-        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = true)
-    end
-
-    fluxes::Array{T,2} = O.fluxes
-    nfaces4cell::Int = 0
-    face::Int = 0
-    flux::T = 0.0
-    other_cell::Int = 0
-    for cell = 1 : ncells
-        nfaces4cell = num_targets(xCellFaces,cell)
-        for cf = 1 : nfaces4cell
-            face = xCellFaces[cf,cell]
-            other_cell = xFaceCells[1,face]
-            if other_cell == cell
-                other_cell = xFaceCells[2,face]
-            end
-            flux = fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
-            if (other_cell > 0) 
-                flux *= 1 // 2 # because it will be accumulated on two cells
-            end       
-            if flux > 0 # flow from cell to other_cell
-                _addnz(A,cell,cell,flux,1)
-                if other_cell > 0
-                    _addnz(A,other_cell,cell,-flux,1)
-                    _addnz(A,other_cell,other_cell,1e-16,1) # add zero to keep pattern for LU
-                    _addnz(A,cell,other_cell,1e-16,1) # add zero to keep pattern for LU
-                    # otherwise flow goes out of domain
-                end    
-            else # flow from other_cell into cell
-                _addnz(A,cell,cell,1e-16,1) # add zero to keep pattern for LU
-                if other_cell > 0 # flow comes from neighbour cell
-                    _addnz(A,other_cell,other_cell,-flux,1)
-                    _addnz(A,cell,other_cell,flux,1)
-                    _addnz(A,other_cell,cell,1e-16,1) # add zero to keep pattern for LU
-                else # flow comes from outside domain
-                   #  A[cell,cell] += flux
-                end 
-            end
-        end
-    end
-end
-
-
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0) 
-    for j = 1 : length(b)
-        b[j] = CurrentSolution[O.copy_from][j] * O.factor
-    end
-end
 
 
 """
 $(TYPEDEF)
 
 common structures for all finite element operators that are assembled with GradientRobustMultiPhysics; better look at the AssemblyPatternType and the constructors
-    
 """
 mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} <: AbstractPDEOperator
     name::String
@@ -279,14 +72,14 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Abstract
     transposed_assembly::Bool
     transposed_copy::Bool
     store_operator::Bool
-    store_reassembly_trigger::Type{<:AbstractAssemblyTrigger}
+    assembly_trigger::Type{<:AbstractAssemblyTrigger}
     storage::Union{<:AbstractVector,<:AbstractMatrix}
-    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],1,[0],false,false,false)
-    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],factor,[0],false,false,false,AssemblyNever)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,[0],false,false,false,AssemblyNever)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,false,AssemblyNever)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,AssemblyInitial)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,store_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,store_trigger)
+    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],1,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],factor,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,assembly_trigger)
 end 
 
 function Base.show(io::IO, O::PDEOperator)
@@ -305,12 +98,25 @@ end
 
 has_copy_block(O::PDEOperator) = O.transposed_copy
 has_storage(O::PDEOperator) = O.store_operator
-function check_PDEoperator(O::PDEOperator, involved_equations::Array{Int})
-    if typeof(O.action) <: NoAction
-        return length(O.fixed_arguments_ids) > 0, false
+function check_PDEoperator(O::PDEOperator, involved_equations)
+    nonlinear = length(O.fixed_arguments_ids) > 0
+    timedependent = typeof(O.action) <: NoAction ? false : is_timedependent(O.action.kernel)
+    if O.assembly_trigger <: AssemblyAuto
+        assembly_trigger = AssemblyInitial
+        if timedependent
+            assembly_trigger = AssemblyEachTimeStep
+        end
+        if nonlinear
+            assembly_trigger = AssemblyAlways
+        end
     else 
-        return length(O.fixed_arguments_ids) > 0, is_timedependent(O.action.kernel)
+        assembly_trigger = O.assembly_trigger
     end
+    return nonlinear, timedependent, assembly_trigger
+end
+# check if operator also depends on arg (additional to the argument(s) relative to position in PDEDescription)
+function check_dependency(O::PDEOperator, arg::Int)
+    return arg in O.fixed_arguments_ids
 end
 
 """
@@ -330,21 +136,6 @@ function restrict_operator(O::PDEOperator; fixed_arguments = [], fixed_arguments
     end
     return Or
 end
-
-# check if operator also depends on arg (additional to the argument relative to position in PDEDescription)
-function check_dependency(O::PDEOperator, arg::Int)
-    return arg in O.fixed_arguments_ids
-end
-
-mutable struct ExteriorPDEOperator{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} <: AbstractPDEOperator
-    name::String
-    factor::T
-    storage::AbstractMatrix
-    init_assemble::Function
-    reassembly_trigger::Type{<:AbstractAssemblyTrigger}
-    reassemble::Function
-end 
-
 
 
 """
@@ -395,7 +186,10 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (A(operator(u)), v) and assembles a second transposed block at the block of the transposed PDE coordinates
+constructor for a bilinearform that describes a(u,v) = (A(operator(u)), id(v)) and assembles a second transposed block at the block of the transposed PDE coordinates. It is intended to use
+to render one unknown of the PDE the Lagrange multiplier for another unknown by putting this operator on the coressponding subdiagonal block of the PDE description.
+
+Example: LagrangeMultiplier(Divergence) is used to render the pressure the LagrangeMultiplier for the velocity divergence constraint in the Stokes prototype.
 """
 function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = NoAction(), regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
@@ -533,7 +327,7 @@ function AbstractBilinearForm(
     if name == "auto"
         apply_action_to == 1 ? "A($operator1(u)):$operator2(v)" : "$operator1(u):A($operator2(v))"
     end
-    O = PDEOperator{Float64, APT_BilinearForm, AT}(name,operators, action, apply_action_to, factor, regions, store, AssemblyInitial)
+    O = PDEOperator{Float64, APT_BilinearForm, AT}(name,operators, action, apply_action_to, factor, regions, store, AssemblyAuto)
     O.transposed_assembly = transposed_assembly
     return O
 end
@@ -555,7 +349,10 @@ function AbstractTrilinearForm(
 abstract trilinearform constructor that assembles
 - c(a,u,v) = int_regions action(operator1(a),operator2(u)) * operator3(v)
 
+where u and are the ansatz and test function coressponding to the PDE coordinates and a is an additional unknown of the PDE.
 The argument a can be moved to the other positions with a_to and gets it data from unknown a_from of the full PDEdescription.
+
+(Note that this operator is always marked as nonlinear by the Solver configuration.)
 """
 function AbstractTrilinearForm(
     operators::Array{DataType,1},
@@ -565,7 +362,7 @@ function AbstractTrilinearForm(
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = true)
+    transposed_assembly::Bool = false)
 
     if name == "auto"
         if a_to == 1
@@ -588,7 +385,7 @@ end
 ````
 function ConvectionOperator(
     a_from::Int, 
-    beta_operator,
+    beta_operator::Type{<:AbstractFunctionOperator},
     xdim::Int,
     ncomponents::Int;
     name = "auto",
@@ -601,9 +398,9 @@ function ConvectionOperator(
     quadorder = 0)
 ````
 
-constructs an PDE operator for a convection term of the form c(a,u,v) = (beta_operator(a)*grad(u),v) where a_from is the id of some unknown of the PDEDescription.
+constructs a trilinearform for a convection term of the form c(a,u,v) = (beta_operator(a)*grad(u),v) where a_from is the id of some unknown of the PDEDescription.
 xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
-With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v). 
+With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v),
 With auto_newton = true a Newton scheme for a(u,v) = (u*grad(u),v) is automatically derived (and fixed_argument is ignored).
 
 """
@@ -845,7 +642,7 @@ function RhsOperator(
     if name == "auto"
         name = "A($operator(v))"
     end
-    PDEOperator{Float64, APT_LinearForm, AT}(name, [operator], action, [1], 1, regions, store, AssemblyInitial)
+    PDEOperator{Float64, APT_LinearForm, AT}(name, [operator], action, [1], 1, regions, store, AssemblyAuto)
 end
 
 
@@ -1041,7 +838,7 @@ end
 
 
 function update_storage!(O::PDEOperator, CurrentSolution::FEVector, j::Int, k::Int; factor = 1, time::Real = 0)
-    @logmsg DeepInfo "Updating storage of PDEOperator $(O.name)"
+    @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in LHS block [$j,$K]"
 
     set_time!(O.action, time)
     T = typeof(O).parameters[1]
@@ -1062,7 +859,7 @@ end
 
 function update_storage!(O::PDEOperator, CurrentSolution::FEVector, j::Int; factor = 1, time::Real = 0)
 
-    @logmsg DeepInfo "Updating storage of PDEOperator $(O.name)"
+    @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in RHS block [$j]"
 
     set_time!(O.action, time)
     T = typeof(O).parameters[1]
@@ -1139,7 +936,7 @@ end
 
 function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0)
     if O.store_operator == true
-        @debug "Adding PDEOperator $(O.name) from storage"
+        @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
         addblock!(b, O.storage; factor = factor)
     else
         set_time!(O.action_rhs, time)
@@ -1175,10 +972,10 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::PDEOperator, Current
 end
 
 
-
+# LHS operator is assembled to RHS block (due to subiteration configuration)
 function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
     if O.store_operator == true
-        @debug "Adding PDEOperator $(O.name) from storage"
+        @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
         addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
     else
         set_time!(O.action_rhs, time)
@@ -1225,3 +1022,238 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
         end
     end
 end
+
+
+
+
+##############################
+###### OTHER OPERATORS #######
+##############################
+
+
+struct DiagonalOperator <: AbstractPDEOperator
+    name::String
+    value::Real
+    onlyz::Bool
+    regions::Array{Int,1}
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+puts _value_ on the diagonal entries of the cell dofs within given _regions_
+
+if _onlyz_ == true only values that are zero are changed
+
+can only be applied in PDE LHS
+"""
+function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [0])
+    return DiagonalOperator("Diag($value)",value, onlynz, regions)
+end
+
+
+struct CopyOperator <: AbstractPDEOperator
+    name::String
+    copy_from::Int
+    factor::Real
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+copies entries from TargetVector to rhs block
+
+can only be applied in PDE RHS
+"""
+function CopyOperator(copy_from, factor)
+    return CopyOperator("CopyOperator",copy_from, factor)
+end
+
+
+
+mutable struct FVConvectionDiffusionOperator <: AbstractPDEOperator
+    name::String
+    diffusion::Float64               # diffusion coefficient
+    beta_from::Int                   # component that determines
+    fluxes::Array{Float64,2}         # saves normalfluxes of beta here
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+ finite-volume convection diffusion operator (for cell-wise P0 rho)
+
+ - div(diffusion * grad(rho) + beta rho)
+
+ For diffusion = 0, the upwind divergence: div_upw(beta*rho) is generated
+ For diffusion > 0, TODO
+                   
+"""
+function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
+    @assert beta_from > 0
+    fluxes = zeros(Float64,0,1)
+    return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
+end
+
+
+function check_PDEoperator(O::FVConvectionDiffusionOperator, involved_equations)
+    return O.beta_from in involved_equations, false, AssemblyAlways
+end
+function check_PDEoperator(O::CopyOperator, involved_equations)
+    return true, true, AssemblyAlways
+end
+
+
+function check_dependency(O::FVConvectionDiffusionOperator, arg::Int)
+    return O.beta_from == arg
+end
+
+
+
+
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0)
+    @debug "Assembling DiagonalOperator $(O.name)"
+    FE1 = A.FESX
+    FE2 = A.FESY
+    @assert FE1 == FE2
+    xCellDofs = FE1[CellDofs]
+    xCellRegions = FE1.xgrid[CellRegions]
+    ncells = num_sources(xCellDofs)
+    dof::Int = 0
+    for item = 1 : ncells
+        for r = 1 : length(O.regions) 
+            # check if item region is in regions
+            if xCellRegions[item] == O.regions[r] || O.regions[r] == 0
+                for k = 1 : num_targets(xCellDofs,item)
+                    dof = xCellDofs[k,item]
+                    if O.onlyz == true
+                        if A[dof,dof] == 0
+                            A[dof,dof] = O.value
+                        end
+                    else
+                        A[dof,dof] = O.value
+                    end    
+                end
+            end
+        end
+    end
+end
+
+
+
+#= 
+
+(1) calculate normalfluxes from component at _beta_from_
+(2) compute FV flux on each face and put coefficients on neighbouring cells in matrix
+
+    if kappa == 0:
+          div_upw(beta*rho)|_T = sum_{F face of T} normalflux(F) * rho(F)
+
+          where rho(F) is the rho in upwind direction 
+
+    and put it into P0xP0 matrix block like this:
+
+          Loop over cell, face of cell
+
+              other_cell = other face neighbour cell
+              if flux := normalflux(F_j) * CellFaceSigns[face,cell] > 0
+                  A(cell,cell) += flux
+                  A(other_cell,cell) -= flux
+              else
+                  A(other_cell,other_cell) -= flux
+                  A(cell,other_cell) += flux
+
+=#
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectionDiffusionOperator, CurrentSolution::FEVector; time::Real = 0)
+    @logmsg MoreInfo "Assembling FVConvectionOperator $(O.name) into matrix"
+    T = Float64
+    FE1 = A.FESX
+    FE2 = A.FESY
+    @assert FE1 == FE2
+    xFaceNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceNodes]
+    xFaceNormals::Array{T,2} = FE1.xgrid[FaceNormals]
+    xFaceCells::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[FaceCells]
+    xFaceVolumes::Array{T,1} = FE1.xgrid[FaceVolumes]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaces]
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE1.xgrid[CellFaceSigns]
+    nfaces::Int = num_sources(xFaceNodes)
+    ncells::Int = num_sources(xCellFaceSigns)
+    nnodes::Int = num_sources(FE1.xgrid[Coordinates])
+    
+    # ensure that flux field is long enough
+    if length(O.fluxes) < nfaces
+        O.fluxes = zeros(Float64,1,nfaces)
+    end
+    # compute normal fluxes of component beta
+    c::Int = O.beta_from
+    fill!(O.fluxes,0)
+    if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+        @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux]; name = "u ⋅ n")
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = false)
+    else
+        evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],[CurrentSolution[c]], skip_preps = true)
+    end
+
+    fluxes::Array{T,2} = O.fluxes
+    nfaces4cell::Int = 0
+    face::Int = 0
+    flux::T = 0.0
+    other_cell::Int = 0
+    for cell = 1 : ncells
+        nfaces4cell = num_targets(xCellFaces,cell)
+        for cf = 1 : nfaces4cell
+            face = xCellFaces[cf,cell]
+            other_cell = xFaceCells[1,face]
+            if other_cell == cell
+                other_cell = xFaceCells[2,face]
+            end
+            flux = fluxes[face] * xCellFaceSigns[cf,cell] # sign okay?
+            if (other_cell > 0) 
+                flux *= 1 // 2 # because it will be accumulated on two cells
+            end       
+            if flux > 0 # flow from cell to other_cell
+                _addnz(A,cell,cell,flux,1)
+                if other_cell > 0
+                    _addnz(A,other_cell,cell,-flux,1)
+                    _addnz(A,other_cell,other_cell,1e-16,1) # add zero to keep pattern for LU
+                    _addnz(A,cell,other_cell,1e-16,1) # add zero to keep pattern for LU
+                    # otherwise flow goes out of domain
+                end    
+            else # flow from other_cell into cell
+                _addnz(A,cell,cell,1e-16,1) # add zero to keep pattern for LU
+                if other_cell > 0 # flow comes from neighbour cell
+                    _addnz(A,other_cell,other_cell,-flux,1)
+                    _addnz(A,cell,other_cell,flux,1)
+                    _addnz(A,other_cell,cell,1e-16,1) # add zero to keep pattern for LU
+                else # flow comes from outside domain
+                   #  A[cell,cell] += flux
+                end 
+            end
+        end
+    end
+end
+
+
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0) 
+    for j = 1 : length(b)
+        b[j] = CurrentSolution[O.copy_from][j] * O.factor
+    end
+end
+
+
+
+#################################
+##### EXTERIOR PDEOPERATORS #####
+#################################
+
+### just an idea so far, not usable yet !!!
+mutable struct ExteriorPDEOperator{T <: Real} <: AbstractPDEOperator
+    name::String
+    factor::T
+    storage::AbstractMatrix
+    init_assemble::Function
+    reassembly_trigger::Type{<:AbstractAssemblyTrigger}
+    reassemble::Function
+end 

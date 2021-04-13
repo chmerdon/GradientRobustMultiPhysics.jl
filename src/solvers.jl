@@ -140,6 +140,7 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
     timedependent::Bool = false
     block_nonlinear::Bool = false
     block_timedependent::Bool = false
+    block_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyNever
     op_nonlinear::Bool = false
     op_timedependent::Bool = false
     LHS_ATs = Array{DataType,2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
@@ -157,10 +158,11 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
         end
         block_nonlinear = false
         block_timedependent = false
+        block_trigger = AssemblyNever
         current_dep = [j,k]
         for o = 1 : length(PDE.LHSOperators[j,k])
             # check nonlinearity and time-dependency of operator
-            op_nonlinear, op_timedependent = check_PDEoperator(PDE.LHSOperators[j,k][o],all_equations)
+            op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(PDE.LHSOperators[j,k][o],all_equations)
             # check dependency on components
             for beta = 1:size(PDE.LHSOperators,2)
                 if check_dependency(PDE.LHSOperators[j,k][o],beta) == true
@@ -173,20 +175,22 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
             if op_timedependent == true
                 block_timedependent = true
             end
+            if block_trigger <: op_trigger
+                block_trigger = op_trigger
+            end
+            @debug "PDEoperator $o at LHS[$j,$k] is $(op_nonlinear ? "nonlinear" : "linear")$(op_timedependent ? " and timedependent" : "") and has the assembly trigger $op_trigger"
         end
         # check nonlinearity and time-dependency of whole block
         # and assign appropriate AssemblyTrigger
         if length(PDE.LHSOperators[j,k]) == 0
             LHS_ATs[j,k] = AssemblyNever
         else
-            LHS_ATs[j,k] = AssemblyInitial
+            LHS_ATs[j,k] = block_trigger
             if block_timedependent== true
                 timedependent = true
-                LHS_ATs[j,k] = AssemblyEachTimeStep
             end
             if block_nonlinear == true
                 nonlinear = true
-                LHS_ATs[j,k] = AssemblyAlways
             end
         end
         # assign dependencies
@@ -201,9 +205,10 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
         end
         block_nonlinear = false
         block_timedependent = false
+        block_trigger = AssemblyNever
         current_dep = []
         for o = 1 : length(PDE.RHSOperators[j])
-            op_nonlinear, op_timedependent = check_PDEoperator(PDE.RHSOperators[j][o],all_equations)
+            op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(PDE.RHSOperators[j][o],all_equations)
             for beta = 1:size(PDE.LHSOperators,2)
                 if check_dependency(PDE.RHSOperators[j][o],beta) == true
                     push!(current_dep,beta)
@@ -215,18 +220,21 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
             if op_timedependent== true
                 block_timedependent = true
             end
+            if block_trigger <: op_trigger
+                block_trigger = op_trigger
+            end
+
+            @debug "PDEoperator $o at RHS[$j] is $(op_nonlinear ? "nonlinear" : "linear")$(op_timedependent ? " and timedependent" : "") and has the assembly trigger $op_trigger"
         end
         if length(PDE.RHSOperators[j]) == 0
             RHS_ATs[j] = AssemblyNever
         else
-            RHS_ATs[j] = AssemblyInitial
+            RHS_ATs[j] = block_trigger
             if block_timedependent== true
                 timedependent = true
-                RHS_ATs[j] = AssemblyEachTimeStep
             end
             if block_nonlinear == true
                 nonlinear = true
-                RHS_ATs[j] = AssemblyAlways
             end
         end
         # assign dependencies
@@ -255,6 +263,7 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
         if (k in subiterations[s]) == false
             for j in subiterations[s]
                 if LHS_ATs[j,k] == AssemblyInitial
+                    @debug "AssemblyTrigger of block [$j,$k] upgraded to AssemblyEachTimeStep due to subiteration configuration"
                     LHS_ATs[j,k] = AssemblyEachTimeStep
                 end
             end
@@ -276,8 +285,8 @@ function Base.show(io::IO, SC::SolverConfig)
 
     println(io, "\nSOLVER-CONFIGURATION")
     println(io, "======================")
-    println(io, "  nonlinear = $(SC.is_nonlinear)")
-    println(io, "  timedependent = $(SC.is_timedependent)")
+    println(io, "  overall nonlinear = $(SC.is_nonlinear)")
+    println(io, "  overall timedependent = $(SC.is_timedependent)")
 
     for (k,v) in SC.user_params
         println(io, "  $(k) = $(v)")
@@ -313,7 +322,7 @@ function Base.show(io::IO, SC::SolverConfig)
         end
         println(io, "")
     end
-    println(io, "                     (I = Once, T = EachTimeStep, A = Always, N = Never)")
+    println(io, "                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)")
     println(io, "\n  LHS_dependencies = $(SC.LHS_dependencies)\n")
 end
 
@@ -379,16 +388,22 @@ function assemble!(
 
     elapsedtime::Float64 = 0
     # force (re)assembly of stored bilinearforms and RhsOperators
-    @logmsg DeepInfo "Locking for triggered storage updates..."
-    if (min_trigger == AssemblyInitial) == true && !only_rhs
+    if !only_rhs
+        op_nonlinear::Bool = false
+        op_timedependent::Bool = false
+        op_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyNever
+        @logmsg DeepInfo "Locking for triggered storage updates..."
         for j = 1:length(equations)
             for k = 1 : size(PDE.LHSOperators,2)
                 if (storage_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) == true
                     for o = 1 : length(PDE.LHSOperators[equations[j],k])
                         O = PDE.LHSOperators[equations[j],k][o]
                         if has_storage(O)
-                            elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j], k; time = time)
-                            SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+                            op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(PDE.LHSOperators[equations[j],k][o],equations)
+                            if (min_trigger <: op_trigger) 
+                                elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j], k; time = time)
+                                SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+                            end
                         end
                     end
                 end
@@ -399,8 +414,11 @@ function assemble!(
                 for o = 1 : length(PDE.RHSOperators[equations[j]])
                     O = PDE.RHSOperators[equations[j]][o]
                     if has_storage(O)
-                        elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j] ; time = time)
-                        SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+                        op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(PDE.RHSOperators[equations[j]][o],equations)
+                        if (min_trigger <: op_trigger) 
+                            elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j] ; time = time)
+                            SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+                        end
                     end
                 end
             end
