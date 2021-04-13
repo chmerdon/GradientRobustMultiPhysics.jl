@@ -106,12 +106,12 @@ Problem =
 ┌ Info: ----- Solving NSE (iterated penalty) -----
 │ 	Equation (1.1) velocity update : u &gt;&gt; u_h (H1P2{2,2}, ndofs = 4226)
 │ 	Equation (2.2) pressure update : p &gt;&gt; p_h (H1P1{1} (broken), ndofs = 3072)
-└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1019
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1037
 SC = 
 SOLVER-CONFIGURATION
 ======================
-  nonlinear = true
-  timedependent = false
+  overall nonlinear = true
+  overall timedependent = false
   anderson_iterations = 0
   subiterations = [[1], [2]]
   show_iteration_details = true
@@ -133,7 +133,7 @@ SOLVER-CONFIGURATION
          LHS_AT[2] :  T  I 
          RHS_AT[1] :  A 
          RHS_AT[2] :  A 
-                     (I = Once, T = EachTimeStep, A = Always, N = Never)
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
 
   LHS_dependencies = [[1] [1, 2]; [2, 1] [2]]
 
@@ -141,15 +141,15 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 4.199491e-11 | 5.048465e-02
-	      2   | 4.173953e-11 | 2.431377e-05
-	      3   | 4.194123e-11 | 7.249710e-07
-	      4   | 4.150508e-11 | 9.759919e-08
-	      5   | 4.265622e-11 | 1.364272e-08
-	      6   | 4.146820e-11 | 1.929446e-09
-	      7   | 4.188488e-11 | 2.866359e-10
-	      8   | 4.131373e-11 | 8.871280e-11
+	      1   | 4.149845e-11 | 5.048465e-02
+	      2   | 4.348829e-11 | 2.431378e-05
+	      3   | 4.390262e-11 | 7.249710e-07
+	      4   | 4.245434e-11 | 9.760028e-08
+	      5   | 4.254257e-11 | 1.364378e-08
+	      6   | 4.162208e-11 | 1.931866e-09
+	      7   | 4.419762e-11 | 2.887304e-10
+	      8   | 4.170112e-11 | 8.736251e-11
 
-|| u - u_h || = 6.190496034726927e-12
-|| p - p_h || = 3.7640940582560554e-10
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson/">« 2D Nonlinear Poisson-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 12 April 2021 21:24">Monday 12 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 6.380008021290287e-12
+|| p - p_h || = 3.8072812559164513e-10
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson/">« 2D Nonlinear Poisson-Problem</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 13 April 2021 07:25">Tuesday 13 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
