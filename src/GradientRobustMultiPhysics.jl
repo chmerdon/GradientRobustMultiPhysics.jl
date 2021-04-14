@@ -244,7 +244,7 @@ export DiagonalOperator, CopyOperator
 export RhsOperator
 export restrict_operator
 
-export LHSoperator_also_modifies_RHS
+export assemble_operator!
 
 
 include("boundarydata.jl")

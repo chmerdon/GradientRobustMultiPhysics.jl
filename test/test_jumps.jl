@@ -175,7 +175,7 @@ function test_disc_TLF(xgrid, discontinuity)
 
     # once again as a trilinearform where the first two components are fixed
     b = zeros(Float64,FE.ndofs)
-    assemble!(b,FEFunction[1],FEFunction[1], TestForm)
+    assemble!(b, TestForm, [FEFunction[1],FEFunction[1]])
     for j = 1 : FE.ndofs
         error[4] += b[j] * FEFunction[1][j]
     end

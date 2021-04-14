@@ -82,13 +82,13 @@ function assemble!(
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
     action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
+    fixed_argument = fixed_arguments[1]
     if AP.regions != [0]
-        @logmsg MoreInfo "Assembling $(AP.name) for given $(fixedFE[1].name) into vector ($AT in regions = $(AP.regions))"
+        @logmsg MoreInfo "Assembling $(AP.name) for given $(fixedFE[1].name) (id=$fixed_argument) into matrix ($AT in regions = $(AP.regions))"
     else
-        @logmsg MoreInfo "Assembling $(AP.name) for given $(fixedFE[1].name) into vector ($AT)"
+        @logmsg MoreInfo "Assembling $(AP.name) for given $(fixedFE[1].name) (id=$fixed_argument) into matrix ($AT)"
     end
     @assert length(fixed_arguments) == 1 "Matrix assembly for Trilinearform needs exactly one fixed argument"
-    fixed_argument = fixed_arguments[1]
     @debug AP
 
     # loop over items
@@ -141,7 +141,7 @@ function assemble!(
                 # update action on dofitem
                 update!(action, basisevaler[2], dofitem[2], item, regions[r])
 
-                # update dofs of free arguments
+                # update coeffs of fixed and dofs of free arguments
                 get_coeffs!(coeffs, fixedFE[1], AM, fixed_argument, di[fixed_argument])
                 get_dofs!(dofs2, AM, nonfixed_ids[1], di[nonfixed_ids[1]])
                 get_dofs!(dofs3, AM, nonfixed_ids[2], di[nonfixed_ids[2]])
@@ -220,9 +220,8 @@ end
 assemble!(
     assemble!(
     b::AbstractVector,                      # target vector
-    FE1::FEVectorBlock,                     # coefficients for first fixed argument
-    FE2::FEVectorBlock.                     # coefficients for second fixed argument
-    AP::AssemblyPattern{APT,T,AT};          # TrilinearForm pattern
+    AP::AssemblyPattern{APT,T,AT},          # coefficients for fixed arguments
+    fixedFE::Array{<:FEVectorBlock,1};      # TrilinearForm pattern
     factor = 1)                             # factor that is multiplied
     where {APT <: APT_TrilinearForm, T, AT}
 ````
@@ -232,14 +231,15 @@ Here, the first two arguments are fixed by the given coefficients in FE1 and FE2
 """
 function assemble!(
     b::AbstractVector,
-    FE1::FEVectorBlock,
-    FE2::FEVectorBlock,
-    AP::AssemblyPattern{APT,T,AT};
+    AP::AssemblyPattern{APT,T,AT},
+    fixedFE::Array{<:FEVectorBlock,1};
     skip_preps::Bool = false,
     factor::Real = 1,
     offset::Int = 0) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     # prepare assembly
+    FE1 = fixedFE[1]
+    FE2 = fixedFE[2]
     FE = AP.FES
     if !skip_preps
         prepare_assembly!(AP)
@@ -355,11 +355,11 @@ end
 ## wrapper for FEVectorBlock to avoid use of setindex! functions of FEMAtrixBlock
 function assemble!(
     b::FEVectorBlock,
-    FE1::FEVectorBlock,
-    FE2::FEVectorBlock,
-    AP::AssemblyPattern{APT,T,AT};
+    AP::AssemblyPattern{APT,T,AT},
+    fixedFE::Array{<:FEVectorBlock,1};
     skip_preps::Bool = false,
+    fixed_arguments = [1,2],
     factor::Real = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
-    assemble!(b.entries, FE1, FE2, AP; factor = factor, offset = b.offset, skip_preps = skip_preps)
+    assemble!(b.entries, AP, fixedFE; factor = factor, offset = b.offset, skip_preps = skip_preps)
 end

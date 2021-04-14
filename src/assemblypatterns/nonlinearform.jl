@@ -209,6 +209,7 @@ function assemble!(
     AP::AssemblyPattern{APT,T,AT},
     FEB::Array{<:FEVectorBlock,1};
     factor = 1,
+    fixed_arguments = nothing, # ignored
     transposed_assembly::Bool = false,
     skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
 

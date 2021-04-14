@@ -554,7 +554,125 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     if SC.user_params[:show_statistics]
         show_statistics(PDE,SC)
     end
+
+    if SC.user_params[:show_iteration_details]
+        @info "overall residual = $(sqrt(resnorm))"
+    end
     return sqrt(resnorm)
+end
+
+mutable struct AndersonAccelerationManager{T<:Real, maxiterations}
+    LastIterates::Array{FEVector{T},1}
+    LastIteratesTilde::Array{FEVector{T},1}
+    NormOperator::AbstractMatrix{T}
+    Matrix::AbstractMatrix{T}
+    Rhs::AbstractVector{T}
+    alpha::AbstractVector{T}
+    cdepth::Int
+    Target::FEVector{T}
+    anderson_unknowns::Array{Int,1}
+end
+
+function AndersonAccelerationManager{T,anderson_iterations}(anderson_metric::String, Target::FEVector; anderson_unknowns = "all") where {T, anderson_iterations}
+
+    @assert anderson_iterations > 1 "Anderson accelerations needs anderson_iterations > 1!"
+    # we need to save the last iterates
+    LastIterates = Array{FEVector,1}(undef, anderson_iterations+1) # actual iterates u_k
+    LastIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
+
+    ## assemble convergence metric
+    FEs = Array{FESpace,1}([])
+    for j = 1 : length(Target.FEVectorBlocks)
+        push!(FEs,Target.FEVectorBlocks[j].FES)
+    end    
+
+    if anderson_unknowns == "all"
+        anderson_unknowns = 1 : length(Target.FEVectorBlocks)
+    end
+    NormOperator = FEMatrix{T}("AA-Metric",FEs)
+    for u in anderson_unknowns
+        if anderson_metric == "L2"
+            AA_METRIC = SymmetricBilinearForm(Float64, ON_CELLS, [FEs[u], FEs[u]], [Identity, Identity], MultiplyScalarAction(1,get_ncomponents(typeof(FEs[u]).parameters[1])))
+            assemble!(NormOperator[u], AA_METRIC)
+        elseif anderson_metric == "l2"
+            for j = 1 : FEs[u].ndofs
+                NormOperator[u][j,j] = 1
+            end
+        end
+    end
+    NormOperator = NormOperator.entries
+    flush!(NormOperator)
+    
+    Matrix = zeros(T, anderson_iterations+2, anderson_iterations+2)
+    Rhs = zeros(T, anderson_iterations+2)
+    Rhs[anderson_iterations+2] = 1 # sum of all coefficients should equal 1
+    alpha = zeros(T, anderson_iterations+2)
+    for j = 1 : anderson_iterations+1
+        LastIterates[j] = deepcopy(Target)
+        LastIteratesTilde[j] = deepcopy(Target)
+        Matrix[j,anderson_iterations+2] = 1
+        Matrix[anderson_iterations+2,j] = 1
+    end
+    return AndersonAccelerationManager{T,anderson_iterations}(LastIterates,LastIteratesTilde,NormOperator,Matrix,Rhs,alpha,0,Target,anderson_unknowns)
+end
+
+# call this every time Target has got its new values
+function update!(AAM::AndersonAccelerationManager)
+    anderson_iterations = typeof(AAM).parameters[2]
+    AAM.cdepth = min(anderson_iterations,AAM.cdepth)
+
+    # move last tilde iterates to the front in memory
+    for j = 1 : anderson_iterations
+        AAM.LastIteratesTilde[j].entries .= AAM.LastIteratesTilde[j+1].entries
+    end
+
+    # save fixpoint iterate as new tilde iterate
+    AAM.LastIteratesTilde[anderson_iterations+1].entries .= AAM.Target.entries
+
+    if AAM.cdepth > 0
+        # fill matrix
+        for j = 1 : AAM.cdepth+1, k = 1 : AAM.cdepth+1
+            AAM.Matrix[j,k] = lrmatmul(AAM.LastIteratesTilde[anderson_iterations+2-j].entries .- AAM.LastIterates[anderson_iterations+2-j].entries,
+                                    AAM.NormOperator,
+                                    AAM.LastIteratesTilde[anderson_iterations+2-k].entries .- AAM.LastIterates[anderson_iterations+2-k].entries)
+        end
+        # solve for alpha coefficients
+        ind = union(1:AAM.cdepth+1,anderson_iterations+2)
+        AAM.alpha[ind] = AAM.Matrix[ind,ind]\AAM.Rhs[ind]
+
+        if abs(sum(AAM.alpha[ind[1:AAM.cdepth+1]]) - 1) > 1e-4
+            @warn "Anderson acceleration alpha coefficient do not satisfy sum equal to 1 condition!"
+        end
+        res = sqrt(sum((AAM.Matrix[ind,ind] * AAM.alpha[ind] - AAM.Rhs[ind]).^2))
+        if res > 1e-4
+            @warn "Anderson acceleration local system residual unsatisfactory (> 1e-4)"
+        end
+
+
+        # move last iterates to the front in memory
+        for j = 1 : anderson_iterations
+            AAM.LastIterates[j].entries .= AAM.LastIterates[j+1].entries
+        end
+
+        # compute next iterate
+        for u in AAM.anderson_unknowns
+            fill!(AAM.Target[u],0)
+        end
+        for a = 1 : AAM.cdepth+1
+            for u in AAM.anderson_unknowns
+                for j = 1 : AAM.Target[u].FES.ndofs
+                    AAM.Target[u][j] += AAM.alpha[a] * AAM.LastIteratesTilde[anderson_iterations+2-a][u][j]
+                end
+            end
+        end
+    end
+
+    # save new iterate
+    AAM.LastIterates[anderson_iterations+1].entries .= AAM.Target.entries
+
+    ## increase depth for next call
+    AAM.cdepth += 1
+    return AAM.Target
 end
 
 
@@ -562,9 +680,6 @@ end
 function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0) where {T <: Real}
 
     ## get relevant solver parameters
-    anderson_iterations = SC.user_params[:anderson_iterations]
-    anderson_metric = SC.user_params[:anderson_metric]
-    anderson_unknowns = SC.user_params[:anderson_unknowns]
     fixed_penalty = SC.user_params[:fixed_penalty]
     damping = SC.user_params[:damping]
     maxiterations = SC.user_params[:maxiterations]
@@ -589,39 +704,14 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     end    
 
     # ANDERSON ITERATIONS
+    anderson_iterations = SC.user_params[:anderson_iterations]
+    anderson_metric = SC.user_params[:anderson_metric]
+    anderson_unknowns = SC.user_params[:anderson_unknowns]
     anderson_time = 0
     if anderson_iterations > 0
         anderson_time += @elapsed begin    
             @logmsg MoreInfo "Preparing Anderson acceleration for unknown(s) = $anderson_unknowns with convergence metric $anderson_metric and $anderson_iterations iterations"
-            # we need to save the last iterates
-            LastAndersonIterates = Array{FEVector,1}(undef, anderson_iterations+1) # actual iterates u_k
-            LastAndersonIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
-
-            ## assemble convergence metric
-            AIONormOperator = FEMatrix{T}("AA-Metric",FEs)
-            for u in anderson_unknowns
-                if anderson_metric == "L2"
-                    AA_METRIC = SymmetricBilinearForm(Float64, ON_CELLS, [FEs[u], FEs[u]], [Identity, Identity], MultiplyScalarAction(1,get_ncomponents(typeof(FEs[u]).parameters[1])))
-                    assemble!(AIONormOperator[u], AA_METRIC)
-                elseif anderson_metric == "l2"
-                    for j = 1 : FEs[u].ndofs
-                        AIONormOperator[u][j,j] = 1
-                    end
-                end
-            end
-            AIONormOperator = AIONormOperator.entries
-            flush!(AIONormOperator)
-            
-            AIOMatrix = zeros(T, anderson_iterations+2, anderson_iterations+2)
-            AIORhs = zeros(T, anderson_iterations+2)
-            AIORhs[anderson_iterations+2] = 1 # sum of all coefficients should equal 1
-            AIOalpha = zeros(T, anderson_iterations+2)
-            for j = 1 : anderson_iterations+1
-                LastAndersonIterates[j] = deepcopy(Target)
-                LastAndersonIteratesTilde[j] = deepcopy(Target)
-                AIOMatrix[j,anderson_iterations+2] = 1
-                AIOMatrix[anderson_iterations+2,j] = 1
-            end
+            AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns)
         end
     end
     if damping > 0
@@ -684,51 +774,14 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         # POSTPRCOESS : ANDERSON ITERATE
         if anderson_iterations > 0
             anderson_time += @elapsed begin
-                depth = min(anderson_iterations,j-1)
-
-                # move last tilde iterates to the front in memory
-                for j = 1 : anderson_iterations
-                    LastAndersonIteratesTilde[j].entries .= LastAndersonIteratesTilde[j+1].entries
-                end
-                # save fixpoint iterate as new tilde iterate
-                LastAndersonIteratesTilde[anderson_iterations+1].entries .= Target.entries
-
-                if depth > 0
-                    # fill matrix
-                    for j = 1 : depth+1, k = 1 : depth+1
-                        AIOMatrix[j,k] = lrmatmul(LastAndersonIteratesTilde[anderson_iterations+2-j].entries .- LastAndersonIterates[anderson_iterations+2-j].entries,
-                                                AIONormOperator,
-                                                LastAndersonIteratesTilde[anderson_iterations+2-k].entries .- LastAndersonIterates[anderson_iterations+2-k].entries)
-                    end
-                    # solve for alpha coefficients
-                    ind = union(1:depth+1,anderson_iterations+2)
-                    AIOalpha[ind] = AIOMatrix[ind,ind]\AIORhs[ind]
-
-                    # move last iterates to the front in memory
-                    for j = 1 : anderson_iterations
-                        LastAndersonIterates[j].entries .= LastAndersonIterates[j+1].entries
-                    end
-
-                    # compute next iterates
-                    fill!(Target[1],0.0)
-                    for a = 1 : depth+1
-                        for u in anderson_unknowns
-                            for j = 1 : FEs[u].ndofs
-                                Target[u][j] += AIOalpha[a] * LastAndersonIteratesTilde[anderson_iterations+2-a][u][j]
-                            end
-                        end
-                    end
-                    LastAndersonIterates[anderson_iterations+1].entries .= Target.entries
-                else
-                    LastAndersonIterates[anderson_iterations+1].entries .= Target.entries
-                end
+                update!(AAM)
             end
         end
 
         # POSTPROCESS : DAMPING
         if damping > 0
             for j = 1 : length(Target.entries)
-                Target.entries[j] = damping*LastIterate.entries[j] + (1-SC.damping)*Target.entries[j]
+                Target.entries[j] = damping*LastIterate.entries[j] + (1-damping)*Target.entries[j]
             end
             LastIterate.entries .= Target.entries
         end
@@ -791,16 +844,11 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
 
     ## get relevant solver parameters
     subiterations = SC.user_params[:subiterations]
-    anderson_iterations = SC.user_params[:anderson_iterations]
     fixed_penalty = SC.user_params[:fixed_penalty]
     damping = SC.user_params[:damping]
     maxiterations = SC.user_params[:maxiterations]
     target_residual = SC.user_params[:target_residual]
     skip_update = SC.user_params[:skip_update]
-
-    if anderson_iterations > 0
-        @warn "Sorry, Anderson acceleration not yet available for this solver mode."
-    end
 
     # ASSEMBLE SYSTEM INIT
     assembly_time = @elapsed begin
@@ -835,6 +883,21 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end
+
+    # ANDERSON ITERATIONS
+    anderson_iterations = SC.user_params[:anderson_iterations]
+    anderson_metric = SC.user_params[:anderson_metric]
+    anderson_unknowns = SC.user_params[:anderson_unknowns]
+    anderson_time = 0
+    if anderson_iterations > 0
+        anderson_time += @elapsed begin    
+            @logmsg MoreInfo "Preparing Anderson acceleration for unknown(s) = $anderson_unknowns with convergence metric $anderson_metric and $anderson_iterations iterations"
+            AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns)
+        end
+    end
+    if damping > 0
+        LastIterate = deepcopy(Target)
+    end
     
     residual = Array{FEVector{T},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
@@ -849,10 +912,6 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     for s = 1 : nsubiterations
         LS[s] = createsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
-    if damping > 0
-        LastIterate = deepcopy(Target)
-    end
-
 
     if SC.user_params[:show_statistics]
         @info "initial assembly time = $(assembly_time)s"
@@ -921,18 +980,26 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             # WRITE INTO Target
-            if damping > 0
-                for j = 1 : length(subiterations[s])
-                    for k = 1 : length(Target[subiterations[s][j]])
-                        Target[subiterations[s][j]][k] = (1-SC.damping)*x[s][j][k] + damping*LastIterate[subiterations[s][j]][k] 
+            for j = 1 : length(subiterations[s])
+                for k = 1 : length(Target[subiterations[s][j]])
+                    Target[subiterations[s][j]][k] = x[s][j][k]
+                end
+            end
+
+            if s == nsubiterations
+                # POSTPRCOESS : ANDERSON ITERATE
+                if anderson_iterations > 0
+                    anderson_time += @elapsed begin
+                        update!(AAM)
                     end
                 end
-                LastIterate.entries .= Target.entries
-            else
-                for j = 1 : length(subiterations[s])
-                    for k = 1 : length(Target[subiterations[s][j]])
-                        Target[subiterations[s][j]][k] = x[s][j][k]
+
+                # POSTPROCESS : DAMPING
+                if damping > 0
+                    for j = 1 : length(Target.entries)
+                        Target.entries[j] = damping*LastIterate.entries[j] + (1-damping)*Target.entries[j]
                     end
+                    LastIterate.entries .= Target.entries
                 end
             end
 
@@ -941,7 +1008,6 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
                 next_eq = (s == nsubiterations) ? 1 : s+1
                 assemble!(A[next_eq],b[next_eq],PDE,SC,Target; time = time, equations = subiterations[next_eq], min_trigger = AssemblyEachTimeStep)
             end
-
         end
 
         # CHECK NONLINEAR RESIDUAL
@@ -969,6 +1035,9 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
         end
 
         if sqrt(sum(resnorm.^2)) < target_residual
+            if SC.user_params[:show_iteration_details]
+                @info "target residual reached after $iteration iterations"
+            end
             break
         end
 
@@ -1059,7 +1128,7 @@ function solve!(
     end
     ## report and check final residual
     if !user_params[:show_iteration_details]
-        @info "reached residual = $residual"
+        @info "overall residual = $residual"
     end
     if residual > user_params[:target_residual]
         @warn "residual was larger than desired target_residual = $(user_params[:target_residual])!"
