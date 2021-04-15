@@ -302,7 +302,7 @@ $(TYPEDSIGNATURES)
 
 Computes vector'-matrix-vector product a'*B*b.
 """
-function lrmatmul(a::AbstractArray{<:Real,1}, B::ExtendableSparseMatrix{Tv,Ti}, b::AbstractArray{<:Real,1}; factor = 1) where {Tv, Ti <: Integer}
+function lrmatmul(a::AbstractVector{Tv}, B::ExtendableSparseMatrix{Tv,Ti}, b::AbstractVector{Tv}; factor = 1) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv,Ti} = B.cscmatrix
     valsB::Array{Tv,1} = cscmat.nzval
     rows::Array{Ti,1} = rowvals(cscmat)
@@ -310,6 +310,25 @@ function lrmatmul(a::AbstractArray{<:Real,1}, B::ExtendableSparseMatrix{Tv,Ti}, 
     for col = 1:size(B,2)
         for r in nzrange(B.cscmatrix, col)
             result += valsB[r] * b[col] * factor * a[rows[r]]
+        end
+    end
+    return result
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Computes vector'-matrix-vector product (a1-a2)'*B*(b1-b2).
+"""
+function ldrdmatmul(a1::AbstractVector{Tv}, a2::AbstractVector{Tv}, B::ExtendableSparseMatrix{Tv,Ti}, b1::AbstractVector{Tv}, b2::AbstractVector{Tv}; factor = 1) where {Tv, Ti <: Integer}
+    cscmat::SparseMatrixCSC{Tv,Ti} = B.cscmatrix
+    valsB::Array{Tv,1} = cscmat.nzval
+    rows::Array{Ti,1} = rowvals(cscmat)
+    result = 0.0
+    for col = 1:size(B,2)
+        for r in nzrange(B.cscmatrix, col)
+            result += valsB[r] * (b1[col] - b2[col]) * factor * (a1[rows[r]] - a2[rows[r]])
         end
     end
     return result

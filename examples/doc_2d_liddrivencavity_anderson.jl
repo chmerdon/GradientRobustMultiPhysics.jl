@@ -14,8 +14,8 @@ a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navi
 where ``\mathbf{u} = (1,0)`` along the top boundary of a square domain.
 
 For small viscosities (where a Newton and a classical Picard iteration do not converge anymore),
-Anderson acceleration might help (see https://arxiv.org/pdf/1810.08494.pdf) which can be tested with this script.
-Here, we use Anderson acceleration until the residual is small enough for the Newton to take over.
+Anderson acceleration might help which can be tested with this script.
+Here, we use [Anderson acceleration](@ref) until the residual is small enough for the Newton to take over.
 
 =#
 
