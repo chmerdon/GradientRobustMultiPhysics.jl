@@ -192,11 +192,11 @@ function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1, transpose::Bo
     acol::Int = 0
     if transpose
         for col = B.offsetY+1:B.last_indexY
-            acol = col - B.offsetY + A.offsetY
+            arow = col - B.offsetY + A.offsetX
             for r in nzrange(cscmat, col)
                 if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
-                    arow = rows[r] - B.offsetX + A.offsetX
-                _addnz(A.entries,acol,arow,valsB[r],factor)
+                    acol = rows[r] - B.offsetX + A.offsetY
+                    _addnz(A.entries,arow,aacol,valsB[r],factor)
                 end
             end
         end
@@ -206,7 +206,7 @@ function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1, transpose::Bo
             for r in nzrange(cscmat, col)
                 if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
                     arow = rows[r] - B.offsetX + A.offsetX
-                _addnz(A.entries,arow,acol,valsB[r],factor)
+                    _addnz(A.entries,arow,acol,valsB[r],factor)
                 end
             end
         end
@@ -227,10 +227,10 @@ function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 
     acol::Int = 0
     if transpose
         for col = 1:size(B,2)
-            acol = col + A.offsetY
+            arow = col + A.offsetX
             for r in nzrange(cscmat, col)
-                arow = rows[r] + A.offsetX
-                _addnz(A.entries,acol,arow,valsB[r],factor)
+                acol = rows[r] + A.offsetY
+                _addnz(A.entries,arow,acol,valsB[r],factor)
                 #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
             end
         end

@@ -20,7 +20,7 @@ function IncompressibleNavierStokesProblem(
     nonlinear::Bool = true,
     auto_newton::Bool = true, # Newton by AD
     no_pressure_constraint::Bool = false,
-    store::Bool = true,
+    store::Bool = false,
     pmean = 0)
 
     if nonlinear == true

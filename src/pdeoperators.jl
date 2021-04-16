@@ -194,11 +194,11 @@ to render one unknown of the PDE the Lagrange multiplier for another unknown by 
 
 Example: LagrangeMultiplier(Divergence) is used to render the pressure the LagrangeMultiplier for the velocity divergence constraint in the Stokes prototype.
 """
-function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = NoAction(), regions::Array{Int,1} = [0], store::Bool = false)
+function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = NoAction(), regions::Array{Int,1} = [0], store::Bool = false, factor = -1)
     if name == "auto"
         name = "$operator(v) ⋅ q"
     end
-    O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[operator, Identity], action, [1], -1, regions, store, AssemblyInitial)
+    O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[operator, Identity], action, [1], factor, regions, store, AssemblyInitial)
     O.transposed_copy = true
     return O
 end
@@ -863,7 +863,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector, j::Int, k::I
     end
     O.storage = ExtendableSparseMatrix{Float64,Int64}(FES[1].ndofs,FES[2].ndofs)
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
-    assemble!(O.storage, Pattern; factor = factor * O.factor, skip_preps = false)
+    assemble!(O.storage, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
     flush!(O.storage)
 end
 
@@ -883,7 +883,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector, j::Int; fact
     end
     O.storage = zeros(Float64,FES[1].ndofs)
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
-    assemble!(O.storage, Pattern; factor = factor * O.factor, skip_preps = false)
+    assemble!(O.storage, Pattern; factor = factor, skip_preps = false)
 end
 
 
@@ -913,7 +913,7 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock, Cur
     return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock, CurrentSolution::FEVector; non_fixed::Int = 1, fixed_id = 1) where{T,APT<:APT_LinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock, CurrentSolution; non_fixed::Int = 1, fixed_id = 1) where{T,APT<:APT_LinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
     FES = Array{FESpace,1}(undef, 1)
     FES[1] = b.FES
@@ -1004,14 +1004,33 @@ function assemble_operator!(A::FEMatrixBlock, O::PDEOperator, CurrentSolution::U
             assemble!(A, Pattern, skip_preps = skip_preps, transposed_assembly = O.transposed_assembly, factor = O.factor)
         end
     end
+    flush!(A.entries)
 end
+
+
+function assemble_operator!(b::FEVectorBlock, O::PDEOperator, CurrentSolution::Union{Nothing,FEVector} = nothing; Pattern = nothing, skip_preps::Bool = false, factor = 1, time::Real = 0)
+    if Pattern === nothing
+        Pattern = create_assembly_pattern(O, b, CurrentSolution)
+    end
+    set_time!(O.action, time)
+    if length(O.fixed_arguments_ids) > 0
+        assemble!(b, Pattern, CurrentSolution[O.fixed_arguments_ids], skip_preps = skip_preps, factor = O.factor, fixed_arguments = O.fixed_arguments)
+    else
+        assemble!(b, Pattern, skip_preps = skip_preps, factor = O.factor)
+    end
+end
+
+
+
+
+
 
 function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; time::Real = 0, At = nothing)  
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock!(A,O.storage)
+        addblock!(A,O.storage; factor = O.factor)
         if At !== nothing
-            addblock!(A,O.storage; transpose = true)
+            addblock!(At,O.storage; factor = O.factor, transpose = true)
         end
     else
         ## find assembly pattern
@@ -1026,11 +1045,10 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
 end
 
 
-
 function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0)
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock!(b, O.storage; factor = factor)
+        addblock!(b, O.storage; factor = factor * O.factor)
     else
         ## find assembly pattern
         skip_preps = true
@@ -1054,7 +1072,7 @@ end
 function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor)
+        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor * O.factor)
     else
         ## find assembly pattern
         skip_preps = true

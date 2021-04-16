@@ -145,7 +145,7 @@ Adds FEVectorBlock b to FEVectorBlock a.
 """
 function addblock!(a::FEVectorBlock, b::FEVectorBlock; factor = 1)
     for j = b.offset+1 : b.last_index
-        a.entries[j] += b.entries[j] * factor
+        a.entries[a.offset+j] += b.entries[j] * factor
     end
     return nothing
 end
@@ -155,9 +155,9 @@ $(TYPEDSIGNATURES)
 
 Adds Array b to FEVectorBlock a.
 """
-function addblock!(a::FEVectorBlock, b::AbstractArray{<:Real,1}; factor = 1)
+function addblock!(a::FEVectorBlock, b::AbstractVector; factor = 1)
     for j = 1 : length(b)
-        a.entries[j] += b[j] * factor
+        a.entries[a.offset+j] += b[j] * factor
     end
     return nothing
 end
