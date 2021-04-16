@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D DG-Hdiv discretisation for Stokes · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../../examples/doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../../examples/doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../../examples/doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../../examples/doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../../examples/doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../../examples/doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../../examples/doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../../examples/doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../../examples/doc_2d_stokes_iterated/">2D Stokes (iterated penalty method)</a></li><li><a class="tocitem" href="../../examples/doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../../examples/doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../../examples/doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../../examples/doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../../examples/doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../doc_2d_naturalconvection/">2D Natural Convection</a></li><li><a class="tocitem" href="../doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li class="is-active"><a class="tocitem" href>2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Advanced)</a></li><li class="is-active"><a href>2D DG-Hdiv discretisation for Stokes</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D DG-Hdiv discretisation for Stokes</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples_advanced/doc_2d_stokes_hdiv-dg.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-DG-Hdiv-discretisation-for-Stokes"><a class="docs-heading-anchor" href="#D-DG-Hdiv-discretisation-for-Stokes">2D DG-Hdiv discretisation for Stokes</a><a id="D-DG-Hdiv-discretisation-for-Stokes-1"></a><a class="docs-heading-anchor-permalink" href="#D-DG-Hdiv-discretisation-for-Stokes" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples_advanced/doc_2d_stokes_hdiv-dg.jl">source code</a>)</p><p>This example computes a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>with exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span> and inhomogeneous Dirichlet boundary data.</p><p>The problem will be solved by a dicontinuous Galerkin method with Hdiv-conforming ansatz space (e.g. BDM1). The normal components of the velocity are fixed by the boundary data, while the tangential boundary fluxes are handled by the DG discretisation of the Laplacian that involves several discontinuous terms on faces <span>$\mathcal{F}$</span>, i.e.</p><p class="math-container">\[\begin{aligned}
+a_h(u_h,v_h) = \mu \Bigl( \int \nabla_h u_h : \nabla_h v_h dx +  \sum_{F \in \mathcal{F}} \frac{\lambda}{h_F} \int_F [[u_h]] \cdot [[v_h]] ds - \int_F {{\nabla_h u_h}} n_F \cdot [[v_h]] ds
+ - \int_F [[u_h]] \cdot {{\nabla_h v_h}} n_F ds \Bigr)
+\end{aligned}\]</p><p>and similar terms on the right-hand side for the inhomogeneous Dirichlet data. The qunatity <span>$\lambda$</span> is the SIP parameter.</p><pre><code class="language-julia">module Example_2DStokesHdivDG
+
+using GradientRobustMultiPhysics
+using Printf
+
+# functions that define the exact solution and the data
+    function exact_pressure!(result,x::Array{&lt;:Real,1},t::Real)
+        result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1))
+    end
+    function user_function_velocity!(result,x::Array{&lt;:Real,1},t::Real)
+        result[1] = cos(t)*(sin(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+        result[2] = cos(t)*(cos(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+    end
+    function exact_velogradient!(result,x::Array{&lt;:Real,1},t::Real)
+        result[1] = pi*cos(t)*(cos(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+        result[2] = pi*cos(t)*(sin(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+        result[3] = -pi*cos(t)*(sin(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+        result[4] = -pi*cos(t)*(cos(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+    end
+    function rhs(nu)
+        function closure!(result,x::Array{&lt;:Real,1},t::Real)
+            # exact Laplacian
+            result[1] = 2*pi*pi*nu*cos(t)*(sin(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+            result[2] = 2*pi*pi*nu*cos(t)*(cos(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+            # exact pressure gradient
+            result[1] += cos(t)*cos(x[1])*cos(x[2])
+            result[2] -= cos(t)*sin(x[1])*sin(x[2])
+        end
+    end
+
+# everything is wrapped in a main function
+function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, lambda = 4)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # FEType (Hdiv-conforming)
+    FETypes = [HDIVBDM1{2}, H1P0{1}]
+
+    # initial grid
+    xgrid = grid_unitsquare(Triangle2D)
+    xBFaces = xgrid[BFaces]
+    xFaceVolumes = xgrid[FaceVolumes]
+    xFaceNormals = xgrid[FaceNormals]
+
+    # load flow data
+    user_function_velocity = DataFunction(user_function_velocity!, [2,2]; dependencies = &quot;XT&quot;, quadorder = 8)
+    user_function_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = &quot;XT&quot;, quadorder = 4)
+    user_function_velocity_gradient = DataFunction(exact_velogradient!, [4,2]; dependencies = &quot;XT&quot;, quadorder = 4)
+    user_function_rhs = DataFunction(rhs(viscosity), [2,2]; dependencies = &quot;XT&quot;, quadorder = 8)
+
+    # prepare error calculation
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity; time = T)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity; time = T)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient; time = T)
+    L2VelocityError = []; L2PressureError = []; H1VelocityError = []; NDofs = []
+
+    # load Stokes problem prototype and assign data
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], user_function_rhs))
+
+    # add boundary data (fixes normal components of along boundary)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function_velocity)
+
+    # define additional operators for DG terms for Laplacian and Dirichlet data
+    # (in order of there appearance in the documentation above)
+    function hdiv_laplace2_kernel(result, input, item)
+        result[1] = input[1]
+        result[2] = input[2]
+        result .*= lambda*viscosity / xFaceVolumes[item]
+        return nothing
+    end
+    function hdiv_laplace3_kernel(result, input, item)
+        result[1] = input[1] * xFaceNormals[1,item]
+        result[2] = input[1] * xFaceNormals[2,item]
+        result[3] = input[2] * xFaceNormals[1,item]
+        result[4] = input[2] * xFaceNormals[2,item]
+        result .*= -viscosity
+        return nothing
+    end
+    function hdiv_laplace4_kernel(result, input, item)
+        result[1] = input[1] * xFaceNormals[1,item] + input[2] * xFaceNormals[2,item]
+        result[2] = input[3] * xFaceNormals[1,item] + input[4] * xFaceNormals[2,item]
+        result .*= -viscosity
+        return nothing
+    end
+    HdivLaplace2 = AbstractBilinearForm([Jump(Identity), Jump(Identity)], Action(Float64, hdiv_laplace2_kernel, [2,2]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;nu/h_F [u] [v]&quot;, AT = ON_FACES)
+    HdivLaplace3 = AbstractBilinearForm([Jump(Identity), Average(Gradient)], Action(Float64, hdiv_laplace3_kernel, [4,2]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;-nu [u] {grad(v)*n}&quot;, AT = ON_FACES)
+    HdivLaplace4 = AbstractBilinearForm([Average(Gradient), Jump(Identity)], Action(Float64, hdiv_laplace4_kernel, [2,4]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;-nu {grad(u)*n} [v] &quot;, AT = ON_FACES)
+
+    # additional terms for tangential part at boundary
+    # note: we use average operators here to force evaluation of all basis functions and not only of the face basis functions
+    # (which in case of Hdiv would be only the ones with nonzero normal fluxes)
+    veloeval = zeros(Float64,2)
+    function hdiv_boundary_kernel(result, input, x, t, item)
+        eval!(veloeval, user_function_velocity, x, t)
+        result[1] = input[1] * veloeval[1] + input[2] * veloeval[2]
+        result[1] *= lambda*viscosity / xFaceVolumes[xBFaces[item]]
+        return nothing
+    end
+    function hdiv_boundary_kernel2(result, input, x, t, item)
+        eval!(veloeval, user_function_velocity, x, t)
+        result[1] = (input[1] * xFaceNormals[1,xBFaces[item]] + input[2] * xFaceNormals[2,xBFaces[item]]) * veloeval[1]
+        result[1] += (input[3] * xFaceNormals[1,xBFaces[item]] + input[4] * xFaceNormals[2,xBFaces[item]]) * veloeval[2]
+        result[1] *= -viscosity
+        return nothing
+    end
+    HdivBoundary1 = RhsOperator(Average(Identity), Action(Float64, hdiv_boundary_kernel, [1,2]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder); name = &quot;- nu lambda/h_F u_D v&quot;, AT = ON_BFACES)
+    HdivBoundary2 = RhsOperator(Average(Gradient), Action(Float64, hdiv_boundary_kernel2, [1,4]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder); name = &quot;- nu u_D grad(v)*n&quot;, AT = ON_BFACES)
+
+    # assign DG operators to problem descriptions
+    add_operator!(Problem, [1,1], HdivLaplace2)
+    add_operator!(Problem, [1,1], HdivLaplace3)
+    add_operator!(Problem, [1,1], HdivLaplace4)
+    add_rhsdata!(Problem, 1, HdivBoundary1)
+    add_rhsdata!(Problem, 1, HdivBoundary2)
+
+    # show final problem description
+    @show Problem
+
+    # loop over levels
+    for level = 1 : nlevels
+
+        # refine grid and update grid component references
+        xgrid = uniform_refine(xgrid)
+        xBFaces = xgrid[BFaces]
+        xFaceVolumes = xgrid[FaceVolumes]
+        xFaceNormals = xgrid[FaceNormals]
+
+        # generate FESpaces
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+
+        # generate solution vector
+        Solution = FEVector{Float64}([&quot;v_h&quot;, &quot;p_h&quot;],FES)
+        push!(NDofs, length(Solution.entries))
+
+        # solve
+        solve!(Solution, Problem; time = T)
+
+        # plot
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter)
+
+        # compute L2 and H1 error of all solutions
+        push!(L2VelocityError, sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
+        push!(L2PressureError, sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
+        push!(H1VelocityError, sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
+    end
+
+    # output errors in a nice table
+    println(&quot;\n   NDOF  | L2ERROR(v_h) | H1ERROR(v_h) | L2ERROR(p_h)&quot;)
+    for j=1:nlevels
+        @printf(&quot;  %6d |&quot;,NDofs[j]);
+        @printf(&quot; %.6e |&quot;,L2VelocityError[j])
+        @printf(&quot; %.6e |&quot;,H1VelocityError[j])
+        @printf(&quot; %.6e\n&quot;,L2PressureError[j])
+    end
+end
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_other_linsolver/">« 2D User-defined Linear Solvers</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 16 April 2021 14:17">Friday 16 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

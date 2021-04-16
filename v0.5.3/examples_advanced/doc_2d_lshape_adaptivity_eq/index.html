@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Equilibration Error Estimation (Global) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../../examples/doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../../examples/doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../../examples/doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../../examples/doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../../examples/doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../../examples/doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../../examples/doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../../examples/doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../../examples/doc_2d_stokes_iterated/">2D Stokes (iterated penalty method)</a></li><li><a class="tocitem" href="../../examples/doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../../examples/doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../../examples/doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../../examples/doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../../examples/doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../../examples/doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li class="is-active"><a class="tocitem" href>2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../doc_2d_naturalconvection/">2D Natural Convection</a></li><li><a class="tocitem" href="../doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Advanced)</a></li><li class="is-active"><a href>2D Equilibration Error Estimation (Global)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Equilibration Error Estimation (Global)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples_advanced/doc_2d_lshape_adaptivity_eq.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Equilibration-Error-Estimation-(Global)"><a class="docs-heading-anchor" href="#D-Equilibration-Error-Estimation-(Global)">2D Equilibration Error Estimation (Global)</a><a id="D-Equilibration-Error-Estimation-(Global)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Equilibration-Error-Estimation-(Global)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples_advanced/doc_2d_lshape_adaptivity_eq.jl">source code</a>)</p><p>This example computes a global equilibration error estimator for the <span>$H^1$</span> error of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(\sigma_h) := \| \sigma_h - \nabla u_h \|^2_{L^2(T)}\]</p><p>where <span>$\sigma_h$</span> is an Hdiv-conforming approximation of the exact <span>$\sigma$</span> in the dual mixed problem</p><p class="math-container">\[\sigma - \nabla u = 0
+\quad \text{and} \quad
+\mathrm{div}(\sigma) + f = 0\]</p><p>by solving the problem globally.</p><div class="admonition is-info"><header class="admonition-header">Note</header><div class="admonition-body"><p>Equilibration error estimators yield guaranteed upper bounds (efficiency index above 1) for the H1 error possibly with some additional term that weighs in the oscillations of <span>$f$</span>, which are zero in this example, and some additional terms that quantifies the Dirichlet boundary error, which is neglected here.</p><p>See the local equilibrated version for a less costly alternative.</p></div></div><pre><code class="language-julia">module Example_EQLshape
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using Printf
+
+# exact solution u for the Poisson problem
+function exact_function!(result,x::Array{&lt;:Real,1})
+    result[1] = atan(x[2],x[1])
+    if result[1] &lt; 0
+        result[1] += 2*pi
+    end
+    result[1] = sin(2*result[1]/3)
+    result[1] *= (x[1]^2 + x[2]^2)^(1/3)
+end
+# ... and its gradient
+function exact_function_gradient!(result,x::Array{&lt;:Real,1})
+    result[1] = atan(x[2],x[1])
+    if result[1] &lt; 0
+        result[1] += 2*pi
+    end
+    # du/dy = du/dr * sin(phi) + (1/r) * du/dphi * cos(phi)
+    result[2] = sin(2*result[1]/3) * sin(result[1]) + cos(2*result[1]/3) * cos(result[1])
+    result[2] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3
+    # du/dx = du/dr * cos(phi) - (1/r) * du/dphi * sin(phi)
+    result[1] = sin(2*result[1]/3) * cos(result[1]) - cos(2*result[1]/3) * sin(result[1])
+    result[1] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, nlevels = 12, theta = 1//2, Plotter = nothing)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # initial grid
+    xgrid = grid_lshape(Triangle2D)
+
+    # choose some finite elements for primal and dual problem
+    FEType = H1P1{1}
+    FETypeDual = [HDIVBDM1{2},H1P0{1}]
+
+    # negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 5)
+    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = &quot;∇(u)&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+
+    # setup Poisson problem
+    Problem = PoissonProblem()
+    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = user_function)
+    add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
+
+    # setup dual mixed Poisson problem
+    DualProblem = PDEDescription(&quot;dual mixed formulation&quot;)
+    add_unknown!(DualProblem; unknown_name = &quot;σ&quot;, equation_name = &quot;stress equation&quot;)
+    add_operator!(DualProblem, [1,1], ReactionOperator())
+    add_rhsdata!(DualProblem, 1, RhsOperator(NormalFlux, [2,3,4,5,6,7], user_function; AT = ON_BFACES))
+    add_unknown!(DualProblem; unknown_name = &quot;Lagrange multiplier for divergence&quot;, equation_name = &quot;divergence constraint&quot;)
+    add_operator!(DualProblem, [1,2], LagrangeMultiplier(Divergence))
+
+    # setup exact error evaluations
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2ErrorEvaluatorDual = L2ErrorIntegrator(Float64, user_function_gradient, Identity)
+
+    # define error estimator : || sigma_h - nabla u_h ||^2_{L^2(T)}
+    # this can be realised via a kernel function
+    function eqestimator_kernel(result, input)
+        # input = [Identity(sigma_h), Gradient(u_h)]
+        result[1] = (input[1] - input[3])^2 + (input[2] - input[4])^2
+        return nothing
+    end
+    estimator_action_kernel = ActionKernel(eqestimator_kernel, [1,4]; name = &quot;estimator kernel&quot;, dependencies = &quot;&quot;, quadorder = 2)
+    # ... which generates an action...
+    estimator_action = Action(Float64,estimator_action_kernel)
+    # ... which is used inside an ItemIntegrator
+    EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient],estimator_action)
+
+    # refinement loop (only uniform for now)
+    NDofs = zeros(Int, nlevels)
+    NDofsDual = zeros(Int, nlevels)
+    Results = zeros(Float64, nlevels, 4)
+    Solution = nothing
+    DualSolution = nothing
+    for level = 1 : nlevels
+
+        # create a solution vector and solve the problem
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        solve!(Solution, Problem)
+        NDofs[level] = length(Solution[1])
+
+        # solve the dual problem
+        FESDual = [FESpace{FETypeDual[1]}(xgrid),FESpace{FETypeDual[2]}(xgrid)]
+        DualSolution = FEVector{Float64}(&quot;σ_h&quot;,FESDual)
+        NDofsDual[level] = length(DualSolution.entries)
+        solve!(DualSolution, DualProblem)
+
+        if verbosity &gt; 0
+            println(&quot;\n  SOLVE LEVEL $level&quot;)
+            println(&quot;    ndofs = $(NDofs[level])&quot;)
+            println(&quot;    ndofsDual = $(NDofsDual[level])&quot;)
+        end
+
+        # evaluate eqilibration error estimator
+        error4cell = zeros(Float64,1,num_sources(xgrid[CellNodes]))
+        evaluate!(error4cell, EQIntegrator, [DualSolution[1], Solution[1]])
+
+        # calculate L2 error, H1 error, estimator, dual L2 error and write to results
+        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
+        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
+        Results[level,3] = sqrt(sum(error4cell))
+        Results[level,4] = sqrt(evaluate(L2ErrorEvaluatorDual,[DualSolution[1]]))
+        if verbosity &gt; 0
+            println(&quot;  ESTIMATE&quot;)
+            println(&quot;    estim H1 error = $(Results[level,3])&quot;)
+            println(&quot;    exact H1 error = $(Results[level,2])&quot;)
+            println(&quot;     dual L2 error = $(Results[level,4])&quot;)
+        end
+
+        if level == nlevels
+            break;
+        end
+
+        # mesh refinement
+        if theta &gt;= 1
+            # uniform mesh refinement
+            xgrid = uniform_refine(xgrid)
+        else
+            # adaptive mesh refinement
+            # refine by red-green-blue refinement (incl. closuring)
+            facemarker = bulk_mark(xgrid, view(error4cell,1,:), theta)
+            xgrid = RGB_refine(xgrid, facemarker)
+        end
+    end
+
+    # plot
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
+
+    # print results
+    @printf(&quot;\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   &quot;)
+    @printf(&quot;\n=========|========================|========================|========================================\n&quot;)
+    order = 0
+    for j=1:nlevels
+        @printf(&quot;  %6d |&quot;,NDofs[j]);
+        for k = 1 : 3
+            if j &gt; 1
+                order = log(Results[j-1,k]/Results[j,k]) / (log(NDofs[j]/NDofs[j-1])/2)
+            end
+            @printf(&quot; %.5e &quot;,Results[j,k])
+            if k == 3
+                @printf(&quot;   %.3f       %.3f&quot;,order,Results[j,k]/Results[j,k-1])
+            else
+                @printf(&quot;   %.3f   |&quot;,order)
+            end
+        end
+        @printf(&quot;\n&quot;)
+    end
+
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_compressiblestokes/">« 2D Compressible Stokes</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 16 April 2021 14:17">Friday 16 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
