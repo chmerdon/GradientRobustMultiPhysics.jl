@@ -398,8 +398,13 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
     
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         coeffs::Array{T,2} = FEBE.coefficients
         subset::Array{Int,1} = FEBE.current_subset
         FEBE.coeffs_handler(coeffs, item);
@@ -410,10 +415,6 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
         tempeval::Array{T,3} = FEBE.refbasisderivvals
         fill!(tempeval,0)
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs2
                 for k = 1 : ncomponents
                     for l = 1 : ncomponents
@@ -502,16 +503,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
     
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for k = 1 : ncomponents
                     FEBE.cvals[k,dof_i,i] = 0.0;
@@ -532,17 +534,18 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
     
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for k = 1 : ncomponents
                     FEBE.cvals[k,dof_i,i] = 0.0;
@@ -607,17 +610,18 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
     
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for l = 1 : ncomponents
@@ -780,13 +784,16 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
+
         fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents
                     for k = 1 : edim, l = 1 : edim
@@ -812,14 +819,16 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents
                     for k = 1 : edim
@@ -848,13 +857,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                 mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
@@ -878,19 +889,20 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
     
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GM2,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         # use Piola transformation on basisvals
         fill!(FEBE.cvals,0.0);
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-                mapderiv!(FEBE.L2GM2,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
                     # compute duc/dxk
@@ -918,13 +930,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 FEBE.cvals[2,dof_i,i] = 0.0;
@@ -949,13 +963,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for j = 1 : edim
@@ -977,17 +993,19 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         # compute tangent of item
         FEBE.iteminfo[1] = FEBE.coefficients3[2,item]
         FEBE.iteminfo[2] = -FEBE.coefficients3[1,item]
 
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
@@ -1016,14 +1034,16 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
                     for j = 1 : edim
@@ -1050,16 +1070,18 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
@@ -1083,13 +1105,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for k = 1 : edim
@@ -1112,16 +1136,18 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
 
-        # update L2G (we need the matrix)
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
 
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         for i = 1 : length(FEBE.xref)
-            if FEBE.L2G.nonlinear || i == 1
-                mapderiv!(FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for k = 1 : edim
@@ -1145,8 +1171,13 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
     
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
 
@@ -1157,10 +1188,6 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
         # and accumulate according to reconstruction coefficients
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs # ndofs4item (H1)
                 for dof_j = 1 : ndofs2
                     if FEBE.coefficients2[dof_i,dof_j] != 0
@@ -1183,8 +1210,14 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
     
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GM2,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # get local reconstruction coefficients
@@ -1194,12 +1227,6 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
         # use Piola transformation on basisvals
         fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-                mapderiv!(FEBE.L2GM2,FEBE.L2G,FEBE.xref[i])
-            end
-
             # calculate gradients of Hdiv basis functions and save them to coefficients3
             fill!(FEBE.coefficients3,0)
             for dof_i = 1 : ndofs2
@@ -1237,17 +1264,18 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
         
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for j = 1 : edim
@@ -1269,16 +1297,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
         
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i]
                 FEBE.cvals[1,dof_i,i] -= FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i]
@@ -1297,17 +1326,18 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
     if FEBE.citem[1] != item
         FEBE.citem[1] = item
         
-        # cell update transformation
+        # update transformation
         update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
         fill!(FEBE.cvals,0.0)
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on basisvals
         for i = 1 : length(FEBE.xref)
-            # evaluate Piola matrix at quadrature point
-            if FEBE.L2G.nonlinear || i == 1
-                piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,FEBE.xref[i])
-            end
             for dof_i = 1 : ndofs
                 for k = 1 : 3
                     FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,1] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],2,i] # du3/dx2

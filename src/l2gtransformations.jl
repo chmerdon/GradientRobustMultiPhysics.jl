@@ -235,7 +235,7 @@ end
 # TRIANGLE2D/CARTESIAN2D map derivative
 # x = A*xref + b
 # Dxref/dx = A^{-T}
-function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, xref)
+function mapderiv!(M::AbstractMatrix, T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, xref)
     # transposed inverse of A
     T.det[1] = 2*T.ItemVolumes[T.citem[1]]
     M[2,2] = T.A[1,1]/T.det[1]
