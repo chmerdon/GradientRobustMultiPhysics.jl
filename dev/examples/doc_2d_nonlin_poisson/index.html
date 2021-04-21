@@ -4,7 +4,6 @@
 \end{aligned}\]</p><p>with some right-hand side <span>$f$</span> on a series of uniform refinements of the unit square <span>$\Omega$</span>.</p><p>This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.</p><pre><code class="language-julia">module Example_2DNonlinearPoisson
 
 using GradientRobustMultiPhysics
-using Pardiso
 using Printf
 
 # problem data
@@ -72,7 +71,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         push!(NDofs,length(Solution.entries))
 
         # solve
-        GradientRobustMultiPhysics.solve!(Solution, Problem)
+        solve!(Solution, Problem)
 
         # calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
@@ -100,4 +99,97 @@ function test()
     return main(; FEType = H1P2{1,2}, nlevels = 1, testmode = true)
 end
 
-end</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DNonlinearPoisson.main()</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity/">« 2D Adaptive Mesh Refinement (L-shape)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 21 April 2021 15:18">Wednesday 21 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre><code class="language-none">Main.##266.Example_2DNonlinearPoisson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DNonlinearPoisson.main()</code></pre><pre><code class="language-none">
+PDE-DESCRIPTION
+===============
+  system name = nonlinear Poisson problem
+
+     id   | unknown name / equation name
+    [1]   | u / nonlinear Poisson equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | ((1+u^2)*grad(u))*grad(v) [AD-Newton] (regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | ((1+u^2)*grad(u))*grad(v) [AD-Newton] (regions = [0])
+            | f⋅id(v) (regions = [0])
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+
+Problem = 
+┌ Info: ----- Solving nonlinear Poisson problem -----
+│ 	Equation (1.1) nonlinear Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 13)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1120
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.276908e-16 | 1.879348e-01
+	      2   | 3.851086e-16 | 2.427676e-03
+	      3   | 5.946535e-16 | 3.580510e-07
+	      4   | 4.571021e-16 | 7.822532e-15
+
+┌ Info: ----- Solving nonlinear Poisson problem -----
+│ 	Equation (1.1) nonlinear Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 41)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1120
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 5.090761e-16 | 1.552235e-01
+	      2   | 9.923088e-16 | 1.898915e-03
+	      3   | 1.075703e-15 | 4.461316e-07
+	      4   | 7.587311e-16 | 2.512439e-14
+
+┌ Info: ----- Solving nonlinear Poisson problem -----
+│ 	Equation (1.1) nonlinear Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 145)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1120
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.464268e-15 | 9.834582e-02
+	      2   | 2.706814e-15 | 1.307935e-03
+	      3   | 2.427420e-15 | 4.214647e-07
+	      4   | 2.607041e-15 | 3.006220e-14
+
+┌ Info: ----- Solving nonlinear Poisson problem -----
+│ 	Equation (1.1) nonlinear Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 545)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1120
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.434626e-15 | 5.522608e-02
+	      2   | 4.212849e-15 | 8.487585e-04
+	      3   | 4.080146e-15 | 2.555420e-07
+	      4   | 4.681722e-15 | 2.316183e-14
+
+┌ Info: ----- Solving nonlinear Poisson problem -----
+│ 	Equation (1.1) nonlinear Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 2113)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1120
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 4.931135e-15 | 2.924738e-02
+	      2   | 9.314385e-15 | 4.905172e-04
+	      3   | 9.680887e-15 | 1.346748e-07
+	      4   | 9.305607e-15 | 1.934723e-14
+
+┌ Info: ----- Solving nonlinear Poisson problem -----
+│ 	Equation (1.1) nonlinear Poisson equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 8321)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1120
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 9.796520e-15 | 1.504798e-02
+	      2   | 1.885556e-14 | 2.640269e-04
+	      3   | 1.927375e-14 | 6.824838e-08
+	      4   | 1.881812e-14 | 3.161844e-14
+
+
+   NDOF  |   L2ERROR   |   H1ERROR
+      13 | 6.62330e-03 | 1.44378e-01
+      41 | 1.65803e-03 | 7.21744e-02
+     145 | 4.14699e-04 | 3.60851e-02
+     545 | 1.03688e-04 | 1.80423e-02
+    2113 | 2.59229e-05 | 9.02111e-03
+    8321 | 6.48078e-06 | 4.51055e-03
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_lshape_adaptivity/">« 2D Adaptive Mesh Refinement (L-shape)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 21 April 2021 15:34">Wednesday 21 April 2021</span>. Using Julia version 1.6.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
