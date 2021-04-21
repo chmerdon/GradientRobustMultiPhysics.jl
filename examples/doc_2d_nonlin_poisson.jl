@@ -19,6 +19,7 @@ and how to assign it to the problem description. The setup is tested with some m
 module Example_2DNonlinearPoisson
 
 using GradientRobustMultiPhysics
+using Pardiso
 using Printf
 
 ## problem data
@@ -86,7 +87,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         push!(NDofs,length(Solution.entries))
 
         ## solve
-        solve!(Solution, Problem)
+        GradientRobustMultiPhysics.solve!(Solution, Problem)
 
         ## calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))

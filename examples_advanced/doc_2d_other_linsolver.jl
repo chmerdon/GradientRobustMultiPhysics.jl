@@ -15,23 +15,23 @@ using Printf
 
 
 ## first define a subtype of AbstractLinearSystem, which is later given as an optional parameter to the problem solve! call
-mutable struct MySolver{T} <: GradientRobustMultiPhysics.AbstractLinearSystem{T}
-    x::AbstractVector{T}
-    A::ExtendableSparseMatrix{T,Int64}
-    b::AbstractVector{T}
+mutable struct MySolver{Tv,Ti} <: GradientRobustMultiPhysics.AbstractLinearSystem{Tv, Ti}
+    x::AbstractVector{Tv}
+    A::ExtendableSparseMatrix{Tv,Ti}
+    b::AbstractVector{Tv}
     ## add stuff here that you need e.g. for preconditioners
-    MySolver{T}(x,A,b) where {T} = new{T}(x,A,b)
+    MySolver{Tv,Ti}(x,A,b) where {Tv,Ti} = new{Tv,Ti}(x,A,b)
 end
 
 ## you need to define update! and solve! functions for your new subtype
-function GradientRobustMultiPhysics.update!(LS::MySolver{T}) where {T}
+function GradientRobustMultiPhysics.update!(LS::MySolver)
     ## this function is called before the solve (if other solver configuration not cause to skip it)
     ## do anything here (e.g. updating the preconditioner)
-    print("\n                                            Hi! update! is called at start and every skip_update time...")
+    println("\t\tHi! update! is called at start and every skip_update time...")
 end
-function GradientRobustMultiPhysics.solve!(LS::MySolver{T}) where {T}
+function GradientRobustMultiPhysics.solve!(LS::MySolver)
     ## this function is called to solve the linear system
-    print("\n                                            Hi! solve! under way...")
+    println("\t\tHi! solve! under way...")
     LS.x .= LS.A \ LS.b
 end
 
@@ -87,7 +87,7 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     Solution = FEVector{Float64}("u_h",FES)
 
     ## solve the problem (here the newly defined linear solver type is used)
-    solve!(Solution, Problem; linsolver = MySolver{Float64}, skip_update = [skip_update])
+    solve!(Solution, Problem; linsolver = MySolver{Float64,Int64}, skip_update = [skip_update])
 
     ## calculate error
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)

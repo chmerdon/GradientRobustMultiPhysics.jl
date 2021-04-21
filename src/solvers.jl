@@ -14,7 +14,7 @@
 #
 # also parameter to steer penalties and stopping criterarions are saved in SolverConfig
 
-abstract type AbstractLinearSystem{T} end
+abstract type AbstractLinearSystem{Tv,Ti} end
 
 mutable struct SolverConfig{T <: Real}
     is_nonlinear::Bool      # (subiterations pf) PDE were detected to be nonlinear
@@ -82,40 +82,30 @@ function _update_solver_params!(user_params,kwargs)
 end
 
 
-mutable struct LinearSystemDirectUMFPACK{T} <: AbstractLinearSystem{T}
-    x::AbstractVector{T}
-    A::ExtendableSparseMatrix{T,Int64}
-    b::AbstractVector{T}
-    ALU::SuiteSparse.UMFPACK.UmfpackLU{T,Int64}     # LU factorization
-    LinearSystemDirectUMFPACK{T}(x,A,b) where {T} = new{T}(x,A,b)
+mutable struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization{Tv,Ti}} <: AbstractLinearSystem{Tv,Ti} 
+    x::AbstractVector{Tv}
+    A::ExtendableSparseMatrix{Tv,Ti}
+    b::AbstractVector{Tv}
+    factorization::FT
+    LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} = new{Tv,Ti,FT}(x,A,b,FT(A,nothing,0))
 end
 
-function createsolver(ST::Type{<:AbstractLinearSystem{T}},x::AbstractVector{T},A::ExtendableSparseMatrix{T,Int64},b::AbstractVector{T}) where {T}
+function createlinsolver(ST::Type{<:AbstractLinearSystem},x::AbstractVector,A::ExtendableSparseMatrix,b::AbstractVector)
     return ST(x,A,b)
 end
 
-function update!(LS::AbstractLinearSystem{T}) where {T}
+function update!(LS::AbstractLinearSystem)
     # do nothing for an abstract solver
 end
 
-function update!(LS::LinearSystemDirectUMFPACK{T}) where {T}
-    if isdefined(LS,:ALU)
-        try
-            @logmsg MoreInfo "Updating LU decomposition..."
-            lu!(LS.ALU,LS.A.cscmatrix; check = false)
-        catch
-            @logmsg MoreInfo "Computing LU decomposition (pattern changed)..."
-            GC()
-        end
-    else
-        @logmsg MoreInfo "Computing LU decomposition..."
-        LS.ALU = lu(LS.A.cscmatrix)
-    end
+function update!(LS::LinearSystem)
+    @logmsg MoreInfo "Updating factorization ($FT)..."
+    ExtendableSparse.update!(LS.factorization)
 end
 
-function solve!(LS::LinearSystemDirectUMFPACK{T}) where {T}
-    @logmsg MoreInfo "Solving directly with UMFPACK..."
-    ldiv!(LS.x,LS.ALU,LS.b)
+function solve!(LS::LinearSystem) 
+    @logmsg MoreInfo "Solving ($FT)..."
+    ldiv!(LS.x,LS.factorization,LS.b)
 end
 
 function set_nonzero_pattern!(A::FEMatrix, AT::Type{<:AbstractAssemblyType} = ON_CELLS)
@@ -135,7 +125,7 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
     end
     ## declare linear solver
     if user_params[:linsolver] == "UMFPACK"
-        user_params[:linsolver] = LinearSystemDirectUMFPACK{T}
+        user_params[:linsolver] = LinearSystem{Float64, Int64, ExtendableSparse.LUFactorization{Float64,Int64}}
     end
     while length(user_params[:skip_update]) < length(user_params[:subiterations])
         push!(user_params[:skip_update], 1)
@@ -534,7 +524,7 @@ function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfi
     end
 
     # SOLVE
-    LS = createsolver(SC.user_params[:linsolver], Target.entries, A.entries, b.entries)
+    LS = createlinsolver(SC.user_params[:linsolver], Target.entries, A.entries, b.entries)
     flush!(A.entries)
     update!(LS)
     solve!(LS)
@@ -738,7 +728,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     resnorm::T = 0.0
 
     ## INIT SOLVER
-    LS = createsolver(SC.user_params[:linsolver],Target.entries,A.entries,b.entries)
+    LS = createlinsolver(SC.user_params[:linsolver],Target.entries,A.entries,b.entries)
 
     if SC.user_params[:show_statistics]
         @info "initial assembly time = $(assembly_time)s"
@@ -934,7 +924,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     ## INIT SOLVERS
     LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        LS[s] = createsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
+        LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
 
     if SC.user_params[:show_statistics]
@@ -1366,7 +1356,7 @@ function TimeControlSolver(
     # INIT LINEAR SOLVERS
     LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
     for s = 1 : nsubiterations
-        LS[s] = createsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
+        LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
 
     # storage for last iterate (to compute change properly)
