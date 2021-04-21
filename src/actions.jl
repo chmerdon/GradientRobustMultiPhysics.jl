@@ -144,17 +144,23 @@ function set_time!(C::AbstractAction, time)
 end
 
 function set_time!(C::Union{XTAction{T},TAction{T}}, time) where {T <: Real}
-    C.ctime[1] = time
+    if is_timedependent(C.kernel)
+        C.ctime[1] = time
+    end
     return nothing
 end
 
-function update!(C::AbstractAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region)
+function update!(C::AbstractAction, FEBE::FEBasisEvaluator, qitem, vitem, region)
     return nothing
 end
 
 function update!(C::Union{Action{T}, TAction{T}}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
-    C.cregion[1] = region
-    C.citem[1] = vitem
+    if is_regiondependent(C.kernel)
+        C.cregion[1] = region
+    end
+    if is_itemdependent(C.kernel)
+        C.citem[1] = vitem
+    end
     if is_ldependent(C.kernel)
         C.xref = FEBE.xref
     end
@@ -162,13 +168,15 @@ function update!(C::Union{Action{T}, TAction{T}}, FEBE::FEBasisEvaluator, qitem:
 end
 
 function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region) where {T <: Real}
-    C.cregion[1] = region
-    C.citem[1] = vitem
-
+    if is_regiondependent(C.kernel)
+        C.cregion[1] = region
+    end
+    if is_itemdependent(C.kernel)
+        C.citem[1] = vitem
+    end
     if is_ldependent(C.kernel)
         C.xref = FEBE.xref
     end
-
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem != qitem 
         update!(FEBE.L2G, qitem)
@@ -178,7 +186,7 @@ function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qite
     while length(C.x) < length(FEBE.xref)
         push!(C.x,zeros(T,size(FEBE.FE.xgrid[Coordinates],1)))
     end  
-    for i = 1 : length(FEBE.xref) 
+    for i = 1 : length(FEBE.xref)
         eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
     return nothing

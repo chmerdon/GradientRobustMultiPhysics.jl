@@ -9,15 +9,16 @@
 # the mutable subtypes maybe used for assembly where the quadrature points change on each item
 # (e.g. when integrating over cuts through cells in future)
 
-abstract type FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
+abstract type AbstractFEBasisEvaluator{T} end
+abstract type FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} <: AbstractFEBasisEvaluator{T} end
 
 struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
-    L2G::L2GTransformer                  # local2global mapper
+    L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
-    xref::Array{SVector{edim,T},1}       # xref of quadrature formula
+    xref::Array{Array{T,1},1}       # xref of quadrature formula
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
@@ -34,11 +35,11 @@ end
 
 mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
-    L2G::L2GTransformer                  # local2global mapper
+    L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
-    xref::Array{SVector{edim,T},1}       # xref of quadrature formula
+    xref::Array{Array{T,1},1}       # xref of quadrature formula
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
@@ -59,11 +60,11 @@ end
 struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
-    L2G::L2GTransformer                  # local2global mapper
+    L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
-    xref::Array{SVector{edim,T},1}            # xref of quadrature formula
+    xref::Array{Array{T,1},1}            # xref of quadrature formula
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
@@ -83,11 +84,11 @@ end
 mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
-    L2G::L2GTransformer                  # local2global mapper
+    L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
-    xref::Array{SVector{edim,T},1}            # xref of quadrature formula
+    xref::Array{Array{T,1},1}            # xref of quadrature formula
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed

@@ -8,34 +8,12 @@ function test_qpmatchup(xgrid)
     FE = FESpace{H1P0{ncomponents}}(xgrid)
     T = Float64
 
-    action = NoAction()
-    AP = LinearForm(Float64, AT, [FE], [GradientDisc{Jump}], action)
+    AP = LinearForm(Float64, AT, [FE], [GradientDisc{Jump}])
 
     # prepare assembly
     prepare_assembly!(AP)
-    ndofs4EG = AP.AM.ndofs4EG
-    qf = AP.AM.qf
-    basisevaler = AP.AM.basisevaler
-    dii4op = AP.AM.dii4op
-
-    operators = AP.operators
-    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Dofmap4AssemblyType(FE, AP.AM.basisAT[1])
-    nitems = Int64(num_sources(xItemNodes))
-
- 
-    EG4item = 0
-    EG4dofitem = [1,1] # type of the current item
-    ndofs4dofitem = 0 # number of dofs for item
-    dofitems = [0,0] # itemnr where the dof numbers can be found
-    itempos4dofitem::Array{Int,1} = [1,1] # local item position in dofitem
-    orientation4dofitem::Array{Int,1} = [1,2] # local orientation
-    dofoffset4dofitem::Array{Int,1} = [1,2] # local orientation
-    coefficient4dofitem::Array{T,1} = [0.0,0.0]
-    dofitem = 0
-    weights::Array{T,1} = qf[1].w # somehow this saves A LOT allocations
-    basisevaler4dofitem::FEBasisEvaluator = basisevaler[1,1,1,1]
+    AM::AssemblyManager = AP.AM
+    nitems::Int = num_sources(xgrid[CellNodes])
     maxerror = 0.0
     pointerror = 0.0
     xleft = [0.0,0.0,0.0]
@@ -43,14 +21,14 @@ function test_qpmatchup(xgrid)
     for item = 1 : nitems
 
         # get dofitem informations
-        EG4item = dii4op[1](dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
+        GradientRobustMultiPhysics.update!(AM, item)
 
         # check that quadrature points on both sides match
-        if dofitems[2] > 0
-            bleft = basisevaler[EG4dofitem[1],1,itempos4dofitem[1],orientation4dofitem[1]]
-            bright = basisevaler[EG4dofitem[2],1,itempos4dofitem[2],orientation4dofitem[2]]
-            GradientRobustMultiPhysics.update!(bleft.L2G,dofitems[1])
-            GradientRobustMultiPhysics.update!(bright.L2G,dofitems[2])
+        if AM.dofitems[1][2] > 0
+            bleft = AM.basisevaler[AM.EG4dofitem[1][1],1,AM.itempos4dofitem[1][1],AM.orientation4dofitem[1][1]]
+            bright = AM.basisevaler[AM.EG4dofitem[1][2],1,AM.itempos4dofitem[1][2],AM.orientation4dofitem[1][2]]
+            GradientRobustMultiPhysics.update!(bleft.L2G,AM.dofitems[1][1])
+            GradientRobustMultiPhysics.update!(bright.L2G,AM.dofitems[1][2])
             for i = 1 : length(bleft.xref)
                 eval!(xleft, bleft.L2G, bleft.xref[i])
                 eval!(xright, bright.L2G, bright.xref[i])
@@ -58,8 +36,7 @@ function test_qpmatchup(xgrid)
                     pointerror += (xleft[k] - xright[k])^2
                 end
                 if pointerror > 1e-14
-                    println("ERROR")
-                    println("orientations = $orientation4dofitem xleft = $xleft right = $xright error = $pointerror")
+                    @error "orientations = $orientation4dofitem xleft = $xleft right = $xright error = $pointerror"
                 end
                 maxerror = max(maxerror, pointerror)
             end

@@ -99,7 +99,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update!(AM, item)
         weights = get_qweights(AM)
 
         # loop over associated dofitems
@@ -146,6 +146,7 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+
     return nothing
 end
 

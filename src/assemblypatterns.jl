@@ -12,26 +12,184 @@ abstract type AssemblyPatternType end
 
 abstract type APT_Undefined <: AssemblyPatternType end
 
+abstract type DIIType end
+abstract type DIIType_continuous <: DIIType end
+abstract type DIIType_discontinuous{DiscType,AT,basisAT} <: DIIType end
+abstract type DIIType_broken{DiscType,AT,basisAT} <: DIIType end
+
 # backpack to save all the information needed for assembly
 # like element geometries (EG), quadrature formulas (qf), basisevaluators for the FES, ...
 # idea is to store this to avoid recomputation in e.g. an in iterative scheme
 # also many redundant stuff within assembly of patterns happens here
 # like chosing the coressponding basis evaluators, quadrature rules and managing the dofs
 struct AssemblyManager{T <: Real}
-    xItemDofs::Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}                # DofMaps
+    xItemDofs::Array{DofMapTypes,1}                # DofMaps
     ndofs4EG::Array{Array{Int,1},1}             # ndofs for each finite element on each EG
     nop::Int                                    # number of operators
     qf::Array{QuadratureRule,1}                 # quadrature rules
-    basisevaler::Array{FEBasisEvaluator,4}      # finite element basis evaluators
-    dii4op::Array{Function,1}
-    basisAT::Array{Type{<:AbstractAssemblyType},1}
-    citem::Array{Int,1}
-    dofitems::Array{Array{Int,1},1}
-    EG4dofitem::Array{Array{Int,1},1}          # coordinate 1 in basisevaler
-    itempos4dofitem::Array{Array{Int,1},1}      # coordinate 3 in basisevaler
-    coeff4dofitem::Array{Array{T,1},1}          
-    dofoffset4dofitem::Array{Array{Int,1},1}
-    orientation4dofitem::Array{Array{Int,1},1}  # coordinate 4 in basisevaler
+    basisevaler::Array{AbstractFEBasisEvaluator{T},4}      # finite element basis evaluators
+    dii4op_types::Array{Type{<:DIIType},1}
+    basisAT::Array{Type{<:AbstractAssemblyType},1}                      
+    citem::Array{Int,1}                                                 # current item
+    dofitems::Array{Array{Int,1},1}                                     # dofitems needed to visit to evaluate operator
+    EG4dofitem::Array{Array{Int,1},1}                                   # id to [EG,dEG] = coordinate 1 in basisevaler
+    itempos4dofitem::Array{Array{Int,1},1}                              # local EG position in dEG = coordinate 3 in basisevaler
+    coeff4dofitem::Array{Array{T,1},1}                                  # coefficients for operators (needed for jump/average operators)
+    dofoffset4dofitem::Array{Array{Int,1},1}                            # offesets (needed for broken FESpaces)
+    orientation4dofitem::Array{Array{Int,1},1}                          # local orientation of EG in dEG = coordinate 4 in basisevaler
+    EG::Array{Type{<:AbstractElementGeometry},1}                        # unique item geometries that may appear 
+    dEG::Array{Type{<:AbstractElementGeometry},1}                       # unique dofitem geometries that may appear (for each operator)
+    xItemGeometries::GridEGTypes                                        # item geometries over which is assembled
+    xDofItemGeometries::Array{GridEGTypes,1}                       # dofitem geometries over which basis is evaluated (for each operator)
+    xDofItems4Item::Array{Union{Nothing,GridAdjacencyTypes},1}       # dofitems <> items adjacency relationship (for each operator)
+    xItemInDofItems::Array{Union{Nothing,GridAdjacencyTypes},1}      # where is the item locally in dofitems
+    xDofItemItemOrientations::Array{Union{Nothing,GridAdjacencyTypes},1} # dofitems <> items orientation relationship
+    xItem2SuperSetItems::Array{Union{Nothing,GridAdjacencyTypes},1}  # only necessary for assembly of discontinuous operators ON_BFACES
+end
+
+function update_dii4op!(AM, j, DII::Type{<:DIIType}, item)
+    @error "Do not know what to do with operator $j of type $DII"
+end
+
+# easiest case: continuously evaluatable operator
+function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_continuous}, item::Int)
+    AM.dofitems[op][1] = item
+    if length(AM.EG) > 1
+        # find EG index for geometry
+        for j=1:length(AM.EG)
+            if AM.xItemGeometries[item] == AM.EG[j]
+                AM.EG4dofitem[op][1] = j
+                break
+            end
+        end
+    end
+end
+
+# jump operators on faces that are avluated using the cell basis
+function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_discontinuous{DiscType,AT,basisAT}}, item::Int) where {DiscType, AT <: ON_FACES, basisAT <: ON_CELLS}
+    AM.dofitems[op][1] = AM.xDofItems4Item[op][1,item]
+    AM.dofitems[op][2] = AM.xDofItems4Item[op][2,item]
+    for k = 1 : num_targets(AM.xItemInDofItems[op],AM.dofitems[op][1])
+        if AM.xItemInDofItems[op][k,AM.dofitems[op][1]] == item
+            AM.itempos4dofitem[op][1] = k
+            AM.orientation4dofitem[op][1] = AM.xDofItemItemOrientations[op][k, AM.dofitems[op][1]]
+            break
+        end
+    end
+    if AM.dofitems[op][2] > 0
+        for k = 1 : num_targets(AM.xItemInDofItems[op],AM.dofitems[op][2])
+            if AM.xItemInDofItems[op][k,AM.dofitems[op][2]] == item
+                AM.itempos4dofitem[op][2] = k
+                AM.orientation4dofitem[op][2] = AM.xDofItemItemOrientations[op][k, AM.dofitems[op][2]]
+                break
+            end
+        end
+        if DiscType == Jump
+            AM.coeff4dofitem[op][1] = 1
+            AM.coeff4dofitem[op][2] = -1
+        elseif DiscType == Average
+            AM.coeff4dofitem[op][1] = 0.5
+            AM.coeff4dofitem[op][2] = 0.5
+        end
+    else
+        AM.coeff4dofitem[op][1] = 1
+        AM.coeff4dofitem[op][2] = 0
+        if AT == ON_IFACES
+            # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
+            AM.dofitems[op][1] = 0
+        end
+    end
+
+    if length(AM.dEG) > 1
+        # find EG index for geometry
+        if AM.dofitems[op][1] > 0
+            for j=1:length(AM.dEG)
+                if AM.xDofItemGeometries[op][AM.dofitems[op][1]] == AM.dEG[j]
+                    AM.EG4dofitem[op][1] = length(AM.EG) + j
+                    break
+                end
+            end
+        end
+        if AM.dofitems[op][2] > 0
+            for j=1:length(AM.dEG)
+                if AM.xDofItemGeometries[op][AM.dofitems[op][2]] == AM.dEG[j]
+                    AM.EG4dofitem[op][2] = length(AM.EG) + j
+                    break
+                end
+            end
+        end
+    else
+        AM.EG4dofitem[op][1] = length(AM.EG) + 1
+        AM.EG4dofitem[op][2] = length(AM.EG) + 1
+    end
+end
+
+
+# jump operators on bfaces that are avluated using the cell basis
+function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_discontinuous{DiscType,AT,basisAT}}, item::Int) where {DiscType, AT <: ON_BFACES, basisAT <: ON_CELLS}
+
+    AM.dofitems[op][1] = AM.xDofItems4Item[op][1,xItem2SuperSetItems[op][item]]
+    AM.dofitems[op][2] = 0
+    for k = 1 : num_targets(AM.xItemInDofItems[op],AM.dofitems[op][1])
+        if AM.xItemInDofItems[op][k,AM.dofitems[op][1]] == AM.dofitems[op][1]
+            AM.itempos4dofitem[op][1] = k
+            AM.orientation4dofitem[op][1] = AM.xDofItemItemOrientations[op][k, AM.dofitems[op][1]]
+            break
+        end
+    end
+    AM.coeff4dofitem[op][1] = 1
+    AM.coeff4dofitem[op][2] = 0
+    if length(AM.dEG) > 1
+        # find EG index for geometry
+        for j=1:length(AM.dEG)
+            if AM.xDofItemGeometries[item] == AM.dEG[j]
+                AM.EG4dofitem[op][1] = length(EG) + j
+                break
+            end
+        end
+    else
+        AM.EG4dofitem[op][1] = length(AM.EG) + 1
+    end
+end
+
+
+
+# broken space discontinuous operator on faces
+function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_broken{DiscType,AT,basisAT}}, item::Int) where {DiscType, AT <: ON_FACES, basisAT <: ON_FACES}
+    if AM.xDofItems4Item[op][2,item] > 0
+        if DiscType == Jump
+            AM.coeff4dofitem[op][1] = 1
+            AM.coeff4dofitem[op][2] = -1
+        elseif DiscType == Average
+            AM.coeff4dofitem[op][1] = 0.5
+            AM.coeff4dofitem[op][2] = 0.5
+        end
+        AM.dofitems[op][1] = item
+        AM.dofitems[op][2] = item
+    else
+        if AT == ON_IFACES
+            # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
+            AM.dofitems[op][1] = 0
+        else
+            AM.coeff4dofitem[op][1] = 1
+            AM.coeff4dofitem[op][2] = 0
+            AM.dofitems[op][1] = item
+        end
+        AM.dofitems[op][2] = 0
+    end
+    if length(AM.EG) > 1
+        # find EG index for geometry
+        for j=1:length(AM.EG)
+            if AM.xItemGeometries[item] == AM.EG[j]
+                AM.EG4dofitem[op][1] = j
+                AM.EG4dofitem[op][2] = j
+                AM.dofoffset4dofitem[op][2] = AM.ndofs4EG[op][j]
+                break
+            end
+        end
+    else
+        AM.dofoffset4dofitem[op][2] = AM.ndofs4EG[op][1] 
+    end
 end
 
 function update!(AM::AssemblyManager{T}, item::Int) where {T <: Real}
@@ -39,7 +197,8 @@ function update!(AM::AssemblyManager{T}, item::Int) where {T <: Real}
     if AM.citem[1] != item
         AM.citem[1] = item
         for j = 1 : AM.nop
-            AM.dii4op[j](AM.dofitems[j], AM.EG4dofitem[j], AM.itempos4dofitem[j], AM.coeff4dofitem[j], AM.orientation4dofitem[j], AM.dofoffset4dofitem[j], item)
+            # update dofitem information for assembly of operator
+            update_dii4op!(AM, j, AM.dii4op_types[j], item)
             # update needed basisevaler
             for di = 1 : length(AM.dofitems[j])
                 if AM.dofitems[j][di] != 0
@@ -90,7 +249,7 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Abst
     action::AbstractAction
     apply_action_to::Array{Int,1}
     regions::Array{Int,1}
-    AM::AssemblyManager # hidden stuff needed for assembly
+    AM::AssemblyManager{T} # hidden stuff needed for assembly
     AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS}()
     AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} = new{APT,T,AT}()
     AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}(name, FES,operators,action,apply_to,regions)
@@ -176,7 +335,7 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyTy
         # for e.g. IdentityDisc, GradientDifsc etc.
         # if AT == ON_FACES: if continuity allows it, assembly ON_FACES two times on each face
         #                    otherwise leads to ON_CELL assembly on neighbouring CELLS
-        # if AT == ON_EDGES: todo (should lead to ON_CELL assembly on neighbouring CELLS, morea than two)
+        # if AT == ON_EDGES: todo (should lead to ON_CELL assembly on neighbouring CELLS, more than two)
         DofitemInformation4Operator(FES, AT, basisAT, FO.parameters[posdt])
     else
         # call standard handlers
@@ -185,26 +344,11 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyTy
     end
 end
 
-# default handlers for continupus operators
+# default handlers for continuous operators
 function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyType}, basisAT::Type{<:AbstractAssemblyType})
     xgrid = FES.xgrid
     xItemGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
-    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
-    # operator is assumed to be continuous, hence only needs to be evaluated on one dofitem = item
-    function closure(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
-        dofitems[1] = item
-        itempos4dofitem[1] = 1
-        coefficient4dofitem[1] = 1
-        # find EG index for geometry
-        for j=1:length(EG)
-            if xItemGeometries[item] == EG[j]
-                EG4dofitem[1] = j
-                break;
-            end
-        end
-        return EG4dofitem[1]
-    end
-    return closure
+    return DIIType_continuous, xItemGeometries, nothing, nothing, nothing, nothing
 end
 
 function DofitemInformation4Operator(FES::FESpace, EG, EGdofitems, AT::Type{<:ON_CELLS}, DiscType::Type{<:Union{Jump, Average}})
@@ -219,61 +363,7 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_FACES}, basisAT
     xFaceGeometries = xgrid[FaceGeometries]
     xCellGeometries = xgrid[CellGeometries]
     xCellFaceOrientations = xgrid[CellFaceOrientations]
-    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
-    EGdofitems = xgrid[GridComponentUniqueGeometries4AssemblyType(basisAT)]
-    if DiscType == Jump
-        coeff_left = 1
-        coeff_right = -1
-    elseif DiscType == Average
-        coeff_left = 0.5
-        coeff_right = 0.5
-    end
-    # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
-    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
-        dofitems[1] = xFaceCells[1,item]
-        dofitems[2] = xFaceCells[2,item]
-        for k = 1 : num_targets(xCellFaces,dofitems[1])
-            if xCellFaces[k,dofitems[1]] == item
-                itempos4dofitem[1] = k
-            end
-        end
-        orientation4dofitem[1] = xCellFaceOrientations[itempos4dofitem[1], dofitems[1]]
-        if dofitems[2] > 0
-            for k = 1 : num_targets(xCellFaces,dofitems[2])
-                if xCellFaces[k,dofitems[2]] == item
-                    itempos4dofitem[2] = k
-                end
-            end
-            orientation4dofitem[2] = xCellFaceOrientations[itempos4dofitem[2], dofitems[2]]
-            coefficient4dofitem[1] = coeff_left
-            coefficient4dofitem[2] = coeff_right
-        else
-            coefficient4dofitem[1] = 1
-            coefficient4dofitem[2] = 0
-            if AT == ON_IFACES
-                # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
-                dofitems[1] = 0
-            end
-        end
-
-        # find EG index for geometry
-        for k = 1 : 2
-            if dofitems[k] > 0
-                for j=1:length(EGdofitems)
-                    if xCellGeometries[dofitems[k]] == EGdofitems[j]
-                        EG4dofitem[k] = length(EG) + j
-                        break;
-                    end
-                end
-            end
-        end
-        for j=1:length(EG)
-            if xFaceGeometries[item] == EG[j]
-                return j
-            end
-        end
-    end
-    return closure!
+    return DIIType_discontinuous{DiscType,AT,basisAT}, xCellGeometries, xFaceCells, xCellFaces, xCellFaceOrientations, nothing
 end
 
 
@@ -281,51 +371,8 @@ end
 function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_FACES}, basisAT::Type{<:ON_FACES}, DiscType::Type{<:Union{Jump, Average}})
     xgrid = FES.xgrid
     xFaceCells = xgrid[FaceCells]
-    xCellFaces = xgrid[CellFaces]
     xItemGeometries = xgrid[FaceGeometries]
-    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
-    EGdofitems = xgrid[GridComponentUniqueGeometries4AssemblyType(basisAT)]
-    if DiscType == Jump
-        coeff_left = 1
-        coeff_right = -1
-    elseif DiscType == Average
-        coeff_left = 0.5
-        coeff_right = 0.5
-    end
-    localndofs = zeros(Int, length(EGdofitems))
-    for j = 1 : length(EGdofitems)
-        localndofs[j] = get_ndofs(basisAT, typeof(FES).parameters[1], EGdofitems[j])
-    end
-    # operator is discontinous ON_FACES and needs to be evaluated in the face dofs of the neighbourings cells
-    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
-        if xFaceCells[2,item] > 0
-            coefficient4dofitem[1] = coeff_left
-            coefficient4dofitem[2] = coeff_right
-            dofitems[1] = item
-            dofitems[2] = item
-        else
-            if AT == ON_IFACES
-                # if assembly is only on interior faces, ignore boundary faces by setting dofitems to zero
-                dofitems[1] = 0
-            else
-                coefficient4dofitem[1] = 1
-                coefficient4dofitem[2] = 0
-                dofitems[1] = item
-            end
-            dofitems[2] = 0
-        end
-        # find EG index for geometry
-        for j=1:length(EG)
-            if xItemGeometries[item] == EG[j]
-                EG4dofitem[1] = j
-                EG4dofitem[2] = j
-                dofoffset4dofitem[2] = localndofs[j]
-                break;
-            end
-        end
-        return EG4dofitem[1]
-    end
-    return closure!
+    return DIIType_broken{DiscType,AT,basisAT}, xItemGeometries, xFaceCells, nothing, nothing, nothing
 end
 
 
@@ -334,39 +381,10 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_BFACES}, basisA
     xgrid = FES.xgrid
     xFaceCells = xgrid[FaceCells]
     xCellFaces = xgrid[CellFaces]
-    xBFaceGeometries = xgrid[BFaceGeometries]
     xCellGeometries = xgrid[CellGeometries]
     xBFaces = xgrid[BFaces]
     xCellFaceOrientations = xgrid[CellFaceOrientations]
-    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
-    EGdofitems = xgrid[GridComponentUniqueGeometries4AssemblyType(basisAT)]
-
-    # operator is discontinous ON_FACES and needs to be evaluated on the two neighbouring cells
-    function closure!(dofitems, EG4dofitem, itempos4dofitem, coefficient4dofitem, orientation4dofitem, dofoffset4dofitem, item)
-        dofitems[1] = xFaceCells[1,xBFaces[item]]
-        dofitems[2] = xFaceCells[2,xBFaces[item]]
-        for k = 1 : num_targets(xCellFaces,dofitems[1])
-            if xCellFaces[k,dofitems[1]] == xBFaces[item]
-                itempos4dofitem[1] = k
-            end
-        end
-        orientation4dofitem[1] = xCellFaceOrientations[itempos4dofitem[1], dofitems[1]]
-        coefficient4dofitem[1] = 1
-
-        # find EG index for geometry
-        for j=1:length(EG)
-            if xCellGeometries[dofitems[1]] == EGdofitems[j]
-                EG4dofitem[1] = length(EG) + j
-                break;
-            end
-        end
-        for j=1:length(EG)
-            if xBFaceGeometries[item] == EG[j]
-                return j
-            end
-        end
-    end
-    return closure!
+    return DIIType_discontinuous{DiscType,AT,basisAT}, xCellGeometries, xFaceCells, xCellFaces, xCellFaceOrientations, xBFaces
 end
 
 
@@ -434,7 +452,6 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
             push!(continuous_operators,j)
         end
         #println("AT = $AT, dofitemAT[j] = $(dofitemAT[j])")
-        dii4op[j] = DofitemInformation4Operator(FE[j], AT, dofitemAT[j], operator[j])
     end    
 
     # if one of the operators is a face jump operator we also need the element geometries 
@@ -534,9 +551,6 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
                 ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j,k,1,1].cvals,2)
             end
         end
-
-        # append EGdofitem to EG
-        EG = [EG, EGdofitem]
     end
 
     # generate assembly manager
@@ -546,6 +560,13 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     coeff4dofitem = Array{Array{T,1},1}(undef, length(FE))          
     dofoffset4dofitem = Array{Array{Int,1},1}(undef, length(FE))
     orientation4dofitem = Array{Array{Int,1},1}(undef, length(FE))  
+    xDofItemGeometries = Array{GridEGTypes,1}(undef, length(FE))           
+    xDofItems4Item = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))     
+    xItemInDofItems = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))     
+    xDofItemItemOrientations = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))
+    xItem2SuperSetItems = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))
+    dii4op_types = Array{Type{<:DIIType},1}(undef,length(FE))
+
     for j = 1 : length(FE)
         dofitems[j] = (j in continuous_operators) ? zeros(Int,1) : zeros(Int,2)
         EG4dofitem[j] = [1,1]
@@ -554,9 +575,17 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
         dofoffset4dofitem[j] = zeros(Int,2)
         orientation4dofitem[j] = [1,1]
         xItemDofs[j] = Dofmap4AssemblyType(FE[j], dofitemAT[j])
+        b,c,d,e,f,g = DofitemInformation4Operator(FE[j], AT, dofitemAT[j], operator[j])
+        dii4op_types[j] = b
+        xDofItemGeometries[j] = c
+        xDofItems4Item[j] = d
+        xItemInDofItems[j] = e
+        xDofItemItemOrientations[j] = f
+        xItem2SuperSetItems[j] = g
     end
 
-    AP.AM = AssemblyManager{T}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op,dofitemAT,[0],dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem)
+    xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
+    AP.AM = AssemblyManager{T}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op_types,dofitemAT,[0],dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem,EG,EGdofitem,xItemGeometries,xDofItemGeometries,xDofItems4Item,xItemInDofItems,xDofItemItemOrientations,xItem2SuperSetItems)
 end
 
 # each assembly pattern is in its own file

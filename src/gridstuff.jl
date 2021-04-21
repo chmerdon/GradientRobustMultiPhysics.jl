@@ -22,6 +22,9 @@
 #    return Edge1DWithParent{CEG}
 #end
 
+const GridAdjacencyTypes = Union{VariableTargetAdjacency{Int32},Array{Int32,2}}
+const GridEGTypes = Vector{DataType}
+
 
 # additional ExtendableGrids adjacency types 
 abstract type CellEdges <: AbstractGridAdjacency end

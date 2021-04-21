@@ -90,13 +90,13 @@ $(TYPEDSIGNATURES)
 
 Custom `show` function for `FEMatrix` that prints some information on its blocks.
 """
-function Base.show(io::IO, FEM::FEMatrix)
+function Base.show(io::IO, FEM::FEMatrix{T,nbrow}) where {T,nbrow}
 	println("\nFEMatrix information")
     println("====================")
     println("  block |  ndofsX |  ndofsY | name (FETypeX, FETypeY) ")
     for j=1:length(FEM)
-        n = mod(j-1,FEM.nFE)+1
-        m = Int(ceil(j/FEM.nFE))
+        n = mod(j-1,nbrow)+1
+        m = Int(ceil(j/nbrow))
         @printf("  [%d,%d] |",m,n);
         @printf("  %6d |",FEM[j].FESX.ndofs);
         @printf("  %6d |",FEM[j].FESY.ndofs);
@@ -196,7 +196,7 @@ function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1, transpose::Bo
             for r in nzrange(cscmat, col)
                 if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
                     acol = rows[r] - B.offsetX + A.offsetY
-                    _addnz(A.entries,arow,aacol,valsB[r],factor)
+                    _addnz(A.entries,arow,acol,valsB[r],factor)
                 end
             end
         end
@@ -222,7 +222,7 @@ Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv, Ti} = B.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
-    valsB::Array{Float64,1} = cscmat.nzval
+    valsB::Array{Tv,1} = cscmat.nzval
     arow::Int = 0
     acol::Int = 0
     if transpose

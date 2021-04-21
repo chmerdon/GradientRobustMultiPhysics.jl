@@ -21,6 +21,12 @@ Base.show(io::IO, level::GRMPLogLevel) =
         show(io, LogLevel(level))
     end
 
+function Logging.handle_message(logger, level::GRMPLogLevel, message, _module, group, id, filepath, line)
+    Logging.handle_message(logger, convert(LogLevel,level), message, _module, group, id, filepath, line)
+end
+
+Logging.disable_logging(Logging.BelowMinLevel)
+
 function set_verbosity(verbosity::Int)
     logger = current_logger()
     if verbosity < 0
@@ -53,3 +59,4 @@ function set_verbosity(verbosity::Int)
         end
     end 
 end
+export MoreInfo, DeepInfo, set_verbosity

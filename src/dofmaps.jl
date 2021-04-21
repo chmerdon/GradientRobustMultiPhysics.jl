@@ -12,6 +12,8 @@ abstract type EdgeDofs <: DofMap end
 abstract type BFaceDofs <: DofMap end
 abstract type BEdgeDofs <: DofMap end
 
+const DofMapTypes = Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}}
+
 UCG4DofMap(::Type{CellDofs}) = UniqueCellGeometries
 UCG4DofMap(::Type{FaceDofs}) = UniqueFaceGeometries
 UCG4DofMap(::Type{EdgeDofs}) = UniqueEdgeGeometries
