@@ -14,11 +14,15 @@ with some right-hand side ``f`` on a series of uniform refinements of the unit s
 This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression
 and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.
 
+Also the factorization in the linear solver can be changed to anything supported by ExtendableSparse.AbstractFactorization
+(but not every one will work in this example).
+
 =#
 
 module Example_2DNonlinearPoisson
 
 using GradientRobustMultiPhysics
+using ExtendableSparse
 using Printf
 
 ## problem data
@@ -38,7 +42,7 @@ end
 
 ## everything is wrapped in a main function
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false)
+function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
 
     ## set log level
     set_verbosity(verbosity)
@@ -86,7 +90,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         push!(NDofs,length(Solution.entries))
 
         ## solve
-        solve!(Solution, Problem)
+        solve!(Solution, Problem; linsolver = factorization)
 
         ## calculate L2 and H1 error
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))

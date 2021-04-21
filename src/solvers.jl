@@ -47,7 +47,7 @@ default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
     :anderson_damping => (1, "Damping factor in Anderson acceleration (1 = undamped)",true,false),
     :anderson_unknowns => ([1], "an array of unknown numbers that should be included in the Anderson acceleration",true,false),
     :fixed_penalty => (1e60, "penalty that is used for the values of fixed degrees of freedom (e.g. by Dirichlet boundary data or global constraints)",true,true),
-    :linsolver => ("UMFPACK", "String that encodes the linear solver (or type name of self-defined solver, see corressponding example)",true,true),
+    :linsolver => ("UMFPACK", "String that encodes the linear solver, or type name of self-defined solver (see corressponding example), or type name of ExtendableSparse.AbstractFactorization",true,true),
     :show_solver_config => (false, "show the complete solver configuration before starting to solve",true,true),
     :show_iteration_details => (true, "show details (residuals etc.) of each iteration",true,true),
     :show_statistics => (false, "show some statistics like assembly times",true,true)
@@ -82,12 +82,12 @@ function _update_solver_params!(user_params,kwargs)
 end
 
 
-mutable struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization{Tv,Ti}} <: AbstractLinearSystem{Tv,Ti} 
+struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization} <: AbstractLinearSystem{Tv,Ti} 
     x::AbstractVector{Tv}
     A::ExtendableSparseMatrix{Tv,Ti}
     b::AbstractVector{Tv}
     factorization::FT
-    LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} = new{Tv,Ti,FT}(x,A,b,FT(A,nothing,0))
+    LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} = new{Tv,Ti,FT}(x,A,b,FT(A))
 end
 
 function createlinsolver(ST::Type{<:AbstractLinearSystem},x::AbstractVector,A::ExtendableSparseMatrix,b::AbstractVector)
@@ -99,12 +99,12 @@ function update!(LS::AbstractLinearSystem)
 end
 
 function update!(LS::LinearSystem)
-    @logmsg MoreInfo "Updating factorization ($FT)..."
+    @logmsg MoreInfo "Updating factorization = $(typeof(LS).parameters[3])..."
     ExtendableSparse.update!(LS.factorization)
 end
 
 function solve!(LS::LinearSystem) 
-    @logmsg MoreInfo "Solving ($FT)..."
+    @logmsg MoreInfo "Solving with factorization = $(typeof(LS).parameters[3])..."
     ldiv!(LS.x,LS.factorization,LS.b)
 end
 
@@ -125,7 +125,11 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
     end
     ## declare linear solver
     if user_params[:linsolver] == "UMFPACK"
-        user_params[:linsolver] = LinearSystem{Float64, Int64, ExtendableSparse.LUFactorization{Float64,Int64}}
+        user_params[:linsolver] = LinearSystem{Float64, Int64, ExtendableSparse.LUFactorization}
+    elseif user_params[:linsolver] == "MKLPARDISO"
+        user_params[:linsolver] = LinearSystem{Float64, Int64, ExtendableSparse.MKLPardisoLU}
+    elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
+        user_params[:linsolver] = LinearSystem{Float64, Int64, user_params[:linsolver]}
     end
     while length(user_params[:skip_update]) < length(user_params[:subiterations])
         push!(user_params[:skip_update], 1)
