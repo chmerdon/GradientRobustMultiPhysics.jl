@@ -4,12 +4,12 @@ abstract type AbstractExtendedDataFunction <: AbstractDataFunction end
 abstract type AbstractActionKernel <: AbstractUserDataType end
 abstract type AbstractNLActionKernel <: AbstractActionKernel end
 
-struct UserData{UST<: AbstractUserDataType,ndim}
+struct UserData{UST<: AbstractUserDataType,FType<:Function,ndim}
     name::String
     dependencies::String
     quadorder::Int
     dimensions::SVector{ndim,Int}     # length of result and input arrays
-    user_function::Function
+    user_function::FType
     negotiated_function::Function
 end
 
@@ -79,7 +79,7 @@ function ActionKernel(f::Function, dimensions::Array{Int,1}; name = "user action
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, R, I, L)
     end
 
-    return UserData{AbstractActionKernel,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractActionKernel,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -113,7 +113,7 @@ function NLActionKernel(f::Function, dimensions::Array{Int,1}; name = "user nonl
         println("nonlinear action kernels that depend on extra variables are not yet supported")
     end
 
-    return UserData{AbstractNLActionKernel,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractNLActionKernel,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -151,7 +151,7 @@ function DataFunction(f::Function, dimensions::Array{Int,1}; name = "user data f
         nf = (result,X,T) -> f(result, X, T)
     end
 
-    return UserData{AbstractDataFunction,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractDataFunction,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -226,7 +226,7 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
         nf = (result,X,T,R,I,L) -> f(result, X, T, R, I, L)
     end
 
-    return UserData{AbstractExtendedDataFunction,length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractExtendedDataFunction,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 @inline function eval!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)

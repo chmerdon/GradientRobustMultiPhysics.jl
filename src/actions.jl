@@ -25,8 +25,8 @@ struct InfNothingArray
 end
 Base.getindex(::InfNothingArray,i) = nothing
 
-mutable struct Action{T <: Real,nsizes} <: AbstractAction
-    kernel::UserData{<:AbstractActionKernel}
+mutable struct Action{T <: Real,KernelType <: UserData{<:AbstractActionKernel}, nsizes} <: AbstractAction
+    kernel::KernelType
     name::String
     citem::Array{Int,1}
     cregion::Array{Int,1}
@@ -36,8 +36,8 @@ mutable struct Action{T <: Real,nsizes} <: AbstractAction
 end
 
 # actions that do depend on t
-mutable struct TAction{T <: Real,nsizes} <: AbstractAction
-    kernel::UserData{<:AbstractActionKernel}
+mutable struct TAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+    kernel::KernelType
     name::String
     citem::Array{Int,1}
     cregion::Array{Int,1}
@@ -49,8 +49,8 @@ end
 
 # actions that do depend on x
 # and require additional managament of global evaluation points
-mutable struct XAction{T <: Real,nsizes} <: AbstractAction
-    kernel::UserData{<:AbstractActionKernel}
+mutable struct XAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+    kernel::KernelType
     name::String
     citem::Array{Int,1}
     cregion::Array{Int,1}
@@ -62,8 +62,8 @@ end
 
 # actions that do depend on x and t
 # and require additional managament of global evaluation points
-mutable struct XTAction{T <: Real,nsizes} <: AbstractAction
-    kernel::UserData{<:AbstractActionKernel}
+mutable struct XTAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+    kernel::KernelType
     name::String
     citem::Array{Int,1}
     cregion::Array{Int,1}
@@ -88,15 +88,15 @@ that should match the number format of the used quadrature rules and grid coordi
 function Action(T, kernel::UserData{<:AbstractActionKernel}; name = "user action")
     if is_xdependent(kernel)
         if is_timedependent(kernel)
-            return XTAction{T,length(kernel.dimensions)}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, InfNothingArray(nothing), Array{T,1}(undef,0))
+            return XTAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, InfNothingArray(nothing), Array{T,1}(undef,0))
         else
-            return XAction{T,length(kernel.dimensions)}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, InfNothingArray(nothing), Array{T,1}(undef,0))
+            return XAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, InfNothingArray(nothing), Array{T,1}(undef,0))
         end
     else
         if is_timedependent(kernel)
-            return TAction{T,length(kernel.dimensions)}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, InfNothingArray(nothing))
+            return TAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, [0], [0], zeros(T,1), kernel.quadorder, kernel.dimensions, InfNothingArray(nothing))
         else
-            return Action{T,length(kernel.dimensions)}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, InfNothingArray(nothing))
+            return Action{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, [0], [0], kernel.quadorder, kernel.dimensions, InfNothingArray(nothing))
         end
     end
 end

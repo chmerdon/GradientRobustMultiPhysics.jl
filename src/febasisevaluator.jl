@@ -12,7 +12,7 @@
 abstract type AbstractFEBasisEvaluator{T} end
 abstract type FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} <: AbstractFEBasisEvaluator{T} end
 
-struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries, FType_coeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
@@ -27,13 +27,13 @@ struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: Abstra
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler::Function             # function to call to get coefficients for finite element
-    subset_handler::Function             # function to call to get linear independent subset of basis on cell
+    coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
+    subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries, FType_coeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
@@ -51,13 +51,13 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler::Function             # function to call to get coefficients for finite element
-    subset_handler::Function             # function to call to get linear independent subset of basis on cell
+    coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
+    subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer{T, EG}           # local2global mapper
@@ -74,14 +74,14 @@ struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: 
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler::Function             # function to call to get coefficients for finite element
-    reconstcoeffs_handler::Function      # function to call to get reconstruction coefficients
-    subset_handler::Function             # function to call to get linear independent subset of basis on cell
+    coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
+    reconstcoeffs_handler::FType_rcoeffs # function to call to get reconstruction coefficients
+    subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer{T, EG}           # local2global mapper
@@ -101,9 +101,9 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
-    coeffs_handler::Function             # function to call to get coefficients for finite element
-    reconstcoeffs_handler::Function      # function to call to get reconstruction coefficients
-    subset_handler::Function             # function to call to get linear independent subset of basis on cell
+    coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
+    reconstcoeffs_handler::FType_rcoeffs # function to call to get reconstruction coefficients
+    subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
@@ -279,9 +279,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
 
     if mutable
-        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     else
-        return StandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return StandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     end
 end    
 
@@ -359,9 +359,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end
     
     if mutable
-        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     else
-        return ReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return ReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     end
 end    
 

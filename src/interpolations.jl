@@ -259,7 +259,7 @@ end
 
 
 
-function nodevalues!(Target::AbstractArray{<:Real,2},
+function nodevalues!(Target::AbstractArray{T,2},
     Source::AbstractArray{<:Real,1},
     FE::FESpace,
     operator::Type{<:AbstractFunctionOperator} = Identity;
@@ -267,14 +267,13 @@ function nodevalues!(Target::AbstractArray{<:Real,2},
     target_offset::Int = 0,
     source_offset::Int = 0,
     zero_target::Bool = true,
-    continuous::Bool = false)
+    continuous::Bool = false) where {T}
 
     xItemGeometries = FE.xgrid[CellGeometries]
-    xItemRegions = FE.xgrid[CellRegions]
-    xItemDofs = FE[CellDofs]
-    xItemNodes = FE.xgrid[CellNodes]
+    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[CellRegions]
+    xItemDofs::DofMapTypes = FE[CellDofs]
+    xItemNodes::GridAdjacencyTypes = FE.xgrid[CellNodes]
 
-    T = Base.eltype(Target)
     if regions == [0]
         try
             regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
@@ -302,18 +301,18 @@ function nodevalues!(Target::AbstractArray{<:Real,2},
     nitems::Int = num_sources(xItemDofs)
     nnodes::Int = num_sources(FE.xgrid[Coordinates])
     nneighbours = zeros(Int,nnodes)
-    dofs = zeros(Int32,max_num_targets_per_source(xItemDofs))
     basisvals::Array{T,3} = basisevaler[1].cvals # pointer to operator results
     item::Int = 0
+    itemET = EG[1]
     nregions::Int = length(regions)
     ncomponents::Int = get_ncomponents(FEType)
-    iEG::Int = 0
+    iEG::Int = 1
     node::Int = 0
     dof::Int = 0
     flag4node = zeros(Bool,nnodes)
 
     if zero_target
-        fill!(Target, 0.0)
+        fill!(Target, 0)
     end
     for item = 1 : nitems
         for r = 1 : nregions
@@ -321,11 +320,13 @@ function nodevalues!(Target::AbstractArray{<:Real,2},
             if xItemRegions[item] == regions[r]
 
                 # find index for CellType
-                itemET = xItemGeometries[item]
-                for j=1:length(EG)
-                    if itemET == EG[j]
-                        iEG = j
-                        break;
+                if length(EG) > 1
+                    itemET = xItemGeometries[item]
+                    for j=1:length(EG)
+                        if itemET == EG[j]
+                            iEG = j
+                            break;
+                        end
                     end
                 end
 

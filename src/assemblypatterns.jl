@@ -44,7 +44,7 @@ struct AssemblyManager{T <: Real}
     xDofItems4Item::Array{Union{Nothing,GridAdjacencyTypes},1}       # dofitems <> items adjacency relationship (for each operator)
     xItemInDofItems::Array{Union{Nothing,GridAdjacencyTypes},1}      # where is the item locally in dofitems
     xDofItemItemOrientations::Array{Union{Nothing,GridAdjacencyTypes},1} # dofitems <> items orientation relationship
-    xItem2SuperSetItems::Array{Union{Nothing,GridAdjacencyTypes},1}  # only necessary for assembly of discontinuous operators ON_BFACES
+    xItem2SuperSetItems::Array{Union{Nothing,Vector{Int32}},1}  # only necessary for assembly of discontinuous operators ON_BFACES
 end
 
 function update_dii4op!(AM, j, DII::Type{<:DIIType}, item)
@@ -128,7 +128,7 @@ end
 # jump operators on bfaces that are avluated using the cell basis
 function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_discontinuous{DiscType,AT,basisAT}}, item::Int) where {DiscType, AT <: ON_BFACES, basisAT <: ON_CELLS}
 
-    AM.dofitems[op][1] = AM.xDofItems4Item[op][1,xItem2SuperSetItems[op][item]]
+    AM.dofitems[op][1] = AM.xDofItems4Item[op][1,AM.xItem2SuperSetItems[op][item]]
     AM.dofitems[op][2] = 0
     for k = 1 : num_targets(AM.xItemInDofItems[op],AM.dofitems[op][1])
         if AM.xItemInDofItems[op][k,AM.dofitems[op][1]] == AM.dofitems[op][1]
@@ -242,18 +242,18 @@ each assembly pattern has one of the assembly pattern types (APT) that trigger d
 finite element spaces, operators and an assigned action. The assembly type (AT) determines if the assembly takes
 place on cells, faces or edges etc. (relatively to the assembly type of the first argument of the pattern)
 """
-mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}
+mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType, ActionType <: AbstractAction}
     name::String
     FES::Array{FESpace,1}
     operators::Array{DataType,1}
-    action::AbstractAction
+    action::ActionType
     apply_action_to::Array{Int,1}
     regions::Array{Int,1}
     AM::AssemblyManager{T} # hidden stuff needed for assembly
-    AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS}()
-    AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} = new{APT,T,AT}()
-    AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}(name, FES,operators,action,apply_to,regions)
-    AssemblyPattern{APT, T, AT}(FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT}("$APT", FES,operators,action,apply_to,regions)
+    AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS, NoAction}()
+    AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} = new{APT,T,AT,NoAction}()
+    AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}(name, FES,operators,action,apply_to,regions)
+    AssemblyPattern{APT, T, AT}(FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}("$APT", FES,operators,action,apply_to,regions)
 end 
 
 function Base.show(io::IO, AP::AssemblyPattern)
@@ -564,7 +564,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     xDofItems4Item = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))     
     xItemInDofItems = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))     
     xDofItemItemOrientations = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))
-    xItem2SuperSetItems = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))
+    xItem2SuperSetItems = Array{Union{Nothing,Vector{Int32}},1}(undef, length(FE))
     dii4op_types = Array{Type{<:DIIType},1}(undef,length(FE))
 
     for j = 1 : length(FE)
