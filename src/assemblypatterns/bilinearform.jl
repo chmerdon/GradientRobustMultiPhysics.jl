@@ -117,6 +117,7 @@ function assemble!(
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
     basisvals::Array{T,3} = basisevaler[1].cvals
+    basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,1),get_maxndofs(AM,2))
     temp::T = 0 # some temporary variable
     ndofs4dofitem::Array{Int,1} = [0,0]
@@ -136,9 +137,8 @@ function assemble!(
     for r = 1 : nregions
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
-
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update!(AM, item)
         weights = get_qweights(AM)
 
         # loop over associated dofitems
@@ -159,6 +159,7 @@ function assemble!(
                 basisevaler[1] = get_basisevaler(AM, 1, di[1])
                 basisevaler[2] = get_basisevaler(AM, 2, di[2])
                 basisvals = basisevaler[other_id].cvals
+                basisxref = basisevaler[other_id].xref
 
                 # update action on dofitem
                 if apply_action_to > 0
@@ -176,7 +177,7 @@ function assemble!(
                         else
                             eval!(action_input, basisevaler[apply_action_to], dof_i, i)
                             action_input .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
-                            apply_action!(action_result, action_input, action, i)
+                            apply_action!(action_result, action_input, action, i, basisxref[i])
                         end
                         if is_locally_symmetric == false
                             for dof_j = 1 : ndofs4dofitem[other_id]
@@ -197,7 +198,6 @@ function assemble!(
                         end
                     end 
                 end
-
 
                 # copy localmatrix into global matrix
                 itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[other_id][di[other_id]]
@@ -334,6 +334,7 @@ function assemble!(
     fixed_coeffs::Array{T,1} = zeros(T,get_maxndofs(AM,fixed_argument))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
     basisvals::Array{T,3} = basisevaler[1].cvals
+    basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     temp::T = 0 # some temporary variable
     ndofs4dofitem::Array{Int,1} = [0,0]
     bdof::Int = 0
@@ -377,6 +378,7 @@ function assemble!(
                 basisevaler[1] = get_basisevaler(AM, 1, di[1])
                 basisevaler[2] = get_basisevaler(AM, 2, di[2])
                 basisvals = basisevaler[free_argument].cvals
+                basisxref = basisevaler[free_argument].xref
 
                 # update action on dofitem
                 if apply_action_to > 0
@@ -404,7 +406,7 @@ function assemble!(
                         end 
                     elseif apply_action_to == fixed_argument
                         # apply action to fixed argument
-                        apply_action!(action_result, fixedval, action, i)
+                        apply_action!(action_result, fixedval, action, i, basisxref[i])
 
                         # multiply free argument
                         action_result .*= AM.coeff4dofitem[free_argument][di[free_argument]]
@@ -420,7 +422,7 @@ function assemble!(
                             # apply action to free argument
                             eval!(action_input, basisevaler[free_argument], dof_i, i)
                             action_input .*= AM.coeff4dofitem[free_argument][di[free_argument]]
-                            apply_action!(action_result, action_input, action, i)
+                            apply_action!(action_result, action_input, action, i, basisxref[i])
             
                             # multiply fixed argument
                             temp = 0

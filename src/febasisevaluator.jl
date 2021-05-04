@@ -23,7 +23,7 @@ struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: Abstra
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
-    citem::Array{Int,1}                  # current item
+    citem::Base.RefValue{Int}            # current item
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
@@ -47,7 +47,7 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     Dcfg::ForwardDiff.DerivativeConfig    # config for ForwardDiff handling
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
-    citem::Array{Int,1}                  # current item
+    citem::Base.RefValue{Int}            # current item
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
@@ -69,7 +69,7 @@ struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
-    citem::Array{Int,1}                  # current item
+    citem::Base.RefValue{Int}            # current item
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients2::Array{T,2}            # coefficients for reconstruction
@@ -96,7 +96,7 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     Dcfg::ForwardDiff.DerivativeConfig    # config for ForwardDiff handling
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
-    citem::Array{Int,1}                  # current item
+    citem::Base.RefValue{Int}            # current item
     cvals::Array{T,3}                    # current operator vals on item
     coefficients::Array{T,2}             # coefficients for finite element
     coefficients2::Array{T,2}            # coefficients for reconstruction
@@ -278,10 +278,11 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         end
     end
 
+    citem = 0
     if mutable
-        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     else
-        return StandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return StandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     end
 end    
 
@@ -358,10 +359,11 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coefficients3 = zeros(T,resultdim,ndofs4item2)
     end
     
+    citem = 0
     if mutable
-        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     else
-        return ReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,[0],current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return ReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     end
 end    
 
@@ -369,8 +371,8 @@ end
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
         #if FEBE.subset_handler != nothing
         #    fill!(FEBE.cvals,0.0)
         #    FEBE.subset_handler(FEBE.current_subset, item)
@@ -387,7 +389,7 @@ end
 # IDENTITYCOMPONENT OPERATOR
 # H1 ELEMENTS (nothing has to be done)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:IdentityComponent,<:AbstractAssemblyType}, item) where {T}
-    FEBE.citem[1] = item
+    FEBE.citem[] = item
     return nothing
 end
 
@@ -396,8 +398,8 @@ end
 # HDIV RECONSTRUCTION
 # Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
 function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionIdentity,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # update transformation
         update!(FEBE.L2G, item)
@@ -449,8 +451,8 @@ end
 # RECONSTRUCTION NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
 function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionNormalFlux,<:ON_FACES,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # get local reconstruction coefficients
         # and accumulate
@@ -475,8 +477,8 @@ end
 # RECONSTRUCTION NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
 function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionNormalFlux,<:ON_BFACES,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # get local reconstruction coefficients
         # and accumulate
@@ -501,8 +503,8 @@ end
 # IDENTITY OPERATOR
 # Hcurl ELEMENTS (covariant Piola trafo)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # update transformation
         update!(FEBE.L2G, item)
@@ -532,8 +534,8 @@ end
 # IDENTITY OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Union{Identity,<:IdentityDisc{Jump}},<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # update transformation
         update!(FEBE.L2G, item)
@@ -567,8 +569,8 @@ end
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
         
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
@@ -589,8 +591,8 @@ end
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:IdentityComponent,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
         
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
@@ -608,8 +610,8 @@ end
 # IDENTITYCOMPONENT OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:IdentityComponent,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # update transformation
         update!(FEBE.L2G, item)
@@ -641,8 +643,8 @@ end
 # H1 ELEMENTS
 # ON_FACES
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:ON_FACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # fetch normal of item
         for k = 1 : ncomponents # ncomponents of normal
@@ -666,8 +668,8 @@ end
 # H1 ELEMENTS
 # ON_BFACES
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:ON_BFACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # fetch normal of item
         for k = 1 : ncomponents
@@ -690,8 +692,8 @@ end
 # H1 ELEMENTS WITH COEFFICIENTS
 # ON_FACES
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:NormalFlux,<:ON_FACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # fetch normal of item
         for k = 1 : ncomponents
@@ -718,8 +720,8 @@ end
 # H1 ELEMENTS WITH COEFFICIENTS
 # ON_BFACES
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,NormalFlux,<:ON_BFACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # fetch normal of item
         for k = 1 : ncomponents
@@ -744,8 +746,8 @@ end
 # NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # use Piola transformation on basisvals
         xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
@@ -762,8 +764,8 @@ end
 # TANGENTLFLUX OPERATOR
 # Hcurl ELEMENTS (just divide by face volume)
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry,<:TangentFlux,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # use Piola transformation on basisvals
         xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
@@ -782,8 +784,8 @@ end
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Hessian,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -817,8 +819,8 @@ end
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Laplacian,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -855,8 +857,8 @@ end
 # Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
 #       i.e. the surface derivative in general
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Gradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -887,8 +889,8 @@ end
 # Hdiv ELEMENTS (Piola trafo)
 #
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Gradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # update transformation
         update!(FEBE.L2G, item)
@@ -928,8 +930,8 @@ end
 # only works in 2D/Cartesian2D at the moment
 #
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry2D,<:CurlScalar,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -961,8 +963,8 @@ end
 # only works in 2D/Cartesian2D at the moment
 #
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry2D,<:Curl2D,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -991,8 +993,8 @@ end
 #
 # only 1D/Cartesian2D at the moment
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:TangentialGradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -1032,8 +1034,8 @@ end
 # in 3D: (du1/dx1, du2/dx2, du3/dx3, du1/dx2 + du2/dx1, du1/dx3 + du3/dx1, du2/dx3 + du3/dx2)
 
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricGradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if (FEBE.citem[] != item)
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -1068,8 +1070,8 @@ end
 # Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
 #       i.e. the surface derivative in general
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Gradient,<:AbstractAssemblyType,edim, ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -1103,8 +1105,8 @@ end
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Divergence,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -1134,8 +1136,8 @@ end
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Divergence,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
 
         # update transformation
         update!(FEBE.L2G, item)
@@ -1169,8 +1171,8 @@ end
 # HDIV RECONSTRUCTION
 # Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
 function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionDivergence,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # update transformation
         update!(FEBE.L2G, item)
@@ -1208,8 +1210,8 @@ end
 # Hdiv ELEMENTS (Piola trafo)
 #
 function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:ReconstructionGradient,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs, ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
     
         # update transformation
         update!(FEBE.L2G, item)
@@ -1262,8 +1264,8 @@ end
 # HDIV ELEMENTS
 # Piola transformation preserves divergence (up to a factor 1/det(A))
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Divergence,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
         
         # update transformation
         update!(FEBE.L2G, item)
@@ -1295,8 +1297,8 @@ end
 # HCURL ELEMENTS on 2D domains
 # covariant Piola transformation preserves curl2D (up to a factor 1/det(A))
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry2D,<:Curl2D,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
         
         # update transformation
         update!(FEBE.L2G, item)
@@ -1324,8 +1326,8 @@ end
 # HCURL ELEMENTS on 3D domains
 # covariant Piola transformation preserves curl3D (up to a factor 1/det(A))
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry3D,Curl3D,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[1] != item
-        FEBE.citem[1] = item
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
         
         # update transformation
         update!(FEBE.L2G, item)

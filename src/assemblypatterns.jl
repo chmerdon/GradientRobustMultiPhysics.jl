@@ -28,9 +28,9 @@ struct AssemblyManager{T <: Real}
     nop::Int                                    # number of operators
     qf::Array{QuadratureRule,1}                 # quadrature rules
     basisevaler::Array{AbstractFEBasisEvaluator{T},4}      # finite element basis evaluators
-    dii4op_types::Array{Type{<:DIIType},1}
+    dii4op_types::Array{DataType,1}
     basisAT::Array{Type{<:AbstractAssemblyType},1}                      
-    citem::Array{Int,1}                                                 # current item
+    citem::Base.RefValue{Int}                                           # current item
     dofitems::Array{Array{Int,1},1}                                     # dofitems needed to visit to evaluate operator
     EG4dofitem::Array{Array{Int,1},1}                                   # id to [EG,dEG] = coordinate 1 in basisevaler
     itempos4dofitem::Array{Array{Int,1},1}                              # local EG position in dEG = coordinate 3 in basisevaler
@@ -192,13 +192,19 @@ function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_broken{Disc
     end
 end
 
-function update!(AM::AssemblyManager{T}, item::Int) where {T <: Real}
+function update!(AM::AssemblyManager, item::Int)
     # get dofitem informations
-    if AM.citem[1] != item
-        AM.citem[1] = item
+    if AM.citem[] != item
+        AM.citem[] = item
         for j = 1 : AM.nop
             # update dofitem information for assembly of operator
-            update_dii4op!(AM, j, AM.dii4op_types[j], item)
+            # would like to avoid the if but dispatching by AM.dii4op_types[j] seems to cause allocations
+            # so this avoids them at least for continuous operators
+            if AM.dii4op_types[j] <: DIIType_continuous
+                update_dii4op!(AM, j, DIIType_continuous, item)
+            else
+                update_dii4op!(AM, j, AM.dii4op_types[j], item)
+            end
             # update needed basisevaler
             for di = 1 : length(AM.dofitems[j])
                 if AM.dofitems[j][di] != 0
@@ -399,8 +405,8 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
         FE = AP.FES
     end
 
-    regions = AP.regions
-    bonus_quadorder = AP.action.bonus_quadorder
+    regions::Array{Int,1} = AP.regions
+    bonus_quadorder::Int = AP.action.bonus_quadorder[]
     operator = AP.operators
     xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
@@ -585,7 +591,8 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     end
 
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    AP.AM = AssemblyManager{T}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op_types,dofitemAT,[0],dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem,EG,EGdofitem,xItemGeometries,xDofItemGeometries,xDofItems4Item,xItemInDofItems,xDofItemItemOrientations,xItem2SuperSetItems)
+    citem = 0
+    AP.AM = AssemblyManager{T}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op_types,dofitemAT,Ref(citem),dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem,EG,EGdofitem,xItemGeometries,xDofItemGeometries,xDofItems4Item,xItemInDofItems,xDofItemItemOrientations,xItem2SuperSetItems)
 end
 
 # each assembly pattern is in its own file

@@ -4,13 +4,13 @@ abstract type AbstractExtendedDataFunction <: AbstractDataFunction end
 abstract type AbstractActionKernel <: AbstractUserDataType end
 abstract type AbstractNLActionKernel <: AbstractActionKernel end
 
-struct UserData{UST<: AbstractUserDataType,FType<:Function,ndim}
-    name::String
-    dependencies::String
-    quadorder::Int
+struct UserData{UST<: AbstractUserDataType,FType<:Function,NFType<:Function,ndim}
+    name::String                      # some name used in info messages etc.
+    dependencies::String              # substring of "XTRIL" that masks the dependencies of the user function
+    quadorder::Int                    # quadrature order that should be used to evaluate the function (is added to quadrature order of related actions)
     dimensions::SVector{ndim,Int}     # length of result and input arrays
-    user_function::FType
-    negotiated_function::Function
+    user_function::FType              # original function by user
+    negotiated_function::NFType       # negotiated function (with possibly more XTRIL input arguments to match general interfacess)
 end
 
 """
@@ -79,7 +79,7 @@ function ActionKernel(f::Function, dimensions::Array{Int,1}; name = "user action
         nf = (result, input,X,T,R,I,L) -> f(result, input, X, T, R, I, L)
     end
 
-    return UserData{AbstractActionKernel,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractActionKernel,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -113,7 +113,7 @@ function NLActionKernel(f::Function, dimensions::Array{Int,1}; name = "user nonl
         println("nonlinear action kernels that depend on extra variables are not yet supported")
     end
 
-    return UserData{AbstractNLActionKernel,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractNLActionKernel,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -151,7 +151,7 @@ function DataFunction(f::Function, dimensions::Array{Int,1}; name = "user data f
         nf = (result,X,T) -> f(result, X, T)
     end
 
-    return UserData{AbstractDataFunction,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractDataFunction,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 
@@ -226,7 +226,7 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
         nf = (result,X,T,R,I,L) -> f(result, X, T, R, I, L)
     end
 
-    return UserData{AbstractExtendedDataFunction,typeof(f),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
+    return UserData{AbstractExtendedDataFunction,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
 @inline function eval!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)

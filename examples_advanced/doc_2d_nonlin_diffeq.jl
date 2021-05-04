@@ -51,7 +51,7 @@ end
 ## the last four parametes steer the solver from DifferentialEquations.jl
 ## for beta = 0, abstol and reltol can be choosen much larger
 function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, beta = 1,
-    use_diffeq::Bool = true, solver = Rosenbrock23(autodiff = false), adaptive_timestep = true,  abstol = 1e-3, reltol = 1e-3)
+    use_diffeq::Bool = true, solver = Rosenbrock23(autodiff = false), adaptive_timestep = true,  abstol = 1e-3, reltol = 1e-3, testmode = false)
 
     ## set log level
     set_verbosity(verbosity)
@@ -65,14 +65,13 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     user_function_rhs = DataFunction(rhs!(beta), [1,1]; name = "f", dependencies = "XT", quadorder = 5)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    function nonlin_kernel(result::Array{<:Real,1}, input::Array{<:Real,1})
+    function diffusion_kernel!(result::Array{<:Real,1}, input::Array{<:Real,1})
         ## input = [u, grad(u)]
         result[1] = (1+beta*input[1]^2)*input[2]
         result[2] = (1+beta*input[1]^2)*input[3]
         return nothing
     end 
-    action_kernel = ActionKernel(nonlin_kernel, [2,3]; dependencies = "", quadorder = 2)
-    nonlin_diffusion = GenerateNonlinearForm("(1+ β u^2) ∇(u)⋅∇(v)", [Identity, Gradient], [1,1], Gradient, action_kernel; ADnewton = true)   
+    nonlin_diffusion = GenerateNonlinearForm("((1+u^2)*grad(u))*grad(v)", [Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; quadorder = 2, ADnewton = true)  
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription(beta == 0 ? "linear Poisson problem" : "nonlinear Poisson problem")
@@ -117,31 +116,38 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         ## compute L2 and H1 error of all solutions
         append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
         append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
-        
-        ## ouput errors
-        if (level == nlevels)
-            println("\n   NDOF  |   L2ERROR      order   ")
-            order = 0
-            for j=1:nlevels
-                if j > 1
-                    order = log(L2error[j-1]/L2error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e ",L2error[j])
-                @printf("   %.3f   \n",order)
-            end
-            println("\n   NDOF  |   H1ERROR      order   ")
-            order = 0
-            for j=1:nlevels
-                if j > 1
-                    order = log(H1error[j-1]/H1error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf("  %6d |",NDofs[j]);
-                @printf(" %.5e ",H1error[j])
-                @printf("   %.3f   \n",order)
-            end
-        end    
     end    
+
+    ## ouput errors
+    if testmode
+        return L2error[1]
+    else
+        println("\n   NDOF  |   L2ERROR      order   ")
+        order = 0
+        for j=1:nlevels
+            if j > 1
+                order = log(L2error[j-1]/L2error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+            end
+            @printf("  %6d |",NDofs[j]);
+            @printf(" %.5e ",L2error[j])
+            @printf("   %.3f   \n",order)
+        end
+        println("\n   NDOF  |   H1ERROR      order   ")
+        order = 0
+        for j=1:nlevels
+            if j > 1
+                order = log(H1error[j-1]/H1error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
+            end
+            @printf("  %6d |",NDofs[j]);
+            @printf(" %.5e ",H1error[j])
+            @printf("   %.3f   \n",order)
+        end
+    end
 end
+
+function test()
+    return main(; use_diffeq = false, nlevels = 1, testmode = true)
+end
+
 
 end

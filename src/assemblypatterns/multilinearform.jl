@@ -95,6 +95,7 @@ function assemble!(
         basisevaler = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
     end
+    basisxref::Array{Array{T,1},1} = basisevaler.xref
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     coeffs = zeros(T,sum(maxdofs[1:end]))
     weights::Array{T,1} = get_qweights(AM)
@@ -136,6 +137,7 @@ function assemble!(
 
         # update action on item/dofitem (of first operator)
         basisevaler4dofitem = get_basisevaler(AM, 1, 1)
+        basisxref = basisevaler4dofitem.xref
         update!(action, basisevaler4dofitem, AM.dofitems[1][1], item, regions[r])
         
         # multiply last operator of testfunction
@@ -146,7 +148,7 @@ function assemble!(
                 update!(action, basisevaler4dofitem, AM.dofitems[nFE][di], item, regions[r])
                 for i in eachindex(weights)
                     # apply action
-                    apply_action!(action_result, action_input[i], action, i)
+                    apply_action!(action_result, action_input[i], action, i, basisxref[i])
         
                     # multiply last component
                     for dof_j = 1 : get_ndofs(AM, nFE, di)

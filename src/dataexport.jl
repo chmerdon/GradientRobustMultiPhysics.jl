@@ -26,9 +26,9 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
     @printf(io, "DATASET UNSTRUCTURED_GRID\n")
     
     # write POINTS
-    xCoordinates = xgrid[Coordinates]
-    nnodes = size(xCoordinates,2)
-    xdim = size(xCoordinates,1)
+    xCoordinates::Array{Float64,2} = xgrid[Coordinates]
+    nnodes::Int = size(xCoordinates,2)
+    xdim::Int = size(xCoordinates,1)
     @printf(io, "POINTS %d float\n", nnodes)
     for node = 1 : nnodes
         for k = 1 : xdim
@@ -45,9 +45,9 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
 
     @printf(io, "\n")
     # write CELLS
-    xCellNodes = xgrid[CellNodes]
-    ncells = num_sources(xCellNodes)
-    nlinks = num_links(xCellNodes) + ncells
+    xCellNodes::GridAdjacencyTypes = xgrid[CellNodes]
+    ncells::Int = num_sources(xCellNodes)
+    nlinks::Int = num_links(xCellNodes) + ncells
     @printf(io, "CELLS %d %d\n",ncells,nlinks)
     for cell = 1 : ncells
         @printf(io, "%d ", num_targets(xCellNodes,cell))
@@ -70,11 +70,11 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
     
     @printf(io, "\n")
     # write data from Data FEVectorBlocks
-    nblocks = length(Data)
-    ncomponents = 0
-    maxcomponents = 0
-    nfields = 0
-    block = 0
+    nblocks::Int = length(Data)
+    ncomponents::Int = 0
+    maxcomponents::Int = 0
+    nfields::Int = 0
+    block::Int = 0
     for j = 1 : length(blocks)
         block = blocks[j]
         while length(operators) < j
@@ -93,8 +93,7 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
     @printf(io, "CELL_DATA %d\n", ncells)
     @printf(io, "POINT_DATA %d\n", nnodes)
     @printf(io, "FIELD FieldData %d\n", nfields)
-    fieldname = ""
-    absval = 0
+    absval::Float64 = 0.0
     for b = 1 : length(blocks)
         block = blocks[b]
         ncomponents = Length4Operator(operators[b], xdim, get_ncomponents(eltype(Data[block].FES))) 
@@ -130,7 +129,7 @@ function writeVTK!(filename::String, Data::FEVector; blocks = [], operators = []
             fieldname = "$(b)_$fieldname.a"
             @printf(io, "%s 1 %d float\n", fieldname, nnodes)
             for node = 1 : nnodes
-                absval = 0
+                absval = 0.0
                 for c = 1 : ncomponents
                     absval += nodedata[c,node]^2
                 end

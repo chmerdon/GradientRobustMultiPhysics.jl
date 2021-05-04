@@ -161,7 +161,7 @@ function assemble!(
 
                 # apply nonlinear action
 
-                apply_action!(action_result, action_input[i], action_input2, action, i)  
+                apply_action!(action_result, action_input[i], action_input2, action, i, nothing)  
                 action_result .*= weights[i]
 
                 # multiply test function operator evaluation
@@ -326,7 +326,7 @@ function assemble!(
         # update!(action, basisevaler, item, item, regions[r])
 
         for i in eachindex(weights)
-            apply_action!(action_result, action_input[i], action, i)
+            apply_action!(action_result, action_input[i], action, i, nothing)
             action_result .*= weights[i]
 
             for dof_j = 1 : get_ndofs(AM, nFE, 1)

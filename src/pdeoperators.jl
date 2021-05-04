@@ -215,6 +215,7 @@ function HookStiffnessOperator1D(mu; name = "C∇u⋅∇v", regions::Array{Int,1
     function tensor_apply_1d(result, input)
         # just Hook law like a spring where mu is the elasticity modulus
         result[1] = mu*input[1]
+        return nothing
     end   
     action_kernel = ActionKernel(tensor_apply_1d, [1,1]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
@@ -247,6 +248,7 @@ function HookStiffnessOperator2D(mu, lambda;
         result[1] = (lambda + 2*mu)*input[1] + lambda*input[2]
         result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
         result[3] = mu*input[3]
+        return nothing
     end   
     action_kernel = ActionKernel(tensor_apply_2d, [3,3]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
@@ -284,6 +286,7 @@ function HookStiffnessOperator3D(mu, lambda;
         result[4] = mu*input[4]
         result[5] = mu*input[5]
         result[6] = mu*input[6]
+        return nothing
     end   
     action_kernel = ActionKernel(tensor_apply_3d, [6,6]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
@@ -438,15 +441,16 @@ function ConvectionOperator(
             end
         end    
     end    
-    action_kernel = ActionKernel(convection_function_fe(),[ncomponents, xdim + ncomponents*xdim]; dependencies = "", quadorder = quadorder)
+    argsizes = [ncomponents, xdim + ncomponents*xdim]
     if auto_newton
         ## generates a nonlinear form with automatic Newton operators by AD
         if name == "auto"
             name = "(u ⋅ ∇) u ⋅ v"
         end
-        return GenerateNonlinearForm(name, [beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, action_kernel; ADnewton = true)     
+        return GenerateNonlinearForm(name, [beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; ADnewton = true, quadorder = quadorder)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
+        action_kernel = ActionKernel(convection_function_fe(),argsizes; dependencies = "", quadorder = quadorder)
         convection_action = Action(Float64, action_kernel)
         a_to = fixed_argument
         if name == "auto"
@@ -559,24 +563,25 @@ function GenerateNonlinearForm(
     operator1::Array{DataType,1},
     coeff_from::Array{Int,1},
     operator2::Type{<:AbstractFunctionOperator},
-    action_kernel::UserData{<:AbstractActionKernel};
+    action_kernel::Function,
+    argsizes::Array{Int,1};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     ADnewton::Bool = false,
     action_kernel_rhs = nothing,
-    bonus_quadorder::Int = 0,
+    quadorder::Int = 0,
     regions = [0])
 
-    argsizes::Array{Int,1} = action_kernel.dimensions
     ### Newton scheme for a nonlinear operator G(u) is
     ## seek u_next such that : DG u_next = DG u - G(u)
+
+    if length(argsizes) == 2
+        push!(argsizes,argsizes[2])
+    end
+
     if ADnewton
         name = name * " [AD-Newton]"
         # the action for the derivative matrix DG is calculated by automatic differentiation (AD)
         # from the given action_kernel of the operator G
-
-        if length(argsizes) == 2
-            push!(argsizes,argsizes[2])
-        end
 
         # for differentation other dependencies of the action_kernel are fixed
         result_temp = Vector{Float64}(undef,argsizes[1])
@@ -584,10 +589,9 @@ function GenerateNonlinearForm(
         jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[3])
         Dresult = DiffResults.DiffResult(result_temp,jac_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-        cfg =ForwardDiff.JacobianConfig(action_kernel.user_function, result_temp, input_temp)
-        func::Function = action_kernel.user_function
+        cfg =ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
         function newton_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1})
-            ForwardDiff.jacobian!(Dresult, func, result, input_current, cfg)
+            ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
             jac = DiffResults.jacobian(Dresult)
             for j = 1 : argsizes[1]
                 result[j] = 0
@@ -597,7 +601,7 @@ function GenerateNonlinearForm(
             end
             return nothing
         end
-        newton_action_kernel = NLActionKernel(newton_kernel, argsizes; dependencies = "", quadorder = action_kernel.quadorder)
+        newton_action_kernel = NLActionKernel(newton_kernel, argsizes; dependencies = "", quadorder = quadorder)
         action = Action(Float64, newton_action_kernel)
 
         # the action for the RHS just evaluates DG and G at input_current
@@ -605,16 +609,21 @@ function GenerateNonlinearForm(
         function rhs_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1})
             fill!(result,0)
             newton_kernel(result, input_current, input_current)
-            func(temp, input_current)
+            action_kernel(temp, input_current)
             for j = 1 : argsizes[1]
                 result[j] -= temp[j]
             end
             return nothing
         end
-        rhs_action_kernel = ActionKernel(rhs_kernel, argsizes; dependencies = "", quadorder = action_kernel.quadorder)
+        rhs_action_kernel = ActionKernel(rhs_kernel, argsizes; dependencies = "", quadorder = quadorder)
         action_rhs = Action(Float64, rhs_action_kernel)
     else
-        action = Action(Float64, action_kernel)
+
+        # take action_kernel as nonlinear action_kernel
+        # = user specifies linearisation of nonlinear operator
+        nlform_action_kernel = NLActionKernel(action_kernel, argsizes; dependencies = "", quadorder = quadorder)
+
+        action = Action(Float64, nlform_action_kernel)
         if action_kernel_rhs != nothing
             action_rhs = Action(Float64, action_kernel_rhs)
         else
@@ -626,7 +635,7 @@ function GenerateNonlinearForm(
     O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, action, 1:(length(coeff_from)), 1, regions)
     O.fixed_arguments = 1:length(coeff_from)
     O.fixed_arguments_ids = coeff_from
-    O.action_rhs = action_rhs
+    O.action_rhs = action_rhs === nothing ? NoAction() : action_rhs
     O.transposed_assembly = true
     return O
 end

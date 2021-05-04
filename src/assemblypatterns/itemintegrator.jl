@@ -162,6 +162,7 @@ function evaluate!(
         basisevaler = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
     end
+    basisxref::Array{Array{T,1},1} = basisevaler.xref
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     coeffs = zeros(T,sum(maxdofs[1:end]))
     weights::Array{T,1} = get_qweights(AM)
@@ -208,11 +209,12 @@ function evaluate!(
             end  
         else
             # update action on item/dofitem (of first operator)
-            basisevaler4dofitem = get_basisevaler(AM, 1, 1)
-            update!(action, basisevaler4dofitem, AM.dofitems[1][1], item, regions[r])
+            basisevaler = get_basisevaler(AM, 1, 1)
+            basisxref = basisevaler.xref
+            update!(action, basisevaler, AM.dofitems[1][1], item, regions[r])
             # apply action to FEVector and accumulate
             for i in eachindex(weights)
-                apply_action!(action_result, action_input[i], action, i)
+                apply_action!(action_result, action_input[i], action, i, basisxref[i])
                 for j = 1 : action_resultdim
                     b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
                 end

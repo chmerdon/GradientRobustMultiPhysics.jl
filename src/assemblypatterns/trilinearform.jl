@@ -96,6 +96,7 @@ function assemble!(
     indexmap = CartesianIndices(zeros(Int, (maxdofitems[1],maxdofitems[2],maxdofitems[3])))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1),get_basisevaler(AM, 2, 1),get_basisevaler(AM, 3, 1)]
     basisvals_testfunction::Array{T,3} = basisevaler[3].cvals
+    basisxref::Array{Array{T,1},1} = basisevaler[2].xref
     nonfixed_ids::Array{Int,1} = setdiff([1,2,3], fixed_argument)
     coeffs::Array{T,1} = zeros(T,get_maxndofs(AM,fixed_argument))
     dofs2::Array{Int,1} = zeros(Int,get_maxndofs(AM,nonfixed_ids[1]))
@@ -139,6 +140,7 @@ function assemble!(
                 basisevaler[3] = get_basisevaler(AM, 3, di[3])
 
                 # update action on dofitem
+                basisxref = basisevaler[2].xref
                 update!(action, basisevaler[2], dofitem[2], item, regions[r])
 
                 # update coeffs of fixed and dofs of free arguments
@@ -157,7 +159,7 @@ function assemble!(
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
                             eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]])
-                            apply_action!(action_result, action_input, action, i)
+                            apply_action!(action_result, action_input, action, i, basisxref[i])
             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                                 temp = 0
@@ -181,7 +183,7 @@ function assemble!(
                             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                                 eval!(action_input, basisevaler[nonfixed_ids[2]], dof_j, i, offsets[2])
-                                apply_action!(action_result, action_input, action, i)
+                                apply_action!(action_result, action_input, action, i, basisxref[i])
 
                                 temp = 0
                                 for k = 1 : action_resultdim
@@ -270,6 +272,7 @@ function assemble!(
     indexmap = CartesianIndices(zeros(Int, (maxdofitems[1],maxdofitems[2],maxdofitems[3])))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1),get_basisevaler(AM, 2, 1),get_basisevaler(AM, 3, 1)]
     basisvals_testfunction::Array{T,3} = basisevaler[3].cvals
+    basisxref::Array{Array{T,1},1} = basisevaler[2].xref
     fixed_arguments::Array{Int,1} = [1,2]
     nonfixed_id::Int = 3
     coeffs1::Array{T,1} = zeros(T,get_maxndofs(AM,fixed_arguments[1]))
@@ -307,6 +310,7 @@ function assemble!(
                 basisevaler[2] = get_basisevaler(AM, 2, di[2])
                 basisevaler[3] = get_basisevaler(AM, 3, di[3])
                 basisvals_testfunction = basisevaler[3].cvals
+                basisxref = basisevaler[2].xref
 
                 # update action on dofitem
                 update!(action, basisevaler[2], dofitem[2], item, regions[r])
@@ -325,7 +329,7 @@ function assemble!(
                     eval!(action_input, basisevaler[fixed_arguments[2]], coeffs2, i, offsets[2])
         
                     # apply action to FE1 and FE2
-                    apply_action!(action_result, action_input, action, i)
+                    apply_action!(action_result, action_input, action, i, basisxref[i])
                    
                     # multiply third component
                     for dof_j = 1 : get_ndofs(AM, 3, di[3])

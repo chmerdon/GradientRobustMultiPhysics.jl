@@ -66,14 +66,13 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     user_function_rhs = DataFunction(rhs!, [1,2]; dependencies = "X", name = "f", quadorder = 4)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    function nonlin_kernel(result::Array{<:Real,1}, input::Array{<:Real,1})
+    function diffusion_kernel!(result::Array{<:Real,1}, input::Array{<:Real,1})
         ## input = [u, grad(u)]
         result[1] = (1+input[1]^2)*input[2]
         result[2] = (1+input[1]^2)*input[3]
         return nothing
     end 
-    action_kernel = ActionKernel(nonlin_kernel, [2,3]; dependencies = "", quadorder = 2)
-    nonlin_diffusion = GenerateNonlinearForm("((1+u^2)*grad(u))*grad(v)", [Identity, Gradient], [1,1], Gradient, action_kernel; ADnewton = true)   
+    nonlin_diffusion = GenerateNonlinearForm("((1+u^2)*grad(u))*grad(v)", [Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; quadorder = 2, ADnewton = true)   
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")

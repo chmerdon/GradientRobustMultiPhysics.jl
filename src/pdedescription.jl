@@ -154,8 +154,10 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator
 
     ## nonlinear forms may push additional right-hand side operators to the description
     if typeof(O).parameters[2] <: APT_NonlinearForm
-        push!(PDE.RHSOperators[position[1]],O)
-        @logmsg DeepInfo "Added operator $(O.name) also to RHS block $(position[1]) of PDEDescription $(PDE.name)"
+        if typeof(O.action_rhs) != NoAction
+            push!(PDE.RHSOperators[position[1]],O)
+            @logmsg DeepInfo "Added operator $(O.name) also to RHS block $(position[1]) of PDEDescription $(PDE.name)"
+        end
     end
 end
 

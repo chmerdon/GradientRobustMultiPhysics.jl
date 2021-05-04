@@ -84,6 +84,8 @@ function assemble!(
     @debug AP
 
     # loop over items
+    basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
+    basisxref::Array{Array{T,1},1} = basisevaler.xref
     weights::Array{T,1} = get_qweights(AM)
     localb::Array{T,2} = zeros(T,get_maxndofs(AM)[1],action_resultdim)
     ndofitems::Int = get_maxdofitems(AM)[1]
@@ -119,7 +121,7 @@ function assemble!(
                     for dof_i = 1 : ndofs4dofitem
                         # apply action
                         eval!(action_input, basisevaler, dof_i, i)
-                        apply_action!(action_result, action_input, action, i)
+                        apply_action!(action_result, action_input, action, i, basisevaler.xref[i])
                         for j = 1 : action_resultdim
                             localb[dof_i,j] += action_result[j] * weights[i]
                         end

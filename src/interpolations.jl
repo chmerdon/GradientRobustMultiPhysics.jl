@@ -260,14 +260,14 @@ end
 
 
 function nodevalues!(Target::AbstractArray{T,2},
-    Source::AbstractArray{<:Real,1},
+    Source::AbstractArray{T,1},
     FE::FESpace,
     operator::Type{<:AbstractFunctionOperator} = Identity;
     regions::Array{Int,1} = [0],
     target_offset::Int = 0,
     source_offset::Int = 0,
     zero_target::Bool = true,
-    continuous::Bool = false) where {T}
+    continuous::Bool = false) where {T <: Real}
 
     xItemGeometries = FE.xgrid[CellGeometries]
     xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[CellRegions]
@@ -276,12 +276,12 @@ function nodevalues!(Target::AbstractArray{T,2},
 
     if regions == [0]
         try
-            regions = Array{Int32,1}(Base.unique(xItemRegions[:]))
+            regions = Array{Int,1}(Base.unique(xItemRegions[:]))
         catch
             regions = [xItemRegions[1]]
         end        
     else
-        regions = Array{Int32,1}(regions)    
+        regions = Array{Int,1}(regions)    
     end
 
     # setup basisevaler for each unique cell geometries
@@ -310,6 +310,8 @@ function nodevalues!(Target::AbstractArray{T,2},
     node::Int = 0
     dof::Int = 0
     flag4node = zeros(Bool,nnodes)
+    temp::Array{T,1} = zeros(T,cvals_resultdim)
+    weights::Array{T,1} = qf[1].w
 
     if zero_target
         fill!(Target, 0)
@@ -328,23 +330,27 @@ function nodevalues!(Target::AbstractArray{T,2},
                             break;
                         end
                     end
+                    weights = qf[iEG].w
                 end
 
                 # update FEbasisevaler
                 update!(basisevaler[iEG],item)
                 basisvals = basisevaler[iEG].cvals
 
-                for i in eachindex(qf[iEG].w) # vertices
+                for i in eachindex(weights) # vertices
                     node = xItemNodes[i,item]
-                    if continuous == false || flag4node[node] == false
+                     if continuous == false || flag4node[node] == false
                         nneighbours[node] += 1
                         flag4node[node] = true
-                        for k = 1 : cvals_resultdim
+                        begin
                             for dof_i = 1 : ndofs4EG[iEG]
                                 dof = xItemDofs[dof_i,item]
-                                Target[k+target_offset,node] += Source[source_offset + dof] * basisvals[k,dof_i,i]
+                                eval!(temp, basisevaler[iEG], dof_i, i)
+                                for k = 1 : cvals_resultdim
+                                    Target[k+target_offset,node] += temp[k] * Source[source_offset + dof]
+                                end
                             end
-                        end  
+                        end
                     end
                 end  
                 break; # region for loop

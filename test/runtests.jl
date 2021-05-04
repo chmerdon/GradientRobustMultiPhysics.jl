@@ -687,6 +687,10 @@ function run_examples()
         println("\n2D NONLINEAR POISSON")
         include("../examples/doc_2d_nonlin_poisson.jl")
         @test eval(Meta.parse("Example_2DNonlinearPoisson.test()")) < 1e-13
+
+        println("\n2D NONLINEAR TIME_DEPENDENT POISSON")
+        include("../examples_advanced/doc_2d_nonlin_diffeq.jl")
+        @test eval(Meta.parse("Example_2DTransientNonlinDiffEQ.test()")) < 1e-15
         
         # tests the same reconstruction operator tests above, but let's keep it for now...
         println("\n2D PRESSURE_ROBUSTNESS")
