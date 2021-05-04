@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Adaptive Mesh Refinement (L-shape) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li class="is-active"><a class="tocitem" href>2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_plaplace/">2D Nonlinear Poisson (p-Laplacian)</a></li><li><a class="tocitem" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_naturalconvection/">2D Natural Convection</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Adaptive Mesh Refinement (L-shape)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Adaptive Mesh Refinement (L-shape)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_lshape_adaptivity.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Adaptive-Mesh-Refinement-(L-shape)"><a class="docs-heading-anchor" href="#D-Adaptive-Mesh-Refinement-(L-shape)">2D Adaptive Mesh Refinement (L-shape)</a><a id="D-Adaptive-Mesh-Refinement-(L-shape)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Adaptive-Mesh-Refinement-(L-shape)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_lshape_adaptivity.jl">source code</a>)</p><p>This example computes the standard-residual error estimator for the <span>$H^1$</span> error <span>$e = u - u_h$</span> of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Adaptive Mesh Refinement (L-shape) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">FE Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">FE Interpolation</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li><li><a class="tocitem" href="../../pdesolvers/">PDE Solvers</a></li><li><a class="tocitem" href="../../userdata/">User Data</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../viewers/">Export/Viewers</a></li><li><span class="tocitem">Examples (Intro)</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li class="is-active"><a class="tocitem" href>2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson_timedependent/">2D Nonlinear Poisson (time-dependent)</a></li><li><a class="tocitem" href="../doc_2d_plaplace/">2D Nonlinear Poisson (p-Laplacian)</a></li><li><a class="tocitem" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><span class="tocitem">Examples (Advanced)</span><ul><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_naturalconvection/">2D Natural Convection</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Adaptive Mesh Refinement (L-shape)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Adaptive Mesh Refinement (L-shape)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_lshape_adaptivity.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Adaptive-Mesh-Refinement-(L-shape)"><a class="docs-heading-anchor" href="#D-Adaptive-Mesh-Refinement-(L-shape)">2D Adaptive Mesh Refinement (L-shape)</a><a id="D-Adaptive-Mesh-Refinement-(L-shape)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Adaptive-Mesh-Refinement-(L-shape)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_lshape_adaptivity.jl">source code</a>)</p><p>This example computes the standard-residual error estimator for the <span>$H^1$</span> error <span>$e = u - u_h$</span> of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
 + \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \cdot \mathbf{n}]] \|^2_{L^2(F)}\]</p><p>This example script showcases the evaluation of 2nd order derivatives like the Laplacian and adaptive mesh refinement.</p><pre><code class="language-julia">module Example_Lshape
 
 using GradientRobustMultiPhysics
@@ -184,138 +184,138 @@ end</code></pre><pre><code class="language-none">Main.##266.Example_Lshape</code
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 67)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 1.85775845048325e-15
+┌ Info: overall residual = 1.923763753981895e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.3333391179306108
+	η = 0.3333391179306109
 	e = 0.0820803030509537
 ------- LEVEL 5
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 93)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 2.402901989943188e-15
+┌ Info: overall residual = 2.0692335422473954e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.23308314458993257
-	e = 0.055004363135275625
+	η = 0.23308314458993296
+	e = 0.05500436313527561
 ------- LEVEL 6
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 119)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 2.2633986948989007e-15
+┌ Info: overall residual = 1.6233452938007536e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.1786953253460242
-	e = 0.039456229943995544
+	η = 0.17869532534602417
+	e = 0.03945622994399559
 ------- LEVEL 7
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 159)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 2.3347393151801343e-15
+┌ Info: overall residual = 2.7267381059712232e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.13915850782044412
+	η = 0.13915850782044387
 	e = 0.029372552786887583
 ------- LEVEL 8
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 215)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 2.695240037684398e-15
+┌ Info: overall residual = 2.621488036222892e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.109821452233475
-	e = 0.022390159079847222
+	η = 0.10982145223347517
+	e = 0.022390159079847215
 ------- LEVEL 9
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 287)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 3.5428099179451275e-15
+┌ Info: overall residual = 3.322808367122337e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.08174488804163997
-	e = 0.01571686306614436
+	η = 0.08174488804164001
+	e = 0.015716863066144327
 ------- LEVEL 10
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 377)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 4.228852018773743e-15
+┌ Info: overall residual = 4.021312025623715e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.06164313323480438
-	e = 0.01166092416956658
+	η = 0.061643133234804595
+	e = 0.011660924169566596
 ------- LEVEL 11
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 527)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 4.2341728880855776e-15
+┌ Info: overall residual = 4.3512442787078964e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.04513125476819613
-	e = 0.00839438373037072
+	η = 0.045131254768195773
+	e = 0.008394383730370722
 ------- LEVEL 12
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 729)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 6.062299576999104e-15
+┌ Info: overall residual = 5.7762643766630905e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.03308173869008528
-	e = 0.006117474655358896
+	η = 0.033081738690084767
+	e = 0.0061174746553588726
 ------- LEVEL 13
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 1025)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 7.0223171124886785e-15
+┌ Info: overall residual = 6.7008327888243124e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.024323647581147988
-	e = 0.004508865557953349
+	η = 0.024323647581148147
+	e = 0.004508865557953344
 ------- LEVEL 14
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 1403)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 8.435601820560888e-15
+┌ Info: overall residual = 9.331491455577904e-15
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.017721168129910637
-	e = 0.0031946413430606353
+	η = 0.017721168129910595
+	e = 0.0031946413430606517
 ------- LEVEL 15
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 1951)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 1.0227325424117546e-14
+┌ Info: overall residual = 1.021435784254183e-14
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.01286507905625899
-	e = 0.002311089419858611
+	η = 0.01286507905625896
+	e = 0.0023110894198585708
 ------- LEVEL 16
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 2685)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 1.3716578174741795e-14
+┌ Info: overall residual = 1.1888477157237247e-14
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.009428615043436072
-	e = 0.0016865873325011785
+	η = 0.009428615043435638
+	e = 0.001686587332501176
 ------- LEVEL 17
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 3647)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 1.3790665244348857e-14
+┌ Info: overall residual = 1.3924194627772985e-14
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.0069421508417187435
-	e = 0.0012444240066276288
+	η = 0.00694215084171859
+	e = 0.0012444240066276143
 ------- LEVEL 18
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 4953)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 1.7008712350863905e-14
+┌ Info: overall residual = 1.673208469766901e-14
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.005073360038187537
-	e = 0.000897681251740881
+	η = 0.005073360038187438
+	e = 0.0008976812517408595
 ------- LEVEL 19
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 6781)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 1.9881640409172472e-14
+┌ Info: overall residual = 2.0173029982121463e-14
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.003722822140532354
-	e = 0.0006539955724163516
+	η = 0.0037228221405321894
+	e = 0.0006539955724163114
 ------- LEVEL 20
 ┌ Info: ----- Solving Poisson problem -----
 │ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 9271)
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
-┌ Info: overall residual = 2.2585371442145934e-14
+┌ Info: overall residual = 2.256585891779066e-14
 └ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:559
-	η = 0.0027250673116204984
-	e = 0.00047677332460083536
+	η = 0.0027250673116202134
+	e = 0.0004767733246008107
 
   NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   
 =========|========================|========================|========================
@@ -339,4 +339,4 @@ end</code></pre><pre><code class="language-none">Main.##266.Example_Lshape</code
     4953 | 6.26521e-06    4.020   | 8.97681e-04    2.134   | 5.07336e-03    2.049   |
     6781 | 3.91776e-06    2.989   | 6.53996e-04    2.016   | 3.72282e-03    1.971   |
     9271 | 2.50250e-06    2.866   | 4.76773e-04    2.021   | 2.72507e-03    1.995   |
-</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson Acceleration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 4 May 2021 14:49">Tuesday 4 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_liddrivencavity_anderson/">« 2D Lid-driven cavity (Anderson Acceleration)</a><a class="docs-footer-nextpage" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 4 May 2021 15:45">Tuesday 4 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
