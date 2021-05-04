@@ -47,4 +47,5 @@ see [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/sta
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
 [DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
+[WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl)\
 [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl)
