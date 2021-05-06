@@ -76,4 +76,83 @@ function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty
     # plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; Plotter = Plotter)
 end
-end</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DIteratedPenaltyStokes.main()</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_plaplace/">« 2D Nonlinear Poisson (p-Laplacian)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 6 May 2021 18:05">Thursday 6 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><pre><code class="language-none">Main.##269.Example_2DIteratedPenaltyStokes</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DIteratedPenaltyStokes.main()</code></pre><pre><code class="language-none">
+PDE-DESCRIPTION
+===============
+  system name = NSE (iterated penalty)
+
+     id   | unknown name / equation name
+    [1]   | u / velocity update 
+    [2]   | p / pressure update 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | ∇(u):∇(v) (regions = [0])
+            | (u ⋅ ∇) u ⋅ v [AD-Newton] (regions = [0])
+            | ϵ (div(u),div(v)) (regions = [0])
+    [1,2]   | (div(v),p) (regions = [0])
+    [2,1]   | (q,div(u)) (regions = [0])
+    [2,2]   | (p,q) (regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | (u ⋅ ∇) u ⋅ v [AD-Newton] (regions = [0])
+     [2]    | (p,q) (regions = [0])
+
+   BoundaryOperator[1] : InterpolateDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+┌ Info: ----- Solving NSE (iterated penalty) -----
+│ 	Equation (1.1) velocity update : u &gt;&gt; u_h (H1P2{2,2}, ndofs = 4226)
+│ 	Equation (2.2) pressure update : p &gt;&gt; p_h (H1P1{1} (broken), ndofs = 3072)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = false
+  anderson_iterations = 0
+  subiterations = [[1], [2]]
+  show_iteration_details = true
+  timedependent_equations = Any[]
+  anderson_unknowns = [1]
+  show_statistics = false
+  anderson_metric = l2
+  skip_update = [1, 1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
+  damping = 0
+  time = 0
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = true
+  fixed_penalty = 1.0e60
+  target_residual = 1.0e-10
+  maxiterations = 20
+  AssemblyTriggers = 
+         LHS_AT[1] :  A  T 
+         LHS_AT[2] :  T  I 
+         RHS_AT[1] :  A 
+         RHS_AT[2] :  A 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2]; [2, 1] [2]]
+
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 4.199491e-11 | 5.048465e-02
+	      2   | 4.330189e-11 | 2.431378e-05
+	      3   | 4.326201e-11 | 7.249697e-07
+	      4   | 4.155748e-11 | 9.760339e-08
+	      5   | 4.203249e-11 | 1.364189e-08
+	      6   | 4.202485e-11 | 1.932356e-09
+	      7   | 4.203106e-11 | 2.846068e-10
+	      8   | 4.115005e-11 | 9.072551e-11
+┌ Info: target residual reached after 8 iterations
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1057
+
+|| u - u_h || = 6.062550723729551e-12
+|| p - p_h || = 3.609339412758741e-10
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_plaplace/">« 2D Nonlinear Poisson (p-Laplacian)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_probust/">2D Pressure-robustness »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 6 May 2021 18:49">Thursday 6 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
