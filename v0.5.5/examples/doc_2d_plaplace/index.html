@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Nonlinear Poisson (p-Laplacian) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Action Kernels</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><input class="collapse-toggle" id="menuitem-6-2" type="checkbox" checked/><label class="tocitem" for="menuitem-6-2"><span class="docs-label">Examples (Intro)</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li><a class="tocitem" href="../doc_2d_liddrivencavity_anderson/">2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson_timedependent/">2D Nonlinear Poisson (time-dependent)</a></li><li class="is-active"><a class="tocitem" href>2D Nonlinear Poisson (p-Laplacian)</a></li><li><a class="tocitem" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-6-3" type="checkbox"/><label class="tocitem" for="menuitem-6-3"><span class="docs-label">Examples (Advanced)</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_naturalconvection/">2D Natural Convection</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Nonlinear Poisson (p-Laplacian)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Nonlinear Poisson (p-Laplacian)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_plaplace.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Nonlinear-Poisson-(p-Laplacian)"><a class="docs-heading-anchor" href="#D-Nonlinear-Poisson-(p-Laplacian)">2D Nonlinear Poisson (p-Laplacian)</a><a id="D-Nonlinear-Poisson-(p-Laplacian)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Nonlinear-Poisson-(p-Laplacian)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_plaplace.jl">source code</a>)</p><p>This example computes the solution <span>$u$</span> of the nonlinear p-Laplace problem</p><p class="math-container">\[\begin{aligned}
+-\mathrm{div}((\kappa + \lvert \nabla u \rvert)^{p-2} \nabla u) &amp; = f \quad \text{in } \Omega
+\end{aligned}\]</p><p>with some <span>$p \in (1,\infty)$</span>, <span>$\kappa \geq 0$</span> and some right-hand side <span>$f$</span> on a series of uniform refinements of the unit square <span>$\Omega$</span>.</p><p>This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.</p><p>Also the factorization in the linear solver can be changed to anything &lt;:ExtendableSparse.AbstractFactorization (but not every one will work in this example).</p><pre><code class="language-julia">module Example_2DPLaplace
+
+using GradientRobustMultiPhysics
+using ExtendableSparse
+using Printf
+
+# problem data
+function exact_function!(result,x::Array{&lt;:Real,1})
+    result[1] = x[1]*x[2]
+    return nothing
+end
+function exact_gradient!(result,x::Array{&lt;:Real,1})
+    result[1] = x[2]
+    result[2] = x[1]
+    return nothing
+end
+function rhs!(p,κ)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[1] = -2*(p-2) * (κ + x[1]^2+x[2]^2)^((p-2)/2-1) * x[1] * x[2] # = -div((\kappa + |grad(u)|)^p-2*grad(u))
+    end
+    return closure
+end
+function diffusion_kernel!(p,κ)
+    function closure(result::Array{&lt;:Real,1}, input::Array{&lt;:Real,1})
+        # input[1:2] = [grad(u)]
+        # we use result[1] as temporary storage to compute (κ + |∇u|)^(p-2)
+        result[1] = (κ + input[1]^2 + input[2]^2)^((p-2)/2)
+        result[2] = result[1] * input[2]
+        result[1] = result[1] * input[1]
+        return nothing
+    end
+    return closure
+end
+
+# everything is wrapped in a main function
+# default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
+function main(; Plotter = nothing, p = 2.7, κ = 0.0001, verbosity = 0, nlevels = 6, FEType = H1P1{1}, factorization = ExtendableSparse.LUFactorization)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # choose initial mesh
+    xgrid = grid_unitsquare(Triangle2D)
+
+    # negotiate data functions to the package
+    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    user_function_gradient = DataFunction(exact_gradient!, [2,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    user_function_rhs = DataFunction(rhs!(p,κ), [1,2]; dependencies = &quot;X&quot;, name = &quot;f&quot;, quadorder = 5)
+
+    # prepare nonlinear expression (1+u^2)*grad(u)
+    nonlin_diffusion = GenerateNonlinearForm(&quot;(κ+|∇u|^2) ∇u ⋅ ∇v&quot;, [Gradient], [1], Gradient, diffusion_kernel!(p,κ), [2,2]; quadorder = 5, ADnewton = true)
+
+    # generate problem description and assign nonlinear operator and data
+    Problem = PDEDescription(&quot;p-Laplace problem (p = $p, κ = $κ)&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;p-Laplace equation&quot;)
+    add_operator!(Problem, [1,1], nonlin_diffusion)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
+    @show Problem
+
+    # prepare error calculation
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2error = []; H1error = []; NDofs = []
+
+    # loop over levels
+    Solution = nothing
+    for level = 1 : nlevels
+        # uniform mesh refinement
+        xgrid = uniform_refine(xgrid)
+
+        # create finite element space and solution vector
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        push!(NDofs,length(Solution.entries))
+
+        # solve
+        solve!(Solution, Problem; linsolver = factorization, maxiterations = 10)
+
+        # calculate L2 and H1 error
+        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
+        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+    end
+
+    # output errors in a nice table
+    println(&quot;\n   NDOF  |   L2ERROR   |   H1ERROR&quot;)
+    for j=1:nlevels
+        @printf(&quot;  %6d | %.5e | %.5e\n&quot;,NDofs[j],L2error[j],H1error[j]);
+    end
+
+    # plot
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+end
+
+end</code></pre><pre><code class="language-none">Main.##268.Example_2DPLaplace</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DPLaplace.main()</code></pre><pre><code class="language-none">
+PDE-DESCRIPTION
+===============
+  system name = p-Laplace problem (p = 2.7, κ = 0.0001)
+
+     id   | unknown name / equation name
+    [1]   | u / p-Laplace equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | (κ+|∇u|^2) ∇u ⋅ ∇v [AD-Newton] (regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | (κ+|∇u|^2) ∇u ⋅ ∇v [AD-Newton] (regions = [0])
+            | f⋅id(v) (regions = [0])
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+
+Problem = 
+┌ Info: ----- Solving p-Laplace problem (p = 2.7, κ = 0.0001) -----
+│ 	Equation (1.1) p-Laplace equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 13)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 3.024594e-17 | 6.687772e+00
+	      2   | 9.222205e-16 | 1.517844e+00
+	      3   | 9.209666e-16 | 3.179508e-01
+	      4   | 3.075112e-16 | 2.435989e-02
+	      5   | 2.305551e-16 | 4.255872e-04
+	      6   | 3.292869e-16 | 2.028779e-07
+	      7   | 5.040140e-16 | 4.181778e-14
+
+┌ Info: ----- Solving p-Laplace problem (p = 2.7, κ = 0.0001) -----
+│ 	Equation (1.1) p-Laplace equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 41)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 3.270770e-17 | 4.633694e+00
+	      2   | 2.779163e-15 | 1.026571e+00
+	      3   | 1.845540e-15 | 2.412933e-01
+	      4   | 1.860842e-15 | 7.408356e-02
+	      5   | 1.696297e-15 | 4.847663e-03
+	      6   | 9.851305e-16 | 7.994967e-05
+	      7   | 1.098065e-15 | 4.542159e-08
+	      8   | 1.068695e-15 | 1.508223e-14
+
+┌ Info: ----- Solving p-Laplace problem (p = 2.7, κ = 0.0001) -----
+│ 	Equation (1.1) p-Laplace equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 145)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 9.473154e-17 | 2.703250e+00
+	      2   | 3.299601e-15 | 6.250175e-01
+	      3   | 2.714678e-15 | 2.216340e-01
+	      4   | 2.149227e-15 | 1.099776e-01
+	      5   | 2.602786e-15 | 1.252383e-02
+	      6   | 2.985570e-15 | 3.625145e-04
+	      7   | 2.403673e-15 | 1.324246e-06
+	      8   | 1.790931e-15 | 2.051659e-11
+
+┌ Info: ----- Solving p-Laplace problem (p = 2.7, κ = 0.0001) -----
+│ 	Equation (1.1) p-Laplace equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 545)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.502344e-16 | 1.453498e+00
+	      2   | 1.010365e-14 | 3.962344e-01
+	      3   | 7.091384e-15 | 1.943456e-01
+	      4   | 5.074261e-15 | 1.195911e-01
+	      5   | 4.723140e-15 | 2.224387e-02
+	      6   | 4.836700e-15 | 1.923502e-03
+	      7   | 4.509939e-15 | 5.260739e-05
+	      8   | 4.748085e-15 | 1.089178e-07
+	      9   | 4.888381e-15 | 3.888400e-13
+
+┌ Info: ----- Solving p-Laplace problem (p = 2.7, κ = 0.0001) -----
+│ 	Equation (1.1) p-Laplace equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 2113)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.796995e-16 | 7.527092e-01
+	      2   | 1.903084e-14 | 2.081275e-01
+	      3   | 1.458300e-14 | 1.394863e-01
+	      4   | 1.017831e-14 | 1.125649e-01
+	      5   | 9.396755e-15 | 2.314891e-02
+	      6   | 9.274086e-15 | 3.140152e-03
+	      7   | 9.405379e-15 | 1.147460e-04
+	      8   | 9.652959e-15 | 2.274281e-07
+	      9   | 1.003708e-14 | 1.827545e-12
+
+┌ Info: ----- Solving p-Laplace problem (p = 2.7, κ = 0.0001) -----
+│ 	Equation (1.1) p-Laplace equation : u &gt;&gt; u_h (H1P1{1}, ndofs = 8321)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 5.799044e-16 | 3.828944e-01
+	      2   | 4.077860e-14 | 1.728237e-01
+	      3   | 3.015385e-14 | 1.069224e-01
+	      4   | 2.212693e-14 | 6.519932e-02
+	      5   | 1.925272e-14 | 1.353785e-02
+	      6   | 1.991092e-14 | 1.991112e-03
+	      7   | 1.906233e-14 | 9.448597e-05
+	      8   | 2.036270e-14 | 3.587667e-07
+	      9   | 2.036876e-14 | 1.261517e-11
+
+
+   NDOF  |   L2ERROR   |   H1ERROR
+      13 | 6.81444e-03 | 1.44858e-01
+      41 | 1.71356e-03 | 7.22631e-02
+     145 | 4.30501e-04 | 3.61000e-02
+     545 | 1.07868e-04 | 1.80446e-02
+    2113 | 2.69903e-05 | 9.02146e-03
+    8321 | 6.74963e-06 | 4.51060e-03
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_nonlin_poisson_timedependent/">« 2D Nonlinear Poisson (time-dependent)</a><a class="docs-footer-nextpage" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 6 May 2021 19:15">Thursday 6 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

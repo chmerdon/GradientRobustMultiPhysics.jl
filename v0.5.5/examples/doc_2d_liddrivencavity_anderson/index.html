@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Lid-driven cavity (Anderson Acceleration) · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Action Kernels</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assembly_details/">Assembly Details</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">How to run the examples</a></li><li><input class="collapse-toggle" id="menuitem-6-2" type="checkbox" checked/><label class="tocitem" for="menuitem-6-2"><span class="docs-label">Examples (Intro)</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../doc_1d_bestapprox/">1D L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_bestapprox_curlpreserve/">2D Curl-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_2d_commutinginterpolators/">Commuting Interpolators (2D)</a></li><li><a class="tocitem" href="../doc_2d_convectiondiffusion/">2D Convection-Diffusion-Problem</a></li><li><a class="tocitem" href="../doc_2d_cookmembrane/">2D Linear Elasticity</a></li><li><a class="tocitem" href="../doc_2d_fe_on_faces/">2D Finite Elements on Faces</a></li><li><a class="tocitem" href="../doc_2d_flowtransport/">2D Flow + Transport</a></li><li class="is-active"><a class="tocitem" href>2D Lid-driven cavity (Anderson Acceleration)</a></li><li><a class="tocitem" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape)</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson/">2D Nonlinear Poisson-Problem</a></li><li><a class="tocitem" href="../doc_2d_nonlin_poisson_timedependent/">2D Nonlinear Poisson (time-dependent)</a></li><li><a class="tocitem" href="../doc_2d_plaplace/">2D Nonlinear Poisson (p-Laplacian)</a></li><li><a class="tocitem" href="../doc_2d_stokes_iterated/">2D Stokes (iterated penalty method)</a></li><li><a class="tocitem" href="../doc_2d_stokes_probust/">2D Pressure-robustness</a></li><li><a class="tocitem" href="../doc_2d_transientstokes/">2D Transient Stokes-Problem</a></li><li><a class="tocitem" href="../doc_3d_bestapprox_divpreserve/">3D Divergence-Preserving L2-Bestapproximation</a></li><li><a class="tocitem" href="../doc_3d_commutinginterpolators/">Commuting Interpolators (3D)</a></li><li><a class="tocitem" href="../doc_3d_poisson/">3D Poisson-Problem</a></li><li><a class="tocitem" href="../doc_rational_massmatrix/">Rational Mass Matrix</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-6-3" type="checkbox"/><label class="tocitem" for="menuitem-6-3"><span class="docs-label">Examples (Advanced)</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../examples_advanced/doc_2d_compressiblestokes/">2D Compressible Stokes</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_eq/">2D Equilibration Error Estimation (Global)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_lshape_adaptivity_loceq/">2D Equilibration Error Estimation (Local)</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_naturalconvection/">2D Natural Convection</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_nonlin_diffeq/">2D Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_other_linsolver/">2D User-defined Linear Solvers</a></li><li><a class="tocitem" href="../../examples_advanced/doc_2d_stokes_hdiv-dg/">2D DG-Hdiv discretisation for Stokes</a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li><a class="is-disabled">Examples (Intro)</a></li><li class="is-active"><a href>2D Lid-driven cavity (Anderson Acceleration)</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Lid-driven cavity (Anderson Acceleration)</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/doc_2d_liddrivencavity_anderson.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Lid-driven-cavity-(Anderson-Acceleration)"><a class="docs-heading-anchor" href="#D-Lid-driven-cavity-(Anderson-Acceleration)">2D Lid-driven cavity (Anderson Acceleration)</a><a id="D-Lid-driven-cavity-(Anderson-Acceleration)-1"></a><a class="docs-heading-anchor-permalink" href="#D-Lid-driven-cavity-(Anderson-Acceleration)" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/doc_2d_liddrivencavity_anderson.jl">source code</a>)</p><p>This example solves the lid-driven cavity problem where one seeks a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = 0\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>where <span>$\mathbf{u} = (1,0)$</span> along the top boundary of a square domain.</p><p>For small viscosities (where a Newton and a classical Picard iteration do not converge anymore), Anderson acceleration might help which can be tested with this script. Here, we use <a href="../../pdesolvers/#Anderson-acceleration">Anderson acceleration</a> until the residual is small enough for the Newton to take over.</p><pre><code class="language-julia">module Example_2DLidDrivenCavityAnderson
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using Printf
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10, target_residual = 1e-14, maxiterations = 50, switch_to_newton_tolerance = 1e-4)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # grid
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4);
+
+    # finite element type
+    FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
+
+    #####################################################################################
+
+    # load Navier-Stokes problem prototype and assign data
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false, store = false)
+    add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
+
+    @show Problem
+
+    # generate FESpaces
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+    Solution = FEVector{Float64}([&quot;u_h&quot;, &quot;p_h&quot;],FES)
+
+    # solve with anderson iterations until 1e-4
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = &quot;l2&quot;, anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
+
+    # solve rest with Newton
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true, store = true)
+    add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual)
+
+    # plot
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2]], [Identity, Identity]; Plotter = Plotter)
+end
+
+end</code></pre><pre><code class="language-none">Main.##264.Example_2DLidDrivenCavityAnderson</code></pre><h3 id="Output-of-default-main()-run"><a class="docs-heading-anchor" href="#Output-of-default-main()-run">Output of default main() run</a><a id="Output-of-default-main()-run-1"></a><a class="docs-heading-anchor-permalink" href="#Output-of-default-main()-run" title="Permalink"></a></h3><pre><code class="language-julia">Example_2DLidDrivenCavityAnderson.main()</code></pre><pre><code class="language-none">
+PDE-DESCRIPTION
+===============
+  system name = incompressible Navier-Stokes-Problem
+
+     id   | unknown name / equation name
+    [1]   | velocity / momentum equation 
+    [2]   | pressure / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 0.0005 ∇(u):∇(v) (regions = [0])
+            | (a ⋅ ∇) u ⋅ v (regions = [0])
+    [1,2]   | div(v) ⋅ q (regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | none
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [3]
+                         HomogeneousDirichletBoundary -&gt; [1, 2, 4]
+                          
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+┌ Info: ----- Solving incompressible Navier-Stokes-Problem -----
+│ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (H1P2{2,2}, ndofs = 4226)
+│ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; p_h (H1P1{1}, ndofs = 545)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.325706e-17 | 1.450425e-02
+	      2   | 2.101188e-17 | 7.842210e-03
+	      3   | 3.055005e-17 | 4.035692e-03
+	      4   | 2.543754e-17 | 2.093571e-03
+	      5   | 2.911623e-17 | 2.345986e-03
+	      6   | 2.720563e-17 | 1.672003e-03
+	      7   | 3.075142e-17 | 8.213932e-04
+	      8   | 2.946150e-17 | 4.516999e-04
+	      9   | 3.228021e-17 | 2.657460e-04
+	     10   | 2.863182e-17 | 1.785569e-04
+	     11   | 3.117787e-17 | 1.009835e-04
+	     12   | 2.687397e-17 | 4.587511e-05
+
+┌ Info: ----- Solving incompressible Navier-Stokes-Problem -----
+│ 	Equation (1.1) momentum equation : velocity &gt;&gt; u_h (H1P2{2,2}, ndofs = 4226)
+│ 	Equation (1.2) incompressibility constraint : pressure &gt;&gt; p_h (H1P1{1}, ndofs = 545)
+└ @ GradientRobustMultiPhysics /home/runner/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1124
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.868063e-17 | 3.869884e-07
+	      2   | 3.041589e-17 | 9.772812e-11
+	      3   | 2.904447e-17 | 1.231147e-16
+
+</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../doc_2d_flowtransport/">« 2D Flow + Transport</a><a class="docs-footer-nextpage" href="../doc_2d_lshape_adaptivity/">2D Adaptive Mesh Refinement (L-shape) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 6 May 2021 19:15">Thursday 6 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
