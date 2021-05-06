@@ -1,0 +1,27 @@
+# Boundary Data
+
+## Dirichlet Boundary Data
+
+BoundaryOperators carry the boundary data for each unknown. Each regions can have a different AbstractBoundaryType and an associated data function that satisfies the interface function data!(result,x::Array{<:Real,1}) or function data!(result,x::Array{<:Real,1},t::Real) if it is also time-dependent.
+
+
+| AbstractBoundaryType                | Subtypes                                 | causes                                                                  |
+| :---------------------------------- | :--------------------------------------- | :---------------------------------------------------------------------- |
+| [`DirichletBoundary`](@ref)         |                                          |                                                                         |
+|                                     | [`BestapproxDirichletBoundary`](@ref)    | computation of Dirichlet data by bestapproximation along boundary faces |
+|                                     | [`InterpolateDirichletBoundary`](@ref)   | computation of Dirichlet data by interpolation along boundary faces     |
+|                                     | [`HomogeneousDirichletBoundary`](@ref)   | zero Dirichlet data on all dofs                                         |
+
+
+```@docs
+BoundaryOperator
+add_boundarydata!
+```
+
+## Other Boundary Data
+
+NeumannBoundary can be implemented as a RhsOperator with AT = ON_BFACES
+
+PeriodicBoundary can be implemented as a CombineDofs <: AbstractGlobalConstraint
+
+SymmetryBoundary can be implemented by penalisation as a AbstractBilinearForm on BFaces and specified boundary regions with operator NormalFlux + MultiplyScalarAction(penalty).
