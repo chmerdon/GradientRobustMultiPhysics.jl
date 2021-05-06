@@ -1,6 +1,8 @@
 
 # Function Operators
 
+## Available Operators
+
 FunctionOperators are building blocks for the weak form and define the operations that should be applied to the trial and test functions (and their discrete representatives) inside some PDEOperator. Below is a list of currently available FunctionOperators. Note, that not all operators can be applied to all finite element types.
 
 
@@ -18,17 +20,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 | [`Curl3D`](@ref)                                     | curl operator 3D to 3D                                  |
 | [`Hessian`](@ref)                                    | Hesse matrix = all 2nd order derivatives (as a vector)  |
 | [`Laplacian`](@ref)                                  | Laplace Operator                                        |
-| [`ReconstructionIdentity{FEType}`](@ref)             | reconstruction operator into specified FEType           |
-| [`ReconstructionDivergence{FEType}`](@ref)           | divergence of FEType reconstruction operator            |
-| [`ReconstructionGradient{FEType}`](@ref)             | gradient of FEType reconstruction operator              |
 
-
-!!! note
-
-    Especially note the operators ReconstructionIdentity{FEType} etc. that allow to evaluate operators of some
-    reconstructed version of a vector-valued testfunction. These operators keep the discrete divergence and so allow
-    for gradient-robust discretisations with classical non divergence-conforming ansatz spaces.
-    So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
 
 !!! note
 
@@ -36,6 +28,8 @@ FunctionOperators are building blocks for the weak form and define the operation
     the evaluation of each function operator has to be implemented for each finite element class.
     Currently, not every function operator works in any dimension and for any finite element. More evaluations
     are added as soon as they are needed (and possibly upon request).
+    Also, the function operators can be combined with user-defined actions to evaluate other operators that
+    can be build from the ones available (e.g. the deviator).
 
 
 ## Jumps and Averages
@@ -53,3 +47,18 @@ Average
 
     Currently this feature is only available for assembly on faces (2D and 3D) and certain function operators like Identity, Gradient, ReconstructionIdentity, ReconstructionGradient, NormalFlux, TangentFlux, but more
     are added as soon as they are needed (and possibly upon request).
+
+
+## Reconstruction Operators
+
+There are special operators (see Table below) that allow to evaluate a usual operator of some discrete
+reconstructed version of a vector-valued testfunction. These operators keep the discrete divergence exactly and so allow
+for gradient-robust discretisations with classical non divergence-conforming ansatz spaces.
+So far such operators are available for the vector-valued Crouzeix-Raviart and Bernardi--Raugel finite element types.
+
+
+| Function operator                                    | Description                                             |
+| :--------------------------------------------------- | :------------------------------------------------------ |
+| [`ReconstructionIdentity{FEType}`](@ref)             | reconstruction operator into specified FEType           |
+| [`ReconstructionDivergence{FEType}`](@ref)           | divergence of FEType reconstruction operator            |
+| [`ReconstructionGradient{FEType}`](@ref)             | gradient of FEType reconstruction operator              |

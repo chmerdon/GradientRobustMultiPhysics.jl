@@ -49,56 +49,58 @@ function replace_source_url(input,source_url)
     return String(take!(lines_out))
 end
 
-function make_all()
+function make_all(; add_examples::Bool = true)
 
     #
     # Generate Markdown pages from examples
     #
-    example_jl_dir = joinpath(@__DIR__,"..","examples")
-    example_jl_dir2 = joinpath(@__DIR__,"..","examples_advanced")
-    example_md_dir  = joinpath(@__DIR__,"src","examples")
-    example_md_dir2  = joinpath(@__DIR__,"src","examples_advanced")
-    
-    for example_source in readdir(example_jl_dir)
-        base,ext=splitext(example_source)
-        if example_source[1:4] == "doc_" && ext==".jl"
-            source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/"*example_source
-            preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
-            try
-                Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
-                              example_md_dir,
-                              documenter=false,
-                              execute=true,
-                              info=false,
-                              preprocess=preprocess)
-            catch
-                Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
-                              example_md_dir,
-                              documenter=false,
-                              execute=false,
-                              info=false,
-                              preprocess=preprocess)
+    if (add_examples)
+        example_jl_dir = joinpath(@__DIR__,"..","examples")
+        example_jl_dir2 = joinpath(@__DIR__,"..","examples_advanced")
+        example_md_dir  = joinpath(@__DIR__,"src","examples")
+        example_md_dir2  = joinpath(@__DIR__,"src","examples_advanced")
+
+        for example_source in readdir(example_jl_dir)
+            base,ext=splitext(example_source)
+            if example_source[1:4] == "doc_" && ext==".jl"
+                source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/"*example_source
+                preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
+                try
+                    Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
+                                example_md_dir,
+                                documenter=false,
+                                execute=true,
+                                info=false,
+                                preprocess=preprocess)
+                catch
+                    Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
+                                example_md_dir,
+                                documenter=false,
+                                execute=false,
+                                info=false,
+                                preprocess=preprocess)
+                end
             end
         end
-    end
-    generated_examples=joinpath.("examples",readdir(example_md_dir))
 
-    for example_source in readdir(example_jl_dir2)
-        base,ext=splitext(example_source)
-        if example_source[1:4] == "doc_" && ext==".jl"
-            source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples_advanced/"*example_source
-            preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
-            Literate.markdown(joinpath(@__DIR__,"..","examples_advanced",example_source),
-                              example_md_dir2,
-                              documenter=false,
-                              info=false,
-                              preprocess=preprocess)
+        for example_source in readdir(example_jl_dir2)
+            base,ext=splitext(example_source)
+            if example_source[1:4] == "doc_" && ext==".jl"
+                source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples_advanced/"*example_source
+                preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
+                Literate.markdown(joinpath(@__DIR__,"..","examples_advanced",example_source),
+                                example_md_dir2,
+                                documenter=false,
+                                info=false,
+                                preprocess=preprocess)
+            end
         end
+        generated_examples=joinpath.("examples",readdir(example_md_dir))
+        generated_examples_advanced=joinpath.("examples_advanced",readdir(example_md_dir2))
     end
-    generated_examples_advanced=joinpath.("examples_advanced",readdir(example_md_dir2))
 
 
-    pushfirst!(generated_examples, "examples_intro.md")
+    
 
     makedocs(
         modules=[GradientRobustMultiPhysics],
@@ -107,28 +109,45 @@ function make_all()
         authors="Christian Merdon",
         pages = [
             "Home" => "index.md",
-            "Implemented Finite Elements" => "fems.md",
-            "FE Spaces and Arrays" => "fespace.md",
-            "FE Interpolation" => "interpolations.md",
-            "Function Operators" => "functionoperators.md",
-            "PDE Description" => "pdedescription.md",
-            "PDE Prototypes" => "pdeprototypes.md",
-            "PDE Solvers" => "pdesolvers.md",
-            "User Data" => "userdata.md",
-            "Assembly Details" => "assembly_details.md",
-            "Meshing" => "meshing.md",
-            "Quadrature" => "quadrature.md",
-            "Export/Viewers" => "viewers.md",
-            "Examples (Intro)" => generated_examples,
-            "Examples (Advanced)" => generated_examples_advanced
+            "Problem Description" => Any[
+                    "pdedescription.md",
+                    "pdeoperators.md",
+                    "functionoperators.md",
+                    "userdata.md",
+                    "boundarydata.md",
+                    "globalconstraints.md",
+                    "pdeprototypes.md",
+            ],
+            "Discretisation" => Any[
+                    "meshing.md",
+                    "fems.md",
+                    "fespace.md",
+                    "interpolations.md",
+                    "quadrature.md",
+                    "assembly_details.md"
+            ],
+            "Solving" => Any[
+                    "pdesolvers.md",
+                    "timecontrolsolver.md"
+                ],
+            "Postprocessing" => Any[
+                    "viewers.md",
+                    "export.md"
+                ],
+            "Examples" => add_examples ? Any[
+                    "examples_intro.md",
+                    "Examples (Intro)" => generated_examples,
+                    "Examples (Advanced)" => generated_examples_advanced
+                ] : "examples_intro.md",
         ]
     )
 
-    rm(example_md_dir,recursive=true)
+  #  rm(example_md_dir,recursive=true)
+  #  rm(example_md_dir2,recursive=true)
     
 end
 
-make_all()
+make_all(; add_examples = true)
 
 deploydocs(
     repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",

@@ -62,7 +62,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     user_function_rhs = DataFunction(rhs!, [1,1]; name = "f", dependencies = "XT", quadorder = 5)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    nonlin_diffusion = GenerateNonlinearForm("((1+u^2)*grad(u))*grad(v)", [Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; quadorder = 2, ADnewton = true)  
+    nonlin_diffusion = GenerateNonlinearForm("(1+u^2) ∇u ⋅ ∇v", [Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; quadorder = 2, ADnewton = true)  
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")

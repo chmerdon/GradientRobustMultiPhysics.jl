@@ -52,9 +52,9 @@ NLActionKernel
 ```
 
 
-## Actions
+## Action
 
-Actions are used by [Assembly Patterns](@ref) and consist of an action kernel plus some additional infratructure. To generate an action from an action kernel works via the following functions.
+Actions are used by abstract user-defined PDEOperators and consist of an action kernel plus some additional infratructure. To generate an action from an action kernel works via the following functions.
 
 ```@docs
 Action

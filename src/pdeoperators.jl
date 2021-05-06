@@ -300,7 +300,7 @@ end
 ````
 function AbstractBilinearForm(
     operators::Array{AbstractFunctionOperator,1},
-    action::AbstractAction;
+    action::AbstractAction = NoAction();
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     apply_action_to = 1,
@@ -313,6 +313,8 @@ abstract bilinearform constructor that assembles
 - b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
 - b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
 
+The optional arguments AT and regions specifies on which grid item the operator lives/assembles, while store toggles the separate storage for the operator
+(which is advisable if it is not alone i an otherweise nonlinear block of a PDEDescription). 
 """
 function AbstractBilinearForm(
     operators::Array{DataType,1},
@@ -359,7 +361,9 @@ abstract trilinearform constructor that assembles
 where u and are the ansatz and test function coressponding to the PDE coordinates and a is an additional unknown of the PDE.
 The argument a can be moved to the other positions with a_to and gets it data from unknown a_from of the full PDEdescription.
 
-(Note that this operator is always marked as nonlinear by the Solver configuration.)
+The optional arguments AT and regions specifies on which grid item the operator lives/assembles,
+
+Also note that this operator is always marked as nonlinear by the Solver configuration.
 """
 function AbstractTrilinearForm(
     operators::Array{DataType,1},

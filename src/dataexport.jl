@@ -77,3 +77,63 @@ function writeVTK!(filename::String, Data::Array{<:FEVectorBlock,1}; operators =
     outfiles = vtk_save(vtkfile)
     return nothing
 end
+
+
+
+"""
+$(TYPEDSIGNATURES)
+Writes the specified FEVectorBlocks into a CSV datafile with the given filename. First d colomuns are the grid coordinates, the remaining columns are filled
+with the evaluations of the operators where operator[j] is applied to Data[j].
+"""
+function writeCSV!(filename::String, Data::Array{<:FEVectorBlock,1}; operators = [], names = [], seperator::String = "\t")
+
+    # open file and write VTK header
+    io = open(filename, "w")
+    @logmsg MoreInfo "data export to csv file $filename"
+    
+    # open grid
+    xgrid = Data[1].FES.xgrid
+    xCoordinates = xgrid[Coordinates]
+    nnodes = size(xCoordinates,2)
+    xdim = size(xCoordinates,1)
+    for j = 1 : xdim
+        @printf(io, "X%d",j)
+        @printf(io, "%s", seperator)
+    end
+
+    # collect data
+    offsets = zeros(Int, length(Data)+1)
+    for j = 1 : length(Data)
+        FEType = eltype(Data[j].FES)
+        offsets[j+1] = offsets[j] + Length4Operator(operators[j], xdim, get_ncomponents(FEType))
+    end
+
+    nodevals = zeros(Float64,offsets[end],nnodes)
+    name = ""
+    for j = 1 : length(Data)
+        try
+            name = names[j]
+        catch
+            name = "$(operators[j])(" * Data[j].name * ")"
+        end
+        @printf(io, "%s %s",name,seperator)
+        ## evaluate operator
+        @debug "collecting data for block $j : " * "$(operators[j])(" * Data[j].name * ")"
+        nodevalues!(nodevals, Data[j], operators[j]; target_offset = offsets[j], zero_target = false)
+    end
+    @printf(io, "\n")
+
+    # write data
+    for n = 1 : nnodes
+        for j = 1 : xdim
+            @printf(io, "%.6f",xCoordinates[j,n])
+            @printf(io, "%s", seperator)
+        end
+        for j = 1 : offsets[end]
+            @printf(io, "%.6f",nodevals[j,n])
+            @printf(io, "%s", seperator)
+        end
+        @printf(io, "\n")
+    end
+    close(io)
+end

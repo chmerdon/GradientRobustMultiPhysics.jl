@@ -69,7 +69,7 @@ function main(; Plotter = nothing, p = 2.7, κ = 0.0001, verbosity = 0, nlevels 
     user_function_rhs = DataFunction(rhs!(p,κ), [1,2]; dependencies = "X", name = "f", quadorder = 5)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    nonlin_diffusion = GenerateNonlinearForm("((1+u^2)*grad(u))*grad(v)", [Gradient], [1], Gradient, diffusion_kernel!(p,κ), [2,2]; quadorder = 5, ADnewton = true)   
+    nonlin_diffusion = GenerateNonlinearForm("(κ+|∇u|^2) ∇u ⋅ ∇v", [Gradient], [1], Gradient, diffusion_kernel!(p,κ), [2,2]; quadorder = 5, ADnewton = true)   
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("p-Laplace problem (p = $p, κ = $κ)")
