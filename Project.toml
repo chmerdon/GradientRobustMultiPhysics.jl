@@ -1,7 +1,7 @@
 name = "GradientRobustMultiPhysics"
 uuid = "0802c0ca-1768-4022-988c-6dd5f9588a11"
 authors = ["Christian Merdon <christian.merdon@wias-berlin.de>"]
-version = "0.5.4"
+version = "0.5.5"
 
 [deps]
 DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"

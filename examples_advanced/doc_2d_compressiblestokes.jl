@@ -87,7 +87,7 @@ function main(; verbosity = 0, Plotter = nothing, reconstruct::Bool = true, c = 
     Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)
     Solution2 = setup_and_solve(xgrid; reconstruct = true, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)
 
-    # plot everything
+    ## plot everything
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2],Solution2[1],Solution2[2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
 
     ## compare L2 error for velocity and density

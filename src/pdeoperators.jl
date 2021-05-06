@@ -435,15 +435,13 @@ function ConvectionOperator(
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = grad(u)
-    function convection_function_fe()
-        function closure(result::Array{<:Real,1}, input::Array{<:Real,1})
-            for j = 1 : ncomponents
-                result[j] = 0
-                for k = 1 : xdim
-                    result[j] += input[k]*input[xdim+(j-1)*xdim+k]
-                end
+    function convection_function_fe(result::Array{<:Real,1}, input::Array{<:Real,1})
+        for j = 1 : ncomponents
+            result[j] = 0
+            for k = 1 : xdim
+                result[j] += input[k]*input[xdim+(j-1)*xdim+k]
             end
-        end    
+        end
     end    
     argsizes = [ncomponents, xdim + ncomponents*xdim]
     if auto_newton
@@ -454,7 +452,7 @@ function ConvectionOperator(
         return GenerateNonlinearForm(name, [beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; ADnewton = true, quadorder = quadorder)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
-        action_kernel = ActionKernel(convection_function_fe(),argsizes; dependencies = "", quadorder = quadorder)
+        action_kernel = ActionKernel(convection_function_fe,argsizes; dependencies = "", quadorder = quadorder)
         convection_action = Action(Float64, action_kernel)
         a_to = fixed_argument
         if name == "auto"
