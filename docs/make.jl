@@ -60,6 +60,7 @@ function make_all(; add_examples_output::Bool = true)
     for example_source in readdir(example_jl_dir)
         base,ext=splitext(example_source)
         if example_source[1:7] == "Example" && ext==".jl"
+            number = example_source[8:10]
             source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/"*example_source
             preprocess(buffer)=replace_source_url(buffer,source_url)|>hashify_block_comments
                 Literate.markdown(joinpath(@__DIR__,"..","examples",example_source),
@@ -69,7 +70,7 @@ function make_all(; add_examples_output::Bool = true)
                             info=false,
                             preprocess=preprocess)
 
-            if (add_examples_output)
+            if (add_examples_output) && number != "A05" # exclude output capturing of ExampleA05
                 # generate default main run output file 
                 include(example_jl_dir * "/" * example_source)
                 filename = example_md_dir * "/" * base * ".md"
