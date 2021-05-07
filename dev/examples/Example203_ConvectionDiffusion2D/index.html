@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>203 : Convection-Diffusion-Problem 2D · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Action Kernels</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li class="is-active"><a class="tocitem" href>203 : Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_BestapproximationHcurl2D/">205 : Bestapproximation Hcurl (2D)</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">205 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example211_pLaplacian2D/">211 : p-Laplacian 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG (2D)</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>203 : Convection-Diffusion-Problem 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>203 : Convection-Diffusion-Problem 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example203_ConvectionDiffusion2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Convection-Diffusion-Problem-2D"><a class="docs-heading-anchor" href="#:-Convection-Diffusion-Problem-2D">203 : Convection-Diffusion-Problem 2D</a><a id=":-Convection-Diffusion-Problem-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Convection-Diffusion-Problem-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example203_ConvectionDiffusion2D.jl">source code</a>)</p><p>This example computes the solution of some convection-diffusion problem</p><p class="math-container">\[-\nu \Delta u + \mathbf{\beta} \cdot \nabla u = f \quad \text{in } \Omega\]</p><p>with some diffusion coefficient  <span>$\nu$</span>, some vector-valued function  <span>$\mathbf{\beta}$</span> and inhomogeneous Dirichlet boundary data.</p><p>We prescribe an analytic solution and check the L2 and H1 error convergence of the method on a series of uniformly refined meshes. We also compare with the error of a simple nodal interpolation and plot the solution and the norm of its gradient.</p><p>For small <span>$\nu$</span>, the convection term dominates and pollutes the accuracy of the method. For demonstration some simple gradient jump (interior penalty) stabilisation is added to improve things.</p><pre><code class="language-julia">module Example203_ConvectionDiffusion2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using Printf
+
+# problem data and expected exact solution
+function exact_solution!(result,x::Array{&lt;:Real,1})
+    result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
+end
+function exact_solution_gradient!(result,x::Array{&lt;:Real,1})
+    result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1
+    result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
+end
+function exact_solution_rhs!(diffusion)
+    function closure(result,x::Array{&lt;:Real,1})
+        # diffusion part
+        result[1] = -diffusion*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
+        # convection part (beta * grad(u))
+        result[1] += x[2]*(2*x[1]-1)*(x[2]-1) + 1
+        return nothing
+    end
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisation = 2e-2, nlevels = 5)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load a mesh of the unit square (this one has triangles and quads in it)
+    # it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
+    # used below to prescribe the boundary data
+    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
+
+    # negotiate data functions to the package
+    user_function = DataFunction(exact_solution!, [1,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+    user_function_gradient = DataFunction(exact_solution_gradient!, [2,2]; name = &quot;∇(u)&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    user_function_rhs = DataFunction(exact_solution_rhs!(diffusion), [1,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    user_function_convection = DataFunction([1,0]; name = &quot;β&quot;)
+
+    # choose a finite element type, here we choose a second order H1-conforming one
+    FEType = H1P2{1,2}
+
+    # create PDE description
+    Problem = PDEDescription(&quot;convection-diffusion problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;convection-diffusion equation&quot;)
+    add_operator!(Problem, [1,1], LaplaceOperator(diffusion))
+    add_operator!(Problem, [1,1], ConvectionOperator(user_function_convection,1))
+
+    # add right-hand side data to equation 1 (there is only one in this example)
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], user_function_rhs))
+
+    # add boundary data to unknown 1 (there is only one in this example)
+    # on boundary regions where the solution is linear the data only needs to be interpolated
+    # on boundary regions where the solution is zero homoegeneous boundary conditions can be used
+    add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = user_function)
+    add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = user_function)
+    add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
+
+    # add a gradient jump (interior penalty) stabilisation for dominant convection
+    if stabilisation &gt; 0
+        # first we define an item-dependent action kernel...
+        xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+        function stabilisation_kernel(result, input, item)
+            for j = 1 : length(input)
+                result[j] = input[j] * stabilisation * xFaceVolumes[item]^2
+            end
+            return nothing
+        end
+        # ... which generates an action
+        stab_action = Action(Float64,stabilisation_kernel, [2,2]; name = &quot;stabilisation action&quot;, dependencies = &quot;I&quot;, quadorder = 0 )
+        # ... which is given to a bilinear form constructor
+        JumpStabilisation = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, name = &quot;s |F|^2 [∇(u)]⋅[∇(v)]&quot;)
+        add_operator!(Problem, [1,1], JumpStabilisation)
+    end
+
+    # finally we have a look at the defined problem
+    @show Problem
+
+    # define ItemIntegrators for L2/H1 error computation and some arrays to store the errors
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2error = []; H1error = []; L2errorInterpolation = []; H1errorInterpolation = []; NDofs = []
+
+    # refinement loop over levels
+    for level = 1 : nlevels
+
+        # uniform mesh refinement
+        xgrid = uniform_refine(xgrid)
+        xFaceVolumes = xgrid[FaceVolumes] # update xFaceVolumes used in stabilisation definition
+
+        # generate FESpace and solution vector
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        push!(NDofs,length(Solution.entries))
+
+        # solve PDE
+        solve!(Solution, Problem)
+
+        # interpolate (just for comparison)
+        Interpolation = FEVector{Float64}(&quot;I(u)&quot;,FES)
+        interpolate!(Interpolation[1], user_function)
+
+        # compute L2 and H1 error
+        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
+        append!(L2errorInterpolation,sqrt(evaluate(L2ErrorEvaluator,Interpolation[1])))
+        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+        append!(H1errorInterpolation,sqrt(evaluate(H1ErrorEvaluator,Interpolation[1])))
+
+        # plot
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+    end
+
+    # print error history
+    println(&quot;\n         |   L2ERROR   |   L2ERROR&quot;)
+    println(&quot;   NDOF  |   SOLUTION  |   INTERPOL&quot;);
+    for j=1:nlevels
+        @printf(&quot;  %6d | %.5e | %.5e\n&quot;,NDofs[j],L2error[j],L2errorInterpolation[j]);
+    end
+    println(&quot;\n         |   H1ERROR   |   H1ERROR&quot;)
+    println(&quot;   NDOF  |   SOLUTION  |   INTERPOL&quot;);
+    for j=1:nlevels
+        @printf(&quot;  %6d | %.5e | %.5e\n&quot;,NDofs[j],H1error[j],H1errorInterpolation[j]);
+    end
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="language-none">julia&gt; Example203_ConvectionDiffusion2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = convection-diffusion problem
+
+     id   | unknown name / equation name
+    [1]   | u / convection-diffusion equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 1.0e-5 ∇(u):∇(v) (regions = [0])
+            | (β ⋅ ∇) u ⋅ id(v) (regions = [0])
+            | s |F|^2 [∇(u)]⋅[∇(v)] (regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | f⋅id(v) (regions = [0])
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 3]
+                         InterpolateDirichletBoundary -&gt; [2]
+                         HomogeneousDirichletBoundary -&gt; [4]
+                          
+
+Problem = 
+
+         |   L2ERROR   |   L2ERROR
+   NDOF  |   SOLUTION  |   INTERPOL
+      73 | 5.06404e-04 | 2.63439e-04
+     257 | 5.68101e-05 | 2.78520e-05
+     961 | 6.48860e-06 | 3.30383e-06
+    3713 | 7.73644e-07 | 4.07237e-07
+   14593 | 9.45091e-08 | 5.07235e-08
+
+         |   H1ERROR   |   H1ERROR
+   NDOF  |   SOLUTION  |   INTERPOL
+      73 | 9.79278e-03 | 7.64421e-03
+     257 | 2.25428e-03 | 1.84899e-03
+     961 | 5.29959e-04 | 4.58288e-04
+    3713 | 1.27610e-04 | 1.14323e-04
+   14593 | 3.12912e-05 | 2.85652e-05</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example202_LinearElasticity2D/">« 202 : Linear Elasticity</a><a class="docs-footer-nextpage" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 7 May 2021 18:48">Friday 7 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
