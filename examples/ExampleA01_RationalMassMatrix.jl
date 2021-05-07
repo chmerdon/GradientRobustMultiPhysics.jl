@@ -1,6 +1,6 @@
 #= 
 
-# Rational Mass Matrix
+# A01 : Rational Mass Matrix
 ([source code](SOURCE_URL))
 
 This example demonstrates the usage of rational numbers to calculate e.g. exact mass matrices on reference domains
@@ -8,25 +8,24 @@ This example demonstrates the usage of rational numbers to calculate e.g. exact 
 
 =#
 
-module Example_RationalMAMA
+module ExampleA01_RationalMassMatrix
 
 using GradientRobustMultiPhysics
-using ExtendableGrids
 
 ## everything is wrapped in a main function
 function main(; verbosity = 1, Plotter = nothing)
 
     ## reference domain as extendable grid
-    xgrid = reference_domain(Triangle2D, Rational)
+    xgrid = reference_domain(Triangle2D, Rational{Int64})
 
     ## define P1-Courant finite element space
     FES = FESpace{H1P1{1}}(xgrid)
 
     ## define mass matrix bilinear form
-    MAMA_BLF = SymmetricBilinearForm(Rational,ON_CELLS,[FES,FES],[Identity,Identity])
+    MAMA_BLF = SymmetricBilinearForm(Rational{Int64},ON_CELLS,[FES,FES],[Identity,Identity])
 
     ## assemble mass matrix and divide by area
-    MAMA = FEMatrix{Rational}("mass matrix",FES)
+    MAMA = FEMatrix{Rational{Int64}}("mass matrix",FES)
     assemble!(MAMA[1],MAMA_BLF)
     MAMA = MAMA.entries ./ xgrid[CellVolumes][1]
 
@@ -35,8 +34,3 @@ function main(; verbosity = 1, Plotter = nothing)
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_RationalMAMA.main()

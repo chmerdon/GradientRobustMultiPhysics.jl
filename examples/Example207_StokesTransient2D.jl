@@ -1,6 +1,6 @@
 #= 
 
-# 2D Transient Stokes-Problem
+# 207 : Stokes Transient 2D
 ([source code](SOURCE_URL))
 
 This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
@@ -28,7 +28,7 @@ Compare e.g. Bernardi--Raugel and Bernardi--Raugel pressure-robust by (un)commen
 =#
 
 
-module Example_2DTransientStokes
+module Example207_StokesTransient2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -204,8 +204,3 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DTransientStokes.main()

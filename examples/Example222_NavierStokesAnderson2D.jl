@@ -1,6 +1,6 @@
 #= 
 
-# 2D Lid-driven cavity (Anderson Acceleration)
+# 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration
 ([source code](SOURCE_URL))
 
 This example solves the lid-driven cavity problem where one seeks
@@ -19,7 +19,7 @@ Here, we use [Anderson acceleration](@ref) until the residual is small enough fo
 
 =#
 
-module Example_2DLidDrivenCavityAnderson
+module Example222_NavierStokesAnderson2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -36,14 +36,11 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
 
     ## finite element type
     FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
-  
-    #####################################################################################
 
     ## load Navier-Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false, store = false)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
-
     @show Problem
 
     ## generate FESpaces
@@ -64,8 +61,3 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DLidDrivenCavityAnderson.main()

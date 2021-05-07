@@ -1,6 +1,6 @@
 #= 
 
-# 2D Nonlinear Poisson (time-dependent)
+# 212 : Nonlinear Poisson Transient 2D
 ([source code](SOURCE_URL))
 
 This example computes a transient velocity ``\mathbf{u}`` solution of the nonlinear Poisson problem
@@ -17,7 +17,7 @@ A manufactureed quadratic-in-space and linear-in-time solution is prescribed to 
 =#
 
 
-module Example_2DTransientNonlinPoisson
+module Example212_NonlinearPoissonTransient2D
 
 using GradientRobustMultiPhysics
 using Printf
@@ -136,9 +136,3 @@ function test()
 end
 
 end
-
-
-#=
-### Output of default main() run
-=#
-Example_2DTransientNonlinPoisson.main()

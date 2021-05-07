@@ -1,6 +1,6 @@
 #= 
 
-# 2D Natural Convection
+# 223 : Natural Convection 2D
 ([source code](SOURCE_URL))
 
 This example solves the natural convection (or Boussinesque) problem on a triangular domain ``\Omega = \mathrm{conv}\lbrace (0,0),(1,0),(0,1) \rbrace``. Altogether, we are looking for a velocity
@@ -20,7 +20,7 @@ Also, note that a divergence-free reconstruction operator is used for the veloci
 =#
 
 
-module Example_2DNaturalConvection
+module Example223_NaturalConvection2D
 
 using GradientRobustMultiPhysics
 

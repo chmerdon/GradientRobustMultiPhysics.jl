@@ -1,6 +1,6 @@
 #= 
 
-# Commuting Interpolators (2D)
+# A02 : Commuting Interpolators 2D
 ([source code](SOURCE_URL))
 ([execute](true))
 
@@ -14,7 +14,7 @@ vertices but not in the additional degrees of freedom. For ``k=2``, the interpol
 
 =#
 
-module Example_2DCommutingInterpolators
+module ExampleA02_CommutingInterpolators2D
 
 using GradientRobustMultiPhysics
 
@@ -92,8 +92,3 @@ function test()
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DCommutingInterpolators.main()

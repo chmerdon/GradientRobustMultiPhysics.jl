@@ -677,25 +677,25 @@ function run_examples()
     @testset "Examples" begin
 
         println("\n2D COMMUTING INTERPOLATORS")
-        include("../examples/doc_2d_commutinginterpolators.jl")
-        @test eval(Meta.parse("Example_2DCommutingInterpolators.test()")) < 1e-15
+        include("../examples/ExampleA02_CommutingInterpolators2D.jl")
+        @test eval(Meta.parse("ExampleA02_CommutingInterpolators2D.test()")) < 1e-15
 
         println("\n3D COMMUTING INTERPOLATORS")
-        include("../examples/doc_3d_commutinginterpolators.jl")
-        @test eval(Meta.parse("Example_3DCommutingInterpolators.test()")) < 1e-15
+        include("../examples/ExampleA03_CommutingInterpolators3D.jl")
+        @test eval(Meta.parse("ExampleA03_CommutingInterpolators3D.test()")) < 1e-15
 
         println("\n2D NONLINEAR POISSON")
-        include("../examples/doc_2d_nonlin_poisson.jl")
-        @test eval(Meta.parse("Example_2DNonlinearPoisson.test()")) < 1e-13
+        include("../examples/Example210_NonlinearPoisson2D.jl")
+        @test eval(Meta.parse("Example210_NonlinearPoisson2D.test()")) < 1e-13
 
         println("\n2D NONLINEAR TIME_DEPENDENT POISSON")
-        include("../examples/doc_2d_nonlin_poisson_timedependent.jl")
-        @test eval(Meta.parse("Example_2DTransientNonlinPoisson.test()")) < 1e-15
+        include("../examples/Example212_NonlinearPoissonTransient2D.jl")
+        @test eval(Meta.parse("Example212_NonlinearPoissonTransient2D.test()")) < 1e-15
         
         # tests the same reconstruction operator tests above, but let's keep it for now...
         println("\n2D PRESSURE_ROBUSTNESS")
-        include("../examples/doc_2d_stokes_probust.jl")
-        @test eval(Meta.parse("Example_2DPressureRobustness.test()")) < 1e-15
+        include("../examples/Example206_PressureRobustness2D.jl")
+        @test eval(Meta.parse("Example206_PressureRobustness2D.test()")) < 1e-15
     end
 end
 

@@ -1,6 +1,6 @@
 #= 
 
-# 2D Nonlinear Poisson (p-Laplacian)
+# 211 : p-Laplacian 2D
 ([source code](SOURCE_URL))
 
 This example computes the solution ``u`` of the nonlinear p-Laplace problem
@@ -19,7 +19,7 @@ Also the factorization in the linear solver can be changed to anything <:Extenda
 
 =#
 
-module Example_2DPLaplace
+module Example211_pLaplacian2D
 
 using GradientRobustMultiPhysics
 using ExtendableSparse
@@ -114,8 +114,3 @@ function main(; Plotter = nothing, p = 2.7, κ = 0.0001, verbosity = 0, nlevels 
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DPLaplace.main()

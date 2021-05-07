@@ -1,6 +1,6 @@
 #= 
 
-# 2D Adaptive Mesh Refinement (L-shape)
+# 204 : Poisson L-shape Adaptive Mesh Refinement
 ([source code](SOURCE_URL))
 
 This example computes the standard-residual error estimator for the $H^1$ error ``e = u - u_h`` of some $H^1$-conforming
@@ -13,7 +13,7 @@ This example script showcases the evaluation of 2nd order derivatives like the L
 
 =#
 
-module Example_Lshape
+module Example204_PoissonLshapeAdaptive2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -170,9 +170,3 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
 end
 
 end
-
-
-#=
-### Output of default main() run
-=#
-Example_Lshape.main()

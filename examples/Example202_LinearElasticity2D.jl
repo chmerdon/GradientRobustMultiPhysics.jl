@@ -1,7 +1,6 @@
-
 #= 
 
-# 2D Linear Elasticity
+# 202 : Linear Elasticity
 ([source code](SOURCE_URL))
 
 This example computes the solution ``\mathbf{u}`` of the linear elasticity problem
@@ -22,7 +21,7 @@ and Neumann boundary conditions (i.e. a constant force that pulls the domain upw
 
 =#
 
-module Example_2DCookMembrane
+module Example202_LinearElasticity2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -63,8 +62,3 @@ function main(; verbosity = 0, Plotter = nothing)
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DCookMembrane.main()

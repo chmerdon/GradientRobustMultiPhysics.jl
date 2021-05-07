@@ -1,7 +1,7 @@
 
 # PDE Prototypes
 
-Below all available prototypes (i.e. pre-defined constructors for PDEDescription) are listed.
+Below all available prototypes (i.e. pre-defined constructors for PDEDescription) are listed. They can be used as a point of deperature for more complex models. Also have a look in to the examples for more complex model problems.
 
 
 !!! note
@@ -28,8 +28,6 @@ A vanilla PDEDescription for this weak formulation (without boundary data) can b
 ```@docs
 PoissonProblem
 ```
-
-Example-Script: [2D Convection-Diffusion-Problem](@ref)
 
 Remarks:
 - dual weak formulations are also possible but are not available as a prototype currently
@@ -65,8 +63,6 @@ Remarks:
 - if nonlinear == false the nonlinear convection term is not added to the equation resulting in the plain Stokes equations.
 - if nopressureconstraint == true removes the integral mean constraint on the pressure.
 
-Example-Script: [2D Hagen-Poiseuille (Navier--Stokes)](@ref)
-
 
 ## Navier-Lame equations (linear elasticity)
 
@@ -100,8 +96,6 @@ A vanilla PDEDescription for this weak formulation (without boundary data) can b
 LinearElasticityProblem
 ```
 
-Example-Scripts: [2D Linear Elasticity](@ref)
-
 
 ## L2-Bestapproximation
 
@@ -117,8 +111,6 @@ Of course, on the continuous level, it holds ``u = u_\text{exact}``, but if the 
 ```@docs
 L2BestapproximationProblem
 ```
-
-Example-Scripts: [3D Divergence-Preserving L2-Bestapproximation](@ref)
 
 
 ## H1-Bestapproximation

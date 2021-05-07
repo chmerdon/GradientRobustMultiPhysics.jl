@@ -1,6 +1,6 @@
 #= 
 
-# 2D DG-Hdiv discretisation for Stokes
+# 230 : Stokes Hdiv-DG (2D)
 ([source code](SOURCE_URL))
 
 This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
@@ -24,7 +24,7 @@ a_h(u_h,v_h) = \mu \Bigl( \int \nabla_h u_h : \nabla_h v_h dx +  \sum_{F \in \ma
 and similar terms on the right-hand side for the inhomogeneous Dirichlet data. The qunatity ``\lambda`` is the SIP parameter.
 =#
 
-module Example_2DStokesHdivDG
+module Example230_StokesHdivDG2D
 
 using GradientRobustMultiPhysics
 using Printf
@@ -69,7 +69,7 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     xFaceVolumes = xgrid[FaceVolumes]
     xFaceNormals = xgrid[FaceNormals]
     
-    ## load flow data
+    ## load exact flow data
     user_function_velocity = DataFunction(user_function_velocity!, [2,2]; dependencies = "XT", quadorder = 8)
     user_function_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = "XT", quadorder = 4)
     user_function_velocity_gradient = DataFunction(exact_velogradient!, [4,2]; dependencies = "XT", quadorder = 4)
@@ -89,7 +89,7 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function_velocity)
 
     ## define additional operators for DG terms for Laplacian and Dirichlet data
-    ## (in order of there appearance in the documentation above)
+    ## (in order of their appearance in the documentation above)
     function hdiv_laplace2_kernel(result, input, item)
         result[1] = input[1]
         result[2] = input[2]

@@ -11,7 +11,7 @@ interpolate!
 
 ## Nodal evaluations
 
-Usually, Plotters need nodal values, so there is a gengeric function that evaluates and finite element function at the nodes of the grids (possibly by averaging if discontinuous).
+Usually, Plotters need nodal values, so there is a gengeric function that evaluates any finite element function at the nodes of the grids (possibly by averaging if discontinuous).
 
 
 ```@docs

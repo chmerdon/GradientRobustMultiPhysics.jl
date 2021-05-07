@@ -101,13 +101,13 @@ $(TYPEDSIGNATURES)
 Custom `show` function for `FEVector` that prints some information on its blocks.
 """
 function Base.show(io::IO, FEF::FEVector)
-	println("\nFEVector information")
-    println("====================")
-    println("   block  |  ndofs  | name (FEType) ")
+	println(io,"\nFEVector information")
+    println(io,"====================")
+    println(io,"   block  |  ndofs  | name (FEType) ")
     for j=1:length(FEF)
-        @printf(" [%5d]  | ",j);
-        @printf(" %6d |",FEF[j].FES.ndofs);
-        @printf(" %s (%s)\n",FEF[j].name,FEF[j].FES.name);
+        @printf(io," [%5d]  | ",j);
+        @printf(io," %6d |",FEF[j].FES.ndofs);
+        @printf(io," %s (%s)\n",FEF[j].name,FEF[j].FES.name);
     end    
 end
 

@@ -75,7 +75,6 @@ Constr Approx 20, 549–564 (2004). https://doi.org/10.1007/s00365-003-0550-5
 The bool array facemarkers determines which faces should be bisected. Note, that a closuring is performed
 such that the first face in every triangle with a marked face is also refined.
 """
-# 
 function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}) where {T,K}
     
     xgrid = ExtendableGrid{T,K}()

@@ -1,6 +1,6 @@
 #= 
 
-# 2D Finite Elements on Faces
+# 209 : Lagrange Multiplier on Faces
 ([source code](SOURCE_URL))
 
 This code demonstrates the novel feature of finite element spaces on faces by providing AT = ON_FACES in the finite element space constructor. It is used here to solve a bestapproximation into an Hdiv-conforming space
@@ -9,7 +9,7 @@ Then the solution is compared to the solution of the same problem using the cont
 
 =#
 
-module Example_2DFaceElements
+module Example209_FaceLagrangeMultiplier2D
 
 using GradientRobustMultiPhysics
 
@@ -72,8 +72,3 @@ function main(; Plotter = nothing, verbosity = 0)
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DFaceElements.main()

@@ -2,7 +2,7 @@
 # Finite Element Spaces and Arrays
 
 This page describes the structure [FESpace](@ref) that acts as a finite element space on a given grid
-and the degree of freedom maps [DofMaps](@ref).
+and provides the associated degree of freedom maps [DofMaps](@ref) on demand.
 See [Implemented Finite Elements](@ref) for a list of available finite element types.
 
 Moreover, there are special arrays [FEVector](@ref) and [FEMatrix](@ref) that carry coefficients and discretised PDEOperators.
@@ -40,7 +40,7 @@ The following DofMap subtypes are available and are used as keys to access the d
 
 ## FEVector
 
-A FEVector consists of FEVectorBlocks that share a common one-dimensional arrays. Each block is associated to a FESpace and can only write into a region of the common array specified by offsets. It also acts as a one-dimensional AbstractArray itself.
+A FEVector consists of FEVectorBlocks that share a common one-dimensional array. Each block is associated to a FESpace and can only write into a region of the common array specified by offsets. It also acts as a one-dimensional AbstractArray itself.
 
 
 ```@autodocs

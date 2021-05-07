@@ -1,6 +1,6 @@
 #= 
 
-# 3D Divergence-Preserving L2-Bestapproximation
+# 302 : Bestapproximation Hdiv 3D
 ([source code](SOURCE_URL))
 
 This example computes the L2-bestapproximation of some given vector-valued function into an Hdiv-conforming finite element space. It also
@@ -9,7 +9,7 @@ Afterwards the L2 error (also of the divergence) is computed.
 
 =#
 
-module Example_3DBestapproxDivpreserve
+module Example302_BestapproximationHdiv3D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -67,8 +67,3 @@ function main(; verbosity = 0)
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_3DBestapproxDivpreserve.main()

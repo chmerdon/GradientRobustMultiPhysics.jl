@@ -1,6 +1,6 @@
 #= 
 
-# 1D L2-Bestapproximation
+# 101 : L2-Bestapproximation 1D
 ([source code](SOURCE_URL))
 
 This example computes the L2-bestapproximation of some given scalar-valued function into the piecewise quadratic continuous polynomials.
@@ -8,7 +8,7 @@ Afterwards the L2 error is computed and the solution is plotted.
 
 =#
 
-module Example_1DBestapprox
+module Example101_Bestapproximation1D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -75,9 +75,3 @@ function main(; Plotter = nothing, verbosity = 0, nrefs = 2, broken::Bool = fals
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_1DBestapprox.main()
-

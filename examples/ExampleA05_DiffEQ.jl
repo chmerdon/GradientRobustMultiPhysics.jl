@@ -1,6 +1,6 @@
 #= 
 
-# 2D Comparison with DifferentialEquations.jl
+# A05 : Comparison with DifferentialEquations.jl
 ([source code](SOURCE_URL))
 
 This example computes a transient velocity ``\mathbf{u}`` solution of the nonlinear Poisson problem
@@ -20,7 +20,7 @@ Note: To run this example the DifferentialEquations.jl package has to be install
 =#
 
 
-module Example_2DTransientNonlinDiffEQ
+module ExampleA05_DiffEQ
 
 using GradientRobustMultiPhysics
 using DifferentialEquations

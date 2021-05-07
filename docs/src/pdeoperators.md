@@ -28,9 +28,9 @@ The following table lists all available operators and physics-motivated construc
 Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Actions](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Actions](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
 
 
-## Assembly Types
+## Assembly Type
 
-Many PDE operators need a specification of its AssemblyTypes that decides to which parts of the mesh the PDEOperator is associated (e.g. cells, faces, bfaces, edges).
+Many PDE operators need a specification of that decides to which parts of the mesh the PDEOperator is associated (e.g. cells, faces, bfaces, edges), this is prescribed via the AssemblyType.
 The following assembly types are available. Additional to define where PDEOperators live and assemble, they can be also used as an argument for interpolation!.
 
 | AssemblyType     | Description                                                      |

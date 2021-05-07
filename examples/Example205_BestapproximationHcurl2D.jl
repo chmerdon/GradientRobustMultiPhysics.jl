@@ -1,6 +1,6 @@
 #= 
 
-# 2D Curl-Preserving L2-Bestapproximation
+# 205 : Bestapproximation Hcurl (2D)
 ([source code](SOURCE_URL))
 
 This example computes the L2-bestapproximation of some given vector-valued function into the lowest-order Nedelec space. It also
@@ -9,7 +9,7 @@ Afterwards the L2 error (also of the curl) is computed and the solution is plott
 
 =#
 
-module Example_2DBestapproxCurlpreserve
+module Example205_BestapproximationHcurl2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -69,8 +69,3 @@ function main(; verbosity = 0, Plotter = nothing)
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DBestapproxCurlpreserve.main()

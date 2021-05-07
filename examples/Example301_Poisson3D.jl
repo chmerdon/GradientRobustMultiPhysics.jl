@@ -1,6 +1,6 @@
 #= 
 
-# 3D Poisson-Problem
+# 301 : Poisson-Problem 3D
 ([source code](SOURCE_URL))
 
 This example computes the solution ``u`` of the three dimensional Poisson problem
@@ -13,7 +13,7 @@ with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series o
 
 =#
 
-module Example_3DPoisson
+module Example301_Poisson3D
 
 using GradientRobustMultiPhysics
 using Printf
@@ -90,8 +90,3 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_3DPoisson.main()

@@ -1,6 +1,6 @@
 #= 
 
-# Commuting Interpolators (3D)
+# A03 : Commuting Interpolators 3D
 ([source code](SOURCE_URL))
 
 This example verifies a structural property of the Hcurl and Hdiv finite element spaces and their interpolators which is
@@ -11,7 +11,7 @@ for the standard Nedelec interpolator ``I_{\mathrm{N}_{k-1}}`` and the standard 
 In this example we verify this identity for $k=1$ (higher order spaces are tested as well as soon as they are available).
 =#
 
-module Example_3DCommutingInterpolators
+module ExampleA03_CommutingInterpolators3D
 using GradientRobustMultiPhysics
 
 ## define some function
@@ -89,8 +89,3 @@ function test()
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_3DCommutingInterpolators.main()

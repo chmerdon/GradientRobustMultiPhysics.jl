@@ -172,6 +172,15 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndof
 end
 
 
+"""
+````
+    FEBasisEvaluator{T <: Real,FEType <: AbstractFiniteElement,EG <: AbstractElementGeometry,FEOP <: AbstractFunctionOperator,AT <: AbstractAssemblyType}(FES::FESpace, qf::QuadratureRule)
+````
+
+Constructor for an evaluator for the basis of the specified FEType (with matching FESpace FES) of the function operator FEOP on the given element geometry EG beeing of AssemblyType AT
+at the points of the quadrature rule qf.
+
+"""
 function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
@@ -370,6 +379,15 @@ end
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
+"""
+````
+    update!(FEBE::FEBasisEvaluator, item::Int)
+````
+
+Update the FEBasisEvaluator on the given item number of the grid items associated to the AssemblyType. During the update the FEBasisevaluator computes all evaluations of all basis functions at all quadrature points and stores
+them in FEBE.cvals. From there they can be accessed directly or via the eval! functions.
+
+"""
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
@@ -1358,7 +1376,14 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
 end
 
 
-# use basisevaluator to evaluate j-th basis function at quadrature point i
+"""
+````
+    eval!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
+````
+
+Evaluate the j-th basis function of the FEBasisEvaluator at the i-th quadrature point adn writes the (possibly vector-valued) evaluation into result (beginning at offset and with the specified factor).
+
+"""
 function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, j::Int, i::Int, offset::Int = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
     for k = 1 : size(FEBE.cvals,1)
         result[offset + k] = FEBE.cvals[k,j,i] * factor
@@ -1366,7 +1391,14 @@ function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,ed
     return nothing
 end
 
-# use basisevaluator to evaluate some function at quadrature point i with the given coefficients
+"""
+````
+    eval!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
+````
+
+Evaluates the linear combination of the basisfunction with given coefficients at the i-th quadrature point and writes the (possibly vector-valued) evaluation into result (beginning at offset and with the specified factor).
+
+"""
 function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, coefficients::Array{T,1}, i, offset = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
     for dof_i = 1 : ndofs # ndofs4item
         for k = 1 : size(FEBE.cvals,1)

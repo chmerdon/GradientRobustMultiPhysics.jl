@@ -1,6 +1,6 @@
 #= 
 
-# 2D Nonlinear Poisson-Problem
+# 210 : Nonlinear Poisson Problem 2D
 ([source code](SOURCE_URL))
 
 This example computes the solution ``u`` of the nonlinear Poisson problem
@@ -19,7 +19,7 @@ Also the factorization in the linear solver can be changed to anything <:Extenda
 
 =#
 
-module Example_2DNonlinearPoisson
+module Example210_NonlinearPoisson2D
 
 using GradientRobustMultiPhysics
 using ExtendableSparse
@@ -89,6 +89,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         push!(NDofs,length(Solution.entries))
 
         ## solve
+        @show Solution
         solve!(Solution, Problem; linsolver = factorization)
 
         ## calculate L2 and H1 error
@@ -100,9 +101,9 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         return H1error[end]
     else
         ## output errors in a nice table
-        println("\n   NDOF  |   L2ERROR   |   H1ERROR")
+        println("\n  NDOF |   L2ERROR   |   H1ERROR")
         for j=1:nlevels
-            @printf("  %6d | %.5e | %.5e\n",NDofs[j],L2error[j],H1error[j]);
+            @printf("%6d | %.5e | %.5e\n",NDofs[j],L2error[j],H1error[j]);
         end
     
         ## plot
@@ -118,8 +119,3 @@ function test()
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DNonlinearPoisson.main()

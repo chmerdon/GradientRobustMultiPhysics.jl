@@ -1,6 +1,6 @@
 #= 
 
-# 2D Pressure-robustness
+# 206 : Pressure-robustness 2D
 ([source code](SOURCE_URL))
 
 This example studies two benchmarks for pressure-robust discretisations of the stationary
@@ -26,7 +26,7 @@ discretisation solves ``\mathbf{u} = 0`` exactly in test problem 1 and gives muc
 =#
 
 
-module Example_2DPressureRobustness
+module Example206_PressureRobustness2D
 
 using GradientRobustMultiPhysics
 using Printf
@@ -170,7 +170,7 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
             println("VELO-CLASSIC : discrete Stokes velocity solution ($(FES[1].name)) with classical discretisation")
             println("VELO-PROBUST : discrete Stokes velocity solution ($(FES[1].name)) with p-robust discretisation")
             println("VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)")
-            println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)")
+            println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boundary data)")
             println("PRES-CLASSIC : discrete Stokes pressure solution ($(FES[2].name)) with classical discretisation")
             println("PRES-PROBUST : discrete Stokes pressure solution ($(FES[1].name)) with p-robust discretisation")
             println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
@@ -183,14 +183,19 @@ end
 
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, nlevels = 3, viscosity = 1e-2)
+function main(; problem = 2, verbosity = 0, nlevels = 3, viscosity = 1e-2)
 
     ## set log level
     set_verbosity(verbosity)
     
     ## set problem to solve
-    #Problem = HydrostaticTestProblem
-    Problem = PotentialFlowTestProblem
+    if problem == 1
+        Problem = HydrostaticTestProblem
+    elseif problem == 2
+        Problem = PotentialFlowTestProblem
+    else
+        @error "No problem defined for this number!"
+    end
 
     ## set grid and problem parameters
     xgrid = grid_unitsquare_mixedgeometries() # initial grid
@@ -224,8 +229,3 @@ function test()
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DPressureRobustness.main()

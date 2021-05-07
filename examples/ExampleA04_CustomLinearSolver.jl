@@ -1,13 +1,13 @@
 #= 
 
-# 2D User-defined Linear Solvers
+# A04 : Custom Linear Solvers
 ([source code](SOURCE_URL))
 
 This example revisits the nonlinear Poisson example from the introductory examples and showcases how to define a user-specified linear solver.
 
 =#
 
-module Example_2DCustomLinSolver
+module ExampleA04_CustomLinearSolver
 
 using GradientRobustMultiPhysics
 using ExtendableSparse

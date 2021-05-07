@@ -1,6 +1,6 @@
 #= 
 
-# 2D Equilibration Error Estimation (Local)
+# A06 : Local Equilibrated Fluxes 2D
 ([source code](SOURCE_URL))
 
 This example computes a local equilibration error estimator for the $H^1$ error of some $H^1$-conforming
@@ -27,8 +27,7 @@ and a strategy solve several small problems in parallel.
 
 =#
 
-
-module Example_LEQLshape
+module ExampleA06_LocalEquilibratedFluxes2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -252,7 +251,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
         Alocal = zeros(Float64,maxdofs,maxdofs)
         blocal = zeros(Float64,maxdofs)
 
-        ## init FEBasiEvaluator
+        ## init FEBasiEvaluators
         FEBasis_gradphi = FEBasisEvaluator{Float64,POUFEType,Triangle2D,Gradient,ON_CELLS}(POUFES, POUqf)
         FEBasis_xref = FEBasisEvaluator{Float64,POUFEType,Triangle2D,Identity,ON_CELLS}(POUFES, qf)
         FEBasis_graduh = FEBasisEvaluator{Float64,FEType,Triangle2D,Gradient,ON_CELLS}(Solution[1].FES, qf)
@@ -294,7 +293,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
                 while xCellNodes[localnode,cell] != node
                     localnode += 1
                 end
-                update!(FEBasis_gradphi,cell)
+                GradientRobustMultiPhysics.update!(FEBasis_gradphi,cell)
                 eval!(gradphi, FEBasis_gradphi, localnode, 1)
 
                 ## read coefficients for discrete flux
@@ -303,9 +302,9 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
                 end
 
                 ## update other FE evaluators
-                update!(FEBasis_graduh,cell)
-                update!(FEBasis_div,cell)
-                update!(FEBasis_id,cell)
+                GradientRobustMultiPhysics.update!(FEBasis_graduh,cell)
+                GradientRobustMultiPhysics.update!(FEBasis_div,cell)
+                GradientRobustMultiPhysics.update!(FEBasis_id,cell)
 
                 ## assembly on this cell
                 for i in eachindex(weights)

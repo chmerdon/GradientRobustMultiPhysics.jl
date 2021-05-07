@@ -1,6 +1,6 @@
 #= 
 
-# 2D Convection-Diffusion-Problem
+# 203 : Convection-Diffusion-Problem 2D
 ([source code](SOURCE_URL))
 
 This example computes the solution of some convection-diffusion problem
@@ -17,7 +17,7 @@ simple gradient jump (interior penalty) stabilisation is added to improve things
 
 =#
 
-module Example_2DConvectionDiffusion
+module Example203_ConvectionDiffusion2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -145,8 +145,3 @@ function main(; verbosity = 0, Plotter = nothing, diffusion = 1e-5, stabilisatio
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DConvectionDiffusion.main()

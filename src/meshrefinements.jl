@@ -170,7 +170,7 @@ uniform refinement rules are available for these AbstractElementGeometries:
 - Line1D (bisection into two subsegments)
 - Triangle2D (red refinement into four subtriangles)
 - Quadrilateral2D (into four subquadrilaterals)
-- Tetrahedron (into eight subtetrahedrons, but seems buggy)
+- Tetrahedron (into eight subtetrahedrons)
 - Hexahedron (into eight subhexahedrons)
 
 if multiple geometries are in the mesh uniform refinement will only work

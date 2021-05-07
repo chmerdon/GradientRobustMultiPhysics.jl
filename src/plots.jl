@@ -85,7 +85,7 @@ function plot(
             elseif plottertype(Plotter) == MakieType
                 # not supported yet
             end
-            ctx = Array{SubVis,1}(undef, nplots)
+            ctx = Array{SubVisualizer,1}(undef, nplots)
             # figure=fig, cbar=true
             vis=GridVisualizer(Plotter=Plotter, layout=(subplots_per_column,(nplots-1)÷subplots_per_column+1), clear=false, legend=false, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
             for j = 1 : nplots
@@ -93,7 +93,7 @@ function plot(
                 ctx[j] = vis[(j-1)%subplots_per_column+1,(j-1)÷subplots_per_column+1]
             end
         else
-            ctx = Array{SubVis,1}(undef, nplots)
+            ctx = Array{SubVisualizer,1}(undef, nplots)
             for j = 1 : nplots
                 #cbar = cbar, 
                 vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, legend=false, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)

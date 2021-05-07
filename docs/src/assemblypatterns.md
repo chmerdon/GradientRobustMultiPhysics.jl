@@ -1,13 +1,9 @@
 
-# Assembly Details
+# Assembly Patterns
 
-The assembly of an operator is essentially based on a combination of [Assembly Types](@ref) and [Assembly Patterns](@ref). The assembly type mainly allows to choose the geometry information needed for providing quadrature and dof handling. The assembly pattern then basically evaluates the
-function operators and action for the ansatz and test functions and does the quadrature-weighted accumulation into matrices or vectors that represent the operators.
+The definition and assembly of an operator is essentially based on Assembly Patterns and a [Assembly Type](@ref) to choose the geometry information needed for providing quadrature and dof handling. The assembly pattern then basically evaluates the function operators and action for the ansatz and test functions and does the quadrature-weighted accumulation into matrices or vectors that represent the operators.
 
-
-## Assembly Patterns
-
-Each Pattern comes with a number of arguments/quantities with associated [Function Operators](@ref) as well as one of the [Assembly Types](@ref) that states whether the form is evaluated over CELLS, FACES order BFACES (see above). Important note: this assembly type is relative to the grid of the first argument of the pattern. If this argument already lives ON_FACES and the pattern is also ON_FACES, it will ultimatively assemble on the faces of the faces (that are the edges of the grid with these faces). Moreover, patterns can have [Abstract Actions](@ref) that allow to make the evaluations parameter-, region- and/or function-dependent. Each pattern then has usually on to three implementation that writes into FEMatrix or FEVector (where e.g. a subset of arguments is fixed) or evaluates the pattern in the given FEVectorBlocks.
+Each pattern comes with a number of arguments/quantities with associated [Function Operators](@ref) as well as one of the [Assembly Type](@ref) that states whether the form is evaluated over CELLS, FACES order BFACES (see above). Important note: this assembly type is relative to the grid of the first argument of the pattern. If this argument already lives ON_FACES and the pattern is also ON_FACES, it will ultimatively assemble on the faces of the faces (that are the edges of the grid with these faces). Moreover, patterns can have [Abstract Actions](@ref) that allow to make the evaluations parameter-, region- and/or function-dependent. Each pattern then has usually on to three implementation that writes into FEMatrix or FEVector (where e.g. a subset of arguments is fixed) or evaluates the pattern in the given FEVectorBlocks.
 
 The patterns are used to assembly the PDE operators defined in a [PDE Description](@ref). However, it is also possible for the user to use them directly, see e.g. the example [Commuting Interpolators (2D)](@ref).
 

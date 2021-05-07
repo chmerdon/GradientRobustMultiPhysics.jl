@@ -1,6 +1,6 @@
 #= 
 
-# 2D Stokes (iterated penalty method)
+# 221 : Stokes iterated penalty method 2D
 ([source code](SOURCE_URL))
 
 This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
@@ -26,7 +26,7 @@ Given intermediate solution  ``\mathbf{u}`` and  ``p`` the next approximations a
 This is done consecutively until the residual of both equations is small enough. (The convection term is linearised by auto-differentiated Newton terms.)
 =#
 
-module Example_2DIteratedPenaltyStokes
+module Example221_StokesIterated2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -97,8 +97,3 @@ function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; Plotter = Plotter)
 end
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DIteratedPenaltyStokes.main()

@@ -1,6 +1,6 @@
 #= 
 
-# 2D Flow + Transport
+# 205 : Flow + Transport 2D
 ([source code](SOURCE_URL))
 
 This example solve the Stokes problem in a Omega-shaped pipe and then uses the velocity in a transport equation for a species with a certain inlet concentration.
@@ -29,7 +29,7 @@ Also note, that only the finite volume discretisation perfectly obeys the maximu
 =#
 
 
-module Example_2DFlowTransport
+module Example208_FlowTransport2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -116,8 +116,3 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
 end
 
 end
-
-#=
-### Output of default main() run
-=#
-Example_2DFlowTransport.main()

@@ -1,6 +1,6 @@
 #= 
 
-# 2D Compressible Stokes
+# 225 : Compressible Stokes 2D
 ([source code](SOURCE_URL))
 
 This example solves the compressible Stokes equations where one seeks a (vector-valued) velocity ``\mathbf{u}``, a density ``\varrho`` and a pressure ``p`` such that
@@ -42,7 +42,7 @@ See reference below for more details.
 =#
 
 
-module Example_2DCompressibleStokes
+module Example225_CompressibleStokes2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
