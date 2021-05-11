@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>225 : Compressible Stokes 2D · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Action Kernels</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ConvectionDiffusion2D/">203 : Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_BestapproximationHcurl2D/">205 : Bestapproximation Hcurl (2D)</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">205 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example211_pLaplacian2D/">211 : p-Laplacian 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li class="is-active"><a class="tocitem" href>225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG (2D)</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example225_CompressibleStokes2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Compressible-Stokes-2D"><a class="docs-heading-anchor" href="#:-Compressible-Stokes-2D">225 : Compressible Stokes 2D</a><a id=":-Compressible-Stokes-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Compressible-Stokes-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example225_CompressibleStokes2D.jl">source code</a>)</p><p>This example solves the compressible Stokes equations where one seeks a (vector-valued) velocity <span>$\mathbf{u}$</span>, a density <span>$\varrho$</span> and a pressure <span>$p$</span> such that</p><p class="math-container">\[\begin{aligned}
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>225 : Compressible Stokes 2D · GradientRobustMultiPhysics.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">GradientRobustMultiPhysics.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Action Kernels</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ConvectionDiffusion2D/">203 : Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_BestapproximationHcurl2D/">205 : Bestapproximation Hcurl (2D)</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li class="is-active"><a class="tocitem" href>225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG (2D)</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example225_CompressibleStokes2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Compressible-Stokes-2D"><a class="docs-heading-anchor" href="#:-Compressible-Stokes-2D">225 : Compressible Stokes 2D</a><a id=":-Compressible-Stokes-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Compressible-Stokes-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example225_CompressibleStokes2D.jl">source code</a>)</p><p>This example solves the compressible Stokes equations where one seeks a (vector-valued) velocity <span>$\mathbf{u}$</span>, a density <span>$\varrho$</span> and a pressure <span>$p$</span> such that</p><p class="math-container">\[\begin{aligned}
 - \mu \Delta \mathbf{u} + \lambda \nabla(\mathrm{div}(\mathbf{u})) + \nabla p &amp; = \mathbf{f} + \varrho \mathbf{g}\\
 \mathrm{div}(\varrho \mathbf{u}) &amp; = 0\\
         p &amp; = eos(\varrho)\\
@@ -48,7 +48,7 @@ function main(; verbosity = 0, Plotter = nothing, reconstruct::Bool = true, c = 
     set_verbosity(verbosity)
 
     # load mesh and refine
-    xgrid = uniform_refine(simplexgrid(&quot;assets/2d_grid_mountainrange.sg&quot;),1)
+    xgrid = simplexgrid(&quot;assets/2d_grid_mountainrange.sg&quot;)
 
     # solve without and with reconstruction and plot
     Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)
@@ -212,64 +212,59 @@ SOLVER-CONFIGURATION
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                         
 	        |            |  (total)   |      v           ϱ           p     
-	     1  | 2.0000e-04 | 1.6986e-14 | 9.2735e-01  8.8097e-03  1.2356e-01 
-	     2  | 4.0000e-04 | 1.7852e-14 | 5.8585e-01  3.5521e-03  4.9934e-02 
-	     3  | 6.0000e-04 | 1.7268e-14 | 2.3923e-01  1.7035e-03  2.3988e-02 
-	     4  | 8.0000e-04 | 1.7348e-14 | 1.1617e-01  8.8095e-04  1.2424e-02 
-	     5  | 1.0000e-03 | 1.7021e-14 | 6.3506e-02  4.8493e-04  6.8480e-03 
-	     6  | 1.2000e-03 | 1.6811e-14 | 3.5906e-02  2.7737e-04  3.9212e-03 
-	     7  | 1.4000e-03 | 1.7222e-14 | 2.2443e-02  1.6554e-04  2.3426e-03 
-	     8  | 1.6000e-03 | 1.7027e-14 | 1.3638e-02  1.0131e-04  1.4347e-03 
-	     9  | 1.8000e-03 | 1.6974e-14 | 9.0495e-03  6.4063e-05  9.0781e-04 
-	    10  | 2.0000e-03 | 1.6455e-14 | 5.7572e-03  4.1122e-05  5.8296e-04 
-	    11  | 2.2000e-03 | 1.7680e-14 | 3.9079e-03  2.7068e-05  3.8387e-04 
-	    12  | 2.4000e-03 | 1.7410e-14 | 2.5606e-03  1.7939e-05  2.5446e-04 
-	    13  | 2.6000e-03 | 1.7399e-14 | 1.7539e-03  1.2119e-05  1.7193e-04 
-	    14  | 2.8000e-03 | 1.6998e-14 | 1.1709e-03  8.1967e-06  1.1630e-04 
-	    15  | 3.0000e-03 | 1.6764e-14 | 8.0614e-04  5.6260e-06  7.9838e-05 
-	    16  | 3.2000e-03 | 1.6829e-14 | 5.4475e-04  3.8535e-06  5.4689e-05 
-	    17  | 3.4000e-03 | 1.6951e-14 | 3.7666e-04  2.6705e-06  3.7902e-05 
-	    18  | 3.6000e-03 | 1.7015e-14 | 2.5665e-04  1.8436e-06  2.6168e-05 
-	    19  | 3.8000e-03 | 1.6670e-14 | 1.7822e-04  1.2851e-06  1.8242e-05 
-	    20  | 4.0000e-03 | 1.7736e-14 | 1.2219e-04  8.9179e-07  1.2659e-05 
-	    21  | 4.2000e-03 | 1.6881e-14 | 8.5237e-05  6.2390e-07  8.8569e-06 
-	    22  | 4.4000e-03 | 1.6485e-14 | 5.8737e-05  4.3448e-07  6.1680e-06 
-	    23  | 4.6000e-03 | 1.7574e-14 | 4.1162e-05  3.0472e-07  4.3260e-06 
-	    24  | 4.8000e-03 | 1.6413e-14 | 2.8495e-05  2.1275e-07  3.0205e-06 
-	    25  | 5.0000e-03 | 1.7245e-14 | 2.0061e-05  1.4948e-07  2.1223e-06 
-	    26  | 5.2000e-03 | 1.6793e-14 | 1.3950e-05  1.0459e-07  1.4849e-06 
-	    27  | 5.4000e-03 | 1.7484e-14 | 9.8654e-06  7.3588e-08  1.0448e-06 
-	    28  | 5.6000e-03 | 1.6799e-14 | 6.8913e-06  5.1584e-08  7.3242e-07 
-	    29  | 5.8000e-03 | 1.7719e-14 | 4.8950e-06  3.6344e-08  5.1605e-07 
-	    30  | 6.0000e-03 | 1.7697e-14 | 3.4355e-06  2.5522e-08  3.6239e-07 
-	    31  | 6.2000e-03 | 1.7359e-14 | 2.4506e-06  1.8006e-08  2.5568e-07 
-	    32  | 6.4000e-03 | 1.6693e-14 | 1.7284e-06  1.2668e-08  1.7988e-07 
-	    33  | 6.6000e-03 | 1.6858e-14 | 1.2378e-06  8.9508e-09  1.2710e-07 
-	    34  | 6.8000e-03 | 1.7280e-14 | 8.7747e-07  6.3097e-09  8.9596e-08 
-	    35  | 7.0000e-03 | 1.7148e-14 | 6.3077e-07  4.4658e-09  6.3415e-08 
-	    36  | 7.2000e-03 | 1.6758e-14 | 4.4946e-07  3.1550e-09  4.4801e-08 
-	    37  | 7.4000e-03 | 1.7228e-14 | 3.2424e-07  2.2374e-09  3.1773e-08 
-	    38  | 7.6000e-03 | 1.6676e-14 | 2.3222e-07  1.5846e-09  2.2502e-08 
-	    39  | 7.8000e-03 | 1.6986e-14 | 1.6808e-07  1.1264e-09  1.5995e-08 
-	    40  | 8.0000e-03 | 1.7205e-14 | 1.2099e-07  7.9996e-10  1.1360e-08 
-	    41  | 8.2000e-03 | 1.6581e-14 | 8.7845e-08  5.7012e-10  8.0961e-09 
-	    42  | 8.4000e-03 | 1.7752e-14 | 6.3533e-08  4.0619e-10  5.7680e-09 
-	    43  | 8.6000e-03 | 1.7669e-14 | 4.6265e-08  2.9036e-10  4.1233e-09 
-	    44  | 8.8000e-03 | 1.7154e-14 | 3.3610e-08  2.0759e-10  2.9479e-09 
-	    45  | 9.0000e-03 | 1.7142e-14 | 2.4542e-08  1.4890e-10  2.1145e-09 
-	    46  | 9.2000e-03 | 1.7188e-14 | 1.7902e-08  1.0686e-10  1.5175e-09 
-	    47  | 9.4000e-03 | 1.7410e-14 | 1.3106e-08  7.6933e-11  1.0925e-09 
-	    48  | 9.6000e-03 | 1.7478e-14 | 9.5958e-09  5.5438e-11  7.8725e-10 
-	    49  | 9.8000e-03 | 1.7450e-14 | 7.0418e-09  4.0069e-11  5.6901e-10 
-	    50  | 1.0000e-02 | 1.6986e-14 | 5.1731e-09  2.8996e-11  4.1177e-10 
-	    51  | 1.0200e-02 | 1.7171e-14 | 3.8044e-09  2.1043e-11  2.9884e-10 
-	    52  | 1.0400e-02 | 1.7461e-14 | 2.8032e-09  1.5294e-11  2.1718e-10 
-	    53  | 1.0600e-02 | 1.7297e-14 | 2.0659e-09  1.1145e-11  1.5827e-10 
-	    54  | 1.0800e-02 | 1.6664e-14 | 1.5260e-09  8.1340e-12  1.1551e-10 
-	    55  | 1.1000e-02 | 1.8050e-14 | 1.1267e-09  5.9515e-12  8.4522e-11 
-	    56  | 1.1200e-02 | 1.7319e-14 | 8.3401e-10  4.3613e-12  6.1939e-11 
+	     1  | 2.0000e-04 | 3.6921e-14 | 1.8188e+00  7.3359e-03  1.0294e-01 
+	     2  | 4.0000e-04 | 3.9039e-14 | 9.8610e-01  2.5020e-03  3.5148e-02 
+	     3  | 6.0000e-04 | 2.5681e-14 | 3.7026e-01  1.0843e-03  1.5247e-02 
+	     4  | 8.0000e-04 | 4.0585e-14 | 1.5419e-01  5.2031e-04  7.3190e-03 
+	     5  | 1.0000e-03 | 3.4123e-14 | 8.4078e-02  2.7468e-04  3.8654e-03 
+	     6  | 1.2000e-03 | 3.5260e-14 | 4.5926e-02  1.5144e-04  2.1307e-03 
+	     7  | 1.4000e-03 | 2.6467e-14 | 2.8076e-02  8.8467e-05  1.2446e-03 
+	     8  | 1.6000e-03 | 3.7091e-14 | 1.7107e-02  5.2099e-05  7.3256e-04 
+	     9  | 1.8000e-03 | 2.6047e-14 | 1.0773e-02  3.2068e-05  4.5087e-04 
+	    10  | 2.0000e-03 | 2.6228e-14 | 6.8936e-03  1.9498e-05  2.7394e-04 
+	    11  | 2.2000e-03 | 2.9830e-14 | 4.3809e-03  1.2355e-05  1.7360e-04 
+	    12  | 2.4000e-03 | 4.1961e-14 | 2.8650e-03  7.6447e-06  1.0733e-04 
+	    13  | 2.6000e-03 | 3.8959e-14 | 1.8319e-03  4.9295e-06  6.9223e-05 
+	    14  | 2.8000e-03 | 2.5434e-14 | 1.2094e-03  3.0848e-06  4.3284e-05 
+	    15  | 3.0000e-03 | 2.3633e-14 | 7.7792e-04  2.0117e-06  2.8238e-05 
+	    16  | 3.2000e-03 | 3.7514e-14 | 5.1589e-04  1.2697e-06  1.7809e-05 
+	    17  | 3.4000e-03 | 4.1697e-14 | 3.3378e-04  8.3455e-07  1.1711e-05 
+	    18  | 3.6000e-03 | 2.5184e-14 | 2.2193e-04  5.3068e-07  7.4412e-06 
+	    19  | 3.8000e-03 | 2.6107e-14 | 1.4439e-04  3.5086e-07  4.9232e-06 
+	    20  | 4.0000e-03 | 2.7057e-14 | 9.6216e-05  2.2472e-07  3.1509e-06 
+	    21  | 4.2000e-03 | 2.2609e-14 | 6.2935e-05  1.4931e-07  2.0952e-06 
+	    22  | 4.4000e-03 | 3.6144e-14 | 4.2044e-05  9.6341e-08  1.3511e-06 
+	    23  | 4.6000e-03 | 3.9919e-14 | 2.7647e-05  6.4300e-08  9.0255e-07 
+	    24  | 4.8000e-03 | 4.0701e-14 | 1.8526e-05  4.1818e-08  5.8667e-07 
+	    25  | 5.0000e-03 | 2.3700e-14 | 1.2247e-05  2.8034e-08  3.9368e-07 
+	    26  | 5.2000e-03 | 2.5986e-14 | 8.2378e-06  1.8387e-08  2.5810e-07 
+	    27  | 5.4000e-03 | 4.0037e-14 | 5.4749e-06  1.2384e-08  1.7401e-07 
+	    28  | 5.6000e-03 | 3.8511e-14 | 3.6995e-06  8.1951e-09  1.1512e-07 
+	    29  | 5.8000e-03 | 3.6878e-14 | 2.4722e-06  5.5469e-09  7.7995e-08 
+	    30  | 6.0000e-03 | 2.7115e-14 | 1.6792e-06  3.7049e-09  5.2087e-08 
+	    31  | 6.2000e-03 | 4.1810e-14 | 1.1285e-06  2.5208e-09  3.5474e-08 
+	    32  | 6.4000e-03 | 4.0076e-14 | 7.7088e-07  1.6994e-09  2.3915e-08 
+	    33  | 6.6000e-03 | 4.0972e-14 | 5.2095e-07  1.1626e-09  1.6375e-08 
+	    34  | 6.8000e-03 | 3.8511e-14 | 3.5802e-07  7.9088e-10  1.1140e-08 
+	    35  | 7.0000e-03 | 3.7388e-14 | 2.4329e-07  5.4400e-10  7.6683e-09 
+	    36  | 7.2000e-03 | 2.6527e-14 | 1.6821e-07  3.7319e-10  5.2610e-09 
+	    37  | 7.4000e-03 | 3.9641e-14 | 1.1491e-07  2.5804e-10  3.6402e-09 
+	    38  | 7.6000e-03 | 2.4869e-14 | 7.9913e-08  1.7835e-10  2.5163e-09 
+	    39  | 7.8000e-03 | 4.0312e-14 | 5.4863e-08  1.2392e-10  1.7494e-09 
+	    40  | 8.0000e-03 | 3.7219e-14 | 3.8359e-08  8.6209e-11  1.2171e-09 
+	    41  | 8.2000e-03 | 2.7289e-14 | 2.6455e-08  6.0160e-11  8.4976e-10 
+	    42  | 8.4000e-03 | 2.5925e-14 | 1.8584e-08  4.2078e-11  5.9443e-10 
+	    43  | 8.6000e-03 | 2.7634e-14 | 1.2869e-08  2.9475e-11  4.1654e-10 
+	    44  | 8.8000e-03 | 3.5969e-14 | 9.0771e-09  2.0707e-11  2.9266e-10 
+	    45  | 9.0000e-03 | 3.7640e-14 | 6.3082e-09  1.4552e-11  2.0572e-10 
+	    46  | 9.2000e-03 | 2.3832e-14 | 4.4648e-09  1.0258e-11  1.4504e-10 
+	    47  | 9.4000e-03 | 2.5122e-14 | 3.1125e-09  7.2283e-12  1.0222e-10 
+	    48  | 9.6000e-03 | 4.1164e-14 | 2.2087e-09  5.1096e-12  7.2262e-11 
+	    49  | 9.8000e-03 | 2.6047e-14 | 1.5439e-09  3.6079e-12  5.1031e-11 
+	    50  | 1.0000e-02 | 4.2928e-14 | 1.0977e-09  2.5553e-12  3.6144e-11 
+	    51  | 1.0200e-02 | 2.6407e-14 | 7.6904e-10  1.8072e-12  2.5566e-11 
 
-  mass_error = 9.8167e-01 - 9.8167e-01 = 5.5511e-15 
+  mass_error = 9.8167e-01 - 9.8167e-01 = 8.8818e-16 
 SC = 
 SOLVER-CONFIGURATION
 ======================
@@ -307,58 +302,55 @@ SOLVER-CONFIGURATION
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                         
 	        |            |  (total)   |      v           ϱ           p     
-	     1  | 2.0000e-04 | 1.7382e-14 | 3.8361e-03  1.5396e-05  2.1577e-04 
-	     2  | 4.0000e-04 | 1.6963e-14 | 4.9038e-03  8.5724e-06  1.2023e-04 
-	     3  | 6.0000e-04 | 1.6658e-14 | 2.8913e-03  5.4422e-06  7.6410e-05 
-	     4  | 8.0000e-04 | 2.0592e-14 | 1.8638e-03  3.5881e-06  5.0419e-05 
-	     5  | 1.0000e-03 | 2.0782e-14 | 1.2285e-03  2.4122e-06  3.3931e-05 
-	     6  | 1.2000e-03 | 2.0611e-14 | 8.2520e-04  1.6448e-06  2.3151e-05 
-	     7  | 1.4000e-03 | 1.7478e-14 | 5.5947e-04  1.1314e-06  1.5939e-05 
-	     8  | 1.6000e-03 | 1.6793e-14 | 3.8150e-04  7.8648e-07  1.1085e-05 
-	     9  | 1.8000e-03 | 1.7658e-14 | 2.6396e-04  5.4915e-07  7.7455e-06 
-	    10  | 2.0000e-03 | 2.0278e-14 | 1.8222e-04  3.8687e-07  5.4583e-06 
-	    11  | 2.2000e-03 | 1.7495e-14 | 1.2817e-04  2.7308e-07  3.8551e-06 
-	    12  | 2.4000e-03 | 1.7073e-14 | 8.9405e-05  1.9427e-07  2.7431e-06 
-	    13  | 2.6000e-03 | 1.7171e-14 | 6.3702e-05  1.3825e-07  1.9531e-06 
-	    14  | 2.8000e-03 | 1.6658e-14 | 4.4811e-05  9.9065e-08  1.3997e-06 
-	    15  | 3.0000e-03 | 1.6887e-14 | 3.2235e-05  7.0942e-08  1.0027e-06 
-	    16  | 3.2000e-03 | 1.6998e-14 | 2.2827e-05  5.1111e-08  7.2249e-07 
-	    17  | 3.4000e-03 | 1.6699e-14 | 1.6533e-05  3.6781e-08  5.2009e-07 
-	    18  | 3.6000e-03 | 1.7090e-14 | 1.1770e-05  2.6609e-08  3.7629e-07 
-	    19  | 3.8000e-03 | 1.6758e-14 | 8.5642e-06  1.9223e-08  2.7191e-07 
-	    20  | 4.0000e-03 | 1.7084e-14 | 6.1228e-06  1.3952e-08  1.9736e-07 
-	    21  | 4.2000e-03 | 1.7568e-14 | 4.4691e-06  1.0111e-08  1.4306e-07 
-	    22  | 4.4000e-03 | 1.7568e-14 | 3.2061e-06  7.3575e-09  1.0410e-07 
-	    23  | 4.6000e-03 | 1.7579e-14 | 2.3451e-06  5.3456e-09  7.5651e-08 
-	    24  | 4.8000e-03 | 1.6729e-14 | 1.6872e-06  3.8980e-09  5.5165e-08 
-	    25  | 5.0000e-03 | 1.7222e-14 | 1.2358e-06  2.8382e-09  4.0174e-08 
-	    26  | 5.2000e-03 | 2.0853e-14 | 8.9130e-07  2.0732e-09  2.9345e-08 
-	    27  | 5.4000e-03 | 1.7382e-14 | 6.5348e-07  1.5122e-09  2.1409e-08 
-	    28  | 5.6000e-03 | 2.0787e-14 | 4.7230e-07  1.1062e-09  1.5660e-08 
-	    29  | 5.8000e-03 | 1.6776e-14 | 3.4651e-07  8.0815e-10  1.1442e-08 
-	    30  | 6.0000e-03 | 2.1107e-14 | 2.5091e-07  5.9188e-10  8.3804e-09 
-	    31  | 6.2000e-03 | 1.6616e-14 | 1.8417e-07  4.3298e-10  6.1313e-09 
-	    32  | 6.4000e-03 | 2.0985e-14 | 1.3358e-07  3.1744e-10  4.4952e-09 
-	    33  | 6.6000e-03 | 1.6980e-14 | 9.8082e-08  2.3249e-10  3.2926e-09 
-	    34  | 6.8000e-03 | 2.0625e-14 | 7.1247e-08  1.7061e-10  2.4162e-09 
-	    35  | 7.0000e-03 | 1.6723e-14 | 5.2329e-08  1.2508e-10  1.7716e-09 
-	    36  | 7.2000e-03 | 1.7302e-14 | 3.8065e-08  9.1859e-11  1.3010e-09 
-	    37  | 7.4000e-03 | 1.6383e-14 | 2.7964e-08  6.7406e-11  9.5479e-10 
-	    38  | 7.6000e-03 | 1.7501e-14 | 2.0366e-08  4.9538e-11  7.0170e-10 
-	    39  | 7.8000e-03 | 1.7529e-14 | 1.4965e-08  3.6380e-11  5.1536e-10 
-	    40  | 8.0000e-03 | 1.7697e-14 | 1.0912e-08  2.6753e-11  3.7899e-10 
-	    41  | 8.2000e-03 | 1.6622e-14 | 8.0197e-09  1.9662e-11  2.7855e-10 
-	    42  | 8.4000e-03 | 2.0254e-14 | 5.8532e-09  1.4467e-11  2.0495e-10 
-	    43  | 8.6000e-03 | 1.7523e-14 | 4.3021e-09  1.0639e-11  1.5073e-10 
-	    44  | 8.8000e-03 | 1.7142e-14 | 3.1430e-09  7.8319e-12  1.1096e-10 
-	    45  | 9.0000e-03 | 1.7422e-14 | 2.3111e-09  5.7633e-12  8.1659e-11 
-	    46  | 9.2000e-03 | 2.0457e-14 | 1.6900e-09  4.2444e-12  6.0137e-11 
-	    47  | 9.4000e-03 | 1.7979e-14 | 1.2426e-09  3.1248e-12  4.4276e-11 
-	    48  | 9.6000e-03 | 1.7658e-14 | 9.0956e-10  2.3025e-12  3.2626e-11 
+	     1  | 2.0000e-04 | 2.7289e-14 | 8.3755e-03  2.7089e-05  3.7971e-04 
+	     2  | 4.0000e-04 | 3.7176e-14 | 1.0154e-02  1.3887e-05  1.9471e-04 
+	     3  | 6.0000e-04 | 3.6491e-14 | 5.6374e-03  8.4444e-06  1.1847e-04 
+	     4  | 8.0000e-04 | 3.9161e-14 | 3.4777e-03  5.3404e-06  7.4945e-05 
+	     5  | 1.0000e-03 | 3.6534e-14 | 2.1968e-03  3.4486e-06  4.8440e-05 
+	     6  | 1.2000e-03 | 3.8387e-14 | 1.4192e-03  2.2585e-06  3.1731e-05 
+	     7  | 1.4000e-03 | 3.1727e-14 | 9.2169e-04  1.4954e-06  2.1029e-05 
+	     8  | 1.6000e-03 | 2.5059e-14 | 6.0581e-04  9.9895e-07  1.4049e-05 
+	     9  | 1.8000e-03 | 2.9026e-14 | 4.0140e-04  6.7174e-07  9.4549e-06 
+	    10  | 2.0000e-03 | 3.8223e-14 | 2.6691e-04  4.5473e-07  6.4007e-06 
+	    11  | 2.2000e-03 | 2.8422e-14 | 1.7975e-04  3.0899e-07  4.3524e-06 
+	    12  | 2.4000e-03 | 3.5170e-14 | 1.2059e-04  2.1110e-07  2.9734e-06 
+	    13  | 2.6000e-03 | 3.5837e-14 | 8.2281e-05  1.4450e-07  2.0366e-06 
+	    14  | 2.8000e-03 | 3.5035e-14 | 5.5581e-05  9.9369e-08  1.4004e-06 
+	    15  | 3.0000e-03 | 3.6835e-14 | 3.8307e-05  6.8377e-08  9.6418e-07 
+	    16  | 3.2000e-03 | 3.8305e-14 | 2.6016e-05  4.7247e-08  6.6614e-07 
+	    17  | 3.4000e-03 | 2.6645e-14 | 1.8066e-05  3.2638e-08  4.6039e-07 
+	    18  | 3.6000e-03 | 3.7891e-14 | 1.2323e-05  2.2632e-08  3.1920e-07 
+	    19  | 3.8000e-03 | 2.6467e-14 | 8.6040e-06  1.5681e-08  2.2125e-07 
+	    20  | 4.0000e-03 | 3.5260e-14 | 5.8889e-06  1.0903e-08  1.5381e-07 
+	    21  | 4.2000e-03 | 3.9721e-14 | 4.1278e-06  7.5716e-09  1.0686e-07 
+	    22  | 4.4000e-03 | 2.2956e-14 | 2.8332e-06  5.2755e-09  7.4439e-08 
+	    23  | 4.6000e-03 | 3.7176e-14 | 1.9914e-06  3.6707e-09  5.1812e-08 
+	    24  | 4.8000e-03 | 3.7006e-14 | 1.3701e-06  2.5619e-09  3.6155e-08 
+	    25  | 5.0000e-03 | 3.5793e-14 | 9.6489e-07  1.7854e-09  2.5204e-08 
+	    26  | 5.2000e-03 | 3.5215e-14 | 6.6523e-07  1.2479e-09  1.7613e-08 
+	    27  | 5.4000e-03 | 3.7682e-14 | 4.6912e-07  8.7087e-10  1.2295e-08 
+	    28  | 5.6000e-03 | 2.5681e-14 | 3.2403e-07  6.0943e-10  8.6026e-09 
+	    29  | 5.8000e-03 | 2.6645e-14 | 2.2872e-07  4.2584e-10  6.0127e-09 
+	    30  | 6.0000e-03 | 3.8633e-14 | 1.5825e-07  2.9833e-10  4.2115e-09 
+	    31  | 6.2000e-03 | 3.7933e-14 | 1.1178e-07  2.0870e-10  2.9469e-09 
+	    32  | 6.4000e-03 | 3.7176e-14 | 7.7465e-08  1.4635e-10  2.0662e-09 
+	    33  | 6.6000e-03 | 3.7724e-14 | 5.4749e-08  1.0249e-10  1.4473e-09 
+	    34  | 6.8000e-03 | 3.8592e-14 | 3.7997e-08  7.1940e-11  1.0157e-09 
+	    35  | 7.0000e-03 | 3.7388e-14 | 2.6866e-08  5.0433e-11  7.1222e-10 
+	    36  | 7.2000e-03 | 3.5837e-14 | 1.8673e-08  3.5431e-11  5.0028e-10 
+	    37  | 7.4000e-03 | 3.6534e-14 | 1.3207e-08  2.4863e-11  3.5113e-10 
+	    38  | 7.6000e-03 | 3.9561e-14 | 9.1923e-09  1.7481e-11  2.4685e-10 
+	    39  | 7.8000e-03 | 3.6534e-14 | 6.5039e-09  1.2279e-11  1.7342e-10 
+	    40  | 8.0000e-03 | 4.1659e-14 | 4.5330e-09  8.6411e-12  1.2202e-10 
+	    41  | 8.2000e-03 | 3.5125e-14 | 3.2082e-09  6.0752e-12  8.5803e-11 
+	    42  | 8.4000e-03 | 3.8016e-14 | 2.2389e-09  4.2785e-12  6.0419e-11 
+	    43  | 8.6000e-03 | 2.8753e-14 | 1.5851e-09  3.0107e-12  4.2523e-11 
+	    44  | 8.8000e-03 | 3.6921e-14 | 1.1076e-09  2.1222e-12  2.9972e-11 
+	    45  | 9.0000e-03 | 2.7691e-14 | 7.8449e-10  1.4949e-12  2.1116e-11 
 
-  mass_error = 9.8167e-01 - 9.8167e-01 = 4.6629e-15 
+  mass_error = 9.8167e-01 - 9.8167e-01 = 7.7716e-16 
 
         reconstruct     false    |    true
 ================================================
-L2error(Velocity) | 2.59706e-02  | 5.72077e-05 
-L2error(Density)  | 9.83321e-04  | 9.62448e-04 </code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Friday 7 May 2021 18:48">Friday 7 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+L2error(Velocity) | 9.78451e-02  | 2.26617e-04 
+L2error(Density)  | 1.95937e-03  | 1.92490e-03 </code></pre><p><img src="../../images/Example225_CompressibleStokes2D_1.png" alt/> <img src="../images/Example225_CompressibleStokes2D_2.png" alt/> <img src="../images/Example225_CompressibleStokes2D_3.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 11 May 2021 12:20">Tuesday 11 May 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
