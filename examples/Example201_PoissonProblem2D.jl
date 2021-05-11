@@ -26,7 +26,7 @@ function main(; verbosity = 0, diffusion = 1, Plotter = nothing)
     ## build/load any grid (here: a uniform-refined 2D unit square into triangles)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),4)
 
-    ## create empty PDE descriptions
+    ## create empty PDE description
     Problem = PDEDescription("Poisson problem")
 
     ## add unknown(s) (here: "u" that gets id 1 for later reference)
