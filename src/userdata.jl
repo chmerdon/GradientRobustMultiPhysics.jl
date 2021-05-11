@@ -16,11 +16,11 @@ end
 """
 ````
 function ActionKernel(
-    f::Function,
-    dimensions::Array{Int,1};
+    f::Function,                    # user function with interface f(result, _other dependencies_)
+    dimensions::Array{Int,1};       # [length(result), length(input)]
     name = "user action kernel",
-    dependencies::String = "",
-    quadorder::Int = 0)
+    dependencies::String = "",      # substring of "XTRIL" encoding other dependencies in f interface
+    quadorder::Int = 0)             # quadrature order added to actions/operators that evaluate this action kernel
 ````
 
 Provides a negotation interface for some function that can be used in the Action constructor to define a user-defined operator action.
@@ -29,10 +29,7 @@ The function has to obey the interface
     f(result, input, [X, T, R, I, L])
 
 where the parameters X (= space coordinates), T ( = time), R (= region number), I (= item number), L (= local coordinates) are optional.
-Which of them are used has to be specified in the String dependencies. The string "XT" for example specifies that the interface is
-only space and time dependent, i.e
-
-    f(result, input, X, T)
+Which of them are used has to be specified in the String dependencies.
 
 The input vector usually provides the FunctionOperator evaluations of (a subset of) the ansatz arguments of the assembly pattern where the action is used.
 The array dimensions specifies the expected length of result and input and quadorder determines the additional quadrature order to be used if this
@@ -120,11 +117,11 @@ end
 """
 ````
 function DataFunction(
-    f::Function,
-    dimensions::Array{Int,1};
+    f::Function,                    # user function with interface f(result, _other dependencies_)
+    dimensions::Array{Int,1};       # [length(result), length(x)]
     name = "user data function",
-    dependencies::String = "",
-    quadorder::Int = 0)
+    dependencies::String = "",      # substring of "XT" encoding other dependencies in f interface
+    quadorder::Int = 0)             # quadrature order added to operator's quadorder that evalute f
 ````
 
 Provides a negotation interface for some user-defined function that 
@@ -134,11 +131,7 @@ The function f has to obey the interface
     f(result, [X, T])
 
 where the parameters X (= space coordinates) and T ( = time) are optional. Which of them are used has to be specified in the 
-String dependencies. The string "X" for example specifies that the interface is only space-dependent, i.e
-
-    f(result, X)
-
-The array dimensions specifies the expected length of result and input and quadorder determines the additional quadrature order to be used if this
+String dependencies. The array dimensions specifies the expected length of result and input and quadorder determines the additional quadrature order to be used if this
 function is involved in some quadrature-requireing procedure.
 """
 function DataFunction(f::Function, dimensions::Array{Int,1}; name = "user data function", dependencies::String = "", quadorder::Int = 0)
@@ -155,6 +148,13 @@ function DataFunction(f::Function, dimensions::Array{Int,1}; name = "user data f
 end
 
 
+"""
+````
+function DataFunction(c::Array{<:Real,1}; name = "constant user data", quadorder::Int = 0)
+````
+
+Directly generates a DataFunction from a given array c, i.e. a DataFunction that is constant and has no dependencies on x or t.
+"""
 function DataFunction(c::Array{<:Real,1}; name = "constant user data", quadorder::Int = 0)
     dimensions = [length(c),0]
     function f_from_c(result)
@@ -167,11 +167,11 @@ end
 """
 ````
 function ExtendedDataFunction(
-    f::Function,
-    dimensions::Array{Int,1};
+    f::Function,                    # user function with interface f(result, _other dependencies_)
+    dimensions::Array{Int,1};       # [length(result), length(x)]
     name = "user data function",
-    dependencies::String = "",
-    quadorder::Int = 0)
+    dependencies::String = "",      # substring of "XTRIL" encoding other dependencies in f interface
+    quadorder::Int = 0)             # quadrature order added to operator's quadorder that evalute f
 ````
 
 Provides a negotation interface for some data function with extended dependencies
@@ -181,12 +181,7 @@ The function f has to obey the interface
     f(result, [X, T, R, I, L])
 
 where the parameters X (= space coordinates) and T ( = time) are optional. Which of them are used has to be specified in the 
-String dependencies. The string "X,I" for example specifies that the interface is
-only space-dependent and item-dependent, i.e
-
-    f(result, X, I)
-
-The array dimensions specifies the expected length of result and X (if X-depdendent, otherwise will be ignored)
+String dependencies. The array dimensions specifies the expected length of result and X (if X-depdendent, otherwise will be ignored)
 and quadorder determines the additional quadrature order to be used if this function is involved in some quadrature-requireing procedure.
 """
 function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "user data function", dependencies::String = "", quadorder::Int = 0)

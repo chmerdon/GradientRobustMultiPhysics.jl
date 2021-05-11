@@ -10,7 +10,7 @@ The PDEDescription has similarities with the weak form of your problem (without 
 
 The following flow chart summarises the assembly process during the solve. The green parts can be modified/specified by the user, the rest is handled automatically. For details on steering the solver see [PDE Solvers](@ref)
 
-![Assembly Flowchart](assembly_flowchart.png) 
+![Assembly Flowchart](images/assembly_flowchart.png) 
 
 
 ```@docs

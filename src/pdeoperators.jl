@@ -93,7 +93,6 @@ function Base.show(io::IO, O::PDEOperator)
     println(io,"\ttranspose A = $(O.transposed_assembly)")
     println(io,"\ttranspose C = $(O.transposed_copy)")
     println(io,"\tfixed ar/id = $(O.fixed_arguments) / $(O.fixed_arguments_ids)")
-    
 end
 
 has_copy_block(O::PDEOperator) = O.transposed_copy
@@ -447,7 +446,7 @@ function ConvectionOperator(
     if auto_newton
         ## generates a nonlinear form with automatic Newton operators by AD
         if name == "auto"
-            name = "(u ⋅ ∇) u ⋅ v"
+            name = "($beta_operator(u) ⋅ $ansatzfunction_operator) u ⋅ $(testfunction_operator)(v)"
         end
         return GenerateNonlinearForm(name, [beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; ADnewton = true, quadorder = quadorder)     
     else
@@ -457,11 +456,11 @@ function ConvectionOperator(
         a_to = fixed_argument
         if name == "auto"
             if a_to == 1
-                name = "(a ⋅ ∇) u ⋅ v"
+                name = "($beta_operator(a) ⋅ $ansatzfunction_operator) u ⋅ $(testfunction_operator)(v)"
             elseif a_to == 2
-                name = "(u ⋅ ∇) a ⋅ v"
+                name = "($beta_operator(u) ⋅ $ansatzfunction_operator) a ⋅ $(testfunction_operator)(v)"
             elseif a_to == 3
-                name = "(u ⋅ ∇) v ⋅ a"
+                name = "($beta_operator(u) ⋅ $ansatzfunction_operator) v ⋅ $(testfunction_operator)(a)"
             end
         end
         

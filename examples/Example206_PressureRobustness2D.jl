@@ -29,7 +29,6 @@ discretisation solves ``\mathbf{u} = 0`` exactly in test problem 1 and gives muc
 module Example206_PressureRobustness2D
 
 using GradientRobustMultiPhysics
-using Printf
 
 ## problem data
 function HydrostaticTestProblem()
@@ -77,7 +76,7 @@ function PotentialFlowTestProblem()
 end
 
 
-function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_results = true, verbosity = 1, target_residual = 1e-10, maxiterations = 20)
+function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_results = true, verbosity = 1, target_residual = 1e-10, maxiterations = 20)
 
     ## load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]
@@ -109,9 +108,8 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
     L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity!, Identity)
     L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, exact_pressure!, Identity)
     H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity_gradient!, Gradient)
-    L2error_velocity = []; L2error_pressure = []; L2error_velocity2 = []; L2error_pressure2 = []
-    L2errorInterpolation_velocity = []; L2errorInterpolation_pressure = []; L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
-    H1error_velocity = []; H1error_velocity2 = []; H1errorBestApproximation_velocity = []; NDofs = []
+    Results = zeros(Float64, nlevels, 9)
+    NDofs = zeros(Int, nlevels)
     
     ## loop over refinement levels
     for level = 1 : nlevels
@@ -122,68 +120,46 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 3, print_res
 
         ## get FESpaces
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-        Solution2 = FEVector{Float64}(["u_h (p-robust)", "p_h (p-robust)"],FES)
-        Solution = FEVector{Float64}(["u_h (classic)", "p_h (classic)"],FES)
-        push!(NDofs,length(Solution.entries))
+        Solution = FEVector{Float64}(["u_c (classic)", "p_c (classic)"],FES)
+        Solution2 = FEVector{Float64}(["u_r (p-robust)", "p_r (p-robust)"],FES)
 
         ## solve both problems
         solve!(Solution, Problem; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
         solve!(Solution2, Problem2; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
 
         ## solve bestapproximation problems
-        L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FES[1])
-        L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FES[2])
-        H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FES[1])
+        L2VelocityBestapproximation = FEVector{Float64}("Πu",FES[1])
+        L2PressureBestapproximation = FEVector{Float64}("πp",FES[2])
+        H1VelocityBestapproximation = FEVector{Float64}("Su",FES[1])
         solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem)
         solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
         solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem)
 
-        ## compute L2 and H1 error
-        append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
-        append!(L2error_velocity2,sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1])))
-        append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1])))
-        append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
-        append!(L2error_pressure2,sqrt(evaluate(L2PressureErrorEvaluator,Solution2[2])))
-        append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1])))
-        append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
-        append!(H1error_velocity2,sqrt(evaluate(H1VelocityErrorEvaluator,Solution2[1])))
-        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1])))
-        
-        ## print results
-        if (level == nlevels) && (print_results)
-            println("\n         |   L2ERROR    |   L2ERROR    |   L2ERROR")
-            println("   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-L2BEST");
-            for j=1:nlevels
-                @printf("  %6d | %.6e | %.6e | %.6e\n",NDofs[j],L2error_velocity[j],L2error_velocity2[j],L2errorBestApproximation_velocity[j])
-            end
-            println("\n         |   H1ERROR    |   H1ERROR    |   H1ERROR")
-            println("   NDOF  | VELO-CLASSIC | VELO-PROBUST | VELO-H1BEST");
-            for j=1:nlevels
-                @printf("  %6d | %.6e | %.6e | %.6e\n",NDofs[j],H1error_velocity[j],H1error_velocity2[j],H1errorBestApproximation_velocity[j])
-            end
-            println("\n         |   L2ERROR    |   L2ERROR    |   L2ERROR")
-            println("   NDOF  | PRES-CLASSIC | PRES-PROBUST | PRES-L2BEST");
-            for j=1:nlevels
-                @printf("  %6d | %.6e | %.6e | %.6e\n",NDofs[j],L2error_pressure[j],L2error_pressure2[j],L2errorBestApproximation_pressure[j])
-            end
-            println("\nLEGEND\n======")
-            println("VELO-CLASSIC : discrete Stokes velocity solution ($(FES[1].name)) with classical discretisation")
-            println("VELO-PROBUST : discrete Stokes velocity solution ($(FES[1].name)) with p-robust discretisation")
-            println("VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)")
-            println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boundary data)")
-            println("PRES-CLASSIC : discrete Stokes pressure solution ($(FES[2].name)) with classical discretisation")
-            println("PRES-PROBUST : discrete Stokes pressure solution ($(FES[1].name)) with p-robust discretisation")
-            println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
-        end    
-    end    
+        ## compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1]))
+        Results[level,3] = sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1]))
+        Results[level,4] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
+        Results[level,5] = sqrt(evaluate(L2PressureErrorEvaluator,Solution2[2]))
+        Results[level,6] = sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1]))
+        Results[level,7] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
+        Results[level,8] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution2[1]))
+        Results[level,9] = sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1]))
+    end
 
-    ## return last error for testing
-    return L2error_velocity2[end]
+    ## print convergence history
+    print_convergencehistory(NDofs, Results[:,1:3]; X_to_h = X -> X.^(-1/2), labels = ["||u-u_c||", "||u-u_r||", "||u-Πu||"])
+    print_convergencehistory(NDofs, Results[:,4:6]; X_to_h = X -> X.^(-1/2), labels = ["||p-p_c||", "||p-p_r||", "||p-πp||"])
+    print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -> X.^(-1/2), labels = ["||∇(u-u_c)||", "||∇(u-u_r)||", "||∇(u-Su)||"])
+
+    ## return last L2 error of p-robust method for testing
+    return Results[end,2]
 end
 
 
 ## everything is wrapped in a main function
-function main(; problem = 2, verbosity = 0, nlevels = 3, viscosity = 1e-2)
+function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2)
 
     ## set log level
     set_verbosity(verbosity)

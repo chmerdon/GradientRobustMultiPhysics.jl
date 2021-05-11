@@ -26,13 +26,13 @@ using ExtendableGrids
 using Printf
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10, target_residual = 1e-14, maxiterations = 50, switch_to_newton_tolerance = 1e-4)
+function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10, target_residual = 1e-12, maxiterations = 50, switch_to_newton_tolerance = 1e-4)
 
     ## set log level
     set_verbosity(verbosity)
 
     ## grid
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4);
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 5);
 
     ## finite element type
     FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
@@ -54,6 +54,7 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true, store = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
+    @show Problem
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual)
 
     ## plot

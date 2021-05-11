@@ -2,7 +2,7 @@
 # User Data and Action Kernels
 
 There is a variety of different user data, like scalar- and vector-valued constants, time-dependent data, region-dependent data or plain functions that
-depend on the the space coordinates. Also dependency on the item number of the reference coordinates of the quadrature point in the quadrature item arr sometimes desireable.
+depend on the the space coordinates. Also dependency on the item number of the reference coordinates of the quadrature point in the quadrature item are sometimes desireable.
 To allow for flexible user-specified data, all functions have to be negotiated by the UserData interface that fixes
 the order and number of the arguments in the interface via a user-given substring of "XTRIL" where each character stands for a dependency.
 The following table explains the meaning of each character.

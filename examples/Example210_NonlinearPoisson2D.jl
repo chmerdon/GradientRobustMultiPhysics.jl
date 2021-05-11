@@ -6,10 +6,18 @@
 This example computes the solution ``u`` of the nonlinear Poisson problem
 ```math
 \begin{aligned}
--\mathrm{div}((1+u^2) \nabla u) & = f \quad \text{in } \Omega
+-\mathrm{div}(q(u) \nabla u) & = f \quad \text{in } \Omega
 \end{aligned}
 ```
 with some right-hand side ``f`` on a series of uniform refinements of the unit square ``\Omega``.
+The quantity q(u) makes the problem nonlinear and we consider the two possibilites
+```math
+\begin{aligned}
+    q_1(u) &:= 1 + u^2\\
+    q_2(u) &:= (\kappa + \lvert \nabla u \rvert)^{p-2} 
+\end{aligned}
+```
+where the second one is known is the p-Laplacian (plus some small regularisation $\kappa \geq 0$ to make it solvable with the Newton solver).
 
 This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression
 and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.
@@ -35,20 +43,38 @@ function exact_gradient!(result,x)
     result[2] = x[1]
     return nothing
 end
-function rhs!(result,x)
-    result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1]) # = -div((1+u^2)*grad(u))
-    return nothing
+function rhs!(q,p,κ)
+    function closure(result,x)
+        if q == 1
+            result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1]) # = -div((1+u^2)*grad(u))
+        elseif q == 2
+            result[1] = -2*(p-2) * (κ + x[1]^2+x[2]^2)^((p-2)/2-1) * x[1] * x[2] # = -div((κ + |grad(u)|)^p-2*grad(u))
+        end
+        return nothing
+    end
+    return closure
 end
-function diffusion_kernel!(result, input)
+function diffusion_kernel1!(result::Array{<:Real,1}, input::Array{<:Real,1})
     ## input[1,2:3] = [u, grad(u)]
     result[1] = (1+input[1]^2)*input[2]
     result[2] = (1+input[1]^2)*input[3]
     return nothing
 end 
+function diffusion_kernel2!(p,κ)
+    function closure(result::Array{<:Real,1}, input::Array{<:Real,1})
+        ## input[1:2] = [grad(u)]
+        ## we use result[1] as temporary storage to compute (κ + |∇u|)^(p-2)
+        result[1] = (κ + input[1]^2 + input[2]^2)^((p-2)/2)
+        result[2] = result[1] * input[2]
+        result[1] = result[1] * input[1]
+        return nothing
+    end
+    return closure
+end 
 
 ## everything is wrapped in a main function
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
+function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
 
     ## set log level
     set_verbosity(verbosity)
@@ -59,10 +85,16 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
     ## negotiate data functions to the package
     user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 2)
     user_function_gradient = DataFunction(exact_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 1)
-    user_function_rhs = DataFunction(rhs!, [1,2]; dependencies = "X", name = "f", quadorder = 4)
+    user_function_rhs = DataFunction(rhs!(q,p,κ), [1,2]; dependencies = "X", name = "f", quadorder = 4)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    nonlin_diffusion = GenerateNonlinearForm("(1+u^2) ∇u ⋅ ∇v", [Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; quadorder = 2, ADnewton = true) 
+    if q == 1
+        nonlin_diffusion = GenerateNonlinearForm("(1+u^2) ∇u ⋅ ∇v", [Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; quadorder = 4, ADnewton = true) 
+    elseif q == 2
+        nonlin_diffusion = GenerateNonlinearForm("(κ+|∇u|^2) ∇u ⋅ ∇v", [Gradient], [1], Gradient, diffusion_kernel2!(p,κ), [2,2]; quadorder = 5, ADnewton = true)   
+    else 
+        @error "only q ∈ [1,2] !"
+    end
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
@@ -75,7 +107,8 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
     ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
     H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
-    L2error = []; H1error = []; NDofs = []
+    NDofs = zeros(Int,nlevels)
+    Results = zeros(Float64,nlevels,2)
 
     ## loop over levels
     Solution = nothing
@@ -86,36 +119,33 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1},
         ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
         Solution = FEVector{Float64}("u_h",FES)
-        push!(NDofs,length(Solution.entries))
 
         ## solve
         @show Solution
         solve!(Solution, Problem; linsolver = factorization)
 
-        ## calculate L2 and H1 error
-        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
-        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+        ## calculate L2 and H1 error and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
     end
 
     if testmode == true
-        return H1error[end]
+        return Results[end,2]
     else
-        ## output errors in a nice table
-        println("\n  NDOF |   L2ERROR   |   H1ERROR")
-        for j=1:nlevels
-            @printf("%6d | %.5e | %.5e\n",NDofs[j],L2error[j],H1error[j]);
-        end
-    
         ## plot
         GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+
+        ## print/plot convergence history
+        print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
+        plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
     end
 end
-
 
 ## test function that is called by test unit
 ## tests if the above problem is solved exactly by P2-FEM
 function test()
-    return main(; FEType = H1P2{1,2}, nlevels = 1, testmode = true)
+    return main(; FEType = H1P2{1,2}, q = 1, nlevels = 1, testmode = true)
 end
 
 end

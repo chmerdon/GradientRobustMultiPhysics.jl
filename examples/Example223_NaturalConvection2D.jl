@@ -32,16 +32,19 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1)
     
     ## load mesh and refine
     xgrid = reference_domain(Triangle2D)
-    xgrid = uniform_refine(xgrid,5)
+    xgrid = uniform_refine(xgrid,6)
 
     ## types for discretisation by Bernardi--Raugel pressure-robust (BDM1 reconstruction) + P1-FEM for temperature
     FETypes = [H1BR{2}, H1P0{1}, H1P1{1}]; 
     postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}}
 
     ## load Stokes prototype and add a unknown for the temperature
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, auto_newton = false)
     add_unknown!(Problem; unknown_name = "temperature", equation_name = "temperature equation")
     Problem.name = "natural convection problem"
+
+    ## add convection term for velocity
+    add_operator!(Problem, [1,1], ConvectionOperator(1, postprocess_operator, 2, 2; testfunction_operator = postprocess_operator, auto_newton = false))
 
     ## add boundary data for velocity (unknown 1) and temperature (unknown 3)
     add_boundarydata!(Problem, 1, [1,2,3], HomogeneousDirichletBoundary)
@@ -52,14 +55,14 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1)
     add_boundarydata!(Problem, 3, [3], HomogeneousDirichletBoundary)
 
     ## add Laplacian to temperature equation
-    add_operator!(Problem,[3,3], LaplaceOperator(1.0; store = true))
+    add_operator!(Problem,[3,3], LaplaceOperator(1.0; store = true, name = "∇(T)⋅∇(V)"))
 
     ## add coupling terms for velocity and temperature
-    add_operator!(Problem,[3,3], ConvectionOperator(1, postprocess_operator, 2, 1; auto_newton = false))
+    add_operator!(Problem,[3,3], ConvectionOperator(1, postprocess_operator, 2, 1; auto_newton = false, name = "(R(u)⋅∇(T)) V"))
     function gravity_kernel(result,input)
         result[1] = -Ra*input[2]
     end
-    add_operator!(Problem,[1,3], AbstractBilinearForm([postprocess_operator, Identity], Action(Float64, gravity_kernel, [1,2]; dependencies = "")))
+    add_operator!(Problem,[1,3], AbstractBilinearForm([postprocess_operator, Identity], Action(Float64, gravity_kernel, [1,2]; name = "-Ra T e_2 ⋅ v", dependencies = "")))
 
     ## show final problem description
     @show Problem

@@ -70,10 +70,10 @@ function make_all(; add_examples_output::Bool = true)
                             info=false,
                             preprocess=preprocess)
 
+            filename = example_md_dir * "/" * base * ".md"
             if (add_examples_output) && number != "A05" # exclude output capturing of ExampleA05
                 # generate default main run output file 
                 include(example_jl_dir * "/" * example_source)
-                filename = example_md_dir * "/" * base * ".md"
                 #imgfile = base * ".png"
                 open(filename, "a") do io
                     redirect_stdout(io) do
@@ -92,6 +92,17 @@ function make_all(; add_examples_output::Bool = true)
                        # end
                     end
                 end
+            end
+            try
+                for k = 1 : 3
+                    imgfile = "../images/" * base * "_$k.png"
+                    open(filename, "a") do io
+                        redirect_stdout(io) do
+                            println("![]($imgfile)")
+                        end
+                    end
+                end
+            catch
             end
         end
     end

@@ -15,17 +15,16 @@ function plot(
     add_grid_plot::Bool = false,
     Plotter = nothing,
     subplots_per_column = 2,
-    resolution = (800,500),
+    resolution = "auto",
     use_subplots::Bool = true,
     colorlevels=51,
-    isolines=11,
+    isolines=9,
     aspect=1,
     show=true,
     clear=true,
     cbar=true,
     cmap = "hot",
-    maintitle = "",
-    fsize = 10)
+    maintitle = "")
 
     nplots = length(Sources) + add_grid_plot
 
@@ -86,17 +85,26 @@ function plot(
                 # not supported yet
             end
             ctx = Array{SubVisualizer,1}(undef, nplots)
+            if resolution == "auto"
+                resolution = (subplots_per_column * 500, (length(layout)-1)*500)
+            end
             # figure=fig, cbar=true
-            vis=GridVisualizer(Plotter=Plotter, layout=(subplots_per_column,(nplots-1)÷subplots_per_column+1), clear=false, legend=false, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+            vis=GridVisualizer(Plotter=Plotter, layout=((nplots-1)÷subplots_per_column+1,subplots_per_column), clear=true, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect, resolution = resolution)
+            if ispyplot(Plotter)
+                Plotter.figure(vis.context[:fignumber], figsize = resolution)
+            end
             for j = 1 : nplots
                 #                subplot = subplots_per_column * 100 + (length(layout)-1) * 10 + j
-                ctx[j] = vis[(j-1)%subplots_per_column+1,(j-1)÷subplots_per_column+1]
+                ctx[j] = vis[(j-1)÷subplots_per_column+1,(j-1)%subplots_per_column+1]
             end
         else
             ctx = Array{SubVisualizer,1}(undef, nplots)
+            if resolution == "auto"
+                resolution = (500, 500)
+            end
             for j = 1 : nplots
                 #cbar = cbar, 
-                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, legend=false, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect)
+                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect, resolution = resolution)
                 ctx[j] = vis[1,1]
             end
         end
@@ -122,11 +130,58 @@ function plot(
         end
         if add_grid_plot
             @logmsg DeepInfo "plotting grid"
-            gridplot!(ctx[nplots], xgrid,show=true) 
+            gridplot!(ctx[nplots], xgrid,show=true; linewidth = 1) 
             if plottertype(Plotter) == PyPlotType
                 Plotter.title(maintitle * " grid")
             end
         end
         reveal(vis) 
+    end
+end
+
+function print_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, name = "convergence history", labels = [], xlabel = "ndofs")
+
+    ## print results
+    xlabel = center_string(xlabel,12)
+    @printf("\n%s|",xlabel)
+    for j = 1 : size(Y,2)
+        if length(labels) < j
+            push!(labels, "DATA $j")
+        end
+        @printf("%s  order  |", center_string(labels[j],16))
+    end
+    @printf("\n")
+    @printf("============|")
+    for j = 1 : size(Y,2)
+        @printf("=========================|")
+    end
+    @printf("\n")
+    order = 0
+    for j=1:length(X)
+        @printf("   %7d  |",X[j]);
+        for k = 1 : size(Y,2)
+            if j > 1
+                order = -log(Y[j-1,k]/Y[j,k]) / (log(X_to_h(X[j])/X_to_h(X[j-1])))
+            end
+            @printf("   %.5e    %.3f  |",Y[j,k], order)
+        end
+        @printf("\n")
+    end
+end
+
+
+function plot_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, Plotter = nothing, name = "convergence history", resolution = (800,600), labels = [], xlabel = "ndofs")
+    if plottertype(Plotter) == PyPlotType
+        Plotter.figure(name, figsize = resolution ./ 100)
+        Plotter.loglog(X, Y; marker = "o");
+        Plotter.xlabel(xlabel) 
+        while length(labels) < size(Y,2)
+            push!(labels, "Data $(length(labels)+1)")
+        end
+        for p in add_h_powers
+            Plotter.loglog(X, X_to_h(X).^p; linestyle = "dotted"); 
+            push!(labels, "h^$p")
+        end
+        Plotter.legend(labels)
     end
 end

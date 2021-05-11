@@ -13,7 +13,7 @@ module ExampleA01_RationalMassMatrix
 using GradientRobustMultiPhysics
 
 ## everything is wrapped in a main function
-function main(; verbosity = 1, Plotter = nothing)
+function main()
 
     ## reference domain as extendable grid
     xgrid = reference_domain(Triangle2D, Rational{Int64})

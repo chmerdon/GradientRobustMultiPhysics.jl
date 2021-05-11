@@ -25,6 +25,43 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - export into csv or vtk datafiles possible for external plotting
 
 
+### Example
+
+The following example demonstrates how to setup a Poisson problem. More extensive examples can be found in the [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html).
+
+```@example
+using GradientRobustMultiPhysics
+
+## build/load any grid (here: a uniform-refined 2D unit square into triangles)
+xgrid = uniform_refine(grid_unitsquare(Triangle2D),4)
+
+## create empty PDE descriptions
+Problem = PDEDescription("Poisson problem")
+
+## add unknown(s) (here: "u" that gets id 1 for later reference)
+add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
+
+## add left-hand side PDEoperator(s) (here: only Laplacian)
+add_operator!(Problem, [1,1], LaplaceOperator(diffusion; AT = ON_CELLS))
+
+## add right-hand side data (here: f = [1] in region(s) [1])
+add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], DataFunction([1]; name = "f"); AT = ON_CELLS))
+
+## add boundary data (here: zero data for boundary regions 1:4)
+add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
+
+## discretise = choose FEVector with appropriate FESpaces
+FEType = H1P2{1,2} # quadratic element with 1 component in 2D
+Solution = FEVector{Float64}("u_h",FESpace{FEType}(xgrid))
+
+## inspect problem and Solution vector structure
+@show Problem Solution
+
+## solve
+solve!(Solution, Problem)
+```
+
+
 ### Installation
 via Julia package manager in Julia 1.5 or above:
 
@@ -34,9 +71,6 @@ via Julia package manager in Julia 1.5 or above:
 # latest version
 (@v1.5) pkg> add GradientRobustMultiPhysics#master
 ```
-
-### EXAMPLES 
-see [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html)
 
 
 ### Dependencies on other Julia packages:

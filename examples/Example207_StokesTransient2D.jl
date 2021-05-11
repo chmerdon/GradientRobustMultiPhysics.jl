@@ -32,7 +32,6 @@ module Example207_StokesTransient2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
 
 ## problem data
 function exact_pressure!(result,x::Array{<:Real,1})
@@ -109,9 +108,8 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity; time = T)
     L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity)
     H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient; time = T)
-    L2error_velocity = []; L2error_pressure = []; NDofs = []
-    L2errorBestApproximation_velocity = []; L2errorBestApproximation_pressure = []
-    H1error_velocity = []; H1errorBestApproximation_velocity = []
+    Results = zeros(Float64, nlevels, 6)
+    NDofs = zeros(Int, nlevels)
     
     ## loop over levels
     for level = 1 : nlevels
@@ -124,7 +122,6 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
 
         ## generate solution fector
         Solution = FEVector{Float64}(["velocity", "pressure"],FES)
-        push!(NDofs,length(Solution.entries))
 
         ## set initial solution ( = bestapproximation at time 0)
         L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FES[1])
@@ -142,65 +139,20 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
         solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
         solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T)
 
-        ## compute L2 and H1 error of all solutions
-        append!(L2error_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
-        append!(L2errorBestApproximation_velocity,sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1])))
-        append!(L2error_pressure,sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
-        append!(L2errorBestApproximation_pressure,sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1])))
-        append!(H1error_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
-        append!(H1errorBestApproximation_velocity,sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1])))
-        
-        ## ouput errors
-        if (level == nlevels)
-            println("\n         |   L2ERROR      order   |   L2ERROR      order   ")
-            println("   NDOF  | VELO-STOKES            | VELO-L2BEST            ");
-            order = 0
-            for j=1:nlevels
-                if j > 1
-                    order = log(L2error_velocity[j-1]/L2error_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf("  %6d | %.5e    %.3f   |",NDofs[j], L2error_velocity[j], order);
-                if j > 1
-                    order = log(L2errorBestApproximation_velocity[j-1]/L2errorBestApproximation_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf(" %.5e    %.3f\n",L2errorBestApproximation_velocity[j], order)
-            end
-            println("\n         |   H1ERROR      order   |   H1ERROR      order   ")
-            println("   NDOF  | VELO-STOKES            | VELO-H1BEST            ");
-            order = 0
-            for j=1:nlevels
-                if j > 1
-                    order = log(H1error_velocity[j-1]/H1error_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf("  %6d | %.5e    %.3f   |",NDofs[j], H1error_velocity[j], order);
-                if j > 1
-                    order = log(H1errorBestApproximation_velocity[j-1]/H1errorBestApproximation_velocity[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf(" %.5e    %.3f\n",H1errorBestApproximation_velocity[j], order)
-            end
-            println("\n         |   L2ERROR      order   |   L2ERROR      order   ")
-            println("   NDOF  | PRES-STOKES            | PRES-L2BEST            ");
-            order = 0
-            for j=1:nlevels
-                if j > 1
-                    order = log(L2error_pressure[j-1]/L2error_pressure[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf("  %6d | %.5e    %.3f   |",NDofs[j], L2error_pressure[j], order);
-                if j > 1
-                    order = log(L2errorBestApproximation_pressure[j-1]/L2errorBestApproximation_pressure[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-                end
-                @printf(" %.5e    %.3f\n",L2errorBestApproximation_pressure[j], order)
-            end
-            println("\nLEGEND\n======")
-            println("VELO-STOKES : discrete Stokes velocity solution ($(FES[1].name))")
-            println("VELO-L2BEST : L2-Bestapproximation of exact velocity (with boundary data)")
-            println("VELO-H1BEST : H1-Bestapproximation of exact velocity (with boudnary data)")
-            println("PRES-STOKES : discrete Stokes pressure solution ($(FES[2].name))")
-            println("PRES-L2BEST : L2-Bestapproximation of exact pressure (without boundary data)")
-
-            GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
-        end    
+        ## compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1]))
+        Results[level,3] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
+        Results[level,4] = sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1]))
+        Results[level,5] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
+        Results[level,6] = sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1]))
     end    
+
+    ## print convergence history
+    print_convergencehistory(NDofs, Results[:,1:2]; X_to_h = X -> X.^(-1/2), labels = ["||u-u_h||", "||u-Πu||"])
+    print_convergencehistory(NDofs, Results[:,3:4]; X_to_h = X -> X.^(-1/2), labels = ["||p-p_h||", "||p-πp||"])
+    print_convergencehistory(NDofs, Results[:,5:6]; X_to_h = X -> X.^(-1/2), labels = ["||∇(u-u_h)||", "||∇(u-Su)||"])
 end
 
 end

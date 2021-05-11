@@ -34,7 +34,7 @@ function main(; verbosity = 0)
     ## generate a unit square mesh and refine
     xgrid = uniform_refine(reference_domain(Tetrahedron3D),4)
     
-    ## negotiate exact_function! and exact_curl! to the package
+    ## negotiate exact_function! and exact_divergence! to the package
     user_function = DataFunction(exact_function!, [3,3]; name = "u", dependencies = "X", quadorder = 3)
     user_function_div = DataFunction(exact_divergence!, [1,3]; name = "div(u)", dependencies = "X", quadorder = 2)
 

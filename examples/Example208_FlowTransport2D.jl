@@ -1,6 +1,6 @@
 #= 
 
-# 205 : Flow + Transport 2D
+# 208 : Flow + Transport 2D
 ([source code](SOURCE_URL))
 
 This example solve the Stokes problem in a Omega-shaped pipe and then uses the velocity in a transport equation for a species with a certain inlet concentration.
@@ -112,7 +112,7 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[3]], [Identity, Identity]; add_grid_plot = false, Plotter = Plotter)
 end
 
 end

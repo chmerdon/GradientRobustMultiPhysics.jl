@@ -124,7 +124,10 @@ end
 function MultiplyScalarAction(value, ncomponents::Int)
 ````
 
+**DEPRECATED**
+
 Directly creates an Action that multiplies a scalar value to the input (vector of length ncomponents).
+This action should not be necessary anymore, since all PDEOperators/AssemblyPatterns have a factor property with the same functionality.
 """
 function MultiplyScalarAction(value, ncomponents::Int, T::Type{<:Real} = Float64)
     function multiply_scalar_action_kernel(result, input)

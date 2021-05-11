@@ -81,7 +81,7 @@ function main(; verbosity = 0, Plotter = nothing, reconstruct::Bool = true, c = 
     set_verbosity(verbosity)
 
     ## load mesh and refine
-    xgrid = uniform_refine(simplexgrid("assets/2d_grid_mountainrange.sg"),1)
+    xgrid = simplexgrid("assets/2d_grid_mountainrange.sg")
 
     ## solve without and with reconstruction and plot
     Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = M, lambda = lambda, shear_modulus = shear_modulus, gamma = gamma)

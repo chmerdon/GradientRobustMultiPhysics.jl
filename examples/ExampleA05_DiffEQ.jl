@@ -12,9 +12,6 @@ This example computes a transient velocity ``\mathbf{u}`` solution of the nonlin
 with (some time-dependent) exterior force ``\mathbf{f}``. The parameter ``\beta`` steers the strength of the nonlinearity. 
 
 The time integration will be performed by a solver from DifferentialEquations.jl or by the iternal backward Euler method of GradientRobustMultiPhysics.
-An quadratic exact solution is prescribed to test if the solver computes the exact solution.
-In case of  ``\beta > 0`` the time integration of GradientRobustMultiPhysics performs 5 stationary nonlinear Newton subiterations (which essentially
-results in this particular linear-in-time example to the fact that even one timestep would be enough, so this is a rather unfair comparison).
 
 Note: To run this example the DifferentialEquations.jl package has to be installed.
 =#
@@ -50,14 +47,14 @@ end
 ## everything is wrapped in a main function
 ## the last four parametes steer the solver from DifferentialEquations.jl
 ## for beta = 0, abstol and reltol can be choosen much larger
-function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, beta = 1,
+function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P1{1}, beta = 1,
     use_diffeq::Bool = true, solver = Rosenbrock23(autodiff = false), adaptive_timestep = true,  abstol = 1e-3, reltol = 1e-3, testmode = false)
 
     ## set log level
     set_verbosity(verbosity)
 
     ## initial grid and final time
-    xgrid = grid_unitsquare(Triangle2D);
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D),1);
 
     ## negotiate data functions to the package
     user_function = DataFunction(exact_solution!, [1,1]; name = "u", dependencies = "XT", quadorder = 5)
@@ -83,7 +80,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     ## define error evaluators
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity; time = T)
     H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient; time = T)
-    L2error = []; NDofs = []; H1error = []; 
+    Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
     
     ## loop over levels
     for level = 1 : nlevels
@@ -94,7 +91,6 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
         Solution = FEVector{Float64}("u_h",FES)
-        push!(NDofs,length(Solution.entries))
 
         ## set initial solution
         interpolate!(Solution[1], user_function) 
@@ -113,36 +109,15 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         ## plot solution at final time
         GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 
-        ## compute L2 and H1 error of all solutions
-        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
-        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+        ## compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
     end    
 
-    ## ouput errors
-    if testmode
-        return L2error[1]
-    else
-        println("\n   NDOF  |   L2ERROR      order   ")
-        order = 0
-        for j=1:nlevels
-            if j > 1
-                order = log(L2error[j-1]/L2error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-            end
-            @printf("  %6d |",NDofs[j]);
-            @printf(" %.5e ",L2error[j])
-            @printf("   %.3f   \n",order)
-        end
-        println("\n   NDOF  |   H1ERROR      order   ")
-        order = 0
-        for j=1:nlevels
-            if j > 1
-                order = log(H1error[j-1]/H1error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-            end
-            @printf("  %6d |",NDofs[j]);
-            @printf(" %.5e ",H1error[j])
-            @printf("   %.3f   \n",order)
-        end
-    end
+    ## print/plot convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
 end
 
 function test()

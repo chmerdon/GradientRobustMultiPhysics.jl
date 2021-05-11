@@ -17,7 +17,6 @@ module Example204_PoissonLshapeAdaptive2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
 
 ## exact solution u for the Poisson problem
 function exact_function!(result,x::Array{<:Real,1})
@@ -150,23 +149,10 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
     
     ## plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
-    
-    ## print results
-    @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order   ")
-    @printf("\n=========|========================|========================|========================\n")
-    order = 0
-    for j=1:nlevels
-        @printf("  %6d |",NDofs[j]);
-        for k = 1 : 3
-            if j > 1
-                order = log(Results[j-1,k]/Results[j,k]) / (log(NDofs[j]/NDofs[j-1])/2)
-            end
-            @printf(" %.5e ",Results[j,k])
-            @printf("   %.3f   |",order)
-        end
-        @printf("\n")
-    end
-    
+
+    ## print/plot convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [2,3], X_to_h = X -> X.^(-1/2), Plotter = Plotter, labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
 end
 
 end

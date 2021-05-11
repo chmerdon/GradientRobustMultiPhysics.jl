@@ -245,7 +245,7 @@ include("dataexport.jl")
 export writeVTK!, writeCSV!
 
 include("plots.jl")
-export plot
+export plot, plot_convergencehistory, print_convergencehistory
 
 
 end #module

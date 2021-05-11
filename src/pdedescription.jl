@@ -216,10 +216,10 @@ function Base.show(io::IO, PDE::PDEDescription)
         if length(PDE.LHSOperators[j,k]) > 0
             print("    [$j,$k]   | ")
             for o = 1 : length(PDE.LHSOperators[j,k])
-                try
-                    print("$(PDE.LHSOperators[j,k][o].name) (regions = $(PDE.LHSOperators[j,k][o].regions))")
-                catch
-                    print("$(PDE.LHSOperators[j,k][o].name) (regions = [0])")
+                if typeof(PDE.LHSOperators[j,k][o]) <: PDEOperator
+                    print("$(PDE.LHSOperators[j,k][o].name) (APT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[2]), AT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[3]), regions = $(PDE.LHSOperators[j,k][o].regions))")
+                else
+                    print("$(typeof(PDE.LHSOperators[j,k][o]))")
                 end
                 if o == length(PDE.LHSOperators[j,k])
                     println("")
@@ -237,10 +237,11 @@ function Base.show(io::IO, PDE::PDEDescription)
         if length(PDE.RHSOperators[j]) > 0
             print("     [$j]    | ")
             for o = 1 : length(PDE.RHSOperators[j])
-                try
-                    print("$(PDE.RHSOperators[j][o].name) (regions = $(PDE.RHSOperators[j][o].regions))")
-                catch
-                    print("$(PDE.RHSOperators[j][o].name) (regions = [0])")
+
+                if typeof(PDE.RHSOperators[j][o]) <: PDEOperator
+                    print("$(PDE.RHSOperators[j][o].name) (APT = $(typeof(PDE.RHSOperators[j][o]).parameters[2]), AT = $(typeof(PDE.RHSOperators[j][o]).parameters[3]), regions = $(PDE.RHSOperators[j][o].regions))")
+                else
+                    print("$(typeof(PDE.RHSOperators[j][o]))")
                 end
                 if o == length(PDE.RHSOperators[j])
                     println("")

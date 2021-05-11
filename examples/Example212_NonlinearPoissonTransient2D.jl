@@ -48,13 +48,13 @@ function diffusion_kernel!(result::Array{<:Real,1}, input::Array{<:Real,1})
 end 
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P2{1,2}, testmode = false)
+function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P1{1}, testmode = false)
 
     ## set log level
     set_verbosity(verbosity)
 
     ## initial grid and final time
-    xgrid = grid_unitsquare(Triangle2D);
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D),1);
 
     ## negotiate data functions to the package
     user_function = DataFunction(exact_solution!, [1,1]; name = "u", dependencies = "XT", quadorder = 5)
@@ -74,9 +74,11 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     ## define error evaluators
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity; time = T)
     H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient; time = T)
-    L2error = []; NDofs = []; H1error = []; 
+    NDofs = zeros(Int,nlevels)
+    Results = zeros(Float64,nlevels,2)
     
     ## loop over levels
+    Solution = nothing
     for level = 1 : nlevels
 
         ## refine grid
@@ -85,7 +87,6 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
         Solution = FEVector{Float64}("u_h",FES)
-        push!(NDofs,length(Solution.entries))
 
         ## set initial solution
         interpolate!(Solution[1], user_function) 
@@ -99,35 +100,21 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         ## plot solution at final time
         GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 
-        ## compute L2 and H1 error of all solutions
-        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
-        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
-    end    
+        ## calculate L2 and H1 error and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+    end
 
-    ## ouput errors
-    if testmode
-        return L2error[1]
+    if testmode == true
+        return Results[end,2]
     else
-        println("\n   NDOF  |   L2ERROR      order   ")
-        order = 0
-        for j=1:nlevels
-            if j > 1
-                order = log(L2error[j-1]/L2error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-            end
-            @printf("  %6d |",NDofs[j]);
-            @printf(" %.5e ",L2error[j])
-            @printf("   %.3f   \n",order)
-        end
-        println("\n   NDOF  |   H1ERROR      order   ")
-        order = 0
-        for j=1:nlevels
-            if j > 1
-                order = log(H1error[j-1]/H1error[j]) / (log(NDofs[j]/NDofs[j-1])/2)
-            end
-            @printf("  %6d |",NDofs[j]);
-            @printf(" %.5e ",H1error[j])
-            @printf("   %.3f   \n",order)
-        end
+        ## plot
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+
+        ## print/plot convergence history
+        print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
+        plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
     end
 end
 

@@ -32,7 +32,6 @@ module ExampleA06_LocalEquilibratedFluxes2D
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using ExtendableSparse
-using Printf
 
 ## exact solution u for the Poisson problem
 function exact_function!(result,x::Array{<:Real,1})
@@ -156,27 +155,10 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
     
     ## plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
-    
-    ## print results
-    @printf("\n  NDOFS  |   L2ERROR      order   |   H1ERROR      order   | H1-ESTIMATOR   order      efficiency   ")
-    @printf("\n=========|========================|========================|========================================\n")
-    order = 0
-    for j=1:nlevels
-        @printf("  %6d |",NDofs[j]);
-        for k = 1 : 3
-            if j > 1
-                order = log(Results[j-1,k]/Results[j,k]) / (log(NDofs[j]/NDofs[j-1])/2)
-            end
-            @printf(" %.5e ",Results[j,k])
-            if k == 3
-                @printf("   %.3f       %.3f",order,Results[j,k]/Results[j,k-1])
-            else
-                @printf("   %.3f   |",order)
-            end
-        end
-        @printf("\n")
-    end
-    
+
+    ## print/plot convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
 end
 
 

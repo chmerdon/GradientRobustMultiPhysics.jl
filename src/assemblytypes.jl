@@ -57,22 +57,22 @@ causes assembly/interpolation on boundary edges of the grid (only in 3D)
 abstract type ON_BEDGES <: AbstractAssemblyType end # on boundary edges
 
 function Base.show(io::Core.IO, ::Type{ON_CELLS})
-    print(io,"on cells")
+    print(io,"ON_CELLS")
 end
 function Base.show(io::Core.IO, ::Type{ON_FACES})
-    print(io,"on faces")
+    print(io,"ON_FACES")
 end
 function Base.show(io::Core.IO, ::Type{ON_BFACES})
-    print(io,"on boundary faces")
+    print(io,"ON_BFACES")
 end
 function Base.show(io::Core.IO, ::Type{ON_IFACES})
-    print(io,"on interior faces")
+    print(io,"ON_IFACES")
 end
 function Base.show(io::Core.IO, ::Type{ON_EDGES})
-    print(io,"on edges")
+    print(io,"ON_EDGES")
 end
 function Base.show(io::Core.IO, ::Type{ON_BEDGES})
-    print(io,"on boundary edges")
+    print(io,"ON_BEDGES")
 end
 
 ItemType4AssemblyType(::Type{ON_CELLS}) = ITEMTYPE_CELL

@@ -79,7 +79,6 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity; time = T)
     L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity; time = T)
     H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient; time = T)
-    L2VelocityError = []; L2PressureError = []; H1VelocityError = []; NDofs = []
 
     ## load Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
@@ -145,6 +144,7 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
     @show Problem
 
     ## loop over levels
+    Results = zeros(Float64,nlevels,3); NDofs = zeros(Int,nlevels)
     for level = 1 : nlevels
 
         ## refine grid and update grid component references
@@ -158,7 +158,6 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
 
         ## generate solution vector
         Solution = FEVector{Float64}(["v_h", "p_h"],FES)
-        push!(NDofs, length(Solution.entries))
 
         ## solve
         solve!(Solution, Problem; time = T)
@@ -166,19 +165,15 @@ function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, 
         ## plot
         GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter)
 
-        ## compute L2 and H1 error of all solutions
-        push!(L2VelocityError, sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1])))
-        push!(L2PressureError, sqrt(evaluate(L2PressureErrorEvaluator,Solution[2])))
-        push!(H1VelocityError, sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1])))
+        ## compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
+        Results[level,3] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
     end    
 
-    ## output errors in a nice table
-    println("\n   NDOF  | L2ERROR(v_h) | H1ERROR(v_h) | L2ERROR(p_h)")
-    for j=1:nlevels
-        @printf("  %6d |",NDofs[j]);
-        @printf(" %.6e |",L2VelocityError[j])
-        @printf(" %.6e |",H1VelocityError[j])
-        @printf(" %.6e\n",L2PressureError[j])
-    end
+    ## print/show convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), labels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_h) ||"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, labels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_h) ||"])
 end
 end

@@ -50,9 +50,6 @@ function main(; Plotter = nothing, verbosity = 0)
     ## solve
     Solution = FEVector{Float64}(["u_h (Hdiv-broken)", "LM face jumps"],FES)
     solve!(Solution, Problem)
-
-    ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
     
     ## solve again with Hdiv-continuous element
     ## to see that we get the same result
@@ -69,6 +66,9 @@ function main(; Plotter = nothing, verbosity = 0)
     println("\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
     println("\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))")
     println("\tL2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))")
+
+    ## plot both solutions
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution2[1]], [Identity, Identity]; Plotter = Plotter)
 end
 
 end

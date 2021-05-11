@@ -27,7 +27,7 @@ abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
 """
 ````
-mutable struct FESpace{FEType<:AbstractFiniteElement}
+struct FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
     ndofs::Int                            # total number of dofs
@@ -66,6 +66,7 @@ function FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}(
 
 Constructor for FESpace of the given FEType, AT = ON_CELLS/ON_FACES/ON_EDGES generates a finite elements space on the cells/faces/edges of the provided xgrid (if omitted ON_CELLS is used as default).
 The broken switch allows to generate a broken finite element space (that is piecewise H1/Hdiv/HCurl). If no name is provided it is generated automatically from FEType.
+If no AT is provided, the space is generated ON_CELLS.
 """
 function FESpace{FEType,AT}(
     xgrid::ExtendableGrid;

@@ -56,7 +56,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     ## prepare error calculation
     L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
     H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
-    L2error = []; H1error = []; NDofs = []
+    Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
 
     ## loop over levels
     Solution = nothing
@@ -67,26 +67,22 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
         ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
         Solution = FEVector{Float64}("u_h",FES)
-        push!(NDofs,length(Solution.entries))
 
         ## solve the problem
         solve!(Solution, Problem)
 
-        ## calculate L2 and H1 error
-        append!(L2error,sqrt(evaluate(L2ErrorEvaluator,Solution[1])))
-        append!(H1error,sqrt(evaluate(H1ErrorEvaluator,Solution[1])))
+        ## calculate L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
     end
 
-    ## output errors in a nice table
-    println("\n   NDOF  |   L2ERROR   |   H1ERROR")
-    for j=1:nlevels
-        @printf("  %6d |",NDofs[j]);
-        @printf(" %.5e |",L2error[j])
-        @printf(" %.5e\n",H1error[j])
-    end
-
-    ## plot (Plotter = Makie should work)
+    ## plot (Plotter = GLMakie should work)
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
+
+    ## print/plot convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/3), labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/3), Plotter = Plotter, labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
 end
 
 end

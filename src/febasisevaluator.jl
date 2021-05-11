@@ -627,7 +627,7 @@ end
 
 # IDENTITYCOMPONENT OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:IdentityComponent,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,FEOP,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,FEOP<:IdentityComponent,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
