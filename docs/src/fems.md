@@ -32,14 +32,14 @@ AbstractFiniteElement
 #### Remarks
 - each type depends on one or two parameters, the first one is always the number of components (ncomponents) that determines of the
   finite element is scalar- or veector-valued; some elements additionaly require the parameter edim <: Int if they are structurally different in different space dimensions
-- each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and degrees of freedom maps for the different [Assembly Types](@ref) (coded as a string)
+- each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and degrees of freedom maps for each [Assembly Type](@ref) (coded as a string)
 - broken finite elements are possible via the broken switch in the [FESpace](@ref) constructor
 - the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated by FEBasisEvaluator.jl
 - depending on additional continuity properties of the element types more basis function sets are defined:
     - AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
     - AbstractHdivFiniteElements additionally have evaluations of nonzero normalfluxes of basisfunctions on faces/bfaces
     - AbstractHcurlFiniteElements additionally have evaluations of nonzero tangentfluxes of basisfunctions on edges/bedges
-- each finite element has its own implemented standard interpolation interpolate! (see [Finite Element Interpolations](@ref)) that can be applied to [Data Functions](@ref), below it is shortly described what this means for each finite element
+- each finite element has its own implemented standard interpolation interpolate! (see [Finite Element Interpolations](@ref)) that can be applied to a [Data Function](@ref), below it is shortly described what this means for each finite element
 
 
 ## List of implemented Finite Elements

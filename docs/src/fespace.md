@@ -27,7 +27,7 @@ Order   = [:type, :function]
 ```
 
 
-The following DofMap subtypes are available and are used as keys to access the dofmap via FESpace[DofMap] (which is equivalent to FESpace.dofmaps[DofMap]).
+The following DofMap subtypes are available and are used as keys to access the dofmap via ```FESpace[DofMap]``` (which is equivalent to ```FESpace.dofmaps[DofMap]```).
 
 | DofMap             | Explanation                                       |
 | :----------------: | :------------------------------------------------ | 

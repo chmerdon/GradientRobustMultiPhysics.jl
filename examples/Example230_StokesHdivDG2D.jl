@@ -1,6 +1,6 @@
 #= 
 
-# 230 : Stokes Hdiv-DG (2D)
+# 230 : Stokes Hdiv-DG 2D
 ([source code](SOURCE_URL))
 
 This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem

@@ -29,7 +29,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 
 The following example demonstrates how to setup a Poisson problem. More extensive examples can be found in the [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html).
 
-```@example
+```julia
 using GradientRobustMultiPhysics
 
 # build/load any grid (here: a uniform-refined 2D unit square into triangles)

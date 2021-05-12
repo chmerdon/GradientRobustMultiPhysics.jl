@@ -8,10 +8,10 @@ space or time variables and will assemble itself accordingly.
 
 | AbstractBoundaryType                | Subtypes                                 | causes                                                                  |
 | :---------------------------------- | :--------------------------------------- | :---------------------------------------------------------------------- |
-| [`DirichletBoundary`](@ref)         |                                          |                                                                         |
-|                                     | [`BestapproxDirichletBoundary`](@ref)    | computation of Dirichlet data by bestapproximation along boundary faces |
-|                                     | [`InterpolateDirichletBoundary`](@ref)   | computation of Dirichlet data by interpolation along boundary faces     |
-|                                     | [`HomogeneousDirichletBoundary`](@ref)   | zero Dirichlet data on all dofs                                         |
+| DirichletBoundary                   |                                          |                                                                         |
+|                                     | BestapproxDirichletBoundary              | computation of Dirichlet data by bestapproximation along boundary faces |
+|                                     | InterpolateDirichletBoundary             | computation of Dirichlet data by interpolation along boundary faces     |
+|                                     | HomogeneousDirichletBoundary             | zero Dirichlet data on all dofs                                         |
 
 
 ```@docs

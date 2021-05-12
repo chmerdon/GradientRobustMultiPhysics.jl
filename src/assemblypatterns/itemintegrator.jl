@@ -38,7 +38,8 @@ function L2ErrorIntegrator(
 
 Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error.
 """
-function L2ErrorIntegrator(T::Type{<:Real},
+function L2ErrorIntegrator(
+    T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction},
     operator::Type{<:AbstractFunctionOperator};
     quadorder = "auto",
@@ -61,7 +62,22 @@ function L2ErrorIntegrator(T::Type{<:Real},
     action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = "L2 error kernel", dependencies = "X", quadorder = quadorder)
     return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = "L2 error ($(compare_data.name))")
 end
-function L2NormIntegrator(T::Type{<:Real},
+
+"""
+````
+L2NormIntegrator(
+    T::Type{<:Real},
+    ncomponents::Int,
+    operator::Type{<:AbstractFunctionOperator};
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    quadorder = 2,
+    regions = [0])
+````
+
+Creates an ItemIntegrator that computes the L2 norm of an operator evaluation where ncomponents is the expected length of the operator evaluation.
+"""
+function L2NormIntegrator(
+    T::Type{<:Real},
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
@@ -76,7 +92,22 @@ function L2NormIntegrator(T::Type{<:Real},
     action_kernel = ActionKernel(L2norm_function, [1,ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = 2)
     return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = "L2 norm")
 end
-function L2DifferenceIntegrator(T::Type{<:Real},
+
+"""
+````
+function L2DifferenceIntegrator(
+    T::Type{<:Real},
+    ncomponents::Int,
+    operator::Type{<:AbstractFunctionOperator};
+    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    quadorder = 2,
+    regions = [0])
+````
+
+Creates an ItemIntegrator that computes the L2 norm difference between two arguments evalauted with the same operator where ncomponents is the expected length of each operator evaluation.
+"""
+function L2DifferenceIntegrator(
+    T::Type{<:Real},
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,

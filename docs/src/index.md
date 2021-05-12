@@ -16,6 +16,43 @@ Also note, that this package is part of the meta-package [PDELIB.jl](https://git
     The focus is (at least currently) not on high-performance, high-order or parallel-computing. Also, this package is still in an early development stage and features and interfaces might change in future updates.
     
 
+## Installation
+via Julia package manager in Julia 1.5 or above:
+
+```julia
+# latest stable version
+(@v1.5) pkg> add GradientRobustMultiPhysics
+# latest version
+(@v1.5) pkg> add GradientRobustMultiPhysics#master
+```
+
+#### Dependencies on other Julia packages
+
+[ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)\
+[GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)\
+[ExtendableSparse.jl](https://github.com/j-fu/ExtendableSparse.jl)\
+[DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
+[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
+[DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
+[WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl)\
+
+
+
+## Getting started
+
+The general work-flow is as follows:
+
+1. Mesh the domain of computation, possibly using one of the constructors by ExtendableGrid.jl or via mesh generators in [SimplexGridFactory.jl](https://github.com/j-fu/SimplexGridFactory.jl).
+2. Describe your PDE system with the help of the [PDE Description](@ref) and [PDE Operators](@ref). User parameters and customised operator actions are framed with the help of [User Data and Actions](@ref).
+3. Discretise, i.e. choose suitable finite element ansatz spaces for the unknowns of your PDE system.
+4. Solve (stationary, time-dependent, iteratively?)
+5. Postprocess (compute stuff, plot, export data)
+
+Please have a look at the Examples.
+
+
+
+
 ## What is gradient-robustness?
 
 Gradient-robustness is a feature of discretisations that exactly balance gradient forces in the momentum balance. In the case of the incompressible Navier--Stokes equations this means that the discrete velocity does not depend on the exact pressure. Divergence-free finite element methods have this property but are usually expensive and difficult to contruct. However, also non-divergence-free classical finite element methods can be made pressure-robust with the help of reconstruction operators applied to testfuntions in certain terms of the momentum balance, see e.g. references [1,2] below.
@@ -40,36 +77,3 @@ Recently gradient-robustness was also connected to the design of well-balanced s
         [>Journal-Link<](https://doi.org/10.1016/j.cma.2020.113069)
         [>Preprint-Link<](https://arxiv.org/abs/1911.01295)
 
-
-## Installation
-via Julia package manager in Julia 1.5 or above:
-
-```@example
-# latest stable version
-(@v1.5) pkg> add GradientRobustMultiPhysics
-# latest version
-(@v1.5) pkg> add GradientRobustMultiPhysics#master
-```
-
-## Dependencies on other Julia packages
-
-[ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)\
-[GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)\
-[ExtendableSparse.jl](https://github.com/j-fu/ExtendableSparse.jl)\
-[DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
-[ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
-[DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
-[WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl)\
-
-
-
-## Getting started
-
-The general work-flow is as follows:
-
-1. Describe your PDE system with the help of the [PDE Description](@ref) (possibly based on one of the [PDE Prototypes](@ref)). Additional parameters, right-hand side and boundary data can be assigned via [User Data and Action Kernels](@ref).
-2. Generate a mesh, possibly using one of the constructors by ExtendableGrid.jl or via mesh generators in [SimplexGridFactory.jl](https://github.com/j-fu/SimplexGridFactory.jl).
-3. Define finite element ansatz spaces (see [Finite Element Spaces and Arrays](@ref) for details) for the unknowns of your PDE system.
-4. Solve by using solve! or via a TimeControlSolver and advance! if the PDE system is time-dependent (see [PDE Solvers](@ref) for details).
-
-Please have a look at the Examples.

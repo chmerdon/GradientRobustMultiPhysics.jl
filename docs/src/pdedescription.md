@@ -8,7 +8,7 @@ to get access to certain automated mechanisms (in particular concerning fixpoint
 
 The PDEDescription has similarities with the weak form of your problem (without time derivatives that are added separately by TimeControlSolver) and in general does not need any information on the discretisation at this point.
 
-The following flow chart summarises the assembly process during the solve. The green parts can be modified/specified by the user, the rest is handled automatically. For details on steering the solver see [PDE Solvers](@ref)
+The following flow chart summarises the assembly process during the solve. The green parts can be modified/specified by the user, the rest is handled automatically. For details on steering the solver see the coressponding section.
 
 ![Assembly Flowchart](images/assembly_flowchart.png) 
 

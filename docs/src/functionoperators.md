@@ -9,18 +9,18 @@ FunctionOperators are building blocks for the weak form and define the operation
 
 | Function operator                                    | Description                                             | Mathematically                                                   |
 | :--------------------------------------------------- | :------------------------------------------------------ | :--------------------------------------------------------------- |
-| [`Identity`](@ref)                                   | identity                                                | ``v \rightarrow v``                                              |
-| [`IdentityComponent{c}`](@ref)                       | identity of c-th component                              | ``v \rightarrow v_c``                                            |
-| [`NormalFlux`](@ref)                                 | normal flux (function times normal)                     | ``v \rightarrow v \cdot \vec{n}``                                |
-| [`TangentFlux`](@ref)                                | tangent flux (function times tangent)                   | ``v \rightarrow v \cdot \vec{t}``                                |
-| [`Gradient`](@ref)                                   | gradient/Jacobian (as a vector)                         | ``v \rightarrow \nabla v``                                       |
-| [`SymmetricGradient`](@ref)                          | symmetric part of the gradient                          | ``v \rightarrow Voigt(\mathrm{sym}(\nabla v))``                  |
-| [`Divergence`](@ref)                                 | divergence                                              | ``v \rightarrow \mathrm{div}(v) = \nabla \cdot v``               |
-| [`CurlScalar`](@ref)                                 | curl operator 1D to 2D (rotated gradient)               | ``v \rightarrow [-dv/dx_2,dv/dx_1]``                             |
-| [`Curl2D`](@ref)                                     | curl operator 2D to 1D                                  | ``v \rightarrow dv_1/dx_2 - dv_2/dx_1``                          |
-| [`Curl3D`](@ref)                                     | curl operator 3D to 3D                                  | ``v \rightarrow \nabla \times v``                                |
-| [`Hessian`](@ref)                                    | Hesse matrix = all 2nd order derivatives (as a vector)  | ``v \rightarrow D^2 v``                                          |
-| [`Laplacian`](@ref)                                  | Laplace Operator                                        | ``v \rightarrow \Delta v``                                       |
+| Identity                                             | identity                                                | ``v \rightarrow v``                                              |
+| IdentityComponent{c}                                 | identity of c-th component                              | ``v \rightarrow v_c``                                            |
+| NormalFlux                                           | normal flux (function times normal)                     | ``v \rightarrow v \cdot \vec{n}``                                |
+| TangentFlux                                          | tangent flux (function times tangent)                   | ``v \rightarrow v \cdot \vec{t}``                                |
+| Gradient                                             | gradient/Jacobian (as a vector)                         | ``v \rightarrow \nabla v``                                       |
+| SymmetricGradient                                    | symmetric part of the gradient                          | ``v \rightarrow Voigt(\mathrm{sym}(\nabla v))``                  |
+| Divergence                                           | divergence                                              | ``v \rightarrow \mathrm{div}(v) = \nabla \cdot v``               |
+| CurlScalar                                           | curl operator 1D to 2D (rotated gradient)               | ``v \rightarrow [-dv/dx_2,dv/dx_1]``                             |
+| Curl2D                                               | curl operator 2D to 1D                                  | ``v \rightarrow dv_1/dx_2 - dv_2/dx_1``                          |
+| Curl3D                                               | curl operator 3D to 3D                                  | ``v \rightarrow \nabla \times v``                                |
+| Hessian                                              | Hesse matrix = all 2nd order derivatives (as a vector)  | ``v \rightarrow D^2 v``                                          |
+| Laplacian                                            | Laplace Operator                                        | ``v \rightarrow \Delta v``                                       |
 
 
 !!! note
@@ -30,7 +30,7 @@ FunctionOperators are building blocks for the weak form and define the operation
     Currently, not every function operator works in any dimension and for any finite element. More evaluations
     are added as soon as they are needed (and possibly upon request).
     Also, the function operators can be combined with user-defined actions to evaluate other operators that
-    can be build from the ones available (e.g. the deviator or the 3D-curl).
+    can be build from the ones available (e.g. the deviator).
 
 
 ## Jumps and Averages
@@ -49,6 +49,8 @@ Average
     Currently this feature is only available for assembly on faces (2D and 3D) and certain function operators like Identity, Gradient, ReconstructionIdentity, ReconstructionGradient, NormalFlux, TangentFlux, but more
     are added as soon as they are needed (and possibly upon request).
 
+    Also note that if a Jump or Average operator has different behaviour depending on the Assembly Pattern it is used in. Usually, the input of the action used in the assembly pattern has the evaluation on one of the two neighbours at a time, but this should be okay in a linear context. Only in ItemIntegrators the whole jump comes in. In NonlinearForms jumps and averages should better not be used currently.
+
 
 ## Reconstruction Operators
 
@@ -60,9 +62,9 @@ So far such operators are available for the vector-valued Crouzeix-Raviart and B
 
 | Function operator                                    | Description                                             |
 | :--------------------------------------------------- | :------------------------------------------------------ |
-| [`ReconstructionIdentity{FEType}`](@ref)             | reconstruction operator into specified FEType           |
-| [`ReconstructionDivergence{FEType}`](@ref)           | divergence of FEType reconstruction operator            |
-| [`ReconstructionGradient{FEType}`](@ref)             | gradient of FEType reconstruction operator              |
+| ReconstructionIdentity{FEType}                       | reconstruction operator into specified FEType           |
+| ReconstructionDivergence{FEType}                     | divergence of FEType reconstruction operator            |
+| ReconstructionGradient{FEType}                       | gradient of FEType reconstruction operator              |
 
 
 !!! note

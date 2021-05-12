@@ -25,7 +25,7 @@ The following table lists all available operators and physics-motivated construc
 | [`GenerateNonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
 | [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))``                                                                                   |
 
-Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Actions](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Actions](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
+Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Action](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
 
 
 ## Assembly Type
@@ -78,6 +78,25 @@ AbstractBilinearForm
 AbstractTrilinearForm
 ```
 
+### Examples
+
+Below some examples for operators are given:
+
+```julia
+# Example 1 : div-div bilinearform with a factor λ (e.g. for divergence-penalisation)
+operator = AbstractBilinearForm([Divergence,Divergence]; name = "λ (div(u),div(v))", factor = λ)
+
+# Example 2 : Gradient jump stabilisation with an item-dependent action and a factor s (e.g. for convection stabilisation)
+xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+function stabilisation_kernel(result, input, item)
+    result .= input 
+    result .*= xFaceVolumes[item]^2
+end
+action = Action(Float64,stabilisation_kernel, [2,2]; dependencies = "I", quadorder = 0 )
+operator = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES, name = "s |F|^2 [∇(u)]⋅[∇(v)]", factor = s)
+
+```
+
 ## Lagrange Multipliers
 
 There is a special bilinearform intended to use for the assembly of Lagrange multipliers that automatically copies itself to the transposed block of the PDEdescription.
@@ -89,7 +108,7 @@ LagrangeMultiplier
 
 ## Nonlinear Operators
 
-Nonlinear Operators can be setup in two ways. The manual way requires the user to define an action with a nonlinear action kernel (see [Action Kernels](@ref)) that specifies the linearisation of the nonlinearity. The is also an automatic way where the user specifies a norml action kernel (where the input can be used nonlinearly) which is then automatically differentiated to generate the linearised action kernel, see below for details.
+Nonlinear Operators can be setup in two ways. The manual way requires the user to define an action with a nonlinear action kernel (see [Action Kernel](@ref)) that specifies the linearisation of the nonlinearity. There is also an automatic way where the user specifies only a function (where the input can be used nonlinearly) which is then automatically differentiated to generate the linearised action kernel, see below for details.
 
 ```@docs
 GenerateNonlinearForm

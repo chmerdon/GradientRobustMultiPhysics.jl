@@ -1,5 +1,5 @@
 
-# User Data and Action Kernels
+# User Data and Actions
 
 There is a variety of different user data, like scalar- and vector-valued constants, time-dependent data, region-dependent data or plain functions that
 depend on the the space coordinates. Also dependency on the item number of the reference coordinates of the quadrature point in the quadrature item are sometimes desireable.
@@ -57,7 +57,7 @@ To use them, the user defines some kernel function for the action that has the i
 However, between the result argument and the further dependencies they get an input argument which (during assembly) carries the operator-evaluations of the arguments that go into the action. Hence the usual interface
 of a action kernel function looks like this:
 
-```@example
+```julia
 function action_kernel!(result,input,[X,T,R,I,L])
     # result = modified input, e.g.
     # multiplication with some parameter that can depend on
