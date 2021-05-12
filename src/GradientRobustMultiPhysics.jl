@@ -243,9 +243,10 @@ export grid_unitsquare, grid_unitsquare_mixedgeometries
 
 include("dataexport.jl")
 export writeVTK!, writeCSV!
+export print_table, print_convergencehistory
 
 include("plots.jl")
-export plot, plot_convergencehistory, print_convergencehistory
+export plot, plot_convergencehistory
 
 
 end #module

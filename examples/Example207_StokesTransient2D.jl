@@ -150,9 +150,9 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     end    
 
     ## print convergence history
-    print_convergencehistory(NDofs, Results[:,1:2]; X_to_h = X -> X.^(-1/2), labels = ["||u-u_h||", "||u-Πu||"])
-    print_convergencehistory(NDofs, Results[:,3:4]; X_to_h = X -> X.^(-1/2), labels = ["||p-p_h||", "||p-πp||"])
-    print_convergencehistory(NDofs, Results[:,5:6]; X_to_h = X -> X.^(-1/2), labels = ["||∇(u-u_h)||", "||∇(u-Su)||"])
+    print_convergencehistory(NDofs, Results[:,1:2]; X_to_h = X -> X.^(-1/2), ylabels = ["||u-u_h||", "||u-Πu||"])
+    print_convergencehistory(NDofs, Results[:,3:4]; X_to_h = X -> X.^(-1/2), ylabels = ["||p-p_h||", "||p-πp||"])
+    print_convergencehistory(NDofs, Results[:,5:6]; X_to_h = X -> X.^(-1/2), ylabels = ["||∇(u-u_h)||", "||∇(u-Su)||"])
 end
 
 end

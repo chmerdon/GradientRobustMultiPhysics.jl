@@ -149,9 +149,9 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     end
 
     ## print convergence history
-    print_convergencehistory(NDofs, Results[:,1:3]; X_to_h = X -> X.^(-1/2), labels = ["||u-u_c||", "||u-u_r||", "||u-Πu||"])
-    print_convergencehistory(NDofs, Results[:,4:6]; X_to_h = X -> X.^(-1/2), labels = ["||p-p_c||", "||p-p_r||", "||p-πp||"])
-    print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -> X.^(-1/2), labels = ["||∇(u-u_c)||", "||∇(u-u_r)||", "||∇(u-Su)||"])
+    print_convergencehistory(NDofs, Results[:,1:3]; X_to_h = X -> X.^(-1/2), ylabels = ["||u-u_c||", "||u-u_r||", "||u-Πu||"])
+    print_convergencehistory(NDofs, Results[:,4:6]; X_to_h = X -> X.^(-1/2), ylabels = ["||p-p_c||", "||p-p_r||", "||p-πp||"])
+    print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -> X.^(-1/2), ylabels = ["||∇(u-u_c)||", "||∇(u-u_r)||", "||∇(u-Su)||"])
 
     ## return last L2 error of p-robust method for testing
     return Results[end,2]

@@ -2,11 +2,12 @@
 """
 $(TYPEDSIGNATURES)
 
-Plots operators applied to components of a given vector of FEVectorBlocks Sources (operator[j] is applied to block j)
-via ExtendablePlots.plot, either in one window with subplots or several single plots.
+Plots scalar plots of nodval values of operators applied to the given vector of FEVectorBlocks (Sources) (this meands operator[j] is applied to block j)
+via GridVisualizer (see documentation there for possible kwargs), either in one window with subplots (default) or several single plots.
+If the operator evaluation is vector-valued the absolute value of this vector is plotted (quiver plots not supported by this interface yet).
 
 Plotter = PyPlot should work in 2D
-Plotter = Makie should work in 3D (but only with a single plot currently)
+Plotter = GLMakie should work in 3D (but only with a single plot currently)
 """
 function plot(
     xgrid::ExtendableGrid,
@@ -15,16 +16,10 @@ function plot(
     add_grid_plot::Bool = false,
     Plotter = nothing,
     subplots_per_column = 2,
-    resolution = "auto",
     use_subplots::Bool = true,
-    colorlevels=51,
-    isolines=9,
-    aspect=1,
-    show=true,
-    clear=true,
-    cbar=true,
-    cmap = "hot",
-    maintitle = "")
+    resolution = "auto",
+    maintitle = "",
+    kwargs...)
 
     nplots = length(Sources) + add_grid_plot
 
@@ -76,20 +71,12 @@ function plot(
                 push!(layout, layout[end] + subplots_per_column)
             end
             layout_aspect = length(layout) / subplots_per_column
-            if ispyplot(Plotter)
-                if clear
-                    Plotter.clf() 
-                end
-                # fig = Plotter.figure(figsize=(layout_aspect*fsize,fsize))
-            elseif plottertype(Plotter) == MakieType
-                # not supported yet
-            end
             ctx = Array{SubVisualizer,1}(undef, nplots)
             if resolution == "auto"
                 resolution = (subplots_per_column * 500, (length(layout)-1)*500)
             end
             # figure=fig, cbar=true
-            vis=GridVisualizer(Plotter=Plotter, layout=((nplots-1)÷subplots_per_column+1,subplots_per_column), clear=true, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect, resolution = resolution)
+            vis=GridVisualizer(Plotter=Plotter, layout=((nplots-1)÷subplots_per_column+1,subplots_per_column), clear=true, edges=true, resolution = resolution, kwargs = kwargs)
             if ispyplot(Plotter)
                 Plotter.figure(vis.context[:fignumber], figsize = resolution)
             end
@@ -104,7 +91,7 @@ function plot(
             end
             for j = 1 : nplots
                 #cbar = cbar, 
-                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, edges=true, cmap = cmap, show = show, isolines = isolines, colorlevels = colorlevels, aspect = aspect, resolution = resolution)
+                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, edges=true, resolution = resolution, kwargs = kwargs)
                 ctx[j] = vis[1,1]
             end
         end
@@ -130,7 +117,7 @@ function plot(
         end
         if add_grid_plot
             @logmsg DeepInfo "plotting grid"
-            gridplot!(ctx[nplots], xgrid,show=true; linewidth = 1) 
+            gridplot!(ctx[nplots], xgrid, clear=true, show=true; linewidth = 1, kwargs = kwargs) 
             if plottertype(Plotter) == PyPlotType
                 Plotter.title(maintitle * " grid")
             end
@@ -139,49 +126,22 @@ function plot(
     end
 end
 
-function print_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, name = "convergence history", labels = [], xlabel = "ndofs")
 
-    ## print results
-    xlabel = center_string(xlabel,12)
-    @printf("\n%s|",xlabel)
-    for j = 1 : size(Y,2)
-        if length(labels) < j
-            push!(labels, "DATA $j")
-        end
-        @printf("%s  order  |", center_string(labels[j],16))
-    end
-    @printf("\n")
-    @printf("============|")
-    for j = 1 : size(Y,2)
-        @printf("=========================|")
-    end
-    @printf("\n")
-    order = 0
-    for j=1:length(X)
-        @printf("   %7d  |",X[j]);
-        for k = 1 : size(Y,2)
-            if j > 1
-                order = -log(Y[j-1,k]/Y[j,k]) / (log(X_to_h(X[j])/X_to_h(X[j-1])))
-            end
-            @printf("   %.5e    %.3f  |",Y[j,k], order)
-        end
-        @printf("\n")
-    end
-end
-
-
-function plot_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, Plotter = nothing, name = "convergence history", resolution = (800,600), labels = [], xlabel = "ndofs")
+function plot_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, Plotter = nothing, name = "convergence history", resolution = (800,600), ylabels = [], xlabel = "ndofs", clear = true)
     if plottertype(Plotter) == PyPlotType
         Plotter.figure(name, figsize = resolution ./ 100)
+        if clear
+            Plotter.clf()
+        end
         Plotter.loglog(X, Y; marker = "o");
         Plotter.xlabel(xlabel) 
-        while length(labels) < size(Y,2)
-            push!(labels, "Data $(length(labels)+1)")
+        while length(ylabels) < size(Y,2)
+            push!(ylabels, "Data $(length(labels)+1)")
         end
         for p in add_h_powers
             Plotter.loglog(X, X_to_h(X).^p; linestyle = "dotted"); 
-            push!(labels, "h^$p")
+            push!(ylabels, "h^$p")
         end
-        Plotter.legend(labels)
+        Plotter.legend(ylabels)
     end
 end

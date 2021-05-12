@@ -81,8 +81,8 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 
     ## print/plot convergence history
-    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/3), labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/3), Plotter = Plotter, labels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
+    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/3), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/3), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
 end
 
 end
