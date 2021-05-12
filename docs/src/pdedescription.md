@@ -3,15 +3,20 @@
 
 ## Purpose
 
-Although a more manually low-level assembly of your problem is possible, it is advised to describe it in the form of a PDEDescription
-to get access to certain automated mechanisms (in particular concerning fixpoint solvers).
+The following flow chart visualizes the typical work flow for solving a PDE.
 
-The PDEDescription has similarities with the weak form of your problem (without time derivatives that are added separately by TimeControlSolver) and in general does not need any information on the discretisation at this point.
+![Assembly Flowchart](images/flowchart.jpeg) 
 
-The following flow chart summarises the assembly process during the solve. The green parts can be modified/specified by the user, the rest is handled automatically. For details on steering the solver see the coressponding section.
+Central object is the PDEDescription which is given as a weak form of your problem (without time derivatives that are added separately by a TimeControlSolver) and usually does not need any information on the discretisation at this point (but of course can depend on region numbers).
 
-![Assembly Flowchart](images/assembly_flowchart.png) 
+Seperately the user provides a mesh and selects suitable finite element spaces on it. The PDEDescription and the Finite Element information is passed to the solver which
+(after an inspection of all the problem features) descides on a solver strategy (directly or fixed-point). In each iteration a linear system of equations is assembled and then solved by a linear solver.
 
+Automatic differentiation enters on the PDEDescription level. Nonlinear operators can be differentiated automatically and the necessary terms for a Newton update enter the PDEDescription.
+
+Also, if preferred or needed, a low-level assembly of the linear system is possible as each operator can be assembled separately.
+
+Below the PDEDescription type is detailed. Its ingredients (PDEOperators, boundary conditions, global constraints) are explained on the next pages.
 
 ```@docs
 PDEDescription
