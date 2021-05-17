@@ -214,7 +214,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     # set coefficient handlers needed for basis evaluation
     coefficients = zeros(T,0,0)
-    coeff_handler = (x) -> nothing
+    coeff_handler = NothingFunction
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
         coefficients = zeros(T,ncomponents,ndofs4item)
         coeff_handler = get_coefficients(FEAT, FE, EG)
@@ -336,7 +336,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         coeff_handler = get_coefficients(AT, FE2, EG)
     else
         coefficients = zeros(T,0,0)
-        coeff_handler = nothing
+        coeff_handler = NothingFunction
     end    
     coefficients2 = zeros(T,ndofs4item,ndofs4item2)
 
@@ -391,18 +391,20 @@ them in FEBE.cvals. From there they can be accessed directly or via the eval! fu
 function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
-        #if FEBE.subset_handler != nothing
-        #    fill!(FEBE.cvals,0.0)
-        #    FEBE.subset_handler(FEBE.current_subset, item)
-        #    for i = 1 : length(FEBE.xref)
-        #        for dof_i = 1 : ndofs, k = 1 : ncomponents
-        #            FEBE.cvals[k,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k]
-        #        end
-        #    end
-        #end
+        # needs only to be updated if basis sets can change (e.g. for P3 in 2D/3D)
+        if FEBE.subset_handler != NothingFunction
+            fill!(FEBE.cvals,0.0)
+            FEBE.subset_handler(FEBE.current_subset, item)
+            for i = 1 : length(FEBE.xref)
+                for dof_i = 1 : ndofs, k = 1 : ncomponents
+                    FEBE.cvals[k,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k]
+                end
+            end
+        end
     end
     return nothing
 end
+
 
 # IDENTITYCOMPONENT OPERATOR
 # H1 ELEMENTS (nothing has to be done)
@@ -813,6 +815,10 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
@@ -820,7 +826,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                     for k = 1 : edim, l = 1 : edim
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : edim, xj = 1 : edim
-                            FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[dof_i + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                            FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                         end
                     end    
                 end    
@@ -886,13 +892,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
+        fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
-                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : edim
                         # compute duc/dxk
-                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    

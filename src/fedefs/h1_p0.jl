@@ -22,6 +22,8 @@ get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{CellDofs}, EG::Type{<:AbstractEl
 get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "C1"
 get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "C1"
 
+isdefined(FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = true
+
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {FEType <: H1P0}
     xCoords = FE.xgrid[Coordinates]
     xCellVolumes = FE.xgrid[CellVolumes]

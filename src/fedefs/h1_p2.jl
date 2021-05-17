@@ -42,6 +42,11 @@ get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractE
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1E1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
 
+isdefined(FEType::Type{<:H1P2}, ::Type{<:AbstractElementGeometry1D}) = true
+isdefined(FEType::Type{<:H1P2}, ::Type{<:Triangle2D}) = true
+isdefined(FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = true
+isdefined(FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D}) = true
+
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P2}
     edim = get_edim(FEType)
     nnodes = size(FE.xgrid[Coordinates],2)

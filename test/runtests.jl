@@ -204,9 +204,10 @@ function run_basis_tests()
                     H1MINI{2,2},
                     H1BR{2},
                     H1P2{2,2}, 
-                    #H1P3{2,2}
+                    H1P2B{2,2}, 
+                    H1P3{2,2}
                     ]
-    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2,3]
+    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -265,22 +266,30 @@ function run_basis_tests()
         println("============================")
         println("Testing Interpolations in 2D")
         println("============================")
-        for EG in [Triangle2D,Parallelogram2D]
-            xgrid = testgrid(EG)
-            for n = 1 : length(TestCatalog2D)
-                test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n])
-                test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], true)
-            end
+        for EG in [Triangle2D, Parallelogram2D]
+                xgrid = testgrid(EG)
+                for n = 1 : length(TestCatalog2D)
+                    if GradientRobustMultiPhysics.isdefined(TestCatalog2D[n], EG)
+                        test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n])
+                        test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], true)
+                    else
+                        @warn "$(TestCatalog2D[n]) not defined on $EG (skipping test case)"
+                    end
+                end
         end
         println("\n")
         println("============================")
         println("Testing Interpolations in 3D")
         println("============================")
-        for EG in [Tetrahedron3D]
+        for EG in [Tetrahedron3D, Parallelepiped3D]
             xgrid = testgrid(EG)
             for n = 1 : length(TestCatalog3D)
-                test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n])
-                test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n], true)
+                if GradientRobustMultiPhysics.isdefined(TestCatalog3D[n], EG)
+                    test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n])
+                    test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n], true)
+                else
+                    @warn "$(TestCatalog3D[n]) not defined on $EG (skipping test case)"
+                end
             end
         end
         println("")
@@ -305,8 +314,10 @@ function run_basis_tests()
                     H1CR{2},
                     H1MINI{2,2},
                     H1BR{2},
-                    H1P2{2,2}]
-    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2]
+                    H1P2{2,2},
+                    H1P2B{2,2},
+                    H1P3{2,2}]
+    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -361,10 +372,16 @@ function run_basis_tests()
         println("===================================")
         println("Testing L2-Bestapproximations in 2D")
         println("===================================")
-        xgrid = testgrid(Triangle2D, Parallelogram2D)
-        for n = 1 : length(TestCatalog2D)
-            test_L2bestapproximation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n])
-            test_L2bestapproximation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], true)
+        for EG in [Triangle2D, Parallelogram2D]
+            xgrid = testgrid(EG)
+            for n = 1 : length(TestCatalog2D)
+                if GradientRobustMultiPhysics.isdefined(TestCatalog2D[n], EG)
+                    test_L2bestapproximation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n])
+                    test_L2bestapproximation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], true)
+                else
+                    @warn "$(TestCatalog2D[n]) not defined on $EG (skipping test case)"
+                end
+            end
         end
         println("\n")
         println("===================================")

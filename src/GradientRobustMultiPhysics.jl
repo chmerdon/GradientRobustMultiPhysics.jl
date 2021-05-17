@@ -82,7 +82,7 @@ export L2GTransformer, update!, eval!, mapderiv!, piola!
 include("quadrature.jl")
 export QuadratureRule
 export VertexRule
-export integrate!, integrate
+export integrate!, integrate, ref_integrate!
 
 include("functionoperators.jl")
 export AbstractFunctionOperator

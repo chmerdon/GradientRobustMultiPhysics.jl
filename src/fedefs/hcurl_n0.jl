@@ -36,6 +36,10 @@ get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{EdgeDofs}, EG::Type{<:Abst
 get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "e1"
 get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BEdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
 
+isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Triangle2D}) = true
+isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Quadrilateral2D}) = true
+isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Tetrahedron3D}) = true
+
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
     edim = get_ncomponents(FEType)
     if edim == 3

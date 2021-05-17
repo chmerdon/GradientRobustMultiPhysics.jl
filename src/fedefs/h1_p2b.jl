@@ -7,7 +7,7 @@ abstract type H1P2B{ncomponents,edim} <: AbstractH1FiniteElement where {ncompone
 Continuous piecewise second-order polynomials.
 
 allowed ElementGeometries:
-- Triangle2D (quadratic polynomials + cell bubble)
+- Triangle2D
 """
 abstract type H1P2B{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
@@ -29,50 +29,9 @@ get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{CellDofs}, EG::Type{<:AbstractE
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 
-function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; items = [], time = 0) where {FEType <: H1P2B}
-    xgrid = FE.xgrid
-    xItemVolumes = xgrid[CellVolumes]
-    xItemNodes = xgrid[CellNodes]
-    xItemDofs = FE[CellDofs]
-    xCellGeometries = xgrid[CellGeometries]
-    ncells = num_sources(xItemNodes)
-    nnodes = size(xgrid[Coordinates],2)
-    edim = get_edim(FEType)
-    ncomponents = get_ncomponents(FEType)
-    offset = nnodes + num_sources(FE.xgrid[CellNodes])
-    if edim == 2
-        offset += num_sources(FE.xgrid[FaceNodes])
-    elseif edim == 3
-        offset += num_sources(FE.xgrid[EdgeNodes])
-    end
-    offset4component = 0:offset:ncomponents*offset
-    if items == []
-        items = 1 : num_sources(xItemNodes)
-    end
+isdefined(FEType::Type{<:H1P2B}, ::Type{<:Triangle2D}) = (FEType.parameters[2] == 2)
 
-    # compute exact cell integrals
-    cellintegrals = zeros(Float64,ncomponents,ncells)
-    integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = time)
-    cellEG = Triangle2D
-    nitemnodes::Int = 0
-    for item in items
-        cellEG = xCellGeometries[item]
-        nitemnodes = nnodes_for_geometry(cellEG)
-        for c = 1 : ncomponents
-            # subtract integral of P2 part 
-            # note: P2 vertex basis functions have cell integral zero !
-            for dof = 1 : nitemnodes
-                cellintegrals[c,item] -= Target[xItemDofs[(c-1)*(2*nitemnodes+1) + nitemnodes + dof,item]] * xItemVolumes[item] / nitemnodes
-            end
-            # in 3D subtract integral of face bubble
-            if edim == 3
-                # todo
-            end
-            # set cell bubble such that cell mean is preserved
-            Target[offset4component[c]+offset-1] = cellintegrals[c,item] / xItemVolumes[item]
-        end
-    end
-end
+get_ref_cellmoments(::Type{<:H1P2B}, ::Type{<:Triangle2D}) = [0//1, 0//1, 0//1, 1//3, 1//3, 1//3, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1P2B}
     edim = get_edim(FEType)
@@ -140,7 +99,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 
     # fix cell bubble value by preserving integral mean
-    ensure_cell_moments!(Target, FE, exact_function!; items = items, time = time)
+    ensure_cell_moments!(Target, FE, exact_function!; facedofs = 1, edgedofs = 0, items = items, time = time)
 end
 
 function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P2B}, EG::Type{<:AbstractElementGeometry})
@@ -156,7 +115,7 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{<:H1P2B}, EG::Type{<:Triangl
     function closure(refbasis, xref)
         refbasis_P2(refbasis, xref)
         # add cell bubbles to P2 basis
-        refbasis[offset,1] = 27*(1-xref[1]-xref[2])*xref[1]*xref[2]
+        refbasis[offset,1] = 60*(1-xref[1]-xref[2])*xref[1]*xref[2]
         for k = 1 : ncomponents-1, j = 1 : offset
             refbasis[k*offset+j,k+1] = refbasis[j,1]
         end

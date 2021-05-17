@@ -133,25 +133,25 @@ function Base.show(io::IO, FES::FESpace{FEType}) where {FEType<:AbstractFiniteEl
     end
 end
 
-# default coefficient functions that can be overwritten by finite element that has non-default coeffcients
+const NothingFunction = (x,y) -> nothing
+
+# default coefficient functions that can be overwritten by finite element that has non-default coefficients
 # ( see e.g. h1v_br.jl )
 function get_coefficients(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
-    function closure(coefficients, item)
-        fill!(coefficients,1.0)
-    end
+    return NothingFunction
 end    
+
+# it is assumed that subset_ids is already 1 vector of form subset_ids = 1:ndofs
+# meaning that all basis functions on the reference cells are used
+# see 3D implementation of BDM1 for an example how this is can be used the choose
+# different basis functions depending on the face orientations (which in 3D is not just a sign)
 function get_basissubset(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
-    function closure(subset_ids, cell)
-        # it is assumed that subset_ids is already 1 vector of form subset_ids = 1:ndofs
-        # meaning that all basis functions on the reference cells are used
-        # see 3D implementation of BDM1 for an example how this is can be used the choose
-        # different basis functions depending on the face orientations (which in 3D is not just a sign)
-        return nothing
-    end
+    return NothingFunction
 end  
 get_ndofs(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = 0 # element is undefined for this AT or EG
 get_basis(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = (refbasis,xref) -> nothing
 get_ndofs_all(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT, FEType, EG)
+isdefined(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = false
 
 
 """

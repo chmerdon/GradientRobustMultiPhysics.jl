@@ -37,6 +37,10 @@ get_dofmap_pattern(FEType::Type{<:HDIVBDM1{3}}, ::Type{CellDofs}, EG::Type{<:Abs
 get_dofmap_pattern(FEType::Type{<:HDIVBDM1{3}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i3"
 get_dofmap_pattern(FEType::Type{<:HDIVBDM1{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i3"
 
+isdefined(FEType::Type{<:HDIVBDM1}, ::Type{<:Triangle2D}) = true
+isdefined(FEType::Type{<:HDIVBDM1}, ::Type{<:Quadrilateral2D}) = true
+isdefined(FEType::Type{<:HDIVBDM1}, ::Type{<:Tetrahedron3D}) = true
+
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HDIVBDM1}
     ncomponents = get_ncomponents(FEType)
@@ -184,45 +188,6 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D
         refbasis[15,:] .= 2*[-12*temp+12*xref[3],0,-12*xref[3]]             # [0,-1,1]
         refbasis[16,:] .= 2*[-12*xref[3]+12*xref[2],-12*xref[2],+12*xref[3]] # [-1,1,0]
     end
-
-    # ##testing
-    # refbasi = zeros(Rational,16,3)
-    # closure(refbasi,[1//3 1//3 0])
-    # println("refbasi normalflux at FACE 1 midpoint = $(-refbasi[:,3])")
-    # closure(refbasi,[1//3 0 1//3])
-    # println("refbasi normalflux at FACE 2 midpoint = $(-refbasi[:,2])")
-    # closure(refbasi,[1//3 1//3 1//3])
-    # println("refbasi normalflux at FACE 3 midpoint = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
-    # closure(refbasi,[0 1//3 1//3])
-    # println("refbasi normalflux at FACE 4 midpoint = $(-refbasi[:,1])")
-
-    # closure(refbasi,[2//3 1//3 0])
-    # println("refbasi normalflux at FACE 1 node 1 = $(-refbasi[:,3])")
-    # closure(refbasi,[0 2//3 0])
-    # println("refbasi normalflux at FACE 1 node 2 = $(-refbasi[:,3])")
-    # closure(refbasi,[1//3 0 0])
-    # println("refbasi normalflux at FACE 1 node 3 = $(-refbasi[:,3])")
-
-    # closure(refbasi,[1//3 0 2//3])
-    # println("refbasi normalflux at FACE 2 node 1 = $(-refbasi[:,2])")
-    # closure(refbasi,[0 0 1//3])
-    # println("refbasi normalflux at FACE 2 node 2 = $(-refbasi[:,2])")
-    # closure(refbasi,[2//3 0 0])
-    # println("refbasi normalflux at FACE 2 node 3 = $(-refbasi[:,2])")
-
-    # closure(refbasi,[0 1//3 2//3])
-    # println("refbasi normalflux at FACE 3 node 1 = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
-    # closure(refbasi,[2//3 0 1//3])
-    # println("refbasi normalflux at FACE 3 node 2 = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
-    # closure(refbasi,[1//3 2//3 0])
-    # println("refbasi normalflux at FACE 3 node 3 = $(refbasi[:,1] .+ refbasi[:,2] .+ refbasi[:,3])")
-
-    # closure(refbasi,[0 1//3 0])
-    # println("refbasi normalflux at FACE 4 node 1 = $(-refbasi[:,1])")
-    # closure(refbasi,[0 2//3 1//3])
-    # println("refbasi normalflux at FACE 4 node 2 = $(-refbasi[:,1])")
-    # closure(refbasi,[0 0 2//3])
-    # println("refbasi normalflux at FACE 4 node 3 = $(-refbasi[:,1])")
 
     return closure
 end

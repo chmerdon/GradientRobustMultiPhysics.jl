@@ -30,6 +30,11 @@ get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{CellDofs}, EG::Type{<:AbstractEl
 get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
 get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
 
+isdefined(FEType::Type{<:H1CR}, ::Type{<:AbstractElementGeometry1D}) = true
+isdefined(FEType::Type{<:H1CR}, ::Type{<:Triangle2D}) = true
+isdefined(FEType::Type{<:H1CR}, ::Type{<:Quadrilateral2D}) = true
+isdefined(FEType::Type{<:H1CR}, ::Type{<:Tetrahedron3D}) = true
+
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: H1CR}
     # preserve face means
     xItemVolumes = FE.xgrid[FaceVolumes]

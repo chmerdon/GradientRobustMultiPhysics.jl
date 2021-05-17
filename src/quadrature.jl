@@ -609,3 +609,30 @@ function integrate(
         return AV.entries
     end
 end
+
+
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Integration for reference basis functions on reference domains (merely for testing stuff).
+
+Note: area of reference geometry is not multiplied
+"""
+function ref_integrate!(
+    integral::AbstractArray,
+    EG::Type{<:AbstractElementGeometry},
+    order::Int,
+    integrand::Function # expected to be like a refbasis function with interface (result,xref)
+    )
+    
+    grid = reference_domain(EG)
+    qf = QuadratureRule{eltype(integral),EG}(order)
+    result = copy(integral)
+
+    for i in eachindex(qf.w)
+        integrand(result, qf.xref[i])
+        integral .+= result * qf.w[i];
+    end  
+end

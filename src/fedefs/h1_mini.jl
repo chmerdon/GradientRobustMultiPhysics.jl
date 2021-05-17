@@ -31,6 +31,13 @@ get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{CellDofs}, EG::Type{<:Abstract
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
 
+isdefined(FEType::Type{<:H1MINI}, ::Type{<:Triangle2D}) = true
+isdefined(FEType::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = true
+isdefined(FEType::Type{<:H1MINI}, ::Type{<:Tetrahedron3D}) = true
+
+get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Triangle2D}) = [1//3, 1//3, 1//3, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
+get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Tetrahedron3D}) = [1//4, 1//4, 1//4, 1//4, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
+get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = [1//4, 1//4, 1//4, 1//4, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
     nnodes = size(FE.xgrid[Coordinates],2)

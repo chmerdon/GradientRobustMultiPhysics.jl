@@ -89,6 +89,17 @@ function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{FETyp
 end
 
 
+# fall back function that is used if element does not define the cell moments directly (see below)
+# (so far only needed for H1-conforming elements with interpolations that preserve cell means)
+function get_ref_cellmoments(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}, AT::Type{<:AbstractAssemblyType} = ON_CELLS)
+    ndofs = get_ndofs(AT, FEType, EG)
+    ncomponents = get_ncomponents(FEType)
+    cellmoments = zeros(Float64, ndofs, ncomponents)
+    refbasis = get_basis(AT, FEType, EG)
+    ref_integrate!(cellmoments, EG, get_polynomialorder(FEType, EG), refbasis)
+    return cellmoments[:,1]
+end
+
 function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {FEType <: AbstractH1FiniteElement}
     # note: assumes that cell dof is always the last one
     xgrid = FE.xgrid
@@ -96,7 +107,6 @@ function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FETyp
     xItemNodes = xgrid[CellNodes]
     xItemDofs = FE[CellDofs]
     xCellGeometries = xgrid[CellGeometries]
-    xCellDofs = Dofmap4AssemblyType(FE, ON_CELLS)
     ncells = num_sources(xItemNodes)
     nnodes = size(xgrid[Coordinates],2)
     ncomponents = get_ncomponents(FEType)
@@ -104,27 +114,42 @@ function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FETyp
         items = 1 : ncells
     end
 
+    # compute referencebasis cell moments
+    uniqueEG = xgrid[UniqueCellGeometries]
+    cell_moments = Array{Array{Float64,1},1}(undef, length(uniqueEG))
+    for j = 1 : length(uniqueEG)
+        cell_moments[j] = get_ref_cellmoments(FEType,uniqueEG[j])
+    end
+
     # compute exact cell integrals
     cellintegrals = zeros(Float64,ncomponents,ncells)
     integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = 0)
-    cellEG = Triangle2D
-    nitemnodes::Int = 0
-    nitemfaces::Int = 0
-    nitemedges::Int = 0
-    offset::Int = 0
+    cellEG = uniqueEG[1]
+    nitemnodes::Int = nnodes_for_geometry(cellEG)
+    nitemfaces::Int = nfaces_for_geometry(cellEG)
+    nitemedges::Int = nedges_for_geometry(cellEG)
+    offset::Int = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
+    cellmoments::Array{Float64,1} = cell_moments[1]
+    iEG::Int = 1
     for item in items
-        cellEG = xCellGeometries[item]
-        nitemnodes = nnodes_for_geometry(cellEG)
-        nitemfaces = nfaces_for_geometry(cellEG)
-        nitemedges = nedges_for_geometry(cellEG)
-        offset = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
+        if length(uniqueEG) > 1
+            if cellEG != xCellGeometries[item]
+                iEG = findfirst(isequal(cellEG), EG)
+                cellEG = xCellGeometries[item]
+                nitemnodes = nnodes_for_geometry(cellEG)
+                nitemfaces = nfaces_for_geometry(cellEG)
+                nitemedges = nedges_for_geometry(cellEG)
+                offset = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
+                cellmoments = cell_moments[iEG]
+            end
+        end
         for c = 1 : ncomponents
-            # subtract integral of P1 part
-            for dof = 1 : nitemnodes
-                cellintegrals[c,item] -= Target[xItemDofs[(c-1)*(nitemnodes+1) + dof,item]] * xItemVolumes[item] / nitemnodes
+            # subtract integral of lower order dofs
+            for dof = 1 : offset - 1
+                cellintegrals[c,item] -= Target[xItemDofs[(c-1)*offset + dof,item]] * xItemVolumes[item] * cellmoments[dof]
             end
             # set cell bubble such that cell mean is preserved
-            Target[xCellDofs[c*offset,item]] = cellintegrals[c,item] / xItemVolumes[item]
+            Target[xItemDofs[c*offset,item]] = cellintegrals[c,item] / (cellmoments[offset] * xItemVolumes[item])
         end
     end
 end

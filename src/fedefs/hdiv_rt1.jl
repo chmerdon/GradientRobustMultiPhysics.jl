@@ -25,6 +25,8 @@ get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{CellDofs}, EG::Type{<:Abst
 get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i2"
 get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i2"
 
+isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Triangle2D}) = true
+
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT1}
     ncomponents = get_ncomponents(FEType)
