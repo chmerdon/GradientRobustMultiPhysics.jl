@@ -371,6 +371,7 @@ function AbstractTrilinearForm(
     action::AbstractAction;
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    factor = 1,
     regions::Array{Int,1} = [0],
     transposed_assembly::Bool = false)
 

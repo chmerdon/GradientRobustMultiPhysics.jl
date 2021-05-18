@@ -23,7 +23,7 @@ $(TYPEDEF)
 
 a plain array but with an additional layer of several FEVectorBlock subdivisions each carrying coefficients for their associated FESpace
 """
-struct FEVector{T} <: AbstractArray{T,1}
+struct FEVector{T}
     FEVectorBlocks::Array{FEVectorBlock{T},1}
     entries::Array{T,1}
 end

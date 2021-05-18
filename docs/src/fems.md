@@ -20,6 +20,7 @@ AbstractFiniteElement
 │  ├─ H1P1
 │  ├─ H1P2
 │  └─ H1P2B
+│  └─ H1P3
 ├─ AbstractHcurlFiniteElement
 │  └─ HCURLN0
 └─ AbstractHdivFiniteElement
@@ -30,11 +31,11 @@ AbstractFiniteElement
 
 
 #### Remarks
-- each type depends on one or two parameters, the first one is always the number of components (ncomponents) that determines of the
+- each type depends on one or two parameters, the first one is always the number of components (ncomponents) that determines if the
   finite element is scalar- or veector-valued; some elements additionaly require the parameter edim <: Int if they are structurally different in different space dimensions
 - each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and degrees of freedom maps for each [Assembly Type](@ref) (coded as a string)
 - broken finite elements are possible via the broken switch in the [FESpace](@ref) constructor
-- the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated by FEBasisEvaluator.jl
+- the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated
 - depending on additional continuity properties of the element types more basis function sets are defined:
     - AbstractH1FiniteElements additionally have evaluations of nonzero basisfunctions on faces/bfaces
     - AbstractHdivFiniteElements additionally have evaluations of nonzero normalfluxes of basisfunctions on faces/bfaces
@@ -56,6 +57,7 @@ The following table lists all curently implemented finite elements. Click on the
 | [`H1BR`](@ref)     |                      |                       |
 | [`H1P2`](@ref)     |                      |                       |
 | [`H1P2B`](@ref)    |                      |                       |
+| [`H1P3`](@ref)     |                      |                       |
 
 
 
@@ -126,6 +128,17 @@ The interpolation of a given function into this space performs point evaluations
 
 ```@docs
 H1P2B
+```
+
+### P3 finite element
+
+The P3 finite element method on simplices equals cubic polynomials. On the Triangle2D shape the degrees of freedom
+are associated with the three vertices, the three faces (double dof) of the triangle and the cell itself (one cell bubble).
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves cell and face integrals in 2D.
+
+```@docs
+H1P3
 ```
 
 ### Crouzeix-Raviart (CR) finite element

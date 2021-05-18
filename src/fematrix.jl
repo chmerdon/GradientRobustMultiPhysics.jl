@@ -27,7 +27,7 @@ $(TYPEDEF)
 
 an AbstractMatrix (e.g. an ExtendableSparseMatrix) with an additional layer of several FEMatrixBlock subdivisions each carrying coefficients for their associated pair of FESpaces
 """
-struct FEMatrix{T,nbrow,nbcol,nbtotal} <: AbstractArray{T,1}
+struct FEMatrix{T,nbrow,nbcol,nbtotal}
     FEMatrixBlocks::Array{FEMatrixBlock{T},1}
     entries::AbstractMatrix
 end
@@ -252,20 +252,33 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor = 1)
+function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor = 1, transposed::Bool = false)
     cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
     rows::Array{Int64,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
     bcol::Int = 0
     row::Int = 0
     arow::Int = 0
-    for col = B.offsetY+1:B.last_indexY
-        bcol = col-B.offsetY+b.offset
-        for r in nzrange(cscmat, col)
-            row = rows[r]
-            if row >= B.offsetX && row <= B.last_indexX
-                arow = row - B.offsetX + a.offset
-                a.entries[arow] += valsB[r] * b.entries[bcol] * factor 
+    if transposed
+        for col = B.offsetY+1:B.last_indexY
+            bcol = col-B.offsetY+a.offset
+            for r in nzrange(cscmat, col)
+                row = rows[r]
+                if row >= B.offsetX && row <= B.last_indexX
+                    arow = row - B.offsetX + b.offset
+                    a.entries[bcol] += valsB[r] * b.entries[arow] * factor 
+                end
+            end
+        end
+    else
+        for col = B.offsetY+1:B.last_indexY
+            bcol = col-B.offsetY+b.offset
+            for r in nzrange(cscmat, col)
+                row = rows[r]
+                if row >= B.offsetX && row <= B.last_indexX
+                    arow = row - B.offsetX + a.offset
+                    a.entries[arow] += valsB[r] * b.entries[bcol] * factor 
+                end
             end
         end
     end
