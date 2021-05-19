@@ -12,7 +12,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 ### Features/Limitations:
 - solves 1D, 2D and 3D problems in Cartesian coordinates
 - uses type-treed FiniteElements (scalar or vector-valued)
-    - H1 elements (so far P1, P2, P2B, MINI, CR, BR)
+    - H1 elements (so far P1, P2, P2B, P3, MINI, CR, BR)
     - Hdiv elements (so far RT0, BDM1, RT1)
     - Hcurl elements (so far N0)
 - finite elements can be broken (e.g. piecewise Hdiv) or live on faces or edges (experimental feature)
@@ -57,7 +57,7 @@ Solution = FEVector{Float64}("u_h",FESpace{FEType}(xgrid))
 # inspect problem and Solution vector structure
 @show Problem Solution
 
-## solve
+# solve
 solve!(Solution, Problem)
 ```
 

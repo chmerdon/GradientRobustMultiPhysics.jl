@@ -130,7 +130,7 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
         refbasis[1,:] .= [xref[1], xref[2]-1];
         refbasis[3,:] .= [xref[1], xref[2]];
         refbasis[5,:] .= [xref[1]-1, xref[2]];
-        # additional face basis functions
+        # additional RT1 face basis functions
         refbasis[2,:] .= -12*temp .* refbasis[1,:];
         refbasis[4,:] .= -(12*(xref[1] - 1//2)) .* refbasis[3,:];
         refbasis[6,:] .= -(12*(xref[2] - 1//2)) .* refbasis[5,:];

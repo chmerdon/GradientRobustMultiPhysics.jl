@@ -76,7 +76,7 @@ function PotentialFlowTestProblem()
 end
 
 
-function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_results = true, verbosity = 1, target_residual = 1e-10, maxiterations = 20)
+function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_results = true, verbosity = 1, target_residual = 1e-10, maxiterations = 20, Plotter = nothing)
 
     ## load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]
@@ -112,6 +112,7 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     NDofs = zeros(Int, nlevels)
     
     ## loop over refinement levels
+    Solution2 = nothing
     for level = 1 : nlevels
 
         ## uniform mesh refinement
@@ -153,13 +154,16 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     print_convergencehistory(NDofs, Results[:,4:6]; X_to_h = X -> X.^(-1/2), ylabels = ["||p-p_c||", "||p-p_r||", "||p-πp||"])
     print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -> X.^(-1/2), ylabels = ["||∇(u-u_c)||", "||∇(u-u_r)||", "||∇(u-Su)||"])
 
+    ## plot p-robust solution
+    GradientRobustMultiPhysics.plot(xgrid, [Solution2[1],Solution2[2],Solution2[1]], [Identity, Identity, ReconstructionDivergence{HDIVRT1{2}}]; Plotter = Plotter)
+
     ## return last L2 error of p-robust method for testing
     return Results[end,2]
 end
 
 
 ## everything is wrapped in a main function
-function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2)
+function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -182,7 +186,7 @@ function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2)
     #FETypes = [H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
 
     ## run
-    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels)
+    solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, Plotter = Plotter)
 
     return nothing
 end
@@ -190,15 +194,25 @@ end
 
 ## test function that is called by test unit
 ## tests if hydrostatic problem is solved exactly by pressure-robust methods
-function test()
+function test(; Plotter = nothing)
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
-
     testspaces = [[H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
                   [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
-                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]]
+                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]
+                  ]
     error = []
     for FETypes in testspaces
         push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false))
+        println("FETypes = $FETypes   error = $(error[end])")
+    end
+
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D))
+    testspaces = [
+                  [H1P2B{2,2}, H1P1{1}, ReconstructionIdentity{HDIVRT1{2}}]
+                  ]
+    error = []
+    for FETypes in testspaces
+        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false, Plotter = Plotter))
         println("FETypes = $FETypes   error = $(error[end])")
     end
     return maximum(error)

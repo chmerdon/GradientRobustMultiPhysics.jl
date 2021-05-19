@@ -226,7 +226,7 @@ end
 
 # subset selector ensures that for every cell face
 # the RT0 and those two BDM1 face functions are chosen
-# such that reflect the two moments with respect to the second and third node
+# such that they reflect the two moments with respect to the second and third node
 # of the global face enumeration
 function get_basissubset(::Type{ON_CELLS}, FE::FESpace{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D})
     xCellFaceOrientations = FE.xgrid[CellFaceOrientations]

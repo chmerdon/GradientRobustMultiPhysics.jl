@@ -42,7 +42,7 @@ function exact_function_gradient!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
+function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -51,7 +51,15 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
     xgrid = grid_lshape(Triangle2D)
 
     ## choose some finite element
-    FEType = H1P2{1,2}
+    if order == 1
+        FEType = H1P1{1}
+    elseif order == 2
+        FEType = H1P2{1,2}
+    elseif order == 3
+        FEType = H1P3{1,2}
+    else
+        @error "order has to be 1,2 or 3"
+    end
     
     ## negotiate data functions to the package
     user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 5)
@@ -152,7 +160,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, Plotter = nothing)
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [2,3], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
 end
 
 end

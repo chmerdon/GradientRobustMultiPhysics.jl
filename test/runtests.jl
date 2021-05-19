@@ -652,11 +652,14 @@ function run_basis_tests()
     ####################################
 
     # list of FETypes that should be tested
-    TestCatalog2D = [
+    TestCatalog2Dm = [
             [H1CR{2}, H1P0{1}, HDIVRT0{2}],
             [H1BR{2}, H1P0{1}, HDIVRT0{2}],
             [H1BR{2}, H1P0{1}, HDIVBDM1{2}]]
-    ExpectedOrders2D = [[0,3],[0,3],[1,3]]
+    ExpectedOrders2Dm = [[0,3],[0,3],[1,3]]
+    TestCatalog2Ds = [
+            [H1P2B{2,2}, H1P1{1}, HDIVRT1{2}]]
+    ExpectedOrders2Ds = [[1,3]]
     TestCatalog3D = [
             [H1CR{3}, H1P0{1}, HDIVRT0{3}],
             [H1BR{3}, H1P0{1}, HDIVRT0{3}],
@@ -669,8 +672,12 @@ function run_basis_tests()
     println("Testing Reconstruction operators in 2D")
     println("======================================")
     xgrid = testgrid(Triangle2D, Parallelogram2D)
-    for n = 1 : length(TestCatalog2D)
-        test_Stokes(xgrid, TestCatalog2D[n][[1,2]], ExpectedOrders2D[n], true, ReconstructionIdentity{TestCatalog2D[n][3]})
+    for n = 1 : length(TestCatalog2Dm)
+        test_Stokes(xgrid, TestCatalog2Dm[n][[1,2]], ExpectedOrders2Dm[n], true, ReconstructionIdentity{TestCatalog2Dm[n][3]})
+    end
+    xgrid = testgrid(Triangle2D)
+    for n = 1 : length(TestCatalog2Ds)
+        test_Stokes(xgrid, TestCatalog2Ds[n][[1,2]], ExpectedOrders2Ds[n], true, ReconstructionIdentity{TestCatalog2Ds[n][3]})
     end
     println("\n")
     println("======================================")

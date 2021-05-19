@@ -595,10 +595,14 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 for k = 1 : ncomponents
-                    FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][dof_i,k] * FEBE.coefficients[k,dof_i];
+                    FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k] * FEBE.coefficients[k,dof_i];
                 end    
             end
         end
@@ -671,11 +675,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             FEBE.iteminfo[k] = FEBE.coefficients3[k,item]
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0
                 for k = 1 : ncomponents
-                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.iteminfo[k];
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k] * FEBE.iteminfo[k];
                 end    
             end
         end
@@ -696,11 +704,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             FEBE.iteminfo[k] = FEBE.coefficients3[k,FEBE.FE.xgrid[BFaces][item]]
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0
                 for k = 1 : ncomponents
-                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.iteminfo[k];
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k] * FEBE.iteminfo[k];
                 end    
             end
         end
@@ -723,11 +735,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0
                 for k = 1 : ncomponents
-                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.coefficients[k,dof_i] * FEBE.iteminfo[k];
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k] * FEBE.coefficients[k,dof_i] * FEBE.iteminfo[k];
                 end    
             end
         end
@@ -751,11 +767,15 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0
                 for k = 1 : ncomponents
-                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][dof_i,k] * FEBE.coefficients[k,dof_i] * FEBE.iteminfo[k];
+                    FEBE.cvals[1,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k] * FEBE.coefficients[k,dof_i] * FEBE.iteminfo[k];
                 end    
             end
         end
@@ -854,6 +874,10 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         fill!(FEBE.cvals,0)
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
@@ -861,7 +885,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                     for k = 1 : edim
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : edim, xj = 1 : edim
-                            FEBE.cvals[c,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[k,xj]*FEBE.refbasisderivvals[dof_i + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                            FEBE.cvals[c,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[k,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                         end
                     end   
                 end    
@@ -969,13 +993,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 FEBE.cvals[2,dof_i,i] = 0.0;
                 for j = 1 : edim
-                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[dof_i,j,i] # -du/dy
-                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[dof_i,j,i] # du/dx
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i] # -du/dy
+                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i] # du/dx
                 end    
             end    
         end  
@@ -1002,12 +1030,16 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for j = 1 : edim
-                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[dof_i,j,i]  # -du1/dy
-                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],j,i]  # du2/dx
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i]  # -du1/dy
+                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[2],j,i]  # du2/dx
                 end    
             end    
         end  
@@ -1032,6 +1064,10 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         # compute tangent of item
         FEBE.iteminfo[1] = FEBE.coefficients3[2,item]
         FEBE.iteminfo[2] = -FEBE.coefficients3[1,item]
@@ -1042,7 +1078,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : edim
                         # compute duc/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i] * FEBE.iteminfo[c]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i] * FEBE.iteminfo[c]
                     end    
                 end    
             end    
@@ -1073,13 +1109,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         fill!(FEBE.cvals,0.0)
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
                     for j = 1 : edim
                         # compute duc/dxk and put it into the right spot in the Voigt vector
-                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    
@@ -1109,6 +1149,10 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
@@ -1118,7 +1162,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : edim
                         # compute duc/dxk
-                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
                     end    
                     FEBE.cvals[k + FEBE.offsets[c], dof_i,i] *= FEBE.coefficients[c, dof_i]
                 end    
@@ -1144,13 +1188,18 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             @error "nonlinear local2global transformations not yet supported"
         end
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
+
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for k = 1 : edim
                     for j = 1 : edim
                         # compute duk/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[k],j,i]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[k],j,i]
                     end    
                 end    
             end    
@@ -1178,13 +1227,17 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
         # get coefficients
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+        
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for k = 1 : edim
                     for j = 1 : edim
                         # compute duk/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[dof_i + FEBE.offsets2[k],j,i] * FEBE.coefficients[k, dof_i]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[k],j,i] * FEBE.coefficients[k, dof_i]
                     end    
                 end    
             end    
