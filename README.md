@@ -11,18 +11,20 @@ finite element module for Julia focussing on gradient-robust finite element meth
 
 ### Features/Limitations:
 - solves 1D, 2D and 3D problems in Cartesian coordinates
-- uses type-treed FiniteElements (scalar or vector-valued)
-    - H1 elements (so far P1, P2, P2B, P3, MINI, CR, BR)
-    - Hdiv elements (so far RT0, BDM1, RT1)
-    - Hcurl elements (so far N0)
+- type-treed finite elements (scalar and vector-valued)
+    - H1 elements (so far P1, P2, MINI, CR, BR, and currently only in 2D also P2B, P3)
+    - Hdiv elements (so far RT0, BDM1, RT1 in 2D and 3D)
+    - Hcurl elements (so far only N0 in 2D and 3D)
 - finite elements can be broken (e.g. piecewise Hdiv) or live on faces or edges (experimental feature)
-- grids by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl), allows mixed element geometries in the grid (simplices and quads atm)
-- PDEDescription module for easy and close-to-physics problem description and discretisation setup
-- PDEDescription recognizes nonlinear operators and automatically devises fixed-point or Newton algorithms by automatic differentation (experimental feature)
-- time-dependent solvers by own backward Euler implementation or via external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
-- reconstruction operators for gradient-robust Stokes discretisations (BR>RT0/BDM1 in 2D/3D, or CR>RT0 in 2D, more in progress)
-- plotting via [GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)
-- export into csv or vtk datafiles possible for external plotting
+- grids by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl) in principle allow for mixed element geometries in the grid
+  (but currently only supported with Triangle2D/Parallelogram2D mixed meshes and certain finite elements)
+- PDEDescription module for easy and close-to-physics problem description (as variational equations) independent from the actual discretisation
+- Newton terms for nonlinear operators are added automatically by automatic differentation (experimental feature)
+- solver can run fixed-point iterations between subsets of equations of the PDEDescription (possibly with Anderson cceleration)
+- time-dependent problems can be integrated in time by own backward Euler implementation or via the external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
+- reconstruction operators for gradient-robust Stokes discretisations (BR>RT0/BDM1 in 2D/3D, or CR>RT0 and P2B>RT1 in 2D, more to come)
+- plotting via functionality of [GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)
+- export into csv files or vtk files (via [WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl))
 
 
 ### Example
@@ -42,7 +44,7 @@ Problem = PDEDescription("Poisson problem")
 add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
 
 # add left-hand side PDEoperator(s) (here: only Laplacian)
-add_operator!(Problem, [1,1], LaplaceOperator(diffusion; AT = ON_CELLS))
+add_operator!(Problem, [1,1], LaplaceOperator(1e-3; AT = ON_CELLS))
 
 # add right-hand side data (here: f = [1] in region(s) [1])
 add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], DataFunction([1]; name = "f"); AT = ON_CELLS))

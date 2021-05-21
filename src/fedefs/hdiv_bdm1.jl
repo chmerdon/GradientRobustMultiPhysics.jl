@@ -142,8 +142,8 @@ end
 function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVBDM1}, ::Type{<:AbstractElementGeometry2D})
     function closure(refbasis,xref)
         refbasis[1,1] = 1
-        refbasis[2,1] = (24*(xref[1] - 1//3) + 12*(xref[2] - 1//3)) # linear normal-flux of first BDM1 function
-        refbasis[3,1] = (24*(xref[2] - 1//3) + 12*(xref[1] - 1//3)) # linear normal-flux of second BDM1 function
+        refbasis[2,1] = 12*(2*xref[1]+xref[2]-1) # 1st linear normal-flux BDM1 function (normal flux weighted with (phi_1 - 1/3))
+        refbasis[3,1] = 12*(2*xref[2]+xref[1]-1) # 2nd linear normal-flux BDM1 function (normal flux weighted with (phi_2 - 1/3))
     end
 end
 
@@ -158,7 +158,6 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D
         # note: we define three additional functions per face
         #       and later select only two linear independent ones that match the local enumeration/orientation
         #       of the global/local face nodes + a possible sign change managed by coefficient_handler
-        # face = [1 3 2]
         temp = 1 - xref[1] - xref[2] - xref[3]
         # FACE1 [1,3,2], normal = [0,0,-1], |E| = 1/2, xref[3] = 0
         # phi = [-gamma*phi2,-beta*phi3,alpha*phi1+beta*phi3+gamma*phi2]

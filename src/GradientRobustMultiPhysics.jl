@@ -165,6 +165,7 @@ export NonlinearForm
 export prepare_assembly!
 export assemble!, evaluate!, evaluate
 export AssemblyManager, update!
+export SegmentIntegrator
 
 
 include("pdeoperators.jl")

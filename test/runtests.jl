@@ -198,6 +198,7 @@ function run_basis_tests()
                     HCURLN0{2},
                     HDIVRT0{2},
                     HDIVBDM1{2},
+                    HDIVRT1{2},
                     H1P0{2},
                     H1P1{2}, 
                     H1CR{2},
@@ -207,18 +208,19 @@ function run_basis_tests()
                     H1P2B{2,2}, 
                     H1P3{2,2}
                     ]
-    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2,2,3]
+    ExpectedOrders2D = [0,0,1,1,0,1,1,1,1,2,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
                     HDIVBDM1{3},
+                    HDIVRT1{3},
                     H1P0{3},
                     H1P1{3}, 
                     H1CR{3},
                     H1MINI{3,3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,0,1,0,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,2]
 
     function test_interpolation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
@@ -322,13 +324,14 @@ function run_basis_tests()
                     HCURLN0{3},
                     HDIVRT0{3},
                     HDIVBDM1{3},
+                    HDIVRT1{3},
                     H1P0{3},
                     H1P1{3},
                     H1CR{3},
                     H1MINI{3,3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,0,1,0,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,2]
 
     function test_L2bestapproximation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])

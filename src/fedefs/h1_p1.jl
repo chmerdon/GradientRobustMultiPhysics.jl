@@ -68,9 +68,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
 end
 
 function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})
-    ncomponents = get_ncomponents(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
+    edim::Int = dim_element(ET) 
     function closure(refbasis, xref)
-        edim = dim_element(ET)
         for k = 1 : ncomponents
             refbasis[(edim+1)*k-edim,k] = 1
             for j = 1 : edim

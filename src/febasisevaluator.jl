@@ -11,8 +11,10 @@
 
 abstract type AbstractFEBasisEvaluator{T} end
 abstract type FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} <: AbstractFEBasisEvaluator{T} end
+abstract type StandardFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs_all, nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
+abstract type ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
 
-struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries, FType_coeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+struct NMStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries, FType_coeffs <: Function, FType_subset <: Function} <: StandardFEBasisEvaluator{T, FEType, EG, FEOP, AT,edim,ncomponents, ndofs, ndofs_all, nentries}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
@@ -33,18 +35,19 @@ struct StandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: Abstra
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries, FType_coeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_subset <: Function} <: StandardFEBasisEvaluator{T, FEType, EG, FEOP, AT,edim,ncomponents, ndofs, ndofs_all, nentries}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     L2G::L2GTransformer{T, EG}           # local2global mapper
     L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
-    xref::Array{Array{T,1},1}       # xref of quadrature formula
-    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
+    xref::Array{Array{T,1},1}            # xref of quadrature formula
+    refbasis::FType_basis                # function to call to evaluate basis function on reference geometry
+    refbasisvals::Array{Array{T,2},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
-    Dresult::DiffResults.DiffResult      # DiffResults for ForwardDiff handling
-    Dcfg::ForwardDiff.DerivativeConfig    # config for ForwardDiff handling
+    Dresult::Union{Nothing,DiffResults.DiffResult}      # DiffResults for ForwardDiff handling
+    Dcfg::Union{Nothing,ForwardDiff.DerivativeConfig}    # config for ForwardDiff handling
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
     citem::Base.RefValue{Int}            # current item
@@ -57,7 +60,7 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer{T, EG}           # local2global mapper
@@ -81,7 +84,7 @@ struct ReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: 
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs}
+mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer{T, EG}           # local2global mapper
@@ -89,7 +92,8 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
     iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{Array{T,1},1}            # xref of quadrature formula
-    refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
+    refbasis::FType_basis                # function to call to evaluate basis function on reference geometry
+    refbasisvals::Array{Array{T,2},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
     Dresult::DiffResults.DiffResult      # DiffResults for ForwardDiff handling
@@ -110,7 +114,7 @@ end
 
 
 
-function prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndofs4item_all, ncomponents; Dcfg = "init", Dresult = "init")
+function prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, ndofs4item_all, ncomponents; Dcfg = "init", Dresult = "init")
 
     # derivatives of the basis on the reference domain are computed
     # by ForwardDiff, to minimise memory allocations and be able
@@ -150,25 +154,48 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndof
     end
 
     if derivorder == 1 ## first order derivatives
-        for i in eachindex(qf.w)
+        for i = 1 : length(xref)
             # evaluate gradients of basis function
             # = list of vectors [du_k/dx_1; du_k,dx_2]
 
-            jac = jacobian_wrap(qf.xref[i])
+            jac = jacobian_wrap(xref[i])
 
             for j = 1 : ndofs4item_all*ncomponents, k = 1 : edim
                 refbasisderivvals[j,k,i] = jac[j,k];
             end
         end
     elseif derivorder == 2 # second order derivatives
-        for i in eachindex(qf.w)
+        for i = 1 : length(xref)
             # evaluate second derivatives of basis function
-            refbasisderivvals[:,:,i] = hessian_wrap(qf.xref[i])
+            refbasisderivvals[:,:,i] = hessian_wrap(xref[i])
         end 
     end
 
 
     return Dresult, Dcfg, refbasisderivvals
+end
+
+## relocates evaluation points (needs mutable FEB) used by segment integrator
+function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref::Array{Array{T,1},1}) where {T, FEType, EG, FEOP, AT}
+    FEB.xref .= new_xref
+    FEAT = EffAT4AssemblyType(typeof(FEB.FE).parameters[2],AT)
+    if FEB.derivorder == 0
+        for i = 1 : length(new_xref)
+            # evaluate basis functions at quadrature point
+            FEB.refbasis(FEB.refbasisvals[i], new_xref[i])
+        end    
+        if FEOP <: Identity || FEOP <: IdentityDisc
+            for i = 1 : length(new_xref), j = 1 : size(FEB.refbasisvals[1],1), k = 1 : size(FEB.refbasisvals[1],2)
+                FEB.cvals[k,j,i] = FEB.refbasisvals[i][j,k]
+            end
+        elseif FEOP <: IdentityComponent
+            for i = 1 : length(new_xref), j = 1 : size(FEB.refbasisvals[1],1)
+                FEB.cvals[1,j,i] = FEB.refbasisvals[i][j,FEOP.parameters[1]]
+            end
+        end
+    elseif FEB.derivorder > 0
+        prepareFEBasisDerivs!(FEB.refbasisderivvals, refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
+    end
 end
 
 
@@ -181,7 +208,7 @@ Constructor for an evaluator for the basis of the specified FEType (with matchin
 at the points of the quadrature rule qf.
 
 """
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
     L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
     L2GM = copy(L2G.A)
     L2GM2 = copy(L2G.A)
@@ -205,11 +232,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     end    
 
     # evaluate basis on reference domain
-    refbasisvals = Array{Array{T,2},1}(undef,length(qf.w));
-    for i in eachindex(qf.w)
-        # evaluate basis functions at quadrature point
+    refbasisvals = Array{Array{T,2},1}(undef,length(xref));
+    for i = 1 : length(xref)
         refbasisvals[i] = zeros(T,ndofs4item_all,ncomponents)
-        refbasis(refbasisvals[i], qf.xref[i])
     end    
 
     # set coefficient handlers needed for basis evaluation
@@ -227,7 +252,6 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     derivorder = NeededDerivative4Operator(FEOP)
     edim = dim_element(EG)
     xdim = size(FE.xgrid[Coordinates],1)
-    xref = copy(qf.xref)
     resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
     coefficients3 = zeros(T,0,0)
     offsets = 0:edim:((ncomponents-1)*edim); # edim steps
@@ -238,37 +262,39 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
         @warn "ndofs = 0 for FEType = $FEType on EG = $EG"
     end
     compressiontargets = zeros(T,0)
-    current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
+    current_eval = zeros(T,resultdim,ndofs4item,length(xref))
     if derivorder == 0
+
+        for i = 1 : length(xref)
+            # evaluate basis functions at quadrature point
+            refbasis(refbasisvals[i], xref[i])
+        end    
+
         refbasisderivvals = zeros(T,0,0,0);
         if FEOP == NormalFlux || (FEOP == TangentFlux && edim == 2)
             coefficients3 = FE.xgrid[FaceNormals]
-            # current_eval = zeros(T,1,ndofs4item,length(qf.w));
         elseif FEOP == TangentFlux && edim == 3
             coefficients3 = FE.xgrid[EdgeTangents]
-            # current_eval = zeros(T,1,ndofs4item,length(qf.w));
         elseif FEOP <: Identity || FEOP <: IdentityDisc
-            # current_eval = zeros(T,ncomponents,ndofs4item,length(qf.w));
-            for i in eachindex(qf.w), j = 1 : ndofs4item, k = 1 : ncomponents
+            for i = 1 : length(xref), j = 1 : ndofs4item, k = 1 : ncomponents
                 current_eval[k,j,i] = refbasisvals[i][j,k]
             end
         elseif FEOP <: IdentityComponent
-            for i in eachindex(qf.w), j = 1 : ndofs4item
+            for i = 1 : length(xref), j = 1 : ndofs4item
                 current_eval[1,j,i] = refbasisvals[i][j,FEOP.parameters[1]]
             end
         end
         Dcfg = nothing
         Dresult = nothing
     elseif derivorder > 0
-
         # get derivatives of basis on reference geometry
         if derivorder == 1
-            refbasisderivvals = zeros(T,ndofs4item_all*ncomponents,edim,length(qf.w));
+            refbasisderivvals = zeros(T,ndofs4item_all*ncomponents,edim,length(xref));
         elseif derivorder == 2
-            refbasisderivvals = zeros(T,ndofs4item_all*ncomponents*edim,edim,length(qf.w))
+            refbasisderivvals = zeros(T,ndofs4item_all*ncomponents*edim,edim,length(xref))
             offsets2 = 0:edim*edim:ncomponents*edim*edim;
         end
-        Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis, qf, derivorder, ndofs4item_all, ncomponents)
+        Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, ndofs4item_all, ncomponents)
 
         # specifications for special operators (e.g. compressing Voigt notation)
         if FEOP == TangentialGradient
@@ -289,14 +315,14 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
 
     citem = 0
     if mutable
-        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     else
-        return StandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return NMStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     end
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
     
     @debug "Creating FEBasisEvaluator for $FEOP operator of $FEType on $EG"
 
@@ -323,11 +349,11 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     ndofs4item2_all = get_ndofs_all(AT, FETypeReconst, EG)    
 
     # evaluate reconstruction basis
-    refbasisvals = Array{Array{T,2},1}(undef,length(qf.w));
-    for i in eachindex(qf.w)
+    refbasisvals = Array{Array{T,2},1}(undef,length(xref));
+    for i = 1 : length(xref)
         # evaluate basis functions at quadrature point
         refbasisvals[i] = zeros(T,ndofs4item2_all,ncomponents2)
-        refbasis_reconst(refbasisvals[i], qf.xref[i])
+        refbasis_reconst(refbasisvals[i], xref[i])
     end    
 
     # set coefficient handlers needed for basis evaluation (for both FEType and FETypereconst)
@@ -347,35 +373,37 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; 
     rcoeff_handler = get_reconstruction_coefficients!(AT, FE, FE2, EG)
 
     # compute refbasisderivvals and further coefficients needed for operator eval
-    xref = copy(qf.xref)
     edim = dim_element(EG)
     xdim = size(FE.xgrid[Coordinates],1)
     offsets = 0:edim:((ncomponents-1)*edim);
     offsets2 = 0:ndofs4item2_all:ncomponents*ndofs4item2_all;
     coefficients3 = zeros(T,0,0)
     resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
-    current_eval = zeros(T,resultdim,ndofs4item,length(qf.w))
+    current_eval = zeros(T,resultdim,ndofs4item,length(xref))
     derivorder = NeededDerivative4Operator(FEOP)
     if derivorder == 0
         # refbasisderivvals are used as a cache for the reconstruction basis
-        refbasisderivvals = zeros(T,ncomponents,ndofs4item2_all,length(qf.w));
+        refbasisderivvals = zeros(T,ncomponents,ndofs4item2_all,length(xref));
         Dcfg = nothing
         Dresult = nothing
     elseif derivorder == 1
         # derivatives of the reconstruction basis on the reference domain are computed
-        refbasisderivvals = zeros(T,ndofs4item2_all*ncomponents2,edim,length(qf.w));
-        Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis_reconst, qf, derivorder, ndofs4item2_all, ncomponents2)
+        refbasisderivvals = zeros(T,ndofs4item2_all*ncomponents2,edim,length(xref));
+        Dresult, Dcfg = prepareFEBasisDerivs!(refbasisderivvals, refbasis_reconst, xref, derivorder, ndofs4item2_all, ncomponents2)
         coefficients3 = zeros(T,resultdim,ndofs4item2)
     end
     
     citem = 0
     if mutable
-        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(refbasis),typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     else
-        return ReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return NMReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
     end
 end    
 
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType, EG, FEOP, AT}
+    FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE, Array{Array{T,1},1}(qf.xref); mutable = mutable)
+end
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)

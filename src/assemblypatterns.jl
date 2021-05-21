@@ -597,6 +597,7 @@ end
 
 # each assembly pattern is in its own file
 include("assemblypatterns/itemintegrator.jl")
+include("assemblypatterns/segmentintegrator.jl")
 include("assemblypatterns/linearform.jl")
 include("assemblypatterns/bilinearform.jl")
 include("assemblypatterns/trilinearform.jl")
