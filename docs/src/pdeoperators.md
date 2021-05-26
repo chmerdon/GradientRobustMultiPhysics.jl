@@ -23,7 +23,7 @@ The following table lists all available operators and physics-motivated construc
 |                                     | [`ConvectionOperator`](@ref)             | ``((a \cdot \nabla) u, v)`` (a is registered unknown)                                                          |
 |                                     | [`ConvectionRotationFormOperator`](@ref) | ``((a \times \nabla) u,v)`` (a is registered unknown, only 2D for now)                                         |
 | [`GenerateNonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
-| [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))``                                                                                   |
+| [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))`` or ``\mathrm{A}(\mathrm{FO}(v))``                                                 |
 
 Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Action](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
 

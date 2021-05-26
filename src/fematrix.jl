@@ -285,6 +285,44 @@ function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; 
     return nothing
 end
 
+"""
+$(TYPEDSIGNATURES)
+
+Adds matrix-vector product B times b to FEVectorBlock a.
+"""
+function addblock_matmul!(a::AbstractVector, B::FEMatrixBlock, b::AbstractVector; factor = 1, transposed::Bool = false)
+    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
+    rows::Array{Int64,1} = rowvals(cscmat)
+    valsB::Array{Float64,1} = cscmat.nzval
+    bcol::Int = 0
+    row::Int = 0
+    arow::Int = 0
+    if transposed
+        for col = B.offsetY+1:B.last_indexY
+            bcol = col-B.offsetY
+            for r in nzrange(cscmat, col)
+                row = rows[r]
+                if row >= B.offsetX && row <= B.last_indexX
+                    arow = row - B.offsetX
+                    a[bcol] += valsB[r] * b[arow] * factor 
+                end
+            end
+        end
+    else
+        for col = B.offsetY+1:B.last_indexY
+            bcol = col-B.offsetY
+            for r in nzrange(cscmat, col)
+                row = rows[r]
+                if row >= B.offsetX && row <= B.last_indexX
+                    arow = row - B.offsetX
+                    a[arow] += valsB[r] * b[bcol] * factor 
+                end
+            end
+        end
+    end
+    return nothing
+end
+
 
 
 """

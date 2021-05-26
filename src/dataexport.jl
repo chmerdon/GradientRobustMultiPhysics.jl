@@ -183,7 +183,11 @@ function print_table(X, Y; ylabels = [], xlabel = "ndofs")
     end
     @printf("\n")
     for j=1:length(X)
-        @printf("   %7d  |",X[j]);
+        if eltype(X) <: Int
+            @printf("   %7d  |",X[j]);
+        else
+            @printf("  %.2e  |",X[j]);
+        end
         for k = 1 : size(Y,2)
             @printf("  %.8e  |",Y[j,k])
         end

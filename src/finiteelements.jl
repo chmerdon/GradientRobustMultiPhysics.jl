@@ -133,6 +133,7 @@ function Base.show(io::IO, FES::FESpace{FEType}) where {FEType<:AbstractFiniteEl
     end
 end
 
+## used if no coefficient handler or subset handler is needed (to have a single Function type for all)
 const NothingFunction = (x,y) -> nothing
 
 # default coefficient functions that can be overwritten by finite element that has non-default coefficients
@@ -266,6 +267,7 @@ get_polynomialorder(::Type{<:AbstractFiniteElement}, ::Type{<:Vertex0D}) = 0;
 include("fedefs/hdiv_rt0.jl");
 include("fedefs/hdiv_bdm1.jl");
 include("fedefs/hdiv_rt1.jl");
+include("fedefs/hdiv_bdm2.jl");
 
 # H1 conforming elements (also Crouzeix-Raviart)
 # lowest order

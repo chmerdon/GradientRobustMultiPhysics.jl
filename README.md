@@ -13,7 +13,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - solves 1D, 2D and 3D problems in Cartesian coordinates
 - type-treed finite elements (scalar and vector-valued)
     - H1 elements (so far P1, P2, MINI, CR, BR, and currently only in 2D also P2B, P3)
-    - Hdiv elements (so far RT0, BDM1, RT1 in 2D and 3D)
+    - Hdiv elements (so far RT0, BDM1, RT1 in 2D and 3D and currently only in 2D also BDM2)
     - Hcurl elements (so far only N0 in 2D and 3D)
 - finite elements can be broken (e.g. piecewise Hdiv) or live on faces or edges (experimental feature)
 - grids by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl) in principle allow for mixed element geometries in the grid
@@ -43,7 +43,7 @@ Problem = PDEDescription("Poisson problem")
 # add unknown(s) (here: "u" that gets id 1 for later reference)
 add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
 
-# add left-hand side PDEoperator(s) (here: only Laplacian)
+# add left-hand side PDEoperator(s) (here: only Laplacian with diffusion coefficient 1e-3)
 add_operator!(Problem, [1,1], LaplaceOperator(1e-3; AT = ON_CELLS))
 
 # add right-hand side data (here: f = [1] in region(s) [1])

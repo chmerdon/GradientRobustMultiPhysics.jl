@@ -7,6 +7,7 @@ Hdiv-conforming vector-valued (ncomponents = edim) Raviart-Thomas space of order
 
 allowed ElementGeometries:
 - Triangle2D
+- Tetrahedron3D
 """
 abstract type HDIVRT1{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
@@ -226,7 +227,6 @@ end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT1{3}}, EG::Type{<:Tetrahedron3D})
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
         fill!(coefficients,1.0)

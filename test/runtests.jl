@@ -199,6 +199,7 @@ function run_basis_tests()
                     HDIVRT0{2},
                     HDIVBDM1{2},
                     HDIVRT1{2},
+                    HDIVBDM2{2},
                     H1P0{2},
                     H1P1{2}, 
                     H1CR{2},
@@ -208,7 +209,7 @@ function run_basis_tests()
                     H1P2B{2,2}, 
                     H1P3{2,2}
                     ]
-    ExpectedOrders2D = [0,0,1,1,0,1,1,1,1,2,2,3]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,2,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -311,6 +312,8 @@ function run_basis_tests()
                     HCURLN0{2},
                     HDIVRT0{2},
                     HDIVBDM1{2},
+                    HDIVRT1{2},
+                    HDIVBDM2{2},
                     H1P0{2},
                     H1P1{2}, 
                     H1CR{2},
@@ -319,7 +322,7 @@ function run_basis_tests()
                     H1P2{2,2},
                     H1P2B{2,2},
                     H1P3{2,2}]
-    ExpectedOrders2D = [0,0,1,0,1,1,1,1,2,2,3]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,2,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},

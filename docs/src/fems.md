@@ -53,7 +53,7 @@ The following table lists all curently implemented finite elements. Click on the
 | [`H1P0`](@ref)     | [`HDIVRT0`](@ref)    | [`HCURLN0`](@ref)     |
 | [`H1P1`](@ref)     | [`HDIVBDM1`](@ref)   |                       |
 | [`H1MINI`](@ref)   | [`HDIVRT1`](@ref)    |                       |
-| [`H1CR`](@ref)     |                      |                       |
+| [`H1CR`](@ref)     | [`HDIVBDM2`](@ref)   |                       |
 | [`H1BR`](@ref)     |                      |                       |
 | [`H1P2`](@ref)     |                      |                       |
 | [`H1P2B`](@ref)    |                      |                       |
@@ -161,6 +161,7 @@ These Raviart-Thomas and Brezzi-Douglas-Marini finite elements of lower order an
 HDIVRT0
 HDIVBDM1
 HDIVRT1
+HDIVBDM2
 ```
 
 ## Hcurl-conforming finite elements
