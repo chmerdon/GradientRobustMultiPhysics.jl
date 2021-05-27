@@ -229,7 +229,6 @@ include("diffeq_interface.jl")
 export eval_rhs!, eval_jacobian!, mass_matrix, jac_prototype
 
 include("pdeprototypes.jl")
-export CompressibleNavierProblem
 export IncompressibleNavierStokesProblem
 export LinearElasticityProblem
 export PoissonProblem

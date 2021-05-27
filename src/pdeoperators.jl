@@ -533,6 +533,7 @@ function GenerateNonlinearForm(
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     ADnewton::Bool = false,
     action_kernel_rhs = nothing,
+    factor = 1,
     regions = [0])
 ````
 
@@ -570,7 +571,9 @@ function GenerateNonlinearForm(
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     ADnewton::Bool = false,
     action_kernel_rhs = nothing,
+    dependencies = "",
     quadorder::Int = 0,
+    factor = 1,
     regions = [0])
 
     ### Newton scheme for a nonlinear operator G(u) is
@@ -591,39 +594,130 @@ function GenerateNonlinearForm(
         jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[3])
         Dresult = DiffResults.DiffResult(result_temp,jac_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-        cfg =ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
-        function newton_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1})
-            ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
-            jac = DiffResults.jacobian(Dresult)
-            for j = 1 : argsizes[1]
-                result[j] = 0
-                for k = 1 : argsizes[2]
-                    result[j] += jac[j,k] * input_ansatz[k]
-                end
-            end
-            return nothing
-        end
-        newton_action_kernel = NLActionKernel(newton_kernel, argsizes; dependencies = "", quadorder = quadorder)
-        action = Action(Float64, newton_action_kernel)
-
-        # the action for the RHS just evaluates DG and G at input_current
         temp = zeros(Float64, argsizes[1])
-        function rhs_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1})
-            fill!(result,0)
-            newton_kernel(result, input_current, input_current)
-            action_kernel(temp, input_current)
-            for j = 1 : argsizes[1]
-                result[j] -= temp[j]
+        if dependencies == "X"
+            reduced_action_kernel_x(x) = (result,input) -> action_kernel(result,input,x)
+            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_x([1.0,1.0,1.0]), result_temp, input_temp)
+            function newton_kernel_x(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x)
+                ForwardDiff.jacobian!(Dresult, reduced_action_kernel_x(x), result, input_current, cfg)
+                jac = DiffResults.jacobian(Dresult)
+                for j = 1 : argsizes[1]
+                    result[j] = 0
+                    for k = 1 : argsizes[2]
+                        result[j] += jac[j,k] * input_ansatz[k]
+                    end
+                end
+                return nothing
             end
-            return nothing
+
+            # the action for the RHS just evaluates DG and G at input_current
+            function rhs_kernel_x(result::Array{<:Real,1}, input_current::Array{<:Real,1}, x)
+                fill!(result,0)
+                newton_kernel_x(result, input_current, input_current, x)
+                reduced_action_kernel_x(x)(temp, input_current)
+                for j = 1 : argsizes[1]
+                    result[j] -= temp[j]
+                end
+                return nothing
+            end
+            newton_action_kernel = NLActionKernel(newton_kernel_x, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action = Action(Float64, newton_action_kernel)
+            rhs_action_kernel = ActionKernel(rhs_kernel_x, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action_rhs = Action(Float64, rhs_action_kernel)
+        elseif dependencies == "T"
+            reduced_action_kernel_t(t) = (result,input) -> action_kernel(result,input,t)
+            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_t(0.0), result_temp, input_temp)
+            function newton_kernel_t(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, t)
+                ForwardDiff.jacobian!(Dresult, reduced_action_kernel_t(t), result, input_current, cfg)
+                jac = DiffResults.jacobian(Dresult)
+                for j = 1 : argsizes[1]
+                    result[j] = 0
+                    for k = 1 : argsizes[2]
+                        result[j] += jac[j,k] * input_ansatz[k]
+                    end
+                end
+                return nothing
+            end
+
+            # the action for the RHS just evaluates DG and G at input_current
+            function rhs_kernel_t(result::Array{<:Real,1}, input_current::Array{<:Real,1}, t)
+                fill!(result,0)
+                newton_kernel_t(result, input_current, input_current, t)
+                reduced_action_kernel_t(t)(temp, input_current)
+                for j = 1 : argsizes[1]
+                    result[j] -= temp[j]
+                end
+                return nothing
+            end
+            newton_action_kernel = NLActionKernel(newton_kernel_t, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action = Action(Float64, newton_action_kernel)
+            rhs_action_kernel = ActionKernel(rhs_kernel_t, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action_rhs = Action(Float64, rhs_action_kernel)
+        elseif dependencies == "XT"
+            reduced_action_kernel_xt(x,t) = (result,input) -> action_kernel(result,input,x,t)
+            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_xt([1.0,1.0,1.0],0.0), result_temp, input_temp)
+            function newton_kernel_xt(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x, t)
+                ForwardDiff.jacobian!(Dresult, reduced_action_kernel_xt(x,t), result, input_current, cfg)
+                jac = DiffResults.jacobian(Dresult)
+                for j = 1 : argsizes[1]
+                    result[j] = 0
+                    for k = 1 : argsizes[2]
+                        result[j] += jac[j,k] * input_ansatz[k]
+                    end
+                end
+                return nothing
+            end
+
+            # the action for the RHS just evaluates DG and G at input_current
+            function rhs_kernel_xt(result::Array{<:Real,1}, input_current::Array{<:Real,1}, x, t)
+                fill!(result,0)
+                newton_kernel_xt(result, input_current, input_current, x, t)
+                reduced_action_kernel_xt(x, t)(temp, input_current)
+                for j = 1 : argsizes[1]
+                    result[j] -= temp[j]
+                end
+                return nothing
+            end
+            newton_action_kernel = NLActionKernel(newton_kernel_xt, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action = Action(Float64, newton_action_kernel)
+            rhs_action_kernel = ActionKernel(rhs_kernel_xt, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action_rhs = Action(Float64, rhs_action_kernel)
+        elseif dependencies == ""
+            cfg =ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
+            function newton_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1})
+                ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
+                jac = DiffResults.jacobian(Dresult)
+                for j = 1 : argsizes[1]
+                    result[j] = 0
+                    for k = 1 : argsizes[2]
+                        result[j] += jac[j,k] * input_ansatz[k]
+                    end
+                end
+                return nothing
+            end
+
+            # the action for the RHS just evaluates DG and G at input_current
+            function rhs_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1})
+                fill!(result,0)
+                newton_kernel(result, input_current, input_current)
+                action_kernel(temp, input_current)
+                for j = 1 : argsizes[1]
+                    result[j] -= temp[j]
+                end
+                return nothing
+            end
+            newton_action_kernel = NLActionKernel(newton_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action = Action(Float64, newton_action_kernel)
+            rhs_action_kernel = ActionKernel(rhs_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
+            action_rhs = Action(Float64, rhs_action_kernel)
+        else
+            @error "Currently nonlinear kernels can only depend on the additional argument(s) x or t"
         end
-        rhs_action_kernel = ActionKernel(rhs_kernel, argsizes; dependencies = "", quadorder = quadorder)
-        action_rhs = Action(Float64, rhs_action_kernel)
     else
 
         # take action_kernel as nonlinear action_kernel
         # = user specifies linearisation of nonlinear operator
-        nlform_action_kernel = NLActionKernel(action_kernel, argsizes; dependencies = "", quadorder = quadorder)
+        nlform_action_kernel = NLActionKernel(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
 
         action = Action(Float64, nlform_action_kernel)
         if action_kernel_rhs != nothing
@@ -637,6 +731,7 @@ function GenerateNonlinearForm(
     O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, action, 1:(length(coeff_from)), 1, regions)
     O.fixed_arguments = 1:length(coeff_from)
     O.fixed_arguments_ids = coeff_from
+    O.factor = factor
     O.action_rhs = action_rhs === nothing ? NoAction() : action_rhs
     O.transposed_assembly = true
     return O

@@ -19,12 +19,13 @@ AbstractFiniteElement
 │  ├─ H1P0
 │  ├─ H1P1
 │  ├─ H1P2
-│  └─ H1P2B
+│  ├─ H1P2B
 │  └─ H1P3
 ├─ AbstractHcurlFiniteElement
 │  └─ HCURLN0
 └─ AbstractHdivFiniteElement
    ├─ HDIVBDM1
+   ├─ HDIVBDM2
    ├─ HDIVRT0
    └─ HDIVRT1
 ```

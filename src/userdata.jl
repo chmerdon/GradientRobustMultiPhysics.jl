@@ -105,9 +105,16 @@ function NLActionKernel(f::Function, dimensions::Array{Int,1}; name = "user nonl
     if length(dimensions) == 2
         push!(dimensions,dimensions[2])
     end
-    nf = (result, input_current, input_ansatz, X,T,R,I,L) -> f(result, input_current, input_ansatz) # no other dependencies
-    if dependencies != ""
-        println("nonlinear action kernels that depend on extra variables are not yet supported")
+    if dependencies == "X"
+        nf = (result, input_current, input_ansatz, X,T,R,I,L) -> f(result, input_current, input_ansatz, X)
+    elseif dependencies == "T"
+        nf = (result, input_current, input_ansatz, X,T,R,I,L) -> f(result, input_current, input_ansatz, T)
+    elseif dependencies == "XT"
+        nf = (result, input_current, input_ansatz, X,T,R,I,L) -> f(result, input_current, input_ansatz, X, T)
+    elseif dependencies == ""
+        nf = (result, input_current, input_ansatz, X,T,R,I,L) -> f(result, input_current, input_ansatz) # no other dependencies
+    else
+        @error "nonlinear action kernels with dependencies = $dependencies currently not supported"
     end
 
     return UserData{AbstractNLActionKernel,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)

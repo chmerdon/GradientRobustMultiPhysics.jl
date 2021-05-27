@@ -148,7 +148,7 @@ function assemble!(
         # update action on dofitem (not needed yet)
         basisevaler2 = get_basisevaler(AM, nFE, 1)
         basisvals = basisevaler2.cvals
-        # update!(action, basisevaler, item, item, regions[r])
+        update!(action, basisevaler, item, item, regions[r])
 
         for i in eachindex(weights)
             for dof_i = 1 : get_ndofs(AM, 1, 1)
@@ -323,7 +323,7 @@ function assemble!(
         # update action on dofitem (not needed yet)
         basisevaler = get_basisevaler(AM, nFE, 1)
         basisvals = basisevaler.cvals
-        # update!(action, basisevaler, item, item, regions[r])
+        update!(action, basisevaler, item, item, regions[r])
 
         for i in eachindex(weights)
             apply_action!(action_result, action_input[i], action, i, nothing)

@@ -76,7 +76,7 @@ function plot(
                 resolution = (subplots_per_column * 500, (length(layout)-1)*500)
             end
             # figure=fig, cbar=true
-            vis=GridVisualizer(Plotter=Plotter, layout=((nplots-1)÷subplots_per_column+1,subplots_per_column), clear=true, edges=true, resolution = resolution, kwargs = kwargs)
+            vis=GridVisualizer(Plotter=Plotter, layout=((nplots-1)÷subplots_per_column+1,subplots_per_column), clear=true, edges=true, resolution = resolution)
             if ispyplot(Plotter)
                 Plotter.figure(vis.context[:fignumber], figsize = resolution)
             end
@@ -91,7 +91,7 @@ function plot(
             end
             for j = 1 : nplots
                 #cbar = cbar, 
-                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, edges=true, resolution = resolution, kwargs = kwargs)
+                vis=GridVisualizer(Plotter=Plotter, fignumber=j, clear=true, edges=true, resolution = resolution)
                 ctx[j] = vis[1,1]
             end
         end
@@ -110,14 +110,14 @@ function plot(
                 Z[1] += 1e-16
             end
             @logmsg DeepInfo "plotting data into plot $j : " * title
-            scalarplot!(ctx[j], xgrid, Z) 
+            scalarplot!(ctx[j], xgrid, Z; kwargs...) 
             if plottertype(Plotter) == PyPlotType
                 Plotter.title(title)
             end
         end
         if add_grid_plot
             @logmsg DeepInfo "plotting grid"
-            gridplot!(ctx[nplots], xgrid, clear=true, show=true; linewidth = 1, kwargs = kwargs) 
+            gridplot!(ctx[nplots], xgrid, clear=true, show=true; linewidth = 1, kwargs...) 
             if plottertype(Plotter) == PyPlotType
                 Plotter.title(maintitle * " grid")
             end
@@ -127,13 +127,14 @@ function plot(
 end
 
 
-function plot_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, Plotter = nothing, name = "convergence history", resolution = (800,600), ylabels = [], xlabel = "ndofs", clear = true)
+function plot_convergencehistory(X, Y; add_h_powers = [], X_to_h = X -> X, Plotter = nothing, name = "convergence history", resolution = (800,600), ylabel = "", ylabels = [], xlabel = "ndofs", clear = true)
     if plottertype(Plotter) == PyPlotType
         Plotter.figure(name, figsize = resolution ./ 100)
         if clear
             Plotter.clf()
         end
         Plotter.loglog(X, Y; marker = "o");
+        Plotter.ylabel(ylabel) 
         Plotter.xlabel(xlabel) 
         while length(ylabels) < size(Y,2)
             push!(ylabels, "Data $(length(labels)+1)")
