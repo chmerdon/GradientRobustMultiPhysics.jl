@@ -247,6 +247,36 @@ function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 
     return nothing
 end
 
+
+function addblock!(A::ExtendableSparseMatrix{Tv,Ti}, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
+    cscmat::SparseMatrixCSC{Tv, Ti} = B.cscmatrix
+    rows::Array{Int,1} = rowvals(cscmat)
+    valsB::Array{Tv,1} = cscmat.nzval
+    arow::Int = 0
+    acol::Int = 0
+    if transpose
+        for col = 1:size(B,2)
+            arow = col
+            for r in nzrange(cscmat, col)
+                acol = rows[r]
+                _addnz(A,arow,acol,valsB[r],factor)
+                #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
+            end
+        end
+    else
+        for col = 1:size(B,2)
+            acol = col
+            for r in nzrange(cscmat, col)
+                arow = rows[r]
+                _addnz(A,arow,acol,valsB[r],factor)
+                #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
+            end
+        end
+    end
+    return nothing
+end
+
+
 """
 $(TYPEDSIGNATURES)
 

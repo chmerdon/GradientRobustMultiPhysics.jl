@@ -16,7 +16,7 @@ with some right-hand side ``f`` within the set of admissible functions that lie 
 \end{aligned}
 ```
 
-The obstacle constraint is realised via a penalty terms that is automatically differentiated for a Newton scheme.
+The obstacle constraint is realised via a penalty term that is automatically differentiated for a Newton scheme.
 
 =#
 

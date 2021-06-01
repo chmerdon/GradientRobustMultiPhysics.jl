@@ -331,10 +331,9 @@ end
 ###########################
 
 
-function get_reconstruction!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D})
+function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D})
     xFaceVolumes::Array{<:Real,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{<:Real,2} = FE.xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, face::Int) 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
         coefficients[2,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
@@ -349,7 +348,6 @@ end
 function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Edge1D})
     xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, face) 
 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]

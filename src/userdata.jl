@@ -162,10 +162,13 @@ function DataFunction(c::Array{<:Real,1}; name = "constant user data", quadorder
 
 Directly generates a DataFunction from a given array c, i.e. a DataFunction that is constant and has no dependencies on x or t.
 """
-function DataFunction(c::Array{<:Real,1}; name = "constant user data", quadorder::Int = 0)
+function DataFunction(c::Array{<:Real,1}; name = "auto", quadorder::Int = 0)
     dimensions = [length(c),0]
     function f_from_c(result)
         result .= c
+    end
+    if name == "auto"
+        name = "Constant($c)"
     end
 
     return DataFunction(f_from_c, dimensions; name = name, dependencies = "", quadorder = quadorder)

@@ -89,7 +89,7 @@ function L2NormIntegrator(
             result[1] += input[j]^2
         end    
     end    
-    action_kernel = ActionKernel(L2norm_function, [1,ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = 2)
+    action_kernel = ActionKernel(L2norm_function, [1,ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = quadorder)
     return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = "L2 norm")
 end
 
@@ -119,7 +119,7 @@ function L2DifferenceIntegrator(
             result[1] += (input[j]-input[ncomponents+j])^2
         end    
     end    
-    action_kernel = ActionKernel(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", quadorder = 2)
+    action_kernel = ActionKernel(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", quadorder = quadorder)
     return ItemIntegrator(T,AT, [operator, operator], Action(T, action_kernel); regions = regions, name = "L2 difference")
 end
 

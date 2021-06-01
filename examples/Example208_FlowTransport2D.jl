@@ -46,14 +46,14 @@ function inlet_concentration!(result,x::Array{<:Real,1})
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity = 1)
+function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport = true, viscosity = 1)
 
     ## set log level
     set_verbosity(verbosity)
     
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_upipe.sg")
-    xgrid = uniform_refine(xgrid,4)
+    xgrid = uniform_refine(xgrid,nrefinements)
 
     ## choose one of these (inf-sup stable) finite element type pairs for the flow
     #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
@@ -84,7 +84,7 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
         ## finite element convection and diffusion (very small) operators
         FETypeTransport = H1P1{1}
         diffusion_FE = 1e-7 # diffusion coefficient for transport equation
-        add_operator!(Problem, [3,3], LaplaceOperator(diffusion_FE,2,1))
+        add_operator!(Problem, [3,3], LaplaceOperator(diffusion_FE))
         add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
     end
     ## with boundary data (i.e. inlet concentration)
@@ -92,7 +92,7 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
     @show Problem
     
     ## generate FESpaces and a solution vector for all 3 unknowns
-    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypeTransport}(xgrid)]
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true), FESpace{FETypeTransport}(xgrid)]
     Solution = FEVector{Float64}(["v_h", "p_h", "c_h"],FES)
 
     ## first solve the decoupled flow problem equations [1,2]
@@ -112,7 +112,7 @@ function main(; verbosity = 0, Plotter = nothing, FVtransport = true, viscosity 
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[3]], [Identity, Identity]; add_grid_plot = false, Plotter = Plotter)
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[3]], [Identity, Identity]; add_grid_plot = false, Plotter = Plotter, subplots_per_column = 1, resolution = (1000,800), isolines = 9)
 end
 
 end

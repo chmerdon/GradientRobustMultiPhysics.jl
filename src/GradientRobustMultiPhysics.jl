@@ -46,6 +46,7 @@ export GridComponent4TypeProperty
 export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
 export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
 export get_facegrid, get_bfacegrid, get_edgegrid
+export gFindLocal!
 
 include("meshrefinements.jl")
 export split_grid_into
@@ -166,6 +167,7 @@ export prepare_assembly!
 export assemble!, evaluate!, evaluate
 export AssemblyManager, update!
 export SegmentIntegrator
+export PointEvaluator
 
 
 include("pdeoperators.jl")

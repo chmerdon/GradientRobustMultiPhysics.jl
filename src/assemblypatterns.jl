@@ -596,6 +596,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
 end
 
 # each assembly pattern is in its own file
+include("assemblypatterns/pointevaluator.jl")
 include("assemblypatterns/itemintegrator.jl")
 include("assemblypatterns/segmentintegrator.jl")
 include("assemblypatterns/linearform.jl")
