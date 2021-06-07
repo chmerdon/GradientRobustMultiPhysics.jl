@@ -141,6 +141,8 @@ export get_reconstruction_matrix
 
 export displace_mesh!
 
+include("reconstructions.jl")
+export ReconstructionHandler, get_rcoefficients!
 
 include("febasisevaluator.jl")
 export FEBasisEvaluator, update!, eval!

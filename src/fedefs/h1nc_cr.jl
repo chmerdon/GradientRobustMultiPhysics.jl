@@ -127,11 +127,11 @@ function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Quadrilate
     end
 end
 
-function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{FEType}, FER::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) where {FEType<:H1CR}
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces = FE.xgrid[CellFaces]
-    ncomponents = get_ncomponents(FEType)
+function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1CR}, FER::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellFaces = xgrid[CellFaces]
+    ncomponents = get_ncomponents(FE)
     nf::Int = nfaces_for_geometry(EG)
     face::Int = 0
     function closure(coefficients, cell::Int) 

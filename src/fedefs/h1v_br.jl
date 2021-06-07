@@ -368,10 +368,9 @@ function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BF
 end
 
 
-function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Triangle2D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid,::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Triangle2D})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     nfacenodes::Int = nnodes_for_geometry(EG)
     function closure(coefficients::Array{<:Real,2}, face::Int) 
         for j = 1 : nfacenodes, k = 1 : 3
@@ -384,10 +383,10 @@ function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BF
     end
 end
 
-function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid,::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
@@ -409,10 +408,10 @@ function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}
     end
 end
 
-function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{3}}, FER::FESpace{HDIVRT0{3}}, EG::Type{<:Tetrahedron3D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVRT0{3}}, EG::Type{<:Tetrahedron3D})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
@@ -434,11 +433,11 @@ function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{3}}
     end
 end
 
-function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}})
-    xFaceVolumes::Array{<:Real,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{<:Real,2} = FE.xgrid[FaceNormals]
-    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FER.xgrid[CellFaceSigns]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}})
+    xFaceVolumes::Array{<:Real,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{<:Real,2} = xgrid[FaceNormals]
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
@@ -465,11 +464,11 @@ function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}
 end
 
 
-function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1BR{3}}, FER::FESpace{HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaceOrientations::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FER.xgrid[CellFaceOrientations]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellFaceOrientations::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceOrientations]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = face_rule[1,1]
     face::Int32 = 0

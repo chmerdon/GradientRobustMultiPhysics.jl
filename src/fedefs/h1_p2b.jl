@@ -83,7 +83,6 @@ end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: H1P2B}
     edim = get_edim(FEType)
-    ncells = num_sources(FE.xgrid[CellNodes])
     if edim == 2
         # delegate cell faces to face interpolation
         subitems = slice(FE.xgrid[CellFaces], items)
@@ -125,42 +124,42 @@ end
 
 
 
-function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1P2B{2,2}}, FER::FESpace{HDIVRT1{2}}, EG::Type{<:Triangle2D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FER.xgrid[CellFaceSigns]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
-    xCellNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellNodes]
-    xCellVolumes::Array{Float64,1} = FE.xgrid[CellVolumes]
+function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVRT1{2}}, EG::Type{<:Triangle2D})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
+    #xCellNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellNodes]
+    #xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
     nnf::Int = size(face_rule,1)
     ndofs4component::Int = 2*nnf + 1
-    RT1_coeffs::Array{Rational,1} = [-1//12, 1//12]
-    xCoordinates = FE.xgrid[Coordinates]
-    C = zeros(Float64,2,3)  # vertices
-    E = zeros(Float64,2,3)  # edge midpoints
-    M = zeros(Float64,2)    # midpoint of current cell
-    A = zeros(Float64,2,8)  # integral means of RT 1 functions
-    b = zeros(Float64,2)    # right-hand side for integral mean
-    id::Int = 0
-    det::Float64 = 0
-    function closure(coefficients::Array{Float64,2}, cell::Int)
+    RT1_coeffs::Array{Float64,1} = [-1//12, 1//12]
+    #xCoordinates = FE.xgrid[Coordinates]
+    #C = zeros(Float64,2,3)  # vertices
+    #E = zeros(Float64,2,3)  # edge midpoints
+    #M = zeros(Float64,2)    # midpoint of current cell
+    #A = zeros(Float64,2,8)  # integral means of RT 1 functions
+    #b = zeros(Float64,2)    # right-hand side for integral mean
+    #id::Int = 0
+    #det::Float64 = 0
+    function closure(coefficients::Array{<:Real,2}, cell::Int)
         # fill!(coefficients,0.0)
 
         # get coordinates of cells
-        fill!(M,0)
-        fill!(E,0)
-        for n = 1 : 3, k = 1 : 2
-            C[k,n] = xCoordinates[k,xCellNodes[n,cell]]
-            M[k] += C[k,n] / 3
-        end
-        for f = 1 : size(face_rule,1)
+        #fill!(M,0)
+        #fill!(E,0)
+        #for n = 1 : 3, k = 1 : 2
+        #    C[k,n] = xCoordinates[k,xCellNodes[n,cell]]
+        #    M[k] += C[k,n] / 3
+        #end
+        for f = 1 : nnf
             face = xCellFaces[f,cell]
-            for n = 1 : 2, k = 1 : 2
-                E[k,f] += C[k,face_rule[f,n]] / 2
-            end
+            #for n = 1 : 2, k = 1 : 2
+            #    E[k,f] += C[k,face_rule[f,n]] / 2
+            #end
             for n = 1 : 2
                 node = face_rule[f,n]
                 for k = 1 : 2
@@ -178,52 +177,97 @@ function get_reconstruction_coefficients!(::Type{ON_CELLS}, FE::FESpace{H1P2B{2,
             end
         end
 
-        # compute integral means of RT1 functions
-        for k = 1 : 2
-            A[k,1] = (M[k] - C[k,3])/2 * xCellFaceSigns[1, cell]
-            A[k,2] = C[k,2] - E[k,2]
-            A[k,3] = (M[k] - C[k,1])/2 * xCellFaceSigns[2, cell]
-            A[k,4] = C[k,3] - E[k,3]
-            A[k,5] = (M[k] - C[k,2])/2 * xCellFaceSigns[3, cell]
-            A[k,6] = C[k,1] - E[k,1]
-        end
-        # directly assign inverted A[1:2,7:8] for faster solve of local systems
-        A[2,8] = (E[1,1] - C[1,3]) # A[1,7]
-        A[2,7] = -(E[2,1] - C[2,3]) # A[2,7]
-        A[1,8] = -(E[1,3] - C[1,2]) # A[1,8]
-        A[1,7] = (E[2,3] - C[2,2]) # A[2,8]
+        # # compute integral means of RT1 functions
+        # for k = 1 : 2
+        #     A[k,1] = (M[k] - C[k,3])/2 * xCellFaceSigns[1, cell]
+        #     A[k,2] = C[k,2] - E[k,2]
+        #     A[k,3] = (M[k] - C[k,1])/2 * xCellFaceSigns[2, cell]
+        #     A[k,4] = C[k,3] - E[k,3]
+        #     A[k,5] = (M[k] - C[k,2])/2 * xCellFaceSigns[3, cell]
+        #     A[k,6] = C[k,1] - E[k,1]
+        # end
+        # # directly assign inverted A[1:2,7:8] for faster solve of local systems
+        # A[2,8] = (E[1,1] - C[1,3]) # A[1,7]
+        # A[2,7] = -(E[2,1] - C[2,3]) # A[2,7]
+        # A[1,8] = -(E[1,3] - C[1,2]) # A[1,8]
+        # A[1,7] = (E[2,3] - C[2,2]) # A[2,8]
 
-        det = A[1,7]*A[2,8] - A[2,7]*A[1,8]
-        A[1:2,7:8] ./= det
+        # det = A[1,7]*A[2,8] - A[2,7]*A[1,8]
+        # A[1:2,7:8] ./= det
 
-        # correct integral means with interior RT1 functions
-        for k = 1 : 2
-            for n = 1 : 3
-                # nodal P2 functions have integral mean zero
-                id = ndofs4component*(k-1) + n
-                fill!(b,0)
-                for c = 1 : 2, j = 1 : 6
-                    b[c] -= coefficients[id,j] * A[c,j]
+        # # correct integral means with interior RT1 functions
+        # for k = 1 : 2
+        #     for n = 1 : 3
+        #         # nodal P2 functions have integral mean zero
+        #         id = ndofs4component*(k-1) + n
+        #         fill!(b,0)
+        #         for c = 1 : 2, j = 1 : 6
+        #             b[c] -= coefficients[id,j] * A[c,j]
+        #         end
+        #         coefficients[id,7:8] = A[:,7:8]*b
+
+        #         # face P2 functions have integral mean 1//3
+        #         id = ndofs4component*(k-1) + n + nnf
+        #         fill!(b,0)
+        #         b[k] = xCellVolumes[cell] / 3
+        #         for c = 1 : 2, j = 1 : 6
+        #             b[c] -= coefficients[id,j] * A[c,j]
+        #         end
+        #         coefficients[id,7:8] = A[:,7:8]*b
+        #     end
+
+        #     # cell bubbles have integral mean 1
+        #     id = ndofs4component*k
+        #     fill!(b,0)
+        #     b[k] = xCellVolumes[cell]
+        #     coefficients[id,7:8] = A[:,7:8]*b
+        # end
+    
+        return nothing
+    end
+end
+
+
+
+function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVBDM2{2}}, EG::Type{<:Triangle2D})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
+    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
+    face_rule::Array{Int,2} = face_enum_rule(EG)
+    node::Int = 0
+    face::Int = 0
+    nnf::Int = size(face_rule,1)
+    ndofs4component::Int = 2*nnf + 1
+    coeffs1::Array{Float64,1} = [-1//12, 1//12]
+    function closure(coefficients::Array{<:Real,2}, cell::Int)
+        # fill!(coefficients,0.0)
+
+        for f = 1 : nnf
+            face = xCellFaces[f,cell]
+            for n = 1 : 2
+                node = face_rule[f,n]
+                for k = 1 : 2
+                    # RT0 reconstruction coefficients for node P2 functions on reference element
+                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+1] = 1 // 6 * xFaceVolumes[face] * xFaceNormals[k, face]
+
+                    # 1st BDM2 reconstruction coefficients for node P2 functions on reference element
+                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+2] = coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face] * xCellFaceSigns[f, cell]
+
+                    # 2nd BDM2 reconstruction coefficients for node P2 functions on reference element
+                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+3] = 1 // 90 * xFaceVolumes[face] * xFaceNormals[k, face]
                 end
-                coefficients[id,7:8] = A[:,7:8]*b
-
-                # face P2 functions have integral mean 1//3
-                id = ndofs4component*(k-1) + n + nnf
-                fill!(b,0)
-                b[k] = xCellVolumes[cell] / 3
-                for c = 1 : 2, j = 1 : 6
-                    b[c] -= coefficients[id,j] * A[c,j]
-                end
-                coefficients[id,7:8] = A[:,7:8]*b
             end
 
-            # cell bubbles have integral mean 1
-            id = ndofs4component*k
-            fill!(b,0)
-            b[k] = xCellVolumes[cell]
-            coefficients[id,7:8] = A[:,7:8]*b
+            for k = 1 : 2
+                # RT0 reconstruction coefficients for face P2 functions (=face bubbles) on reference element
+                coefficients[ndofs4component*(k-1)+f+nnf,3*(f-1)+1] = 2 // 3 * xFaceVolumes[face] * xFaceNormals[k, face]
+
+                # 2nd BDM2 reconstruction coefficients for face P2 functions on reference element
+                coefficients[ndofs4component*(k-1)+f+nnf,3*(f-1)+3] = -1 // 45 * xFaceVolumes[face] * xFaceNormals[k, face]
+            end
         end
-    
+
         return nothing
     end
 end

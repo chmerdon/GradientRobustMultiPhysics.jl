@@ -6,7 +6,7 @@
 This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
 ```math
 \begin{aligned}
-- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p & = \mathbf{f}\\
+- \mu \Delta \mathbf{u} + \nabla p & = \mathbf{f}\\
 \mathrm{div}(u) & = 0
 \end{aligned}
 ```

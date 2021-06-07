@@ -756,7 +756,9 @@ function RhsOperator(
     if name == "auto"
         name = "A($operator(v))"
     end
-    PDEOperator{Float64, APT_LinearForm, AT}(name, [operator], action, [1], 1, regions, store, AssemblyAuto)
+    O = PDEOperator{Float64, APT_LinearForm, AT}(name, [operator], action, [1], 1, regions, store, AssemblyAuto)
+    O.factor = factor
+    return O 
 end
 
 
@@ -852,7 +854,9 @@ function RhsOperator(
     end
     action = Action(Float64, action_kernel)
 
-    PDEOperator{Float64, APT_LinearForm, AT}(name,[operator], action, [1], 1, regions, store, AssemblyAuto)
+    O = PDEOperator{Float64, APT_LinearForm, AT}(name,[operator], action, [1], 1, regions, store, AssemblyAuto)
+    O.factor = factor
+    return O
 end
 
 

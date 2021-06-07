@@ -616,11 +616,11 @@ function run_basis_tests()
         errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
         if RhsOp == Identity
             # classical case
-            println("EG = Triangle2D | FETypes = $(FETypes) | orders (V/P) = $orders | errorV = $errorV | errorP = $errorP")
+            println("EG = $(xgrid[UniqueCellGeometries]) | FETypes = $(FETypes) | orders (V/P) = $orders | errorV = $errorV | errorP = $errorP")
             @test max(errorV,errorP) < tolerance
         else
             # p-robust case, only velocity error can be expected to be zero, as pressure is not in ansatz space
-            println("EG = Triangle2D | FETypes = $(FETypes) | R = $RhsOp | orders (V/P) = $orders | errorV = $errorV ")
+            println("EG = $(xgrid[UniqueCellGeometries]) | FETypes = $(FETypes) | R = $RhsOp | orders (V/P) = $orders | errorV = $errorV ")
             @test errorV < tolerance
         end
     end
@@ -664,8 +664,10 @@ function run_basis_tests()
             [H1BR{2}, H1P0{1}, HDIVBDM1{2}]]
     ExpectedOrders2Dm = [[0,3],[0,3],[1,3]]
     TestCatalog2Ds = [
-            [H1P2B{2,2}, H1P1{1}, HDIVRT1{2}]]
-    ExpectedOrders2Ds = [[1,3]]
+            [H1P2B{2,2}, H1P1{1}, HDIVRT1{2}],
+            [H1P2B{2,2}, H1P1{1}, HDIVBDM2{2}]
+            ]
+    ExpectedOrders2Ds = [[1,3],[2,3]]
     TestCatalog3D = [
             [H1CR{3}, H1P0{1}, HDIVRT0{3}],
             [H1BR{3}, H1P0{1}, HDIVRT0{3}],
@@ -722,7 +724,6 @@ function run_examples()
         include("../examples/Example212_NonlinearPoissonTransient2D.jl")
         @test eval(Meta.parse("Example212_NonlinearPoissonTransient2D.test()")) < 1e-14
         
-        # tests the same reconstruction operator tests above, but let's keep it for now...
         println("\n2D PRESSURE_ROBUSTNESS")
         include("../examples/Example206_PressureRobustness2D.jl")
         @test eval(Meta.parse("Example206_PressureRobustness2D.test()")) < 1e-15

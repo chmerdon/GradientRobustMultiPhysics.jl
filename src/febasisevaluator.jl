@@ -60,7 +60,7 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
+struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, FETypeR <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer{T, EG}           # local2global mapper
@@ -78,13 +78,13 @@ struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
     coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
-    reconstcoeffs_handler::FType_rcoeffs # function to call to get reconstruction coefficients
+    reconst_handler::ReconstructionHandler{FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
     subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_rcoeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
+mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, FETypeR <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FE2::FESpace                         # link to reconstruction FE
     L2G::L2GTransformer{T, EG}           # local2global mapper
@@ -106,7 +106,7 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
     coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
-    reconstcoeffs_handler::FType_rcoeffs # function to call to get reconstruction coefficients
+    reconst_handler::ReconstructionHandler{FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
     subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
@@ -370,7 +370,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     subset_handler = get_basissubset(AT, FE2, EG)
 
     # get reconstruction coefficient handlers
-    rcoeff_handler = get_reconstruction_coefficients!(AT, FE, FE2, EG)
+    reconst_handler = ReconstructionHandler(FE,FE2,AT,EG)
 
     # compute refbasisderivvals and further coefficients needed for operator eval
     edim = dim_element(EG)
@@ -395,9 +395,9 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     
     citem = 0
     if mutable
-        return MReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(refbasis),typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return MReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, reconst_handler, subset_handler,1:ndofs4item2,[])
     else
-        return NMReconstructionFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(rcoeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, rcoeff_handler,subset_handler,1:ndofs4item2,[])
+        return NMReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler,reconst_handler,subset_handler,1:ndofs4item2,[])
     end
 end    
 
@@ -479,7 +479,10 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
         # get local reconstruction coefficients
         # and accumulate
         rcoeffs::Array{T,2} = FEBE.coefficients2
-        FEBE.reconstcoeffs_handler(rcoeffs, item)
+        #FEBE.reconstcoeffs_handler(rcoeffs, item)
+        #@show item rcoeffs; fill!(rcoeffs,0)
+        get_rcoefficients!(rcoeffs, FEBE.reconst_handler, item)
+        #@show rcoeffs
 
         fill!(FEBE.cvals,0.0)
         for dof_i = 1 : ndofs, dof_j = 1 : ndofs2
@@ -504,7 +507,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
 
         # get local reconstruction coefficients
         # and accumulate
-        FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
+        get_rcoefficients!(FEBE.coefficients2, FEBE.reconst_handler, item)
 
         fill!(FEBE.cvals,0.0)
         xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
@@ -530,7 +533,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
 
         # get local reconstruction coefficients
         # and accumulate
-        FEBE.reconstcoeffs_handler(FEBE.coefficients2, FEBE.FE.xgrid[BFaces][item])
+        get_rcoefficients!(FEBE.coefficients2, FEBE.reconst_handler, FEBE.FE.xgrid[BFaces][item])
 
         fill!(FEBE.cvals,0.0)
         xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
@@ -1294,7 +1297,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # get local reconstruction coefficients
-        FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
+        get_rcoefficients!(FEBE.coefficients2, FEBE.reconst_handler, item)
 
         # use Piola transformation on Hdiv basis
         # and accumulate according to reconstruction coefficients
@@ -1333,7 +1336,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # get local reconstruction coefficients
-        FEBE.reconstcoeffs_handler(FEBE.coefficients2, item)
+        get_rcoefficients!(FEBE.coefficients2, FEBE.reconst_handler, item)
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
