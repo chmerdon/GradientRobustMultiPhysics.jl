@@ -270,6 +270,8 @@ include("fedefs/hdiv_rt1.jl");
 include("fedefs/hdiv_bdm2.jl");
 
 # H1 conforming elements (also Crouzeix-Raviart)
+# no order (just for certain purposes)
+include("fedefs/h1_bubble.jl");
 # lowest order
 include("fedefs/h1_p0.jl");
 include("fedefs/h1_p1.jl");

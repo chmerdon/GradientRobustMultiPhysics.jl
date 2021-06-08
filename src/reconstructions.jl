@@ -18,7 +18,6 @@ function ReconstructionHandler(FES,FES_Reconst,AT,EG)
     interior_offset = interior_dofs_offset(AT,FE2,EG)
     interior_ndofs = get_ndofs(AT,FE2,EG) - interior_offset
     if interior_ndofs > 0
-        @info "Computing interior reconstruction coefficients for $FE1 > $FE2 ($AT)"
         coeffs = xgrid[ReconstructionCoefficients{FE1,FE2,AT}]
     else
         coeffs = zeros(Float64,0,0)
@@ -41,6 +40,7 @@ interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{2}}, ::Type{<:Triangle
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVBDM2{2}}, ::Type{<:Triangle2D}) = 9
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{ReconstructionCoefficients{FE1,FE2,AT}}) where {FE1<:H1P2B{2,2}, FE2<:HDIVRT1{2}, AT <: ON_CELLS}
+    @info "Computing interior reconstruction coefficients for $FE1 > $FE2 ($AT)"
     xCellFaces = xgrid[CellFaces]
     xCoordinates = xgrid[Coordinates]
     xCellNodes = xgrid[CellNodes]
@@ -144,6 +144,7 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{ReconstructionCoefficients{FE1,FE2,AT}}) where {FE1<:H1P2B{2,2}, FE2<:HDIVBDM2{2}, AT <: ON_CELLS}
+    @info "Computing interior reconstruction coefficients for $FE1 > $FE2 ($AT)"
     xCellFaces = xgrid[CellFaces]
     xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     EG = xgrid[UniqueCellGeometries]
@@ -160,27 +161,41 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{Reconstructio
 
 
     qf = QuadratureRule{Float64,EG[1]}(4)
+    weights::Array{Float64,1} = qf.w
+    # evaluation of FE1 and FE2 basis
     FES1 = FESpace{FE1,AT}(xgrid)
     FES2 = FESpace{FE2,AT}(xgrid)
     FEB1 = FEBasisEvaluator{Float64,FE1,EG[1],Identity,ON_CELLS}(FES1, qf)
     FEB2 = FEBasisEvaluator{Float64,FE2,EG[1],Identity,ON_CELLS}(FES2, qf)
+    # evaluation of gradient of P1 functions
     FE3 = H1P1{1}
     FES3 = FESpace{FE3,AT}(xgrid)
     FEB3 = FEBasisEvaluator{Float64,FE3,EG[1],Gradient,ON_CELLS}(FES3, qf)
+    # evaluation of curl of bubble functions
+    FE4 = H1BUBBLE{1}
+    FES4 = FESpace{FE4,AT}(xgrid)
+    FEB4 = FEBasisEvaluator{Float64,FE4,EG[1],CurlScalar,ON_CELLS}(FES4, qf)
+
     basisvals1::Array{Float64,3} = FEB1.cvals
     basisvals2::Array{Float64,3} = FEB2.cvals
     basisvals3::Array{Float64,3} = FEB3.cvals
-    IMM_face = zeros(Float64,2*interior_ndofs-1,interior_offset)
-    IMM = zeros(Float64,2*interior_ndofs-1,2*interior_ndofs-1)
-    lb = zeros(Float64,2*interior_ndofs-1)
-    lx = zeros(Float64,2*interior_ndofs-1)
+    basisvals4::Array{Float64,3} = FEB4.cvals
+    IMM_face = zeros(Float64,interior_ndofs,interior_offset)
+    IMM = zeros(Float64,interior_ndofs,interior_ndofs)
+    for k = 1 : interior_ndofs
+        IMM[k,k] = 1
+    end
+    lb = zeros(Float64,interior_ndofs)
+    lx = zeros(Float64,interior_ndofs)
     temp::Float64 = 0
     offset::Int = 0
+    IMMfact = lu(IMM)
     for cell = 1 : ncells
         # update basis
         update!(FEB1,cell)
         update!(FEB2,cell)
         update!(FEB3,cell)
+        update!(FEB4,cell)
 
         # get reconstruction coefficients for boundary dofs
         rcoeff_handler!(coefficients, cell)
@@ -188,80 +203,72 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{Reconstructio
         # compute local mass matrices
         fill!(IMM,0)
         fill!(IMM_face,0)
-        for i = 1 : length(qf.w)
+        for i in eachindex(weights)
             for dof = 1:interior_ndofs
-                # mass matrix of interior basis functions
-                for dof2 = 1 : interior_ndofs
-                    temp = 0
-                    for k = 1 : 2
-                        temp += basisvals2[k,interior_offset + dof,i] * basisvals2[k,interior_offset + dof2,i]
-                    end
-                    IMM[dof,dof2] += temp * xCellVolumes[cell] * qf.w[i]
-                end
-
-                # mass matrix of interior basis functions x times gradP1
+                # interior FE2 basis functions times grad(P1) of first two P1 functions
                 for dof2 = 1 : interior_ndofs - 1
                     temp = 0
                     for k = 1 : 2
                         temp += basisvals2[k,interior_offset + dof,i] * basisvals3[k,dof2,i]
                     end
-                    temp *= xCellVolumes[cell] * qf.w[i]
-                    IMM[dof,3+dof2] += temp
-                    IMM[3+dof2,dof] += temp
+                    IMM[dof2,dof] += temp * xCellVolumes[cell] * weights[i]
                 end
+                # interior FE2 basis functions times curl(bubble)
+                temp = 0
+                for k = 1 : 2
+                    temp += basisvals2[k,interior_offset + dof,i] * basisvals4[k,1,i]
+                end
+                IMM[3,dof] += temp * xCellVolumes[cell] * weights[i]
 
-                # mass matrix of face basis functions x interior basis functions
-                for dof2 = 1 : interior_offset
-                    temp = 0
-                    for k = 1 : 2
-                        temp += basisvals2[k,interior_offset + dof,i] * basisvals2[k,dof2,i]
-                    end
-                    IMM_face[dof,dof2] += temp * xCellVolumes[cell] * qf.w[i]
-                end
-                # mass matrix of face basis functions x interior basis functions
+                # mass matrix of face basis functions x grad(P1) and curl(bubble)
                 if dof < 3
                     for dof2 = 1 : interior_offset
                         temp = 0
                         for k = 1 : 2
                             temp += basisvals3[k,dof,i] * basisvals2[k,dof2,i]
                         end
-                        IMM_face[3+dof,dof2] += temp * xCellVolumes[cell] * qf.w[i] 
+                        IMM_face[dof,dof2] += temp * xCellVolumes[cell] * weights[i]
+                    end
+                    # mass matrix of face basis functions x interior basis functions
+                elseif dof == 3
+                    for dof2 = 1 : interior_offset
+                        temp = 0
+                        for k = 1 : 2
+                            temp += basisvals4[k,1,i] * basisvals2[k,dof2,i]
+                        end
+                        IMM_face[dof,dof2] += temp * xCellVolumes[cell] * weights[i] 
                     end
                 end
             end
         end
 
         # solve local systems
+        IMMfact = lu(IMM)
         for dof1 = 1 : ndofs1
             # right-hand side
             fill!(lb,0)
-            for i = 1 : length(qf.w)
-                for idof = 1:interior_ndofs
-                    temp = 0
-                    for k = 1 : 2
-                        temp += basisvals1[k,dof1,i] * basisvals2[k,interior_offset + idof,i]
-                    end
-                    lb[idof] += temp *  xCellVolumes[cell] * qf.w[i]
-                end
+            for i in eachindex(weights)
                 for idof = 1:interior_ndofs-1
                     temp = 0
                     for k = 1 : 2
                         temp += basisvals1[k,dof1,i] * basisvals3[k,idof,i]
                     end
-                    lb[3+idof] += temp *  xCellVolumes[cell] * qf.w[i]
+                    lb[idof] += temp *  xCellVolumes[cell] * weights[i]
                 end
+                temp = 0
+                for k = 1 : 2
+                    temp += basisvals1[k,dof1,i] * basisvals4[k,1,i]
+                end
+                lb[3] += temp *  xCellVolumes[cell] * weights[i]
             end
 
             # subtract face interpolation from right-hand side
             for idof = 1 : interior_ndofs, dof2 = 1 : interior_offset
                 lb[idof] -= coefficients[dof1,dof2] * IMM_face[idof,dof2]
             end
-            for idof = 1 : interior_ndofs-1, dof2 = 1 : interior_offset
-                lb[3+idof] -= coefficients[dof1,dof2] * IMM_face[3+idof,dof2]
-            end
         
             # solve local system
-            lx .= IMM\lb
+            ldiv!(lx, IMMfact, lb)
             offset = interior_ndofs*(dof1-1)
             for idof = 1 : interior_ndofs
                 interior_coefficients[offset+idof,cell] = lx[idof]

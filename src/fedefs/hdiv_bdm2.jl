@@ -96,12 +96,25 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     xCellDofs = FE[CellDofs]
     qf = QuadratureRule{Float64,EG}(max(4,2+exact_function!.quadorder))
     FEB = FEBasisEvaluator{Float64,eltype(FE),EG,Identity,ON_CELLS}(FE, qf)
+
+    # evaluation of gradient of P1 functions
+    FE3 = H1P1{1}
+    FES3 = FESpace{FE3,ON_CELLS}(FE.xgrid)
+    FEBP1 = FEBasisEvaluator{Float64,FE3,EG,Gradient,ON_CELLS}(FES3, qf)
+    # evaluation of curl of bubble functions
+    FE4 = H1BUBBLE{1}
+    FES4 = FESpace{FE4,ON_CELLS}(FE.xgrid)
+    FEBB = FEBasisEvaluator{Float64,FE4,EG,CurlScalar,ON_CELLS}(FES4, qf)
+
+
     if items == []
         items = 1 : ncells
     end
 
     interiordofs = zeros(Int,nidofs)
     basisvals::Array{Float64,3} = FEB.cvals
+    basisvalsP1::Array{Float64,3} = FEBP1.cvals
+    basisvalsB::Array{Float64,3} = FEBB.cvals
     IMM_face = zeros(Float64,nidofs,interior_offset)
     IMM = zeros(Float64,nidofs,nidofs)
     lb = zeros(Float64,nidofs)
@@ -111,35 +124,52 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     for cell in items
         # update basis
         update!(FEB,cell)
+        update!(FEBP1,cell)
+        update!(FEBB,cell)
         fill!(IMM,0)
         fill!(IMM_face,0)
         fill!(lb,0)
 
         # quadrature loop
         for i = 1 : length(qf.w)
-            # right-hand side : f interior functions
+            # right-hand side : f times grad(P1),curl(bubble)
             eval!(x,FEB.L2G,FEB.xref[i])
             eval!(feval, exact_function!, x, time)
             feval .*= xCellVolumes[cell] * qf.w[i]
             for dof = 1:nidofs
                 for k = 1 : ncomponents
-                    lb[dof] += feval[k] * basisvals[k,interior_offset + dof,i]
+                    if dof < 3
+                        lb[dof] += feval[k] * basisvalsP1[k,dof,i]
+                    elseif dof == 3
+                        lb[dof] += feval[k] * basisvalsB[k,1,i]
+                    end
                 end
 
                 # mass matrix of interior basis functions
-                for dof2 = 1 : nidofs
+                for dof2 = 1 : nidofs-1
                     temp = 0
                     for k = 1 : ncomponents
-                        temp += basisvals[k,interior_offset + dof,i] * basisvals[k,interior_offset + dof2,i]
+                        temp += basisvals[k,interior_offset + dof,i] * basisvalsP1[k,dof2,i]
                     end
-                    IMM[dof,dof2] += temp * xCellVolumes[cell] * qf.w[i]
+                    IMM[dof2,dof] += temp * xCellVolumes[cell] * qf.w[i]
                 end
+                temp = 0
+                for k = 1 : ncomponents
+                    temp += basisvals[k,interior_offset + dof,i] * basisvalsB[k,1,i]
+                end
+                IMM[3,dof] += temp * xCellVolumes[cell] * qf.w[i]
 
-                # mass matrix of interior x face basis functions
+                # mass matrix of face basis functions
                 for dof2 = 1 : interior_offset
                     temp = 0
-                    for k = 1 : ncomponents
-                        temp += basisvals[k,interior_offset + dof,i] * basisvals[k,dof2,i]
+                    if dof < 3
+                        for k = 1 : ncomponents
+                            temp += basisvalsP1[k,dof,i] * basisvals[k,dof2,i]
+                        end
+                    elseif dof == 3
+                        for k = 1 : ncomponents
+                            temp += basisvalsB[k,1,i] * basisvals[k,dof2,i]
+                        end
                     end
                     IMM_face[dof,dof2] += temp * xCellVolumes[cell] * qf.w[i]
                 end
