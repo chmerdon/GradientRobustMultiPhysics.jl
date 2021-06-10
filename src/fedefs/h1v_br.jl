@@ -331,9 +331,9 @@ end
 ###########################
 
 
-function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVRT0{2}}, ::Type{<:Edge1D})
-    xFaceVolumes::Array{<:Real,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{<:Real,2} = FE.xgrid[FaceNormals]
+function get_reconstruction_coefficients!(xgrid, ::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVRT0{2}}, ::Type{<:Edge1D})
+    xFaceVolumes::Array{<:Real,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{<:Real,2} = xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face::Int) 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
         coefficients[2,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
@@ -345,9 +345,9 @@ function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BF
 end
 
 
-function get_reconstruction_coefficients!(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::FESpace{H1BR{2}}, FER::FESpace{HDIVBDM1{2}}, ::Type{<:Edge1D})
-    xFaceVolumes::Array{Float64,1} = FE.xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+function get_reconstruction_coefficients!(xgrid, ::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D})
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face) 
 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]

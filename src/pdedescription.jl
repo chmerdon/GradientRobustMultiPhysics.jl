@@ -131,6 +131,7 @@ end
 $(TYPEDSIGNATURES)
 
 Adds the given abstract PDEOperator to the left-hand side of the PDEDescription at the specified position.
+The id of the operator in the coressponding LHS block of PDEDescription is returned.
 """
 function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDEOperator; equation_name::String = "")
     push!(PDE.LHSOperators[position[1],position[2]],O)
@@ -138,12 +139,15 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDE
         PDE.equation_names[position[1]] = equation_name
     end
     @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
+    return length(PDE.LHSOperators[position[1],position[2]])
 end
 
 """
 $(TYPEDSIGNATURES)
 
 Adds the given PDEOperator to the left-hand side of the PDEDescription at the specified position. Optionally, the name of the equation can be changed.
+The id of the operator in the coressponding LHS block of PDEDescription is returned (in case of a nonlinear operator with a RHS contribution also the id
+in the coressponding RHS block is returned).
 """
 function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator; equation_name::String = "")
     push!(PDE.LHSOperators[position[1],position[2]],O)
@@ -158,17 +162,21 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator
             push!(PDE.RHSOperators[position[1]],O)
             @logmsg DeepInfo "Added operator $(O.name) also to RHS block $(position[1]) of PDEDescription $(PDE.name)"
         end
+        return length(PDE.LHSOperators[position[1],position[2]]), length(PDE.RHSOperators[position[1]])
+    else
+        return length(PDE.LHSOperators[position[1],position[2]])
     end
 end
 
 """
 $(TYPEDSIGNATURES)
 
-Adds the given PDEOperator to the right-hand side of the PDEDescription at the specified position.
+Adds the given PDEOperator to the right-hand side of the PDEDescription at the specified position. The id of the operator in the coressponding RHS block of PDEDescription is returned.
 """
 function add_rhsdata!(PDE::PDEDescription,position::Int,O::AbstractPDEOperator)
     push!(PDE.RHSOperators[position],O)
     @logmsg DeepInfo "Added operator $(O.name) to RHS block $position of PDEDescription $(PDE.name)"
+    return length(PDE.RHSOperators[position])
 end
 
 """

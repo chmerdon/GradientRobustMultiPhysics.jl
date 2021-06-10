@@ -116,7 +116,7 @@ function assemble!(
     # loop over items
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
-    basisvals::Array{T,3} = basisevaler[1].cvals
+    basisvals::AbstractArray{T,3} = basisevaler[1].cvals
     basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,1),get_maxndofs(AM,2))
     temp::T = 0 # some temporary variable
@@ -333,7 +333,7 @@ function assemble!(
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
     fixed_coeffs::Array{T,1} = zeros(T,get_maxndofs(AM,fixed_argument))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
-    basisvals::Array{T,3} = basisevaler[1].cvals
+    basisvals::AbstractArray{T,3} = basisevaler[1].cvals
     basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     temp::T = 0 # some temporary variable
     ndofs4dofitem::Array{Int,1} = [0,0]

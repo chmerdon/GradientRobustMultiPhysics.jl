@@ -92,7 +92,7 @@ function assemble!(
     maxdofs = get_maxndofs(AM)
     basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
     basisevaler2::FEBasisEvaluator = get_basisevaler(AM, nFE, 1)
-    basisvals::Array{T,3} = basisevaler.cvals
+    basisvals::AbstractArray{T,3} = basisevaler.cvals
     for j = 1 : nFE
         basisevaler = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
@@ -271,7 +271,7 @@ function assemble!(
     offsets = zeros(Int,nFE+1)
     maxdofs = get_maxndofs(AM)
     basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
-    basisvals::Array{T,3} = basisevaler.cvals
+    basisvals::AbstractArray{T,3} = basisevaler.cvals
     for j = 1 : nFE
         basisevaler = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)

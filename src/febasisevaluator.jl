@@ -97,7 +97,7 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
     Dresult::DiffResults.DiffResult      # DiffResults for ForwardDiff handling
-    Dcfg::ForwardDiff.DerivativeConfig    # config for ForwardDiff handling
+    Dcfg::ForwardDiff.DerivativeConfig   # config for ForwardDiff handling
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
     citem::Base.RefValue{Int}            # current item
@@ -111,7 +111,6 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
-
 
 
 function prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, ndofs4item_all, ncomponents; Dcfg = "init", Dresult = "init")
@@ -321,7 +320,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     end
 end    
 
-# constructor for ReconstructionIdentity, ReconstructionDivergence
+# constructor for ReconstructionIdentity, ReconstructionDivergence, ReconstructionGradient
 function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
     
     @debug "Creating FEBasisEvaluator for $FEOP operator of $FEType on $EG"
@@ -395,15 +394,16 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     
     citem = 0
     if mutable
-        return MReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, reconst_handler, subset_handler,1:ndofs4item2,[])
+        return MReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents2,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, reconst_handler, subset_handler,1:ndofs4item2,[])
     else
-        return NMReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler,reconst_handler,subset_handler,1:ndofs4item2,[])
+        return NMReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents2,typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler,reconst_handler,subset_handler,1:ndofs4item2,[])
     end
 end    
 
 function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType, EG, FEOP, AT}
     FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE, Array{Array{T,1},1}(qf.xref); mutable = mutable)
 end
+
 
 # IDENTITY OPERATOR
 # H1 ELEMENTS (nothing has to be done)
@@ -1499,5 +1499,50 @@ function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,ed
             result[offset+k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i] * factor 
         end    
     end 
+    return nothing
+end
+
+
+
+
+
+
+##### additional infrastructure for pairs of FE evaluators
+
+struct SharedCValView{T} <: AbstractArray{T,3}
+    cvals1::AbstractArray{T,3}
+    cvals2::AbstractArray{T,3}
+    offset2::Int
+end
+
+Base.getindex(SCV::SharedCValView{T},i,j,k) where {T} = (i > SCV.offset2) ? SCV.cvals2[i-SCV.offset2,j,k] : SCV.cvals1[i,j,k]
+Base.size(SCV::SharedCValView{T}) where {T} = [size(SCV.cvals1,1) + size(SCV.cvals2,1), size(SCV.cvals1,2), size(SCV.cvals1,3)]
+Base.size(SCV::SharedCValView{T},i) where {T} = (i == 1) ? size(SCV.cvals1,1) + size(SCV.cvals2,1) : size(SCV.cvals1,i)
+
+# pairs two FEBasisEvaluators
+struct FEBasisEvaluatorPair{T,FEB1Type,FEB2Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
+    FE::FESpace                          # link to full FE (e.g. for coefficients)
+    FEB1::FEB1Type # first FEBasisEvaluator
+    FEB2::FEB2Type # second FEBasisEvaluator
+    cvals::SharedCValView{T}
+    L2G::L2GTransformer{T, EG}           # local2global mapper
+    xref::Array{Array{T,1},1} # xref of quadrature formula
+end
+
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: OperatorPair, AT <: AbstractAssemblyType}
+    FEOP1 = FEOP.parameters[1]
+    FEOP2 = FEOP.parameters[2]
+    FEB1 = FEBasisEvaluator{T,FEType,EG,FEOP1,AT}(FE,xref; mutable = mutable)
+    FEB2 = FEBasisEvaluator{T,FEType,EG,FEOP2,AT}(FE,xref; mutable = mutable)
+    cvals = SharedCValView(FEB1.cvals,FEB2.cvals,size(FEB1.cvals,1))
+    edim = dim_element(EG)
+    ncomponents = size(FEB1.cvals,1) + size(FEB1.cvals,2)
+    ndofs = size(FEB1.cvals,2)
+    return FEBasisEvaluatorPair{T,typeof(FEB1),typeof(FEB2),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,cvals,FEB1.L2G,FEB1.xref)
+end
+
+function update!(FEBE::FEBasisEvaluatorPair, item)
+    update!(FEBE.FEB1, item)
+    update!(FEBE.FEB2, item)
     return nothing
 end

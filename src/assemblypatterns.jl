@@ -326,7 +326,6 @@ end
 
 function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyType}, basisAT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
     # check if operator is discontinuous for this AT
-    xgrid = FES.xgrid
     discontinuous = false
     posdt = 0
     for j = 1 : length(FO.parameters)
@@ -505,6 +504,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
         # choose quadrature order for all finite elements
         for k = 1 : length(FE)
           #  if dofitemAT[k] == AT
+            if !(k in discontinuous_operators)
                 if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
                     basisevaler[j,k,1,1] = basisevaler[j,1,1,1] # e.g. for symmetric bilinearforms
                 elseif k > 2 && FE[k] == FE[2] && operator[k] == operator[2]
@@ -513,6 +513,11 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
                     basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
                 end    
                 ndofs4EG[k][j] = size(basisevaler[j,k,1,1].cvals,2)
+            else
+                # todo: will not be evaluated, but do something reasonable here
+                basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],Identity,AT}(FE[k], qf[j])
+                ndofs4EG[k][j] = 0
+            end
          #   end
         end
     end        

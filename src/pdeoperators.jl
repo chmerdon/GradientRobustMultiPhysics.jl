@@ -168,7 +168,7 @@ $(TYPEDSIGNATURES)
 constructor for a bilinearform that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
     
 """
-function ReactionOperator(coefficient = 1.0; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, identity_operator = Identity, regions::Array{Int,1} = [0], store::Bool = false)
+function ReactionOperator(coefficient = 1.0, ncomponents = 1; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, identity_operator = Identity, regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
         name = "u ⋅ v"
         if typeof(coefficient) <: Float64
@@ -179,6 +179,21 @@ function ReactionOperator(coefficient = 1.0; name = "auto", AT::Type{<:AbstractA
     end
     if typeof(coefficient) <: Float64
         return PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[identity_operator,identity_operator], NoAction(), [1], coefficient, regions, store, AssemblyInitial)
+    elseif typeof(coefficient) <: UserData{AbstractDataFunction}
+        xdim = coefficient.dimensions[1]
+        function reaction_function_func_xt()
+            eval_coeff = zeros(Float64,ncomponents)
+            function closure(result, input, x, t)
+                # evaluate beta
+                eval!(eval_coeff,coefficient,x,t)
+                # compute alpha*u
+                for j = 1 : ncomponents
+                    result[j] = eval_coeff[j] * input[j]
+                end
+            end    
+        end    
+        action_kernel = ActionKernel(reaction_function_func_xt(), [ncomponents, xdim]; dependencies = "XT", quadorder = coefficient.quadorder)
+        O = PDEOperator{Float64, APT_BilinearForm, AT}(name, [identity_operator, identity_operator], Action(Float64, action_kernel), [1], 1, regions, store, AssemblyAuto)
     else
         @error "No standard reaction operator definition for this coefficient type available, please define your own action and PDEOperator with it."
     end
@@ -327,7 +342,6 @@ function AbstractBilinearForm(
     store::Bool = false)
 
     # check formalities
-    @assert length(operators) == 2 "BilinearForm needs exactly 2 operators!"
     @assert apply_action_to in [[1],[2]] "Action must be applied to [1] or [2]"
 
     # construct PDEoperator

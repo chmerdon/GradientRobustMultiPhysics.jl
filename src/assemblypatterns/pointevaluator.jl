@@ -48,7 +48,7 @@ function evaluate!(
     action = PE.action
     action_input::Array{T,1} = PE.action_input
     coeffs::Array{T,1} = FEB.entries
-    basisvals::Array{T,3} = FEBE.cvals
+    basisvals::AbstractArray{T,3} = FEBE.cvals
     xItemDofs::DofMapTypes = PE.xItemDofs
 
     fill!(result,0)

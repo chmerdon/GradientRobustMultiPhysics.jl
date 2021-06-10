@@ -3,8 +3,8 @@ abstract type ReconstructionCoefficients{FE1,FE2,AT} <: AbstractGridFloatArray2D
 abstract type ReconstructionDofs{FE1,FE2,AT} <: AbstractGridIntegerArray2D end
 
 struct ReconstructionHandler{FE1,FE2,AT,EG, FType <: Function}
-    FES::FESpace{FE1,AT}
-    FER::FESpace{FE2,AT}
+    FES::FESpace{FE1,ON_CELLS}
+    FER::FESpace{FE2,ON_CELLS}
     interior_offset::Int
     interior_ndofs::Int
     interior_coefficients::Matrix{Float64} # coefficients for interior basis functions are precomputed
@@ -163,17 +163,17 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{Reconstructio
     qf = QuadratureRule{Float64,EG[1]}(4)
     weights::Array{Float64,1} = qf.w
     # evaluation of FE1 and FE2 basis
-    FES1 = FESpace{FE1,AT}(xgrid)
-    FES2 = FESpace{FE2,AT}(xgrid)
+    FES1 = FESpace{FE1,ON_CELLS}(xgrid)
+    FES2 = FESpace{FE2,ON_CELLS}(xgrid)
     FEB1 = FEBasisEvaluator{Float64,FE1,EG[1],Identity,ON_CELLS}(FES1, qf)
     FEB2 = FEBasisEvaluator{Float64,FE2,EG[1],Identity,ON_CELLS}(FES2, qf)
     # evaluation of gradient of P1 functions
     FE3 = H1P1{1}
-    FES3 = FESpace{FE3,AT}(xgrid)
+    FES3 = FESpace{FE3,ON_CELLS}(xgrid)
     FEB3 = FEBasisEvaluator{Float64,FE3,EG[1],Gradient,ON_CELLS}(FES3, qf)
     # evaluation of curl of bubble functions
     FE4 = H1BUBBLE{1}
-    FES4 = FESpace{FE4,AT}(xgrid)
+    FES4 = FESpace{FE4,ON_CELLS}(xgrid)
     FEB4 = FEBasisEvaluator{Float64,FE4,EG[1],CurlScalar,ON_CELLS}(FES4, qf)
 
     basisvals1::Array{Float64,3} = FEB1.cvals

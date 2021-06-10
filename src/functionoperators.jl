@@ -142,6 +142,7 @@ abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 
 
+
 """
 ````
 function Jump(::Type{<:AbstractFunctionOperator})
@@ -249,3 +250,18 @@ QuadratureOrderShift4Operator(::Type{SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{TangentialGradient}) = -1
 QuadratureOrderShift4Operator(::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{Hessian}) = -2
+
+
+# some infrastructure to allow operator pairs (and possibly triplets etc. by recursive application)
+
+"""
+````
+abstract type OperatorPair{<:AbstractFunctionOperator,<:AbstractFunctionOperator} <: AbstractFunctionOperator
+````
+
+allows to evaluate two operators in place of one, e.g. OperatorPair{Identity,Gradient}.
+"""
+abstract type OperatorPair{OP1 <:AbstractFunctionOperator,OP2 <: AbstractFunctionOperator} <: AbstractFunctionOperator end
+Length4Operator(OP::Type{<:OperatorPair}, xdim::Int, ncomponents::Int) = Length4Operator(OP.parameters[1], xdim, ncomponents) + Length4Operator(OP.parameters[2], xdim, ncomponents)
+QuadratureOrderShift4Operator(OP::Type{<:OperatorPair}) = max(QuadratureOrderShift4Operator(OP.parameters[1]),QuadratureOrderShift4Operator(OP.parameters[2]))
+DefaultName4Operator(OP::Type{<:OperatorPair}) = "(" * DefaultName4Operator(OP.parameters[1]) * "," *  DefaultName4Operator(OP.parameters[2]) * ")"

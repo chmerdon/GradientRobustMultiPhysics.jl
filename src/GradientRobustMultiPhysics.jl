@@ -87,7 +87,7 @@ export integrate!, integrate, ref_integrate!
 
 include("functionoperators.jl")
 export AbstractFunctionOperator
-export Identity, IdentityComponent
+export Identity, IdentityComponent, IdentityDisc
 export ReconstructionIdentity, ReconstructionIdentityDisc
 export ReconstructionGradient, ReconstructionGradientDisc
 export ReconstructionDivergence
@@ -104,7 +104,7 @@ export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 
 export DiscontinuityTreatment, Jump, Average
-export IdentityDisc, GradientDisc
+export OperatorPair
 
 
 include("finiteelements.jl")

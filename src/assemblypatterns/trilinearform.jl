@@ -95,7 +95,7 @@ function assemble!(
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     indexmap = CartesianIndices(zeros(Int, (maxdofitems[1],maxdofitems[2],maxdofitems[3])))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1),get_basisevaler(AM, 2, 1),get_basisevaler(AM, 3, 1)]
-    basisvals_testfunction::Array{T,3} = basisevaler[3].cvals
+    basisvals_testfunction::AbstractArray{T,3} = basisevaler[3].cvals
     basisxref::Array{Array{T,1},1} = basisevaler[2].xref
     nonfixed_ids::Array{Int,1} = setdiff([1,2,3], fixed_argument)
     coeffs::Array{T,1} = zeros(T,get_maxndofs(AM,fixed_argument))
@@ -271,7 +271,7 @@ function assemble!(
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     indexmap = CartesianIndices(zeros(Int, (maxdofitems[1],maxdofitems[2],maxdofitems[3])))
     basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1),get_basisevaler(AM, 2, 1),get_basisevaler(AM, 3, 1)]
-    basisvals_testfunction::Array{T,3} = basisevaler[3].cvals
+    basisvals_testfunction::AbstractArray{T,3} = basisevaler[3].cvals
     basisxref::Array{Array{T,1},1} = basisevaler[2].xref
     fixed_arguments::Array{Int,1} = [1,2]
     nonfixed_id::Int = 3
