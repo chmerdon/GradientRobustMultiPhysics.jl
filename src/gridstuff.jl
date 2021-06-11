@@ -1267,7 +1267,6 @@ function gFindLocal!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int = 1,
     imin::Int = 0
 
     while (true)
-
         # compute barycentric coordinates of point in current simplex
         update!(L2G, icell)
 
@@ -1300,14 +1299,75 @@ function gFindLocal!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int = 1,
         if icell == previous_cells[end]
             icell = xFaceCells[2,xCellFaces[node2oppositeface[imin],icell]]
             if icell == 0
-                @warn "could not find point in any cell and ended up at boundary of domain (maybe x lies outside of the domain ?)"
+              #  @warn "could not find point in any cell and ended up at boundary of domain (maybe x lies outside of the domain ?)"
                 return 0
             end
         end
 
         if icell == previous_cells[end-1]
-            @warn "could not find point in any cell and ended up going in circles (better try brute force search)"
+           # @warn "could not find point in any cell and ended up going in circles (better try brute force search)"
             return 0
+        end
+    end
+    
+    return 0
+end
+
+function gFindBruteForce!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int = 1, eps = 1e-14) where{Tv,Ti}
+
+    EG = xgrid[CellGeometries][1]
+    CS = xgrid[CoordinateSystem]
+
+    L2G = L2GTransformer{Tv,EG,CS}(xgrid, ON_CELLS)
+
+    if EG <: AbstractElementGeometry1D
+        A = zeros(Tv,1,1)
+        @assert length(x) == 1 "x must have dimension 1"
+        @assert length(xref) == 1 "x must have dimension 1"
+    elseif EG <: Triangle2D
+        A = zeros(Tv,2,2)
+        @assert length(x) == 2 "x must have dimension 2"
+        @assert length(xref) == 2 "x must have dimension 2"
+        node2oppositeface = [2, 3, 1]
+    elseif EG <: Tetrahedron3D
+        A = zeros(Tv,3,3)
+        @assert length(x) == 3 "x must have dimension 3"
+        @assert length(xref) == 3 "x must have dimension 3"
+        node2oppositeface = [3, 4, 2,1]
+    else
+        @error "ElementGeometry not supported by gFindCell"
+    end
+        
+    icell::Int = icellstart
+    ncells::Int = num_sources(xgrid[CellNodes])
+    cx = zero(x)
+    L2GA::Matrix{Tv} = L2G.A
+    L2Gb::Vector{Tv} = L2G.b
+    xrefmin::Tv = 1e30
+    imin::Int = 0
+
+    for icell = 1 : ncells
+        # compute barycentric coordinates of point in current simplex
+        update!(L2G, icell)
+
+        # compute barycentric coordinates of node
+        cx .= x - L2Gb
+        xref .= L2GA\cx
+        xrefmin = 1e30
+        for i = 1 : length(xref)
+            if xrefmin >= xref[i]
+                xrefmin = xref[i]
+                imin = i+1
+            end
+        end
+        if xrefmin >= (1 - sum(xref))
+            xrefmin = (1 - sum(xref))
+            imin = 1
+        end
+
+        # if all barycentric coordinates are within [0,1] the including cell is found
+        if  xrefmin >= -eps
+            return icell
         end
     end
     

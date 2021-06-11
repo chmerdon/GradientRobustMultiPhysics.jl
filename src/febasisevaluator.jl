@@ -1493,10 +1493,28 @@ end
 Evaluates the linear combination of the basisfunction with given coefficients at the i-th quadrature point and writes the (possibly vector-valued) evaluation into result (beginning at offset and with the specified factor).
 
 """
-function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, coefficients::Array{T,1}, i, offset = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
+function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, coefficients::Array{T,1}, i::Int, offset = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
     for dof_i = 1 : ndofs # ndofs4item
         for k = 1 : size(FEBE.cvals,1)
             result[offset+k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i] * factor 
+        end    
+    end 
+    return nothing
+end
+
+
+"""
+````
+    eval!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
+````
+
+Evaluates the linear combination of the basisfunction with given coefficients at the i-th quadrature point and writes the (possibly vector-valued) evaluation into result (beginning at offset and with the specified factor).
+
+"""
+function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, coefficients::Array{T,1}, xItemDofs::DofMapTypes, i::Int, offset = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
+    for dof_i = 1 : ndofs # ndofs4item
+        for k = 1 : size(FEBE.cvals,1)
+            result[offset+k] += coefficients[xItemDofs[dof_i,FEBE.citem[]]] * FEBE.cvals[k,dof_i,i] * factor 
         end    
     end 
     return nothing
@@ -1510,14 +1528,14 @@ end
 ##### additional infrastructure for pairs of FE evaluators
 
 struct SharedCValView{T} <: AbstractArray{T,3}
-    cvals1::AbstractArray{T,3}
-    cvals2::AbstractArray{T,3}
-    offset2::Int
+    cvals::Array{Array{T,3},1}
+    k2cvalindex::Array{Int,1}
+    offsets::Array{Int,1}
 end
 
-Base.getindex(SCV::SharedCValView{T},i,j,k) where {T} = (i > SCV.offset2) ? SCV.cvals2[i-SCV.offset2,j,k] : SCV.cvals1[i,j,k]
-Base.size(SCV::SharedCValView{T}) where {T} = [size(SCV.cvals1,1) + size(SCV.cvals2,1), size(SCV.cvals1,2), size(SCV.cvals1,3)]
-Base.size(SCV::SharedCValView{T},i) where {T} = (i == 1) ? size(SCV.cvals1,1) + size(SCV.cvals2,1) : size(SCV.cvals1,i)
+Base.getindex(SCV::SharedCValView{T},i::Int,j::Int,k::Int) where {T} = SCV.cvals[SCV.k2cvalindex[i]][i-SCV.offsets[i],j,k]
+Base.size(SCV::SharedCValView{T}) where {T} = [SCV.offsets[end] + size(SCV.cvals[end],1), size(SCV.cvals[end],2), size(SCV.cvals[end],3)]
+Base.size(SCV::SharedCValView{T},i) where {T} = (i == 1) ? SCV.offsets[end] + size(SCV.cvals[end],1) : size(SCV.cvals[end],i)
 
 # pairs two FEBasisEvaluators
 struct FEBasisEvaluatorPair{T,FEB1Type,FEB2Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
@@ -1534,9 +1552,15 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     FEOP2 = FEOP.parameters[2]
     FEB1 = FEBasisEvaluator{T,FEType,EG,FEOP1,AT}(FE,xref; mutable = mutable)
     FEB2 = FEBasisEvaluator{T,FEType,EG,FEOP2,AT}(FE,xref; mutable = mutable)
-    cvals = SharedCValView(FEB1.cvals,FEB2.cvals,size(FEB1.cvals,1))
+    ncomponents = size(FEB1.cvals,1) + size(FEB2.cvals,1)
+    indexes = ones(Int,ncomponents)
+    offsets = zeros(Int,ncomponents)
+    for j = 1 : size(FEB2.cvals,1)
+        indexes[size(FEB1.cvals,1)+j] = 2
+        offsets[size(FEB1.cvals,1)+j] = size(FEB1.cvals,1)
+    end
+    cvals = SharedCValView([FEB1.cvals,FEB2.cvals],indexes,offsets)
     edim = dim_element(EG)
-    ncomponents = size(FEB1.cvals,1) + size(FEB1.cvals,2)
     ndofs = size(FEB1.cvals,2)
     return FEBasisEvaluatorPair{T,typeof(FEB1),typeof(FEB2),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,cvals,FEB1.L2G,FEB1.xref)
 end

@@ -29,9 +29,9 @@ function PointEvaluator{T,FEType,EG,FEOP,AT}(FES::FESpace, FEB::FEVectorBlock, a
 end
 
 function evaluate!(
-    result::Array{T,1},
+    result::AbstractArray{T,1},
     PE::PointEvaluator{T},
-    xref::Array{T,1},
+    xref::AbstractArray{T,1},
     item::Int # cell used to evaluate local coordinates
     ) where {T}
 
@@ -48,7 +48,6 @@ function evaluate!(
     action = PE.action
     action_input::Array{T,1} = PE.action_input
     coeffs::Array{T,1} = FEB.entries
-    basisvals::AbstractArray{T,3} = FEBE.cvals
     xItemDofs::DofMapTypes = PE.xItemDofs
 
     fill!(result,0)
@@ -58,14 +57,10 @@ function evaluate!(
 
         # evaluate operator
         fill!(action_input,0)
-        for dof_i = 1 : size(basisvals,2), k = 1 : length(action_input)
-            action_input[k] += coeffs[xItemDofs[dof_i,item] + FEB.offset] * basisvals[k,dof_i,1]
-        end
+        @time eval!(action_input, FEBE, coeffs, xItemDofs, 1)
         apply_action!(result,action_input,action,1,xref)
     else
-        @time for dof_i = 1 : size(basisvals,2), k = 1 : length(result)
-            result[k] += coeffs[xItemDofs[dof_i,item] + FEB.offset] * basisvals[k,dof_i,1]
-        end
+        @time eval!(result, FEBE, coeffs, xItemDofs, 1)
     end
 
     return nothing

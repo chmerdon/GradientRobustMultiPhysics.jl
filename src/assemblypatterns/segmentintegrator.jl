@@ -93,7 +93,7 @@ function integrate!(
     action_input::Array{T,1} = SI.action_input
     action_result::Array{T,1} = SI.action_result
     coeffs::Array{T,1} = FEB.entries
-    basisvals::AbstractArray{T,3} = FEBE.cvals
+    basisvals::Union{SharedCValView{T},Array{T,3}} = FEBE.cvals
     xItemDofs::DofMapTypes = SI.xItemDofs
     weights::Array{T,1} = qf.w
 
