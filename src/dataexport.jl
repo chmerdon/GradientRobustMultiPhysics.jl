@@ -104,6 +104,9 @@ function writeCSV!(filename::String, Data::Array{<:FEVectorBlock,1}; operators =
     # collect data
     offsets = zeros(Int, length(Data)+1)
     for j = 1 : length(Data)
+        if length(operators) < j
+            push!(operators, Identity)
+        end
         FEType = eltype(Data[j].FES)
         offsets[j+1] = offsets[j] + Length4Operator(operators[j], xdim, get_ncomponents(FEType))
     end

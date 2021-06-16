@@ -11,7 +11,7 @@ This example solves the DFG Navier-Stokes benchmark problem
 \end{aligned}
 ```
 on a rectangular 2D domain with a circular obstacle, see
-[here](http://www.featflow.de/en/benchmarks/cfdbenchmarking/flow/dfg_benchmark1_re20.html) for details.
+[here](www.mathematik.tu-dortmund.de/~featflow/en/benchmarks/cfdbenchmarking/flow/dfg_benchmark1_re20.html) for details.
 
 This script demonstrates the employment of external grid generators and the computation of drag and lift coefficients.
 
@@ -77,17 +77,36 @@ function main(; Plotter = nothing, verbosity = 2, μ = 1e-3, maxvol = 5e-4)
 
     ## postprocess : compute drag/lift (see function below)
     draglift = get_draglift(Solution, μ)
+    pdiff = get_pressure_difference(Solution)
     println("[drag, lift] = $draglift")
+    println("p difference = $pdiff")
 
     ## plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; add_grid_plot = true, Plotter = Plotter, use_subplots = false, resolution = (800,400))
 end
 
+function get_pressure_difference(Solution::FEVector)
+    xgrid = Solution[2].FES.xgrid
+    PE = PointEvaluator{Float64,typeof(Solution[2].FES).parameters[1],Triangle2D,Identity,ON_CELLS}(Solution[2].FES, Solution[2])
+    xref = zeros(Float64,2)
+    p_left = zeros(Float64,1); x1 = [0.15,0.2]
+    p_right = zeros(Float64,1); x2 = [0.25,0.2]
+    cell::Int = gFindLocal!(xref, xgrid, x1; icellstart = 1)
+    if cell == 0
+        cell = gFindBruteForce!(xref, xgrid, x1)
+    end
+    evaluate!(p_left,PE,xref,cell)
+    cell = gFindLocal!(xref, xgrid, x2; icellstart = 1)
+    if cell == 0
+        cell = gFindBruteForce!(xref, xgrid, x2)
+    end
+    evaluate!(p_right,PE,xref,cell)
+    return p_left - p_right
+end
 
 function get_draglift(Solution::FEVector, μ)
 
-
-    ## this functin is interpolated for drag/lift test function creation
+    ## this function is interpolated for drag/lift test function creation
     function circle_bnd_testfunction(component)
         function closure!(result,x)
             fill!(result,0)

@@ -215,7 +215,7 @@ function update!(AM::AssemblyManager, item::Int)
     end
 end
 
-@inline get_basisevaler(AM::AssemblyManager, op::Int, dofitem::Int) = AM.basisevaler[AM.EG4dofitem[op][dofitem],op,AM.itempos4dofitem[op][dofitem],AM.orientation4dofitem[op][dofitem]]
+@inline get_basisevaler(AM::AssemblyManager, op::Int, dofitem) = AM.basisevaler[AM.EG4dofitem[op][dofitem],op,AM.itempos4dofitem[op][dofitem],AM.orientation4dofitem[op][dofitem]]
 @inline get_qweights(AM::AssemblyManager) = AM.qf[AM.EG4dofitem[1][1]].w
 @inline get_ndofs(AM, op::Int, dofitem::Int) = AM.ndofs4EG[op][AM.EG4dofitem[op][dofitem]]
 @inline get_maxndofs(AM::AssemblyManager) = maximum.(AM.ndofs4EG)

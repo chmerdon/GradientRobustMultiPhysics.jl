@@ -135,9 +135,9 @@ function assemble!(
                 ndofs4item[3] = get_ndofs(AM, 3, di[3])
 
                 # update FEbasisevaler
-                basisevaler[1] = get_basisevaler(AM, 1, di[1])
-                basisevaler[2] = get_basisevaler(AM, 2, di[2])
-                basisevaler[3] = get_basisevaler(AM, 3, di[3])
+                basisevaler[1] = get_basisevaler(AM, 1, di[1])::FEBasisEvaluator
+                basisevaler[2] = get_basisevaler(AM, 2, di[2])::FEBasisEvaluator
+                basisevaler[3] = get_basisevaler(AM, 3, di[3])::FEBasisEvaluator
 
                 # update action on dofitem
                 basisxref = basisevaler[2].xref
@@ -306,9 +306,9 @@ function assemble!(
             if dofitem[1] > 0 && dofitem[2] > 0 && dofitem[3] > 0
 
                 # update FEbasisevaler
-                basisevaler[1] = get_basisevaler(AM, 1, di[1])
-                basisevaler[2] = get_basisevaler(AM, 2, di[2])
-                basisevaler[3] = get_basisevaler(AM, 3, di[3])
+                basisevaler[1] = get_basisevaler(AM, 1, di[1])::FEBasisEvaluator
+                basisevaler[2] = get_basisevaler(AM, 2, di[2])::FEBasisEvaluator
+                basisevaler[3] = get_basisevaler(AM, 3, di[3])::FEBasisEvaluator
                 basisvals_testfunction = basisevaler[3].cvals
                 basisxref = basisevaler[2].xref
 

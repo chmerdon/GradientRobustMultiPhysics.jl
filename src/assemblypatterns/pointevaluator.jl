@@ -3,8 +3,9 @@
 ##################
 
 
-struct PointEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType, ACT <: AbstractAction}
+struct PointEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType, ACT <: AbstractAction, BVT}
     FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
+    basisvals::BVT
     FEB::FEVectorBlock{T} # holds coefficients
     xItemDofs::DofMapTypes # holds dof numbers
     action::ACT # additional action to postprocess operator evaluation
@@ -25,21 +26,21 @@ function PointEvaluator{T,FEType,EG,FEOP,AT}(FES::FESpace, FEB::FEVectorBlock, a
         action_input = zeros(Float64,action.argsizes[2])
     end
 
-    return PointEvaluator{T,FEType,EG,FEOP,AT,typeof(action)}(FEBE, FEB, DM, action, action_input)
+    return PointEvaluator{T,FEType,EG,FEOP,AT,typeof(action),typeof(FEBE.cvals)}(FEBE, FEBE.cvals, FEB, DM, action, action_input)
 end
 
 function evaluate!(
     result::AbstractArray{T,1},
-    PE::PointEvaluator{T},
-    xref::AbstractArray{T,1},
+    PE::PointEvaluator{T, FEType, EG, FEOP, AT, ACT, BVT},
+    xref::Array{T,1},
     item::Int # cell used to evaluate local coordinates
-    ) where {T}
+    ) where  {T, FEType, EG, FEOP, AT, ACT, BVT}
 
     FEBE = PE.FEBE
     FEB = PE.FEB
 
-    # update basis evaluations on new quadrature points
-    relocate_xref!(FEBE, [xref])
+    # update basis evaluations at xref
+    relocate_xref!(FEBE, xref)
     
     # update operator eveluation on item
     update!(FEBE, item)
@@ -48,19 +49,24 @@ function evaluate!(
     action = PE.action
     action_input::Array{T,1} = PE.action_input
     coeffs::Array{T,1} = FEB.entries
+    basisvals::BVT = PE.basisvals
     xItemDofs::DofMapTypes = PE.xItemDofs
 
     fill!(result,0)
-    if !(typeof(action) <: NoAction)
+    if !(ACT <: NoAction)
         # update_action
         update!(action, FEBE, item, item, 0) # region is missing currently
 
         # evaluate operator
         fill!(action_input,0)
-        @time eval!(action_input, FEBE, coeffs, xItemDofs, 1)
+        for dof_i = 1 : size(basisvals,2), k = 1 : length(action_input)
+            action_input[k] += coeffs[xItemDofs[dof_i,item] + FEB.offset] * basisvals[k,dof_i,1]
+        end
         apply_action!(result,action_input,action,1,xref)
     else
-        @time eval!(result, FEBE, coeffs, xItemDofs, 1)
+        for dof_i = 1 : size(basisvals,2), k = 1 : length(result)
+            result[k] += coeffs[xItemDofs[dof_i,item] + FEB.offset] * basisvals[k,dof_i,1]
+        end
     end
 
     return nothing

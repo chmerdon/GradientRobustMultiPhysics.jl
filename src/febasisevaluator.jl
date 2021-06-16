@@ -175,9 +175,8 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, nd
 end
 
 ## relocates evaluation points (needs mutable FEB) used by segment integrator
-function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref::Array{Array{T,1},1}) where {T, FEType, EG, FEOP, AT}
+function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref) where {T, FEType, EG, FEOP, AT}
     FEB.xref .= new_xref
-    FEAT = EffAT4AssemblyType(typeof(FEB.FE).parameters[2],AT)
     if FEB.derivorder == 0
         for i = 1 : length(new_xref)
             # evaluate basis functions at quadrature point
@@ -197,6 +196,24 @@ function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref::Ar
     end
 end
 
+function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref::AbstractArray{T,1}) where {T, FEType, EG, FEOP, AT}
+    FEB.xref[1] .= new_xref
+    if FEB.derivorder == 0
+        # evaluate basis functions at quadrature point
+        FEB.refbasis(FEB.refbasisvals[1], new_xref)
+        if FEOP <: Identity || FEOP <: IdentityDisc
+            for j = 1 : size(FEB.refbasisvals[1],1), k = 1 : size(FEB.refbasisvals[1],2)
+                FEB.cvals[k,j,1] = FEB.refbasisvals[1][j,k]
+            end
+        elseif FEOP <: IdentityComponent
+            for j = 1 : size(FEB.refbasisvals[1],1)
+                FEB.cvals[1,j,1] = FEB.refbasisvals[1][j,FEOP.parameters[1]]
+            end
+        end
+    elseif FEB.derivorder > 0
+        prepareFEBasisDerivs!(FEB.refbasisderivvals, refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
+    end
+end
 
 """
 ````
@@ -1501,26 +1518,6 @@ function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,ed
     end 
     return nothing
 end
-
-
-"""
-````
-    eval!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
-````
-
-Evaluates the linear combination of the basisfunction with given coefficients at the i-th quadrature point and writes the (possibly vector-valued) evaluation into result (beginning at offset and with the specified factor).
-
-"""
-function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, coefficients::Array{T,1}, xItemDofs::DofMapTypes, i::Int, offset = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
-    for dof_i = 1 : ndofs # ndofs4item
-        for k = 1 : size(FEBE.cvals,1)
-            result[offset+k] += coefficients[xItemDofs[dof_i,FEBE.citem[]]] * FEBE.cvals[k,dof_i,i] * factor 
-        end    
-    end 
-    return nothing
-end
-
-
 
 
 

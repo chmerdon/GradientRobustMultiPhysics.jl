@@ -1299,13 +1299,13 @@ function gFindLocal!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int = 1,
         if icell == previous_cells[end]
             icell = xFaceCells[2,xCellFaces[node2oppositeface[imin],icell]]
             if icell == 0
-              #  @warn "could not find point in any cell and ended up at boundary of domain (maybe x lies outside of the domain ?)"
+                @debug  "could not find point in any cell and ended up at boundary of domain (maybe x lies outside of the domain ?)"
                 return 0
             end
         end
 
         if icell == previous_cells[end-1]
-           # @warn "could not find point in any cell and ended up going in circles (better try brute force search)"
+            @debug  "could not find point in any cell and ended up going in circles (better try brute force search)"
             return 0
         end
     end
@@ -1313,7 +1313,7 @@ function gFindLocal!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int = 1,
     return 0
 end
 
-function gFindBruteForce!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int = 1, eps = 1e-14) where{Tv,Ti}
+function gFindBruteForce!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; eps = 1e-14) where{Tv,Ti}
 
     EG = xgrid[CellGeometries][1]
     CS = xgrid[CoordinateSystem]
@@ -1338,7 +1338,6 @@ function gFindBruteForce!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int
         @error "ElementGeometry not supported by gFindCell"
     end
         
-    icell::Int = icellstart
     ncells::Int = num_sources(xgrid[CellNodes])
     cx = zero(x)
     L2GA::Matrix{Tv} = L2G.A
@@ -1370,6 +1369,8 @@ function gFindBruteForce!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int
             return icell
         end
     end
+
+    @debug "gFindBruteForce did not find any cell that contains x = $x (make sure that x is inside the domain, or try reducing $eps)"
     
     return 0
 end
