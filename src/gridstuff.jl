@@ -1243,16 +1243,16 @@ function gFindLocal!(xref, xgrid::ExtendableGrid{Tv,Ti}, x; icellstart::Int = 1,
     if EG <: AbstractElementGeometry1D
         A = zeros(Tv,1,1)
         @assert length(x) == 1 "x must have dimension 1"
-        @assert length(xref) == 1 "x must have dimension 1"
+        @assert length(xref) == 1 "xref must have dimension 1"
     elseif EG <: Triangle2D
         A = zeros(Tv,2,2)
         @assert length(x) == 2 "x must have dimension 2"
-        @assert length(xref) == 2 "x must have dimension 2"
+        @assert length(xref) == 2 "xref must have dimension 2"
         node2oppositeface = [2, 3, 1]
     elseif EG <: Tetrahedron3D
         A = zeros(Tv,3,3)
         @assert length(x) == 3 "x must have dimension 3"
-        @assert length(xref) == 3 "x must have dimension 3"
+        @assert length(xref) == 3 "xref must have dimension 3"
         node2oppositeface = [3, 4, 2,1]
     else
         @error "ElementGeometry not supported by gFindCell"

@@ -80,7 +80,7 @@ function main(; verbosity = 0, c = 10, γ = 1.4, M = 1, μ = 1e-3, λ = -1e-3/3,
     ## load mesh and refine
     xgrid = simplexgrid("assets/2d_grid_mountainrange.sg")
 
-    # compute mass of exact density in domain (bit smaller than M due to mountains)
+    ## compute mass of exact density in domain (bit smaller than M due to mountains)
     ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = "ϱ", dependencies = "X", quadorder = 1)
     Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
 

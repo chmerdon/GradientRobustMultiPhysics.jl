@@ -24,7 +24,7 @@ module Example223_NaturalConvection2D
 
 using GradientRobustMultiPhysics
 
-# boundary data for temperature on bottom
+## boundary data for temperature on bottom
 T_bottom = DataFunction((T,x) -> (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = "X", quadorder = 4)
 
 ## everything is wrapped in a main function
@@ -71,7 +71,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefi
     ## solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
     solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = "l2", anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true)
     
-    # compute Nusselt number along bottom boundary
+    ## compute Nusselt number along bottom boundary
     NuIntegrator = ItemIntegrator(Float64,ON_BFACES,[Jump(Gradient)], fdot_action(Float64,DataFunction([0,-1.0])); regions = [1])
     println("\tNu = $(evaluate(NuIntegrator,[Solution[3]]))")
 

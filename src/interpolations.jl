@@ -283,6 +283,58 @@ function interpolate!(Target::FEVectorBlock, source_data::UserData{AbstractDataF
 end
 
 
+"""
+````
+function interpolate!(Target::FEVectorBlock,
+     source_data::UserData{AbstractDataFunction};
+     items = [])
+````
+
+Interpolates the given finite element function into the finite element space assigned to the Target FEVectorBlock. 
+(Currently not the most efficient way as it is based on the PointEvaluation pattern and cell search.)
+"""
+function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operator = Identity, xtrafo = nothing, items = [], not_in_domain_value = 1e30)
+    # wrap point evaluation into function that is put into normal interpolate!
+    xgrid = source_data.FES.xgrid
+    xdim_source::Int = size(xgrid[Coordinates],1)
+    xdim_target::Int = size(Target.FES.xgrid[Coordinates],1)
+    if xdim_source != xdim_target
+        @assert xtrafo !== nothing "grids have different coordinate dimensions, need xtrafo!"
+    end
+    FEType = typeof(source_data.FES).parameters[1]
+    ncomponents = get_ncomponents(FEType)
+    resultdim = Length4Operator(operator,xdim_source,ncomponents)
+    PE = PointEvaluator{Float64,FEType,xgrid[CellGeometries][1],operator,ON_CELLS}(source_data.FES, source_data)
+    xref = zeros(Float64,xdim_source)
+    x_source = zeros(Float64,xdim_source)
+    cell::Int = 1
+    lastnonzerocell::Int = 1
+    function point_evaluation!(result, x)
+        if xtrafo !== nothing
+            xtrafo(x_source, x)
+            cell = gFindLocal!(xref, xgrid, x_source; icellstart = lastnonzerocell)
+            if cell == 0
+                cell = gFindBruteForce!(xref, xgrid, x_source)
+            end
+        else
+            cell = gFindLocal!(xref, xgrid, x; icellstart = lastnonzerocell)
+            if cell == 0
+                cell = gFindBruteForce!(xref, xgrid, x)
+            end
+        end
+        if cell == 0
+            fill!(result, not_in_domain_value)
+        else
+            evaluate!(result,PE,xref,cell)
+            lastnonzerocell = cell
+        end
+        return nothing
+    end
+    fe_function = DataFunction(point_evaluation!, [resultdim, xdim_target]; dependencies = "X", quadorder = 2)
+    interpolate!(Target, ON_CELLS, fe_function; items = items)
+end
+
+
 
 function nodevalues!(Target::AbstractArray{T,2},
     Source::AbstractArray{T,1},

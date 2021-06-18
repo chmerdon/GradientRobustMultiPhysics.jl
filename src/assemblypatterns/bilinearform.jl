@@ -185,7 +185,11 @@ function assemble!(
                                 for k = 1 : action_resultdim
                                     temp += action_result[k] * basisvals[k,dof_j,i]
                                 end
-                                localmatrix[dof_i,dof_j] += weights[i] * temp
+                                if apply_action_to == 2
+                                    localmatrix[dof_j,dof_i] += weights[i] * temp
+                                else
+                                    localmatrix[dof_i,dof_j] += weights[i] * temp
+                                end
                             end
                         else # symmetric case
                             for dof_j = dof_i : ndofs4dofitem[other_id]
