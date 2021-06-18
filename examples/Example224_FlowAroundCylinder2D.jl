@@ -88,17 +88,18 @@ end
 function get_pressure_difference(Solution::FEVector)
     xgrid = Solution[2].FES.xgrid
     PE = PointEvaluator{Float64,typeof(Solution[2].FES).parameters[1],Triangle2D,Identity,ON_CELLS}(Solution[2].FES, Solution[2])
+    CF = CellFinder(xgrid, Triangle2D)
     xref = zeros(Float64,2)
     p_left = zeros(Float64,1); x1 = [0.15,0.2]
     p_right = zeros(Float64,1); x2 = [0.25,0.2]
-    cell::Int = gFindLocal!(xref, xgrid, x1; icellstart = 1)
+    cell::Int = gFindLocal!(xref, CF, x1; icellstart = 1)
     if cell == 0
-        cell = gFindBruteForce!(xref, xgrid, x1)
+        cell = gFindBruteForce!(xref, CF, x1)
     end
     evaluate!(p_left,PE,xref,cell)
-    cell = gFindLocal!(xref, xgrid, x2; icellstart = 1)
+    cell = gFindLocal!(xref, CF, x2; icellstart = 1)
     if cell == 0
-        cell = gFindBruteForce!(xref, xgrid, x2)
+        cell = gFindBruteForce!(xref, CF, x2)
     end
     evaluate!(p_right,PE,xref,cell)
     return p_left - p_right
