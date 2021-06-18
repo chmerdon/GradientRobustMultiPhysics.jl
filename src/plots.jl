@@ -11,8 +11,8 @@ Plotter = GLMakie should work in 3D (but only with a single plot currently)
 """
 function plot(
     xgrid::ExtendableGrid,
-    Sources::Array{<:FEVectorBlock,1},
-    operators::Array{DataType,1};
+    Sources::Vector{<:FEVectorBlock},
+    operators::Vector{DataType};
     add_grid_plot::Bool = false,
     Plotter = nothing,
     subplots_per_column = 2,
@@ -54,12 +54,13 @@ function plot(
             end
         end
 
-        nodevals = zeros(Float64,offsets[end],nnodes)
+        nodevals = Array{Array{Float64,2},1}(undef,nplots - add_grid_plot)
         for j = 1 : nplots - add_grid_plot
             ## evaluate operator
             if typeof(Sources[j]) <: FEVectorBlock
+                nodevals[j] = zeros(Float64,offsets[j+1]-offsets[j],size(Sources[j].FES.xgrid[Coordinates],2))
                 @logmsg DeepInfo "collecting data for plot $j : " * "$(operators[j])(" * Sources[j].name * ")"
-                nodevalues!(nodevals, Sources[j], operators[j]; target_offset = offsets[j], zero_target = false)
+                nodevalues!(nodevals[j], Sources[j], operators[j]; zero_target = false)
             end
         end
 
@@ -96,21 +97,23 @@ function plot(
             end
         end
 
-        # fill plots
-        Z = zeros(Float64,nnodes)
+        # fill plots    
+        temp::Float64 = 0
         for j = 1 : nplots - add_grid_plot
             if offsets[j+1] - offsets[j] > 1
-                Z[:] = sqrt.(sum(view(nodevals,(offsets[j]+1):offsets[j+1],:).^2, dims = 1))
+                for n = 1 : size(nodevals[j],2)
+                    temp = 0
+                    for k = 1 : size(nodevals[j],1)
+                        temp += nodevals[j][k,n].^2
+                    end
+                    nodevals[j][1,n] = sqrt(temp)
+                end
                 title = maintitle * " | $(operators[j])(" * Sources[j].name * ") |"
             else
-                Z[:] = view(nodevals,offsets[j]+1,:)
                 title = maintitle * " $(operators[j])(" * Sources[j].name * ")"
             end
-            if minimum(Z) == maximum(Z)
-                Z[1] += 1e-16
-            end
             @logmsg DeepInfo "plotting data into plot $j : " * title
-            scalarplot!(ctx[j], xgrid, Z; kwargs...) 
+            scalarplot!(ctx[j], Sources[j].FES.xgrid, view(nodevals[j],1,:); kwargs...) 
             if plottertype(Plotter) == PyPlotType
                 Plotter.title(title)
             end
@@ -133,7 +136,17 @@ function plot_convergencehistory(X, Y; add_h_powers = [], X_to_h = X -> X, Plott
         if clear
             Plotter.clf()
         end
-        Plotter.loglog(X, Y; marker = "o");
+        for j = 1 : size(Y,2)
+            Xk = []
+            Yk = []
+            for k = 1 : length(X)
+                if Y[k,j] > 0
+                    push!(Xk,X[k])
+                    push!(Yk,Y[k,j])
+                end
+            end
+            Plotter.loglog(Xk,Yk; marker = "o");
+        end
         Plotter.ylabel(ylabel) 
         Plotter.xlabel(xlabel) 
         while length(ylabels) < size(Y,2)

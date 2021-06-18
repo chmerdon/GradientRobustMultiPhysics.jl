@@ -46,12 +46,12 @@ export GridComponent4TypeProperty
 export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
 export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
 export get_facegrid, get_bfacegrid, get_edgegrid
-export gFindLocal!, gFindBruteForce!
 
 include("meshrefinements.jl")
 export split_grid_into
 export uniform_refine
 export barycentric_refine
+export CellParents
 
 include("adaptive_meshrefinements.jl")
 export bulk_mark
@@ -79,6 +79,10 @@ export GridComponentRegions4AssemblyType
 
 include("l2gtransformations.jl");
 export L2GTransformer, update!, eval!, mapderiv!, piola!
+
+include("cellfinder.jl")
+export CellFinder
+export gFindLocal!, gFindBruteForce!
 
 include("quadrature.jl")
 export QuadratureRule

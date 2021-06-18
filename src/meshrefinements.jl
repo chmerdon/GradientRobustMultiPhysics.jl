@@ -1,4 +1,15 @@
 
+
+# refinements can store parent informations
+abstract type CellParents <: AbstractGridIntegerArray1D end
+
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellParents})
+    ncells = num_sources(xgrid[CellNodes]) 
+    VectorOfConstants{Int32}(0,ncells)
+end
+
+
+
 # functions that tell how to split one ElementGeometry into another
 split_rule(::Type{Triangle2D}, ::Type{Triangle2D}) = reshape([1,2,3],1,3)
 split_rule(::Type{Tetrahedron3D}, ::Type{Tetrahedron3D}) = reshape([1,2,3,4],1,4)
@@ -177,7 +188,7 @@ if multiple geometries are in the mesh uniform refinement will only work
 if all refinement rules refine faces and edges (in 3D) equally
 (so no hanging nodes are created)
 """
-function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
+function uniform_refine(source_grid::ExtendableGrid{T,K}; store_parents = false) where {T,K}
     @logmsg MoreInfo "Uniform refinement of $(num_sources(source_grid[CellNodes])) cells"
     
     xgrid = ExtendableGrid{T,K}()
@@ -281,6 +292,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
     iEG = 1
     subitemnodes = zeros(Int32,max_num_targets_per_source(oldCellNodes)+max_num_targets_per_source(oldCellFaces)+1)
     m = 0
+    xCellParents = zeros(Int32,0)
     for cell = 1 : num_sources(oldCellNodes)
         itemEG = oldCellGeometries[cell]
         nnodes4item = nnodes_for_geometry(itemEG)
@@ -331,6 +343,9 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
             append!(xCellNodes,subitemnodes[1:size(refine_rules[iEG],2)])
             push!(xCellGeometries,itemEG)
             push!(xCellRegions, oldCellRegions[cell])
+            if store_parents
+                push!(xCellParents,cell)
+            end
         end    
         ncells += size(refine_rules[iEG],1)
     end
@@ -435,15 +450,26 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}) where {T,K}
         xgrid[BFaceGeometries] = Array{DataType,1}(xBFaceGeometries)
     end    
 
+    if store_parents
+        xgrid[CellParents] = xCellParents
+    end
+
 
     return xgrid
 end
 
 
-function uniform_refine(source_grid::ExtendableGrid{T,K}, nrefinements::Int) where {T,K}
+function uniform_refine(source_grid::ExtendableGrid{T,K}, nrefinements::Int; store_parents = false) where {T,K}
     xgrid = source_grid
+    parents = 1:num_sources(xgrid[CellNodes])
     for j=1:nrefinements
-        xgrid = uniform_refine(xgrid)
+        xgrid = uniform_refine(xgrid; store_parents = store_parents)
+        if store_parents
+            parents = parents[xgrid[CellParents]]
+        end
+    end
+    if store_parents
+        xgrid[CellParents] = parents
     end
     return xgrid
 end

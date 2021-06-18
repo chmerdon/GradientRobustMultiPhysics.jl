@@ -47,7 +47,7 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
     derivorder::Int                      # order of derivatives that are needed
     Dresult::Union{Nothing,DiffResults.DiffResult}      # DiffResults for ForwardDiff handling
-    Dcfg::Union{Nothing,ForwardDiff.DerivativeConfig}    # config for ForwardDiff handling
+    Dcfg::Union{Nothing,ForwardDiff.DerivativeConfig, ForwardDiff.JacobianConfig}    # config for ForwardDiff handling
     offsets::SVector{ncomponents,Int}    # offsets for gradient entries of each dof
     offsets2::Array{Int,1}               # offsets for dof entries of each gradient (on ref)
     citem::Base.RefValue{Int}            # current item
@@ -192,7 +192,7 @@ function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref) wh
             end
         end
     elseif FEB.derivorder > 0
-        prepareFEBasisDerivs!(FEB.refbasisderivvals, refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
+        prepareFEBasisDerivs!(FEB.refbasisderivvals, FEB.refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
     end
 end
 
@@ -211,7 +211,7 @@ function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref::Ab
             end
         end
     elseif FEB.derivorder > 0
-        prepareFEBasisDerivs!(FEB.refbasisderivvals, refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
+        prepareFEBasisDerivs!(FEB.refbasisderivvals, FEB.refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
     end
 end
 

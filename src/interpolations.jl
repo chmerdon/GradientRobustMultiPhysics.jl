@@ -58,13 +58,42 @@ function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}
     end
 end
 
+
+# point evaluation (at vertices of geometry)
+# for lowest order degrees of freedom
+# used e.g. for interpolation into P1, P2, P2B, MINI finite elements
+function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}, ::Type{AT_NODES}, exact_function::UserData{AbstractExtendedDataFunction}; items = [], component_offset::Int = 0, time = 0) where {FEType <: AbstractFiniteElement}
+    xCoordinates = FES.xgrid[Coordinates]
+    xdim = size(xCoordinates,1)
+    nnodes = size(xCoordinates,2)
+    ncomponents = get_ncomponents(FEType)
+    if items == []
+        items = 1 : nnodes
+    end
+    result = zeros(Float64,ncomponents)
+    offset4component = 0:component_offset:ncomponents*component_offset
+    # interpolate at nodes
+    x = zeros(Float64,xdim)
+    xNodeCells = atranspose(FES.xgrid[CellNodes])
+    cell::Int = 0
+    for j in items
+        for k=1:xdim
+            x[k] = xCoordinates[k,j]
+        end    
+        cell = xNodeCells[1,j]
+        eval!(result, exact_function , x, time, nothing, cell, nothing)
+        for k = 1 : ncomponents
+            Target[j+offset4component[k]] = result[k]
+        end    
+    end
+end
+
 function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{FEType}, ::Type{ON_CELLS}, exact_function::UserData{AbstractDataFunction}; items = [], time = 0) where {FEType <: AbstractFiniteElement, T<:Real} 
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     xCellNodes = FES.xgrid[CellNodes]
     xCellDofs = FES[CellDofs]
 
-    nnodes = size(xCoordinates,2)
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(xCellNodes)
@@ -101,7 +130,9 @@ function get_ref_cellmoments(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:A
 end
 
 function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {FEType <: AbstractH1FiniteElement}
-    # note: assumes that cell dof is always the last one
+
+    # note: assumes that cell dof is always the last one and that there are no higher oder cell moments
+
     xgrid = FE.xgrid
     xItemVolumes = xgrid[CellVolumes]
     xItemNodes = xgrid[CellNodes]
@@ -234,7 +265,7 @@ Interpolates the given source_data into the finite elements space assigned to th
 """
 function interpolate!(Target::FEVectorBlock,
      AT::Type{<:AbstractAssemblyType},
-     source_data::UserData{AbstractDataFunction};
+     source_data::UserData{<:AbstractDataFunction};
      items = [],
      time = 0)
 
@@ -278,7 +309,7 @@ function interpolate!(Target::FEVectorBlock,
 Interpolates the given source_data into the finite element space assigned to the Target FEVectorBlock. The optional time argument
 is only used if the source_data depends on time.
 """
-function interpolate!(Target::FEVectorBlock, source_data::UserData{AbstractDataFunction}; time = 0)
+function interpolate!(Target::FEVectorBlock, source_data::UserData{<:AbstractDataFunction}; time = 0)
     interpolate!(Target, ON_CELLS, source_data; time = time)
 end
 
@@ -293,7 +324,7 @@ function interpolate!(Target::FEVectorBlock,
 Interpolates the given finite element function into the finite element space assigned to the Target FEVectorBlock. 
 (Currently not the most efficient way as it is based on the PointEvaluation pattern and cell search.)
 """
-function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operator = Identity, xtrafo = nothing, items = [], not_in_domain_value = 1e30)
+function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operator = Identity, xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false)
     # wrap point evaluation into function that is put into normal interpolate!
     xgrid = source_data.FES.xgrid
     xdim_source::Int = size(xgrid[Coordinates],1)
@@ -304,33 +335,57 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
     FEType = typeof(source_data.FES).parameters[1]
     ncomponents = get_ncomponents(FEType)
     resultdim = Length4Operator(operator,xdim_source,ncomponents)
-    PE = PointEvaluator{Float64,FEType,xgrid[CellGeometries][1],operator,ON_CELLS}(source_data.FES, source_data)
+    EG = xgrid[CellGeometries][1]
+    PE = PointEvaluator{Float64,FEType,EG,operator,ON_CELLS}(source_data.FES, source_data)
     xref = zeros(Float64,xdim_source)
     x_source = zeros(Float64,xdim_source)
     cell::Int = 1
     lastnonzerocell::Int = 1
-    function point_evaluation!(result, x)
-        if xtrafo !== nothing
-            xtrafo(x_source, x)
-            cell = gFindLocal!(xref, xgrid, x_source; icellstart = lastnonzerocell)
-            if cell == 0
-                cell = gFindBruteForce!(xref, xgrid, x_source)
+    same_cells::Bool = xgrid == Target.FES.xgrid
+    CF = CellFinder(xgrid, EG)
+
+    if same_cells || use_cellparents == true
+        xCellParents::Array{Int,1} = Target.FES.xgrid[CellParents]
+        function point_evaluation_parentgrid!(result, x, target_cell)
+            if same_cells
+                lastnonzerocell = target_cell
+            elseif use_cellparents
+                lastnonzerocell = xCellParents[target_cell]
             end
-        else
-            cell = gFindLocal!(xref, xgrid, x; icellstart = lastnonzerocell)
-            if cell == 0
-                cell = gFindBruteForce!(xref, xgrid, x)
+            if xtrafo !== nothing
+                xtrafo(x_source, x)
+                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
+            else
+                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell)
             end
-        end
-        if cell == 0
-            fill!(result, not_in_domain_value)
-        else
             evaluate!(result,PE,xref,cell)
-            lastnonzerocell = cell
+            return nothing
         end
-        return nothing
+        fe_function = ExtendedDataFunction(point_evaluation_parentgrid!, [resultdim, xdim_target]; dependencies = "XI", quadorder = get_polynomialorder(FEType,EG))
+    else
+        function point_evaluation_arbitrarygrids!(result, x)
+            if xtrafo !== nothing
+                xtrafo(x_source, x)
+                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
+                if cell == 0
+                    cell = gFindBruteForce!(xref, CF, x_source)
+                end
+            else
+                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell)
+                if cell == 0
+                    cell = gFindBruteForce!(xref, CF, x)
+                end
+            end
+            if cell == 0
+                fill!(result, not_in_domain_value)
+            else
+                evaluate!(result,PE,xref,cell)
+                lastnonzerocell = cell
+            end
+            return nothing
+        end
+        fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", quadorder = get_polynomialorder(FEType,EG))
     end
-    fe_function = DataFunction(point_evaluation!, [resultdim, xdim_target]; dependencies = "X", quadorder = 2)
     interpolate!(Target, ON_CELLS, fe_function; items = items)
 end
 
