@@ -1,6 +1,6 @@
 #= 
 
-# A07 : Interpolation Between Mehses
+# A07 : Interpolation Between Meshes
 ([source code](SOURCE_URL))
 
 This example demonstrates the interpolation between meshes feature. Here, we interpolate a function withe the P2 element of a coarse triangulation and then interpolate
@@ -13,7 +13,7 @@ module ExampleA07_InterpolationBetweenMeshes
 using GradientRobustMultiPhysics
 using ExtendableGrids
 
-# exact solution
+## function to interpolate
 function data!(ν)
     function closure(result,x::Array{<:Real,1})
         result[1] = sin(2*pi*x[1])*sin(2*pi*x[2]);

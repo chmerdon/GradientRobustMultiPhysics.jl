@@ -807,8 +807,8 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (beta*grad(u),v) with some user-specified DataFunction beta that writes into
-an result array of length ncomponents
+constructor for a bilinearform that describes a(u,v) = (beta*grad(u),v) with some user-specified DataFunction beta.
+The user also has to specify the number of components ncomponents()) the convection is applied to.
     
 """
 function ConvectionOperator(
@@ -819,6 +819,7 @@ function ConvectionOperator(
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     ansatzfunction_operator::Type{<:AbstractFunctionOperator} = Gradient,
     testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    transposed_assembly::Bool = true,
     regions::Array{Int,1} = [0])
 
     T = Float64
@@ -893,7 +894,7 @@ function ConvectionOperator(
     end
 
     O = PDEOperator{Float64, APT_BilinearForm, AT}(name, [ansatzfunction_operator, testfunction_operator], Action(T, action_kernel), [1], 1, regions, store, AssemblyAuto)
-    O.transposed_assembly = true
+    O.transposed_assembly = transposed_assembly
     return O
 end
 

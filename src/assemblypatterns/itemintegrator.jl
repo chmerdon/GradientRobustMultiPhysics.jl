@@ -17,6 +17,7 @@ function ItemIntegrator(
     AT::Type{<:AbstractAssemblyType},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
+    name = "ItemIntegrator",
     regions::Array{Int,1} = [0])
 ````
 
@@ -32,6 +33,8 @@ function L2ErrorIntegrator(
     T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction}, # can be omitted if zero
     operator::Type{<:AbstractFunctionOperator};
+    quadorder = "auto",
+    name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     time = 0)
 ````
@@ -43,6 +46,7 @@ function L2ErrorIntegrator(
     compare_data::UserData{AbstractDataFunction},
     operator::Type{<:AbstractFunctionOperator};
     quadorder = "auto",
+    name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     regions = [0],
     time = 0)
@@ -59,8 +63,11 @@ function L2ErrorIntegrator(
     if quadorder == "auto"
         quadorder = 2 * compare_data.quadorder
     end
-    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = "L2 error kernel", dependencies = "X", quadorder = quadorder)
-    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = "L2 error ($(compare_data.name))")
+    if name == "auto"
+        name = "L2 error ($(compare_data.name))"
+    end
+    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = name, dependencies = "X", quadorder = quadorder)
+    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = name)
 end
 
 """
@@ -70,6 +77,7 @@ L2NormIntegrator(
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    name = "L2 norm",
     quadorder = 2,
     regions = [0])
 ````
@@ -81,6 +89,7 @@ function L2NormIntegrator(
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    name = "L2 norm",
     quadorder = 2,
     regions = [0])
     function L2norm_function(result,input)
@@ -90,7 +99,7 @@ function L2NormIntegrator(
         end    
     end    
     action_kernel = ActionKernel(L2norm_function, [1,ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = quadorder)
-    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = "L2 norm")
+    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = name)
 end
 
 """
@@ -98,19 +107,22 @@ end
 function L2DifferenceIntegrator(
     T::Type{<:Real},
     ncomponents::Int,
-    operator::Type{<:AbstractFunctionOperator};
+    operator::Union{Type{<:AbstractFunctionOperator},Array{DataType,1}};
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    name = "L2 difference",
     quadorder = 2,
     regions = [0])
 ````
 
-Creates an ItemIntegrator that computes the L2 norm difference between two arguments evalauted with the same operator where ncomponents is the expected length of each operator evaluation.
+Creates an ItemIntegrator that computes the L2 norm difference between two arguments evalauted with the same operator (or with different operators if operator is an array) where ncomponents is the expected length of each operator evaluation.
+Note that all arguments in an evaluation call need to be defined on the same grid !
 """
 function L2DifferenceIntegrator(
     T::Type{<:Real},
     ncomponents::Int,
-    operator::Type{<:AbstractFunctionOperator};
+    operator;
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    name = "L2 difference",
     quadorder = 2,
     regions = [0])
     function L2difference_function(result,input)
@@ -120,7 +132,11 @@ function L2DifferenceIntegrator(
         end    
     end    
     action_kernel = ActionKernel(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", quadorder = quadorder)
-    return ItemIntegrator(T,AT, [operator, operator], Action(T, action_kernel); regions = regions, name = "L2 difference")
+    if typeof(operator) <: DataType
+        return ItemIntegrator(T,AT, [operator, operator], Action(T, action_kernel); regions = regions, name = name)
+    else
+        return ItemIntegrator(T,AT, [operator[1], operator[2]], Action(T, action_kernel); regions = regions, name = name)
+    end
 end
 
 

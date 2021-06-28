@@ -6,6 +6,7 @@ struct CellFinder{Tv,Ti,EG,CS}
     node2oppositeface::Array{Int,1}
     previous_cells::Array{Int,1}
     L2G::L2GTransformer{Tv,EG,CS}
+    invA::Matrix{Tv}
     cx::Vector{Tv}
 end
 
@@ -24,7 +25,7 @@ function CellFinder(xgrid::ExtendableGrid{Tv,Ti}, EG) where {Tv,Ti}
     else
         @error "ElementGeometry not supported by CellFinder"
     end
-    return CellFinder{Tv,Ti,EG,CS}(xgrid, xgrid[CellFaces], xgrid[FaceCells], node2oppositeface, zeros(Ti,3), L2G, zeros(Tv,size(A,1)))
+    return CellFinder{Tv,Ti,EG,CS}(xgrid, xgrid[CellFaces], xgrid[FaceCells], node2oppositeface, zeros(Ti,3), L2G, A, zeros(Tv,size(A,1)))
 end
 
 
@@ -41,7 +42,7 @@ function gFindLocal!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; icellstart::Int = 1, 
     previous_cells::Array{Int,1} = CF.previous_cells
     fill!(previous_cells,0)
 
-    L2GA::Matrix{Tv} = L2G.A
+    invA::Matrix{Tv} = CF.invA
     L2Gb::Vector{Tv} = L2G.b
     xrefmin::Tv = 1e30
     imin::Int = 0
@@ -54,7 +55,11 @@ function gFindLocal!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; icellstart::Int = 1, 
         for j = 1 : length(x)
             cx[j] = x[j] - L2Gb[j]
         end
-        xref .= L2GA\cx # should be the only line with allocations
+        mapderiv!(invA,L2G,xref)
+        fill!(xref,0)
+        for j = 1 : length(x), k = 1 : length(x)
+            xref[k] += invA[j,k] * cx[j]
+        end
         xrefmin = 1e30
         for i = 1 : length(xref)
             if xrefmin >= xref[i]
@@ -102,7 +107,7 @@ function gFindBruteForce!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; eps = 1e-14) whe
     previous_cells::Array{Int,1} = CF.previous_cells
     fill!(previous_cells,0)
 
-    L2GA::Matrix{Tv} = L2G.A
+    invA::Matrix{Tv} = CF.invA
     L2Gb::Vector{Tv} = L2G.b
     xrefmin::Tv = 1e30
     imin::Int = 0
@@ -115,7 +120,11 @@ function gFindBruteForce!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; eps = 1e-14) whe
         for j = 1 : length(x)
             cx[j] = x[j] - L2Gb[j]
         end
-        xref .= L2GA\cx
+        mapderiv!(invA,L2G,xref)
+        fill!(xref,0)
+        for j = 1 : length(x), k = 1 : length(x)
+            xref[k] += invA[j,k] * cx[j]
+        end
         xrefmin = 1e30
         for i = 1 : length(xref)
             if xrefmin >= xref[i]

@@ -317,7 +317,7 @@ end
 """
 ````
 function interpolate!(Target::FEVectorBlock,
-     source_data::UserData{AbstractDataFunction};
+     source_data::FEVectorBlock;
      items = [])
 ````
 
@@ -333,8 +333,8 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
         @assert xtrafo !== nothing "grids have different coordinate dimensions, need xtrafo!"
     end
     FEType = typeof(source_data.FES).parameters[1]
-    ncomponents = get_ncomponents(FEType)
-    resultdim = Length4Operator(operator,xdim_source,ncomponents)
+    ncomponents::Int = get_ncomponents(FEType)
+    resultdim::Int = Length4Operator(operator,xdim_source,ncomponents)
     EG = xgrid[CellGeometries][1]
     PE = PointEvaluator{Float64,FEType,EG,operator,ON_CELLS}(source_data.FES, source_data)
     xref = zeros(Float64,xdim_source)
@@ -342,7 +342,7 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
     cell::Int = 1
     lastnonzerocell::Int = 1
     same_cells::Bool = xgrid == Target.FES.xgrid
-    CF = CellFinder(xgrid, EG)
+    CF::CellFinder{Float64,Int32,EG,xgrid[CoordinateSystem]} = CellFinder(xgrid, EG)
 
     if same_cells || use_cellparents == true
         xCellParents::Array{Int,1} = Target.FES.xgrid[CellParents]
@@ -353,8 +353,8 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
                 lastnonzerocell = xCellParents[target_cell]
             end
             if xtrafo !== nothing
-                xtrafo(x_source, x)
-                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
+               xtrafo(x_source, x)
+               cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
             else
                 cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell)
             end
@@ -386,7 +386,7 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
         end
         fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", quadorder = get_polynomialorder(FEType,EG))
     end
-    interpolate!(Target, ON_CELLS, fe_function; items = items)
+    @time interpolate!(Target, ON_CELLS, fe_function; items = items)
 end
 
 
