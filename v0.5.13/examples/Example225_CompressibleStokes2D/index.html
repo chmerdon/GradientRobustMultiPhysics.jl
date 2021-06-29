@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>225 : Compressible Stokes 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D</a></li><li class="is-active"><a class="tocitem" href>225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example225_CompressibleStokes2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Compressible-Stokes-2D"><a class="docs-heading-anchor" href="#:-Compressible-Stokes-2D">225 : Compressible Stokes 2D</a><a id=":-Compressible-Stokes-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Compressible-Stokes-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example225_CompressibleStokes2D.jl">source code</a>)</p><p>This example solves the compressible Stokes equations where one seeks a (vector-valued) velocity <span>$\mathbf{u}$</span>, a density <span>$\varrho$</span> and a pressure <span>$p$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + \λ \nabla(\mathrm{div}(\mathbf{u})) + \nabla p &amp; = \mathbf{f} + \varrho \mathbf{g}\\
+\mathrm{div}(\varrho \mathbf{u}) &amp; = 0\\
+        p &amp; = eos(\varrho)\\
+        \int_\Omega \varrho \, dx &amp; = M\\
+        \varrho &amp; \geq 0.
+\end{aligned}\]</p><p>Here eos <span>$eos$</span> is some equation of state function that describes the dependence of the pressure on the density (and further physical quantities like temperature in a more general setting). Moreover, <span>$\mu$</span> and <span>$\λ$</span> are Lame parameters and <span>$\mathbf{f}$</span> and <span>$\mathbf{g}$</span> are given right-hand side data.</p><p>In this example we solve a analytical toy problem with the prescribed solution</p><p class="math-container">\[\begin{aligned}
+\mathbf{u}(\mathbf{x}) &amp; =0\\
+\varrho(\mathbf{x}) &amp; = 1 - (x_2 - 0.5)/c\\
+p &amp;= eos(\varrho) := c \varrho^\γ
+\end{aligned}\]</p><p>such that <span>$\mathbf{f} = 0$</span> and <span>$\mathbf{g}$</span> nonzero to match the prescribed solution. This example is designed to study the well-balanced property of a discretisation. Note that a gradient-robust discretisation (set reconstruct = true below) has a much smaller L2 velocity error (i.e. approximatse the well-balanced state much better). For larger c the problem gets more incompressible which reduces the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density. See reference below for more details.</p><div class="admonition is-category-reference"><header class="admonition-header">Reference</header><div class="admonition-body"><p>&quot;A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem&quot;,<br/>M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon,<br/>Computer Methods in Applied Mechanics and Engineering 367 (2020),<br/><a href="https://doi.org/10.1016/j.cma.2020.113069">&gt;Journal-Link&lt;</a> <a href="https://arxiv.org/abs/1911.01295">&gt;Preprint-Link&lt;</a></p></div></div><pre><code class="language-julia">module Example225_CompressibleStokes2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using Printf
+
+# the equation of state
+function equation_of_state!(c,γ)
+    function closure(pressure,density)
+        for j = 1 : length(density)
+            pressure[j] = c*density[j]^γ
+        end
+    end
+end
+
+# the exact density (used for initial value of density if configured so)
+function ϱ_exact!(M,c)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[1] = M*(1.0 - (x[2] - 0.5)/c)
+    end
+end
+
+# gravity right-hand side (just gravity but with opposite sign!)
+function gravity!(γ,c)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2) * γ # = - ϱ^(γ-2) * γ
+    end
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, c = 10, γ = 1.4, M = 1, μ = 1e-3, λ = -1e-3/3, Plotter = nothing,)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load mesh and refine
+    xgrid = simplexgrid(&quot;assets/2d_grid_mountainrange.sg&quot;)
+
+    # compute mass of exact density in domain (bit smaller than M due to mountains)
+    ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = &quot;ϱ&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
+
+    # solve without and with reconstruction and plot
+    Solution = setup_and_solve(xgrid; reconstruct = false, c = c, M = Mreal, λ = λ, μ = μ, γ = γ)
+    Solution2 = setup_and_solve(xgrid; reconstruct = true, c = c, M = Mreal, λ = λ, μ = μ, γ = γ)
+
+    # plot everything
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2],Solution2[1],Solution2[2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
+
+    # compare L2 error for velocity and density
+    u = DataFunction([0,0]; name = &quot;u&quot;)
+    VeloError = L2ErrorIntegrator(Float64, u, Identity)
+    DensityError = L2ErrorIntegrator(Float64, ϱ, Identity)
+    L2error = sqrt(evaluate(VeloError,Solution[1]))
+    L2error2 = sqrt(evaluate(VeloError,Solution2[1]))
+    L2error3 = sqrt(evaluate(DensityError,Solution[2]))
+    L2error4 = sqrt(evaluate(DensityError,Solution2[2]))
+    @printf(&quot;\n\t        reconstruct     false    |    true\n&quot;)
+    @printf(&quot;\t================================================\n&quot;)
+    @printf(&quot;\tL2error(Velocity) | %.5e  | %.5e \n&quot;,L2error,L2error2)
+    @printf(&quot;\tL2error(Density)  | %.5e  | %.5e \n&quot;,L2error3,L2error4)
+end
+
+function setup_and_solve(xgrid;
+    c = 1, γ = 1, M = 1, μ = 1, λ = 0,
+    reconstruct = true,
+    timestep = 2 * μ / c,
+    maxTimeSteps = 1000,
+    stationarity_threshold = 1e-12/μ)
+
+    # set finite element types [velocity, density,  pressure]
+    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel x P0
+
+    # generate empty PDEDescription for three unknowns (u, ϱ. p)
+    Problem = PDEDescription(&quot;compressible Stokes problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;v&quot;, equation_name = &quot;momentum equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;ϱ&quot;, equation_name = &quot;continuity equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;equation of state&quot;)
+    add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
+
+    # momentum equation
+    VeloIdentity = reconstruct ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
+    VeloDivergence = reconstruct ? ReconstructionDivergence{HDIVBDM1{2}} : Divergence
+    add_operator!(Problem, [1,1], LaplaceOperator(2*μ; store = true))
+    if λ != 0
+        add_operator!(Problem, [1,1], AbstractBilinearForm([VeloDivergence,VeloDivergence]; name = &quot;λ (div(u),div(v))&quot;, factor = λ, store = true))
+    end
+    add_operator!(Problem, [1,3], AbstractBilinearForm([Divergence,Identity]; name = &quot;(div(v),p)&quot;, factor = -1, store = true))
+
+    # gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
+    g = DataFunction(gravity!(γ,c), [2,2]; name = &quot;g&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    add_operator!(Problem, [1,2], AbstractBilinearForm([VeloIdentity,Identity], fdot_action(Float64, g); factor = -1, name = &quot;(g ⋅ v) ϱ&quot;, store = true))
+
+    # continuity equation (by FV upwind on triangles)
+    add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
+
+    # equation of state (by best-approximation, P0 mass matrix is diagonal)
+    eos_action = Action(Float64, equation_of_state!(c,γ),[1,1]; dependencies = &quot;&quot;, quadorder = 0)
+    add_operator!(Problem, [3,2], AbstractBilinearForm([Identity,Identity],eos_action; name = &quot;(p,eos(ϱ))&quot;, apply_action_to = [2]))
+    add_operator!(Problem, [3,3], AbstractBilinearForm([Identity,Identity]; name = &quot;(p,q)&quot;, factor = -1, store = true))
+
+    # generate FESpaces and solution vector
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
+    Solution = FEVector{Float64}([&quot;v_h (reconst=$reconstruct)&quot;, &quot;ϱ_h (reconst=$reconstruct)&quot;, &quot;p_h (reconst=$reconstruct)&quot;],FES)
+
+    # initial values for density (constant) and pressure (by equation of state)
+    fill!(Solution[2], M/sum(xgrid[CellVolumes]))
+    equation_of_state!(c,γ)(Solution[3],Solution[2])
+
+    # time-dependent solver with three equations [1] velocity, [2] density, [3] pressure
+    # solved iteratively [1] =&gt; [2] =&gt; [3] in each pseudo time step until stationarity
+    TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
+                                        subiterations = [[1],[2],[3]], # solve [1], then [2], then [3]
+                                        skip_update = [-1,1,-1], # only matrix of eq [2] changes
+                                        timedependent_equations = [2], # only eq [2] is time-dependent
+                                        maxiterations = 1,
+                                        show_solver_config = true,
+                                        check_nonlinear_residual = false)
+    advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
+
+    # check error in mass constraint
+    Md = sum(Solution[2][:] .* xgrid[CellVolumes])
+    @printf(&quot;\tmass_error = %.4e - %.4e = %.4e \n&quot;,M, Md, abs(M-Md))
+
+    return Solution
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight">julia&gt; Example225_CompressibleStokes2D.main()
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = false
+  anderson_iterations = 0
+  subiterations = [[1], [2], [3]]
+  show_iteration_details = true
+  timedependent_equations = [2]
+  anderson_unknowns = [1]
+  show_statistics = false
+  anderson_metric = l2
+  skip_update = [-1, 1, -1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
+  damping = 0
+  time = 0
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = false
+  fixed_penalty = 1.0e60
+  target_residual = 1.0e-10
+  maxiterations = 1
+  AssemblyTriggers = 
+         LHS_AT[1] :  I  T  T 
+         LHS_AT[2] :  N  A  N 
+         LHS_AT[3] :  N  T  I 
+         RHS_AT[1] :  T 
+         RHS_AT[2] :  T 
+         RHS_AT[3] :  T 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2] [1, 3]; [2, 1] [2, 1] [2, 3]; [3, 1] [3, 2] [3]]
+
+
+
+	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                         
+	        |            |  (total)   |      v           ϱ           p     
+	     1  | 2.0000e-04 | 3.9722e-14 | 3.6071e+02  3.3217e-01  4.6477e+00 
+	     2  | 4.0000e-04 | 3.4945e-14 | 2.9110e+02  1.1483e-01  1.6123e+00 
+	     3  | 6.0000e-04 | 3.7598e-14 | 4.2505e+01  5.8360e-02  8.1912e-01 
+	     4  | 8.0000e-04 | 2.6228e-14 | 3.3474e+01  3.3134e-02  4.6499e-01 
+	     5  | 1.0000e-03 | 3.8674e-14 | 1.2102e+01  2.0588e-02  2.8901e-01 
+	     6  | 1.2000e-03 | 2.7861e-14 | 8.8154e+00  1.2903e-02  1.8107e-01 
+	     7  | 1.4000e-03 | 3.5749e-14 | 4.3758e+00  8.3844e-03  1.1770e-01 
+	     8  | 1.6000e-03 | 3.8470e-14 | 3.0516e+00  5.4019e-03  7.5803e-02 
+	     9  | 1.8000e-03 | 2.6107e-14 | 1.7230e+00  3.5469e-03  4.9781e-02 
+	    10  | 2.0000e-03 | 2.7404e-14 | 1.1895e+00  2.3053e-03  3.2338e-02 
+	    11  | 2.2000e-03 | 2.4869e-14 | 7.0926e-01  1.5185e-03  2.1304e-02 
+	    12  | 2.4000e-03 | 2.4161e-14 | 4.8912e-01  9.9048e-04  1.3889e-02 
+	    13  | 2.6000e-03 | 2.7634e-14 | 2.9921e-01  6.5338e-04  9.1625e-03 
+	    14  | 2.8000e-03 | 3.9241e-14 | 2.0650e-01  4.2693e-04  5.9840e-03 
+	    15  | 3.0000e-03 | 2.6348e-14 | 1.2806e-01  2.8194e-04  3.9522e-03 
+	    16  | 3.2000e-03 | 3.9161e-14 | 8.8454e-02  1.8451e-04  2.5853e-03 
+	    17  | 3.4000e-03 | 2.7634e-14 | 5.5291e-02  1.2202e-04  1.7099e-03 
+	    18  | 3.6000e-03 | 3.9641e-14 | 3.8249e-02  7.9974e-05  1.1202e-03 
+	    19  | 3.8000e-03 | 3.8140e-14 | 2.4049e-02  5.2976e-05  7.4218e-04 
+	    20  | 4.0000e-03 | 2.4030e-14 | 1.6670e-02  3.4783e-05  4.8709e-04 
+	    21  | 4.2000e-03 | 2.6586e-14 | 1.0533e-02  2.3087e-05  3.2339e-04 
+	    22  | 4.4000e-03 | 4.1010e-14 | 7.3186e-03  1.5191e-05  2.1270e-04 
+	    23  | 4.6000e-03 | 2.5742e-14 | 4.6465e-03  1.0109e-05  1.4159e-04 
+	    24  | 4.8000e-03 | 2.5986e-14 | 3.2386e-03  6.6679e-06  9.3361e-05 
+	    25  | 5.0000e-03 | 2.3364e-14 | 2.0666e-03  4.4508e-06  6.2343e-05 
+	    26  | 5.2000e-03 | 2.4806e-14 | 1.4455e-03  2.9447e-06  4.1234e-05 
+	    27  | 5.4000e-03 | 3.7176e-14 | 9.2765e-04  1.9729e-06  2.7638e-05 
+	    28  | 5.6000e-03 | 3.8140e-14 | 6.5133e-04  1.3101e-06  1.8348e-05 
+	    29  | 5.8000e-03 | 2.6348e-14 | 4.2070e-04  8.8155e-07  1.2353e-05 
+	    30  | 6.0000e-03 | 2.6705e-14 | 2.9655e-04  5.8799e-07  8.2375e-06 
+	    31  | 6.2000e-03 | 3.8959e-14 | 1.9295e-04  3.9764e-07  5.5743e-06 
+	    32  | 6.4000e-03 | 2.7577e-14 | 1.3653e-04  2.6659e-07  3.7366e-06 
+	    33  | 6.6000e-03 | 3.9080e-14 | 8.9553e-05  1.8130e-07  2.5428e-06 
+	    34  | 6.8000e-03 | 3.8264e-14 | 6.3592e-05  1.2226e-07  1.7145e-06 
+	    35  | 7.0000e-03 | 2.8030e-14 | 4.2070e-05  8.3642e-08  1.1738e-06 
+	    36  | 7.2000e-03 | 2.6407e-14 | 2.9966e-05  5.6763e-08  7.9656e-07 
+	    37  | 7.4000e-03 | 2.9511e-14 | 1.9998e-05  3.9073e-08  5.4871e-07 
+	    38  | 7.6000e-03 | 2.9724e-14 | 1.4280e-05  2.6692e-08  3.7484e-07 
+	    39  | 7.8000e-03 | 2.6527e-14 | 9.6123e-06  1.8485e-08  2.5977e-07 
+	    40  | 8.0000e-03 | 2.7861e-14 | 6.8761e-06  1.2711e-08  1.7863e-07 
+	    41  | 8.2000e-03 | 2.6940e-14 | 4.6665e-06  8.8530e-09  1.2450e-07 
+	    42  | 8.4000e-03 | 4.0507e-14 | 3.3422e-06  6.1257e-09  8.6149e-08 
+	    43  | 8.6000e-03 | 2.4932e-14 | 2.2852e-06  4.2884e-09  6.0348e-08 
+	    44  | 8.8000e-03 | 2.6998e-14 | 1.6379e-06  2.9844e-09  4.1999e-08 
+	    45  | 9.0000e-03 | 3.8016e-14 | 1.1274e-06  2.0986e-09  2.9549e-08 
+	    46  | 9.2000e-03 | 3.8264e-14 | 8.0825e-07  1.4678e-09  2.0669e-08 
+	    47  | 9.4000e-03 | 2.5986e-14 | 5.5958e-07  1.0360e-09  1.4595e-08 
+	    48  | 9.6000e-03 | 3.8959e-14 | 4.0119e-07  7.2780e-10  1.0253e-08 
+	    49  | 9.8000e-03 | 3.9879e-14 | 2.7915e-07  5.1526e-10  7.2621e-09 
+	    50  | 1.0000e-02 | 2.9026e-14 | 2.0009e-07  3.6329e-10  5.1203e-09 
+	    51  | 1.0200e-02 | 3.7514e-14 | 1.3982e-07  2.5782e-10  3.6351e-09 
+	    52  | 1.0400e-02 | 2.4742e-14 | 1.0019e-07  1.8233e-10  2.5708e-09 
+	    53  | 1.0600e-02 | 4.1393e-14 | 7.0260e-08  1.2965e-10  1.8285e-09 
+	    54  | 1.0800e-02 | 4.2186e-14 | 5.0328e-08  9.1913e-11  1.2963e-09 
+	    55  | 1.1000e-02 | 3.9281e-14 | 3.5400e-08  6.5456e-11  9.2339e-10 
+	    56  | 1.1200e-02 | 3.7261e-14 | 2.5348e-08  4.6498e-11  6.5595e-10 
+	    57  | 1.1400e-02 | 2.4932e-14 | 1.7874e-08  3.3153e-11  4.6779e-10 
+	    58  | 1.1600e-02 | 2.6998e-14 | 1.2794e-08  2.3590e-11  3.3285e-10 
+	    59  | 1.1800e-02 | 3.7006e-14 | 9.0415e-09  1.6836e-11  2.3759e-10 
+	    60  | 1.2000e-02 | 2.4291e-14 | 6.4700e-09  1.1995e-11  1.6928e-10 
+	    61  | 1.2200e-02 | 3.8387e-14 | 4.5802e-09  8.5673e-12  1.2093e-10 
+	    62  | 1.2400e-02 | 4.1469e-14 | 3.2767e-09  6.1108e-12  8.6251e-11 
+	    63  | 1.2600e-02 | 2.8917e-14 | 2.3233e-09  4.3672e-12  6.1647e-11 
+	    64  | 1.2800e-02 | 3.7933e-14 | 1.6616e-09  3.1182e-12  4.4019e-11 
+	    65  | 1.3000e-02 | 4.0390e-14 | 1.1796e-09  2.2306e-12  3.1494e-11 
+	    66  | 1.3200e-02 | 3.8305e-14 | 8.4397e-10  1.5946e-12  2.2514e-11 
+
+	mass_error = 9.8167e-01 - 9.8167e-01 = 1.4433e-15 
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = false
+  anderson_iterations = 0
+  subiterations = [[1], [2], [3]]
+  show_iteration_details = true
+  timedependent_equations = [2]
+  anderson_unknowns = [1]
+  show_statistics = false
+  anderson_metric = l2
+  skip_update = [-1, 1, -1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
+  damping = 0
+  time = 0
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = false
+  fixed_penalty = 1.0e60
+  target_residual = 1.0e-10
+  maxiterations = 1
+  AssemblyTriggers = 
+         LHS_AT[1] :  I  T  T 
+         LHS_AT[2] :  N  A  N 
+         LHS_AT[3] :  N  T  I 
+         RHS_AT[1] :  T 
+         RHS_AT[2] :  T 
+         RHS_AT[3] :  T 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2] [1, 3]; [2, 1] [2, 1] [2, 3]; [3, 1] [3, 2] [3]]
+
+
+
+	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                         
+	        |            |  (total)   |      v           ϱ           p     
+	     1  | 2.0000e-04 | 3.6450e-14 | 3.6037e+02  3.3298e-01  4.6590e+00 
+	     2  | 4.0000e-04 | 3.4169e-14 | 2.9150e+02  1.1510e-01  1.6161e+00 
+	     3  | 6.0000e-04 | 3.8305e-14 | 4.2587e+01  5.8607e-02  8.2264e-01 
+	     4  | 8.0000e-04 | 2.5309e-14 | 3.3550e+01  3.3307e-02  4.6743e-01 
+	     5  | 1.0000e-03 | 2.6288e-14 | 1.2145e+01  2.0724e-02  2.9093e-01 
+	     6  | 1.2000e-03 | 2.4030e-14 | 8.8486e+00  1.3008e-02  1.8254e-01 
+	     7  | 1.4000e-03 | 2.5434e-14 | 4.3987e+00  8.4689e-03  1.1889e-01 
+	     8  | 1.6000e-03 | 3.7176e-14 | 3.0690e+00  5.4674e-03  7.6716e-02 
+	     9  | 1.8000e-03 | 2.6047e-14 | 1.7358e+00  3.5983e-03  5.0498e-02 
+	    10  | 2.0000e-03 | 4.2224e-14 | 1.1995e+00  2.3441e-03  3.2880e-02 
+	    11  | 2.2000e-03 | 4.1735e-14 | 7.1672e-01  1.5480e-03  2.1715e-02 
+	    12  | 2.4000e-03 | 4.1087e-14 | 4.9488e-01  1.0123e-03  1.4193e-02 
+	    13  | 2.6000e-03 | 2.5247e-14 | 3.0352e-01  6.6965e-04  9.3890e-03 
+	    14  | 2.8000e-03 | 2.7519e-14 | 2.0974e-01  4.3887e-04  6.1501e-03 
+	    15  | 3.0000e-03 | 4.2964e-14 | 1.3045e-01  2.9068e-04  4.0738e-03 
+	    16  | 3.2000e-03 | 4.0546e-14 | 9.0227e-02  1.9081e-04  2.6729e-03 
+	    17  | 3.4000e-03 | 3.6534e-14 | 5.6598e-02  1.2655e-04  1.7728e-03 
+	    18  | 3.6000e-03 | 2.5681e-14 | 3.9188e-02  8.3192e-05  1.1649e-03 
+	    19  | 3.8000e-03 | 2.5986e-14 | 2.4726e-02  5.5250e-05  7.7380e-04 
+	    20  | 4.0000e-03 | 2.5059e-14 | 1.7145e-02  3.6377e-05  5.0924e-04 
+	    21  | 4.2000e-03 | 3.8999e-14 | 1.0867e-02  2.4200e-05  3.3885e-04 
+	    22  | 4.4000e-03 | 3.8016e-14 | 7.5494e-03  1.5960e-05  2.2338e-04 
+	    23  | 4.6000e-03 | 2.9404e-14 | 4.8044e-03  1.0639e-05  1.4894e-04 
+	    24  | 4.8000e-03 | 3.9958e-14 | 3.3458e-03  7.0303e-06  9.8387e-05 
+	    25  | 5.0000e-03 | 3.7514e-14 | 2.1380e-03  4.6979e-06  6.5768e-05 
+	    26  | 5.2000e-03 | 3.6405e-14 | 1.4937e-03  3.1124e-06  4.3557e-05 
+	    27  | 5.4000e-03 | 3.8756e-14 | 9.5873e-04  2.0860e-06  2.9204e-05 
+	    28  | 5.6000e-03 | 3.9120e-14 | 6.7220e-04  1.3859e-06  1.9397e-05 
+	    29  | 5.8000e-03 | 3.8511e-14 | 4.3374e-04  9.3222e-07  1.3053e-05 
+	    30  | 6.0000e-03 | 3.8633e-14 | 3.0526e-04  6.2149e-07  8.7001e-06 
+	    31  | 6.2000e-03 | 2.7918e-14 | 1.9820e-04  4.1975e-07  5.8793e-06 
+	    32  | 6.4000e-03 | 2.7691e-14 | 1.4002e-04  2.8097e-07  3.9345e-06 
+	    33  | 6.6000e-03 | 3.6318e-14 | 9.1542e-05  1.9065e-07  2.6715e-06 
+	    34  | 6.8000e-03 | 3.7598e-14 | 6.4904e-05  1.2822e-07  1.7964e-06 
+	    35  | 7.0000e-03 | 3.7766e-14 | 4.2753e-05  8.7458e-08  1.2261e-06 
+	    36  | 7.2000e-03 | 3.8959e-14 | 3.0407e-05  5.9136e-08  8.2898e-07 
+	    37  | 7.4000e-03 | 3.7682e-14 | 2.0189e-05  4.0559e-08  5.6897e-07 
+	    38  | 7.6000e-03 | 3.4990e-14 | 1.4398e-05  2.7585e-08  3.8695e-07 
+	    39  | 7.8000e-03 | 3.8592e-14 | 9.6375e-06  1.9027e-08  2.6709e-07 
+	    40  | 8.0000e-03 | 3.9039e-14 | 6.8885e-06  1.3019e-08  1.8276e-07 
+	    41  | 8.2000e-03 | 3.6187e-14 | 4.6478e-06  9.0300e-09  1.2685e-07 
+	    42  | 8.4000e-03 | 3.7091e-14 | 3.3274e-06  6.2165e-09  8.7333e-08 
+	    43  | 8.6000e-03 | 3.4353e-14 | 2.2621e-06  4.3345e-09  6.0935e-08 
+	    44  | 8.8000e-03 | 3.7598e-14 | 1.6212e-06  3.0015e-09  4.2198e-08 
+	    45  | 9.0000e-03 | 2.4030e-14 | 1.1099e-06  2.1028e-09  2.9582e-08 
+	    46  | 9.2000e-03 | 3.7556e-14 | 7.9595e-07  1.4640e-09  2.0597e-08 
+	    47  | 9.4000e-03 | 3.6231e-14 | 5.4838e-07  1.0300e-09  1.4500e-08 
+	    48  | 9.6000e-03 | 3.9281e-14 | 3.9335e-07  7.2063e-10  1.0145e-08 
+	    49  | 9.8000e-03 | 3.9521e-14 | 2.7251e-07  5.0882e-10  7.1666e-09 
+	    50  | 1.0000e-02 | 3.5704e-14 | 1.9547e-07  3.5750e-10  5.0355e-09 
+	    51  | 1.0200e-02 | 3.5394e-14 | 1.3607e-07  2.5318e-10  3.5676e-09 
+	    52  | 1.0400e-02 | 2.7577e-14 | 9.7587e-08  1.7853e-10  2.5158e-09 
+	    53  | 1.0600e-02 | 3.7261e-14 | 6.8217e-08  1.2674e-10  1.7867e-09 
+	    54  | 1.0800e-02 | 3.7974e-14 | 4.8908e-08  8.9643e-11  1.2638e-09 
+	    55  | 1.1000e-02 | 3.7514e-14 | 3.4309e-08  6.3766e-11  8.9922e-10 
+	    56  | 1.1200e-02 | 2.7347e-14 | 2.4590e-08  4.5216e-11  6.3766e-10 
+	    57  | 1.1400e-02 | 3.6012e-14 | 1.7302e-08  3.2214e-11  4.5442e-10 
+	    58  | 1.1600e-02 | 2.8643e-14 | 1.2397e-08  2.2892e-11  3.2293e-10 
+	    59  | 1.1800e-02 | 3.8016e-14 | 8.7450e-09  1.6331e-11  2.3042e-10 
+	    60  | 1.2000e-02 | 3.7388e-14 | 6.2639e-09  1.1625e-11  1.6402e-10 
+	    61  | 1.2200e-02 | 4.1202e-14 | 4.4277e-09  8.3009e-12  1.1715e-10 
+	    62  | 1.2400e-02 | 3.5925e-14 | 3.1706e-09  5.9173e-12  8.3507e-11 
+	    63  | 1.2600e-02 | 2.3024e-14 | 2.2453e-09  4.2292e-12  5.9692e-11 
+	    64  | 1.2800e-02 | 3.4855e-14 | 1.6077e-09  3.0187e-12  4.2609e-11 
+	    65  | 1.3000e-02 | 3.5438e-14 | 1.1408e-09  2.1593e-12  3.0482e-11 
+	    66  | 1.3200e-02 | 3.9919e-14 | 8.1708e-10  1.5426e-12  2.1776e-11 
+
+	mass_error = 9.8167e-01 - 9.8167e-01 = 1.1102e-15 
+
+	        reconstruct     false    |    true
+	================================================
+	L2error(Velocity) | 9.78451e-02  | 2.26617e-04 
+	L2error(Density)  | 1.95937e-03  | 1.92490e-03 </code></pre><p><img src="../../images/Example225_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example224_FlowAroundCylinder2D/">« 224 : Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 29 June 2021 10:01">Tuesday 29 June 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

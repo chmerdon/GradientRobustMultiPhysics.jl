@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>230 : Stokes Hdiv-DG 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D</a></li><li class="is-active"><a class="tocitem" href>230 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>230 : Stokes Hdiv-DG 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>230 : Stokes Hdiv-DG 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example230_StokesHdivDG2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Stokes-Hdiv-DG-2D"><a class="docs-heading-anchor" href="#:-Stokes-Hdiv-DG-2D">230 : Stokes Hdiv-DG 2D</a><a id=":-Stokes-Hdiv-DG-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Stokes-Hdiv-DG-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example230_StokesHdivDG2D.jl">source code</a>)</p><p>This example computes a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>with exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span> and inhomogeneous Dirichlet boundary data.</p><p>The problem will be solved by a dicontinuous Galerkin method with Hdiv-conforming ansatz space (e.g. BDM1). The normal components of the velocity are fixed by the boundary data, while the tangential boundary fluxes are handled by the DG discretisation of the Laplacian that involves several discontinuous terms on faces <span>$\mathcal{F}$</span>, i.e.</p><p class="math-container">\[\begin{aligned}
+a_h(u_h,v_h) = \mu \Bigl( \int \nabla_h u_h : \nabla_h v_h dx +  \sum_{F \in \mathcal{F}} \frac{\lambda}{h_F} \int_F [[u_h]] \cdot [[v_h]] ds - \int_F {{\nabla_h u_h}} n_F \cdot [[v_h]] ds
+ - \int_F [[u_h]] \cdot {{\nabla_h v_h}} n_F ds \Bigr)
+\end{aligned}\]</p><p>and similar terms on the right-hand side for the inhomogeneous Dirichlet data. The qunatity <span>$\lambda$</span> is the SIP parameter.</p><pre><code class="language-julia">module Example230_StokesHdivDG2D
+
+using GradientRobustMultiPhysics
+using Printf
+
+# functions that define the exact solution and the data
+    function exact_pressure!(result,x::Array{&lt;:Real,1},t::Real)
+        result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1))
+    end
+    function user_function_velocity!(result,x::Array{&lt;:Real,1},t::Real)
+        result[1] = cos(t)*(sin(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+        result[2] = cos(t)*(cos(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+    end
+    function exact_velogradient!(result,x::Array{&lt;:Real,1},t::Real)
+        result[1] = pi*cos(t)*(cos(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+        result[2] = pi*cos(t)*(sin(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+        result[3] = -pi*cos(t)*(sin(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+        result[4] = -pi*cos(t)*(cos(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+    end
+    function rhs(nu)
+        function closure!(result,x::Array{&lt;:Real,1},t::Real)
+            # exact Laplacian
+            result[1] = 2*pi*pi*nu*cos(t)*(sin(pi*x[1]-0.7)*sin(pi*x[2]+0.2))
+            result[2] = 2*pi*pi*nu*cos(t)*(cos(pi*x[1]-0.7)*cos(pi*x[2]+0.2))
+            # exact pressure gradient
+            result[1] += cos(t)*cos(x[1])*cos(x[2])
+            result[2] -= cos(t)*sin(x[1])*sin(x[2])
+        end
+    end
+
+# everything is wrapped in a main function
+function main(;viscosity = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, lambda = 4)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # FEType (Hdiv-conforming)
+    FETypes = [HDIVBDM1{2}, H1P0{1}]
+
+    # initial grid
+    xgrid = grid_unitsquare(Triangle2D)
+    xBFaces = xgrid[BFaces]
+    xFaceVolumes = xgrid[FaceVolumes]
+    xFaceNormals = xgrid[FaceNormals]
+
+    # load exact flow data
+    user_function_velocity = DataFunction(user_function_velocity!, [2,2]; dependencies = &quot;XT&quot;, quadorder = 8)
+    user_function_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = &quot;XT&quot;, quadorder = 4)
+    user_function_velocity_gradient = DataFunction(exact_velogradient!, [4,2]; dependencies = &quot;XT&quot;, quadorder = 4)
+    user_function_rhs = DataFunction(rhs(viscosity), [2,2]; dependencies = &quot;XT&quot;, quadorder = 8)
+
+    # prepare error calculation
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity; time = T)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity; time = T)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient; time = T)
+
+    # load Stokes problem prototype and assign data
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], user_function_rhs))
+
+    # add boundary data (fixes normal components of along boundary)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function_velocity)
+
+    # define additional operators for DG terms for Laplacian and Dirichlet data
+    # (in order of their appearance in the documentation above)
+    function hdiv_laplace2_kernel(result, input, item)
+        result[1] = input[1]
+        result[2] = input[2]
+        result .*= lambda*viscosity / xFaceVolumes[item]
+        return nothing
+    end
+    function hdiv_laplace3_kernel(result, input, item)
+        result[1] = input[1] * xFaceNormals[1,item]
+        result[2] = input[1] * xFaceNormals[2,item]
+        result[3] = input[2] * xFaceNormals[1,item]
+        result[4] = input[2] * xFaceNormals[2,item]
+        result .*= -viscosity
+        return nothing
+    end
+    function hdiv_laplace4_kernel(result, input, item)
+        result[1] = input[1] * xFaceNormals[1,item] + input[2] * xFaceNormals[2,item]
+        result[2] = input[3] * xFaceNormals[1,item] + input[4] * xFaceNormals[2,item]
+        result .*= -viscosity
+        return nothing
+    end
+    HdivLaplace2 = AbstractBilinearForm([Jump(Identity), Jump(Identity)], Action(Float64, hdiv_laplace2_kernel, [2,2]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;nu/h_F [u] [v]&quot;, AT = ON_FACES)
+    HdivLaplace3 = AbstractBilinearForm([Jump(Identity), Average(Gradient)], Action(Float64, hdiv_laplace3_kernel, [4,2]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;-nu [u] {grad(v)*n}&quot;, AT = ON_FACES)
+    HdivLaplace4 = AbstractBilinearForm([Average(Gradient), Jump(Identity)], Action(Float64, hdiv_laplace4_kernel, [2,4]; dependencies = &quot;I&quot;, quadorder = 0); name = &quot;-nu {grad(u)*n} [v] &quot;, AT = ON_FACES)
+
+    # additional terms for tangential part at boundary
+    # note: we use average operators here to force evaluation of all basis functions and not only of the face basis functions
+    # (which in case of Hdiv would be only the ones with nonzero normal fluxes)
+    veloeval = zeros(Float64,2)
+    function hdiv_boundary_kernel(result, input, x, t, item)
+        eval!(veloeval, user_function_velocity, x, t)
+        result[1] = input[1] * veloeval[1] + input[2] * veloeval[2]
+        result[1] *= lambda*viscosity / xFaceVolumes[xBFaces[item]]
+        return nothing
+    end
+    function hdiv_boundary_kernel2(result, input, x, t, item)
+        eval!(veloeval, user_function_velocity, x, t)
+        result[1] = (input[1] * xFaceNormals[1,xBFaces[item]] + input[2] * xFaceNormals[2,xBFaces[item]]) * veloeval[1]
+        result[1] += (input[3] * xFaceNormals[1,xBFaces[item]] + input[4] * xFaceNormals[2,xBFaces[item]]) * veloeval[2]
+        result[1] *= -viscosity
+        return nothing
+    end
+    HdivBoundary1 = RhsOperator(Average(Identity), Action(Float64, hdiv_boundary_kernel, [1,2]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder); name = &quot;- nu lambda/h_F u_D v&quot;, AT = ON_BFACES)
+    HdivBoundary2 = RhsOperator(Average(Gradient), Action(Float64, hdiv_boundary_kernel2, [1,4]; dependencies = &quot;XTI&quot;, quadorder = user_function_velocity.quadorder); name = &quot;- nu u_D grad(v)*n&quot;, AT = ON_BFACES)
+
+    # assign DG operators to problem descriptions
+    add_operator!(Problem, [1,1], HdivLaplace2)
+    add_operator!(Problem, [1,1], HdivLaplace3)
+    add_operator!(Problem, [1,1], HdivLaplace4)
+    add_rhsdata!(Problem, 1, HdivBoundary1)
+    add_rhsdata!(Problem, 1, HdivBoundary2)
+
+    # show final problem description
+    @show Problem
+
+    # loop over levels
+    Results = zeros(Float64,nlevels,3); NDofs = zeros(Int,nlevels)
+    for level = 1 : nlevels
+
+        # refine grid and update grid component references
+        xgrid = uniform_refine(xgrid)
+        xBFaces = xgrid[BFaces]
+        xFaceVolumes = xgrid[FaceVolumes]
+        xFaceNormals = xgrid[FaceNormals]
+
+        # generate FESpaces
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+
+        # generate solution vector
+        Solution = FEVector{Float64}([&quot;v_h&quot;, &quot;p_h&quot;],FES)
+
+        # solve
+        solve!(Solution, Problem; time = T)
+
+        # plot
+        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter)
+
+        # compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
+        Results[level,3] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
+    end
+
+    # print/show convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| p - p_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), Plotter = Plotter, ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| p - p_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;])
+end
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight">julia&gt; Example230_StokesHdivDG2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = incompressible Stokes-Problem
+
+     id   | unknown name / equation name
+    [1]   | velocity / momentum equation 
+    [2]   | pressure / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 0.001 ∇(u):∇(v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | nu/h_F [u] [v] (APT = BilinearForm, AT = ON_FACES, regions = [0])
+            | -nu [u] {grad(v)*n} (APT = BilinearForm, AT = ON_FACES, regions = [0])
+            | -nu {grad(u)*n} [v]  (APT = BilinearForm, AT = ON_FACES, regions = [0])
+    [1,2]   | div(v) ⋅ q (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | user data function⋅id(v) (APT = LinearForm, AT = ON_CELLS, regions = [1])
+            | - nu lambda/h_F u_D v (APT = LinearForm, AT = ON_BFACES, regions = [0])
+            | - nu u_D grad(v)*n (APT = LinearForm, AT = ON_BFACES, regions = [0])
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+
+    ndofs   |  || u - u_h ||   order  |  || p - p_h ||   order  ||| ∇(u - u_h) ||  order  |
+============|=========================|=========================|=========================|
+        72  |   1.02863e-01    0.000  |   3.49020e-02    0.000  |   1.49484e+00    0.000  |
+       272  |   1.11840e-02    3.339  |   1.74718e-02    1.041  |   3.90996e-01    2.018  |
+      1056  |   2.73673e-03    2.076  |   8.74172e-03    1.021  |   1.93586e-01    1.036  |
+      4160  |   6.80881e-04    2.029  |   4.37158e-03    1.011  |   9.61205e-02    1.021  |
+     16512  |   1.71156e-04    2.003  |   2.18588e-03    1.006  |   4.80277e-02    1.007  |</code></pre><p><img src="../../images/Example230_StokesHdivDG2D_1.png" alt/> <img src="../../images/Example230_StokesHdivDG2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example225_CompressibleStokes2D/">« 225 : Compressible Stokes 2D</a><a class="docs-footer-nextpage" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 29 June 2021 10:01">Tuesday 29 June 2021</span>. Using Julia version 1.6.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
