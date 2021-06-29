@@ -170,7 +170,7 @@ function Base.fill!(B::FEMatrixBlock, value)
     valsB::Array{Float64,1} = cscmat.nzval
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(cscmat, col)
-            if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
+            if rows[r] > B.offsetX && rows[r] <= B.last_indexX
                 valsB[r] = value
             end
         end

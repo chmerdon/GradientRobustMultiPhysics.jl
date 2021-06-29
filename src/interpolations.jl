@@ -386,7 +386,7 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
         end
         fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", quadorder = get_polynomialorder(FEType,EG))
     end
-    @time interpolate!(Target, ON_CELLS, fe_function; items = items)
+    interpolate!(Target, ON_CELLS, fe_function; items = items)
 end
 
 
