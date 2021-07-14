@@ -1,5 +1,6 @@
 module GradientRobustMultiPhysics
 
+using Base: Bool
 using ExtendableGrids
 using GridVisualize
 export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D, num_sources, simplexgrid, VectorOfConstants
@@ -120,7 +121,7 @@ export AbstractH1FiniteElement
 export H1BUBBLE, H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR, H1P3
 
 export AbstractH1FiniteElementWithCoefficients
-export H1BR
+export H1BR, H1P1TEB
 
 export AbstractHdivFiniteElement
 export HDIVRT0, HDIVBDM1, HDIVRT1, HDIVBDM2
@@ -195,6 +196,7 @@ export AbstractNonlinearForm, GenerateNonlinearForm
 
 export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
+export CustomMatrixOperator
 
 export RhsOperator
 export restrict_operator

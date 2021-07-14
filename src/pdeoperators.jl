@@ -123,9 +123,10 @@ $(TYPEDSIGNATURES)
 
 restricts a PDEOperator by fixing arguments with the arguments of the full PDEDescription that match the specified argument ids.
 """
-function restrict_operator(O::PDEOperator; fixed_arguments = [], fixed_arguments_ids = [])
+function restrict_operator(O::PDEOperator; fixed_arguments = [], fixed_arguments_ids = [], factor = 1)
     Or = deepcopy(O)
     Or.store_operator = false
+    Or.factor *= factor
     APT = typeof(O).parameters[2]
     if APT <: APT_BilinearForm
         Or.fixed_arguments = fixed_arguments
@@ -1174,7 +1175,6 @@ end
 ###### OTHER OPERATORS #######
 ##############################
 
-
 struct DiagonalOperator <: AbstractPDEOperator
     name::String
     value::Real
@@ -1247,7 +1247,6 @@ end
 function check_PDEoperator(O::CopyOperator, involved_equations)
     return true, true, AssemblyAlways
 end
-
 
 function check_dependency(O::FVConvectionDiffusionOperator, arg::Int)
     return O.beta_from == arg
@@ -1388,16 +1387,44 @@ end
 
 
 
-#################################
-##### EXTERIOR PDEOPERATORS #####
-#################################
+#####################################
+##### CUSTOM MATRIX PDEOPERATOR #####
+#####################################
 
-### just an idea so far, not usable yet !!!
-mutable struct ExteriorPDEOperator{T <: Real} <: AbstractPDEOperator
+
+struct CustomMatrixOperator{MT<:AbstractMatrix, T <: Real} <: AbstractPDEOperator
     name::String
     factor::T
-    storage::AbstractMatrix
-    init_assemble::Function
-    reassembly_trigger::Type{<:AbstractAssemblyTrigger}
-    reassemble::Function
-end 
+    matrix::MT
+    nonlinear::Bool
+end
+
+function CustomMatrixOperator(A; factor = 1.0, name = "custom matrix", nonlinear::Bool = false)
+    return CustomMatrixOperator{typeof(A),typeof(factor)}(name, factor, A, nonlinear)
+end
+
+function check_PDEoperator(O::CustomMatrixOperator, involved_equations)
+    return O.nonlinear, false, AssemblyAlways
+end
+
+
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::CustomMatrixOperator, CurrentSolution::FEVector; time = 0, At = nothing)
+    @logmsg DeepInfo "Adding CustomMatrixOperator $(O.name)"
+    addblock!(A,O.matrix; factor = O.factor)
+    if At !== nothing
+        addblock!(At,O.matrix; factor = O.factor, transpose = true)
+    end
+end
+
+
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CustomMatrixOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0)
+    @logmsg DeepInfo "Adding CustomMatrixOperator $(O.name)"
+    addblock!(b, O.matrix; factor = factor * O.factor)
+end
+
+# LHS operator is assembled to RHS block (due to subiteration configuration)
+function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::CustomMatrixOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
+    @logmsg DeepInfo "Adding CustomMatrixOperator $(O.name)"
+    addblock_matmul!(b,O.matrix,CurrentSolution[fixed_component]; factor = factor * O.factor)
+end
+

@@ -278,6 +278,7 @@ include("fedefs/h1_p1.jl");
 include("fedefs/h1_mini.jl");
 include("fedefs/h1nc_cr.jl");
 include("fedefs/h1v_br.jl"); # Bernardi--Raugel (only vector-valued, with coefficients)
+include("fedefs/h1v_p1teb.jl"); # P1 + tangential edge bubbles (only vector-valued, with coefficients)
 # second order
 include("fedefs/h1_p2.jl");
 include("fedefs/h1_p2b.jl");

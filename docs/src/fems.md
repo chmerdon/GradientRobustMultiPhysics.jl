@@ -13,6 +13,7 @@ Finite elements are abstract type leaves in a type-tree. The complete tree looks
 AbstractFiniteElement
 ├─ AbstractH1FiniteElement
 │  ├─ AbstractH1FiniteElementWithCoefficients
+│  │  ├─ H1P1TEB
 │  │  └─ H1BR
 │  ├─ H1CR
 │  ├─ H1MINI
@@ -56,6 +57,7 @@ The following table lists all curently implemented finite elements. Click on the
 | [`H1MINI`](@ref)   | [`HDIVRT1`](@ref)    |                       |
 | [`H1CR`](@ref)     | [`HDIVBDM2`](@ref)   |                       |
 | [`H1BR`](@ref)     |                      |                       |
+| [`H1P1TEB`](@ref)  |                      |                       |
 | [`H1P2`](@ref)     |                      |                       |
 | [`H1P2B`](@ref)    |                      |                       |
 | [`H1P3`](@ref)     |                      |                       |
@@ -97,6 +99,18 @@ cell integral.
 ```@docs
 H1MINI
 ```
+
+
+### P1TEB finite element
+
+This element adds tangent-weighted edge bubbles to the P1 finite element and therefore is only available as a vector-valued element.
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves face integrals of its tangential flux.
+
+```@docs
+H1P1TEB
+```
+
 
 ### Bernardi-Raugel (BR) finite element
 

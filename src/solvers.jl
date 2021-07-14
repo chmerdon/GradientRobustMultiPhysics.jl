@@ -1688,7 +1688,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             for j = 1 : size(statistics,1)
                 @printf("        ")
             end
-            if do_after_each_timestep != nothing
+            if do_after_each_timestep !== nothing
                 do_after_each_timestep(0, statistics)
             end
             @printf("\n\t        |            |  (total)   |    (total)     |")
@@ -1697,7 +1697,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             for j = 1 : size(statistics,1)
                 @printf("        ")
             end
-            if do_after_each_timestep != nothing
+            if do_after_each_timestep !== nothing
                 do_after_each_timestep(0, statistics)
             end
             @printf("\n\t        |            |  (total)   |")
@@ -1721,7 +1721,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
             end
             @printf("\n")
         end
-        if do_after_each_timestep != nothing
+        if do_after_each_timestep !== nothing
             do_after_each_timestep(TCS.cstep, statistics)
         end
     end

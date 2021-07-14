@@ -8,10 +8,15 @@ function bulk_mark(xgrid, refinement_indicators, theta = 0.5; indicator_AT = ON_
     if indicator_AT == ON_CELLS
         refind4face = zeros(Float64,nfaces)
         cell::Int = 0
-        for face = 1 : nfaces, k = 1 : 2
-            cell = xFaceCells[k,face]
+        for face = 1 : nfaces
+            for k = 1 : 2
+                cell = xFaceCells[k,face]
+                if cell > 0
+                    refind4face[face] += refinement_indicators[cell]
+                end
+            end
             if cell > 0
-                refind4face[face] += refinement_indicators[cell]
+                refind4face[face] /= 2
             end
         end
     elseif indicator_AT == ON_FACES

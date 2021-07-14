@@ -204,12 +204,13 @@ function run_basis_tests()
                     H1P1{2}, 
                     H1CR{2},
                     H1MINI{2,2},
+                    H1P1TEB{2},
                     H1BR{2},
                     H1P2{2,2}, 
                     H1P2B{2,2}, 
                     H1P3{2,2}
                     ]
-    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,2,2,3]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -318,11 +319,12 @@ function run_basis_tests()
                     H1P1{2}, 
                     H1CR{2},
                     H1MINI{2,2},
+                    H1P1TEB{2},
                     H1BR{2},
                     H1P2{2,2},
                     H1P2B{2,2},
                     H1P3{2,2}]
-    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,2,2,3]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -424,7 +426,7 @@ function run_basis_tests()
                     H1CR{3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [1,1,1,1,2]
+    ExpectedOrders3D = [1,1,1,1,1,2]
     EG3D = [Tetrahedron3D]
 
     function test_H1bestapproximation(xgrid, FEType, order)
@@ -445,7 +447,7 @@ function run_basis_tests()
         FES = FESpace{FEType}(xgrid)
 
         # solve
-        Solution = FEVector{Float64}("L2-Bestapproximation",FES)
+        Solution = FEVector{Float64}("H1-Bestapproximation",FES)
         solve!(Solution, Problem)
 
         # check error
@@ -571,6 +573,7 @@ function run_basis_tests()
                     [H1CR{2},H1P0{1},true],
                     [H1MINI{2,2},H1P1{1},false],
                     [H1BR{2},H1P0{1},true],
+                    [H1P1TEB{2},H1P1{1},false],
                     [H1P2{2,2},H1P1{1},false],
                     [H1P2B{2,2},H1P1{1},true]]
     TestCatalogParallelogram2D = [
@@ -578,7 +581,7 @@ function run_basis_tests()
                   #  [H1MINI{2,2},H1CR{1},false],
                     [H1BR{2},H1P0{1},true],
                     [H1P2{2,2},H1P1{1},false]]
-    ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[2,1],[2,1]]
+    ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[1,1],[2,1],[2,1]]
     ExpectedOrdersParallelogram2D = [[1,0],[1,0],[2,1],[2,1]]
     TestCatalog3D = [
                     [H1BR{3},H1P0{1},true],
