@@ -295,6 +295,7 @@ function get_coefficients(::Type{ON_BFACES}, FE::FESpace{<:AbstractFiniteElement
     xBFaces = FE.xgrid[BFaces]
     function closure(coefficients, bface)
         get_coeffs_on_face(coefficients, xBFaces[bface])
+        return nothing
     end
 end    
 

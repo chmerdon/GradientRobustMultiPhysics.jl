@@ -17,7 +17,7 @@ the tangential boundary fluxes are handled by the DG discretisation of the Lapla
 
 ```math
 \begin{aligned}
-a_h(u_h,v_h) = \mu \Bigl( \int \nabla_h u_h : \nabla_h v_h dx +  \sum_{F \in \mathcal{F}} \frac{\λ}{h_F} \int_F [[u_h]] \cdot [[v_h]] ds - \int_F {{\nabla_h u_h}} n_F \cdot [[v_h]] ds
+a_h(u_h,v_h) = \mu \Bigl( \int \nabla_h u_h : \nabla_h v_h dx +  \sum_{F \in \mathcal{F}} \frac{\lambda}{h_F} \int_F [[u_h]] \cdot [[v_h]] ds - \int_F {{\nabla_h u_h}} n_F \cdot [[v_h]] ds
  - \int_F [[u_h]] \cdot {{\nabla_h v_h}} n_F ds \Bigr)
 \end{aligned}
 ```

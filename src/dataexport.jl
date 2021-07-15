@@ -142,19 +142,19 @@ function writeCSV!(filename::String, Data::Array{<:FEVectorBlock,1}; operators =
 end
 
 
-function print_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, ylabels = [], xlabel = "ndofs")
+function print_convergencehistory(X, Y; X_to_h = X -> X, ylabels = [], xlabel = "ndofs")
     xlabel = center_string(xlabel,12)
     @printf("\n%s|",xlabel)
     for j = 1 : size(Y,2)
         if length(ylabels) < j
             push!(ylabels, "DATA $j")
         end
-        @printf("%s  order  |", center_string(ylabels[j],16))
+        @printf("%s  order  |", center_string(ylabels[j],20))
     end
     @printf("\n")
     @printf("============|")
     for j = 1 : size(Y,2)
-        @printf("=========================|")
+        @printf("=============================|")
     end
     @printf("\n")
     order = 0
@@ -164,7 +164,7 @@ function print_convergencehistory(X, Y; add_h_powers = [2], X_to_h = X -> X, yla
             if j > 1
                 order = -log(Y[j-1,k]/Y[j,k]) / (log(X_to_h(X[j])/X_to_h(X[j-1])))
             end
-            @printf("   %.5e    %.3f  |",Y[j,k], order)
+            @printf("     %.5e      %.3f  |",Y[j,k], order)
         end
         @printf("\n")
     end
@@ -177,12 +177,12 @@ function print_table(X, Y; ylabels = [], xlabel = "ndofs")
         if length(ylabels) < j
             push!(ylabels, "DATA $j")
         end
-        @printf(" %s |", center_string(ylabels[j],16))
+        @printf(" %s |", center_string(ylabels[j],20))
     end
     @printf("\n")
     @printf("============|")
     for j = 1 : size(Y,2)
-        @printf("==================|")
+        @printf("====================|")
     end
     @printf("\n")
     for j=1:length(X)
@@ -192,7 +192,7 @@ function print_table(X, Y; ylabels = [], xlabel = "ndofs")
             @printf("  %.2e  |",X[j]);
         end
         for k = 1 : size(Y,2)
-            @printf("  %.8e  |",Y[j,k])
+            @printf("    %.8e    |",Y[j,k])
         end
         @printf("\n")
     end

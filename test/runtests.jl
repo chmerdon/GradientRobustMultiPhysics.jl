@@ -220,9 +220,10 @@ function run_basis_tests()
                     H1P1{3}, 
                     H1CR{3},
                     H1MINI{3,3},
+                    H1P1TEB{3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,1,2]
 
     function test_interpolation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
@@ -334,9 +335,10 @@ function run_basis_tests()
                     H1P1{3},
                     H1CR{3},
                     H1MINI{3,3},
+                    H1P1TEB{3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,2]
+    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,1,2]
 
     function test_L2bestapproximation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
@@ -423,10 +425,11 @@ function run_basis_tests()
     TestCatalog3D = [
                     H1P1{3},
                     H1MINI{3,3},
+                    H1P1TEB{3},
                     H1CR{3},
                     H1BR{3},
                     H1P2{3,3}]
-    ExpectedOrders3D = [1,1,1,1,1,2]
+    ExpectedOrders3D = [1,1,1,1,1,1,2]
     EG3D = [Tetrahedron3D]
 
     function test_H1bestapproximation(xgrid, FEType, order)
@@ -587,6 +590,7 @@ function run_basis_tests()
                     [H1BR{3},H1P0{1},true],
                     [H1CR{3},H1P0{1},true],
                     [H1MINI{3,3},H1P1{1},false],
+                  #  [H1P1TEB{3},H1P1{1},false],
                     [H1P2{3,3},H1P1{1},false]
                     ]
     ExpectedOrders3D = [[1,0],[1,0],[1,1],[2,1]]

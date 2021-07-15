@@ -19,7 +19,7 @@ Here the exact data for the planar lattice flow
 p(x,y,t) & := \exp(-8 \pi^2 \nu t) ( \cos(4 \pi x) - \cos(4 \pi y)) / 4
 \end{aligned}
 ```
-is prescribed at fixed time ``t = 0`` with ``\mathbf{f} = \mathbf{u}_t``.
+is prescribed at fixed time ``t = 0`` with ``\mathbf{f} = \mathbf{u}_t - \nu \Delta \mathbf{u}``.
 
 In this example the Navier-Stokes equations are solved with a pressure-robust variant of the Bernardi--Raugel finite element method
 and the nonlinear convection term (that involves reconstruction operators) is automatically differentiated for a Newton iteration.
@@ -30,7 +30,7 @@ module Example205_PlanarLatticeFlow2D
 using GradientRobustMultiPhysics
 using ExtendableGrids
 
-# exact solution
+## exact solution
 function exact_velocity!(ν)
     function closure(result,x::Array{<:Real,1},t)
         result[1] = exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);

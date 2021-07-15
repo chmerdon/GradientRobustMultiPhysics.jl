@@ -385,21 +385,24 @@ function assemble!(
     # important to flush first in case there is some cached stuff that
     # will not be seen by fill! functions
     flush!(A.entries)
+    LHSOperators::Array{Array{AbstractPDEOperator,1},2} = PDE.LHSOperators
+    RHSOperators::Array{Array{AbstractPDEOperator,1},1} = PDE.RHSOperators
 
     elapsedtime::Float64 = 0
+    nequations::Int = length(equations)
     # force (re)assembly of stored bilinearforms and RhsOperators
     if !only_rhs
         op_nonlinear::Bool = false
         op_timedependent::Bool = false
         op_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyNever
         @logmsg DeepInfo "Locking for triggered storage updates..."
-        for j = 1:length(equations)
-            for k = 1 : size(PDE.LHSOperators,2)
+        for j = 1:nequations
+            for k = 1 : size(LHSOperators,2)
                 if (storage_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) == true
-                    for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                        O = PDE.LHSOperators[equations[j],k][o]
+                    for o = 1 : length(LHSOperators[equations[j],k])
+                        O = LHSOperators[equations[j],k][o]
                         if has_storage(O)
-                            op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(PDE.LHSOperators[equations[j],k][o],equations)
+                            op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(LHSOperators[equations[j],k][o],equations)
                             if (min_trigger <: op_trigger) 
                                 elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j], k; time = time)
                                 SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
@@ -409,12 +412,12 @@ function assemble!(
                 end
             end
         end
-        for j = 1:length(equations)
+        for j = 1:nequations
             if (storage_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) == true
-                for o = 1 : length(PDE.RHSOperators[equations[j]])
-                    O = PDE.RHSOperators[equations[j]][o]
+                for o = 1 : length(RHSOperators[equations[j]])
+                    O = RHSOperators[equations[j]][o]
                     if has_storage(O)
-                        op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(PDE.RHSOperators[equations[j]][o],equations)
+                        op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(RHSOperators[equations[j]][o],equations)
                         if (min_trigger <: op_trigger) 
                             elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j] ; time = time)
                             SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
@@ -426,15 +429,15 @@ function assemble!(
     end
 
     # (re)assembly right-hand side
-    rhs_block_has_been_erased = zeros(Bool,length(equations))
-    for j = 1 : length(equations)
-        if (min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) && (length(PDE.RHSOperators[equations[j]]) > 0)
+    rhs_block_has_been_erased = zeros(Bool,nequations)
+    for j = 1 : nequations
+        if (min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) && (length(RHSOperators[equations[j]]) > 0)
             @debug "Erasing rhs block [$j]"
             fill!(b[j],0.0)
             rhs_block_has_been_erased[j] = true
             @logmsg DeepInfo "Locking what to assemble in rhs block [$(equations[j])]..."
-            for o = 1 : length(PDE.RHSOperators[equations[j]])
-                O = PDE.RHSOperators[equations[j]][o]
+            for o = 1 : length(RHSOperators[equations[j]])
+                O = RHSOperators[equations[j]][o]
                 elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, O, CurrentSolution; time = time)
                 SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
             end
@@ -442,21 +445,22 @@ function assemble!(
     end
 
     # (re)assembly left-hand side
-    lhs_block_has_been_erased = zeros(Bool,length(equations),length(equations))
-    subblock = 0
-    for j = 1:length(equations)
-        for k = 1 : size(PDE.LHSOperators,2)
+
+    lhs_block_has_been_erased = zeros(Bool,nequations,nequations)
+    subblock::Int = 0
+    for j = 1:nequations
+        for k = 1 : size(LHSOperators,2)
             if length(intersect(SC.LHS_dependencies[equations[j],k], if_depends_on)) > 0
                 if (k in equations) && !only_rhs
                     subblock += 1
                     #println("\n  Equation $j, subblock $subblock")
-                    if (min_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) && (length(PDE.LHSOperators[equations[j],k]) > 0)
+                    if (min_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) && (length(LHSOperators[equations[j],k]) > 0)
                         @debug "Erasing lhs block [$j,$subblock]"
                         fill!(A[j,subblock],0)
                         lhs_block_has_been_erased[j, subblock] = true
                         @logmsg DeepInfo "Locking what to assemble in lhs block [$(equations[j]),$k]..."
-                        for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                            O = PDE.LHSOperators[equations[j],k][o]
+                        for o = 1 : length(LHSOperators[equations[j],k])
+                            O = LHSOperators[equations[j],k][o]
                             if has_copy_block(O)
                                 elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time, At = A[subblock,j])
                             else
@@ -467,15 +471,15 @@ function assemble!(
                     end
                 elseif !(k in equations)
                     if (min_trigger <: SC.LHS_AssemblyTriggers[equations[j],k]) == true
-                        if (length(PDE.LHSOperators[equations[j],k]) > 0) && (!(min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]))
+                        if (length(LHSOperators[equations[j],k]) > 0) && (!(min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]))
                             if rhs_block_has_been_erased[j] == false
                                 @debug "Erasing rhs block [$j]"
                                 fill!(b[j],0)
                                 rhs_block_has_been_erased[j] = true
                             end
                         end
-                        for o = 1 : length(PDE.LHSOperators[equations[j],k])
-                            O = PDE.LHSOperators[equations[j],k][o]
+                        for o = 1 : length(LHSOperators[equations[j],k])
+                            O = LHSOperators[equations[j],k][o]
                             @debug "Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(O.name)"
                             elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, O, CurrentSolution; factor = -1.0, time = time, fixed_component = k)
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
@@ -1427,6 +1431,7 @@ function advance!(TCS::TimeControlSolver, timestep::Real = 1e-1)
     eqdof::Int = 0
     d::Int = 0
     update_matrix::Bool = true
+
     for s = 1 : length(subiterations)
 
         # decide if matrix needs to be updated

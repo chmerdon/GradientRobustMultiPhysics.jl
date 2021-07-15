@@ -19,8 +19,8 @@ Given intermediate solutions  ``\mathbf{u}_h`` and  ``p_h`` the next approximati
 ```math
 \begin{aligned}
 (\nabla \mathbf{u}_h^{next}, \nabla \mathbf{v}_h) + ((\mathbf{u}_h^{next} \cdot \nabla) \mathbf{u}_h^{next}, \mathbf{v}_h) + \epsilon (\mathrm{div}_h(\mathbf{u}_h) ,\mathrm{div}_h(\mathbf{v}_h)) & = (\mathbf{f},\mathbf{v}_h) + (p,\mathrm{div}(\mathbf{v}_h))
-&& \text{for all } \mathbf{v} \in \mathbf{V}\\
-(p^{next},q) & = (p,q) - (\mathrm{div}(\mathbf{u}^{next}),q) && \text{for all } \mathbf{q} \in Q
+&& \text{for all } \mathbf{v}_h \in \mathbf{V}_h\\
+(p^{next}_h,q_h) & = (p_h,q_h) - (\mathrm{div}(\mathbf{u}_H^{next}),q_h) && \text{for all } q_h \in Q_h
 \end{aligned}
 ```
 

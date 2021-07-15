@@ -299,9 +299,7 @@ function assemble!(
     factor = 1,
     skip_preps::Bool = false,
     offsets::Array{Int,1} = [0,0]) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
-
-    fixedFE = fixedFE
-
+    
     # prepare assembly
     FE = AP.FES
     if !skip_preps
@@ -314,7 +312,7 @@ function assemble!(
 
     # prepare action
     action = AP.action
-    apply_action_to = AP.apply_action_to[1]
+    apply_action_to::Int = AP.apply_action_to[1]
     if typeof(action) <: NoAction
         apply_action_to = 0
         action_resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
@@ -343,7 +341,6 @@ function assemble!(
     ndofs4dofitem::Array{Int,1} = [0,0]
     bdof::Int = 0
     dofitems::Array{Int,1} = [0,0]
-    is_symmetric::Bool = APT <: APT_SymmetricBilinearForm
     itemfactor::T = 0
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     indexmap = CartesianIndices(zeros(Int, maxdofitems[1],maxdofitems[2]))
