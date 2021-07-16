@@ -4,101 +4,101 @@ using GradientRobustMultiPhysics
 
 include("test_jumps.jl")
 
-function run_basis_tests()
+function testgrid(::Type{Edge1D})
+    return uniform_refine(simplexgrid([0.0,1//4,2//3,1.0]),1)
+end
+function testgrid(EG::Type{<:AbstractElementGeometry2D})
+    return uniform_refine(grid_unitsquare(EG),1)
+end
+function testgrid(EG::Type{<:AbstractElementGeometry3D})
+    return uniform_refine(grid_unitcube(EG),1)
+end
+function testgrid(::Type{Triangle2D},::Type{Parallelogram2D})
+    return uniform_refine(grid_unitsquare_mixedgeometries(),1)
+end
 
-    function testgrid(::Type{Edge1D})
-        return uniform_refine(simplexgrid([0.0,1//4,2//3,1.0]),1)
-    end
-    function testgrid(EG::Type{<:AbstractElementGeometry2D})
-        return uniform_refine(grid_unitsquare(EG),1)
-    end
-    function testgrid(EG::Type{<:AbstractElementGeometry3D})
-        return uniform_refine(grid_unitcube(EG),1)
-    end
-    function testgrid(::Type{Triangle2D},::Type{Parallelogram2D})
-        return uniform_refine(grid_unitsquare_mixedgeometries(),1)
-    end
+tolerance = 5e-12
 
-    tolerance = 5e-12
-
-    function exact_function1D(polyorder)
-        function polynomial(result,x::Array{<:Real,1})
-            result[1] = x[1]^polyorder + 1
-        end
-        function gradient(result,x::Array{<:Real,1})
-            result[1] = polyorder * x[1]^(polyorder-1)
-        end
-        function hessian(result,x::Array{<:Real,1})
-            result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
-        end
-        exact_integral = 1 // (polyorder+1) + 1
-        exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", quadorder = polyorder)
-        exact_gradient = DataFunction(gradient, [1,1]; dependencies = "X", quadorder = polyorder - 1)
-        exact_hessian = DataFunction(hessian, [1,1]; dependencies = "X", quadorder = polyorder - 2)
-        return exact_function, exact_integral, exact_gradient, exact_hessian
+function exact_function1D(polyorder)
+    function polynomial(result,x::Array{<:Real,1})
+        result[1] = x[1]^polyorder + 1
     end
-
-    function exact_function2D(polyorder)
-        function polynomial(result,x::Array{<:Real,1})
-            result[1] = x[1]^polyorder + 2*x[2]^polyorder + 1
-            result[2] = 3*x[1]^polyorder - x[2]^polyorder - 1
-        end
-        function gradient(result,x::Array{<:Real,1})
-            result[1] = polyorder * x[1]^(polyorder-1)
-            result[2] = 2 * polyorder * x[2]^(polyorder - 1)
-            result[3] = 3 * polyorder * x[1]^(polyorder-1)
-            result[4] = - polyorder * x[2]^(polyorder - 1)
-        end
-        function hessian(result,x::Array{<:Real,1})
-            result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
-            result[2] = 0
-            result[3] = 0
-            result[4] = 2 * polyorder * (polyorder - 1) * x[2]^(polyorder-2)
-            result[5] = 3 * polyorder * (polyorder - 1) * x[1]^(polyorder-2)
-            result[6] = 0
-            result[7] = 0
-            result[8] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
-        end
-        exact_integral = [3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
-        exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", quadorder = polyorder)
-        exact_gradient = DataFunction(gradient, [4,2]; dependencies = "X", quadorder = polyorder - 1)
-        exact_hessian = DataFunction(hessian, [8,2]; dependencies = "X", quadorder = polyorder - 2)
-        return exact_function, exact_integral, exact_gradient, exact_hessian
+    function gradient(result,x::Array{<:Real,1})
+        result[1] = polyorder * x[1]^(polyorder-1)
     end
-
-    function exact_function3D(polyorder)
-        function polynomial(result,x::Array{<:Real,1})
-            result[1] = 2*x[3]^polyorder - x[2]^polyorder - 1
-            result[2] = x[1]^polyorder + 2*x[2]^polyorder + 1
-            result[3] = 3*x[1]^polyorder - x[2]^polyorder - 1
-        end
-        function gradient(result,x::Array{<:Real,1})
-            result[1] = 0
-            result[2] = - polyorder * x[2]^(polyorder - 1)
-            result[3] = 2 * polyorder * x[3]^(polyorder - 1)
-            result[4] = polyorder * x[1]^(polyorder-1)
-            result[5] = 2 * polyorder * x[2]^(polyorder - 1)
-            result[7] = 3 * polyorder * x[1]^(polyorder-1)
-            result[8] = - polyorder * x[2]^(polyorder - 1)
-            result[9] = 0
-        end
-        function hessian(result,x::Array{<:Real,1})
-            fill!(result,0)
-            result[5] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
-            result[9] = 2 * polyorder * (polyorder - 1) * x[3]^(polyorder-2)
-            result[10] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
-            result[14] = 2 * polyorder * (polyorder - 1) * x[2]^(polyorder-2)
-            result[19] = 3 * polyorder * (polyorder - 1) * x[1]^(polyorder-2)
-            result[23] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
-        end
-        exact_integral = [1 // (polyorder + 1) - 1, 3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
-        exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", quadorder = polyorder)
-        exact_gradient = DataFunction(gradient, [9,3]; dependencies = "X", quadorder = polyorder - 1)
-        exact_hessian = DataFunction(hessian, [27,3]; dependencies = "X", quadorder = polyorder - 2)
-        return exact_function, exact_integral, exact_gradient, exact_hessian
+    function hessian(result,x::Array{<:Real,1})
+        result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
     end
+    exact_integral = 1 // (polyorder+1) + 1
+    exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", quadorder = polyorder)
+    exact_gradient = DataFunction(gradient, [1,1]; dependencies = "X", quadorder = polyorder - 1)
+    exact_hessian = DataFunction(hessian, [1,1]; dependencies = "X", quadorder = polyorder - 2)
+    return exact_function, exact_integral, exact_gradient, exact_hessian
+end
 
-    ############################
+function exact_function2D(polyorder)
+    function polynomial(result,x::Array{<:Real,1})
+        result[1] = x[1]^polyorder + 2*x[2]^polyorder + 1
+        result[2] = 3*x[1]^polyorder - x[2]^polyorder - 1
+    end
+    function gradient(result,x::Array{<:Real,1})
+        result[1] = polyorder * x[1]^(polyorder-1)
+        result[2] = 2 * polyorder * x[2]^(polyorder - 1)
+        result[3] = 3 * polyorder * x[1]^(polyorder-1)
+        result[4] = - polyorder * x[2]^(polyorder - 1)
+    end
+    function hessian(result,x::Array{<:Real,1})
+        result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+        result[2] = 0
+        result[3] = 0
+        result[4] = 2 * polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+        result[5] = 3 * polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+        result[6] = 0
+        result[7] = 0
+        result[8] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+    end
+    exact_integral = [3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
+    exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", quadorder = polyorder)
+    exact_gradient = DataFunction(gradient, [4,2]; dependencies = "X", quadorder = polyorder - 1)
+    exact_hessian = DataFunction(hessian, [8,2]; dependencies = "X", quadorder = polyorder - 2)
+    return exact_function, exact_integral, exact_gradient, exact_hessian
+end
+
+function exact_function3D(polyorder)
+    function polynomial(result,x::Array{<:Real,1})
+        result[1] = 2*x[3]^polyorder - x[2]^polyorder - 1
+        result[2] = x[1]^polyorder + 2*x[2]^polyorder + 1
+        result[3] = 3*x[1]^polyorder - x[2]^polyorder - 1
+    end
+    function gradient(result,x::Array{<:Real,1})
+        result[1] = 0
+        result[2] = - polyorder * x[2]^(polyorder - 1)
+        result[3] = 2 * polyorder * x[3]^(polyorder - 1)
+        result[4] = polyorder * x[1]^(polyorder-1)
+        result[5] = 2 * polyorder * x[2]^(polyorder - 1)
+        result[7] = 3 * polyorder * x[1]^(polyorder-1)
+        result[8] = - polyorder * x[2]^(polyorder - 1)
+        result[9] = 0
+    end
+    function hessian(result,x::Array{<:Real,1})
+        fill!(result,0)
+        result[5] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+        result[9] = 2 * polyorder * (polyorder - 1) * x[3]^(polyorder-2)
+        result[10] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+        result[14] = 2 * polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+        result[19] = 3 * polyorder * (polyorder - 1) * x[1]^(polyorder-2)
+        result[23] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
+    end
+    exact_integral = [1 // (polyorder + 1) - 1, 3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
+    exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", quadorder = polyorder)
+    exact_gradient = DataFunction(gradient, [9,3]; dependencies = "X", quadorder = polyorder - 1)
+    exact_hessian = DataFunction(hessian, [27,3]; dependencies = "X", quadorder = polyorder - 2)
+    return exact_function, exact_integral, exact_gradient, exact_hessian
+end
+
+
+function run_quadrature_tests()
+     ############################
     # TESTSET QUADRATURE RULES #
     ############################
     maxorder1D = 12
@@ -153,7 +153,9 @@ function run_basis_tests()
         println("")
     end
 
+end
 
+function run_face_orientation_and_discontinuities_tests()
 
     ##################################################
     # TESTSET ORIENTATION/FACEDISCONTINUITY ASSEMBLY #
@@ -182,6 +184,10 @@ function run_basis_tests()
             end
         end
     end
+end
+
+
+function run_basic_fe_tests()
 
     ##########################################
     # TESTSET Finite Elements interpolations #
@@ -488,7 +494,10 @@ function run_basis_tests()
         end
         println("")
     end
+end
 
+
+function run_stokes_tests()
 
 
     ###########################
@@ -704,7 +713,46 @@ function run_basis_tests()
     end
     println("")
     end
+end
 
+function run_timeintegration_tests()
+
+    ## solve u_t + u = f
+    ## for linear/quadratic in-time polynomial that should be integrated exactly
+
+    for pair in [[BackwardEuler,1],[CrankNicolson,2]]
+
+        ## define data
+        u = DataFunction((result,x,t) -> (result[1] = x[1]^2*t^pair[2]), [1,1]; dependencies = "XT", quadorder = 2)    
+        f = DataFunction((result,x,t) -> (result[1] = pair[2]*x[1]^2*t^(pair[2]-1) + x[1]^2*t^pair[2]), [1,1]; dependencies = "XT", quadorder = 2)    
+
+        ## setup problem
+        Problem = PDEDescription("time-dependent test problem for $(pair[1]) time integration rule")
+        add_unknown!(Problem; unknown_name = "u", equation_name = "test equation")
+        add_operator!(Problem, [1,1], AbstractBilinearForm([Identity,Identity]; name = "(u,v)", store = true))
+        add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = u)
+        add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
+
+        ## discretise in space
+        xgrid = testgrid(Edge1D)
+        FES = FESpace{H1P2{1,1}}(xgrid)
+        Solution = FEVector{Float64}("u_h",FES)
+
+        ## set initial solution
+        interpolate!(Solution[1],u)
+
+        ## generate time-dependent solver
+        sys = TimeControlSolver(Problem, Solution,pair[1]; timedependent_equations = [1])
+
+        ## use time control solver by GradientRobustMultiPhysics
+        advance_until_time!(sys, 1e-1, 1.0)
+
+        ## compute error
+        L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity, time = 1)
+        error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        println("$(pair[1]) | order = $(pair[2]) | error = $error")
+        @test error < tolerance
+    end
 end
 
 
@@ -729,7 +777,7 @@ function run_examples()
 
         println("\n2D NONLINEAR TIME_DEPENDENT POISSON")
         include("../examples/Example212_NonlinearPoissonTransient2D.jl")
-        @test eval(Meta.parse("Example212_NonlinearPoissonTransient2D.test()")) < 1e-14
+        @test eval(Meta.parse("Example212_NonlinearPoissonTransient2D.test()")) < 1e-12
         
         println("\n2D PRESSURE_ROBUSTNESS")
         include("../examples/Example206_PressureRobustness2D.jl")
@@ -740,7 +788,11 @@ end
 
 function run_all_tests()
     begin
-        run_basis_tests()
+        run_quadrature_tests()
+        run_face_orientation_and_discontinuities_tests()
+        run_basic_fe_tests()
+        run_timeintegration_tests()
+        run_stokes_tests()
         run_examples()
     end
 end

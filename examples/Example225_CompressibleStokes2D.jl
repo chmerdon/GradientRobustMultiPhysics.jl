@@ -89,13 +89,13 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     ∇u = DataFunction([0,0,0,0]; name = "∇u")
     ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = "ϱ", dependencies = "X", quadorder = 2)
 
-    ## compute mass of exact density in domain (bit smaller than M due to mountains)
+    ## compute mass of exact density on grid (bit smaller than M due to mountains)
     Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
 
     ## prepare error calculation
     VeloError = L2ErrorIntegrator(Float64, u, Identity; quadorder = 4)
     VeloGradError = L2ErrorIntegrator(Float64, ∇u, Gradient; quadorder = 2)
-    DensityError = L2ErrorIntegrator(Float64, ϱ, Identity)
+    DensityError = L2ErrorIntegrator(Float64, ϱ, Identity; quadorder = 2)
     Results = zeros(Float64,6,nlevels)
     NDoFs = zeros(Int,nlevels)
 
@@ -124,7 +124,7 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
 
             ## check error in mass constraint
             Md = sum(Target[2][:] .* xgrid[CellVolumes])
-            @printf("\tmass_error = %.4e - %.4e = %.4e \n",M, Md, abs(M-Md))
+            @printf("\tmass_error = %.4e - %.4e = %.4e \n",Mreal, Md, abs(Mreal-Md))
         end
     end
 
@@ -153,7 +153,7 @@ function setup_and_solve!(Solution, xgrid;
     add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     ## momentum equation
-    hdiv_space = HDIVBDM1{2} # HDIVRT0{2} alsow works
+    hdiv_space = HDIVBDM1{2} # HDIVRT0{2} also works
     VeloIdentity = reconstruct ? ReconstructionIdentity{hdiv_space} : Identity
     VeloDivergence = reconstruct ? ReconstructionDivergence{hdiv_space} : Divergence
     add_operator!(Problem, [1,1], LaplaceOperator(2*μ; store = true))
@@ -162,11 +162,12 @@ function setup_and_solve!(Solution, xgrid;
     end
     add_operator!(Problem, [1,3], AbstractBilinearForm([Divergence,Identity]; name = "(div(v),p)", factor = -1, store = true))
 
-    ## gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
     if use_gravity
+        ## discrete gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
         g = DataFunction(gravity!(γ,c), [2,2]; name = "g", dependencies = "X", quadorder = 4)
         add_operator!(Problem, [1,2], AbstractBilinearForm([VeloIdentity,Identity], fdot_action(Float64, g); factor = -1, name = "(g ⋅ v) ϱ", store = true))
     else
+        ## exact gravity term for right-hand side
         f = DataFunction(rhs!(γ,c), [2,2]; name = "f", dependencies = "X", quadorder = 4)
         add_rhsdata!(Problem, 1,  RhsOperator(VeloIdentity, [0], f; store = true))
     end
@@ -190,8 +191,8 @@ function setup_and_solve!(Solution, xgrid;
                                         skip_update = [-1,1,-1], # only matrix of eq [2] changes
                                         timedependent_equations = [2], # only eq [2] is time-dependent
                                         maxiterations = 1,
-                                        check_nonlinear_residual = false)
+                                        check_nonlinear_residual = false,
+                                        show_iteration_details = false)
     advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 end
-
 end

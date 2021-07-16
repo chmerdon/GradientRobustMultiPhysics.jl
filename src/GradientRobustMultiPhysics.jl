@@ -233,7 +233,7 @@ export solve!, assemble!
 export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_time!
 export show_statistics
 export AbstractTimeIntegrationRule
-export BackwardEuler
+export BackwardEuler, CrankNicolson
 
 include("diffeq_interface.jl")
 export eval_rhs!, eval_jacobian!, mass_matrix, jac_prototype
