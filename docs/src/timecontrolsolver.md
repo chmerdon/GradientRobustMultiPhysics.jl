@@ -8,10 +8,13 @@ The structure TimeControlSolver can be used to setup a time-dependent solver tha
 | Time integration rule | order | Formula       
 | :-------------------: | :---: | :-----------------------------------------------------------------------: |
 | BackwardEuler         |   1   | ``(M^{n+1} + A^{n+1}) u^{n+1} = F^{n+1} + M^{n+1} u^n``                   |
-| CrankNicolson         |   2   | ``(M^{n} + A^{n+1}) u^{n+1} = F^{n+1} + F^n + M^{n+1} u^n - A^n u^{n+1}`` |
+| CrankNicolson         |   2   | ``(M^{n+1} + A^{n+1}) u^{n+1} = F^{n+1} + F^n - A^n u^n + M^{n+1} u^n``   |
 
 Note that currently the time-derivative (M terms) is added by the TimeControlSolver in each integration step and is in general not part of the PDEDescription
 (this might change in future). The default time derivative is a scaled (depends on the integration rule) mass matrix of the used finite element space, but the user can overwrite it via optional constructor arguments (experimental).
+
+In case of the Crank-Nicolson scheme the user can mask unknowns of the PDE as an algebraic constraint (see add_unknown! in ProblemDescription). For these variables old iterates
+are not used on the right-hand side of the iteration formula. The pressure in the Navier-Stokes system is an example for such a constraint.
 
 ```@docs
 TimeControlSolver

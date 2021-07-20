@@ -59,7 +59,7 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
         ## input = [u,∇u] as a vector of length 3
         eval!(eval_beta, β, x, 0)
         eval!(eval_alpha, α, x, 0)
-        result[1] = eval_alpha[1] * input[1] +  eval_beta[1] * input[2] + eval_beta[2] * input[3]
+        result[1] = eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
         result[2] = ν * input[2]
         result[3] = ν * input[3]
         ## result will be multiplied with [v,∇v]

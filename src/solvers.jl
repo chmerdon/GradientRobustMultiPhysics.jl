@@ -1195,6 +1195,7 @@ mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
     fixed_dofs::Array{Int,1}            # fixed dof numbes (values are stored in X)
     eqoffsets::Array{Array{Int,1},1}    # offsets for subblocks of each equation package
     ALU::Array{Any,1}  # LU decompositions of matrices A
+    statistics::Array{Float64,2}  # statistics of last timestep
 end
 
 
@@ -1237,7 +1238,7 @@ function TimeControlSolver(
 
 Creates a time-dependent solver that can be advanced in time with advance!.
 The FEVector Solution stores the initial state but also the solution at the current time.
-The argument TIR carries the time integration rule (currently there is only BackwardEuler).
+The argument TIR carries the time integration rule to be use (e.g. BackwardEuler or CrankNicolson).
 
 Keyword arguments:
 $(_myprint(default_solver_kwargs(),true))
@@ -1245,7 +1246,7 @@ $(_myprint(default_solver_kwargs(),true))
 Further (very experimental) optional arguments for TimeControlSolver are:
 - dt_test_function_operator : (array of) operators applied to testfunctions in time derivative (default: Identity)
 - dt_action : (array of) actions that are applied to the ansatz function in the time derivative (to include parameters etc.)
-- nonlinear_dt : (array of) booleans to decide which time derivatives should be recomputed in each iteration/timestep
+- nonlinear_dt : (array of) booleans to decide which time derivatives should be recomputed in each timestep
 
 """
 function TimeControlSolver(
@@ -1271,7 +1272,7 @@ function TimeControlSolver(
     end
 
     ## logging stuff
-    moreinfo_string = "----- Preparing time control solver for $(PDE.name) -----"
+    moreinfo_string = "----- Preparing time control solver for $(PDE.name) using $(TIR) -----"
     nsolvedofs = 0
     subiterations = SC.user_params[:subiterations]
     nsubiterations = length(subiterations)
@@ -1387,7 +1388,8 @@ function TimeControlSolver(
     LastIterate = deepcopy(InitialValues)
 
     # generate TimeControlSolver
-    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)))
+    statistics = zeros(Float64,length(InitialValues),4)
+    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)), statistics)
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
@@ -1428,14 +1430,17 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
     fixed_dofs = TCS.fixed_dofs
     eqoffsets = TCS.eqoffsets
     T = eltype(res[1].entries)
+    statistics = TCS.statistics
+    fill!(statistics,0)
 
     ## get relevant solver parameters
     subiterations = SC.user_params[:subiterations]
-    anderson_iterations = SC.user_params[:anderson_iterations]
+    #anderson_iterations = SC.user_params[:anderson_iterations]
     fixed_penalty = SC.user_params[:fixed_penalty]
-    damping = SC.user_params[:damping]
+    #damping = SC.user_params[:damping]
     maxiterations = SC.user_params[:maxiterations]
     check_nonlinear_residual = SC.user_params[:check_nonlinear_residual]
+    #timedependent_equations = SC.user_params[:timedependent_equations]
     target_residual = SC.user_params[:target_residual]
     skip_update = SC.user_params[:skip_update]
 
@@ -1444,12 +1449,12 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
     LastIterate.entries .= X.entries
 
     ## LOOP OVER ALL SUBITERATIONS
-    statistics = zeros(T,length(X),4)
     linresnorm::T = 1e30
     resnorm::T = 1e30
     eqdof::Int = 0
     d::Int = 0
     update_matrix::Bool = true
+    factors::Array{Int,1} = ones(Int,length(X))
 
     for s = 1 : length(subiterations)
 
@@ -1484,9 +1489,23 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
         elseif TIR == CrankNicolson # S and A are separate, A[s] contains spacial discretisation of last timestep
 
             ## reset rhs and add terms for old solution F^n - A^n u^n
+            ## last iterates of algebraic constraints are ignored
             fill!(rhs[s].entries,0)
             rhs[s].entries .+= b[s].entries
-            rhs[s].entries .-= A[s].entries * LastIterate.entries
+            for j = 1 : length(subiterations[s])
+                d = subiterations[s][j]
+                if PDE.algebraic_constraint[d] == false
+                    for k = 1 : length(subiterations[s])
+                        if PDE.algebraic_constraint[subiterations[s][k]] == false
+                            addblock_matmul!(rhs[s][k],A[s][k,j],LastIterate[d]; factor = -1)
+                        end
+                    end
+                else
+                    # old iterates of algebraic constraints are not used, instead the weight of the coressponding equation
+                    # is adjusted (e.g. the pressure in Navier-Stokes equations)
+                    factors[d] = 2
+                end
+            end
 
             if update_matrix # update matrix S[s] and right-hand side rhs[s]
 
@@ -1576,8 +1595,9 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
 
             # WRITE x[s] INTO X
             for j = 1 : length(subiterations[s])
+                d = subiterations[s][j]
                 for k = 1 : length(LastIterate[subiterations[s][j]])
-                    X[subiterations[s][j]][k] = x[s][j][k]
+                    X[d][k] = x[s][j][k] / factors[d]
                 end
             end
 
@@ -1657,7 +1677,8 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
     # remember last timestep
     TCS.last_timestep = timestep
 
-    return sqrt.(statistics)
+    statistics .= sqrt.(statistics)
+    return nothing
 end
 
 function center_string(S::String, L::Int = 8)
@@ -1682,7 +1703,7 @@ Advances a TimeControlSolver in time with the given (initial) timestep until sta
 The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
 """
 function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
-    statistics = zeros(Float64,length(TCS.X),3)
+    statistics = TCS.statistics
     maxiterations = TCS.SC.user_params[:maxiterations]
     show_details = TCS.SC.user_params[:show_iteration_details]
     check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
@@ -1713,7 +1734,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
         @printf("\n")
     end
     totaltime = @elapsed for iteration = 1 : maxTimeSteps
-        statistics = advance!(TCS, timestep)
+        advance!(TCS, timestep)
         if show_details
             @printf("\t  %4d  ",iteration)
             @printf("| %.4e ",TCS.ctime)
@@ -1759,7 +1780,7 @@ Advances a TimeControlSolver in time with the given (initial) timestep until the
 The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
 """
 function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
-    statistics = zeros(Float64,length(TCS.X),3)
+    statistics = TCS.statistics
     maxiterations = TCS.SC.user_params[:maxiterations]
     show_details = TCS.SC.user_params[:show_iteration_details]
     show_statistics = TCS.SC.user_params[:show_statistics]
@@ -1791,7 +1812,7 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
         @printf("\n")
     end
     totaltime = @elapsed while TCS.ctime < finaltime - finaltime_tolerance
-        statistics = advance!(TCS, timestep)
+        advance!(TCS, timestep)
         if show_details
             @printf("\t  %4d  ",TCS.cstep)
             @printf("| %.4e ",TCS.ctime)

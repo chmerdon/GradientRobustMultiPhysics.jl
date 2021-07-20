@@ -34,7 +34,7 @@ function IncompressibleNavierStokesProblem(
     # unknown 2 : pressure
     Problem = PDEDescription(name)
     add_unknown!(Problem; equation_name = "momentum equation", unknown_name = "velocity")
-    add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "pressure")
+    add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "pressure", algebraic_constraint = true)
 
     # add Laplacian for velocity
     add_operator!(Problem, [1,1], LaplaceOperator(viscosity; store = store))
