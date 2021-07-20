@@ -5,7 +5,7 @@
 \end{aligned}\]</p><p>with an exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\nu$</span> and Dirichlet boundary data for <span>$\mathbf{u}$</span>.</p><p>Here the exact data for the planar lattice flow</p><p class="math-container">\[\begin{aligned}
 \mathbf{u}(x,y,t) &amp; := \exp(-8 \pi^2 \nu t) \begin{pmatrix} \sin(2 \pi x) sin(2 \pi y) \\ \cos(2 \pi x) cos(2 \pi y) \end{pmatrix}\\
 p(x,y,t) &amp; := \exp(-8 \pi^2 \nu t) ( \cos(4 \pi x) - \cos(4 \pi y)) / 4
-\end{aligned}\]</p><p>is prescribed at fixed time <span>$t = 0$</span> with <span>$\mathbf{f} = \mathbf{u}_t - \nu \Delta \mathbf{u}$</span>.</p><p>In this example the Navier-Stokes equations are solved with a pressure-robust variant of the Bernardi–Raugel finite element method and the nonlinear convection term (that involves reconstruction operators) is automatically differentiated for a Newton iteration.</p><pre><code class="language-julia">module Example205_PlanarLatticeFlow2D
+\end{aligned}\]</p><p>is prescribed at fixed time <span>$t = 0$</span> with <span>$\mathbf{f} = \mathbf{u}_t - \nu \Delta \mathbf{u}$</span>.</p><p>In this example the Navier-Stokes equations are solved with a pressure-robust variant of the Bernardi–Raugel finite element method and the nonlinear convection term (that involves reconstruction operators) is automatically differentiated for a Newton iteration.</p><pre><code class="language-julia hljs">module Example205_PlanarLatticeFlow2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -73,7 +73,7 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; Plotter = Plotter, isolines = 9)
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight">julia&gt; Example205_PlanarLatticeFlow2D.main()
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example205_PlanarLatticeFlow2D.main()
 
 PDE-DESCRIPTION
 ===============
@@ -104,10 +104,10 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 4.603630e-17 | 9.171721e-02
-	      2   | 1.064692e-16 | 1.005659e-06
-	      3   | 1.059644e-16 | 2.431843e-10
-	      4   | 1.054086e-16 | 1.479453e-16
+	      1   | 4.445431e-17 | 9.171721e-02
+	      2   | 1.068140e-16 | 1.005659e-06
+	      3   | 1.036015e-16 | 2.431843e-10
+	      4   | 1.063117e-16 | 1.461784e-16
 
-|| u - u_h || = 0.002188090113224078
-|| p - p_h || = 0.01641994916604902</code></pre><p><img src="../../images/Example205_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_PoissonLshapeAdaptive2D/">« 204 : Poisson L-shape Adaptive Mesh Refinement</a><a class="docs-footer-nextpage" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Friday 16 July 2021 14:21">Friday 16 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 0.00218809011322407
+|| p - p_h || = 0.01641994916604906</code></pre><p><img src="../../images/Example205_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_PoissonLshapeAdaptive2D/">« 204 : Poisson L-shape Adaptive Mesh Refinement</a><a class="docs-footer-nextpage" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.4 on <span class="colophon-date" title="Tuesday 20 July 2021 07:22">Tuesday 20 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

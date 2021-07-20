@@ -5,7 +5,7 @@
 \end{aligned}\]</p><p>with (possibly time-dependent) exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>In this example we solve an analytical toy problem with prescribed solution</p><p class="math-container">\[\begin{aligned}
 \mathbf{u}(\mathbf{x},t) &amp; = (1+t)(\cos(x_2), \sin(x_1))^T\\
 p(\mathbf{x}) &amp;= \sin(x_1+x_2) - 2\sin(1) + \sin(2)
-\end{aligned}\]</p><p>with time-dependent right-hand side and inhomogeneous Dirichlet boundary data. The example showcases the benefits of pressure-robustness in time-dependent linear Stokes problem in presence of complicated pressures and small viscosities. The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution, an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence! Compare e.g. Bernardi–Raugel and Bernardi–Raugel pressure-robust by (un)commenting the responsible lines in this example.</p><pre><code class="language-julia">module Example207_StokesTransient2D
+\end{aligned}\]</p><p>with time-dependent right-hand side and inhomogeneous Dirichlet boundary data. The example showcases the benefits of pressure-robustness in time-dependent linear Stokes problem in presence of complicated pressures and small viscosities. The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution, an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence! Compare e.g. Bernardi–Raugel and Bernardi–Raugel pressure-robust by (un)commenting the responsible lines in this example.</p><pre><code class="language-julia hljs">module Example207_StokesTransient2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -106,7 +106,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
         Solution[1][:] = L2VelocityBestapproximation[1][:]
 
         # generate time-dependent solver and chance rhs data
-        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; timedependent_equations = [1], skip_update = [-1], dt_testfunction_operator = [testfunction_operator])
+        TCS = TimeControlSolver(Problem, Solution, CrankNicolson; timedependent_equations = [1], skip_update = [-1], dt_testfunction_operator = [testfunction_operator])
         advance_until_time!(TCS, timestep, T)
 
         # solve bestapproximation problems at final time for comparison
@@ -132,70 +132,70 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     print_convergencehistory(NDofs, Results[:,5:6]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||∇(u-u_h)||&quot;, &quot;||∇(u-Su)||&quot;])
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight">julia&gt; Example207_StokesTransient2D.main()
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example207_StokesTransient2D.main()
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
 	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 7.9287e-14 | 4.9651e-03  3.0773e+00 
-	     2  | 2.0000e-03 | 6.8660e-14 | 3.6022e-03  2.3073e+00 
-	     3  | 3.0000e-03 | 6.4342e-14 | 3.6022e-03  1.1207e-10 
-	     4  | 4.0000e-03 | 8.1233e-14 | 3.6022e-03  1.1171e-10 
-	     5  | 5.0000e-03 | 5.9534e-14 | 3.6022e-03  1.1202e-10 
-	     6  | 6.0000e-03 | 7.0385e-14 | 3.6022e-03  1.1169e-10 
-	     7  | 7.0000e-03 | 8.4582e-14 | 3.6022e-03  1.1220e-10 
-	     8  | 8.0000e-03 | 6.5268e-14 | 3.6022e-03  1.1181e-10 
-	     9  | 9.0000e-03 | 8.6987e-14 | 3.6022e-03  1.1210e-10 
-	    10  | 1.0000e-02 | 6.9619e-14 | 3.6022e-03  1.1180e-10 
-
-
-	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
-	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 4.2420e-14 | 5.6702e-03  2.8195e+00 
-	     2  | 2.0000e-03 | 3.9699e-14 | 6.4012e-03  1.1598e+00 
-	     3  | 3.0000e-03 | 4.1321e-14 | 6.4012e-03  1.4695e-10 
-	     4  | 4.0000e-03 | 4.0197e-14 | 6.4012e-03  1.4498e-10 
-	     5  | 5.0000e-03 | 3.9602e-14 | 6.4012e-03  1.4613e-10 
-	     6  | 6.0000e-03 | 3.8764e-14 | 6.4012e-03  1.4585e-10 
-	     7  | 7.0000e-03 | 3.9580e-14 | 6.4012e-03  1.4587e-10 
-	     8  | 8.0000e-03 | 4.4734e-14 | 6.4012e-03  1.4600e-10 
-	     9  | 9.0000e-03 | 4.0968e-14 | 6.4012e-03  1.4607e-10 
-	    10  | 1.0000e-02 | 4.2265e-14 | 6.4012e-03  1.4540e-10 
+	     1  | 1.0000e-03 | 1.2446e-13 | 4.9651e-03  3.0773e+00 
+	     2  | 2.0000e-03 | 1.9724e-13 | 3.6022e-03  2.3073e+00 
+	     3  | 3.0000e-03 | 1.3878e-13 | 3.6022e-03  1.1200e-10 
+	     4  | 4.0000e-03 | 1.2002e-13 | 3.6022e-03  1.1174e-10 
+	     5  | 5.0000e-03 | 1.3834e-13 | 3.6022e-03  1.1208e-10 
+	     6  | 6.0000e-03 | 1.1453e-13 | 3.6022e-03  1.1171e-10 
+	     7  | 7.0000e-03 | 1.1009e-13 | 3.6022e-03  1.1215e-10 
+	     8  | 8.0000e-03 | 1.5181e-13 | 3.6022e-03  1.1176e-10 
+	     9  | 9.0000e-03 | 1.2756e-13 | 3.6022e-03  1.1221e-10 
+	    10  | 1.0000e-02 | 1.7460e-13 | 3.6022e-03  1.1174e-10 
 
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
 	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 2.0974e-14 | 1.1430e-02  4.0417e+00 
-	     2  | 2.0000e-03 | 2.1543e-14 | 1.2040e-02  5.7953e-01 
-	     3  | 3.0000e-03 | 2.2778e-14 | 1.2040e-02  9.5561e-11 
-	     4  | 4.0000e-03 | 2.1817e-14 | 1.2040e-02  9.4403e-11 
-	     5  | 5.0000e-03 | 2.1931e-14 | 1.2040e-02  9.5659e-11 
-	     6  | 6.0000e-03 | 2.0687e-14 | 1.2040e-02  9.4704e-11 
-	     7  | 7.0000e-03 | 2.0931e-14 | 1.2040e-02  9.5582e-11 
-	     8  | 8.0000e-03 | 2.1496e-14 | 1.2040e-02  9.4667e-11 
-	     9  | 9.0000e-03 | 2.1339e-14 | 1.2040e-02  9.5814e-11 
-	    10  | 1.0000e-02 | 2.0883e-14 | 1.2040e-02  9.4782e-11 
+	     1  | 1.0000e-03 | 8.2673e-14 | 5.6703e-03  2.8195e+00 
+	     2  | 2.0000e-03 | 8.4935e-14 | 6.4012e-03  1.1598e+00 
+	     3  | 3.0000e-03 | 7.0959e-14 | 6.4012e-03  1.4692e-10 
+	     4  | 4.0000e-03 | 8.5227e-14 | 6.4012e-03  1.4498e-10 
+	     5  | 5.0000e-03 | 8.1965e-14 | 6.4012e-03  1.4623e-10 
+	     6  | 6.0000e-03 | 9.1636e-14 | 6.4012e-03  1.4581e-10 
+	     7  | 7.0000e-03 | 8.8148e-14 | 6.4012e-03  1.4577e-10 
+	     8  | 8.0000e-03 | 8.0198e-14 | 6.4012e-03  1.4597e-10 
+	     9  | 9.0000e-03 | 8.1223e-14 | 6.4012e-03  1.4621e-10 
+	    10  | 1.0000e-02 | 7.4885e-14 | 6.4012e-03  1.4534e-10 
 
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
 	        |            |  (total)   |  velocity    pressure  
-	     1  | 1.0000e-03 | 1.1128e-14 | 2.2993e-02  7.3187e+00 
-	     2  | 2.0000e-03 | 1.1125e-14 | 2.3341e-02  2.8899e-01 
-	     3  | 3.0000e-03 | 1.0720e-14 | 2.3341e-02  6.5471e-09 
-	     4  | 4.0000e-03 | 1.0848e-14 | 2.3341e-02  6.5268e-09 
-	     5  | 5.0000e-03 | 1.1290e-14 | 2.3341e-02  6.4975e-09 
-	     6  | 6.0000e-03 | 1.0965e-14 | 2.3341e-02  6.4758e-09 
-	     7  | 7.0000e-03 | 1.1399e-14 | 2.3341e-02  6.4483e-09 
-	     8  | 8.0000e-03 | 1.0808e-14 | 2.3341e-02  6.4273e-09 
-	     9  | 9.0000e-03 | 1.0978e-14 | 2.3341e-02  6.3970e-09 
-	    10  | 1.0000e-02 | 1.1124e-14 | 2.3341e-02  6.3797e-09 
+	     1  | 1.0000e-03 | 4.1940e-14 | 1.1430e-02  4.0417e+00 
+	     2  | 2.0000e-03 | 4.2462e-14 | 1.2040e-02  5.7953e-01 
+	     3  | 3.0000e-03 | 4.2800e-14 | 1.2040e-02  9.5359e-11 
+	     4  | 4.0000e-03 | 4.2660e-14 | 1.2040e-02  9.4490e-11 
+	     5  | 5.0000e-03 | 4.1879e-14 | 1.2040e-02  9.5623e-11 
+	     6  | 6.0000e-03 | 3.9818e-14 | 1.2040e-02  9.4644e-11 
+	     7  | 7.0000e-03 | 4.4865e-14 | 1.2040e-02  9.5501e-11 
+	     8  | 8.0000e-03 | 4.3170e-14 | 1.2040e-02  9.4743e-11 
+	     9  | 9.0000e-03 | 4.7996e-14 | 1.2040e-02  9.5590e-11 
+	    10  | 1.0000e-02 | 4.0860e-14 | 1.2040e-02  9.4943e-11 
+
+
+	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                 
+	        |            |  (total)   |  velocity    pressure  
+	     1  | 1.0000e-03 | 2.2527e-14 | 2.2994e-02  7.3187e+00 
+	     2  | 2.0000e-03 | 2.0675e-14 | 2.3341e-02  2.8899e-01 
+	     3  | 3.0000e-03 | 2.1626e-14 | 2.3341e-02  6.5749e-09 
+	     4  | 4.0000e-03 | 2.1719e-14 | 2.3341e-02  6.5546e-09 
+	     5  | 5.0000e-03 | 2.1938e-14 | 2.3341e-02  6.5249e-09 
+	     6  | 6.0000e-03 | 2.2034e-14 | 2.3341e-02  6.5034e-09 
+	     7  | 7.0000e-03 | 2.2123e-14 | 2.3341e-02  6.4756e-09 
+	     8  | 8.0000e-03 | 2.2538e-14 | 2.3341e-02  6.4538e-09 
+	     9  | 9.0000e-03 | 2.2235e-14 | 2.3341e-02  6.4244e-09 
+	    10  | 1.0000e-02 | 2.2103e-14 | 2.3341e-02  6.4070e-09 
 
 
     ndofs   |      ||u-u_h||       order  |      ||u-Πu||        order  |
 ============|=============================|=============================|
         70  |     2.83479e-03      0.000  |     2.16474e-03      0.000  |
-       250  |     6.94502e-04      2.210  |     5.11118e-04      2.268  |
-       946  |     1.70438e-04      2.111  |     1.21282e-04      2.162  |
-      3682  |     4.22301e-05      2.053  |     2.92850e-05      2.091  |
+       250  |     6.94501e-04      2.210  |     5.11118e-04      2.268  |
+       946  |     1.70437e-04      2.111  |     1.21282e-04      2.162  |
+      3682  |     4.22288e-05      2.053  |     2.92850e-05      2.091  |
 
     ndofs   |      ||p-p_h||       order  |      ||p-πp||        order  |
 ============|=============================|=============================|
@@ -209,4 +209,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
         70  |     5.12836e-02      0.000  |     4.81476e-02      0.000  |
        250  |     2.59216e-02      1.072  |     2.38875e-02      1.101  |
        946  |     1.30868e-02      1.027  |     1.18665e-02      1.051  |
-      3682  |     6.52868e-03      1.023  |     5.90884e-03      1.026  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example206_PressureRobustness2D/">« 206 : Pressure-robustness 2D</a><a class="docs-footer-nextpage" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Friday 16 July 2021 14:21">Friday 16 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      3682  |     6.52912e-03      1.023  |     5.90884e-03      1.026  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example206_PressureRobustness2D/">« 206 : Pressure-robustness 2D</a><a class="docs-footer-nextpage" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.4 on <span class="colophon-date" title="Tuesday 20 July 2021 07:22">Tuesday 20 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

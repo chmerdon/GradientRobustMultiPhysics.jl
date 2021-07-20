@@ -3,7 +3,7 @@
 - \mu \Delta \mathbf{u} + \nabla p &amp; = 0\\
 \mathrm{div}(u) &amp; = 0\\
 - \kappa \Delta \mathbf{c} + \mathbf{u} \cdot \nabla \mathbf{c} &amp; = 0
-\end{aligned}\]</p><p>with some viscosity parameter  and diffusion parameter <span>$\kappa$</span>.</p><p>The diffusion coefficient for the species is chosen (almost) zero such that the isolines of the concentration should stay parallel from inlet to outlet. For the discretisation of the convection term in the transport equation two three possibilities can be chosen:</p><ol><li>Classical finite element discretisations <span>$\mathbf{u}_h \cdot \nabla \mathbf{c}_h$</span></li><li>Pressure-robust finite element discretisation <span>$\Pi_\text{reconst} \mathbf{u}_h \cdot \nabla \mathbf{c}_h$</span> with some divergence-free reconstruction operator <span>$\Pi_\text{reconst}$</span></li><li>Upwind finite volume discretisation for <span>$\kappa = 0$</span> based on normal fluxes along the faces (also divergence-free in finite volume sense)</li></ol><p>Observe that a pressure-robust Bernardi–Raugel discretisation preserves this much better than a classical Bernardi–Raugel method. For comparison also a Taylor–Hood method can be switched on which is comparable to the pressure-robust lowest-order method in this example.</p><p>Note, that the transport equation is very convection-dominated and no stabilisation in the finite element discretisations was used here (but instead a nonzero <span>$\kappa$</span>). The results are very sensitive to <span>$\kappa$</span> and may be different if a stabilisation is used (work in progress). Also note, that only the finite volume discretisation perfectly obeys the maximum principle for the concentration but the isolines do no stay parallel until the outlet is reached, possibly due to articifial diffusion.</p><pre><code class="language-julia">module Example208_FlowTransport2D
+\end{aligned}\]</p><p>with some viscosity parameter  and diffusion parameter <span>$\kappa$</span>.</p><p>The diffusion coefficient for the species is chosen (almost) zero such that the isolines of the concentration should stay parallel from inlet to outlet. For the discretisation of the convection term in the transport equation two three possibilities can be chosen:</p><ol><li>Classical finite element discretisations <span>$\mathbf{u}_h \cdot \nabla \mathbf{c}_h$</span></li><li>Pressure-robust finite element discretisation <span>$\Pi_\text{reconst} \mathbf{u}_h \cdot \nabla \mathbf{c}_h$</span> with some divergence-free reconstruction operator <span>$\Pi_\text{reconst}$</span></li><li>Upwind finite volume discretisation for <span>$\kappa = 0$</span> based on normal fluxes along the faces (also divergence-free in finite volume sense)</li></ol><p>Observe that a pressure-robust Bernardi–Raugel discretisation preserves this much better than a classical Bernardi–Raugel method. For comparison also a Taylor–Hood method can be switched on which is comparable to the pressure-robust lowest-order method in this example.</p><p>Note, that the transport equation is very convection-dominated and no stabilisation in the finite element discretisations was used here (but instead a nonzero <span>$\kappa$</span>). The results are very sensitive to <span>$\kappa$</span> and may be different if a stabilisation is used (work in progress). Also note, that only the finite volume discretisation perfectly obeys the maximum principle for the concentration but the isolines do no stay parallel until the outlet is reached, possibly due to articifial diffusion.</p><pre><code class="language-julia hljs">module Example208_FlowTransport2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -89,7 +89,7 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[3]], [Identity, Identity]; add_grid_plot = false, Plotter = Plotter, subplots_per_column = 1, resolution = (1000,800), isolines = 9)
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight">julia&gt; Example208_FlowTransport2D.main()
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example208_FlowTransport2D.main()
 
 PDE-DESCRIPTION
 ===============
@@ -127,23 +127,23 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 7.938499e-14 | 7.938499e-14
+	      1   | 8.405365e-14 | 8.405365e-14
 
 
 	  STEP  |    TIME    | LSRESIDUAL |   CHANGE                         
 	        |            |  (total)   |  velocity    pressure   concentrat 
-	     1  | 1.0000e+04 | 2.0094e-16 | 0.0000e+00  0.0000e+00  7.9759e+01 
-	     2  | 2.0000e+04 | 2.2322e-16 | 0.0000e+00  0.0000e+00  4.3757e-01 
-	     3  | 3.0000e+04 | 2.0766e-16 | 0.0000e+00  0.0000e+00  1.9895e-02 
-	     4  | 4.0000e+04 | 2.0893e-16 | 0.0000e+00  0.0000e+00  1.0653e-03 
-	     5  | 5.0000e+04 | 2.2306e-16 | 0.0000e+00  0.0000e+00  5.5956e-05 
-	     6  | 6.0000e+04 | 2.2174e-16 | 0.0000e+00  0.0000e+00  2.9128e-06 
-	     7  | 7.0000e+04 | 2.1126e-16 | 0.0000e+00  0.0000e+00  1.5116e-07 
-	     8  | 8.0000e+04 | 2.2268e-16 | 0.0000e+00  0.0000e+00  7.8373e-09 
-	     9  | 9.0000e+04 | 2.2422e-16 | 0.0000e+00  0.0000e+00  4.0622e-10 
-	    10  | 1.0000e+05 | 2.2353e-16 | 0.0000e+00  0.0000e+00  2.1054e-11 
-	    11  | 1.1000e+05 | 2.2346e-16 | 0.0000e+00  0.0000e+00  1.0890e-12 
-	    12  | 1.2000e+05 | 2.2338e-16 | 0.0000e+00  0.0000e+00  5.9853e-14 
+	     1  | 1.0000e+04 | 1.9936e-16 | 0.0000e+00  0.0000e+00  7.9759e+01 
+	     2  | 2.0000e+04 | 2.1197e-16 | 0.0000e+00  0.0000e+00  4.3757e-01 
+	     3  | 3.0000e+04 | 2.2461e-16 | 0.0000e+00  0.0000e+00  1.9895e-02 
+	     4  | 4.0000e+04 | 2.1007e-16 | 0.0000e+00  0.0000e+00  1.0653e-03 
+	     5  | 5.0000e+04 | 2.2269e-16 | 0.0000e+00  0.0000e+00  5.5956e-05 
+	     6  | 6.0000e+04 | 2.2262e-16 | 0.0000e+00  0.0000e+00  2.9128e-06 
+	     7  | 7.0000e+04 | 2.1006e-16 | 0.0000e+00  0.0000e+00  1.5116e-07 
+	     8  | 8.0000e+04 | 2.1008e-16 | 0.0000e+00  0.0000e+00  7.8373e-09 
+	     9  | 9.0000e+04 | 2.1006e-16 | 0.0000e+00  0.0000e+00  4.0622e-10 
+	    10  | 1.0000e+05 | 2.0857e-16 | 0.0000e+00  0.0000e+00  2.1052e-11 
+	    11  | 1.1000e+05 | 2.0905e-16 | 0.0000e+00  0.0000e+00  1.0929e-12 
+	    12  | 1.2000e+05 | 2.0922e-16 | 0.0000e+00  0.0000e+00  5.4404e-14 
 
 
-[min(c),max(c)] = [0.02083333333332794,0.9895833333333334]</code></pre><p><img src="../../images/Example208_FlowTransport2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example207_StokesTransient2D/">« 207 : Stokes Transient 2D</a><a class="docs-footer-nextpage" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Friday 16 July 2021 14:21">Friday 16 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[min(c),max(c)] = [0.020833333333327937,0.9895833333333334]</code></pre><p><img src="../../images/Example208_FlowTransport2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example207_StokesTransient2D/">« 207 : Stokes Transient 2D</a><a class="docs-footer-nextpage" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.4 on <span class="colophon-date" title="Tuesday 20 July 2021 07:22">Tuesday 20 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

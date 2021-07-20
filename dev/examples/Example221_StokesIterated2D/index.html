@@ -6,7 +6,7 @@
 (\nabla \mathbf{u}_h^{next}, \nabla \mathbf{v}_h) + ((\mathbf{u}_h^{next} \cdot \nabla) \mathbf{u}_h^{next}, \mathbf{v}_h) + \epsilon (\mathrm{div}_h(\mathbf{u}_h) ,\mathrm{div}_h(\mathbf{v}_h)) &amp; = (\mathbf{f},\mathbf{v}_h) + (p_h,\mathrm{div}(\mathbf{v}_h))
 &amp;&amp; \text{for all } \mathbf{v}_h \in \mathbf{V}_h\\
 (p^{next}_h,q_h) &amp; = (p_h,q_h) - (\mathrm{div}(\mathbf{u}_H^{next}),q_h) &amp;&amp; \text{for all } q_h \in Q_h
-\end{aligned}\]</p><p>This is done consecutively until the residual of both equations is small enough. The convection term is linearised by auto-differentiated Newton terms. The discrete divergence is computed via a RT0 reconstruction operator that preserves the disrete divergence. (another way would be to compute B<em>inv(M)</em>B&#39; where M is the mass matrix of the pressure and B is the matrix for the div-pressure block).</p><pre><code class="language-julia">module Example221_StokesIterated2D
+\end{aligned}\]</p><p>This is done consecutively until the residual of both equations is small enough. The convection term is linearised by auto-differentiated Newton terms. The discrete divergence is computed via a RT0 reconstruction operator that preserves the disrete divergence. (another way would be to compute B<em>inv(M)</em>B&#39; where M is the mass matrix of the pressure and B is the matrix for the div-pressure block).</p><pre><code class="language-julia hljs">module Example221_StokesIterated2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -81,7 +81,7 @@ function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty
     # plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; Plotter = Plotter)
 end
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight">julia&gt; Example221_StokesIterated2D.main()
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example221_StokesIterated2D.main()
 
 PDE-DESCRIPTION
 ===============
@@ -144,10 +144,10 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.085172e-11 | 1.145706e-01
-	      2   | 2.221224e-11 | 4.876621e-05
-	      3   | 2.022528e-11 | 2.635025e-08
-	      4   | 2.134176e-11 | 4.331952e-11
+	      1   | 2.045853e-11 | 1.145706e-01
+	      2   | 2.067699e-11 | 4.876621e-05
+	      3   | 2.019771e-11 | 2.635035e-08
+	      4   | 2.076446e-11 | 4.311700e-11
 
-|| u - u_h || = 0.00015826122824622282
-|| p - p_h || = 0.02091959276146515</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Friday 16 July 2021 14:21">Friday 16 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 0.00015826122827419144
+|| p - p_h || = 0.020919592761189876</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.4 on <span class="colophon-date" title="Tuesday 20 July 2021 07:22">Tuesday 20 July 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
