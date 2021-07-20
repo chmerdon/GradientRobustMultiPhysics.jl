@@ -21,7 +21,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - PDEDescription module for easy and close-to-physics problem description (as variational equations) independent from the actual discretisation
 - Newton terms for nonlinear operators are added automatically by automatic differentation (experimental feature)
 - solver can run fixed-point iterations between subsets of equations of the PDEDescription (possibly with Anderson acceleration)
-- time-dependent problems can be integrated in time by own backward Euler implementation or via the external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
+- time-dependent problems can be integrated in time by own backward Euler or Crank-Nicolson implementation or via the external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
 - reconstruction operators for gradient-robust Stokes discretisations (BR->RT0/BDM1 or CR->RT0 in 2D/3D, and P2B->RT1/BDM2 in 2D, more to come)
 - plotting via functionality of [GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)
 - export into csv files or vtk files (via [WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl))

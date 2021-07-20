@@ -109,7 +109,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds another unknown to the PDEDescription. With the optinal argument algebraic_constraint = true the unknown and the related equation
+Adds another unknown to the PDEDescription. With the optional argument algebraic_constraint = true the unknown and the related equation
 can be mask as an algebraic constraint. (Currently this only has a consequence if the system is integrated in time with the Crank-Nicolson rule.)
 """
 function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_name::String = "", algebraic_constraint::Bool = false)
