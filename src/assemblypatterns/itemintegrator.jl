@@ -204,14 +204,14 @@ function evaluate!(
     # loop over items
     offsets = zeros(Int,nFE+1)
     maxdofs = get_maxndofs(AM)
-    basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
+    basisevaler::Array{FEBasisEvaluator,1} = Array{FEBasisEvaluator,1}(undef,nFE)
     for j = 1 : nFE
-        basisevaler = get_basisevaler(AM, j, 1)
-        offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
+        basisevaler[j] = get_basisevaler(AM, j, 1)
+        offsets[j+1] = offsets[j] + size(basisevaler[j].cvals,1)
     end
-    basisxref::Array{Array{T,1},1} = basisevaler.xref
+    basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
-    coeffs = zeros(T,sum(maxdofs[1:end]))
+    coeffs::Array{T,1} = zeros(T,sum(maxdofs[1:end]))
     weights::Array{T,1} = get_qweights(AM)
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
@@ -230,10 +230,10 @@ function evaluate!(
             for di = 1 : maxdofitems[FEid]
                 if AM.dofitems[FEid][di] != 0
                     # get correct basis evaluator for dofitem (was already updated by AM)
-                    basisevaler = get_basisevaler(AM, FEid, di)
+                    basisevaler[FEid] = get_basisevaler(AM, FEid, di)
     
                     # update action on dofitem
-                    update!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
+                    update!(action, basisevaler[FEid], AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
@@ -241,7 +241,7 @@ function evaluate!(
 
                     # write evaluation of operator of current FE into action_input
                     for i in eachindex(weights)
-                        eval!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
+                        eval!(action_input[i], basisevaler[FEid], coeffs, i, offsets[FEid])
                     end  
                 end
             end
@@ -256,9 +256,8 @@ function evaluate!(
             end  
         else
             # update action on item/dofitem (of first operator)
-            basisevaler = get_basisevaler(AM, 1, 1)
-            basisxref = basisevaler.xref
-            update!(action, basisevaler, AM.dofitems[1][1], item, regions[r])
+            basisxref = basisevaler[1].xref
+            update!(action, basisevaler[1], AM.dofitems[1][1], item, regions[r])
             # apply action to FEVector and accumulate
             for i in eachindex(weights)
                 apply_action!(action_result, action_input[i], action, i, basisxref[i])

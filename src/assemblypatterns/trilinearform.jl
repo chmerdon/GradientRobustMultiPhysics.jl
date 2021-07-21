@@ -362,7 +362,7 @@ function assemble!(
     AP::AssemblyPattern{APT,T,AT},
     fixedFE::Array{<:FEVectorBlock,1};
     skip_preps::Bool = false,
-    fixed_arguments = [1,2],
+    fixed_arguments = [1,2], # currently the only accepted configuration
     factor::Real = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
 
     assemble!(b.entries, AP, fixedFE; factor = factor, offset = b.offset, skip_preps = skip_preps)

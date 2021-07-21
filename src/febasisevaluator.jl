@@ -475,7 +475,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
         end
         coeffs::Array{T,2} = FEBE.coefficients
         subset::Array{Int,1} = FEBE.current_subset
-        FEBE.coeffs_handler(coeffs, item);
+        FEBE.coeffs_handler(coeffs, item)
         FEBE.subset_handler(subset, item)
 
         # use Piola transformation on Hdiv basis

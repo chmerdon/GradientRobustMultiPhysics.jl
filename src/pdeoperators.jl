@@ -1068,7 +1068,7 @@ function assemble_operator!(b::FEVectorBlock, O::PDEOperator, CurrentSolution::U
     end
     set_time!(O.action, time)
     if length(O.fixed_arguments_ids) > 0
-        assemble!(b, Pattern, CurrentSolution[O.fixed_arguments_ids], skip_preps = skip_preps, factor = O.factor, fixed_arguments = O.fixed_arguments)
+        assemble!(b, Pattern, CurrentSolution[O.fixed_arguments_ids], skip_preps = skip_preps, factor = O.factor*factor, fixed_arguments = O.fixed_arguments)
     else
         assemble!(b, Pattern, skip_preps = skip_preps, factor = O.factor)
     end
@@ -1113,11 +1113,7 @@ function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::PDEOperator, Current
 
         ## assemble
         set_time!(O.action_rhs, time)
-        if length(O.fixed_arguments_ids) > 0
-            assemble!(b, SC.RHS_AssemblyPatterns[j][o],CurrentSolution[O.fixed_arguments_ids]; skip_preps = skip_preps, factor = O.factor*factor)
-        else
-            assemble!(b, SC.RHS_AssemblyPatterns[j][o]; skip_preps = skip_preps, factor = O.factor*factor)
-        end
+        assemble_operator!(b, O, CurrentSolution; Pattern = SC.RHS_AssemblyPatterns[j][o], time = time, skip_preps = skip_preps, factor = factor)
     end
 end
 

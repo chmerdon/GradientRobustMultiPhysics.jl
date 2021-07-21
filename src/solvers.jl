@@ -369,7 +369,7 @@ function assemble!(
     min_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyAlways,
     storage_trigger = "same as min_trigger",
     only_lhs::Bool = false,
-    only_rhs::Bool = false) where {T <: Real}
+    only_rhs::Bool = false) where {T}
 
     @assert only_lhs * only_rhs == 0 "Cannot assemble with only_lhs and only_rhs both true"
 
@@ -1172,30 +1172,30 @@ abstract type AbstractTimeIntegrationRule end
 abstract type BackwardEuler <: AbstractTimeIntegrationRule end
 abstract type CrankNicolson <: AbstractTimeIntegrationRule end
 
-mutable struct TimeControlSolver{TIR<:AbstractTimeIntegrationRule}
+mutable struct TimeControlSolver{T,TIR<:AbstractTimeIntegrationRule}
     PDE::PDEDescription      # PDE description (operators, data etc.)
     SC::SolverConfig         # solver configurations (subiterations, penalties etc.)
     LS::Array{AbstractLinearSystem,1} # array for linear solvers of all subiterations
     ctime::Real              # current time
-    cstep::Real              # current timestep count
+    cstep::Int               # current timestep count
     last_timestep::Real      # last timestep
-    AM::Array{FEMatrix,1}    # heap for mass matrices for each equation package
+    AM::Array{FEMatrix{T},1}    # heap for mass matrices for each equation package
     which::Array{Int,1}      # which equations shall have a time derivative?
     nonlinear_dt::Array{Bool,1} # if true mass matrix is recomputed in each iteration
     dt_operators::Array{DataType,1} # operators associated with the time derivative
     dt_actions::Array{<:AbstractAction,1} # actions associated with the time derivative
-    S::Array{FEMatrix,1}     # heap for system matrix for each equation package
-    rhs::Array{FEVector,1}   # heap for system rhs for each equation package
-    A::Array{FEMatrix,1}     # heap for spacial discretisation matrix for each equation package
-    b::Array{FEVector,1}     # heap for spacial rhs for each equation package
-    x::Array{FEVector,1}     # heap for current solution for each equation package
-    res::Array{FEVector,1}   # residual vector
-    X::FEVector              # full solution vector
-    LastIterate::FEVector    # helper variable if maxiterations > 1
+    S::Array{FEMatrix{T},1}     # heap for system matrix for each equation package
+    rhs::Array{FEVector{T},1}   # heap for system rhs for each equation package
+    A::Array{FEMatrix{T},1}     # heap for spacial discretisation matrix for each equation package
+    b::Array{FEVector{T},1}     # heap for spacial rhs for each equation package
+    x::Array{FEVector{T},1}     # heap for current solution for each equation package
+    res::Array{FEVector{T},1}   # residual vector
+    X::FEVector{T}              # full solution vector
+    LastIterate::FEVector{T}    # helper variable if maxiterations > 1
     fixed_dofs::Array{Int,1}            # fixed dof numbes (values are stored in X)
     eqoffsets::Array{Array{Int,1},1}    # offsets for subblocks of each equation package
     ALU::Array{Any,1}  # LU decompositions of matrices A
-    statistics::Array{Float64,2}  # statistics of last timestep
+    statistics::Array{T,2}  # statistics of last timestep
 end
 
 
@@ -1389,7 +1389,7 @@ function TimeControlSolver(
 
     # generate TimeControlSolver
     statistics = zeros(Float64,length(InitialValues),4)
-    TCS = TimeControlSolver{TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)), statistics)
+    TCS = TimeControlSolver{Float64,TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)), statistics)
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
@@ -1410,7 +1410,7 @@ function TimeControlSolver(
 Advances a TimeControlSolver one step in time with the given timestep.
 
 """
-function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR}
+function advance!(TCS::TimeControlSolver{T,TIR}, timestep::Real = 1e-1) where {T,TIR}
     # update timestep counter
     TCS.cstep += 1
     TCS.ctime += timestep
@@ -1427,36 +1427,36 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
     res = TCS.res
     X = TCS.X
     LS = TCS.LS
-    fixed_dofs = TCS.fixed_dofs
-    eqoffsets = TCS.eqoffsets
-    T = eltype(res[1].entries)
-    statistics = TCS.statistics
+    fixed_dofs::Array{Int,1} = TCS.fixed_dofs
+    eqoffsets::Array{Array{Int,1},1} = TCS.eqoffsets
+    statistics::Array{T,2} = TCS.statistics
     fill!(statistics,0)
 
     ## get relevant solver parameters
-    subiterations = SC.user_params[:subiterations]
+    subiterations::Array{Array{Int,1},1} = SC.user_params[:subiterations]
     #anderson_iterations = SC.user_params[:anderson_iterations]
-    fixed_penalty = SC.user_params[:fixed_penalty]
+    fixed_penalty::T = SC.user_params[:fixed_penalty]
     #damping = SC.user_params[:damping]
-    maxiterations = SC.user_params[:maxiterations]
-    check_nonlinear_residual = SC.user_params[:check_nonlinear_residual]
+    maxiterations::Int = SC.user_params[:maxiterations]
+    check_nonlinear_residual::Bool = SC.user_params[:check_nonlinear_residual]
     #timedependent_equations = SC.user_params[:timedependent_equations]
-    target_residual = SC.user_params[:target_residual]
-    skip_update = SC.user_params[:skip_update]
+    target_residual::T = SC.user_params[:target_residual]
+    skip_update::Array{Int,1} = SC.user_params[:skip_update]
 
     # save current solution to LastIterate
     LastIterate = TCS.LastIterate
     LastIterate.entries .= X.entries
 
     ## LOOP OVER ALL SUBITERATIONS
-    linresnorm::T = 1e30
     resnorm::T = 1e30
     eqdof::Int = 0
     d::Int = 0
+    nsubitblocks::Int = 0
     update_matrix::Bool = true
     factors::Array{Int,1} = ones(Int,length(X))
 
     for s = 1 : length(subiterations)
+        nsubitblocks = length(subiterations[s])
 
         # decide if matrix needs to be updated
         update_matrix = skip_update[s] != -1 || TCS.cstep == 1 || TCS.last_timestep != timestep
@@ -1470,7 +1470,7 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
 
                 ## update mass matrix and add time derivative
                 assemble_massmatrix4subiteration!(TCS, s; force = false)
-                for k = 1 : length(subiterations[s])
+                for k = 1 : nsubitblocks
                     d = subiterations[s][k]
                     addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
                     addblock_matmul!(b[s][k],AM[s][k,k],LastIterate[d]; factor = 1.0/timestep)
@@ -1481,7 +1481,7 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
                 assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
 
                 ## add time derivative
-                for k = 1 : length(subiterations[s])
+                for k = 1 : nsubitblocks
                     d = subiterations[s][k]
                     addblock_matmul!(b[s][k],AM[s][k,k],LastIterate[d]; factor = 1.0/timestep)
                 end
@@ -1492,10 +1492,10 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
             ## last iterates of algebraic constraints are ignored
             fill!(rhs[s].entries,0)
             rhs[s].entries .+= b[s].entries
-            for j = 1 : length(subiterations[s])
+            for j = 1 : nsubitblocks
                 d = subiterations[s][j]
                 if PDE.algebraic_constraint[d] == false
-                    for k = 1 : length(subiterations[s])
+                    for k = 1 : nsubitblocks
                         if PDE.algebraic_constraint[subiterations[s][k]] == false
                             addblock_matmul!(rhs[s][k],A[s][k,j],LastIterate[d]; factor = -1)
                         end
@@ -1517,12 +1517,12 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
                 fill!(A[s].entries.cscmatrix.nzval,0)
                 assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
                 rhs[s].entries .+= b[s].entries
-                S[s].entries.cscmatrix += A[s].entries.cscmatrix
+                add!(S[s],A[s])
                 flush!(S[s].entries)
                 
                 ## update and add time derivative to system matrix and right-hand side
                 assemble_massmatrix4subiteration!(TCS, s; force = false)
-                for k = 1 : length(subiterations[s])
+                for k = 1 : nsubitblocks
                     d = subiterations[s][k]
                     addblock!(S[s][k,k],AM[s][k,k]; factor = 2.0/timestep)
                     addblock_matmul!(rhs[s][k],AM[s][k,k],LastIterate[d]; factor = 2.0/timestep)
@@ -1536,7 +1536,7 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
                 
                 ## update and add time derivative to system matrix and right-hand side
                 assemble_massmatrix4subiteration!(TCS, s; force = false)
-                for k = 1 : length(subiterations[s])
+                for k = 1 : nsubitblocks
                     d = subiterations[s][k]
                     addblock_matmul!(rhs[s][k],AM[s][k,k],LastIterate[d]; factor = 2.0/timestep)
                 end
@@ -1545,10 +1545,10 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
         end
 
         # ASSEMBLE (TIME-DEPENDENT) BOUNDARY DATA
-        for k = 1 : length(subiterations[s])
+        for k = 1 : nsubitblocks
             d = subiterations[s][k]
             if any(PDE.BoundaryOperators[d].timedependent) == true
-                boundarydata!(x[s][k],PDE.BoundaryOperators[d]; time = TCS.ctime)
+                boundarydata!(x[s][k],PDE.BoundaryOperators[d]; time = TCS.ctime, skip_enumerations = true)
             end
         end    
 
@@ -1558,10 +1558,10 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
 
             # PENALIZE FIXED DOFS (IN CASE THE MATRIX CHANGED)
             # (from boundary conditions and global constraints)
-            for j = 1 : length(fixed_dofs)
-                for eq = 1 : length(subiterations[s])
-                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
-                        eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+            for dof in fixed_dofs
+                for eq = 1 : nsubitblocks
+                    if dof > eqoffsets[s][eq] && dof <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
+                        eqdof = dof - eqoffsets[s][eq]
                         rhs[s][eq][eqdof] = fixed_penalty * x[s][eq][eqdof]
                         S[s][eq,eq][eqdof,eqdof] = fixed_penalty
                     end
@@ -1578,23 +1578,25 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
             end
 
             ## CHECK LINEAR RESIDUAL
-            res[s].entries[:] = S[s].entries*x[s].entries - rhs[s].entries
-            for j = 1 : length(fixed_dofs)
-                for eq = 1 : length(subiterations[s])
-                    if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
-                        eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+            mul!(res[s].entries,S[s].entries,x[s].entries)
+            res[s].entries .-= rhs[s].entries
+            for dof in fixed_dofs
+                for eq = 1 : nsubitblocks
+                    if dof > eqoffsets[s][eq] && dof <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
+                        eqdof = dof - eqoffsets[s][eq]
                         res[s][eq][eqdof] = 0
                     end
                 end
             end
-            statistics[subiterations[s][:],1] .= 0
-            for j = 1 : length(subiterations[s])
-                statistics[subiterations[s][j],1] += sum(res[s][j][:].^2)
+            for j = 1 : nsubitblocks
+                statistics[subiterations[s][j],1] = 0
+                for k = res[s][j].offset+1:res[s][j].last_index
+                    statistics[subiterations[s][j],1] += res[s][j].entries[k].^2
+                end
             end
-            linresnorm = norm(res[s].entries)
 
             # WRITE x[s] INTO X
-            for j = 1 : length(subiterations[s])
+            for j = 1 : nsubitblocks
                 d = subiterations[s][j]
                 for k = 1 : length(LastIterate[subiterations[s][j]])
                     X[d][k] = x[s][j][k] / factors[d]
@@ -1609,7 +1611,7 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
                     lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], min_trigger = AssemblyAlways, time = TCS.ctime)
 
                     ## S = A, so we need to readd the time-derivative for reassembled blocks
-                    for k = 1 : length(subiterations[s])
+                    for k = 1 : nsubitblocks
                         d = subiterations[s][k]
                         if lhs_erased[k,k]
                             addblock!(A[s][k,k],AM[s][k,k]; factor = 1.0/timestep)
@@ -1620,36 +1622,40 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
                     end
                 elseif TIR == CrankNicolson
                     # subtract current matrix A
-                    S[s].entries.cscmatrix -= A[s].entries.cscmatrix
+                    add!(S[s],A[s]; factor = -1)
                     rhs[s].entries .-= b[s].entries
 
                     # update matrix A
                     lhs_erased, rhs_erased = assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], min_trigger = AssemblyAlways, time = TCS.ctime)
 
                     # add new matrix A
-                    S[s].entries.cscmatrix += A[s].entries.cscmatrix
+                    add!(S[s],A[s])
                     rhs[s].entries .+= b[s].entries
                 end
 
                 # CHECK NONLINEAR RESIDUAL
                 if sum(lhs_erased[:]) + sum(rhs_erased) > 0
-                    flush!(S[s].entries)
-                    res[s].entries[:] = S[s].entries*x[s].entries - rhs[s].entries
-                    for j = 1 : length(fixed_dofs)
-                        for eq = 1 : length(subiterations[s])
-                            if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
-                                eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+                    mul!(res[s].entries,S[s].entries,x[s].entries)
+                    res[s].entries .-= rhs[s].entries
+                    for dof in fixed_dofs
+                        for eq = 1 : nsubitblocks
+                            if dof > eqoffsets[s][eq] && dof <= eqoffsets[s][eq]+X[subiterations[s][eq]].FES.ndofs
+                                eqdof = dof - eqoffsets[s][eq]
                                 res[s][eq][eqdof] = 0
                             end
                         end
                     end
-                    statistics[subiterations[s][:],3] .= 0
-                    for j = 1 : length(subiterations[s])
-                        statistics[subiterations[s][j],3] += sum(res[s][j][:].^2)
+                    for j = 1 : nsubitblocks
+                        statistics[subiterations[s][j],3] = 0
+                        for k = res[s][j].offset+1:res[s][j].last_index
+                            statistics[subiterations[s][j],3] += res[s][j].entries[k].^2
+                        end
                     end
                     resnorm = norm(res[s].entries)
                 else
-                    statistics[subiterations[s][:],3] .= statistics[subiterations[s][:],1]
+                    for j = 1 : nsubitblocks
+                        statistics[subiterations[s][j],3] .= statistics[subiterations[s][j],1]
+                    end
                 end
             else
                 statistics[subiterations[s][:],3] .= 1e99 # nonlinear residual has not been checked !
@@ -1659,7 +1665,6 @@ function advance!(TCS::TimeControlSolver{TIR}, timestep::Real = 1e-1) where {TIR
                 break
             end
         end
-
     end
     
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
@@ -1708,44 +1713,45 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
     show_details = TCS.SC.user_params[:show_iteration_details]
     check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
     @info "Advancing in time until stationarity..."
+    steptime::Float64 = 0
     if show_details
         if maxiterations > 1 || check_nonlinear_residual
-            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |  RUNTIME  |   CHANGE ")
             for j = 1 : size(statistics,1)
-                @printf("        ")
+                @printf("       ")
             end
             if do_after_each_timestep != nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n\t        |            |  (total)   |  (total,nits)  |")
+            @printf("\n\t        |            |  (total)   |  (total,nits)  |    (s)    |")
         else
-            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE ")
             for j = 1 : size(statistics,1)
-                @printf("        ")
+                @printf("       ")
             end
             if do_after_each_timestep != nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n\t        |            |  (total)   |")
+            @printf("\n\t        |            |  (total)   |    (s)    |")
         end
         for j = 1 : size(statistics,1)
             @printf(" %s ",center_string(TCS.PDE.unknown_names[j],10))
         end
-        @printf("\n")
     end
     totaltime = @elapsed for iteration = 1 : maxTimeSteps
-        advance!(TCS, timestep)
+        steptime = @elapsed advance!(TCS, timestep)
         if show_details
+            @printf("\n")
             @printf("\t  %4d  ",iteration)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
             if maxiterations > 1 || check_nonlinear_residual
-                @printf(" %.4e (%d) |",sqrt(sum(statistics[:,3].^2)), statistics[1,4])
+                @printf(" %.4e (%d) |",sqrt(sum(view(statistics,:,3).^2)), statistics[1,4])
             end
+            @printf(" %.3e |",steptime)
             for j = 1 : size(statistics,1)
                 @printf(" %.4e ",statistics[j,2])
             end
-            @printf("\n")
         end
         if do_after_each_timestep != nothing
             do_after_each_timestep(TCS.cstep, statistics)
@@ -1786,44 +1792,45 @@ function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finalt
     show_statistics = TCS.SC.user_params[:show_statistics]
     check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
     @info "Advancing in time from $(TCS.ctime) until $finaltime"
+    steptime::Float64 = 0
     if show_details
         if maxiterations > 1 || check_nonlinear_residual
-            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |  RUNTIME  |   CHANGE ")
             for j = 1 : size(statistics,1)
-                @printf("        ")
+                @printf("       ")
             end
             if do_after_each_timestep !== nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n\t        |            |  (total)   |    (total)     |")
+            @printf("\n\t        |            |  (total)   |    (total)     |    (s)    |")
         else
-            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |   CHANGE ")
+            @printf("\n\t  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE ")
             for j = 1 : size(statistics,1)
-                @printf("        ")
+                @printf("       ")
             end
             if do_after_each_timestep !== nothing
                 do_after_each_timestep(0, statistics)
             end
-            @printf("\n\t        |            |  (total)   |")
+            @printf("\n\t        |            |  (total)   |    (s)    ")
         end
         for j = 1 : size(statistics,1)
             @printf(" %s ",center_string(TCS.PDE.unknown_names[j],10))
         end
-        @printf("\n")
     end
     totaltime = @elapsed while TCS.ctime < finaltime - finaltime_tolerance
-        advance!(TCS, timestep)
+        steptime = @elapsed advance!(TCS, timestep)
         if show_details
+            @printf("\n")
             @printf("\t  %4d  ",TCS.cstep)
             @printf("| %.4e ",TCS.ctime)
             @printf("| %.4e |",sqrt(sum(statistics[:,1].^2)))
             if maxiterations > 1 || check_nonlinear_residual
-                @printf(" %.4e (%d) |",sqrt(sum(statistics[:,3].^2)), statistics[1,4])
+                @printf(" %.4e (%d) |",sqrt(sum(view(statistics,:,3).^2)), statistics[1,4])
             end
+            @printf(" %.3e |",steptime)
             for j = 1 : size(statistics,1)
                 @printf(" %.4e ",statistics[j,2])
             end
-            @printf("\n")
         end
         if do_after_each_timestep !== nothing
             do_after_each_timestep(TCS.cstep, statistics)

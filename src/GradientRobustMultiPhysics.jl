@@ -140,7 +140,7 @@ export nodevalues! # = P1interpolation, abstract averaging method that works for
 
 export FEVectorBlock, FEVector
 export FEMatrixBlock, FEMatrix, _addnz
-export fill!, addblock!, addblock_matmul!, lrmatmul
+export fill!, addblock!, addblock_matmul!, lrmatmul, add!
 
 export get_reconstruction_matrix
 

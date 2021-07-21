@@ -61,7 +61,7 @@ Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
 Base.getindex(FEF::FEMatrix{T,nbrow,nbcol},i,j) where {T,nbrow,nbcol} = FEF.FEMatrixBlocks[(i-1)*nbcol+j]
 Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
 Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
-Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = (FEB.entries[FEB.offsetX+i,FEB.offsetY+j] = v)
+Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = setindex!(FEB.entries,v,FEB.offsetX+i,FEB.offsetY+j)
 
 """
 $(TYPEDSIGNATURES)
@@ -182,10 +182,44 @@ end
 """
 $(TYPEDSIGNATURES)
 
+Adds FEMatrix B to FEMatrix A.
+"""
+function add!(A::FEMatrix{T}, B::FEMatrix{T}; factor = 1, transpose::Bool = false) where {T}
+    AM::ExtendableSparseMatrix{T,Int64} = A.entries
+    BM::ExtendableSparseMatrix{T,Int64} = B.entries
+    cscmat::SparseMatrixCSC{T,Int64} = BM.cscmatrix
+    rows::Array{Int,1} = rowvals(cscmat)
+    valsB::Array{T,1} = cscmat.nzval
+    ncols::Int = size(cscmat,2)
+    arow::Int = 0
+    if transpose
+        for col = 1:ncols
+            for r in nzrange(cscmat, col)
+                arow = rows[r]
+                _addnz(AM,col,arow,valsB[r],factor)
+            end
+        end
+    else
+        for col = 1:ncols
+            for r in nzrange(cscmat, col)
+                arow = rows[r]
+                _addnz(AM,arow,col,valsB[r],factor)
+            end
+        end
+    end
+    return nothing
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
 Adds FEMatrixBlock B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1, transpose::Bool = false)
-    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
+function addblock!(A::FEMatrixBlock{T}, B::FEMatrixBlock{T}; factor = 1, transpose::Bool = false) where {T}
+    AM::ExtendableSparseMatrix{T,Int64} = A.entries
+    BM::ExtendableSparseMatrix{T,Int64} = B.entries
+    cscmat::SparseMatrixCSC{Float64,Int64} = BM.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Float64,1} = cscmat.nzval
     arow::Int = 0
@@ -196,7 +230,7 @@ function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1, transpose::Bo
             for r in nzrange(cscmat, col)
                 if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
                     acol = rows[r] - B.offsetX + A.offsetY
-                    _addnz(A.entries,arow,acol,valsB[r],factor)
+                    _addnz(AM,arow,acol,valsB[r],factor)
                 end
             end
         end
@@ -206,7 +240,7 @@ function addblock!(A::FEMatrixBlock, B::FEMatrixBlock; factor = 1, transpose::Bo
             for r in nzrange(cscmat, col)
                 if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
                     arow = rows[r] - B.offsetX + A.offsetX
-                    _addnz(A.entries,arow,acol,valsB[r],factor)
+                    _addnz(AM,arow,acol,valsB[r],factor)
                 end
             end
         end
@@ -219,7 +253,8 @@ $(TYPEDSIGNATURES)
 
 Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
+function addblock!(A::FEMatrixBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
+    AM::ExtendableSparseMatrix{Tv,Int64} = A.entries
     cscmat::SparseMatrixCSC{Tv, Ti} = B.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Tv,1} = cscmat.nzval
@@ -230,7 +265,7 @@ function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 
             arow = col + A.offsetX
             for r in nzrange(cscmat, col)
                 acol = rows[r] + A.offsetY
-                _addnz(A.entries,arow,acol,valsB[r],factor)
+                _addnz(AM,arow,acol,valsB[r],factor)
                 #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
             end
         end
@@ -239,53 +274,23 @@ function addblock!(A::FEMatrixBlock, B::ExtendableSparseMatrix{Tv,Ti}; factor = 
             acol = col + A.offsetY
             for r in nzrange(cscmat, col)
                 arow = rows[r] + A.offsetX
-                _addnz(A.entries,arow,acol,valsB[r],factor)
+                _addnz(AM,arow,acol,valsB[r],factor)
                 #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
             end
         end
     end
     return nothing
 end
-
-
-function addblock!(A::ExtendableSparseMatrix{Tv,Ti}, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
-    cscmat::SparseMatrixCSC{Tv, Ti} = B.cscmatrix
-    rows::Array{Int,1} = rowvals(cscmat)
-    valsB::Array{Tv,1} = cscmat.nzval
-    arow::Int = 0
-    acol::Int = 0
-    if transpose
-        for col = 1:size(B,2)
-            arow = col
-            for r in nzrange(cscmat, col)
-                acol = rows[r]
-                _addnz(A,arow,acol,valsB[r],factor)
-                #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
-            end
-        end
-    else
-        for col = 1:size(B,2)
-            acol = col
-            for r in nzrange(cscmat, col)
-                arow = rows[r]
-                _addnz(A,arow,acol,valsB[r],factor)
-                #A[rows[r],col] += B.cscmatrix.nzval[r] * factor
-            end
-        end
-    end
-    return nothing
-end
-
 
 """
 $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock, B::FEMatrixBlock, b::FEVectorBlock; factor = 1, transposed::Bool = false)
-    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
+function addblock_matmul!(a::FEVectorBlock{T}, B::FEMatrixBlock{T}, b::FEVectorBlock; factor = 1, transposed::Bool = false) where {T}
+    cscmat::SparseMatrixCSC{T,Int64} = B.entries.cscmatrix
     rows::Array{Int64,1} = rowvals(cscmat)
-    valsB::Array{Float64,1} = cscmat.nzval
+    valsB::Array{T,1} = cscmat.nzval
     bcol::Int = 0
     row::Int = 0
     arow::Int = 0
@@ -320,10 +325,10 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::AbstractVector, B::FEMatrixBlock, b::AbstractVector; factor = 1, transposed::Bool = false)
-    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
+function addblock_matmul!(a::AbstractVector{T}, B::FEMatrixBlock{T}, b::AbstractVector; factor = 1, transposed::Bool = false) where {T}
+    cscmat::SparseMatrixCSC{T,Int64} = B.entries.cscmatrix
     rows::Array{Int64,1} = rowvals(cscmat)
-    valsB::Array{Float64,1} = cscmat.nzval
+    valsB::Array{T,1} = cscmat.nzval
     bcol::Int = 0
     row::Int = 0
     arow::Int = 0
@@ -360,7 +365,7 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock, B::ExtendableSparseMatrix{Tv,Ti}, b::FEVectorBlock; factor = 1) where {Tv, Ti <: Integer}
+function addblock_matmul!(a::FEVectorBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}, b::FEVectorBlock; factor = 1) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv,Ti} = B.cscmatrix
     rows::Array{Ti,1} = rowvals(cscmat)
     valsB::Array{Tv,1} = cscmat.nzval

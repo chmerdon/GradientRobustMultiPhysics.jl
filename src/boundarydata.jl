@@ -32,18 +32,21 @@ collects boundary data for a component of the system and allows to specify a Abs
 so far only DirichletBoundary types (see above)
 
 """
-struct BoundaryOperator <: AbstractPDEOperator
+mutable struct BoundaryOperator <: AbstractPDEOperator
     regions4boundarytype :: Dict{Type{<:AbstractBoundaryType},Array{Int,1}}
     data4bregion :: Array{Any,1}
     timedependent :: Array{Bool,1}
     quadorder4bregion :: Array{Int,1}
+    ifaces4bregion::Array{Array{Int,1},1}
+    ibfaces4bregion::Array{Array{Int,1},1}
+    homdofs::Array{Int,1}
 end
 
 function BoundaryOperator()
     regions4boundarytype = Dict{Type{<:AbstractBoundaryType},Array{Int,1}}()
     quadorder4bregion = zeros(Int,0)
     timedependent = Array{Bool,1}([])
-    return BoundaryOperator(regions4boundarytype, [], timedependent, quadorder4bregion)
+    return BoundaryOperator(regions4boundarytype, [], timedependent, quadorder4bregion,Array{Array{Int,1},1}(undef,0),Array{Array{Int,1},1}(undef,0),[])
 end
 
 function Base.append!(O::BoundaryOperator,region::Int, btype::Type{<:AbstractBoundaryType}; data = Nothing)
@@ -79,11 +82,13 @@ function boundarydata!(
     Target::FEVectorBlock,
     O::BoundaryOperator;
     time = 0,
-    fixed_penalty::Float64 = 1e60)
+    fixed_penalty::Float64 = 1e60,
+    skip_enumerations = false)
+
     fixed_dofs = []
   
     FE = Target.FES
-    xdim = size(FE.xgrid[Coordinates],1) 
+    xdim::Int = size(FE.xgrid[Coordinates],1) 
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
     xBFaceDofs = nothing
@@ -105,19 +110,29 @@ function boundarydata!(
 
         # find Dirichlet dofs
         for r = 1 : length(InterDirichletBoundaryRegions)
-            bregiondofs = []
-            ifaces = []
-            ibfaces = []
-            for bface = 1 : nbfaces
-                if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
-                    append!(ifaces,xBFaces[bface])
-                    append!(ibfaces,bface)
-                    append!(bregiondofs,xBFaceDofs[:,bface])
+            if skip_enumerations == false
+                while length(O.ifaces4bregion) < r
+                    push!(O.ifaces4bregion,[])
+                    push!(O.ibfaces4bregion,[])
                 end
-            end    
-            bregiondofs = Base.unique(bregiondofs)
-            bregion = InterDirichletBoundaryRegions[r]
-            append!(fixed_dofs,bregiondofs)
+                O.ifaces4bregion[r] = []
+                O.ibfaces4bregion[r] = []
+                ifaces = O.ifaces4bregion[r]
+                ibfaces = O.ibfaces4bregion[r]
+                bregiondofs = []
+                for bface = 1 : nbfaces
+                    if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
+                        append!(ifaces,xBFaces[bface])
+                        append!(ibfaces,bface)
+                        append!(bregiondofs,xBFaceDofs[:,bface])
+                    end
+                end    
+                bregiondofs = Base.unique(bregiondofs)
+                append!(fixed_dofs,bregiondofs)
+            end
+            bregion::Int = InterDirichletBoundaryRegions[r]
+            ifaces::Array{Int,1} = O.ifaces4bregion[r]
+            ibfaces::Array{Int,1} = O.ibfaces4bregion[r]
             if length(ifaces) > 0
                 if FE.broken == true
                     # face interpolation expects continuous dofmaps
@@ -142,7 +157,7 @@ function boundarydata!(
             end
         end   
 
-        @debug "Int-DBnd = $InterDirichletBoundaryRegions (ndofs = $(length(fixed_dofs)))"
+        @debug "Int-DBnd = $InterDirichletBoundaryRegions"# (ndofs = $(length(fixed_dofs)))"
     end
 
     # HOMOGENEOUS DIRICHLET BOUNDARY
@@ -150,17 +165,22 @@ function boundarydata!(
     if length(HomDirichletBoundaryRegions) > 0
 
         # find Dirichlet dofs
-        hom_dofs = []
-        for r = 1 : length(HomDirichletBoundaryRegions)
-            for bface = 1 : nbfaces
-                if xBFaceRegions[bface] == HomDirichletBoundaryRegions[r]
-                    append!(hom_dofs,xBFaceDofs[:,bface])
+        hom_dofs = O.homdofs
+        if skip_enumerations == false
+            hom_dofs = []
+            for r = 1 : length(HomDirichletBoundaryRegions)
+                for bface = 1 : nbfaces
+                    if xBFaceRegions[bface] == HomDirichletBoundaryRegions[r]
+                        append!(hom_dofs,xBFaceDofs[:,bface])
+                    end    
                 end    
-            end    
+            end
+            hom_dofs = Base.unique(hom_dofs)
+            append!(fixed_dofs,hom_dofs)
+            fixed_dofs = Base.unique(fixed_dofs)
         end
-        hom_dofs = Base.unique(hom_dofs)
-        append!(fixed_dofs,hom_dofs)
-        fixed_dofs = Base.unique(fixed_dofs)
+
+        # set homdofs to zero
         for j in hom_dofs
             Target[j] = 0
         end    
@@ -325,7 +345,11 @@ function boundarydata!(
 
     end
     
-    return fixed_dofs
+    if skip_enumerations
+        return nothing
+    else
+        return fixed_dofs
+    end
 end    
 
 

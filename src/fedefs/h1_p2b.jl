@@ -233,10 +233,10 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
     xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
+    xCellFaces = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
-    face::Int = 0
+    face::Array{Int,1} = [0] # <-- seems to avoid allocations in line 247
     nnf::Int = size(face_rule,1)
     ndofs4component::Int = 2*nnf + 1
     coeffs1::Array{Float64,1} = [-1//12, 1//12]
@@ -244,27 +244,27 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
         # fill!(coefficients,0.0)
 
         for f = 1 : nnf
-            face = xCellFaces[f,cell]
+            face[1] = xCellFaces[f,cell]
             for n = 1 : 2
                 node = face_rule[f,n]
                 for k = 1 : 2
                     # RT0 reconstruction coefficients for node P2 functions on reference element
-                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+1] = 1 // 6 * xFaceVolumes[face] * xFaceNormals[k, face]
+                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+1] = 1 // 6 * xFaceVolumes[face[1]] * xFaceNormals[k, face[1]]
 
                     # 1st BDM2 reconstruction coefficients for node P2 functions on reference element
-                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+2] = coeffs1[n] * xFaceVolumes[face] * xFaceNormals[k, face] * xCellFaceSigns[f, cell]
+                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+2] = coeffs1[n] * xFaceVolumes[face[1]] * xFaceNormals[k, face[1]] * xCellFaceSigns[f, cell]
 
                     # 2nd BDM2 reconstruction coefficients for node P2 functions on reference element
-                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+3] = 1 // 90 * xFaceVolumes[face] * xFaceNormals[k, face]
+                    coefficients[ndofs4component*(k-1)+node,3*(f-1)+3] = 1 // 90 * xFaceVolumes[face[1]] * xFaceNormals[k, face[1]]
                 end
             end
 
             for k = 1 : 2
                 # RT0 reconstruction coefficients for face P2 functions (=face bubbles) on reference element
-                coefficients[ndofs4component*(k-1)+f+nnf,3*(f-1)+1] = 2 // 3 * xFaceVolumes[face] * xFaceNormals[k, face]
+                coefficients[ndofs4component*(k-1)+f+nnf,3*(f-1)+1] = 2 // 3 * xFaceVolumes[face[1]] * xFaceNormals[k, face[1]]
 
                 # 2nd BDM2 reconstruction coefficients for face P2 functions on reference element
-                coefficients[ndofs4component*(k-1)+f+nnf,3*(f-1)+3] = -1 // 45 * xFaceVolumes[face] * xFaceNormals[k, face]
+                coefficients[ndofs4component*(k-1)+f+nnf,3*(f-1)+3] = -1 // 45 * xFaceVolumes[face[1]] * xFaceNormals[k, face[1]]
             end
         end
 
