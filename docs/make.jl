@@ -72,7 +72,7 @@ function make_all(; add_examples_output::Bool = true)
                             preprocess=preprocess)
 
             filename = example_md_dir * "/" * base * ".md"
-            if (add_examples_output) && !(number in ["A05","212"]) # exclude these examples for now
+            if (add_examples_output) && !(number in ["A05","212","240"]) # exclude these examples for now
                 # generate default main run output file 
                 include(example_jl_dir * "/" * example_source)
                 open(filename, "a") do io
@@ -85,7 +85,7 @@ function make_all(; add_examples_output::Bool = true)
                     end
                 end
             end
-            for k = 1 : 3
+            for k = 1 : 4
                 imgfile = "../images/" * base * "_$k.png"
                 if isfile(image_dir * "/" * base * "_$k.png")
                     open(filename, "a") do io

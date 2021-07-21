@@ -31,17 +31,16 @@ using ExtendableGrids
 ## as in DFG benchmark 2D-1 (Re = 20, laminar)
 const umax = 0.3
 const umean = 2//3 * umax
-const L = 0.1
-const W = 2.2
-const H = 0.41
+const L, W, H = 0.1, 2.2, 0.41
 function bnd_inlet!(result,x)
     result[1] = 4*umax*x[2]*(H-x[2])/(H*H);
     result[2] = 0.0;
 end
+const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "X", quadorder = 2)
 
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 2, μ = 1e-3, maxvol = 5e-4)
+function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
 
     ## load grid (see function below)
     xgrid = make_grid(W,H; n = Int(ceil(sqrt(1/maxvol))), maxvol = maxvol)
@@ -61,9 +60,8 @@ function main(; Plotter = nothing, verbosity = 2, μ = 1e-3, maxvol = 5e-4)
     add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, auto_newton = true))
     
     ## add boundary data (bregion 2 is outflow, 4 is inflow, 5 is cylinder)
-    user_function_inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "X", quadorder = 2)
     add_boundarydata!(Problem, 1, [1,3,5], HomogeneousDirichletBoundary)
-    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = user_function_inflow)
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = inflow)
 
     ## inspect problem
     @show Problem
@@ -121,8 +119,7 @@ function get_draglift(Solution::FEVector, μ)
     function draglift_kernel(result, input)
         ## input = [ u, grad(u), p , v , grad(v)]
         ##         [1:2,  3:6,   7 ,8:9,  10:13 ]
-        fill!(result,0)
-        result[1] += μ * (input[3]*input[10] + input[4]*input[11] + input[5]*input[12] + input[6]*input[13])
+        result[1] = μ * (input[3]*input[10] + input[4]*input[11] + input[5]*input[12] + input[6]*input[13])
         result[1] += (input[1] * input[3] + input[2] * input[4]) * input[8]
         result[1] += (input[1] * input[5] + input[2] * input[6]) * input[9]
         result[1] -= input[7] * (input[10] + input[13])
@@ -135,13 +132,13 @@ function get_draglift(Solution::FEVector, μ)
     ## test for drag
     TestFunction = FEVector{Float64}("drag testfunction",Solution[1].FES)
     xBFaces = Solution[1].FES.xgrid[BFaces]
-    user_function_dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
-    interpolate!(TestFunction[1], ON_FACES, user_function_dragtest; items = xBFaces)
+    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
+    interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaces)
     drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     ## test for lift
-    user_function_lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
-    interpolate!(TestFunction[1], ON_FACES, user_function_lifttest; items = xBFaces)
+    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
+    interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaces)
     lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     return [drag,lift]
@@ -151,8 +148,7 @@ end
 function make_grid(W,H; n=20,maxvol=0.1)
 	builder=SimplexGridBuilder(Generator=Triangulate)
     function circlehole!(builder, center, radius; n=20)
-        points=[point!(builder, center[1]+radius*sin(t),center[2]+radius*cos(t)) 
-				for t in range(0,2π,length=n)]
+        points=[point!(builder, center[1]+radius*sin(t),center[2]+radius*cos(t)) for t in range(0,2π,length=n)]
         for i=1:n-1
             facet!(builder,points[i],points[i+1])
         end
@@ -182,11 +178,11 @@ function make_grid(W,H; n=20,maxvol=0.1)
     
     facetregion!(builder,1); facet!(builder,p1,p2)
     facetregion!(builder,2); facet!(builder,p2,p3)
-	facetregion!(builder,3); facet!(builder,p3,p4)
-	facetregion!(builder,4); facet!(builder,p4,p1)
+    facetregion!(builder,3); facet!(builder,p3,p4)
+    facetregion!(builder,4); facet!(builder,p4,p1)
+    facetregion!(builder,5); circlehole!(builder, (0.2,0.2),0.05,n=n)
 
-	facetregion!(builder,5); circlehole!(builder, (0.2,0.2),0.05,n=n)
-	simplexgrid(builder,maxvolume=16*maxvol, unsuitable = unsuitable)
+    simplexgrid(builder,maxvolume=16*maxvol, unsuitable = unsuitable)
 end
 
 end
