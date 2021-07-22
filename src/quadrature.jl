@@ -224,6 +224,9 @@ function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) wh
       xref[1] = ones(T,3) * 1 // 4
       w = [1]
   elseif order == 2
+      # Ref
+      # P Keast, Moderate degree tetrahedral quadrature formulas, CMAME 55: 339-348 (1986)
+      # O. C. Zienkiewicz, The Finite Element Method,  Sixth Edition,
       name = "order 2 rule"
       xref = Vector{Array{T,1}}(undef,4);
       xref[1] = [0.1381966011250105,0.1381966011250105,0.1381966011250105]
@@ -231,6 +234,18 @@ function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) wh
       xref[3] = [0.1381966011250105,0.5854101966249685,0.1381966011250105]
       xref[4] = [0.1381966011250105,0.1381966011250105,0.5854101966249685]
       w = ones(T,4) * 1 // 4
+  elseif order <= 3 # up to order 3 exact
+      # Ref
+      # P Keast, Moderate degree tetrahedral quadrature formulas, CMAME 55: 339-348 (1986)
+      # O. C. Zienkiewicz, The Finite Element Method,  Sixth Edition,
+      name = "order 3 rule"
+      xref = Vector{Array{T,1}}(undef,5);
+      xref[1] = [1//4,1//4,1//4]
+      xref[2] = [1//2,1//6,1//6]
+      xref[3] = [1//6,1//6,1//6]
+      xref[4] = [1//6,1//6,1//2]
+      xref[5] = [1//6,1//2,1//6]
+      w = [-4//5,9//20,9//20,9//20,9//20]
   elseif order <= 4 # up to order 4 exact
       # Ref
       # P Keast, Moderate degree tetrahedral quadrature formulas, CMAME 55: 339-348 (1986)
