@@ -44,21 +44,33 @@ Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations again
 function L2ErrorIntegrator(
     T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction},
-    operator::Type{<:AbstractFunctionOperator};
+    operator = Identity;
     quadorder = "auto",
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     regions = [0],
     time = 0)
 
+    ninputs = 1
+    ops = operator
+    if typeof(operator) <: DataType
+        ops = [operator]
+    else
+        ninputs = length(operator)
+    end
+
     ncomponents::Int = compare_data.dimensions[1]
     temp = zeros(T,ncomponents)
     function L2error_function(result,input,x)
+        fill!(temp,0)
         eval!(temp,compare_data,x,time)
-        result[1] = 0
-        for j=1:ncomponents
-            result[1] += (temp[j] - input[j])^2
+        for j=1:ncomponents[1], i = 1 : ninputs
+            temp[j] -= input[(i-1)*ncomponents+j]
         end    
+        result[1] = 0
+        for j=1:ncomponents[1]
+            result[1] += temp[j].^2
+        end
     end    
     if quadorder == "auto"
         quadorder = 2 * compare_data.quadorder
@@ -66,8 +78,8 @@ function L2ErrorIntegrator(
     if name == "auto"
         name = "L2 error ($(compare_data.name))"
     end
-    action_kernel = ActionKernel(L2error_function, [1,compare_data.dimensions[1]]; name = name, dependencies = "X", quadorder = quadorder)
-    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = name)
+    action_kernel = ActionKernel(L2error_function, [1,ninputs*compare_data.dimensions[1]]; name = name, dependencies = "X", quadorder = quadorder)
+    return ItemIntegrator(T,AT, ops, Action(T, action_kernel); regions = regions, name = name)
 end
 
 """
@@ -87,19 +99,33 @@ Creates an ItemIntegrator that computes the L2 norm of an operator evaluation wh
 function L2NormIntegrator(
     T::Type{<:Real},
     ncomponents::Int,
-    operator::Type{<:AbstractFunctionOperator};
+    operator;
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     name = "L2 norm",
     quadorder = 2,
     regions = [0])
+
+    ninputs = 1
+    ops = operator
+    if typeof(operator) <: DataType
+        ops = [operator]
+    else
+        ninputs = length(operator)
+    end
+
+    temp = zeros(T,ncomponents)
     function L2norm_function(result,input)
+        fill!(temp,0)
+        for j=1:ncomponents, i = 1 : ninputs
+            temp[j] += input[(i-1)*ncomponents+j]
+        end
         result[1] = 0
         for j=1:ncomponents
-            result[1] += input[j]^2
+            result[1] += temp[j]^2
         end    
     end    
-    action_kernel = ActionKernel(L2norm_function, [1,ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = quadorder)
-    return ItemIntegrator(T,AT, [operator], Action(T, action_kernel); regions = regions, name = name)
+    action_kernel = ActionKernel(L2norm_function, [1,ninputs*ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = quadorder)
+    return ItemIntegrator(T,AT, ops, Action(T, action_kernel); regions = regions, name = name)
 end
 
 """

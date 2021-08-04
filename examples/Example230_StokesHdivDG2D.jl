@@ -27,35 +27,34 @@ and similar terms on the right-hand side for the inhomogeneous Dirichlet data. T
 module Example230_StokesHdivDG2D
 
 using GradientRobustMultiPhysics
-using Printf
 
 ## functions that define the exact solution and the data 
-    function exact_pressure!(result,x::Array{<:Real,1},t::Real)
-        result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1))
+function exact_pressure!(result,x,t)
+    result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1))
+end
+function u!(result,x,t)
+    result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
+    result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
+end
+function exact_velogradient!(result,x,t)
+    result[1] = π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
+    result[2] = π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
+    result[3] = -π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
+    result[4] = -π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
+end
+function rhs(μ)
+    function closure!(result,x,t)
+        ## exact Laplacian
+        result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
+        result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
+        ## exact pressure gradient
+        result[1] += cos(t)*cos(x[1])*cos(x[2])
+        result[2] -= cos(t)*sin(x[1])*sin(x[2])
     end
-    function u!(result,x::Array{<:Real,1},t::Real)
-        result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
-        result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
-    end
-    function exact_velogradient!(result,x::Array{<:Real,1},t::Real)
-        result[1] = π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
-        result[2] = π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
-        result[3] = -π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
-        result[4] = -π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
-    end
-    function rhs(μ)
-        function closure!(result,x::Array{<:Real,1},t::Real)
-            ## exact Laplacian
-            result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
-            result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
-            ## exact pressure gradient
-            result[1] += cos(t)*cos(x[1])*cos(x[2])
-            result[2] -= cos(t)*sin(x[1])*sin(x[2])
-        end
-    end
+end
 
 ## everything is wrapped in a main function
-function main(;μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, λ = 4)
+function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, λ = 4)
 
     ## set log level
     set_verbosity(verbosity)
