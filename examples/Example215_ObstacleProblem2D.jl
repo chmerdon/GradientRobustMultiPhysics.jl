@@ -23,21 +23,16 @@ The obstacle constraint is realised via a penalty term that is automatically dif
 module Example215_ObstacleProblem2D
 
 using GradientRobustMultiPhysics
-using ExtendableSparse
-using Printf
 
-## problem data
-function obstacle!(result,x)
-    result[1] = -0.05 + 0.05*cos(4*x[1]*pi)*cos(4*x[2]*pi)
-    return nothing
-end
-function obstacle_penalty_kernel!(result::Array{<:Real,1}, input::Array{<:Real,1},x)
-    obstacle!(result,x)
+## define obstacle and penalty kernel
+const χ! = (result,x) -> (result[1] = (cos(4*x[1]*π)*cos(4*x[2]*π) - 1)/20)
+function obstacle_penalty_kernel!(result, input, x)
+    χ!(result,x)
     result[1] = min(0, input[1] - result[1])
     return nothing
 end
 
-function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 5, FEType = H1P1{1})
+function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 6, FEType = H1P1{1})
 
     ## set log level
     set_verbosity(verbosity)
@@ -49,7 +44,7 @@ function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 
     Problem = PDEDescription("obstacle problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "obstacle problem")
     add_operator!(Problem, [1,1], LaplaceOperator(1.0; store = true))
-    add_operator!(Problem, [1,1], GenerateNonlinearForm("eps^{-1} ||(u-χ)_||", [Identity], [1], Identity, obstacle_penalty_kernel!, [1,1]; dependencies = "X", factor = penalty, quadorder = 4, ADnewton = true) )
+    add_operator!(Problem, [1,1], GenerateNonlinearForm("eps^{-1} ||(u-χ)_||", [Identity], [1], Identity, obstacle_penalty_kernel!, [1,1]; dependencies = "X", factor = penalty, quadorder = 2, ADnewton = true) )
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], DataFunction([-1]); store = true))
         
@@ -64,6 +59,4 @@ function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 
     ## plot
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
 end
-
-
 end

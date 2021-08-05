@@ -318,6 +318,7 @@ function AbstractBilinearForm(
     action::AbstractAction = NoAction();
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    APT::Type{<:APT_BilinearForm} = APT_BilinearForm,
     apply_action_to = 1,
     regions::Array{Int,1} = [0],
     transposed_assembly::Bool = false,
@@ -329,13 +330,15 @@ abstract bilinearform constructor that assembles
 - b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
 
 The optional arguments AT and regions specifies on which grid item the operator lives/assembles, while store toggles the separate storage for the operator
-(which is advisable if it is not alone i an otherweise nonlinear block of a PDEDescription). 
+(which is advisable if it is not alone i an otherweise nonlinear block of a PDEDescription). With the optional argument APT one can trigger different subpatterns
+like APT_SymmetricBilinearForm (assembles only a triangular block) or APT_LumpedBilinearForm (assembles only the diagonal).
 """
 function AbstractBilinearForm(
     operators::Array{DataType,1},
     action::AbstractAction = NoAction();
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    APT::Type{<:APT_BilinearForm} = APT_BilinearForm,
     apply_action_to = [1],
     factor = 1,
     regions::Array{Int,1} = [0],
@@ -350,7 +353,7 @@ function AbstractBilinearForm(
         name = apply_action_to == 1 ? "A($(operators[1])(u)):$(operators[2])(v)" : "$(operators[1])(u):A($(operators[2])(v))"
     end
     
-    O = PDEOperator{Float64, APT_BilinearForm, AT}(name,operators, action, apply_action_to, factor, regions, store, AssemblyAuto)
+    O = PDEOperator{Float64, APT, AT}(name,operators, action, apply_action_to, factor, regions, store, AssemblyAuto)
     O.transposed_assembly = transposed_assembly
     return O
 end
@@ -608,6 +611,7 @@ function GenerateNonlinearForm(
         input_temp = Vector{Float64}(undef,argsizes[3])
         jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[3])
         Dresult = DiffResults.DiffResult(result_temp,jac_temp)
+        Dresult = DiffResults.JacobianResult(result_temp,input_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
         temp = zeros(Float64, argsizes[1])
         if dependencies == "X"
@@ -698,9 +702,9 @@ function GenerateNonlinearForm(
             rhs_action_kernel = ActionKernel(rhs_kernel_xt, argsizes; dependencies = dependencies, quadorder = quadorder)
             action_rhs = Action(Float64, rhs_action_kernel)
         elseif dependencies == ""
-            cfg =ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
-            function newton_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1})
-                ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
+            cfg = ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
+            function newton_kernel(result::Vector{T}, input_current::Vector{T}, input_ansatz::Vector{T}) where {T}
+                Dresult = ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
                 for j = 1 : argsizes[1]
                     result[j] = 0

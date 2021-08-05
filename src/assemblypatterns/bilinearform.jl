@@ -13,11 +13,21 @@ symmetric bilinearform assembly pattern type
 """
 abstract type APT_SymmetricBilinearForm <: APT_BilinearForm end
 
+"""
+$(TYPEDEF)
+
+lumped bilinearform assembly pattern type where only the diagonal elements on each item are assembled
+"""
+abstract type APT_LumpedBilinearForm <: APT_BilinearForm end
+
 function Base.show(io::IO, ::Type{APT_BilinearForm})
     print(io, "BilinearForm")
 end
 function Base.show(io::IO, ::Type{APT_SymmetricBilinearForm})
     print(io, "SymmetricBilinearForm")
+end
+function Base.show(io::IO, ::Type{APT_LumpedBilinearForm})
+    print(io, "LumpedBilinearForm")
 end
 
 """
@@ -58,6 +68,26 @@ function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, op
     @assert length(FES) == 2
     @assert apply_action_to in [[1],[2]] "action can only be applied to one argument [1] or [2]"
     return AssemblyPattern{APT_BilinearForm, T, AT}(name,FES,operators,action,apply_action_to,regions)
+end
+
+"""
+````
+function LumpedBilinearForm(
+    T::Type{<:Real},
+    AT::Type{<:AbstractAssemblyType},
+    FE::Array{FESpace,1},
+    operators::Array{DataType,1}, 
+    action::AbstractAction; 
+    regions::Array{Int,1} = [0])
+````
+
+Creates a LumpedBilinearForm assembly pattern with the given FESpaces, operators and action etc.
+"""
+function LumpedBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "Lumped BLF", regions = [0], apply_action_to = [1])
+    @assert length(operators) == 2
+    @assert length(FES) == 2
+    @assert apply_action_to in [[1],[2]] "action can only be applied to one argument [1] or [2]"
+    return AssemblyPattern{APT_LumpedBilinearForm, T, AT}(name, FES,operators,action,apply_action_to,regions)
 end
 
 
@@ -112,6 +142,7 @@ function assemble!(
         @logmsg MoreInfo "Assembling $(AP.name) ($AT) into matrix"
     end
     @debug AP
+    @debug "offsets = [$offsetX,$offsetY], factor = $factor"
  
     # loop over items
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
@@ -128,8 +159,118 @@ function assemble!(
     itemfactor::T = 0
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     indexmap = CartesianIndices(zeros(Int, maxdofitems[1],maxdofitems[2]))
-
     other_id::Int = apply_action_to == 2 ? 1 : 2
+
+    function basismul!(localmatrix,dof_i,i,::Type{<:APT_BilinearForm},is_locally_symmetric)
+        _temp::T = temp # re-annotate to avoid allocations in closure
+        for dof_j = 1 : ndofs4dofitem[other_id]
+            _temp = 0
+            for k = 1 : action_resultdim
+                _temp += action_result[k] * basisvals[k,dof_j,i]
+            end
+            if apply_action_to == 2
+                localmatrix[dof_j,dof_i] += weights[i] * _temp
+            else
+                localmatrix[dof_i,dof_j] += weights[i] * _temp
+            end
+        end
+        return nothing
+    end
+
+    function basismul!(localmatrix,dof_i,i,::Type{APT_SymmetricBilinearForm},is_locally_symmetric)
+        if is_locally_symmetric
+            _temp::T = temp # re-annotate to avoid allocations in closure
+            for dof_j = dof_i : ndofs4dofitem[other_id]
+                _temp = 0
+                for k = 1 : action_resultdim
+                    _temp += action_result[k] * basisvals[k,dof_j,i]
+                end
+                localmatrix[dof_i,dof_j] += weights[i] * _temp
+            end
+        else
+            basismul!(localmatrix,dof_i,i,APT_BilinearForm,is_locally_symmetric)
+        end
+        return nothing
+    end
+
+    function basismul!(localmatrix,dof_i,i,::Type{APT_LumpedBilinearForm},is_locally_symmetric)
+        _temp::T = temp # re-annotate to avoid allocations in closure
+        _temp = 0
+        for k = 1 : action_resultdim
+            _temp += action_result[k] * basisvals[k,dof_i,i]
+        end
+        localmatrix[dof_i,dof_i] += weights[i] * _temp
+        return nothing
+    end
+
+    function add_localmatrix!(A,localmatrix,di,::Type{<:APT_BilinearForm},transposed_assembly,is_locally_symmetric)
+        _arow::Int = arow
+        _acol::Int = acol
+        for dof_i = 1 : ndofs4dofitem[1]
+            _arow = get_dof(AM, 1, di[1], dof_i) + offsetX
+            for dof_j = 1 : ndofs4dofitem[2]
+            #  if localmatrix[dof_i,dof_j] != 0
+                    _acol = get_dof(AM, 2, di[2], dof_j) + offsetY
+                    if transposed_assembly == true
+                        _addnz(A,_acol,_arow,localmatrix[dof_i,dof_j] * itemfactor,1)
+                    else 
+                        _addnz(A,_arow,_acol,localmatrix[dof_i,dof_j] * itemfactor,1)  
+                    end
+                    if transpose_copy != nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
+                        if transposed_assembly == true
+                            _addnz(transpose_copy,_arow,_acol,localmatrix[dof_i,dof_j] * itemfactor,-1)
+                        else
+                            _addnz(transpose_copy,_acol,_arow,localmatrix[dof_i,dof_j] * itemfactor,-1)
+                        end
+                    end
+            #  end
+            end
+        end
+        fill!(localmatrix,0.0)
+        return nothing
+    end
+
+    function add_localmatrix!(A,localmatrix,di,::Type{<:APT_SymmetricBilinearForm},transposed_assembly,is_locally_symmetric)
+        if is_locally_symmetric
+            _arow::Int = arow
+            _acol::Int = acol
+            for dof_i = 1 : ndofs4dofitem[1]
+                for dof_j = dof_i+1 : ndofs4dofitem[2]
+                #  if localmatrix[dof_i,dof_j] != 0 
+                        _arow = get_dof(AM, 1, di[1], dof_i) + offsetX
+                        _acol = get_dof(AM, 2, di[2], dof_j) + offsetY
+                        _addnz(A,_arow,_acol,localmatrix[dof_i,dof_j] * itemfactor,1)
+                        _arow = get_dof(AM, 1, di[1], dof_j) + offsetX
+                        _acol = get_dof(AM, 2, di[2], dof_i) + offsetY
+                        _addnz(A,_arow,_acol,localmatrix[dof_i,dof_j] * itemfactor,1)
+                # end
+                end
+            end    
+            for dof_i = 1 : ndofs4dofitem[1]
+                _arow = get_dof(AM, 2, di[1], dof_i) + offsetX
+                _acol = get_dof(AM, 1, di[2], dof_i) + offsetY
+                _addnz(A,_arow,_acol,localmatrix[dof_i,dof_i] * itemfactor,1)
+            end    
+            fill!(localmatrix,0.0)
+            return nothing
+        else
+            add_localmatrix!(A,localmatrix,di,APT_BilinearForm,transposed_assembly,is_locally_symmetric)
+        end
+    end
+
+    function add_localmatrix!(A,localmatrix,di,::Type{<:APT_LumpedBilinearForm},transposed_assembly,is_locally_symmetric)
+        _arow::Int = arow
+        _acol::Int = acol
+        for dof_i = 1 : ndofs4dofitem[1]
+            _arow = get_dof(AM, 2, di[1], dof_i) + offsetX
+            _acol = get_dof(AM, 1, di[2], dof_i) + offsetY
+            _addnz(A,_arow,_acol,localmatrix[dof_i,dof_i] * itemfactor,1)
+        end    
+        fill!(localmatrix,0.0)
+        return nothing
+    end
+
+
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
@@ -179,80 +320,20 @@ function assemble!(
                             action_input .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
                             apply_action!(action_result, action_input, action, i, basisxref[i])
                         end
-                        if is_locally_symmetric == false
-                            for dof_j = 1 : ndofs4dofitem[other_id]
-                                temp = 0
-                                for k = 1 : action_resultdim
-                                    temp += action_result[k] * basisvals[k,dof_j,i]
-                                end
-                                if apply_action_to == 2
-                                    localmatrix[dof_j,dof_i] += weights[i] * temp
-                                else
-                                    localmatrix[dof_i,dof_j] += weights[i] * temp
-                                end
-                            end
-                        else # symmetric case
-                            for dof_j = dof_i : ndofs4dofitem[other_id]
-                                temp = 0
-                                for k = 1 : action_resultdim
-                                    temp += action_result[k] * basisvals[k,dof_j,i]
-                                end
-                                localmatrix[dof_i,dof_j] += weights[i] * temp
-                            end
-                        end
+                        basismul!(localmatrix,dof_i,i,APT,is_locally_symmetric)
                     end 
                 end
 
                 # copy localmatrix into global matrix
                 itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[other_id][di[other_id]]
-                if is_locally_symmetric == false
-                    for dof_i = 1 : ndofs4dofitem[1]
-                        arow = get_dof(AM, 1, di[1], dof_i) + offsetX
-                        for dof_j = 1 : ndofs4dofitem[2]
-                          #  if localmatrix[dof_i,dof_j] != 0
-                                acol = get_dof(AM, 2, di[2], dof_j) + offsetY
-                                if transposed_assembly == true
-                                    _addnz(A,acol,arow,localmatrix[dof_i,dof_j] * itemfactor,1)
-                                else 
-                                    _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)  
-                                end
-                                if transpose_copy != nothing # sign is changed in case nonzero rhs data is applied to LagrangeMultiplier (good idea?)
-                                    if transposed_assembly == true
-                                        _addnz(transpose_copy,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,-1)
-                                    else
-                                        _addnz(transpose_copy,acol,arow,localmatrix[dof_i,dof_j] * itemfactor,-1)
-                                    end
-                                end
-                          #  end
-                        end
-                    end
-                else # symmetric case
-                    for dof_i = 1 : ndofs4dofitem[1]
-                        for dof_j = dof_i+1 : ndofs4dofitem[2]
-                          #  if localmatrix[dof_i,dof_j] != 0 
-                                arow = get_dof(AM, 1, di[1], dof_i) + offsetX
-                                acol = get_dof(AM, 2, di[2], dof_j) + offsetY
-                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)
-                                arow = get_dof(AM, 1, di[1], dof_j) + offsetX
-                                acol = get_dof(AM, 2, di[2], dof_i) + offsetY
-                                _addnz(A,arow,acol,localmatrix[dof_i,dof_j] * itemfactor,1)
-                           # end
-                        end
-                    end    
-                    for dof_i = 1 : ndofs4dofitem[1]
-                        arow = get_dof(AM, 2, di[1], dof_i) + offsetX
-                        acol = get_dof(AM, 1, di[2], dof_i) + offsetY
-                       _addnz(A,arow,acol,localmatrix[dof_i,dof_i] * itemfactor,1)
-                    end    
-                end    
-                fill!(localmatrix,0.0)
+
+                add_localmatrix!(A,localmatrix,di,APT,transposed_assembly,is_locally_symmetric)
             end
         end 
         break; # region for loop
     end # if in region    
     end # region for loop
     end # item for loop
-
     return nothing
 end
 

@@ -166,7 +166,8 @@ include("assemblypatterns.jl")
 export AssemblyPatternType, AssemblyPreparations
 export ItemIntegrator, L2ErrorIntegrator, L2NormIntegrator, L2DifferenceIntegrator
 export LinearForm
-export BilinearForm, SymmetricBilinearForm
+export BilinearForm, SymmetricBilinearForm, LumpedBilinearForm
+export APT_BilinearForm, APT_SymmetricBilinearForm, APT_LumpedBilinearForm
 export TrilinearForm
 export MultilinearForm
 export NonlinearForm

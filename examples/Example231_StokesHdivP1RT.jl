@@ -21,33 +21,29 @@ module Example231_StokesHdivP1RT
 
 using GradientRobustMultiPhysics
 
-## functions that define the exact solution and the data 
-function exact_pressure!(result,x,t)
-    result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1))
-end
-function u!(result,x,t)
-    result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
-    result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
-end
-function exact_velogradient!(result,x,t)
-    result[1] = π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
-    result[2] = π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
-    result[3] = -π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
-    result[4] = -π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
-end
-function rhs(μ)
-    function closure!(result,x,t)
-        ## exact Laplacian
-        result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
-        result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
-        ## exact pressure gradient
-        result[1] += cos(t)*cos(x[1])*cos(x[2])
-        result[2] -= cos(t)*sin(x[1])*sin(x[2])
-    end
+# flow data for boundary condition, right-hand side and error calculation
+function get_flowdata(μ)
+    p! = (result,x,t) -> (result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1)))
+    u! = (result,x,t) -> (
+        result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2));
+        result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)))
+    ∇u! = (result,x,t) -> (
+        result[1] = π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2));
+        result[2] = π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2));
+        result[3] = -result[2];
+        result[4] = -result[1])
+    f! = (result,x,t) -> (## f= -μΔu + ∇p
+        result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2)) + cos(t)*cos(x[1])*cos(x[2]);
+        result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)) - cos(t)*sin(x[1])*sin(x[2]);)
+    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", quadorder = 5)
+    p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", quadorder = 4)
+    ∇u = DataFunction(∇u!, [4,2]; dependencies = "XT", name = "∇u", quadorder = 4)
+    f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", quadorder = 5)
+    return u, p, ∇u, f
 end
 
 ## everything is wrapped in a main function
-function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, α = 20)
+function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, α = 2.0)
 
     ## set log level
     set_verbosity(verbosity)
@@ -57,40 +53,33 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     
     ## initial grid
     xgrid = grid_unitsquare(Triangle2D)
-    xCellVolumes = xgrid[CellVolumes] # will be overwritten if mesh is refined
     
-    ## load exact flow data
-    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", quadorder = 5)
-    p = DataFunction(exact_pressure!, [1,2]; dependencies = "XT", name = "p", quadorder = 4)
-    ∇u = DataFunction(exact_velogradient!, [4,2]; dependencies = "XT", name = "∇u", quadorder = 4)
-    f = DataFunction(rhs(μ), [2,2]; dependencies = "XT", name = "f", quadorder = 5)
+    ## get exact flow data (see above)
+    u,p,∇u,f = get_flowdata(μ)
 
     ## load Stokes problem prototype and assign data
     Problem = PDEDescription("Stokes problem")
     add_unknown!(Problem; equation_name = "momentum equation (P1 part)", unknown_name = "u_P1")
-    add_unknown!(Problem; unknown_name = "u_RT", equation_name = "momentum equation (RT0 part)")
-    add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "pressure", algebraic_constraint = true)
+    add_unknown!(Problem; equation_name = "momentum equation (RT0 part)", unknown_name = "u_RT")
+    add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p")
 
     ## add Laplacian for both velocity blocks
     add_operator!(Problem, [1,1], LaplaceOperator(μ))
     add_operator!(Problem, [2,2], LaplaceOperator(μ))
 
-    ## add stabilising term for RT0 block
-    stabaction = Action(Float64, (result, input, item) -> (result .= input / xCellVolumes[item]), [2,2]; dependencies = "I", quadorder = 0)
-    add_operator!(Problem, [2,2], AbstractBilinearForm([Identity, Identity], stabaction; name = "α h^-2 (u_RT,v_RT)", factor = α, AT = ON_CELLS))
+    ## add stabilising term for RT0 block (lumped div-div matrix)
+    add_operator!(Problem, [2,2], AbstractBilinearForm([Divergence, Divergence]; name = "α (div u_RT,div v_RT) [lumped]", factor = α, APT = APT_LumpedBilinearForm))
 
     ## add Lagrange multiplier for divergence of velocity
     add_operator!(Problem, [1,3], LagrangeMultiplier(Divergence))
     add_operator!(Problem, [2,3], LagrangeMultiplier(Divergence))
+    add_constraint!(Problem, FixedIntegralMean(3,0))
 
-    ## add right-hand side
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], f))
-    add_rhsdata!(Problem, 2, RhsOperator(Identity, [1], f))
-
-    ## add boundary data and global constraints
+    ## add boundary data and right-hand side
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
     add_boundarydata!(Problem, 2, [1,2,3,4], HomogeneousDirichletBoundary)
-    add_constraint!(Problem, FixedIntegralMean(3,0))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], f))
+    add_rhsdata!(Problem, 2, RhsOperator(Identity, [1], f))
 
     ## show final problem description
     @show Problem
@@ -104,10 +93,8 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## loop over levels
     for level = 1 : nlevels
-
         ## refine grid and update grid component references
         xgrid = uniform_refine(xgrid)
-        xCellVolumes = xgrid[CellVolumes]
 
         ## generate FES spaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]

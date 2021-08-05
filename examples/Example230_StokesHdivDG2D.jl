@@ -28,29 +28,25 @@ module Example230_StokesHdivDG2D
 
 using GradientRobustMultiPhysics
 
-## functions that define the exact solution and the data 
-function exact_pressure!(result,x,t)
-    result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1))
-end
-function u!(result,x,t)
-    result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
-    result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
-end
-function exact_velogradient!(result,x,t)
-    result[1] = π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
-    result[2] = π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
-    result[3] = -π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2))
-    result[4] = -π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2))
-end
-function rhs(μ)
-    function closure!(result,x,t)
-        ## exact Laplacian
-        result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2))
-        result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))
-        ## exact pressure gradient
-        result[1] += cos(t)*cos(x[1])*cos(x[2])
-        result[2] -= cos(t)*sin(x[1])*sin(x[2])
-    end
+# flow data for boundary condition, right-hand side and error calculation
+function get_flowdata(μ)
+    p! = (result,x,t) -> (result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1)))
+    u! = (result,x,t) -> (
+        result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2));
+        result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)))
+    ∇u! = (result,x,t) -> (
+        result[1] = π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2));
+        result[2] = π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2));
+        result[3] = -result[2];
+        result[4] = -result[1])
+    f! = (result,x,t) -> (## f= -μΔu + ∇p
+        result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2)) + cos(t)*cos(x[1])*cos(x[2]);
+        result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)) - cos(t)*sin(x[1])*sin(x[2]);)
+    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", quadorder = 5)
+    p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", quadorder = 4)
+    ∇u = DataFunction(∇u!, [4,2]; dependencies = "XT", name = "∇u", quadorder = 4)
+    f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", quadorder = 5)
+    return u, p, ∇u, f
 end
 
 ## everything is wrapped in a main function
@@ -69,10 +65,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     
     ## load exact flow data
-    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", quadorder = 5)
-    p = DataFunction(exact_pressure!, [1,2]; dependencies = "XT", name = "p", quadorder = 4)
-    ∇u = DataFunction(exact_velogradient!, [4,2]; dependencies = "XT", name = "∇u", quadorder = 4)
-    f = DataFunction(rhs(μ), [2,2]; dependencies = "XT", name = "f", quadorder = 5)
+    u,p,∇u,f = get_flowdata(μ)
 
     ## prepare error calculation
     L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity; time = T)
@@ -88,15 +81,11 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## define additional operators for DG terms for Laplacian and Dirichlet data
     ## (in order of their appearance in the documentation above) 
-    function hdiv_laplace2_kernel(result, input, item)
-        result .= input / xFaceVolumes[item]
-        return nothing
-    end
+    hdiv_laplace2_kernel = (result, input, item) -> (result .= input / xFaceVolumes[item])
     function hdiv_laplace3_kernel(result, input, item)
-        result[1] = input[1] * xFaceNormals[1,item]
-        result[2] = input[1] * xFaceNormals[2,item]
-        result[3] = input[2] * xFaceNormals[1,item]
-        result[4] = input[2] * xFaceNormals[2,item]
+        for j = 1 : 2, k = 1 : 2
+            result[(j-1)*2+k] = input[j] * xFaceNormals[k,item]
+        end
         return nothing
     end
     function hdiv_laplace4_kernel(result, input, item)
