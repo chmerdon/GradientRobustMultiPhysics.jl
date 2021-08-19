@@ -67,7 +67,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefi
         add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; name = "(R(u)⋅∇(T)) V"))
     else #if newton
         function Tconvection_kernel(result,input)
-            # input = [u_1,u_2,T]
+            ## input = [id(u),∇T]
             result[1] = input[1]*input[3] + input[2]*input[4]
             return nothing
         end
