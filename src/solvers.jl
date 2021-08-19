@@ -806,9 +806,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
 
 
         # REASSEMBLE NONLINEAR PARTS
-        time_reassembly = @elapsed for j = 1:size(PDE.RHSOperators,1)
-            assemble!(A,b,PDE,SC,Target; time = time, equations = [j], min_trigger = AssemblyAlways)
-        end
+        time_reassembly = @elapsed assemble!(A,b,PDE,SC,Target; time = time, equations = 1:size(PDE.RHSOperators,1), min_trigger = AssemblyAlways)
 
         # CHECK NONLINEAR RESIDUAL
         residual = A.entries*Target.entries - b.entries

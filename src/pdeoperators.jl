@@ -67,6 +67,7 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Abstract
     apply_action_to::Array{Int,1}
     fixed_arguments::Array{Int,1}
     fixed_arguments_ids::Array{Int,1}
+    newton_arguments::Array{Int,1}
     factor::T
     regions::Array{Int,1}
     transposed_assembly::Bool
@@ -74,12 +75,12 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Abstract
     store_operator::Bool
     assembly_trigger::Type{<:AbstractAssemblyTrigger}
     storage::Union{<:AbstractVector,<:AbstractMatrix}
-    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],1,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],factor,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],factor,regions,false,false,store,assembly_trigger)
+    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger)
 end 
 
 function Base.show(io::IO, O::PDEOperator)
@@ -575,7 +576,9 @@ where input_current is a vector of the operators of the solution and input_ansat
 If necessary, also a right-hand side action in the same format can be prescribed in action_kernel_rhs.
 
 
-Note: this is a highly experimental feature at the moment and will possibly only work when all operators are associated with the same unknown.
+Note: This is still a highly experimental feature which needs more testing. However, the limitation that the nonlinearity only can depend on one unknown of the PDE
+was recently lifted. The nonlinearity can now depend on arbitrary unknowns which will lead then lead to copies of the operator assigned also to off-diagonal blocks
+which are then related to partial derivatives with respect to the other unknowns. This assignment is done automatically by the add_operator! function.
 
 can only be applied in PDE LHS
 """
@@ -750,6 +753,7 @@ function GenerateNonlinearForm(
     O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, action, 1:(length(coeff_from)), 1, regions)
     O.fixed_arguments = 1:length(coeff_from)
     O.fixed_arguments_ids = coeff_from
+    O.newton_arguments = 1 : length(coeff_from) # if depended on different ids, operator is later splitted into several operators where newton_arguments refer only to subset
     O.factor = factor
     O.action_rhs = action_rhs === nothing ? NoAction() : action_rhs
     O.transposed_assembly = true
@@ -1027,8 +1031,10 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock, Cur
     for a = 1 : length(O.fixed_arguments)
         FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
     end
-    push!(FES,A.FESY)
-    return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    push!(FES,A.FESX) # testfunction always refers to matrix row in this pattern !!!
+    AP = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    AP.newton_args = O.newton_arguments
+    return AP
 end
 
 
@@ -1428,3 +1434,133 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::CustomMatrix
     addblock_matmul!(b,O.matrix,CurrentSolution[fixed_component]; factor = factor * O.factor)
 end
 
+
+#####################################
+##### CUSTOM MATRIX PDEOPERATOR #####
+#####################################
+
+mutable struct SchurComplement{T} <: AbstractPDEOperator
+    name::String
+    operatorA::AbstractPDEOperator
+    operatorB::AbstractPDEOperator
+    operatorC::AbstractPDEOperator # currently ignored and B = C assumed
+    operatorf::AbstractPDEOperator
+    ids::Array{Int,1}              # ids in PDEDescription
+    factor::T
+    zero_boundary::Bool
+    nonlinear::Bool
+    timedependent::Bool
+    storage_ready::Bool
+    last_ndofs::Int
+    storage_LHS::AbstractMatrix
+    storage_RHS::AbstractVector
+    SchurComplement(A,B,C,f,ids; name = "Schur complement", nonlinear::Bool = false, timedependent::Bool = false, zero_boundary::Bool = true) = new{Float64}(name, A,B,C,f, ids, 1, zero_boundary, nonlinear, timedependent, false,0)
+end
+
+
+function check_PDEoperator(O::SchurComplement, involved_equations)
+    return O.nonlinear, O.timedependent, AssemblyAlways
+end
+
+function assembleSchurComplement(SC, O::SchurComplement{Tv}, CurrentSolution::FEVector; time = 0) where{Tv}
+    if O.storage_ready == false || O.last_ndofs != CurrentSolution[O.ids[1]].FES.ndofs
+        Ti = Int64
+        @logmsg DeepInfo "Assembling $(O.name)"
+        @assert length(O.ids) == 2
+        FES = [CurrentSolution[O.ids[1]].FES,CurrentSolution[O.ids[2]].FES]
+        MA = FEMatrix{Tv}("sub-block A", FES[1])
+        MB = FEMatrix{Tv}("sub-block B", FES[1],FES[2])
+    # MC = FEMatrix{Tv}("sub-block C", FES[2],FES[1])
+        vb = FEVector{Tv}("sub-block f", FES[1])
+        ndofs1::Int = FES[1].ndofs
+        ndofs2::Int = FES[2].ndofs
+        # todo: allow several operators in each block, use storage if available
+        assemble_operator!(MA[1,1], O.operatorA, CurrentSolution; time = time)
+        assemble_operator!(MB[1,1], O.operatorB, CurrentSolution; time = time)
+    #  assemble_operator!(MC[1,1], O.operatorC, CurrentSolution; time = time)
+        assemble_operator!(vb[1], O.operatorf, CurrentSolution; time = time)
+        flush!(MA.entries)
+        flush!(MB.entries)
+
+        ## erase fixed dofs on boundary
+        cscmat::SparseMatrixCSC{Tv,Ti} = MB.entries.cscmatrix
+        rows::Array{Ti,1} = rowvals(cscmat)
+        valsB::Array{Tv,1} = cscmat.nzval
+        value::Tv = 0
+
+        if O.zero_boundary
+            xBFaceDofs = FES[1][BFaceDofs]
+            dof::Int = 0
+            for j = 1 : num_sources(xBFaceDofs)
+                for k = 1 : num_targets(xBFaceDofs,j)
+                    dof = xBFaceDofs[j,k]
+                    MA.entries[dof,dof] = 1e60
+                end
+            end
+        end
+
+        diagA::Array{Tv,1} = diag(MA.entries)
+
+        S = ExtendableSparseMatrix{Tv,Ti}(ndofs2,ndofs2)
+        CinvAf = zeros(Tv,ndofs2)
+        # compute S = B' inv(A_diag) B (currently assuming that B = C)
+        for i = 1:ndofs2, j = i:ndofs2
+            value = 0
+            for r in nzrange(cscmat, i)
+                for r2 in nzrange(cscmat, j)
+                    if rows[r] == rows[r2]
+                        value += valsB[r] * valsB[r2] / diagA[rows[r]]
+                        break
+                    end
+                end
+            end
+            _addnz(S,i,j,value,1)
+            if j != i
+                _addnz(S,j,i,value,1)
+            end
+        end
+
+        # compute B' inv(A_diag) f (currently assuming B = C)
+        vb.entries ./= diagA
+        
+        for i = 1:ndofs2
+            for r in nzrange(cscmat, i)
+                CinvAf[i] += valsB[r] * vb.entries[rows[r]]
+            end
+        end
+        flush!(S)
+        O.storage_LHS = S
+        O.storage_RHS = CinvAf
+        O.storage_ready = true
+        O.last_ndofs = ndofs1
+    end
+    return nothing
+end
+
+function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::SchurComplement{T}, CurrentSolution::FEVector; time = 0, At = nothing) where {T}
+
+    # compute Schur complement (if not already done)
+    assembleSchurComplement(SC, O, CurrentSolution; time = time)
+
+    # add LHS Schur complement to A
+    @logmsg DeepInfo "Applying $(O.name)"
+    addblock!(A,O.storage_LHS; factor = O.factor)
+    return nothing
+end
+
+
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::SchurComplement{T}, CurrentSolution::FEVector; factor = 1, time = 0) where {T}
+
+    # compute Schur complement (if not already done)
+    assembleSchurComplement(SC, O, CurrentSolution; time = time)
+    
+    # add RHS Schur complement to b
+    @logmsg DeepInfo "Applying $(O.name)"
+    addblock!(b,O.storage_RHS; factor = O.factor)
+    return nothing
+end
+
+# LHS operator is assembled to RHS block (due to subiteration configuration)
+function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::SchurComplement, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
+    @warn "unknown with Schur complement in its equation should be part of solve, doing nothing here" # how to handle this case approriately ?
+end

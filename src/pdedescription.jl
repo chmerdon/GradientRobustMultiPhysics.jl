@@ -160,23 +160,43 @@ The id of the operator in the coressponding LHS block of PDEDescription is retur
 in the coressponding RHS block is returned).
 """
 function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator; equation_name::String = "")
-    push!(PDE.LHSOperators[position[1],position[2]],O)
-    if equation_name != ""
-        PDE.equation_names[position[1]] = equation_name
-    end
-    @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
-
-    ## nonlinear forms may push additional right-hand side operators to the description
+    ## nonlinear forms may push additional left-hand side and right-hand side operators to the description
     if typeof(O).parameters[2] <: APT_NonlinearForm
+        dependencies = unique(O.fixed_arguments_ids)
+        if length(dependencies) > 0 
+            for j = 1 : length(dependencies)
+                Oc = deepcopy(O)
+                Oc.newton_arguments = findall(x -> x == dependencies[j], O.fixed_arguments_ids)
+                push!(PDE.LHSOperators[position[1],dependencies[j]],Oc)
+                @logmsg DeepInfo "Added operator $(O.name) to LHS block [$(position[1]),$(dependencies[j])] of PDEDescription $(PDE.name) with newton_arguments = O.newton_arguments"
+                dependencies[j] = 0
+            end
+        end
         if typeof(O.action_rhs) != NoAction
             push!(PDE.RHSOperators[position[1]],O)
             @logmsg DeepInfo "Added operator $(O.name) also to RHS block $(position[1]) of PDEDescription $(PDE.name)"
         end
-        return length(PDE.LHSOperators[position[1],position[2]]), length(PDE.RHSOperators[position[1]])
     else
+        push!(PDE.LHSOperators[position[1],position[2]],O)
+        if equation_name != ""
+            PDE.equation_names[position[1]] = equation_name
+        end
+        @logmsg DeepInfo "Added operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
         return length(PDE.LHSOperators[position[1],position[2]])
     end
 end
+
+function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::SchurComplement; equation_name::String = "")
+    push!(PDE.LHSOperators[position[1],position[2]],O)
+    if equation_name != ""
+        PDE.equation_names[position[1]] = equation_name
+    end
+    push!(PDE.RHSOperators[position[1]],O)
+    @logmsg DeepInfo "Added Schur complement operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
+    @logmsg DeepInfo "Added Schur complement operator $(O.name) to RHS block $(position[1]) of PDEDescription $(PDE.name)"
+    return length(PDE.LHSOperators[position[1],position[2]]), length(PDE.RHSOperators[position[1]])
+end
+
 
 """
 $(TYPEDSIGNATURES)

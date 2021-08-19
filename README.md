@@ -19,7 +19,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - grids by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl) in principle allow for mixed element geometries in the grid
   (but currently only supported with Triangle2D/Parallelogram2D mixed meshes and certain finite elements)
 - PDEDescription module for easy and close-to-physics problem description (as variational equations) independent from the actual discretisation
-- Newton terms for nonlinear operators are added automatically by automatic differentation (experimental feature)
+- Newton terms for nonlinear operators are added automatically by automatic differentiation (experimental feature)
 - solver can run fixed-point iterations between subsets of equations of the PDEDescription (possibly with Anderson acceleration)
 - time-dependent problems can be integrated in time by own backward Euler or Crank-Nicolson implementation or via the external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
 - reconstruction operators for gradient-robust Stokes discretisations (BR->RT0/BDM1 or CR->RT0 in 2D/3D, and P2B->RT1/BDM2 in 2D, more to come)
@@ -29,7 +29,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 
 ### Example
 
-The following example demonstrates how to setup a Poisson problem. More extensive examples can be found in the [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html).
+The following minimal example demonstrates how to setup a Poisson problem. More extensive examples can be found in the [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html).
 
 ```julia
 using GradientRobustMultiPhysics
@@ -44,10 +44,10 @@ Problem = PDEDescription("Poisson problem")
 add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
 
 # add left-hand side PDEoperator(s) (here: only Laplacian with diffusion coefficient 1e-3)
-add_operator!(Problem, [1,1], LaplaceOperator(1e-3; AT = ON_CELLS))
+add_operator!(Problem, [1,1], LaplaceOperator(1e-3))
 
 # add right-hand side data (here: f = [1] in region(s) [1])
-add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], DataFunction([1]; name = "f"); AT = ON_CELLS))
+add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], DataFunction([1]; name = "f")))
 
 # add boundary data (here: zero data for boundary regions 1:4)
 add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)

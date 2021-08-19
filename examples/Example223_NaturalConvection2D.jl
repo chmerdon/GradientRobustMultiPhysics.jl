@@ -14,7 +14,12 @@ This example solves the natural convection (or Boussinesque) problem on a triang
 ```
 with some parameter ``Ra``. The velocity has zero Dirichlet boundary conditions, while the temperature is zero along the y-axis, trigonometric along the x-axis and do-nothing at the diagonal boundary of the triangular domain.
 
-Instead of using a Newton scheme, we solve a simpler fixpoint iteration plus [Anderson acceleration](@ref).
+Two possible solution strategies are implemented here. The first is Newton's method. For this both nonlinear operators are assigned as NonlinearForms
+and the rest is handled by the package! Note, the the nonlinearity in the tmeperature equation involves both unknowns u and T and hence leads to two assigned
+matrix blocks in the equation for T. However, a direct Newton solve only works smooth for small or moderate ``Ra`` (circa up to 1e5).
+    
+Therefore, for larger ``Ra``,  [Anderson acceleration](@ref) can be used which is triggered by setting anderson = true
+
 Also, note that a divergence-free reconstruction operator is used for the velocity, which also helps with the convergence and accuracy of the lowest-order method for this test problem.
 
 =#
@@ -28,7 +33,7 @@ using GradientRobustMultiPhysics
 T_bottom = DataFunction((T,x) -> (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = "X", quadorder = 4)
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefinements = 6)
+function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefinements = 6, anderson = false)
 
     ## set log level
     set_verbosity(verbosity)
@@ -47,7 +52,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefi
     Problem.name = "natural convection problem"
 
     ## add convection term for velocity
-    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, auto_newton = false))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, auto_newton = !anderson))
 
     ## add boundary data for velocity (unknown 1) and temperature (unknown 3)
     add_boundarydata!(Problem, 1, [1,2,3], HomogeneousDirichletBoundary)
@@ -58,7 +63,16 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefi
     add_operator!(Problem,[3,3], LaplaceOperator(1.0; store = true, name = "∇(T)⋅∇(V)"))
 
     ## add coupling terms for velocity and temperature (convection + gravity)
-    add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; auto_newton = false, name = "(R(u)⋅∇(T)) V"))
+    if anderson
+        add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; name = "(R(u)⋅∇(T)) V"))
+    else #if newton
+        function Tconvection_kernel(result,input)
+            # input = [u_1,u_2,T]
+            result[1] = input[1]*input[3] + input[2]*input[4]
+            return nothing
+        end
+        add_operator!(Problem,[3,3], GenerateNonlinearForm("(R(u)⋅∇(T)) V", [RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; ADnewton = true, quadorder = 0)  )
+    end
     add_operator!(Problem,[1,3], AbstractBilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = "-Ra v⋅g T", store = true))
 
     ## show final problem description
@@ -69,7 +83,11 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefi
     Solution = FEVector{Float64}(["v_h", "p_h", "T_h"],FES)
 
     ## solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
-    solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = "l2", anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true)
+    if anderson
+        solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = "l2", anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true)
+    else
+        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e-8, show_solver_config = true)
+    end
     
     ## compute Nusselt number along bottom boundary
     NuIntegrator = ItemIntegrator(Float64,ON_BFACES,[Jump(Gradient)], fdot_action(Float64,DataFunction([0,-1.0])); regions = [1])

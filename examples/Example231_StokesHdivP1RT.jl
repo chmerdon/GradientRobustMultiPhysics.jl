@@ -21,7 +21,7 @@ module Example231_StokesHdivP1RT
 
 using GradientRobustMultiPhysics
 
-# flow data for boundary condition, right-hand side and error calculation
+## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)
     p! = (result,x,t) -> (result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1)))
     u! = (result,x,t) -> (
@@ -57,7 +57,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     ## get exact flow data (see above)
     u,p,∇u,f = get_flowdata(μ)
 
-    ## load Stokes problem prototype and assign data
+    ## define problem
     Problem = PDEDescription("Stokes problem")
     add_unknown!(Problem; equation_name = "momentum equation (P1 part)", unknown_name = "u_P1")
     add_unknown!(Problem; equation_name = "momentum equation (RT0 part)", unknown_name = "u_RT")
@@ -65,9 +65,8 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## add Laplacian for both velocity blocks
     add_operator!(Problem, [1,1], LaplaceOperator(μ))
-    add_operator!(Problem, [2,2], LaplaceOperator(μ))
 
-    ## add stabilising term for RT0 block (lumped div-div matrix)
+    ## add stabilising term for RT0 block (lumped diagonal div-div matrix)
     add_operator!(Problem, [2,2], AbstractBilinearForm([Divergence, Divergence]; name = "α (div u_RT,div v_RT) [lumped]", factor = α, APT = APT_LumpedBilinearForm))
 
     ## add Lagrange multiplier for divergence of velocity

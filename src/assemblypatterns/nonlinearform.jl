@@ -26,12 +26,15 @@ function NonlinearForm(
     T::Type{<:Real},
     AT::Type{<:AbstractAssemblyType},
     FES::Array{FESpace,1}, 
-    operators::Array{DataType,1},  
+    operators::Array{DataType,1},
     action::AbstractAction;
+    newton_args::Array{Int,1} = 1 : (length(operators)-1),
     name = "NLF",
     regions::Array{Int,1} = [0])
 
-    return AssemblyPattern{APT_NonlinearForm, T, AT}(name,FES,operators,action,1:(length(operators)-1),regions)
+    AP = AssemblyPattern{APT_NonlinearForm, T, AT}(name,FES,operators,action,1:(length(operators)-1),regions)
+    AP.newton_args = newton_args
+    return AP
 end
 
 
@@ -87,7 +90,9 @@ function assemble!(
     end
     @debug AP
 
+
     # loop over items
+    newton_args = AP.newton_args
     offsets = zeros(Int,nFE+1)
     maxdofs = get_maxndofs(AM)
     basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
@@ -99,7 +104,7 @@ function assemble!(
     end
     action_input2 = zeros(T,offsets[end-1])
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
-    localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,1),get_maxndofs(AM,nFE))
+    localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,newton_args[1]),get_maxndofs(AM,nFE))
     coeffs = zeros(T,maximum(maxdofs))
     weights::Array{T,1} = get_qweights(AM)
     itemfactor::T = 0
@@ -122,7 +127,7 @@ function assemble!(
         update!(AP.AM, item)
         weights = get_qweights(AM)
 
-        # fill action input with evluation of current solution
+        # fill action input with evaluation of current solution
         # assemble all but the last operators into action_input
         for FEid = 1 : nFE - 1
             for di = 1 : maxdofitems[FEid]
@@ -151,16 +156,16 @@ function assemble!(
         update!(action, basisevaler, item, item, regions[r])
 
         for i in eachindex(weights)
-            for dof_i = 1 : get_ndofs(AM, 1, 1)
+            for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
 
-                # evaluate operators of ansatz function
-                for FEid = 1 : nFE - 1
-                    basisevaler = get_basisevaler(AM, FEid, 1)
-                    eval!(action_input2, basisevaler, dof_i, i, offsets[FEid])
+                # evaluate operators of ansatz function (but only of those operators in the current block)
+                # (only of the newton arguments that are associated to the current matrix block)
+                for newarg in newton_args
+                    basisevaler = get_basisevaler(AM, newarg, 1)
+                    eval!(action_input2, basisevaler, dof_i, i, offsets[newarg])
                 end
 
                 # apply nonlinear action
-
                 apply_action!(action_result, action_input[i], action_input2, action, i, nothing)  
                 action_result .*= weights[i]
 
@@ -179,11 +184,11 @@ function assemble!(
         itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[nFE][1]
 
         # copy localmatrix into global matrix
-        for dof_i = 1 : get_ndofs(AM, 1, 1)
-            arow = get_dof(AM, 1, 1, dof_i) + offsetX
+        for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
+            arow = get_dof(AM, newton_args[1], 1, dof_i) + offsetY # offsetY refers to the newton argument offset
             for dof_j = 1 : get_ndofs(AM, nFE, 1)
                # if localmatrix[dof_i,dof_j] != 0
-                    acol = get_dof(AM, nFE, 1, dof_j) + offsetY
+                    acol = get_dof(AM, nFE, 1, dof_j) + offsetX # offsetX refers to the test function offset
                     if transposed_assembly == true
                         _addnz(A,acol,arow,localmatrix[dof_i,dof_j],itemfactor)
                     else 

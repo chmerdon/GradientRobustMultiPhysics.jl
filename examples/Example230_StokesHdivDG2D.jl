@@ -28,7 +28,7 @@ module Example230_StokesHdivDG2D
 
 using GradientRobustMultiPhysics
 
-# flow data for boundary condition, right-hand side and error calculation
+## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)
     p! = (result,x,t) -> (result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1)))
     u! = (result,x,t) -> (

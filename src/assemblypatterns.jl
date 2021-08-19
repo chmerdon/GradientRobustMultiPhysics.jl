@@ -252,14 +252,15 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Abst
     name::String
     FES::Array{FESpace,1}
     operators::Array{DataType,1}
+    newton_args::Array{Int,1}      # which of the operators should be differentiated in this block ? (only relevant for nonlinear form)
     action::ActionType
     apply_action_to::Array{Int,1}
     regions::Array{Int,1}
     AM::AssemblyManager{T} # hidden stuff needed for assembly
     AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS, NoAction}()
     AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} = new{APT,T,AT,NoAction}()
-    AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}(name, FES,operators,action,apply_to,regions)
-    AssemblyPattern{APT, T, AT}(FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}("$APT", FES,operators,action,apply_to,regions)
+    AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}(name, FES,operators,[],action,apply_to,regions)
+    AssemblyPattern{APT, T, AT}(FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}("$APT", FES,operators,[],action,apply_to,regions)
 end 
 
 function Base.show(io::IO, AP::AssemblyPattern)
