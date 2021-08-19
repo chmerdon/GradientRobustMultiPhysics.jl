@@ -3,7 +3,7 @@
 - \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = Ra \mathbf{e}_2 T\\
 \mathrm{div}(u) &amp; = 0\\
 - \Delta \mathbf{T} + \mathbf{u} \cdot \nabla \mathbf{T} &amp; = 0
-\end{aligned}\]</p><p>with some parameter <span>$Ra$</span>. The velocity has zero Dirichlet boundary conditions, while the temperature is zero along the y-axis, trigonometric along the x-axis and do-nothing at the diagonal boundary of the triangular domain.</p><p>Instead of using a Newton scheme, we solve a simpler fixpoint iteration plus Anderson acceleration. Also, note that a divergence-free reconstruction operator is used for the velocity, which also helps with the convergence and accuracy of the lowest-order method for this test problem.</p><pre><code class="language-julia hljs">module Example223_NaturalConvection2D
+\end{aligned}\]</p><p>with some parameter <span>$Ra$</span>. The velocity has zero Dirichlet boundary conditions, while the temperature is zero along the y-axis, trigonometric along the x-axis and do-nothing at the diagonal boundary of the triangular domain.</p><p>Two possible solution strategies are implemented here. The first is Newton&#39;s method. For this both nonlinear operators are assigned as NonlinearForms and the rest is handled by the package! Note, the the nonlinearity in the tmeperature equation involves both unknowns u and T and hence leads to two assigned matrix blocks in the equation for T. However, a direct Newton solve only works smooth for small or moderate <span>$Ra$</span> (circa up to 1e5).</p><p>Therefore, for larger <span>$Ra$</span>,  Anderson acceleration can be used which is triggered by setting anderson = true</p><p>Also, note that a divergence-free reconstruction operator is used for the velocity, which also helps with the convergence and accuracy of the lowest-order method for this test problem.</p><pre><code class="language-julia hljs">module Example223_NaturalConvection2D
 
 using GradientRobustMultiPhysics
 
@@ -11,7 +11,7 @@ using GradientRobustMultiPhysics
 T_bottom = DataFunction((T,x) -&gt; (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = &quot;X&quot;, quadorder = 4)
 
 # everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefinements = 6)
+function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefinements = 6, anderson = false)
 
     # set log level
     set_verbosity(verbosity)
@@ -30,7 +30,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefi
     Problem.name = &quot;natural convection problem&quot;
 
     # add convection term for velocity
-    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, auto_newton = false))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, auto_newton = !anderson))
 
     # add boundary data for velocity (unknown 1) and temperature (unknown 3)
     add_boundarydata!(Problem, 1, [1,2,3], HomogeneousDirichletBoundary)
@@ -41,7 +41,14 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefi
     add_operator!(Problem,[3,3], LaplaceOperator(1.0; store = true, name = &quot;∇(T)⋅∇(V)&quot;))
 
     # add coupling terms for velocity and temperature (convection + gravity)
-    add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; auto_newton = false, name = &quot;(R(u)⋅∇(T)) V&quot;))
+    if anderson
+        add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; name = &quot;(R(u)⋅∇(T)) V&quot;))
+    else #if newton
+        function Tconvection_kernel(result,input)</code></pre><p>input = [u<em>1,u</em>2,T]</p><pre><code class="language-julia hljs">            result[1] = input[1]*input[3] + input[2]*input[4]
+            return nothing
+        end
+        add_operator!(Problem,[3,3], GenerateNonlinearForm(&quot;(R(u)⋅∇(T)) V&quot;, [RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; ADnewton = true, quadorder = 0)  )
+    end
     add_operator!(Problem,[1,3], AbstractBilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = &quot;-Ra v⋅g T&quot;, store = true))
 
     # show final problem description
@@ -52,7 +59,11 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e6, viscosity = 1, nrefi
     Solution = FEVector{Float64}([&quot;v_h&quot;, &quot;p_h&quot;, &quot;T_h&quot;],FES)
 
     # solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
-    solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = &quot;l2&quot;, anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true)
+    if anderson
+        solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = &quot;l2&quot;, anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true)
+    else
+        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e-8, show_solver_config = true)
+    end
 
     # compute Nusselt number along bottom boundary
     NuIntegrator = ItemIntegrator(Float64,ON_BFACES,[Jump(Gradient)], fdot_action(Float64,DataFunction([0,-1.0])); regions = [1])
@@ -75,21 +86,21 @@ PDE-DESCRIPTION
 
   LHS block | PDEOperator(s)
     [1,1]   | ∇(u):∇(v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | (R(a) ⋅ ∇) u ⋅ R(v) (APT = TrilinearForm, AT = ON_CELLS, regions = [0])
+            | (R(u) ⋅ ∇) u ⋅ R(v) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
     [1,2]   | div(v) ⋅ q (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [1,3]   | -Ra v⋅g T (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
     [2,3]   | none
-    [3,1]   | none
+    [3,1]   | (R(u)⋅∇(T)) V [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
     [3,2]   | none
     [3,3]   | ∇(T)⋅∇(V) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | (R(u)⋅∇(T)) V (APT = TrilinearForm, AT = ON_CELLS, regions = [0])
+            | (R(u)⋅∇(T)) V [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
-     [1]    | none
+     [1]    | (R(u) ⋅ ∇) u ⋅ R(v) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
      [2]    | none
-     [3]    | none
+     [3]    | (R(u)⋅∇(T)) V [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
 
    BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 2, 3]
                           
@@ -105,30 +116,30 @@ SOLVER-CONFIGURATION
 ======================
   overall nonlinear = true
   overall timedependent = false
-  anderson_iterations = 5
-  subiterations = [[3], [1, 2]]
+  anderson_iterations = 0
+  subiterations = UnitRange{Int64}[1:3]
   show_iteration_details = true
   timedependent_equations = Any[]
-  anderson_unknowns = [1, 3]
+  anderson_unknowns = [1]
   show_statistics = false
   anderson_metric = l2
-  skip_update = [1, 1]
+  skip_update = [1]
   linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
   damping = 0
   time = 0
   show_solver_config = true
-  anderson_damping = 0.95
+  anderson_damping = 1
   check_nonlinear_residual = true
   fixed_penalty = 1.0e60
   target_residual = 1.0e-8
   maxiterations = 100
   AssemblyTriggers = 
-         LHS_AT[1] :  A  I  T 
+         LHS_AT[1] :  A  I  I 
          LHS_AT[2] :  N  N  N 
-         LHS_AT[3] :  N  N  A 
-         RHS_AT[1] :  N 
+         LHS_AT[3] :  A  N  A 
+         RHS_AT[1] :  A 
          RHS_AT[2] :  N 
-         RHS_AT[3] :  N 
+         RHS_AT[3] :  A 
                      (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
 
   LHS_dependencies = [[1] [1, 2] [1, 3]; [2, 1] [2] [2, 3]; [3, 1] [3, 2] [3, 1]]
@@ -137,54 +148,19 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 6.988663e-11 | 9.063645e+01
-	      2   | 9.551617e-11 | 7.488134e+00
-	      3   | 6.989564e-11 | 6.022488e-01
-	      4   | 7.058951e-11 | 4.960060e-01
-	      5   | 7.392546e-11 | 1.250719e-01
-	      6   | 7.466694e-11 | 7.680621e-01
-	      7   | 7.643274e-11 | 7.043239e-01
-	      8   | 7.449730e-11 | 9.364728e+00
-	      9   | 6.782990e-11 | 1.205297e+01
-	     10   | 8.681826e-11 | 1.435981e+01
-	     11   | 9.718980e-11 | 5.871295e+00
-	     12   | 9.101090e-11 | 2.401963e+00
-	     13   | 9.053196e-11 | 2.770361e+00
-	     14   | 9.368104e-11 | 4.056945e+00
-	     15   | 6.634606e-11 | 2.038940e+00
-	     16   | 6.744205e-11 | 1.668131e+00
-	     17   | 8.024788e-11 | 3.157813e-01
-	     18   | 7.475106e-11 | 2.898775e-01
-	     19   | 7.300467e-11 | 5.488417e-01
-	     20   | 7.276846e-11 | 2.264459e-01
-	     21   | 7.078085e-11 | 1.282042e-01
-	     22   | 7.401708e-11 | 8.975790e-02
-	     23   | 7.084914e-11 | 6.103222e-02
-	     24   | 7.432084e-11 | 3.920953e-02
-	     25   | 7.341020e-11 | 2.192602e-02
-	     26   | 6.942767e-11 | 1.611986e-02
-	     27   | 7.203853e-11 | 8.210658e-03
-	     28   | 7.251780e-11 | 6.087826e-03
-	     29   | 7.270139e-11 | 2.278378e-03
-	     30   | 7.214845e-11 | 1.832466e-03
-	     31   | 7.455460e-11 | 5.785445e-04
-	     32   | 7.027972e-11 | 2.213736e-04
-	     33   | 7.735573e-11 | 1.645343e-04
-	     34   | 7.267762e-11 | 4.255229e-05
-	     35   | 7.792381e-11 | 4.165039e-05
-	     36   | 7.727515e-11 | 1.833512e-05
-	     37   | 7.780805e-11 | 8.190263e-06
-	     38   | 7.652640e-11 | 5.154906e-06
-	     39   | 7.265447e-11 | 1.895523e-06
-	     40   | 7.652005e-11 | 1.912427e-06
-	     41   | 7.443129e-11 | 4.921489e-07
-	     42   | 6.984482e-11 | 3.690981e-07
-	     43   | 7.287340e-11 | 4.227189e-07
-	     44   | 7.330583e-11 | 8.429613e-08
-	     45   | 7.290633e-11 | 4.647877e-08
-	     46   | 7.428146e-11 | 4.431605e-08
-	     47   | 7.473824e-11 | 1.804113e-08
-	     48   | 7.377402e-11 | 1.101000e-08
-	     49   | 7.560755e-11 | 7.748437e-09
+	      1   | 7.511895e-12 | 4.727947e+03
+	      2   | 8.584118e-12 | 1.366252e+03
+	      3   | 1.209945e-11 | 1.314725e+03
+	      4   | 1.065450e-11 | 5.372116e+02
+	      5   | 2.924960e-11 | 1.445927e+04
+	      6   | 2.038217e-11 | 3.607745e+03
+	      7   | 1.282215e-11 | 9.549590e+02
+	      8   | 1.044524e-11 | 3.135915e+02
+	      9   | 9.155705e-12 | 9.423720e+01
+	     10   | 8.698577e-12 | 6.128983e+01
+	     11   | 8.177567e-12 | 6.628965e+00
+	     12   | 8.350641e-12 | 5.063421e-01
+	     13   | 8.256483e-12 | 8.656401e-04
+	     14   | 8.490124e-12 | 1.844801e-09
 
-	Nu = 22.638373261273316</code></pre><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.5 on <span class="colophon-date" title="Thursday 5 August 2021 15:07">Thursday 5 August 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	Nu = 13.978023716629727</code></pre><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.5 on <span class="colophon-date" title="Thursday 19 August 2021 14:59">Thursday 19 August 2021</span>. Using Julia version 1.6.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
