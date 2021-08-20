@@ -106,6 +106,14 @@ abstract type Hessian <: AbstractFunctionOperator end # D^2(v_h)
 """
 $(TYPEDEF)
 
+evaluates only the symmetric part of the Hessian of some (possibly vector-valued) finite element function.
+A concatenation of Voigt compressed Hessians for each component of the finite element functions is returned.
+The weighting of the mixed derivatives can be steered with offdiagval (e.g. √2 or 1 depending on the use case).
+"""
+abstract type SymmetricHessian{offdiagval} <: AbstractFunctionOperator where {offdiagval} end # sym(D^2(v_h))
+"""
+$(TYPEDEF)
+
 evaluates the curl of some scalar function in 2D, i.e. the rotated gradient.
 """
 abstract type CurlScalar <: AbstractFunctionOperator end # only 2D: CurlScalar(v_h) = D(v_h)^\perp
@@ -183,6 +191,7 @@ NeededDerivative4Operator(::Type{SymmetricGradient}) = 1
 NeededDerivative4Operator(::Type{TangentialGradient}) = 1
 NeededDerivative4Operator(::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{Hessian}) = 2
+NeededDerivative4Operator(::Type{<:SymmetricHessian}) = 2
 NeededDerivative4Operator(::Type{CurlScalar}) = 1
 NeededDerivative4Operator(::Type{Curl2D}) = 1
 NeededDerivative4Operator(::Type{Curl3D}) = 1
@@ -208,6 +217,7 @@ DefaultName4Operator(::Type{SymmetricGradient}) = "ϵ"
 DefaultName4Operator(::Type{TangentialGradient}) = "TangentialGradient"
 DefaultName4Operator(::Type{Laplacian}) = "Δ"
 DefaultName4Operator(::Type{Hessian}) = "H"
+DefaultName4Operator(::Type{<:SymmetricHessian}) = "symH"
 DefaultName4Operator(::Type{CurlScalar}) = "curl"
 DefaultName4Operator(::Type{Curl2D}) = "Curl"
 DefaultName4Operator(::Type{Curl3D}) = "∇×"
@@ -235,6 +245,7 @@ Length4Operator(::Type{<:Gradient}, xdim::Int, ncomponents::Int) = xdim*ncompone
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
+Length4Operator(::Type{<:SymmetricHessian}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ncomponents
 Length4Operator(::Type{Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
 
 QuadratureOrderShift4Operator(::Type{<:Identity}) = 0
@@ -250,6 +261,7 @@ QuadratureOrderShift4Operator(::Type{SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{TangentialGradient}) = -1
 QuadratureOrderShift4Operator(::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{Hessian}) = -2
+QuadratureOrderShift4Operator(::Type{<:SymmetricHessian}) = -2
 
 
 # some infrastructure to allow operator pairs (and possibly triplets etc. by recursive application)
@@ -265,3 +277,16 @@ abstract type OperatorPair{OP1 <:AbstractFunctionOperator,OP2 <: AbstractFunctio
 Length4Operator(OP::Type{<:OperatorPair}, xdim::Int, ncomponents::Int) = Length4Operator(OP.parameters[1], xdim, ncomponents) + Length4Operator(OP.parameters[2], xdim, ncomponents)
 QuadratureOrderShift4Operator(OP::Type{<:OperatorPair}) = max(QuadratureOrderShift4Operator(OP.parameters[1]),QuadratureOrderShift4Operator(OP.parameters[2]))
 DefaultName4Operator(OP::Type{<:OperatorPair}) = "(" * DefaultName4Operator(OP.parameters[1]) * "," *  DefaultName4Operator(OP.parameters[2]) * ")"
+
+
+"""
+````
+abstract type OperatorTriple{<:AbstractFunctionOperator,<:AbstractFunctionOperator} <: AbstractFunctionOperator
+````
+
+allows to evaluate three operators in place of one, e.g. OperatorTriple{Identity,Gradient,Hessian}.
+"""
+abstract type OperatorTriple{OP1 <:AbstractFunctionOperator,OP2 <: AbstractFunctionOperator,OP3 <: AbstractFunctionOperator} <: AbstractFunctionOperator end
+Length4Operator(OP::Type{<:OperatorTriple}, xdim::Int, ncomponents::Int) = Length4Operator(OP.parameters[1], xdim, ncomponents) + Length4Operator(OP.parameters[2], xdim, ncomponents) +  + Length4Operator(OP.parameters[3], xdim, ncomponents)
+QuadratureOrderShift4Operator(OP::Type{<:OperatorTriple}) = max(max(QuadratureOrderShift4Operator(OP.parameters[1]),QuadratureOrderShift4Operator(OP.parameters[2])),QuadratureOrderShift4Operator(OP.parameters[3]))
+DefaultName4Operator(OP::Type{<:OperatorTriple}) = "(" * DefaultName4Operator(OP.parameters[1]) * "," *  DefaultName4Operator(OP.parameters[2]) * "," *  DefaultName4Operator(OP.parameters[3]) * ")"

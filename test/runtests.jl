@@ -2,6 +2,7 @@ using Test
 using ExtendableGrids
 using GradientRobustMultiPhysics
 
+include("test_operators.jl")
 include("test_jumps.jl")
 
 function testgrid(::Type{Edge1D})
@@ -153,6 +154,17 @@ function run_quadrature_tests()
         println("")
     end
 
+end
+
+function run_operator_tests()
+    @testset "Operators" begin
+        println("\n")
+        println("============================")
+        println("Testing Operator Evaluations")
+        println("============================")
+        error = test_2nd_derivs()
+        @test error < 1e-14
+    end
 end
 
 function run_face_orientation_and_discontinuities_tests()
@@ -789,6 +801,7 @@ end
 function run_all_tests()
     begin
         run_quadrature_tests()
+        run_operator_tests()
         run_face_orientation_and_discontinuities_tests()
         run_basic_fe_tests()
         run_timeintegration_tests()

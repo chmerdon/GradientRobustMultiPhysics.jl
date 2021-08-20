@@ -130,7 +130,8 @@ function plot(
 end
 
 
-function plot_convergencehistory(X, Y; add_h_powers = [], X_to_h = X -> X, Plotter = nothing, name = "convergence history", resolution = (800,600), ylabel = "", ylabels = [], xlabel = "ndofs", clear = true)
+function plot_convergencehistory(X, Y; add_h_powers = [], X_to_h = X -> X, Plotter = nothing, name = "convergence history", resolution = (800,600), ylabel = "", ylabels = [], xlabel = "ndofs", clear = true, legend_fontsize = 14, label_fontsize = 14)
+    labels = deepcopy(ylabels)
     if plottertype(Plotter) == PyPlotType
         Plotter.figure(name, figsize = resolution ./ 100)
         if clear
@@ -147,15 +148,18 @@ function plot_convergencehistory(X, Y; add_h_powers = [], X_to_h = X -> X, Plott
             end
             Plotter.loglog(Xk,Yk; marker = "o");
         end
-        Plotter.ylabel(ylabel) 
-        Plotter.xlabel(xlabel) 
-        while length(ylabels) < size(Y,2)
-            push!(ylabels, "Data $(length(labels)+1)")
+        Plotter.ylabel(ylabel; fontsize = label_fontsize) 
+        Plotter.xlabel(xlabel; fontsize = label_fontsize) 
+        Plotter.xticks(fontsize = label_fontsize) 
+        Plotter.yticks(fontsize = label_fontsize) 
+        Plotter.grid("on")
+        while length(labels) < size(Y,2)
+            push!(labels, "Data $(length(labels)+1)")
         end
         for p in add_h_powers
             Plotter.loglog(X, X_to_h(X).^p; linestyle = "dotted"); 
-            push!(ylabels, "h^$p")
+            push!(labels, "h^$p")
         end
-        Plotter.legend(ylabels)
+        Plotter.legend(labels; fontsize = legend_fontsize)
     end
 end

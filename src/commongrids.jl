@@ -37,6 +37,20 @@ function reference_domain(EG::Type{<:AbstractElementGeometry}, T::Type{<:Real} =
     return xgrid
 end
 
+"""
+````
+    Triangle(coords) -> ExtendableGrid{T,Int32}
+````
+
+Generates a single triangle with the given coordinates, that should be a 2 x 3 array
+with the coordinates of the three vertices, e.g. coords = [0.0 0.0; 1.0 0.0; 0.0 1.0]'.
+"""
+function grid_triangle(coords::AbstractArray{T,2}) where {T}
+    xgrid = reference_domain(Triangle2D)
+    xgrid[Coordinates]=coords
+    return xgrid
+end
+
 # unit cube as one cell with six boundary regions (bottom, front, right, back, left, top)
 function grid_unitcube(EG::Type{<:Hexahedron3D}; scale = [1,1,1], shift = [0,0,0])
     return reference_domain(EG; scale = scale, shift = shift)

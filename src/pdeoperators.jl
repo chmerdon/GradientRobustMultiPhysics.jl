@@ -568,19 +568,24 @@ and setup a Newton iteration. The action_kernel has to be a function of the inte
 where input is a vector of the operators of the solution and result is what then is multiplied with operator2 of the testfunction.
 Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
 
+
 If ADnewton == false, the user is epected to prescribe a linearisation of the nonlinear operator. In this case the action_kernel has to satisfy the interface
 
     function name(result, input_current, input_ansatz)
 
 where input_current is a vector of the operators of the solution and input_ansatz is a vecor with the operators evaluated at one of the basis functions.
-If necessary, also a right-hand side action in the same format can be prescribed in action_kernel_rhs.
+If necessary, also a right-hand side action in the same format can be prescribed in action_kernel_rhs. 
 
+Note 1: The AD feature matured a bit, but still is to be considered experimental.
 
-Note: This is still a highly experimental feature which needs more testing. However, the limitation that the nonlinearity only can depend on one unknown of the PDE
-was recently lifted. The nonlinearity can now depend on arbitrary unknowns which will lead then lead to copies of the operator assigned also to off-diagonal blocks
-which are then related to partial derivatives with respect to the other unknowns. This assignment is done automatically by the add_operator! function.
+Note 2: The limitation that the nonlinearity only can depend on one unknown of the PDE was recently lifted, however the behavior how to assign this operator to the PDE
+may be revised in future. Currently, the nonlinearity can indeed depend on arbitrary unknowns (i.e. coeff_from may contain more than one different unknown ids),
+which will lead to copies of the operator assigned also to off-diagonal blocks which are then related to partial derivatives with respect to the other unknowns
+(i.e. input_ansatz will only contain the operator evaluations that coresspond to the unknown of the subblock it is evaluated at, all other entries are zero).
+The subblock assignment o fthe copies is done automatically by the add_operator! function.
+Therein the user specifies a block [i,j] and only the row number is important (associated to the testfunction operator2 evaluation), as the columns depend on coeff_from
+as explained before.
 
-can only be applied in PDE LHS
 """
 function GenerateNonlinearForm(
     name::String,

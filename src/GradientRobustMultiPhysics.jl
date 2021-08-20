@@ -102,7 +102,7 @@ export Gradient, GradientDisc
 export SymmetricGradient, TangentialGradient
 export Divergence, ReconstructionDivergence
 export CurlScalar, Curl2D, Curl3D
-export Laplacian, Hessian
+export Laplacian, Hessian, SymmetricHessian
 export Trace, Deviator
 export NeededDerivatives4Operator, QuadratureOrderShift4Operator
 export Dofmap4AssemblyType, DofitemAT4Operator
@@ -201,6 +201,7 @@ export CustomMatrixOperator
 
 export RhsOperator
 export restrict_operator
+export SchurComplement
 
 export assemble_operator!
 
@@ -251,6 +252,7 @@ export reference_domain
 export grid_unitcube
 export grid_lshape
 export grid_unitsquare, grid_unitsquare_mixedgeometries
+export grid_triangle
 
 include("dataexport.jl")
 export writeVTK!, writeCSV!

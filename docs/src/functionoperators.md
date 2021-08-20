@@ -7,20 +7,21 @@ FunctionOperators are building blocks for the weak form and define the operation
 (e.g. NormalFlux only on a face). Also note that all evaluations are returned as a vector,  so e.g.\ a gradient of a 2d vector-field will be a vector of length 4 (ordered component-wise).
 
 
-| Function operator                                    | Description                                             | Mathematically                                                   |
-| :--------------------------------------------------- | :------------------------------------------------------ | :--------------------------------------------------------------- |
-| Identity                                             | identity                                                | ``v \rightarrow v``                                              |
-| IdentityComponent{c}                                 | identity of c-th component                              | ``v \rightarrow v_c``                                            |
-| NormalFlux                                           | normal flux (function times normal)                     | ``v \rightarrow v \cdot \vec{n}``                                |
-| TangentFlux                                          | tangent flux (function times tangent)                   | ``v \rightarrow v \cdot \vec{t}``                                |
-| Gradient                                             | gradient/Jacobian (as a vector)                         | ``v \rightarrow \nabla v``                                       |
-| SymmetricGradient                                    | symmetric part of the gradient                          | ``v \rightarrow Voigt(\mathrm{sym}(\nabla v))``                  |
-| Divergence                                           | divergence                                              | ``v \rightarrow \mathrm{div}(v) = \nabla \cdot v``               |
-| CurlScalar                                           | curl operator 1D to 2D (rotated gradient)               | ``v \rightarrow [-dv/dx_2,dv/dx_1]``                             |
-| Curl2D                                               | curl operator 2D to 1D                                  | ``v \rightarrow dv_1/dx_2 - dv_2/dx_1``                          |
-| Curl3D                                               | curl operator 3D to 3D                                  | ``v \rightarrow \nabla \times v``                                |
-| Hessian                                              | Hesse matrix = all 2nd order derivatives (as a vector)  | ``v \rightarrow D^2 v``                                          |
-| Laplacian                                            | Laplace Operator                                        | ``v \rightarrow \Delta v``                                       |
+| Function operator                                    | Description                                              | Mathematically                                                            |
+| :--------------------------------------------------- | :------------------------------------------------------- | :------------------------------------------------------------------------ |
+| Identity                                             | identity                                                 | ``v \rightarrow v``                                                       |
+| IdentityComponent{c}                                 | identity of c-th component                               | ``v \rightarrow v_c``                                                     |
+| NormalFlux                                           | normal flux (function times normal)                      | ``v \rightarrow v \cdot \vec{n}`` (only ON_FACES)                         |
+| TangentFlux                                          | tangent flux (function times tangent)                    | ``v \rightarrow v \cdot \vec{t}`` (only ON_EDGES)                         |
+| Gradient                                             | gradient/Jacobian (as a vector)                          | ``v \rightarrow \nabla v``                                                |
+| SymmetricGradient                                    | symmetric part of the gradient                           | ``v \rightarrow Voigt(\mathrm{sym}(\nabla v))``                           |
+| Divergence                                           | divergence                                               | ``v \rightarrow \mathrm{div}(v) = \nabla \cdot v``                        |
+| CurlScalar                                           | curl operator 1D to 2D (rotated gradient)                | ``v \rightarrow [-dv/dx_2,dv/dx_1]``                                      |
+| Curl2D                                               | curl operator 2D to 1D                                   | ``v \rightarrow dv_1/dx_2 - dv_2/dx_1``                                   |
+| Curl3D                                               | curl operator 3D to 3D                                   | ``v \rightarrow \nabla \times v``                                         |
+| Hessian                                              | Hesse matrix = all 2nd order derivatives (as a vector)   | ``v \rightarrow D^2 v``      (e.g. in 2D: xx,xy,yx,yy for each component) |
+| SymmetricHessian{a}                                  | symmetric part of Hesse matrix, offdiagonals scaled by a | ``v \rightarrow sym(D^2 v)`` (e.g. in 2D: xx,yy,a*xy for each component)  |
+| Laplacian                                            | Laplace Operator (diagonal of Hessian)                   | ``v \rightarrow \Delta v``   (e.g. in 2D: xx,yy for each component)       |
 
 
 !!! note

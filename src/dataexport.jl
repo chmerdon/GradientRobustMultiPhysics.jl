@@ -182,7 +182,7 @@ function print_table(X, Y; ylabels = [], xlabel = "ndofs")
     @printf("\n")
     @printf("============|")
     for j = 1 : size(Y,2)
-        @printf("====================|")
+        @printf("======================|")
     end
     @printf("\n")
     for j=1:length(X)

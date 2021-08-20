@@ -14,11 +14,11 @@ This example solves the natural convection (or Boussinesque) problem on a triang
 ```
 with some parameter ``Ra``. The velocity has zero Dirichlet boundary conditions, while the temperature is zero along the y-axis, trigonometric along the x-axis and do-nothing at the diagonal boundary of the triangular domain.
 
-Two possible solution strategies are implemented here. The first is Newton's method. For this both nonlinear operators are assigned as NonlinearForms
-and the rest is handled by the package! Note, the the nonlinearity in the tmeperature equation involves both unknowns u and T and hence leads to two assigned
+Two possible solution strategies are implemented here. The first is Newton's method. For this both nonlinear operators are assigned as auto-differentiated operators.
+Note, that the nonlinearity in the tmeperature equation involves both unknowns u and T and hence leads to two assigned
 matrix blocks in the equation for T. However, a direct Newton solve only works smooth for small or moderate ``Ra`` (circa up to 1e5).
     
-Therefore, for larger ``Ra``,  [Anderson acceleration](@ref) can be used which is triggered by setting anderson = true
+Therefore, for larger ``Ra``, [Anderson acceleration](@ref) can be used which is triggered by setting anderson = true
 
 Also, note that a divergence-free reconstruction operator is used for the velocity, which also helps with the convergence and accuracy of the lowest-order method for this test problem.
 

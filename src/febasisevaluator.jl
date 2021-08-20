@@ -112,7 +112,6 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-
 function prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, ndofs4item_all, ncomponents; Dcfg = "init", Dresult = "init")
 
     # derivatives of the basis on the reference domain are computed
@@ -317,14 +316,31 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
             coefficients3 = FE.xgrid[FaceNormals]
         elseif FEOP == SymmetricGradient
             # the following mapping tells where each entry of the full gradient lands in the reduced vector
-            if edim == 1
-                compressiontargets = [1,1]
-            elseif edim == 2
+            @assert ncomponents == edim "SymmetricGradient requires a square matrix as gradient (ncomponents == dim is needed)"
+            @assert edim > 1 "SymmetricGradient makes only sense for dim > 1, please use Gradient"
+            if edim == 2
                 # 2D Voigt accumulation positions of du1/dx1, du1/dx2, du2/dx1, d2/dx2
                 compressiontargets = [1,3,3,2]
             elseif edim == 3
                 # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
                 compressiontargets = [1,6,5,6,2,4,5,4,3] 
+            end
+        elseif FEOP <: SymmetricHessian
+            cl::Int = 0
+            if edim == 1
+                compressiontargets = [1,1]
+                cl = 1
+            elseif edim == 2
+                # 2D Voigt accumulation positions of du1/dx1, du1/dx2, du2/dx1, d2/dx2
+                compressiontargets = [1,3,3,2]
+                cl = 3
+            elseif edim == 3
+                # 3D Voigt accumulation positions of du1/dx1, du1/dx2, du1/dx3, d2/dx1,...
+                compressiontargets = [1,6,5,6,2,4,5,4,3] 
+                cl = 6
+            end
+            for n = 1 : ncomponents
+                append!(compressiontargets,compressiontargets .+ cl)
             end
         end
     end
@@ -895,6 +911,51 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : edim, xj = 1 : edim
                             FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                        end
+                    end    
+                end    
+            end  
+        end  
+    end  
+    return nothing  
+end
+
+
+# SYMMETRICHESSIAN OPERATOR
+# H1 ELEMENTS
+# multiply tinverted jacobian of element trafo with gradient of basis function
+# which yields (by chain rule) the gradient in x coordinates
+function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricHessian{offdiagval},<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs,offdiagval}
+    if FEBE.citem[] != item
+        FEBE.citem[] = item
+
+        # update transformation
+        update!(FEBE.L2G, item)
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+        else
+            @error "nonlinear local2global transformations not yet supported"
+        end
+
+        if FEBE.subset_handler != NothingFunction
+            FEBE.subset_handler(FEBE.current_subset, item)
+        end
+
+        fill!(FEBE.cvals,0)
+        for i = 1 : length(FEBE.xref)
+            for dof_i = 1 : ndofs
+                for c = 1 : ncomponents
+                    for k = 1 : edim, l = k : edim
+                        # compute second derivatives  ∂^2 (x_k x_l) and put it in the right spot of Voigt vector
+                        # note: if l > k the derivative is multiplied with offdiagval
+                        if k != l
+                            for xi = 1 : edim, xj = 1 : edim
+                                FEBE.cvals[FEBE.compressiontargets[(c-1)*edim^2 + (k-1)*edim + l],dof_i,i] += offdiagval * FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                            end
+                        else
+                            for xi = 1 : edim, xj = 1 : edim
+                                FEBE.cvals[FEBE.compressiontargets[(c-1)*edim^2 + (k-1)*edim + l],dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                            end
                         end
                     end    
                 end    
@@ -1534,11 +1595,22 @@ Base.getindex(SCV::SharedCValView{T},i::Int,j::Int,k::Int) where {T} = SCV.cvals
 Base.size(SCV::SharedCValView{T}) where {T} = [SCV.offsets[end] + size(SCV.cvals[end],1), size(SCV.cvals[end],2), size(SCV.cvals[end],3)]
 Base.size(SCV::SharedCValView{T},i) where {T} = (i == 1) ? SCV.offsets[end] + size(SCV.cvals[end],1) : size(SCV.cvals[end],i)
 
-# pairs two FEBasisEvaluators
+# collects two FEBasisEvaluators
 struct FEBasisEvaluatorPair{T,FEB1Type,FEB2Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
     FE::FESpace                          # link to full FE (e.g. for coefficients)
     FEB1::FEB1Type # first FEBasisEvaluator
     FEB2::FEB2Type # second FEBasisEvaluator
+    cvals::SharedCValView{T}
+    L2G::L2GTransformer{T, EG}           # local2global mapper
+    xref::Array{Array{T,1},1} # xref of quadrature formula
+end
+
+# collects three FEBasisEvaluators
+struct FEBasisEvaluatorTriple{T,FEB1Type,FEB2Type,FEB3Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
+    FE::FESpace                          # link to full FE (e.g. for coefficients)
+    FEB1::FEB1Type # first FEBasisEvaluator
+    FEB2::FEB2Type # second FEBasisEvaluator
+    FEB3::FEB3Type # third FEBasisEvaluator
     cvals::SharedCValView{T}
     L2G::L2GTransformer{T, EG}           # local2global mapper
     xref::Array{Array{T,1},1} # xref of quadrature formula
@@ -1562,8 +1634,40 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     return FEBasisEvaluatorPair{T,typeof(FEB1),typeof(FEB2),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,cvals,FEB1.L2G,FEB1.xref)
 end
 
+
+function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: OperatorTriple, AT <: AbstractAssemblyType}
+    FEOP1 = FEOP.parameters[1]
+    FEOP2 = FEOP.parameters[2]
+    FEOP3 = FEOP.parameters[3]
+    FEB1 = FEBasisEvaluator{T,FEType,EG,FEOP1,AT}(FE,xref; mutable = mutable)
+    FEB2 = FEBasisEvaluator{T,FEType,EG,FEOP2,AT}(FE,xref; mutable = mutable)
+    FEB3 = FEBasisEvaluator{T,FEType,EG,FEOP3,AT}(FE,xref; mutable = mutable)
+    ncomponents = size(FEB1.cvals,1) + size(FEB2.cvals,1) + size(FEB3.cvals,1)
+    indexes = ones(Int,ncomponents)
+    offsets = zeros(Int,ncomponents)
+    for j = 1 : size(FEB2.cvals,1)
+        indexes[size(FEB1.cvals,1)+j] = 2
+        offsets[size(FEB1.cvals,1)+j] = size(FEB1.cvals,1)
+    end
+    for j = 1 : size(FEB3.cvals,1)
+        indexes[size(FEB1.cvals,1)+size(FEB1.cvals,2)+j] = 2
+        offsets[size(FEB1.cvals,1)+size(FEB1.cvals,2)+j] = size(FEB1.cvals,1)
+    end
+    cvals = SharedCValView([FEB1.cvals,FEB2.cvals,FEB3.cvals],indexes,offsets)
+    edim = dim_element(EG)
+    ndofs = size(FEB1.cvals,2)
+    return FEBasisEvaluatorPair{T,typeof(FEB1),typeof(FEB2),typeof(FEB3),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,FEB3,cvals,FEB1.L2G,FEB1.xref)
+end
+
 function update!(FEBE::FEBasisEvaluatorPair, item)
     update!(FEBE.FEB1, item)
     update!(FEBE.FEB2, item)
+    return nothing
+end
+
+function update!(FEBE::FEBasisEvaluatorTriple, item)
+    update!(FEBE.FEB1, item)
+    update!(FEBE.FEB2, item)
+    update!(FEBE.FEB3, item)
     return nothing
 end
