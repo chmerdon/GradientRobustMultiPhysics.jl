@@ -71,7 +71,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefi
             result[1] = input[1]*input[3] + input[2]*input[4]
             return nothing
         end
-        add_operator!(Problem,[3,3], GenerateNonlinearForm("(R(u)⋅∇(T)) V", [RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; ADnewton = true, quadorder = 0)  )
+        add_operator!(Problem,3, GenerateNonlinearForm("(R(u)⋅∇(T)) V", [RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; ADnewton = true, quadorder = 0)  )
     end
     add_operator!(Problem,[1,3], AbstractBilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = "-Ra v⋅g T", store = true))
 

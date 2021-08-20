@@ -582,9 +582,7 @@ Note 2: The limitation that the nonlinearity only can depend on one unknown of t
 may be revised in future. Currently, the nonlinearity can indeed depend on arbitrary unknowns (i.e. coeff_from may contain more than one different unknown ids),
 which will lead to copies of the operator assigned also to off-diagonal blocks which are then related to partial derivatives with respect to the other unknowns
 (i.e. input_ansatz will only contain the operator evaluations that coresspond to the unknown of the subblock it is evaluated at, all other entries are zero).
-The subblock assignment o fthe copies is done automatically by the add_operator! function.
-Therein the user specifies a block [i,j] and only the row number is important (associated to the testfunction operator2 evaluation), as the columns depend on coeff_from
-as explained before.
+The subblock assignment of the copies is done automatically by the add_operator! function.
 
 """
 function GenerateNonlinearForm(
