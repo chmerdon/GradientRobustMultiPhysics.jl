@@ -60,6 +60,9 @@ function make_all(; add_examples_output::Bool = true)
 
     for example_source in readdir(example_jl_dir)
         base,ext=splitext(example_source)
+        if example_source == "pluto"
+            break;
+        end
         if example_source[1:7] == "Example" && ext==".jl"
             number = example_source[8:10]
             source_url="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/"*example_source

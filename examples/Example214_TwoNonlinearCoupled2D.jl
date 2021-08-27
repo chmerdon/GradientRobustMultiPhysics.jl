@@ -6,7 +6,7 @@
 This example computes the solutions ``u_1`` and ``u_2`` of the two coupled nonlinear PDEs
 ```math
 \begin{aligned}
--\nu_1 \Delta u_1 + \alpha_1 u_1u_2 & = f_1 \quad \text{in } \Omega
+-\nu_1 \Delta u_1 + \alpha_1 u_1u_2 & = f_1 \quad \text{in } \Omega\\
 -\nu_2 \Delta u_2 + \alpha_2 u_1u_2 & = f_2 \quad \text{in } \Omega
 \end{aligned}
 ```
@@ -54,8 +54,8 @@ function main(; verbosity = 0, Plotter = nothing)
             return nothing
         end
     end
-    add_operator!(Problem,[1,1], GenerateNonlinearForm("ν1 (∇u1,∇v) + α1 (u1,u2) - (f1,v)", [OperatorPair{Identity,Gradient},Identity], [1,2], OperatorPair{Identity,Gradient}, operator_kernel(1), [3,4]; dependencies = "X", ADnewton = true, quadorder = 0)  )
-    add_operator!(Problem,[2,2], GenerateNonlinearForm("ν2 (∇u2,∇v) + α2 (u1,u2) - (f2,v)", [OperatorPair{Identity,Gradient},Identity], [2,1], OperatorPair{Identity,Gradient}, operator_kernel(2), [3,4]; dependencies = "X", ADnewton = true, quadorder = 0)  )
+    add_operator!(Problem,[1,1], GenerateNonlinearForm("ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v)", [OperatorPair{Identity,Gradient},Identity], [1,2], OperatorPair{Identity,Gradient}, operator_kernel(1), [3,4]; dependencies = "X", ADnewton = true, quadorder = 0)  )
+    add_operator!(Problem,[2,2], GenerateNonlinearForm("ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v)", [OperatorPair{Identity,Gradient},Identity], [2,1], OperatorPair{Identity,Gradient}, operator_kernel(2), [3,4]; dependencies = "X", ADnewton = true, quadorder = 0)  )
 
     ## discretise (here: u1 with P3, u2 with P2)
     FETypes = [H1P3{1,2},H1P2{1,2}]

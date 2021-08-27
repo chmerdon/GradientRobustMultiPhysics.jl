@@ -173,18 +173,6 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator
     end
 end
 
-function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::SchurComplement; equation_name::String = "")
-    push!(PDE.LHSOperators[position[1],position[2]],O)
-    if equation_name != ""
-        PDE.equation_names[position[1]] = equation_name
-    end
-    push!(PDE.RHSOperators[position[1]],O)
-    @logmsg DeepInfo "Added Schur complement operator $(O.name) to LHS block $position of PDEDescription $(PDE.name)"
-    @logmsg DeepInfo "Added Schur complement operator $(O.name) to RHS block $(position[1]) of PDEDescription $(PDE.name)"
-    return length(PDE.LHSOperators[position[1],position[2]]), length(PDE.RHSOperators[position[1]])
-end
-
-
 """
 $(TYPEDSIGNATURES)
 
