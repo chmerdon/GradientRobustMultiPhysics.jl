@@ -27,9 +27,9 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - export into csv files or vtk files (via [WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl))
 
 
-### Example
+### Minimal Example
 
-The following minimal example demonstrates how to setup a Poisson problem. More extensive examples can be found in the [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html).
+The following minimal example demonstrates how to setup a Poisson problem.
 
 ```julia
 using GradientRobustMultiPhysics
@@ -62,6 +62,11 @@ Solution = FEVector{Float64}("u_h",FESpace{FEType}(xgrid))
 # solve
 solve!(Solution, Problem)
 ```
+
+### Other Examples
+
+More extensive examples can be found in the [documentation](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/index.html)
+and interactive [Pluto](https://github.com/fonsp/Pluto.jl) notebooks can be found in the subfolder examples/pluto for download.
 
 
 ### Installation
