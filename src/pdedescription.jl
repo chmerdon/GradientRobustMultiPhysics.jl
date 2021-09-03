@@ -183,7 +183,7 @@ function add_operator!(PDE::PDEDescription,equation::Int,O::PDEOperator{T,APT}; 
     dependencies = unique(O.fixed_arguments_ids)
     if length(dependencies) > 0 
         for j = 1 : length(dependencies)
-            Oc = deepcopy(O)
+            Oc = copy(O)
             Oc.newton_arguments = findall(x -> x == dependencies[j], O.fixed_arguments_ids)
             Oc.name = O.name * " [∂$(PDE.unknown_names[dependencies[j]])]"
             push!(PDE.LHSOperators[equation,dependencies[j]],Oc)

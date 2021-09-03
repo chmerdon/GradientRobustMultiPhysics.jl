@@ -83,6 +83,24 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Abstract
     PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger)
 end 
 
+## provisoric copy method for PDEoperators (needed during assignment of nonlinear operators, where each copy is related to partial derivatives of each related unknown)
+export copy
+function Base.copy(O::PDEOperator{T,APT,AT}) where{T,APT,AT}
+    cO = PDEOperator{T,APT,AT}(O.name,copy(O.operators4arguments))
+    cO.action = O.action # deepcopy would lead to errors !!!
+    cO.action_rhs = O.action_rhs # deepcopy would lead to errors !!!
+    cO.apply_action_to = copy(O.apply_action_to)
+    cO.fixed_arguments = copy(O.fixed_arguments)
+    cO.fixed_arguments_ids = copy(O.fixed_arguments_ids)
+    cO.newton_arguments = copy(O.newton_arguments)
+    cO.factor = O.factor
+    cO.regions = copy(O.regions)
+    cO.transposed_assembly = O.transposed_assembly
+    cO.store_operator = O.store_operator
+    cO.assembly_trigger = O.assembly_trigger
+    return cO
+end
+
 function Base.show(io::IO, O::PDEOperator)
     println(io,"\n\toperator name = $(O.name)")
 	println(io,"\toperator type = $(typeof(O).parameters[2]) (T = $(typeof(O).parameters[1]))")
