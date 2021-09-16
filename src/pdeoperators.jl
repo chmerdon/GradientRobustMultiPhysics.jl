@@ -64,6 +64,7 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Abstract
     operators4arguments::Array{DataType,1}
     action::AbstractAction
     action_rhs::AbstractAction
+    action_eval::AbstractAction
     apply_action_to::Array{Int,1}
     fixed_arguments::Array{Int,1}
     fixed_arguments_ids::Array{Int,1}
@@ -75,12 +76,12 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Abstract
     store_operator::Bool
     assembly_trigger::Type{<:AbstractAssemblyTrigger}
     storage::Union{<:AbstractVector,<:AbstractMatrix}
-    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger)
+    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AbstractAssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger)
 end 
 
 ## provisoric copy method for PDEoperators (needed during assignment of nonlinear operators, where each copy is related to partial derivatives of each related unknown)
@@ -89,6 +90,7 @@ function Base.copy(O::PDEOperator{T,APT,AT}) where{T,APT,AT}
     cO = PDEOperator{T,APT,AT}(O.name,copy(O.operators4arguments))
     cO.action = O.action # deepcopy would lead to errors !!!
     cO.action_rhs = O.action_rhs # deepcopy would lead to errors !!!
+    cO.action_eval = O.action_eval # deepcopy would lead to errors !!! 
     cO.apply_action_to = copy(O.apply_action_to)
     cO.fixed_arguments = copy(O.fixed_arguments)
     cO.fixed_arguments_ids = copy(O.fixed_arguments_ids)
@@ -778,6 +780,9 @@ function GenerateNonlinearForm(
     O.factor = factor
     O.action_rhs = action_rhs === nothing ? NoAction() : action_rhs
     O.transposed_assembly = true
+
+    # eval action
+    O.action_eval = Action(Float64, action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
     return O
 end
 
@@ -1195,6 +1200,25 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
     end
 end
 
+
+
+############################################
+### EVALUATION OF NONLINEAR PDEOPERATORS ###
+############################################
+
+function eval_assemble!(b::FEVectorBlock, O::PDEOperator{T,APT,AT}, CurrentSolution::FEVector; factor = 1, time::Real = 0) where {T, APT, AT}
+    @debug "Creating assembly pattern for PDEOperator $(O.name)"
+    FES = Array{FESpace,1}(undef, length(O.fixed_arguments))
+    for a = 1 : length(O.fixed_arguments)
+        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
+    end
+    push!(FES,b.FES)
+    AP = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_eval,O.apply_action_to,O.regions)
+
+    ## assemble
+    set_time!(O.action_rhs, time)
+    return assemble!(b, AP, CurrentSolution[O.fixed_arguments_ids]; skip_preps = false, factor = factor)
+end
 
 
 

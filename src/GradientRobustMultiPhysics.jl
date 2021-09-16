@@ -203,7 +203,7 @@ export RhsOperator
 export restrict_operator
 export SchurComplement
 
-export assemble_operator!
+export assemble_operator!, eval_assemble!
 
 
 include("boundarydata.jl")

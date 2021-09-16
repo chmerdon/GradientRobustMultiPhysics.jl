@@ -41,7 +41,7 @@ default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
     :check_nonlinear_residual => ("auto", "check the nonlinear residual in last nonlinear iteration (causes one more reassembly of nonlinear terms)",true,true),
     :time => (0, "time at which time-dependent data functions are evaluated or initial time for TimeControlSolver",true,true),
     :skip_update => ([1], "matrix update (for the j-th sub-iteration) will be performed each skip_update[j] iteration; -1 means only in the first iteration",true,true),
-    :damping => (0, "damp the new iteration with this part of the old iteration (0 = undamped)",true,false),
+    :damping => (0, "damp the new iteration with this part of the old iteration (0 = undamped), also a function is allowed with the interface (old_iterate, new_iterate, fixed_dofs) that returns the new damping value",true,false),
     :anderson_iterations => (0, "use Anderson acceleration with this many previous iterates (to hopefully speed up/enable convergence of fixpoint iterations)",true,false),
     :anderson_metric => ("l2", "String that encodes the desired convergence metric for the Anderson acceleration (possible values: ''l2'' or ''L2'' or ''H1'')",true,false),
     :anderson_damping => (1, "Damping factor in Anderson acceleration (1 = undamped)",true,false),
@@ -699,6 +699,12 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     ## get relevant solver parameters
     fixed_penalty = SC.user_params[:fixed_penalty]
     damping = SC.user_params[:damping]
+    damping_val::Float64 = 0
+    if typeof(damping) <: Function
+        damping_val = 1
+    elseif typeof(damping) <: Real
+        damping_val = damping
+    end
     maxiterations = SC.user_params[:maxiterations]
     target_residual = SC.user_params[:target_residual]
     skip_update = SC.user_params[:skip_update]
@@ -732,7 +738,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
         end
     end
-    if damping > 0
+    if damping_val > 0
         LastIterate = deepcopy(Target)
     end
 
@@ -789,7 +795,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
             linresnorm = (sqrt(sum(residual.^2, dims = 1)[1]))
         end
 
-        # POSTPRCOESS : ANDERSON ITERATE
+        # POSTPROCESS : ANDERSON ITERATE
         if anderson_iterations > 0
             anderson_time += @elapsed begin
                 update!(AAM)
@@ -797,10 +803,16 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
         end
 
         # POSTPROCESS : DAMPING
-        if damping > 0
+        if typeof(damping) <: Function
+            damping_val = damping(LastIterate, Target, fixed_dofs)
+        end    
+        if damping_val > 0
+            @logmsg MoreInfo "Damping with value $damping_val"
             for j = 1 : length(Target.entries)
-                Target.entries[j] = damping*LastIterate.entries[j] + (1-damping)*Target.entries[j]
+                Target.entries[j] = damping_val * LastIterate.entries[j] + (1-damping_val) * Target.entries[j]
             end
+        end
+        if damping_val > 0 || typeof(damping) <: Function
             LastIterate.entries .= Target.entries
         end
 
@@ -862,6 +874,12 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
     subiterations = SC.user_params[:subiterations]
     fixed_penalty = SC.user_params[:fixed_penalty]
     damping = SC.user_params[:damping]
+    damping_val::Float64 = 0
+    if typeof(damping) <: Function
+        damping_val = 1
+    elseif typeof(damping) <: Real
+        damping_val = damping
+    end
     maxiterations = SC.user_params[:maxiterations]
     target_residual = SC.user_params[:target_residual]
     skip_update = SC.user_params[:skip_update]
@@ -920,7 +938,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
         end
     end
-    if damping > 0
+    if damping_val > 0
         LastIterate = deepcopy(Target)
     end
     
@@ -1012,7 +1030,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
             end
 
             if s == nsubiterations
-                # POSTPRCOESS : ANDERSON ITERATE
+                # POSTPROCESS : ANDERSON ITERATE
                 if anderson_iterations > 0
                     anderson_time += @elapsed begin
                         update!(AAM)
@@ -1020,10 +1038,21 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
                 end
 
                 # POSTPROCESS : DAMPING
-                if damping > 0
+                if typeof(damping) <: Function
+                    damping_val = damping(LastIterate, Target, fixed_dofs)
+                end    
+                if damping_val > 0
+                    @logmsg MoreInfo "Damping with value $damping_val"
                     for j = 1 : length(Target.entries)
-                        Target.entries[j] = damping*LastIterate.entries[j] + (1-damping)*Target.entries[j]
+                        Target.entries[j] = damping_val * LastIterate.entries[j] + (1-damping_val) * Target.entries[j]
                     end
+                    for j = 1 : length(subiterations[s])
+                        for k = 1 : length(Target[subiterations[s][j]])
+                            x[s][j][k] = Target[subiterations[s][j]][k]
+                        end
+                    end
+                end
+                if damping_val > 0 || typeof(damping) <: Function
                     LastIterate.entries .= Target.entries
                 end
             end
