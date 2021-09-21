@@ -7,7 +7,23 @@ struct CellFinder{Tv,Ti,EG,CS}
     previous_cells::Array{Int,1}
     L2G::L2GTransformer{Tv,EG,CS}
     invA::Matrix{Tv}
+    xreftest::Array{Tv,1}
     cx::Vector{Tv}
+end
+
+function postprocess_xreftest!(CF::CellFinder{Tv,Ti,EG,CS}) where{Tv,Ti,EG <: AbstractElementGeometry, CS}
+    CF.xreftest[end] = 1 - sum(CF.xreftest[1:end-1])
+end
+
+function postprocess_xreftest!(CF::CellFinder{Tv,Ti,EG,CS}) where{Tv,Ti,EG <: Parallelogram2D, CS}
+    CF.xreftest[3] = 1 - CF.xreftest[1]
+    CF.xreftest[4] = 1 - CF.xreftest[2]
+end
+
+function postprocess_xreftest!(CF::CellFinder{Tv,Ti,EG,CS}) where{Tv,Ti,EG <: Parallelepiped3D, CS}
+    CF.xreftest[4] = 1 - CF.xreftest[1]
+    CF.xreftest[5] = 1 - CF.xreftest[2]
+    CF.xreftest[6] = 1 - CF.xreftest[3]
 end
 
 
@@ -16,17 +32,28 @@ function CellFinder(xgrid::ExtendableGrid{Tv,Ti}, EG) where {Tv,Ti}
     L2G = L2GTransformer{Tv,EG,CS}(xgrid, ON_CELLS)
     if EG <: AbstractElementGeometry1D
         A = zeros(Tv,1,1)
-        node2oppositeface = [2, 1]
+        node2oppositeface = [1, 2]
+        xreftest = zeros(Tv,2)
     elseif EG <: Triangle2D
         A = zeros(Tv,2,2)
-        node2oppositeface = [2, 3, 1]
+        node2oppositeface = [3, 1, 2]
+        xreftest = zeros(Tv,3)
     elseif EG <: Tetrahedron3D
         A = zeros(Tv,3,3)
-        node2oppositeface = [3, 4, 2,1]
+        node2oppositeface = [4, 2, 1, 3]
+        xreftest = zeros(Tv,4)
+    elseif EG <: Parallelogram2D
+        A = zeros(Tv,2,2)
+        node2oppositeface = [4, 1, 2, 3]
+        xreftest = zeros(Tv,4)
+    elseif EG <: Parallelepiped3D
+        A = zeros(Tv,3,3)
+        node2oppositeface = [5, 2, 1, 3, 4, 6]
+        xreftest = zeros(Tv,6)
     else
         @error "ElementGeometry not supported by CellFinder"
     end
-    return CellFinder{Tv,Ti,EG,CS}(xgrid, xgrid[CellFaces], xgrid[FaceCells], node2oppositeface, zeros(Ti,3), L2G, A, zeros(Tv,size(A,1)))
+    return CellFinder{Tv,Ti,EG,CS}(xgrid, xgrid[CellFaces], xgrid[FaceCells], node2oppositeface, zeros(Ti,3), L2G, A, xreftest, zeros(Tv,size(A,1)))
 end
 
 
@@ -42,10 +69,10 @@ function gFindLocal!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; icellstart::Int = 1, 
     icell::Int = icellstart
     previous_cells::Array{Int,1} = CF.previous_cells
     fill!(previous_cells,0)
+    xreftest::Array{Tv,1} = CF.xreftest
 
     invA::Matrix{Tv} = CF.invA
     L2Gb::Vector{Tv} = L2G.b
-    xrefmin::Tv = 1e30
     imin::Int = 0
 
     while (true)
@@ -57,24 +84,23 @@ function gFindLocal!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; icellstart::Int = 1, 
             cx[j] = x[j] - L2Gb[j]
         end
         mapderiv!(invA,L2G,xref)
-        fill!(xref,0)
+        fill!(xreftest,0)
         for j = 1 : length(x), k = 1 : length(x)
-            xref[k] += invA[j,k] * cx[j]
+            xreftest[k] += invA[j,k] * cx[j]
         end
-        xrefmin = 1e30
-        for i = 1 : length(xref)
-            if xrefmin >= xref[i]
-                xrefmin = xref[i]
-                imin = i+1
+        postprocess_xreftest!(CF)
+
+        # find minimal barycentric coordinate with
+        imin = 1
+        for i = 2 : length(xreftest)
+            if xreftest[imin] >= xreftest[i]
+                imin = i
             end
-        end
-        if xrefmin >= (1 - sum(xref))
-            xrefmin = (1 - sum(xref))
-            imin = 1
         end
 
         # if all barycentric coordinates are within [0,1] the including cell is found
-        if  xrefmin >= -eps
+        if xreftest[imin] >= -eps
+            xref .= view(xreftest,1:length(xref))
             return icell
         end
 
@@ -110,7 +136,6 @@ function gFindBruteForce!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; eps = 1e-14) whe
 
     invA::Matrix{Tv} = CF.invA
     L2Gb::Vector{Tv} = L2G.b
-    xrefmin::Tv = 1e30
     imin::Int = 0
 
     for icell = 1 : num_sources(CF.xgrid[CellNodes])
@@ -122,24 +147,23 @@ function gFindBruteForce!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; eps = 1e-14) whe
             cx[j] = x[j] - L2Gb[j]
         end
         mapderiv!(invA,L2G,xref)
-        fill!(xref,0)
+        fill!(xreftest,0)
         for j = 1 : length(x), k = 1 : length(x)
-            xref[k] += invA[j,k] * cx[j]
+            xreftest[k] += invA[j,k] * cx[j]
         end
-        xrefmin = 1e30
-        for i = 1 : length(xref)
-            if xrefmin >= xref[i]
-                xrefmin = xref[i]
-                imin = i+1
+        postprocess_xreftest!(CF)
+
+        # find minimal barycentric coordinate with
+        imin = 1
+        for i = 2 : length(xreftest)
+            if xreftest[imin] >= xreftest[i]
+                imin = i
             end
-        end
-        if xrefmin >= (1 - sum(xref))
-            xrefmin = (1 - sum(xref))
-            imin = 1
         end
 
         # if all barycentric coordinates are within [0,1] the including cell is found
-        if  xrefmin >= -eps
+        if xreftest[imin] >= -eps
+            xref .= view(xreftest,1:length(xref))
             return icell
         end
     end

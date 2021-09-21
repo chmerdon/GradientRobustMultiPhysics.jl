@@ -20,6 +20,14 @@ function get_testgrid(::Type{<:Tetrahedron3D})
     simplexgrid(X,Y,Z)
 end
 
+function get_testgrid(::Type{Parallelogram2D})
+    return uniform_refine(grid_unitsquare(Parallelogram2D),2)
+end
+
+function get_testgrid(::Type{Parallelepiped3D})
+    return uniform_refine(grid_unitcube(Parallelepiped3D),2)
+end
+
 function check_enumeration_consistency(G::Type{<:AbstractElementGeometry}, CellItems, ItemNodes, item_enum_rule)
 
     @info "Checking enumeration consistency $CellItems <> $ItemNodes with $item_enum_rule for geometry = $G..."
@@ -85,13 +93,9 @@ function check_cellfinder(G::Type{<:AbstractElementGeometry})
 
     # check xref
     x = zeros(Float64,edim)
-    for j = 1 : edim
-        x[j] = xCoordinates[j,xCellNodes[1,cell]]
-        for k = 1 : edim
-            x[j] += xref[k] * xCoordinates[j,xCellNodes[k+1,cell]]
-            x[j] -= xref[k] * xCoordinates[j,xCellNodes[1,cell]]
-        end
-    end
+    L2G = L2GTransformer{Float64,G,xgrid[CoordinateSystem]}(xgrid, ON_CELLS)
+    GradientRobustMultiPhysics.update!(L2G,cell)
+    eval!(x,L2G,xref)
     
     @info "... found x=$x in cell = $cell (and had x=$x_source in cell=$cell_to_find)"
     return (cell == cell_to_find) && (sqrt(sum((x - x_source).^2)) < 1e-14)
@@ -102,6 +106,7 @@ function run_grid_tests()
     # test FACE enumerations
     @test check_enumeration_consistency(Edge1D, CellFaces, FaceNodes, face_enum_rule)
     @test check_enumeration_consistency(Triangle2D, CellFaces, FaceNodes, face_enum_rule)
+    @test check_enumeration_consistency(Parallelogram2D, CellFaces, FaceNodes, face_enum_rule)
     @test check_enumeration_consistency(Tetrahedron3D, CellFaces, FaceNodes, face_enum_rule)
     
     # test EDGE enumerations
@@ -113,5 +118,7 @@ function run_grid_tests()
 
     @test check_cellfinder(Edge1D)
     @test check_cellfinder(Triangle2D)
+    @test check_cellfinder(Parallelogram2D)
     @test check_cellfinder(Tetrahedron3D)
+    @test check_cellfinder(Parallelepiped3D)
 end
