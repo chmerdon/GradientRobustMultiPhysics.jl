@@ -1,0 +1,117 @@
+
+using ExtendableSparse
+using ExtendableGrids
+
+function get_testgrid(::Type{<:Edge1D})
+    X=collect(0:0.05:1)
+    simplexgrid(X)
+end
+
+function get_testgrid(::Type{<:Triangle2D})
+    X=collect(0:0.05:1)
+    Y=collect(0:0.05:1)
+    simplexgrid(X,Y)
+end
+
+function get_testgrid(::Type{<:Tetrahedron3D})
+    X=collect(0:0.1:1)
+    Y=collect(0:0.1:1)
+    Z=collect(0:0.1:1)
+    simplexgrid(X,Y,Z)
+end
+
+function check_enumeration_consistency(G::Type{<:AbstractElementGeometry}, CellItems, ItemNodes, item_enum_rule)
+
+    @info "Checking enumeration consistency $CellItems <> $ItemNodes with $item_enum_rule for geometry = $G..."
+
+    xgrid = get_testgrid(G)
+
+    xCellNodes = xgrid[CellNodes]
+    xCellItems = xgrid[CellItems]
+    xItemNodes = xgrid[ItemNodes]
+    item_rule = item_enum_rule(G)
+    nitems_per_cell = max_num_targets_per_source(xCellItems)
+    nnodes_per_item = max_num_targets_per_source(xItemNodes)
+    ncells = num_sources(xCellNodes)
+
+    @assert nitems_per_cell == size(item_rule,1)
+    @assert nnodes_per_item == size(item_rule,2)
+
+    item::Int = 0
+    everything_is_consistent = true
+    itemnodes_found = zeros(Bool, nnodes_per_item)
+    for cell = 1 : ncells
+        for i = 1 : nitems_per_cell
+            item = xCellItems[i,cell]
+            fill!(itemnodes_found,false)
+            for n = 1 : nnodes_per_item
+                for k = 1 : nnodes_per_item
+                    if xItemNodes[n,item] == xCellNodes[item_rule[i,k],cell]
+                        itemnodes_found[n] = true
+                        break
+                    end
+                end
+            end
+            if prod(itemnodes_found) != true
+                everything_is_consistent = false
+            end
+        end
+    end
+
+    return everything_is_consistent
+end
+
+
+function check_cellfinder(G::Type{<:AbstractElementGeometry})
+    @info "Testing CellFinder for geometry=$G..."
+    xgrid = get_testgrid(G)
+    xCoordinates = xgrid[Coordinates]
+    xCellNodes = xgrid[CellNodes]
+    edim = dim_element(G)
+    CF::CellFinder{Float64,Int32,G,xgrid[CoordinateSystem]} = CellFinder(xgrid, G)
+
+    cell_to_find = num_sources(xCellNodes) - 1
+
+    # compute midpoint of cell_to_find
+    x_source = zeros(Float64,edim)
+    for j = 1 : edim, k = 1 : edim+1
+        x_source[j] += xCoordinates[j,xCellNodes[k,cell_to_find]] + 1e-6
+    end
+    x_source ./= (edim+1)
+
+    # find cell
+    xref = zeros(Float64,edim+1)
+    cell = gFindLocal!(xref, CF, x_source; icellstart = 1)
+
+    # check xref
+    x = zeros(Float64,edim)
+    for j = 1 : edim
+        x[j] = xCoordinates[j,xCellNodes[1,cell]]
+        for k = 1 : edim
+            x[j] += xref[k] * xCoordinates[j,xCellNodes[k+1,cell]]
+            x[j] -= xref[k] * xCoordinates[j,xCellNodes[1,cell]]
+        end
+    end
+    
+    @info "... found x=$x in cell = $cell (and had x=$x_source in cell=$cell_to_find)"
+    return (cell == cell_to_find) && (sqrt(sum((x - x_source).^2)) < 1e-14)
+end
+
+
+function run_grid_tests()
+    # test FACE enumerations
+    @test check_enumeration_consistency(Edge1D, CellFaces, FaceNodes, face_enum_rule)
+    @test check_enumeration_consistency(Triangle2D, CellFaces, FaceNodes, face_enum_rule)
+    @test check_enumeration_consistency(Tetrahedron3D, CellFaces, FaceNodes, face_enum_rule)
+    
+    # test EDGE enumerations
+    @test check_enumeration_consistency(Tetrahedron3D, GradientRobustMultiPhysics.CellEdges, GradientRobustMultiPhysics.EdgeNodes, edge_enum_rule)
+
+    # todo: check FaceEdges, CellFaceSigns, CellFaceOrientations
+    # todo: FaceCells, EdgeCells
+
+
+    @test check_cellfinder(Edge1D)
+    @test check_cellfinder(Triangle2D)
+    @test check_cellfinder(Tetrahedron3D)
+end

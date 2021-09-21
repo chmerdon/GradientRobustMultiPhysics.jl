@@ -16,6 +16,7 @@ function CellFinder(xgrid::ExtendableGrid{Tv,Ti}, EG) where {Tv,Ti}
     L2G = L2GTransformer{Tv,EG,CS}(xgrid, ON_CELLS)
     if EG <: AbstractElementGeometry1D
         A = zeros(Tv,1,1)
+        node2oppositeface = [2, 1]
     elseif EG <: Triangle2D
         A = zeros(Tv,2,2)
         node2oppositeface = [2, 3, 1]
