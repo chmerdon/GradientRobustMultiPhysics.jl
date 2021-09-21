@@ -12,7 +12,10 @@ struct CellFinder{Tv,Ti,EG,CS}
 end
 
 function postprocess_xreftest!(CF::CellFinder{Tv,Ti,EG,CS}) where{Tv,Ti,EG <: AbstractElementGeometry, CS}
-    CF.xreftest[end] = 1 - sum(CF.xreftest[1:end-1])
+    CF.xreftest[end] = 1
+    for j = 1 : length(CF.xreftest) - 1
+        CF.xreftest[end] -= CF.xreftest[j]
+    end
 end
 
 function postprocess_xreftest!(CF::CellFinder{Tv,Ti,EG,CS}) where{Tv,Ti,EG <: Parallelogram2D, CS}
@@ -131,8 +134,7 @@ function gFindBruteForce!(xref, CF::CellFinder{Tv,Ti,EG,CS}, x; eps = 1e-14) whe
 
     L2G::L2GTransformer{Tv,EG,CS} = CF.L2G
     cx::Vector{Tv} = CF.cx
-    previous_cells::Array{Int,1} = CF.previous_cells
-    fill!(previous_cells,0)
+    xreftest::Array{Tv,1} = CF.xreftest
 
     invA::Matrix{Tv} = CF.invA
     L2Gb::Vector{Tv} = L2G.b

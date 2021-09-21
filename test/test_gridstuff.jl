@@ -87,9 +87,14 @@ function check_cellfinder(G::Type{<:AbstractElementGeometry})
     end
     x_source ./= (edim+1)
 
-    # find cell
+    # find cell by local strategy
     xref = zeros(Float64,edim+1)
     cell = gFindLocal!(xref, CF, x_source; icellstart = 1)
+
+    @assert cell == cell_to_find
+
+    # find cell again by brute force
+    cell = gFindBruteForce!(xref, CF, x_source)
 
     # check xref
     x = zeros(Float64,edim)
