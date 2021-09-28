@@ -678,7 +678,7 @@ end
 # IDENTITYCOMPONENT OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:IdentityComponent,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,FEOP,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,FEOP<:IdentityComponent,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
         
