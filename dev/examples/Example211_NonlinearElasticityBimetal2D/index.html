@@ -12,14 +12,14 @@ using GridVisualize
 # kernel for nonlinear operator
 function nonlinear_operator_kernel!(λ,μ,ΔT,α)
 
-    # pre-calculate strain due to thermal load
-    ϵT::Array{Float64,1} = ΔT*α*[1,1]
+    # thermal misfit strain
+    ϵT::Float64 = ΔT*α
 
     function closure(result, input)
         # input = grad(u) written as a vector
         # compute linear part of strain, subtract thermal strain (all in Voigt notation)
-        result[1] = input[1] - ϵT[1]
-        result[2] = input[4] - ϵT[2]
+        result[1] = input[1] - ϵT
+        result[2] = input[4] - ϵT
         result[3] = input[2] + input[3]
 
         # add nonlinear part of the strain 1/2 * (grad(u)&#39;*grad(u))
@@ -29,10 +29,8 @@ function nonlinear_operator_kernel!(λ,μ,ΔT,α)
 
         # multiply with isotropic stress tensor
         # (stored in input[5:7] using Voigt notation)
-        input[5:7] .= 0
-        for i = 1 : 2
-            input[4+i] = λ*(result[1]+result[2]) + 2*μ*result[i]
-        end
+        input[5] = λ*(result[1]+result[2]) + 2*μ*result[1]
+        input[6] = λ*(result[1]+result[2]) + 2*μ*result[2]
         input[7] = 2*μ*result[3]
 
         # write strain into result
@@ -40,16 +38,21 @@ function nonlinear_operator_kernel!(λ,μ,ΔT,α)
         result[2] = input[7]
         result[3] = input[7]
         result[4] = input[6]
+
         return nothing
     end
     return closure
 end
 
 # everything is wrapped in a main function
-function main(; λ = [1,1], μ = [1,1], ΔT = [10,10], α = [1e-3,1e-2], scale = [80,1000], nrefinements = 1, material_border = 0.5, verbosity = 0, Plotter = nothing)
+function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, verbosity = 0, Plotter = nothing)
 
     # set log level
     set_verbosity(verbosity)
+
+    # compute Lame&#39; coefficients μ and λ from ν and E
+    μ = E ./ (2  .* (1 .+ ν.^(-1)))
+    λ = E .* ν ./ ( (1 .- 2*ν) .* (1 .+ ν))
 
     # generate bimetal mesh
     xgrid = bimetal_strip2D(; material_border = material_border, scale = scale)
@@ -64,7 +67,7 @@ function main(; λ = [1,1], μ = [1,1], ΔT = [10,10], α = [1e-3,1e-2], scale =
     add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;displacement equation&quot;)
     add_operator!(Problem, 1, nonlin_operator_1)
     add_operator!(Problem, 1, nonlin_operator_2)
-    add_boundarydata!(Problem, 1, 1, HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [1,11], HomogeneousDirichletBoundary)
     @show Problem
 
     # create finite element space and solution vector
@@ -73,7 +76,7 @@ function main(; λ = [1,1], μ = [1,1], ΔT = [10,10], α = [1e-3,1e-2], scale =
     Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
 
     # solve
-    solve!(Solution, Problem; maxiterations = 20)
+    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9)
 
     # displace mesh and plot
     gridplot(xgrid, Plotter = Plotter, title = &quot;initial bimetal&quot;, fignumber = 1)
@@ -135,17 +138,15 @@ PDE-DESCRIPTION
      [1]    | C(ϵ(u)-ϵT):∇v [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [1])
             | C(ϵ(u)-ϵT):∇v [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [2])
 
-   BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1]
+   BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 11]
                           
 
 Problem = 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 1.890972e-11 | 4.992777e+02
-	      2   | 2.603408e-11 | 1.085312e+02
-	      3   | 1.948150e-11 | 1.197545e+01
-	      4   | 1.713114e-11 | 2.122681e-01
-	      5   | 1.486753e-11 | 9.128005e-05
-	      6   | 1.525715e-11 | 3.243194e-11
-</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/> <img src="../../images/Example211_NonlinearElasticityBimetal2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Tuesday 28 September 2021 09:34">Tuesday 28 September 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	      1   | 6.990361e-13 | 2.097176e+00
+	      2   | 8.669097e-13 | 2.059942e-02
+	      3   | 9.305488e-13 | 2.699072e-06
+	      4   | 9.476336e-13 | 1.352000e-12
+</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/> <img src="../../images/Example211_NonlinearElasticityBimetal2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Wednesday 29 September 2021 18:56">Wednesday 29 September 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

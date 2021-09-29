@@ -52,12 +52,12 @@ PDE-DESCRIPTION
     [1]   | u / obstacle problem 
 
   LHS block | PDEOperator(s)
-    [1,1]   | ∇(u):∇(v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+    [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
             | eps^{-1} ||(u-χ)_|| [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
      [1]    | eps^{-1} ||(u-χ)_|| [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-            | Constant([-1])⋅id(v) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+            | (Constant([-1]), id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
 
    BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 2, 3, 4]
                           
@@ -72,14 +72,14 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 1.316401e-15 | 1.741424e+00
-	      2   | 1.193356e-15 | 6.066034e-02
-	      3   | 9.396338e-16 | 4.055005e-02
-	      4   | 7.574093e-16 | 2.849054e-02
-	      5   | 5.523939e-16 | 1.826753e-02
-	      6   | 5.263771e-16 | 9.343813e-03
-	      7   | 4.916735e-16 | 3.137573e-03
-	      8   | 4.943287e-16 | 3.914447e-04
-	      9   | 4.973393e-16 | 1.034667e-05
-	     10   | 4.808701e-16 | 4.808700e-16
-</code></pre><p><img src="../../images/Example215_ObstacleProblem2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example214_TwoNonlinearCoupled2D/">« 214 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Tuesday 28 September 2021 09:34">Tuesday 28 September 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	      1   | 1.315176e-15 | 1.741424e+00
+	      2   | 1.202754e-15 | 6.066034e-02
+	      3   | 9.551116e-16 | 4.055005e-02
+	      4   | 7.634506e-16 | 2.849054e-02
+	      5   | 5.423019e-16 | 1.826753e-02
+	      6   | 5.167176e-16 | 9.343813e-03
+	      7   | 5.009503e-16 | 3.137573e-03
+	      8   | 4.991457e-16 | 3.914447e-04
+	      9   | 4.747818e-16 | 1.034667e-05
+	     10   | 4.836093e-16 | 4.836093e-16
+</code></pre><p><img src="../../images/Example215_ObstacleProblem2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example214_TwoNonlinearCoupled2D/">« 214 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Wednesday 29 September 2021 18:56">Wednesday 29 September 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -68,7 +68,7 @@ end
 function get_pressure_difference(Solution::FEVector)
     xgrid = Solution[2].FES.xgrid
     PE = PointEvaluator{Float64,typeof(Solution[2].FES).parameters[1],Triangle2D,Identity,ON_CELLS}(Solution[2].FES, Solution[2])
-    CF = CellFinder(xgrid, Triangle2D)
+    CF = CellFinder(xgrid)
     xref = zeros(Float64,2)
     p_left = zeros(Float64,1); x1 = [0.15,0.2]
     p_right = zeros(Float64,1); x2 = [0.25,0.2]
@@ -178,14 +178,14 @@ PDE-DESCRIPTION
     [2]   | p / incompressibility constraint 
 
   LHS block | PDEOperator(s)
-    [1,1]   | 0.001 ∇(u):∇(v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | (R(u) ⋅ ∇) u ⋅ R(v) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-    [1,2]   | div(v) ⋅ q (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,1]   | 0.001 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
 
   RHS block | PDEOperator(s)
-     [1]    | (R(u) ⋅ ∇) u ⋅ R(v) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [1]    | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
      [2]    | none
 
    BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [4]
@@ -197,11 +197,11 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.158694e-17 | 1.903511e-03
-	      2   | 2.309762e-17 | 5.517788e-04
-	      3   | 2.042380e-17 | 2.927442e-05
-	      4   | 2.281003e-17 | 1.036895e-07
-	      5   | 2.295749e-17 | 1.089343e-12
+	      1   | 2.134949e-17 | 1.903511e-03
+	      2   | 2.127433e-17 | 5.517788e-04
+	      3   | 2.065148e-17 | 2.927442e-05
+	      4   | 2.303249e-17 | 1.036895e-07
+	      5   | 2.053100e-17 | 1.089344e-12
 
-[drag, lift] = [5.574275662599664, 0.012138554422720174]
-p difference = [0.11612370212308319]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/> <img src="../../images/Example224_FlowAroundCylinder2D_2.png" alt/> <img src="../../images/Example224_FlowAroundCylinder2D_3.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Tuesday 28 September 2021 09:34">Tuesday 28 September 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[drag, lift] = [5.574275662599664, 0.012138554422721244]
+p difference = [0.1161237021230832]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/> <img src="../../images/Example224_FlowAroundCylinder2D_2.png" alt/> <img src="../../images/Example224_FlowAroundCylinder2D_3.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Wednesday 29 September 2021 18:56">Wednesday 29 September 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
