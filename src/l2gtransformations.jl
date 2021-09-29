@@ -3,7 +3,7 @@
 ##################
 #
 # maps points of reference geometries to global world
-# and is e.g. used by FEBasisEvaluator
+# and is e.g. used by FEBasisEvaluator or CellFinder
 #
 # needs call of update! on entry of a new cell
 # 

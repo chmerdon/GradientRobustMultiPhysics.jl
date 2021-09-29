@@ -28,6 +28,10 @@ function get_testgrid(::Type{Parallelepiped3D})
     return uniform_refine(grid_unitcube(Parallelepiped3D),2)
 end
 
+function get_testgrid(::Type{Triangle2D},::Type{Parallelogram2D})
+    return uniform_refine(grid_unitsquare_mixedgeometries(),1)
+end
+
 function check_enumeration_consistency(G::Type{<:AbstractElementGeometry}, CellItems, ItemNodes, item_enum_rule)
 
     @info "Checking enumeration consistency $CellItems <> $ItemNodes with $item_enum_rule for geometry = $G..."
@@ -70,26 +74,33 @@ function check_enumeration_consistency(G::Type{<:AbstractElementGeometry}, CellI
 end
 
 
-function check_cellfinder(G::Type{<:AbstractElementGeometry})
-    @info "Testing CellFinder for geometry=$G..."
-    xgrid = get_testgrid(G)
+function check_cellfinder(xgrid)
+    EG = xgrid[UniqueCellGeometries]
+    @info "Testing CellFinder for geometries=$EG..."
     xCoordinates = xgrid[Coordinates]
     xCellNodes = xgrid[CellNodes]
-    edim = dim_element(G)
-    CF::CellFinder{Float64,Int32,G,xgrid[CoordinateSystem]} = CellFinder(xgrid, G)
-
+    edim = dim_element(EG[1])
+    CF::CellFinder{Float64,Int32} = CellFinder(xgrid)
     cell_to_find = num_sources(xCellNodes) - 1
 
     # compute midpoint of cell_to_find
     x_source = zeros(Float64,edim)
-    for j = 1 : edim, k = 1 : edim+1
+    for j = 1 : edim, k = 1 : num_targets(xCellNodes,cell_to_find)
         x_source[j] += xCoordinates[j,xCellNodes[k,cell_to_find]] + 1e-6
     end
-    x_source ./= (edim+1)
+    x_source ./= num_targets(xCellNodes,cell_to_find)
 
     # find cell by local strategy
     xref = zeros(Float64,edim+1)
     cell = gFindLocal!(xref, CF, x_source; icellstart = 1)
+
+    # check xref
+    x = zeros(Float64,edim)
+    L2G = L2GTransformer{Float64,xgrid[CellGeometries][cell],xgrid[CoordinateSystem]}(xgrid, ON_CELLS)
+    GradientRobustMultiPhysics.update!(L2G,cell)
+    eval!(x,L2G,xref)
+    
+    @info "... found x=$x in cell = $cell by local search (and had to find x=$x_source in cell=$cell_to_find)"
 
     @assert cell == cell_to_find
 
@@ -98,11 +109,14 @@ function check_cellfinder(G::Type{<:AbstractElementGeometry})
 
     # check xref
     x = zeros(Float64,edim)
-    L2G = L2GTransformer{Float64,G,xgrid[CoordinateSystem]}(xgrid, ON_CELLS)
+    L2G = L2GTransformer{Float64,xgrid[CellGeometries][cell],xgrid[CoordinateSystem]}(xgrid, ON_CELLS)
     GradientRobustMultiPhysics.update!(L2G,cell)
     eval!(x,L2G,xref)
     
-    @info "... found x=$x in cell = $cell (and had x=$x_source in cell=$cell_to_find)"
+    @info "... found x=$x in cell = $cell by brute force (and had to find  x=$x_source in cell=$cell_to_find)"
+
+    @assert cell == cell_to_find
+
     return (cell == cell_to_find) && (sqrt(sum((x - x_source).^2)) < 1e-14)
 end
 
@@ -121,9 +135,11 @@ function run_grid_tests()
     # todo: FaceCells, EdgeCells
 
 
-    @test check_cellfinder(Edge1D)
-    @test check_cellfinder(Triangle2D)
-    @test check_cellfinder(Parallelogram2D)
-    @test check_cellfinder(Tetrahedron3D)
-    @test check_cellfinder(Parallelepiped3D)
+    @test check_cellfinder(get_testgrid(Edge1D))
+    @test check_cellfinder(get_testgrid(Triangle2D))
+    @test check_cellfinder(get_testgrid(Parallelogram2D))
+    @test check_cellfinder(get_testgrid(Triangle2D,Parallelogram2D))
+    @test check_cellfinder(get_testgrid(Tetrahedron3D))
+    @test check_cellfinder(get_testgrid(Parallelepiped3D))
+    @test check_cellfinder(get_testgrid(Triangle2D))
 end

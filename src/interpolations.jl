@@ -342,7 +342,7 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
     cell::Int = 1
     lastnonzerocell::Int = 1
     same_cells::Bool = xgrid == Target.FES.xgrid
-    CF::CellFinder{Float64,Int32,EG,xgrid[CoordinateSystem]} = CellFinder(xgrid, EG)
+    CF::CellFinder{Float64,Int32} = CellFinder(xgrid)
 
     if same_cells || use_cellparents == true
         xCellParents::Array{Int,1} = Target.FES.xgrid[CellParents]
