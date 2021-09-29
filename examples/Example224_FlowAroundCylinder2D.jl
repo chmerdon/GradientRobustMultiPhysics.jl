@@ -86,7 +86,7 @@ end
 function get_pressure_difference(Solution::FEVector)
     xgrid = Solution[2].FES.xgrid
     PE = PointEvaluator{Float64,typeof(Solution[2].FES).parameters[1],Triangle2D,Identity,ON_CELLS}(Solution[2].FES, Solution[2])
-    CF = CellFinder(xgrid, Triangle2D)
+    CF = CellFinder(xgrid)
     xref = zeros(Float64,2)
     p_left = zeros(Float64,1); x1 = [0.15,0.2]
     p_right = zeros(Float64,1); x2 = [0.25,0.2]

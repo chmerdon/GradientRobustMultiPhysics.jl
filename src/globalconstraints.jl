@@ -26,6 +26,16 @@ struct FixedIntegralMean <: AbstractGlobalConstraint
     value::Real
     when_assemble::Type{<:AbstractAssemblyTrigger}
 end 
+
+
+"""
+````
+function FixedIntegralMean(unknown_id::Int, value::Real; name::String = "")
+````
+
+constructs a FixedIntegralMean constraint that (if assigned to a PDEDescription) ensures that the unknown with the specified id has an integral mean value.
+
+"""
 function FixedIntegralMean(component::Int, value::Real; name::String = "")
     if name == ""
         name = "Mean[$component] != $value"
@@ -46,7 +56,16 @@ struct CombineDofs <: AbstractGlobalConstraint
     dofsY::Array{Int,1}
     when_assemble::Type{<:AbstractAssemblyTrigger}
 end 
-function CombineDofs(componentX,componentY,dofsX,dofsY)
+
+"""
+````
+function CombineDofs(idX::Int,idY::Int,dofsX::Array{Int,1},dofsY::Array{Int,1})
+````
+
+constructs a CombineDofs constraint that (if assigned to a PDEDescription) ensures that the dofsX of the unknown with id idX matches the dofsY of the unknown with id idY.
+
+"""
+function CombineDofs(componentX::Int,componentY::Int,dofsX::Array{Int,1},dofsY::Array{Int,1})
     @assert length(dofsX) == length(dofsY)
     return CombineDofs("CombineDofs[$componentX,$componentY] (ndofs = $(length(dofsX)))",componentX,componentY,dofsX,dofsY, AssemblyAlways)
 end

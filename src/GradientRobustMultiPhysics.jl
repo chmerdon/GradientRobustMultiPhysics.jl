@@ -109,7 +109,7 @@ export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 
 export DiscontinuityTreatment, Jump, Average
-export OperatorPair
+export OperatorPair, OperatorTriple
 
 
 include("finiteelements.jl")

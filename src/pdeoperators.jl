@@ -165,59 +165,60 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (kappa * nabla u, nabla v) where kappa is some constant diffusion coefficient
+constructor for a bilinearform that describes a(u,v) = κ (∇u,∇v) where kappa is some constant (diffusion) coefficient.
 """
-function LaplaceOperator(diffusion = 1.0; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, gradient_operator = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
+function LaplaceOperator(κ = 1.0; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, ∇ = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
-        name = "∇(u):∇(v)"
-        if typeof(diffusion) <: Real
-            if diffusion != 1
-                name = "$diffusion " * name
+        name = "(∇u,∇v)"
+        if typeof(κ) <: Real
+            if κ != 1
+                name = "$κ " * name
             end
         end
     end
-    if typeof(diffusion) <: Real
-        O = PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[gradient_operator, gradient_operator], NoAction(), [1], diffusion, regions, store, AssemblyInitial)
+    if typeof(κ) <: Real
+        O = PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[∇, ∇], NoAction(), [1], κ, regions, store, AssemblyInitial)
         return O
     else
-        @error "No standard Laplace operator definition for this diffusion type available, please define your own action and PDEOperator with it."
+        @error "No standard Laplace operator definition for this type of κ available, please define your own action and PDEOperator with it."
     end
 end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (A(u),v) or (u,A(v)) with some user-specified action A
-    
+constructor for a bilinearform that describes a(u,v) = (αu,v) or (u,αv) with some coefficient α that can be a number or an AbstractDataFunction.
 """
-function ReactionOperator(coefficient = 1.0, ncomponents = 1; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, identity_operator = Identity, regions::Array{Int,1} = [0], store::Bool = false)
+function ReactionOperator(α = 1.0, ncomponents = 1; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, id = Identity, regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
-        name = "u ⋅ v"
-        if typeof(coefficient) <: Float64
-            if coefficient != 1.0
-                name = "$coefficient " * name
+        name = "(u,v)"
+        if typeof(α) <: Float64
+            if α != 1.0
+                name = "$α " * name
             end
+        elseif typeof(α) <: UserData{AbstractDataFunction}
+            name = "(αu,v)"
         end
     end
-    if typeof(coefficient) <: Float64
-        return PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[identity_operator,identity_operator], NoAction(), [1], coefficient, regions, store, AssemblyInitial)
-    elseif typeof(coefficient) <: UserData{AbstractDataFunction}
-        xdim = coefficient.dimensions[1]
+    if typeof(α) <: Float64
+        return PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[id,id], NoAction(), [1], α, regions, store, AssemblyInitial)
+    elseif typeof(α) <: UserData{AbstractDataFunction}
+        xdim = α.dimensions[1]
         function reaction_function_func_xt()
             eval_coeff = zeros(Float64,ncomponents)
             function closure(result, input, x, t)
                 # evaluate beta
-                eval!(eval_coeff,coefficient,x,t)
+                eval!(eval_coeff,α,x,t)
                 # compute alpha*u
                 for j = 1 : ncomponents
                     result[j] = eval_coeff[j] * input[j]
                 end
             end    
         end    
-        action_kernel = ActionKernel(reaction_function_func_xt(), [ncomponents, xdim]; dependencies = "XT", quadorder = coefficient.quadorder)
-        O = PDEOperator{Float64, APT_BilinearForm, AT}(name, [identity_operator, identity_operator], Action(Float64, action_kernel), [1], 1, regions, store, AssemblyAuto)
+        action_kernel = ActionKernel(reaction_function_func_xt(), [ncomponents, xdim]; dependencies = "XT", quadorder = α.quadorder)
+        return PDEOperator{Float64, APT_BilinearForm, AT}(name, [id, id], Action(Float64, action_kernel), [1], 1, regions, store, AssemblyAuto)
     else
-        @error "No standard reaction operator definition for this coefficient type available, please define your own action and PDEOperator with it."
+        @error "No standard reaction operator definition for this type of α available, please define your own action and PDEOperator with it."
     end
 end
 
@@ -232,7 +233,7 @@ Example: LagrangeMultiplier(Divergence) is used to render the pressure the Lagra
 """
 function LagrangeMultiplier(operator::Type{<:AbstractFunctionOperator}; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, action::AbstractAction = NoAction(), regions::Array{Int,1} = [0], store::Bool = false, factor = -1)
     if name == "auto"
-        name = "$operator(v) ⋅ q"
+        name = "($operator(v),q)"
     end
     O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[operator, Identity], action, [1], factor, regions, store, AssemblyInitial)
     O.transposed_copy = true
@@ -243,59 +244,56 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (C grad(u), grad(v)) where C is the 1D stiffness tensor
-C grad(u) = mu grad(u)
+constructor for a bilinearform that describes a(u,v) = (μ ∇u,∇v) where C is the 1D stiffness tensor for given μ.
     
 """
-function HookStiffnessOperator1D(mu; name = "C∇u⋅∇v", regions::Array{Int,1} = [0], gradient_operator = TangentialGradient, store::Bool = false)
-    function tensor_apply_1d(result, input)
-        # just Hook law like a spring where mu is the elasticity modulus
-        result[1] = mu*input[1]
-        return nothing
-    end   
-    action_kernel = ActionKernel(tensor_apply_1d, [1,1]; dependencies = "", quadorder = 0)
-    action = Action(Float64, action_kernel)
-    return PDEOperator{Float64, APT_BilinearForm, ON_CELLS}(name,[gradient_operator, gradient_operator], action, [1], 1, regions, store, AssemblyInitial)
+function HookStiffnessOperator1D(μ; name = "(μ ∇u,∇v)", regions::Array{Int,1} = [0], ∇ = TangentialGradient, store::Bool = false)
+    return PDEOperator{Float64, APT_BilinearForm, ON_CELLS}(name,[∇, ∇], NoAction(), [1], μ, regions, store, AssemblyInitial)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
+constructor for a bilinearform that describes a(u,v) = (C ϵ(u), ϵ(v)) where C is the 2D stiffness tensor
 for isotropic media in Voigt notation, i.e.
-C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+C ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
     
     In Voigt notation C is a 3 x 3 matrix
     C = [c11,c12,  0
          c12,c11,  0
            0,  0,c33]
     
-    where c33 = shear_modulus, c12 = lambda and c11 = 2*c33 + c12
+    where c33 = μ, c12 = λ and c11 = 2*c33 + c12
+
+Note: ϵ is the symmetric part of the gradient (in Voigt notation)
     
 """
-function HookStiffnessOperator2D(mu, lambda; 
-    name = "Cϵ(u):ϵ(v)", 
+function HookStiffnessOperator2D(μ, λ; 
+    name = "(C(μ,λ) ϵ(u),ϵ(v))", 
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0], 
-    gradient_operator = SymmetricGradient, 
+    ϵ = SymmetricGradient, 
     store::Bool = false)
 
+    @assert ϵ == SymmetricGradient
+
     function tensor_apply_2d(result, input)
-        result[1] = (lambda + 2*mu)*input[1] + lambda*input[2]
-        result[2] = (lambda + 2*mu)*input[2] + lambda*input[1]
-        result[3] = mu*input[3]
+        result[1] = (λ + 2*μ)*input[1] + λ*input[2]
+        result[2] = (λ + 2*μ)*input[2] + λ*input[1]
+        result[3] = μ*input[3]
         return nothing
     end   
     action_kernel = ActionKernel(tensor_apply_2d, [3,3]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return PDEOperator{Float64, APT_BilinearForm, AT}(name,[gradient_operator, gradient_operator], action, [1], 1, regions, store, AssemblyInitial)
+    return PDEOperator{Float64, APT_BilinearForm, AT}(name,[ϵ, ϵ], action, [1], 1, regions, store, AssemblyInitial)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (C eps(u), eps(v)) where C is the 3D stiffness tensor
-for isotropic media in Voigt notation, i.e. C eps(u) = 2 mu eps(u) + lambda tr(eps(u)) for Lame parameters mu and lambda
+constructor for a bilinearform that describes a(u,v) = (C ϵ(u), ϵ(v)) where C is the 3D stiffness tensor
+for isotropic media in Voigt notation, i.e.
+C ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
 
     In Voigt notation C is a 6 x 6 matrix
     C = [c11,c12,c12,  0,  0,  0
@@ -305,28 +303,32 @@ for isotropic media in Voigt notation, i.e. C eps(u) = 2 mu eps(u) + lambda tr(e
            0,  0,  0,  0,c44,  0
            0,  0,  0,  0,  0,c44]   
 
-    where c44 = shear_modulus, c12 = lambda and c11 = 2*c44 + c12
+    where c44 = μ, c12 = λ and c11 = 2*c44 + c12
+
+Note: ϵ is the symmetric part of the gradient (in Voigt notation)
     
 """
-function HookStiffnessOperator3D(mu, lambda;
-    name = "Cϵ(u):ϵ(v)", 
+function HookStiffnessOperator3D(μ, λ;
+    name = "(C(μ,λ) ϵ(u),ϵ(v))", 
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0],
-    gradient_operator = SymmetricGradient,
+    ϵ = SymmetricGradient,
     store::Bool = false)
 
+    @assert ϵ == SymmetricGradient
+
     function tensor_apply_3d(result, input)
-        result[1] = (lambda + 2*mu)*input[1] + lambda*(input[2] + input[3])
-        result[2] = (lambda + 2*mu)*input[2] + lambda*(input[1] + input[3])
-        result[3] = (lambda + 2*mu)*input[3] + lambda*(input[1] + input[2])
-        result[4] = mu*input[4]
-        result[5] = mu*input[5]
-        result[6] = mu*input[6]
+        result[1] = (λ + 2*μ)*input[1] + λ*(input[2] + input[3])
+        result[2] = (λ + 2*μ)*input[2] + λ*(input[1] + input[3])
+        result[3] = (λ + 2*μ)*input[3] + λ*(input[1] + input[2])
+        result[4] = μ*input[4]
+        result[5] = μ*input[5]
+        result[6] = μ*input[6]
         return nothing
     end   
     action_kernel = ActionKernel(tensor_apply_3d, [6,6]; dependencies = "", quadorder = 0)
     action = Action(Float64, action_kernel)
-    return PDEOperator{Float64, APT_BilinearForm, AT}(name,[gradient_operator, gradient_operator], action, [1], 1, regions, store, AssemblyInitial)
+    return PDEOperator{Float64, APT_BilinearForm, AT}(name,[ϵ, ϵ], action, [1], 1, regions, store, AssemblyInitial)
 end
 
 
@@ -394,7 +396,7 @@ function AbstractTrilinearForm(
 ````
 
 abstract trilinearform constructor that assembles
-- c(a,u,v) = int_regions action(operator1(a),operator2(u)) * operator3(v)
+- c(a,u,v) = (action(operators[1](a),operators[2](u)), operators[3](v))
 
 where u and are the ansatz and test function coressponding to the PDE coordinates and a is an additional unknown of the PDE.
 The argument a can be moved to the other positions with a_to and gets it data from unknown a_from of the full PDEdescription.
@@ -416,11 +418,11 @@ function AbstractTrilinearForm(
 
     if name == "auto"
         if a_to == 1
-            name = "A($(operators[1])(a),$(operators[2])(u)) ⋅ $(operators[3])(v)"
+            name = "(A($(operators[1])(a),$(operators[2])(u)), $(operators[3])(v))"
         elseif a_to == 2
-            name = "A($(operators[1])(u),$(operators[2])(a)) ⋅ $(operators[3])(v)"
+            name = "(A($(operators[1])(u),$(operators[2])(a)), $(operators[3])(v))"
         elseif a_to == 3
-            name = "A($(operators[1])(u),$(operators[2])(v)) ⋅ $(operators[3])(a)"
+            name = "(A($(operators[1])(u),$(operators[2])(v)), $(operators[3])(a))"
         end
     end
         
@@ -449,10 +451,10 @@ function ConvectionOperator(
     quadorder = 0)
 ````
 
-constructs a trilinearform for a convection term of the form c(a,u,v) = (beta_operator(a)*grad(u),v) where a_from is the id of some unknown of the PDEDescription.
-xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
+constructs a trilinearform for a convection term of the form c(a,u,v) = (beta_operator(a)*ansatzfunction_operator(u),testfunction_operator(v))
+where a_from is the id of some unknown of the PDEDescription; xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
 With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v),
-With auto_newton = true a Newton scheme for a(u,v) = (u*grad(u),v) is automatically derived (and fixed_argument is ignored).
+With auto_newton = true a Newton scheme for c(u,u,v) is automatically derived (and fixed_argument is ignored).
 
 """
 function ConvectionOperator(
@@ -486,7 +488,7 @@ function ConvectionOperator(
     if auto_newton
         ## generates a nonlinear form with automatic Newton operators by AD
         if name == "auto"
-            name = "($beta_operator(u) ⋅ $ansatzfunction_operator) u ⋅ $(testfunction_operator)(v)"
+            name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) u, $(testfunction_operator)(v))"
         end
         return GenerateNonlinearForm(name, [beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; ADnewton = true, quadorder = quadorder)     
     else
@@ -496,11 +498,11 @@ function ConvectionOperator(
         a_to = fixed_argument
         if name == "auto"
             if a_to == 1
-                name = "($beta_operator(a) ⋅ $ansatzfunction_operator) u ⋅ $(testfunction_operator)(v)"
+                name = "(($beta_operator(a) ⋅ $ansatzfunction_operator) u, $(testfunction_operator)(v))"
             elseif a_to == 2
-                name = "($beta_operator(u) ⋅ $ansatzfunction_operator) a ⋅ $(testfunction_operator)(v)"
+                name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) a, $(testfunction_operator)(v))"
             elseif a_to == 3
-                name = "($beta_operator(u) ⋅ $ansatzfunction_operator) v ⋅ $(testfunction_operator)(a)"
+                name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) v, $(testfunction_operator)(a))"
             end
         end
         
@@ -543,7 +545,7 @@ function ConvectionRotationFormOperator(
         action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", quadorder = 0)
         convection_action = Action(Float64, action_kernel)
         if name == "auto"
-            name = "(β × ∇) u ⋅ v"
+            name = "((β × ∇) u, v)"
         end
         O = PDEOperator{Float64, APT_TrilinearForm, AT}(name,[beta_operator,ansatzfunction_operator,testfunction_operator], convection_action, [1,2], factor, regions)
         O.fixed_arguments = [1]
@@ -756,7 +758,7 @@ function GenerateNonlinearForm(
             rhs_action_kernel = ActionKernel(rhs_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
             action_rhs = Action(Float64, rhs_action_kernel)
         else
-            @error "Currently nonlinear kernels can only depend on the additional argument(s) x or t"
+            @error "Currently nonlinear kernels may only depend on the additional argument(s) x or t"
         end
     else
 
@@ -790,7 +792,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a linearform from an action
+generates a linearform from an action (whose input dimension has to equal the result dimension of operator and the result dimension has to be 1), L(v) = (A(operator(v)),1)
     
 """
 function RhsOperator(
@@ -802,8 +804,10 @@ function RhsOperator(
     factor = 1,
     store::Bool = false)
 
+    @assert action.argsizes[1] == 1 "Actions for right-hand sides must have result dimension 1!"
+
     if name == "auto"
-        name = "A($operator(v))"
+        name = "(A($operator(v)), 1)"
     end
     O = PDEOperator{Float64, APT_LinearForm, AT}(name, [operator], action, [1], 1, regions, store, AssemblyAuto)
     O.factor = factor
@@ -814,23 +818,24 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a linearform from a given UserData{<:DataFunction} (whose result dimension has to be 1)
+generates a linearform from a given UserData{<:DataFunction} f (that should have the same result dimensions as the length of result of the operator applied to the testfunction),
+i.e. L(v) = (f,operator(v))
     
 """
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
     regions::Array{Int,1},
-    data::UserData{<:AbstractDataFunction};
+    f::UserData{<:AbstractDataFunction};
     name = "auto",
     AT::Type{<:AbstractAssemblyType} = ON_CELLS,
     factor = 1,
     store::Bool = false)
 
     if name == "auto"
-        name = "$(data.name)⋅$operator(v)"
+        name = "($(f.name), $operator(v))"
     end
 
-    action = fdot_action(Float64,data)
+    action = fdot_action(Float64,f)
     O = PDEOperator{Float64, APT_LinearForm, AT}(name,[operator], action, [1], 1, regions, store, AssemblyAuto)
     O.factor = factor
     return O
@@ -842,12 +847,13 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (beta*grad(u),v) with some user-specified DataFunction beta.
-The user also has to specify the number of components ncomponents()) the convection is applied to.
+constructor for a bilinearform that describes a(u,v) = ((β ⋅ ∇) u,v) with some user-specified DataFunction β.
+The user also has to specify the number of components (ncomponents) the convection is applied to.
+The operators for u and v can be changed (if this leads to something reasonable).
     
 """
 function ConvectionOperator(
-    beta::UserData{AbstractDataFunction},
+    β::UserData{AbstractDataFunction},
     ncomponents::Int; 
     name = "auto", 
     store::Bool = false,
@@ -858,14 +864,14 @@ function ConvectionOperator(
     regions::Array{Int,1} = [0])
 
     T = Float64
-    xdim = beta.dimensions[1]
-    if is_timedependent(beta) && is_xdependent(beta)
+    xdim = β.dimensions[1]
+    if is_timedependent(β) && is_xdependent(β)
         function convection_function_func_xt() # dot(convection!, input=Gradient)
             convection_vector = zeros(T,xdim)
             function closure(result, input, x, time)
-                # evaluate beta
-                eval!(convection_vector,beta,x,time)
-                # compute (beta*grad)u
+                # evaluate β
+                eval!(convection_vector,β,x,time)
+                # compute (β ⋅ ∇) u
                 for j = 1 : ncomponents
                     result[j] = 0.0
                     for k = 1 : xdim
@@ -874,14 +880,14 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; dependencies = "XT", quadorder = beta.quadorder)
-    elseif !is_timedependent(beta) && !is_xdependent(beta)
+        action_kernel = ActionKernel(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; dependencies = "XT", quadorder = β.quadorder)
+    elseif !is_timedependent(β) && !is_xdependent(β)
         function convection_function_func() # dot(convection!, input=Gradient)
             convection_vector = zeros(T,xdim)
             function closure(result, input)
-                # evaluate beta
-                eval!(convection_vector,beta, nothing, nothing)
-                # compute (beta*grad)u
+                # evaluate β
+                eval!(convection_vector,β, nothing, nothing)
+                # compute (β ⋅ ∇) u
                 for j = 1 : ncomponents
                     result[j] = 0.0
                     for k = 1 : xdim
@@ -890,14 +896,14 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; dependencies = "", quadorder = beta.quadorder)
-    elseif !is_timedependent(beta) && is_xdependent(beta)
+        action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; dependencies = "", quadorder = β.quadorder)
+    elseif !is_timedependent(β) && is_xdependent(β)
         function convection_function_func_x() # dot(convection!, input=Gradient)
             convection_vector = zeros(T,xdim)
             function closure(result, input, x)
-                # evaluate beta
-                eval!(convection_vector,beta,x,nothing)
-                # compute (beta*grad)u
+                # evaluate β
+                eval!(convection_vector,β,x,nothing)
+                # compute (β ⋅ ∇) u
                 for j = 1 : ncomponents
                     result[j] = 0.0
                     for k = 1 : xdim
@@ -906,14 +912,14 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func_x(), [ncomponents, ncomponents*xdim]; dependencies = "X", quadorder = beta.quadorder)
-    elseif is_timedependent(beta) && !is_xdependent(beta)
+        action_kernel = ActionKernel(convection_function_func_x(), [ncomponents, ncomponents*xdim]; dependencies = "X", quadorder = β.quadorder)
+    elseif is_timedependent(β) && !is_xdependent(β)
         function convection_function_func_t() # dot(convection!, input=Gradient)
             convection_vector = zeros(T,xdim)
             function closure(result, input, t)
-                # evaluate beta
-                eval!(convection_vector,beta,nothing,t)
-                # compute (beta*grad)u
+                # evaluate β
+                eval!(convection_vector,β,nothing,t)
+                # compute (β ⋅ ∇) u
                 for j = 1 : ncomponents
                     result[j] = 0.0
                     for k = 1 : xdim
@@ -922,10 +928,10 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func_t(), [ncomponents, ncomponents*xdim]; dependencies = "T", quadorder = beta.quadorder)
+        action_kernel = ActionKernel(convection_function_func_t(), [ncomponents, ncomponents*xdim]; dependencies = "T", quadorder = β.quadorder)
     end
     if name == "auto"
-        name = "(β ⋅ ∇) u ⋅ $testfunction_operator(v)"
+        name = "((β ⋅ $(ansatzfunction_operator)) u, $testfunction_operator(v))"
     end
 
     O = PDEOperator{Float64, APT_BilinearForm, AT}(name, [ansatzfunction_operator, testfunction_operator], Action(T, action_kernel), [1], 1, regions, store, AssemblyAuto)
@@ -1268,9 +1274,9 @@ end
 
 mutable struct FVConvectionDiffusionOperator <: AbstractPDEOperator
     name::String
-    diffusion::Float64               # diffusion coefficient
-    beta_from::Int                   # component that determines
-    fluxes::Array{Float64,2}         # saves normalfluxes of beta here
+    μ::Float64               # diffusion coefficient
+    beta_from::Int           # component that determines
+    fluxes::Array{Float64,2} # saves normalfluxes of beta here
 end
 
 
@@ -1279,16 +1285,16 @@ $(TYPEDSIGNATURES)
 
  finite-volume convection diffusion operator (for cell-wise P0 rho)
 
- - div(diffusion * grad(rho) + beta rho)
+ - div(μ ∇ρ + β ρ)
 
- For diffusion = 0, the upwind divergence: div_upw(beta*rho) is generated
- For diffusion > 0, TODO
+ For μ = 0, the upwind divergence div_upw(β ρ) is generated
+ For μ > 0, TODO
                    
 """
-function FVConvectionDiffusionOperator(beta_from::Int; diffusion::Float64 = 0.0)
+function FVConvectionDiffusionOperator(beta_from::Int; μ::Float64 = 0.0)
     @assert beta_from > 0
     fluxes = zeros(Float64,0,1)
-    return FVConvectionDiffusionOperator("FVConvectionDiffusion",diffusion,beta_from,fluxes)
+    return FVConvectionDiffusionOperator("FVConvectionDiffusion",μ,beta_from,fluxes)
 end
 
 

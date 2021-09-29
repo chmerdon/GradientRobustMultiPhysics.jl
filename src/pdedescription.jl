@@ -26,17 +26,15 @@ A PDE system is described by
 - a length n array of BoundaryOperators that describes the boundary conditions for each unknown
 - an array of GlobalConstraints that describes additional global constraints
 
-A PDEDescription mainly is a set of PDEOperators arranged in a quadratic n by n matrix.
+A PDEDescription mainly is a set of PDEOperators arranged in a quadratic n by n matrix (LHS).
 Every matrix row refers to one equation and the positioning of the PDEOperators (e.g. a bilinearform)
 immediately sets the information which unknowns have to be used to evaluate the operator. Also 
 nonlinear PDEOperators are possible where extra information on the further involved uknowns have to be specified.
 UserData is also assigned to the PDEDescription depending on their type. Operator coefficients are
-assigned directly to the PDEOperators (in form of AbstractActions), right-hand side data is assigned
-to the right-hand side array of PDEOperators and boundary data is assigned to the BoundaryOperators
+assigned directly to the PDEOperators (in form of AbstractActions or a constant factor), right-hand side data is assigned
+to the right-hand side array of PDEOperators (RHS) and boundary data is assigned to the BoundaryOperators
 of the PDEDescription. Additionaly global constraints (like a global zero integral mean) can be assigned as a GlobalConstraint.
-
 """
-
 mutable struct PDEDescription
     name::String
     equation_names::Array{String,1}
@@ -155,13 +153,11 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds the given PDEOperator to the left-hand side of the PDEDescription at the specified position. Optionally, the name of the equation can be changed.
-The id of the operator in the coressponding LHS block of PDEDescription is returned (in case of a nonlinear operator with a RHS contribution also the id
-in the coressponding RHS block is returned).
+Adds the given linear PDEOperator to the left-hand side of the PDEDescription at the specified position. Optionally, the name of the equation can be changed.
+The id of the operator in the coressponding LHS block of PDEDescription is returned.
 """
 function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::PDEOperator; equation_name::String = "")
-    ## nonlinear forms may push additional left-hand side and right-hand side operators to the description
-    if typeof(O).parameters[2] <: APT_NonlinearForm
+    if typeof(O).parameters[2] <: APT_NonlinearForm # delegate to NonlinearOperator assignment
         add_operator!(PDE, position[1],O; equation_name = equation_name)
     else
         push!(PDE.LHSOperators[position[1],position[2]],O)
@@ -225,9 +221,9 @@ $(TYPEDSIGNATURES)
 
 Adds the given boundary data with the specified AbstractBoundaryType at the specified position in the BoundaryOperator of the PDEDescription.
 
-If timedependent == true, that data function depends also on time t and is reassembled in any advance! step of a TimeControlSolver.
+Note: If the data function is time-dependent (see User Data documentation) it is evaluated in any advance! step of a TimeControlSolver.
 """
-function add_boundarydata!(PDE::PDEDescription,position::Int,regions, btype::Type{<:AbstractBoundaryType}; data = Nothing)
+function add_boundarydata!(PDE::PDEDescription,position::Int, regions, btype::Type{<:AbstractBoundaryType}; data = Nothing)
     Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data)
     @logmsg DeepInfo "Added boundary_data for unknown $(PDE.unknown_names[position]) in region(s) $regions to PDEDescription $(PDE.name)"
 end

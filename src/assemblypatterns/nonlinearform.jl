@@ -289,10 +289,6 @@ function assemble!(
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
 
-    # note: at the moment we expect that all FE[1:end-1] are the same !
-    # otherwise more than one MatrixBlock has to be assembled and we need more offset information
-    # hence, this only can handle nonlinearities at the moment that depend on one unknown of the PDEsystem
-
     for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions

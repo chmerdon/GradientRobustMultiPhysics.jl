@@ -29,14 +29,14 @@ using GridVisualize
 ## kernel for nonlinear operator
 function nonlinear_operator_kernel!(λ,μ,ΔT,α)
 
-    ## pre-calculate strain due to thermal load
-    ϵT::Array{Float64,1} = ΔT*α*[1,1]
+    ## thermal misfit strain
+    ϵT::Float64 = ΔT*α
 
     function closure(result, input)
         ## input = grad(u) written as a vector
         ## compute linear part of strain, subtract thermal strain (all in Voigt notation)
-        result[1] = input[1] - ϵT[1]
-        result[2] = input[4] - ϵT[2]
+        result[1] = input[1] - ϵT
+        result[2] = input[4] - ϵT
         result[3] = input[2] + input[3]
 
         ## add nonlinear part of the strain 1/2 * (grad(u)'*grad(u))
@@ -46,42 +46,45 @@ function nonlinear_operator_kernel!(λ,μ,ΔT,α)
 
         ## multiply with isotropic stress tensor
         ## (stored in input[5:7] using Voigt notation)
-        input[5:7] .= 0
-        for i = 1 : 2
-            input[4+i] = λ*(result[1]+result[2]) + 2*μ*result[i]
-        end
+        input[5] = λ*(result[1]+result[2]) + 2*μ*result[1]
+        input[6] = λ*(result[1]+result[2]) + 2*μ*result[2]
         input[7] = 2*μ*result[3]
-        
+    
         ## write strain into result
         result[1] = input[5]
         result[2] = input[7]
         result[3] = input[7]
         result[4] = input[6]
+
         return nothing
     end
     return closure
 end 
 
 ## everything is wrapped in a main function
-function main(; λ = [1,1], μ = [1,1], ΔT = [10,10], α = [1e-3,1e-2], scale = [80,1000], nrefinements = 1, material_border = 0.5, verbosity = 0, Plotter = nothing)
+function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, verbosity = 0, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
+
+    ## compute Lame' coefficients μ and λ from ν and E
+    μ = E ./ (2  .* (1 .+ ν.^(-1)))
+    λ = E .* ν ./ ( (1 .- 2*ν) .* (1 .+ ν))
 
     ## generate bimetal mesh
     xgrid = bimetal_strip2D(; material_border = material_border, scale = scale)
     xgrid = uniform_refine(xgrid,nrefinements)
 
     ## prepare nonlinear operator (one for each bimetal region)
-    nonlin_operator_1 = GenerateNonlinearForm("C(ϵ(u)-ϵT):∇v", [Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[1],μ[1],ΔT[1],α[1]), [4,4,7]; regions = [1], quadorder = 3, ADnewton = true)   
+    nonlin_operator_1 = GenerateNonlinearForm("C(ϵ(u)-ϵT):∇v", [Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[1],μ[1],ΔT[1],α[1]), [4,4,7]; regions = [1], quadorder = 3, ADnewton = true) 
     nonlin_operator_2 = GenerateNonlinearForm("C(ϵ(u)-ϵT):∇v", [Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[2],μ[2],ΔT[2],α[2]), [4,4,7]; regions = [2], quadorder = 3, ADnewton = true) 
-
+    
     ## generate problem description and assign nonlinear operators
     Problem = PDEDescription("nonlinear elasticity problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "displacement equation")
     add_operator!(Problem, 1, nonlin_operator_1)
     add_operator!(Problem, 1, nonlin_operator_2)
-    add_boundarydata!(Problem, 1, 1, HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [1,11], HomogeneousDirichletBoundary)
     @show Problem
 
     ## create finite element space and solution vector
@@ -90,7 +93,7 @@ function main(; λ = [1,1], μ = [1,1], ΔT = [10,10], α = [1e-3,1e-2], scale =
     Solution = FEVector{Float64}("u_h",FES)
 
     ## solve
-    solve!(Solution, Problem; maxiterations = 20)
+    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9)
 
     ## displace mesh and plot
     gridplot(xgrid, Plotter = Plotter, title = "initial bimetal", fignumber = 1)

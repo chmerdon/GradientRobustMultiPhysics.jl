@@ -2,14 +2,16 @@
 
 ## Purpose
 
-The PDE consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces etc.), they describe the continuous weak form of the PDE. 
+The PDEDescription consists of PDEOperators characterising some feature of the model (like friction, convection, exterior forces, optimality conditions etc.) and describe the continuous weak form of the PDE.
+They can be separated roughly into two categories: linear operators and nonlinear operators.
 
 
 ```@docs
 GradientRobustMultiPhysics.PDEOperator
 ```
 
-The following table lists all available operators and physics-motivated constructors for them. Click on them or scroll down to find out more details.
+The following table lists all available operators and available physics-motivated constructors for them (besides the abstract main constructor).
+Click on them or scroll down to find out more details.
 
 | Main constructors                   | Special constructors                     | Mathematically                                                                                                 |
 | :---------------------------------- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
@@ -30,18 +32,19 @@ Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``
 
 ## Assembly Type
 
-Many PDE operators need a specification of that decides to which parts of the mesh the PDEOperator is associated (e.g. cells, faces, bfaces, edges), this is prescribed via the AssemblyType.
-The following assembly types are available. Additional to define where PDEOperators live and assemble, they can be also used as an argument for interpolation!.
+Many PDE operators need a specification that decides to which parts of the mesh the PDEOperator is associated (e.g. cells, faces, bfaces, edges), this is prescribed via the AssemblyType.
+In other words they define on which entities the PDEOperators lives and assembles. Additionally, the assembly types can be used as an argument for [Finite Element Interpolations](@ref).
+The following assembly types are available. 
 
 | AssemblyType     | Description                                                      |
 | :--------------- | :--------------------------------------------------------------- |
 | AT_NODES         | interpolate at vertices of the mesh (only for H1-conforming FEM) |
-| ON_CELLS         | assemble/interpolate over the cells of the mesh                  |
-| ON_FACES         | assemble/interpolate over all faces of the mesh                  |
-| ON_IFACES        | assemble/interpolate over the interior faces of the mesh         |
-| ON_BFACES        | assemble/interpolate over the boundary faces of the mesh         |
-| ON_EDGES (*)     | assemble/interpolate over all edges of the mesh (in 3D)          |
-| ON_BEDGES (*)    | assemble/interpolate over the boundary edges of the mesh (in 3D) |
+| ON_CELLS         | assemble/interpolate on the cells of the mesh                  |
+| ON_FACES         | assemble/interpolate on all faces of the mesh                  |
+| ON_IFACES        | assemble/interpolate on the interior faces of the mesh         |
+| ON_BFACES        | assemble/interpolate on the boundary faces of the mesh         |
+| ON_EDGES (*)     | assemble/interpolate on all edges of the mesh (in 3D)          |
+| ON_BEDGES (*)    | assemble/interpolate on the boundary edges of the mesh (in 3D) |
 
 !!! note
     (*) = only reasonable in 3D and still experimental, might have some issues
@@ -84,7 +87,7 @@ Below some examples for operators are given:
 
 ```julia
 # Example 1 : div-div bilinearform with a factor λ (e.g. for divergence-penalisation)
-operator = AbstractBilinearForm([Divergence,Divergence]; name = "λ (div(u),div(v))", factor = λ)
+operator = AbstractBilinearForm([Divergence,Divergence]; factor = λ, name = "λ (div(u),div(v))")
 
 # Example 2 : Gradient jump stabilisation with an item-dependent action and a factor s (e.g. for convection stabilisation)
 xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
@@ -93,7 +96,7 @@ function stabilisation_kernel(result, input, item)
     result .*= xFaceVolumes[item]^2
 end
 action = Action(Float64,stabilisation_kernel, [2,2]; dependencies = "I", quadorder = 0 )
-operator = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES, name = "s |F|^2 [∇(u)]⋅[∇(v)]", factor = s)
+operator = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES, factor = s, name = "s |F|^2 [∇(u)]⋅[∇(v)]")
 
 ```
 

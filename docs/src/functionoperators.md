@@ -24,6 +24,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 | Laplacian                                            | Laplace Operator (diagonal of Hessian)                   | ``v \rightarrow \Delta v``   (e.g. in 2D: xx,yy for each component)       |
 
 
+
 !!! note
 
     As each finite element type is transformed differently from the reference domain to the general domain,
@@ -71,15 +72,16 @@ So far such operators are available for the vector-valued Crouzeix-Raviart and B
 !!! note
 
     Currently this feature works with FEType = HdivRT0{d} and FEType = HdivBDM1{d} where d is the space dimension. However, solve! on a PDEDescription that includes these
-    operators will only work if the function operators are at spots were it is applied to functions from the Bernardi--Raugel or Crouzeix-Raviart finite element space.
+    operators will only work if the function operators are at spots were it is applied to functions of type H1BR, H1CR or H1P2B.
     More reconstruction operators will be implemented at some later point.
 
 
 
 ## Operator Pairs (experimental)
 
-Two function operators can be put into an OperatorPair so that one can provide effectively two operators in each argument of an assembly pattern. However, the user should make sure that both operators can be evaluated together reasonably (meaning both should be well-defined on the element geometries and the finite element space where the argument will be evaluated). This feature is still experimental and might have issues in some cases.
+Two function operators can be put into an OperatorPair so that one can provide effectively two operators in each argument of an assembly pattern. However, the user should make sure that both operators can be evaluated together reasonably (meaning both should be well-defined on the element geometries and the finite element space where the argument will be evaluated, and the action of the operator has to operate with coressponding input and result fields). This feature is still experimental and might have issues in some cases. OperatorTriple for a combination of three operators is also available.
 
 ```@docs
 OperatorPair
+OperatorTriple
 ```
