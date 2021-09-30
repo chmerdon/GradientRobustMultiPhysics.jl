@@ -569,11 +569,11 @@ function integrate!(
             itemET = xItemGeometries[item]
             iEG = findfirst(isequal(itemET), EG)
 
-            update!(local2global[iEG],item)
+            ExtendableGrids.update!(local2global[iEG],item)
 
             for i in eachindex(qf[iEG].w)
-                eval!(x, local2global[iEG], qf[iEG].xref[i])
-                eval!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
+                ExtendableGrids.eval!(x, local2global[iEG], qf[iEG].xref[i])
+                GradientRobustMultiPhysics.eval!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
                 integral4items[item+index_offset] += result[1] * qf[iEG].w[i] * xItemVolumes[item];
             end  
         end
@@ -586,11 +586,11 @@ function integrate!(
             itemET = xItemGeometries[item]
             iEG = findfirst(isequal(itemET), EG)
 
-            update!(local2global[iEG],item)
+            ExtendableGrids.update!(local2global[iEG],item)
 
             for i in eachindex(qf[iEG].w)
-                eval!(x, local2global[iEG], qf[iEG].xref[i])
-                eval!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
+                ExtendableGrids.eval!(x, local2global[iEG], qf[iEG].xref[i])
+                GradientRobustMultiPhysics.eval!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
                 for j = 1 : resultdim
                     integral4items[j,item] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
                 end

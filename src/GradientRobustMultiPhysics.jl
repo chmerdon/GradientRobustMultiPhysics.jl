@@ -20,46 +20,46 @@ include("logging.jl")
 
 ## stuff that may go to ExtendableGrids
 
-include("shape_specs.jl")
-export refcoords_for_geometry
-export nnodes_for_geometry
-export nfaces_for_geometry
-export nedges_for_geometry
-export face_enum_rule
-export edge_enum_rule
-export facetype_of_cellface
-export edgetype_of_celledge
-export celledges_for_cellface
-export Volume4ElemType
-export Normal4ElemType!
-export Tangent4ElemType!
+# include("shape_specs.jl")
+# export refcoords_for_geometry
+# export nnodes_for_geometry
+# export nfaces_for_geometry
+# export nedges_for_geometry
+# export face_enum_rule
+# export edge_enum_rule
+# export facetype_of_cellface
+# export edgetype_of_celledge
+# export celledges_for_cellface
+# export Volume4ElemType
+# export Normal4ElemType!
+# export Tangent4ElemType!
 
-include("gridstuff.jl")
-export Coordinates
-export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns, CellFaceOrientations, CellEdgeSigns
-export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceEdges, FaceNormals
-export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTangents
-export NodePatchGroups
-export BFaces, BFaceCellPos, BFaceVolumes
-export BEdgeNodes, BEdges, BEdgeVolumes, BEdgeGeometries
-export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries, UniqueBEdgeGeometries
-export GridComponent4TypeProperty
-export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
-export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
-export get_facegrid, get_bfacegrid, get_edgegrid
+# include("gridstuff.jl")
+# export Coordinates
+# export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns, CellFaceOrientations, CellEdgeSigns
+# export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceEdges, FaceNormals
+# export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTangents
+# export NodePatchGroups
+# export BFaces, BFaceCellPos, BFaceVolumes
+# export BEdgeNodes, BEdges, BEdgeVolumes, BEdgeGeometries
+# export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries, UniqueBEdgeGeometries
+# export GridComponent4TypeProperty
+# export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
+# export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
+# export get_facegrid, get_bfacegrid, get_edgegrid
 
-include("meshrefinements.jl")
-export split_grid_into
-export uniform_refine
-export barycentric_refine
-export CellParents
+# include("meshrefinements.jl")
+# export split_grid_into
+# export uniform_refine
+# export barycentric_refine
+# export CellParents
 
-include("adaptive_meshrefinements.jl")
-export bulk_mark
-export RGB_refine
+# include("adaptive_meshrefinements.jl")
+# export bulk_mark
+# export RGB_refine
 
-include("serialadjacency.jl")
-export SerialVariableTargetAdjacency
+# include("serialadjacency.jl")
+# export SerialVariableTargetAdjacency
 
 
 
@@ -69,21 +69,21 @@ export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
 export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
 export is_timedependent, is_regiondependent, is_itemdependent
 
-include("assemblytypes.jl");
-export AbstractAssemblyType
-export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
-export ItemType4AssemblyType
-export GridComponentNodes4AssemblyType
-export GridComponentVolumes4AssemblyType
-export GridComponentGeometries4AssemblyType
-export GridComponentRegions4AssemblyType
+# include("assemblytypes.jl");
+# export AbstractAssemblyType
+# export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
+# export ItemType4AssemblyType
+# export GridComponentNodes4AssemblyType
+# export GridComponentVolumes4AssemblyType
+# export GridComponentGeometries4AssemblyType
+# export GridComponentRegions4AssemblyType
 
-include("l2gtransformations.jl");
-export L2GTransformer, update!, eval!, mapderiv!, piola!
+#include("l2gtransformations.jl");
+#export L2GTransformer, update!, eval!, mapderiv!, piola!
 
-include("cellfinder.jl")
-export CellFinder
-export gFindLocal!, gFindBruteForce!
+# include("cellfinder.jl")
+# export CellFinder
+# export gFindLocal!, gFindBruteForce!
 
 include("quadrature.jl")
 export QuadratureRule
@@ -247,12 +247,12 @@ export PoissonProblem
 export L2BestapproximationProblem
 export H1BestapproximationProblem
 
-include("commongrids.jl")
-export reference_domain
-export grid_unitcube
-export grid_lshape
-export grid_unitsquare, grid_unitsquare_mixedgeometries
-export grid_triangle
+# include("commongrids.jl")
+# export reference_domain
+# export grid_unitcube
+# export grid_lshape
+# export grid_unitsquare, grid_unitsquare_mixedgeometries
+# export grid_triangle
 
 include("dataexport.jl")
 export writeVTK!, writeCSV!

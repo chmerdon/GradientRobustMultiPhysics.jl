@@ -133,8 +133,8 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
         # quadrature loop
         for i = 1 : length(qf.w)
             # right-hand side : f times grad(P1),curl(bubble)
-            eval!(x,FEB.L2G,FEB.xref[i])
-            eval!(feval, exact_function!, x, time)
+            ExtendableGrids.eval!(x,FEB.L2G,FEB.xref[i])
+            GradientRobustMultiPhysics.eval!(feval, exact_function!, x, time)
             feval .*= xCellVolumes[cell] * qf.w[i]
             for dof = 1:nidofs
                 for k = 1 : ncomponents
