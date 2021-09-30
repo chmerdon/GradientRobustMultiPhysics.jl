@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>207 : Stokes Transient 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li class="is-active"><a class="tocitem" href>207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example214_TwoNonlinearCoupled2D/">214 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example231_StokesHdivP1RT/">231 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>207 : Stokes Transient 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>207 : Stokes Transient 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example207_StokesTransient2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Stokes-Transient-2D"><a class="docs-heading-anchor" href="#:-Stokes-Transient-2D">207 : Stokes Transient 2D</a><a id=":-Stokes-Transient-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Stokes-Transient-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example207_StokesTransient2D.jl">source code</a>)</p><p>This example computes a velocity <span>$\mathbf{u}$</span> and pressure <span>$\mathbf{p}$</span> of the incompressible Navier–Stokes problem</p><p class="math-container">\[\begin{aligned}
+\mathbf{u}_t - \mu \Delta \mathbf{u} + \nabla p &amp; = \mathbf{f}\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>with (possibly time-dependent) exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\mu$</span>.</p><p>In this example we solve an analytical toy problem with prescribed solution</p><p class="math-container">\[\begin{aligned}
+\mathbf{u}(\mathbf{x},t) &amp; = (1+t)(\cos(x_2), \sin(x_1))^T\\
+p(\mathbf{x}) &amp;= \sin(x_1+x_2) - 2\sin(1) + \sin(2)
+\end{aligned}\]</p><p>with time-dependent right-hand side and inhomogeneous Dirichlet boundary data. The example showcases the benefits of pressure-robustness in time-dependent linear Stokes problem in presence of complicated pressures and small viscosities. The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution, an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence! Compare e.g. Bernardi–Raugel and Bernardi–Raugel pressure-robust by (un)commenting the responsible lines in this example.</p><pre><code class="language-julia hljs">module Example207_StokesTransient2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+
+# problem data
+function exact_pressure!(result,x::Array{&lt;:Real,1})
+    result[1] = sin(x[1]+x[2]) - 2*sin(1)+sin(2)
+end
+function exact_velocity!(result,x::Array{&lt;:Real,1},t::Real)
+    result[1] = (1+t)*cos(x[2]);
+    result[2] = (1+t)*sin(x[1]);
+end
+function exact_velocity_gradient!(result,x::Array{&lt;:Real,1},t::Real)
+    result[1] = 0.0
+    result[2] = -(1+t)*sin(x[2]);
+    result[3] = (1+t)*cos(x[1]);
+    result[4] = 0.0;
+end
+function exact_rhs!(viscosity)
+    function closure(result,x::Array{&lt;:Real,1},t::Real)
+        result[1] = viscosity*(1+t)*cos(x[2]) + cos(x[1]+x[2]) + cos(x[2])
+        result[2] = viscosity*(1+t)*sin(x[1]) + cos(x[1]+x[2]) + sin(x[1])
+    end
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, T = 1e-2, viscosity = 1e-6, graddiv = 0)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # initial grid
+    xgrid = grid_unitsquare(Triangle2D);
+
+    # choose one of these (inf-sup stable) finite element type pairs
+    reconstruct = false # do not change
+    broken_p = false # is pressure space broken ?
+    #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
+    #FETypes = [H1P2B{2,2}, H1P1{1}]; broken_p = true # P2-bubble
+    #FETypes = [H1CR{2}, H1P0{1}]; broken_p = true # Crouzeix--Raviart
+    #FETypes = [H1CR{2}, H1P0{1}]; broken_p = true; reconstruct = true # Crouzeix-Raviart gradient-robust
+    #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
+    #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
+    #FETypes = [H1BR{2}, H1P0{1}]; broken_p = true # Bernardi--Raugel
+    FETypes = [H1BR{2}, H1P0{1}]; broken_p = true; reconstruct = true # Bernardi--Raugel gradient-robust
+
+    #####################################################################################
+
+    # set testfunction operator for certain testfunctions
+    # (pressure-robustness chooses a reconstruction that can exploit the L2-orthogonality onto gradients)
+    testfunction_operator = reconstruct ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
+
+    # negotiate data functions to the package
+    # note that dependencies &quot;XT&quot; marks the function to be x- and t-dependent
+    # that causes the solver to automatically reassemble associated operators in each time step
+    user_function_velocity = DataFunction(exact_velocity!, [2,2]; name = &quot;u_exact&quot;, dependencies = &quot;XT&quot;, quadorder = 5)
+    user_function_pressure = DataFunction(exact_pressure!, [1,2]; name = &quot;p_exact&quot;, dependencies = &quot;X&quot;, quadorder = 5)
+    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;XT&quot;, quadorder = 4)
+    user_function_rhs = DataFunction(exact_rhs!(viscosity), [2,2]; name = &quot;f&quot;, dependencies = &quot;XT&quot;, quadorder = 5)
+
+    # load Stokes problem prototype and assign data
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function_velocity)
+    add_rhsdata!(Problem, 1, RhsOperator(testfunction_operator, [1], user_function_rhs))
+
+    # add grad-div stabilisation
+    if graddiv &gt; 0
+        add_operator!(Problem, [1,1], AbstractBilinearForm(&quot;graddiv-stabilisation (div x div)&quot;, Divergence, Divergence, MultiplyScalarAction(graddiv)))
+    end
+
+    # define bestapproximation problems
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(user_function_pressure; bestapprox_boundary_regions = [])
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(user_function_velocity_gradient, user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
+
+    # define ItemIntegrators for L2/H1 error computation and arrays to store them
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity; time = T)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient; time = T)
+    Results = zeros(Float64, nlevels, 6)
+    NDofs = zeros(Int, nlevels)
+
+    # loop over levels
+    for level = 1 : nlevels
+
+        # refine grid
+        xgrid = uniform_refine(xgrid)
+
+        # generate FESpaces
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = broken_p)]
+
+        # generate solution fector
+        Solution = FEVector{Float64}([&quot;velocity&quot;, &quot;pressure&quot;],FES)
+
+        # set initial solution ( = bestapproximation at time 0)
+        L2VelocityBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation velocity&quot;,FES[1])
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = 0)
+        Solution[1][:] = L2VelocityBestapproximation[1][:]
+
+        # generate time-dependent solver and chance rhs data
+        TCS = TimeControlSolver(Problem, Solution, CrankNicolson; timedependent_equations = [1], skip_update = [-1], dt_testfunction_operator = [testfunction_operator])
+        advance_until_time!(TCS, timestep, T)
+
+        # solve bestapproximation problems at final time for comparison
+        L2PressureBestapproximation = FEVector{Float64}(&quot;L2-Bestapproximation pressure&quot;,FES[2])
+        H1VelocityBestapproximation = FEVector{Float64}(&quot;H1-Bestapproximation velocity&quot;,FES[1])
+        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = T)
+        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
+        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T)
+
+        # compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1]))
+        Results[level,3] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
+        Results[level,4] = sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1]))
+        Results[level,5] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
+        Results[level,6] = sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1]))
+    end
+
+    # print convergence history
+    print_convergencehistory(NDofs, Results[:,1:2]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||u-u_h||&quot;, &quot;||u-Πu||&quot;])
+    print_convergencehistory(NDofs, Results[:,3:4]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||p-p_h||&quot;, &quot;||p-πp||&quot;])
+    print_convergencehistory(NDofs, Results[:,5:6]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||∇(u-u_h)||&quot;, &quot;||∇(u-Su)||&quot;])
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example207_StokesTransient2D.main()
+
+	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
+	        |            |  (total)   |    (s)      velocity    pressure  
+	     1  | 1.0000e-03 | 1.4466e-13 | 5.311e+00 | 4.9651e-03  3.0773e+00 
+	     2  | 2.0000e-03 | 1.5937e-13 | 3.082e-02 | 3.6022e-03  2.3073e+00 
+	     3  | 3.0000e-03 | 1.3691e-13 | 1.756e-03 | 3.6022e-03  1.1203e-10 
+	     4  | 4.0000e-03 | 1.4458e-13 | 1.594e-03 | 3.6022e-03  1.1174e-10 
+	     5  | 5.0000e-03 | 1.2235e-13 | 1.598e-03 | 3.6022e-03  1.1206e-10 
+	     6  | 6.0000e-03 | 1.7675e-13 | 1.662e-03 | 3.6022e-03  1.1177e-10 
+	     7  | 7.0000e-03 | 1.3755e-13 | 1.650e-03 | 3.6022e-03  1.1215e-10 
+	     8  | 8.0000e-03 | 1.3359e-13 | 1.586e-03 | 3.6022e-03  1.1180e-10 
+	     9  | 9.0000e-03 | 1.7021e-13 | 1.591e-03 | 3.6022e-03  1.1212e-10 
+	    10  | 1.0000e-02 | 1.5510e-13 | 1.567e-03 | 3.6022e-03  1.1177e-10 
+
+	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
+	        |            |  (total)   |    (s)      velocity    pressure  
+	     1  | 1.0000e-03 | 8.0765e-14 | 6.442e-03 | 5.6703e-03  2.8195e+00 
+	     2  | 2.0000e-03 | 9.0578e-14 | 3.228e-03 | 6.4012e-03  1.1598e+00 
+	     3  | 3.0000e-03 | 8.4737e-14 | 4.683e-03 | 6.4012e-03  1.4684e-10 
+	     4  | 4.0000e-03 | 9.2578e-14 | 3.453e-03 | 6.4012e-03  1.4512e-10 
+	     5  | 5.0000e-03 | 8.3924e-14 | 3.520e-03 | 6.4012e-03  1.4607e-10 
+	     6  | 6.0000e-03 | 8.5502e-14 | 3.617e-03 | 6.4012e-03  1.4581e-10 
+	     7  | 7.0000e-03 | 8.3046e-14 | 3.527e-03 | 6.4012e-03  1.4590e-10 
+	     8  | 8.0000e-03 | 8.4320e-14 | 4.089e-03 | 6.4012e-03  1.4597e-10 
+	     9  | 9.0000e-03 | 8.1094e-14 | 3.540e-03 | 6.4012e-03  1.4626e-10 
+	    10  | 1.0000e-02 | 7.8020e-14 | 3.531e-03 | 6.4012e-03  1.4520e-10 
+
+	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
+	        |            |  (total)   |    (s)      velocity    pressure  
+	     1  | 1.0000e-03 | 4.3949e-14 | 2.435e-02 | 1.1430e-02  4.0417e+00 
+	     2  | 2.0000e-03 | 4.2635e-14 | 1.003e-02 | 1.2040e-02  5.7953e-01 
+	     3  | 3.0000e-03 | 4.3319e-14 | 1.051e-02 | 1.2040e-02  9.5532e-11 
+	     4  | 4.0000e-03 | 4.3968e-14 | 1.011e-02 | 1.2040e-02  9.4340e-11 
+	     5  | 5.0000e-03 | 4.1433e-14 | 1.087e-02 | 1.2040e-02  9.5695e-11 
+	     6  | 6.0000e-03 | 4.5165e-14 | 1.010e-02 | 1.2040e-02  9.4537e-11 
+	     7  | 7.0000e-03 | 4.1895e-14 | 1.067e-02 | 1.2040e-02  9.5578e-11 
+	     8  | 8.0000e-03 | 4.0827e-14 | 1.138e-02 | 1.2040e-02  9.4772e-11 
+	     9  | 9.0000e-03 | 4.6319e-14 | 1.002e-02 | 1.2040e-02  9.5622e-11 
+	    10  | 1.0000e-02 | 4.2196e-14 | 1.059e-02 | 1.2040e-02  9.4840e-11 
+
+	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
+	        |            |  (total)   |    (s)      velocity    pressure  
+	     1  | 1.0000e-03 | 2.2255e-14 | 9.417e-02 | 2.2994e-02  7.3187e+00 
+	     2  | 2.0000e-03 | 2.2382e-14 | 3.813e-02 | 2.3341e-02  2.8899e-01 
+	     3  | 3.0000e-03 | 2.2497e-14 | 3.544e-02 | 2.3341e-02  6.5748e-09 
+	     4  | 4.0000e-03 | 2.2928e-14 | 3.839e-02 | 2.3341e-02  6.5539e-09 
+	     5  | 5.0000e-03 | 2.2558e-14 | 3.618e-02 | 2.3341e-02  6.5258e-09 
+	     6  | 6.0000e-03 | 2.2094e-14 | 3.719e-02 | 2.3341e-02  6.5025e-09 
+	     7  | 7.0000e-03 | 2.2223e-14 | 4.125e-02 | 2.3341e-02  6.4759e-09 
+	     8  | 8.0000e-03 | 2.2153e-14 | 3.618e-02 | 2.3341e-02  6.4539e-09 
+	     9  | 9.0000e-03 | 2.2132e-14 | 3.981e-02 | 2.3341e-02  6.4247e-09 
+	    10  | 1.0000e-02 | 2.2167e-14 | 3.611e-02 | 2.3341e-02  6.4064e-09 
+
+    ndofs   |      ||u-u_h||       order  |      ||u-Πu||        order  |
+============|=============================|=============================|
+        70  |     2.83479e-03      0.000  |     2.16474e-03      0.000  |
+       250  |     6.94501e-04      2.210  |     5.11118e-04      2.268  |
+       946  |     1.70437e-04      2.111  |     1.21282e-04      2.162  |
+      3682  |     4.22288e-05      2.053  |     2.92850e-05      2.091  |
+
+    ndofs   |      ||p-p_h||       order  |      ||p-πp||        order  |
+============|=============================|=============================|
+        70  |     6.98506e-02      0.000  |     6.98503e-02      0.000  |
+       250  |     3.49744e-02      1.087  |     3.49744e-02      1.087  |
+       946  |     1.74943e-02      1.041  |     1.74943e-02      1.041  |
+      3682  |     8.74806e-03      1.020  |     8.74806e-03      1.020  |
+
+    ndofs   |    ||∇(u-u_h)||      order  |     ||∇(u-Su)||      order  |
+============|=============================|=============================|
+        70  |     5.12836e-02      0.000  |     4.81476e-02      0.000  |
+       250  |     2.59216e-02      1.072  |     2.38875e-02      1.101  |
+       946  |     1.30868e-02      1.027  |     1.18665e-02      1.051  |
+      3682  |     6.52912e-03      1.023  |     5.90884e-03      1.026  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example206_PressureRobustness2D/">« 206 : Pressure-robustness 2D</a><a class="docs-footer-nextpage" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Thursday 30 September 2021 14:27">Thursday 30 September 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
