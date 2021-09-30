@@ -10,7 +10,7 @@ struct UserData{UST<: AbstractUserDataType,FType<:Function,NFType<:Function,ndim
     quadorder::Int                    # quadrature order that should be used to evaluate the function (is added to quadrature order of related actions)
     dimensions::SVector{ndim,Int}     # length of result and input arrays
     user_function::FType              # original function by user
-    negotiated_function::NFType       # negotiated function (with possibly more XTRIL input arguments to match general interfacess)
+    negotiated_function::NFType       # negotiated function (with possibly more XTRIL input arguments to match general interfaces)
 end
 
 """

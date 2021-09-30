@@ -404,11 +404,8 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     else
         FE = AP.FES
     end
-
-    regions::Array{Int,1} = AP.regions
     bonus_quadorder::Int = AP.action.bonus_quadorder[]
     operator = AP.operators
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
     EG = FE[1].xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
 
@@ -422,12 +419,12 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     discontinuous_operators = []
     broken_operators = []
     discontinuous::Bool = false
-    dii4op = Array{Function,1}(undef,length(FE))
+    # dii4op = Array{Function,1}(undef,length(FE))
     for j=1:length(FE)
         dofitemAT[j] = DefaultBasisAssemblyType4Operator(operator[j], AT, typeof(FE[j]).parameters[1])
         xItemDofs[j] = Dofmap4AssemblyType(FE[j],dofitemAT[j])
 
-        broken_space = FE[j].broken
+        #broken_space = FE[j].broken
         # check if operator is requested discontinuous
         discontinuous = false
         for k = 1 : length(operator[j].parameters)

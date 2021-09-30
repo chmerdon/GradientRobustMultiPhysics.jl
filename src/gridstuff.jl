@@ -184,7 +184,7 @@ end
 # FaceNodes = nodes for each face (implicitly defines the enumerations of faces)
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
-    xCellNodes = xgrid[CellNodes]
+    xCellNodes::GridAdjacencyTypes = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nnodes = num_sources(xgrid[Coordinates])
     xCellGeometries = xgrid[CellGeometries]
@@ -421,13 +421,12 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{NodePatchGroups})
-    xCellNodes = xgrid[CellNodes]
+    xCellNodes::GridAdjacencyTypes = xgrid[CellNodes]
     xNodeCells = atranspose(xCellNodes)
     nnodes = size(xgrid[Coordinates],2)
     ncells = num_sources(xCellNodes)
     ncells4node::Int = 0
     group4node = zeros(Int,nnodes)
-    cell::Int = 0
     cgroup::Int = 0
     cell_in_group = zeros(Bool,ncells)
     take_into = false
@@ -462,29 +461,28 @@ end
 # FaceNodes = nodes for each face (implicitly defines the enumerations of faces)
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
 
-    dim = size(xgrid[Coordinates],1) 
-    xCellNodes = xgrid[CellNodes]
-    ncells = num_sources(xCellNodes)
-    nnodes = num_sources(xgrid[Coordinates])
+    xCellNodes::GridAdjacencyTypes = xgrid[CellNodes]
+    ncells::Int = num_sources(xCellNodes)
+    nnodes::Int = num_sources(xgrid[Coordinates])
     xCellGeometries = xgrid[CellGeometries]
-    dim = dim_element(xCellGeometries[1])
+    dim::Int = dim_element(xCellGeometries[1])
     if dim < 2
-        # do nothing in 2D: alternative one could think of returning FaceNodes or a field 1:nnodes instead (as the edges in 2D would be vertices)
+        # do nothing in 1D
         return
     end
 
     #transpose CellNodes to get NodeCells
     xNodeCells = atranspose(xCellNodes)
-    max_ncell4node = max_num_targets_per_source(xNodeCells)
+    max_ncell4node::Int = max_num_targets_per_source(xNodeCells)
 
-    xEdgeCells = VariableTargetAdjacency(Int32)
+    xEdgeCells::GridAdjacencyTypes = VariableTargetAdjacency(Int32)
 
 
     # find unique edge enumeration rules
     EG::Array{DataType,1} = unique(xCellGeometries)
-    edge_rules = Array{Array{Int,2},1}(undef,length(EG))
+    edge_rules::Array{Array{Int32,2},1} = Array{Array{Int32,2},1}(undef,length(EG))
     EEG = [edgetype_of_celledge(EG[1], 1)]
-    maxedgenodes = 0
+    maxedgenodes::Int = 0
     for j = 1 : length(EG)
         edge_rules[j] = edge_enum_rule(EG[j])
         maxedgenodes = max(size(edge_rules[j],2),maxedgenodes)
@@ -513,15 +511,14 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
         xEdgeNodes = zeros(Int32,0)
     end
 
-    edge_rule::Array{Int,2} = edge_rules[1]
-    edge_rule2::Array{Int,2} = edge_rules[1]
-    current_item = zeros(Int32,2) # should be large enough to store largest nnodes_per_celledge
-    flag4item = zeros(Bool,nnodes)
+    edge_rule::Array{Int32,2} = edge_rules[1]
+    edge_rule2::Array{Int32,2} = edge_rules[1]
+    current_item::Array{Int32,1} = zeros(Int32,nnodes_for_geometry(EEG[1])) # should be large enough to store largest nnodes_per_celledge
+    flag4item::Array{Bool,1} = zeros(Bool,nnodes)
     cellEG = EG[1]
     cell2EG = EG[1]
-    node::Int = 0
-    node_cells = zeros(Int32,max_ncell4node) # should be large enough to store largest nnodes_per_celledge
-    item::Int = 0
+    node::Int32 = 0
+    node_cells::Array{Int32,1} = zeros(Int32,max_ncell4node) # should be large enough to store largest nnodes_per_celledge
     cell2::Int = 0
     nneighbours::Int = 0
     edges_per_cell::Int = nedges_for_geometry(EG[1])
@@ -529,9 +526,9 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
     nodes_per_celledge::Int = nnodes_for_geometry(EEG[1])
     nodes_per_celledge2::Int = nnodes_for_geometry(EEG[1])
     common_nodes::Int = 0
-    cells_with_common_edge = zeros(Int32,max_ncell4node)
-    pos_in_cells_with_common_edge = zeros(Int32,max_ncell4node)
-    sign_in_cells_with_common_edge = zeros(Int32,max_ncell4node)
+    cells_with_common_edge::Array{Int32,1} = zeros(Int32,max_ncell4node)
+    pos_in_cells_with_common_edge::Array{Int32,1} = zeros(Int32,max_ncell4node)
+    sign_in_cells_with_common_edge::Array{Int32,1} = zeros(Int32,max_ncell4node)
     ncells_with_common_edge::Int = 0
     edge::Int = 0
     iEG::Int = 0
@@ -925,7 +922,7 @@ function collectVolumes4Geometries(T::Type{<:Real}, xgrid::ExtendableGrid, ItemT
     xItemNodes = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_NODES) ]
     xGeometries = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_GEOMETRY) ]
     EG = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_UNIQUEGEOMETRY) ]
-    nitems = num_sources(xItemNodes)
+    nitems::Int = num_sources(xItemNodes)
 
     # get Volume4ElemType handlers
     handlers = Array{Function,1}(undef, length(EG))
@@ -934,7 +931,7 @@ function collectVolumes4Geometries(T::Type{<:Real}, xgrid::ExtendableGrid, ItemT
     end
 
     # init Volumes
-    xVolumes = zeros(T,nitems)
+    xVolumes::Array{T,1} = zeros(T,nitems)
 
     # loop over items and call handlers
     iEG::Int = 1
@@ -980,14 +977,13 @@ end
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     # get links to other stuff
     xCoordinates = xgrid[Coordinates]
-    xFaceNodes = xgrid[FaceNodes]
-    xBFaceNodes = xgrid[BFaceNodes]
-    nnodes = num_sources(xCoordinates)
-    nbfaces = num_sources(xBFaceNodes)
-    nfaces = num_sources(xFaceNodes)
+    xFaceNodes::GridAdjacencyTypes = xgrid[FaceNodes]
+    xBFaceNodes::GridAdjacencyTypes = xgrid[BFaceNodes]
+    nnodes::Int = num_sources(xCoordinates)
+    nbfaces::Int = num_sources(xBFaceNodes)
 
     # init BFaces
-    xBFaces = zeros(Int32,nbfaces)
+    xBFaces::Array{Int32,1} = zeros(Int32,nbfaces)
     #xBFaceGeometries = xgrid[BFaceGeometries]
     #if typeof(xBFaceGeometries) == VectorOfConstants{DataType}
     #    EG = xBFaceGeometries[1]
@@ -997,12 +993,10 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     #    end
     #end
 
-
     # transpose FaceNodes to get NodeFaces
     xNodeFaces = atranspose(xFaceNodes)
-    max_nfaces4node = max_num_targets_per_source(xNodeFaces)
 
-    flag4item = zeros(Bool,nnodes)
+    flag4item::Array{Bool,1} = zeros(Bool,nnodes)
     nodes_per_bface::Int = 0
     nodes_per_face::Int = 0
     common_nodes::Int = 0

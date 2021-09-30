@@ -70,15 +70,17 @@ end
 function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) where {FEType <: AbstractFiniteElement}
     ## Beware: Automatic broken DofMap generation currently only reliable for CellDofs
 
+    @logmsg MoreInfo "Generating $DM for $(FES.name)"
+
     ## prepare dofmap patterns
     xgrid = FES.xgrid
     EG = xgrid[UCG4DofMap(DM)]
     ncomponents::Int = get_ncomponents(FEType)
-    need_faces = false
-    need_edges = false
+    need_faces::Bool = false
+    need_edges::Bool = false
     maxdofs4item::Int = 0
-    dofmap_patterns = Array{String,1}(undef,length(EG))
-    dofmap_quantifiers = Array{Array{Int,1},1}(undef,length(EG))
+    dofmap_patterns::Array{String,1} = Array{String,1}(undef,length(EG))
+    dofmap_quantifiers::Array{Array{Int,1},1} = Array{Array{Int,1},1}(undef,length(EG))
     dofs4item4component::Int = 0
     dofs4item_single::Int = 0
     for j = 1 : length(EG)
@@ -114,8 +116,8 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
         dofs4item_single = 0
     end
 
-    nnodes = size(xgrid[Coordinates],2)
-    ncells = num_sources(xgrid[CellNodes])
+    nnodes::Int32 = size(xgrid[Coordinates],2)
+    ncells::Int = num_sources(xgrid[CellNodes])
     xItemNodes = xgrid[SuperItemNodes4DofMap(DM)]
     xItemGeometries = xgrid[ItemGeometries4DofMap(DM)]
     if need_faces
@@ -129,8 +131,8 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
 
 
     offset4component::Int = 0
-    xItemNodes = xgrid[SuperItemNodes4DofMap(DM)]
-    nitems = num_sources(xItemNodes)
+    xItemNodes::GridAdjacencyTypes = xgrid[SuperItemNodes4DofMap(DM)]
+    nitems::Int = num_sources(xItemNodes)
     for k = 1 : length(dofmap_patterns[1])
         if dofmap_patterns[1][k] == 'N'
             offset4component += nnodes*dofmap_quantifiers[1][k]
@@ -147,7 +149,7 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
 
     ## generate dofmap from patterns
     sub2sup = nothing
-    nsubitems = 0
+    nsubitems::Int = 0
     try 
         Sub2SupItems = xgrid[Sub2Sup4DofMap(DM)]
         sub2sup = (x) -> Sub2SupItems[x]
@@ -157,6 +159,15 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
         nsubitems = nitems
     end
 
+    nnodes4EG::Array{Int,1} = zeros(Int,length(EG))
+    nfaces4EG::Array{Int,1} = zeros(Int,length(EG))
+    nedges4EG::Array{Int,1} = zeros(Int,length(EG))
+    for j = 1 : length(EG)
+        nnodes4EG[j] = nnodes_for_geometry(EG[j])
+        nfaces4EG[j] = nfaces_for_geometry(EG[j])
+        nedges4EG[j] = nedges_for_geometry(EG[j])
+    end
+
     if FES.broken == true
         xItemDofs = SerialVariableTargetAdjacency(Int32)
     else
@@ -164,28 +175,25 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
     end
     itemEG = EG[1]
     pattern::String = dofmap_patterns[1]
-    iEG = 1
-    k = 0
-    itemdofs = zeros(Int,maxdofs4item)
-    localnode = 0
-    localface = 0
-    localedge = 0
-    newdof::Int = 0
-    offset::Int = 0
-    pos::Int = 0
-    q::Int = 0
-    total_broken_dofs::Int = 0
+    iEG::Int32 = 1
+    k::Int32 = 0
+    itemdofs::Array{Int32,1} = zeros(Int32,maxdofs4item)
+    offset::Int32 = 0
+    pos::Int32 = 0
+    q::Int32 = 0
     for subitem = 1 : nsubitems
         itemEG = xItemGeometries[subitem]
         item = sub2sup(subitem)
-        iEG = findfirst(isequal(itemEG), EG)
+        if length(EG) > 1
+            iEG = findfirst(isequal(itemEG), EG)
+        end
         pattern = dofmap_patterns[iEG]
         for c = 1 : ncomponents
             offset = (c-1)*offset4component
             for k = 1 : length(pattern)
                 q = dofmap_quantifiers[iEG][k]
                 if pattern[k] == 'N'
-                    for n = 1 : nnodes_for_geometry(itemEG)
+                     for n = 1 : nnodes4EG[iEG]
                         for m = 1 : q
                             pos += 1
                             itemdofs[pos] = xItemNodes[n,item] + offset + (m-1)*nnodes
@@ -193,7 +201,7 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
                     end
                     offset += nnodes*q
                 elseif pattern[k] == 'F'
-                    for n = 1 : nfaces_for_geometry(itemEG)
+                    for n = 1 : nfaces4EG[iEG]
                         for m = 1 : q
                             pos += 1
                             itemdofs[pos] = xItemFaces[n,item] + offset + (m-1)*nfaces
@@ -201,7 +209,7 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
                     end
                     offset += nfaces*q
                 elseif pattern[k] == 'E'
-                    for n = 1 : nedges_for_geometry(itemEG)
+                    for n = 1 : nedges4EG[iEG]
                         for m = 1 : q
                             pos += 1
                             itemdofs[pos] = xItemEdges[n,item] + offset + (m-1)*nedges
@@ -247,7 +255,7 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
         if FES.broken
             append!(xItemDofs,pos)
         else
-            append!(xItemDofs,itemdofs[1:pos])
+            append!(xItemDofs,view(itemdofs,1:pos))
         end
         pos = 0
     end
@@ -308,8 +316,6 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Union{Type{BFaceDofs},Typ
     xFaceCells = FES.xgrid[FaceCells]
     xCellNodes = FES.xgrid[CellNodes]
     xCellDofs = FES[CellDofs]
-    nnodes = size(xgrid[Coordinates],2)
-    ncells = num_sources(xgrid[CellNodes])
     xFaceNodes = FES.xgrid[SuperItemNodes4DofMap(DM)]
     xFaceGeometries = xgrid[ItemGeometries4DofMap(DM)]
     xFaceDofs = VariableTargetAdjacency(Int32)
@@ -327,14 +333,11 @@ function init_broken_dofmap!(FES::FESpace{FEType}, DM::Union{Type{BFaceDofs},Typ
     if need_edges
         xFaceEdges = xgrid[FaceEdges]
         xCellEdges = xgrid[CellEdges]
-        nedges = num_sources(xgrid[EdgeNodes])
         local_edges = zeros(Int, max_num_targets_per_source(xFaceEdges))
     end
 
-    itemEG = EG[1]
     pattern::String = dofmap_patterns[1]
     iEG::Int = 1
-    itemdofs = zeros(Int,maxdofs4item)
     local_nodes = zeros(Int, max_num_targets_per_source(xFaceNodes))
     local_face::Int = 0
     local_dofs = zeros(Int, max_num_targets_per_source(xCellDofs))

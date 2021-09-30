@@ -192,7 +192,7 @@ constructor for a bilinearform that describes a(u,v) = (αu,v) or (u,αv) with s
 function ReactionOperator(α = 1.0, ncomponents = 1; name = "auto", AT::Type{<:AbstractAssemblyType} = ON_CELLS, id = Identity, regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
         name = "(u,v)"
-        if typeof(α) <: Float64
+        if typeof(α) <: Real
             if α != 1.0
                 name = "$α " * name
             end
@@ -200,7 +200,7 @@ function ReactionOperator(α = 1.0, ncomponents = 1; name = "auto", AT::Type{<:A
             name = "(αu,v)"
         end
     end
-    if typeof(α) <: Float64
+    if typeof(α) <: Real
         return PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[id,id], NoAction(), [1], α, regions, store, AssemblyInitial)
     elseif typeof(α) <: UserData{AbstractDataFunction}
         xdim = α.dimensions[1]
