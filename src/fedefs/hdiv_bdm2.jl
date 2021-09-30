@@ -10,8 +10,8 @@ allowed ElementGeometries:
 """
 abstract type HDIVBDM2{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:HDIVBDM2})
-    print(io,"HDIVBDM2{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, ::Type{<:HDIVBDM2{edim}}) where {edim}
+    print(io,"HDIVBDM2{$edim}")
 end
 
 get_ncomponents(FEType::Type{<:HDIVBDM2}) = FEType.parameters[1]

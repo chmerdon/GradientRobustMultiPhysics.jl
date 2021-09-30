@@ -14,8 +14,8 @@ allowed ElementGeometries:
 """
 abstract type H1BR{edim} <: AbstractH1FiniteElementWithCoefficients where {edim<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:H1BR})
-    print(io,"H1BR{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, ::Type{<:H1BR{edim}}) where {edim}
+    print(io,"H1BR{$edim}")
 end
 
 get_ncomponents(FEType::Type{<:H1BR}) = FEType.parameters[1]

@@ -13,8 +13,8 @@ allowed element geometries:
 """
 abstract type H1MINI{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:H1MINI})
-    print(io,"H1MINI{$(FEType.parameters[1]),$(FEType.parameters[2])}")
+function Base.show(io::Core.IO, ::Type{<:H1MINI{ncomponents,edim}}) where {ncomponents,edim}
+    print(io,"H1MINI{$ncomponents,$edim}")
 end
 
 get_ncomponents(FEType::Type{<:H1MINI}) = FEType.parameters[1]

@@ -11,8 +11,8 @@ allowed ElementGeometries:
 """
 abstract type HDIVRT1{edim} <: AbstractHdivFiniteElement where {edim<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:HDIVRT1})
-    print(io,"HDIVRT1{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, FEType::Type{<:HDIVRT1{edim}}) where {edim}
+    print(io,"HDIVRT1{$edim}")
 end
 
 get_ncomponents(FEType::Type{<:HDIVRT1}) = FEType.parameters[1]
@@ -35,8 +35,8 @@ get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Type{CellDofs}, EG::Type{<:Tetr
 get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Type{FaceDofs}, EG::Type{<:Triangle2D}) = "i3"
 get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Type{BFaceDofs}, EG::Type{<:Triangle2D}) = "i3"
 
-isdefined(FEType::Type{<:HDIVRT1{2}}, ::Type{<:Triangle2D}) = true
-isdefined(FEType::Type{<:HDIVRT1{3}}, ::Type{<:Tetrahedron3D}) = true
+isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Triangle2D}) = true
+isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Tetrahedron3D}) = true
 
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT1}

@@ -13,8 +13,8 @@ allowed element geometries:
 """
 abstract type H1BUBBLE{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:H1BUBBLE})
-    print(io,"H1BUBBLE{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, ::Type{<:H1BUBBLE{ncomponents}}) where{ncomponents}
+    print(io,"H1BUBBLE{$ncomponents}")
 end
 
 get_ncomponents(FEType::Type{<:H1BUBBLE}) = FEType.parameters[1]

@@ -11,8 +11,8 @@ allowed ElementGeometries:
 """
 abstract type H1P2B{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:H1P2B})
-    print(io,"H1P2B{$(FEType.parameters[1]),$(FEType.parameters[2])}")
+function Base.show(io::Core.IO, ::Type{<:H1P2B{ncomponents,edim}}) where {ncomponents,edim}
+    print(io,"H1P2B{$ncomponents,$edim}")
 end
 
 get_ncomponents(FEType::Type{<:H1P2B}) = FEType.parameters[1]
@@ -29,7 +29,7 @@ get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{CellDofs}, EG::Type{<:AbstractE
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1C1"
 
-isdefined(FEType::Type{<:H1P2B}, ::Type{<:Triangle2D}) = (FEType.parameters[2] == 2)
+isdefined(FEType::Type{<:H1P2B}, ::Type{<:Triangle2D}) = true
 
 get_ref_cellmoments(::Type{<:H1P2B}, ::Type{<:Triangle2D}) = [0//1, 0//1, 0//1, 1//3, 1//3, 1//3, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 

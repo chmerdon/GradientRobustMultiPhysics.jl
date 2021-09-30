@@ -9,8 +9,8 @@ allowed on every ElementGeometry
 """
 abstract type H1P0{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:H1P0})
-    print(io,"H1P0{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, ::Type{<:H1P0{ncomponents}}) where {ncomponents}
+    print(io,"H1P0{$ncomponents}")
 end
 
 get_ncomponents(FEType::Type{<:H1P0}) = FEType.parameters[1]

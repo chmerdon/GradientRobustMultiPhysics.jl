@@ -14,8 +14,8 @@ allowed ElementGeometries:
 """
 abstract type H1P2{ncomponents,edim} <: AbstractH1FiniteElement where {ncomponents<:Int,edim<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:H1P2})
-    print(io,"H1P2{$(FEType.parameters[1]),$(FEType.parameters[2])}")
+function Base.show(io::Core.IO, ::Type{<:H1P2{ncomponents,edim} }) where {ncomponents,edim} 
+    print(io,"H1P2{$ncomponents,$edim}")
 end
 
 get_ncomponents(FEType::Type{<:H1P2}) = FEType.parameters[1]

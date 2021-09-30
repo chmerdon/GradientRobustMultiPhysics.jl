@@ -12,8 +12,8 @@ allowed ElementGeometries:
 """
 abstract type HCURLN0{edim} <: AbstractHcurlFiniteElement where {edim<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:HCURLN0})
-    print(io,"HCURLN0{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, ::Type{<:HCURLN0{edim}}) where {edim}
+    print(io,"HCURLN0{$edim}")
 end
 
 get_ncomponents(FEType::Type{<:HCURLN0}) = FEType.parameters[1]

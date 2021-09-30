@@ -13,8 +13,8 @@ allowed ElementGeometries:
 """
 abstract type H1CR{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
-function Base.show(io::Core.IO, FEType::Type{<:H1CR})
-    print(io,"H1CR{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, ::Type{<:H1CR{ncomponents}}) where {ncomponents}
+    print(io,"H1CR{$ncomponents}")
 end
 
 get_ncomponents(FEType::Type{<:H1CR}) = FEType.parameters[1]

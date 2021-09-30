@@ -47,21 +47,32 @@ AbstractFiniteElement
 
 ## List of implemented Finite Elements
 
-The following table lists all curently implemented finite elements. Click on them to find out more details.
+The following table lists all curently implemented finite elements and on which geometries they are available (in brackets a dofmap pattern for CellDofs is shown and the number of local degrees of freedom for a vector-valued realisation). Click on the FEType to find out more details.
+
+| FEType | Triangle2D | Parallelogram2D | Tetrahedron3D | Parallelepiped3D |
+| :----------------: | :----------------: |  :----------------: |  :----------------: |  :----------------: | 
+| AbstractH1FiniteElementWithCoefficients |   |   |   |   |
+| [`H1BR`](@ref) | ✓ (N1f1, 9) | ✓ (N1f1, 12) | ✓ (N1f1, 16) |   |
+| [`H1P1TEB`](@ref) | ✓ (N1f1, 9) |   | ✓ (N1e1, 18) |   |
+| AbstractH1FiniteElement |   |   |   |   |
+| [`H1BUBBLE`](@ref) | ✓ (I1, 2) | ✓ (I1, 2) | ✓ (I1, 3) |   |
+| [`H1CR`](@ref) | ✓ (F1, 6) | ✓ (F1, 8) | ✓ (F1, 12) |   |
+| [`H1MINI`](@ref) | ✓ (N1I1, 8) | ✓ (N1I1, 10) | ✓ (N1I1, 15) |   |
+| [`H1P0`](@ref) | ✓ (I1, 2) | ✓ (I1, 2) | ✓ (I1, 3) | ✓ (I1, 3) |
+| [`H1P1`](@ref) | ✓ (N1, 6) | ✓ (N1, 8) | ✓ (N1, 12) | ✓ (N1, 24) |
+| [`H1P2`](@ref) | ✓ (N1F1, 12) | ✓ (N1F1, 16) | ✓ (N1E1, 30) |   |
+| [`H1P2B`](@ref) | ✓ (N1F1I1, 14) |   |   |   |
+| [`H1P3`](@ref) | ✓ (N1F2I1, 20) |   |   |   |
+| AbstractHcurlFiniteElement |   |   |   |   |
+| [`HCURLN0`](@ref) | ✓ (f1, 3) | ✓ (f1, 4) | ✓ (e1, 6) |   |
+| AbstractHdivFiniteElement |   |   |   |   |
+| [`HDIVBDM1`](@ref) | ✓ (f2, 6) | ✓ (f2, 8) | ✓ (f3, 12) |   |
+| [`HDIVBDM2`](@ref) | ✓ (f3i3, 12) |   |   |   |
+| [`HDIVRT0`](@ref) | ✓ (f1, 3) | ✓ (f1, 4) | ✓ (f1, 4) | ✓ (f1, 6) |
+| [`HDIVRT1`](@ref) | ✓ (f2i2, 8) |   | ✓ (f3i3, 15) |   |
 
 
-| H1 finite elements | Hdiv finite elements | Hcurl finite elements |
-| :----------------: | :------------------: | :-------------------: |
-| [`H1P0`](@ref)     | [`HDIVRT0`](@ref)    | [`HCURLN0`](@ref)     |
-| [`H1P1`](@ref)     | [`HDIVBDM1`](@ref)   |                       |
-| [`H1MINI`](@ref)   | [`HDIVRT1`](@ref)    |                       |
-| [`H1CR`](@ref)     | [`HDIVBDM2`](@ref)   |                       |
-| [`H1BR`](@ref)     |                      |                       |
-| [`H1P1TEB`](@ref)  |                      |                       |
-| [`H1P2`](@ref)     |                      |                       |
-| [`H1P2B`](@ref)    |                      |                       |
-| [`H1P3`](@ref)     |                      |                       |
-
+Note: the dofmap pattern describes the connection of the local degrees of freedom to entities of the grid and also hints to the continuity. Here, "N" or "n" means nodes, "F" or "f" means faces, "E" or "e" means edges and "I" means interior (dofs without any continuity across elements). Capital letters cause that every component has its own degree of freedom, while small letters signalize that only one dof is associated to the entity. As an example "N1f1" (for the Bernardi-Raugel element) means that at each node sits one dof per component and at each face sits a single dof. Usually finite elements that involve small letters are only defined vector-valued (i.e. the number of components has to match the element dimension), while finite elements that only involve capital letters are available for any number of components.
 
 
 ## H1-conforming finite elements

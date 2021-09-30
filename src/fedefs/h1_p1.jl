@@ -16,8 +16,8 @@ allowed ElementGeometries:
 abstract type H1P1{ncomponents} <: AbstractH1FiniteElement where {ncomponents<:Int} end
 
 
-function Base.show(io::Core.IO, FEType::Type{<:H1P1})
-    print(io,"H1P1{$(FEType.parameters[1])}")
+function Base.show(io::Core.IO, ::Type{<:H1P1{ncomponents}}) where {ncomponents}
+    print(io,"H1P1{$ncomponents}")
 end
 
 get_ncomponents(FEType::Type{<:H1P1}) = FEType.parameters[1] # is this okay?
