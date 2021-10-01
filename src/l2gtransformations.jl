@@ -5,11 +5,10 @@
 # maps points of reference geometries to global world
 # and is e.g. used by FEBasisEvaluator or CellFinder
 #
-# needs call of update! on entry of a new cell
+# needs call of update! on entry of a new cell (to update the trafo matrix and the determinant det)
 # 
 # eval! maps local xref on cell to global x (e.g. for evaluation of data functions)
 # mapderiv! gives the derivative of the mapping (for computation of derivatives of basis functions)
-# piola! gives the piola map (for flux-preserving transformation of Hdiv basis functions)
 
 """
     L2GTransformer
@@ -52,6 +51,7 @@ function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian1D}, item::Int)
         T.citem[] = item
         T.b[1] = T.Coords[1,T.Nodes[1,item]]
         T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
+        T.det[] = T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -63,6 +63,7 @@ function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian2D}, item::Int)
         T.b[2] = T.Coords[2,T.Nodes[1,item]]
         T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
         T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
+        T.det[] = T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -76,6 +77,7 @@ function update!(T::L2GTransformer{<:Real,<:Edge1D,Cartesian3D}, item::Int)
         T.A[1,1] = T.Coords[1,T.Nodes[2,item]] - T.b[1]
         T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
         T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
+        T.det[] = T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -89,6 +91,7 @@ function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, item::Int)
         T.A[1,2] = T.Coords[1,T.Nodes[3,item]] - T.b[1]
         T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
         T.A[2,2] = T.Coords[2,T.Nodes[3,item]] - T.b[2]
+        T.det[] = 2*T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -102,6 +105,7 @@ function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, item::
         T.A[1,2] = T.Coords[1,T.Nodes[4,item]] - T.b[1]
         T.A[2,1] = T.Coords[2,T.Nodes[2,item]] - T.b[2]
         T.A[2,2] = T.Coords[2,T.Nodes[4,item]] - T.b[2]
+        T.det[] = T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -118,6 +122,7 @@ function update!(T::L2GTransformer{<:Real,<:Triangle2D,Cartesian3D}, item::Int)
         T.A[2,2] = T.Coords[2,T.Nodes[3,item]] - T.b[2]
         T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
         T.A[3,2] = T.Coords[3,T.Nodes[3,item]] - T.b[3]
+        T.det[] = 2*T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -134,6 +139,7 @@ function update!(T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian3D}, item::
         T.A[2,2] = T.Coords[2,T.Nodes[4,item]] - T.b[2]
         T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
         T.A[3,2] = T.Coords[3,T.Nodes[4,item]] - T.b[3]
+        T.det[] = T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -154,6 +160,7 @@ function update!(T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}, item::In
         T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
         T.A[3,2] = T.Coords[3,T.Nodes[3,item]] - T.b[3]
         T.A[3,3] = T.Coords[3,T.Nodes[4,item]] - T.b[3]
+        T.det[] = 6*T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -173,6 +180,7 @@ function update!(T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, item:
         T.A[3,1] = T.Coords[3,T.Nodes[2,item]] - T.b[3]
         T.A[3,2] = T.Coords[3,T.Nodes[4,item]] - T.b[3]
         T.A[3,3] = T.Coords[3,T.Nodes[5,item]] - T.b[3]
+        T.det[] = T.ItemVolumes[T.citem[]]
     end    
     return nothing
 end
@@ -297,52 +305,5 @@ function mapderiv!(M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartes
     for j = 1 : 3, k = 1 : 3
         M[j,k] = T.C[j,k] / T.det[]
     end
-    return nothing
-end
-
-# PIOLA MAPS
-# x = A*xref + b
-# returns A
-function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Triangle2D,Cartesian2D}, xref)
-    M[1,1] = T.A[1,1]
-    M[1,2] = T.A[1,2]
-    M[2,1] = T.A[2,1]
-    M[2,2] = T.A[2,2]
-    info[1] = 2*T.ItemVolumes[T.citem[]]
-    return nothing
-end
-function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Parallelogram2D,Cartesian2D}, xref)
-    M[1,1] = T.A[1,1]
-    M[1,2] = T.A[1,2]
-    M[2,1] = T.A[2,1]
-    M[2,2] = T.A[2,2]
-    info[1] = T.ItemVolumes[T.citem[]]
-    return nothing
-end
-function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Tetrahedron3D,Cartesian3D}, xref)
-    M[1,1] = T.A[1,1]
-    M[1,2] = T.A[1,2]
-    M[1,3] = T.A[1,3]
-    M[2,1] = T.A[2,1]
-    M[2,2] = T.A[2,2]
-    M[2,3] = T.A[2,3]
-    M[3,1] = T.A[3,1]
-    M[3,2] = T.A[3,2]
-    M[3,3] = T.A[3,3]
-    info[1] = 6*T.ItemVolumes[T.citem[]]
-    return nothing
-end
-# similar for parallelogram
-function piola!(info::Array{<:Real,1}, M::Matrix, T::L2GTransformer{<:Real,<:Parallelepiped3D,Cartesian3D}, xref)
-    M[1,1] = T.A[1,1]
-    M[1,2] = T.A[1,2]
-    M[1,3] = T.A[1,3]
-    M[2,1] = T.A[2,1]
-    M[2,2] = T.A[2,2]
-    M[2,3] = T.A[2,3]
-    M[3,1] = T.A[3,1]
-    M[3,2] = T.A[3,2]
-    M[3,3] = T.A[3,3]
-    info[1] = T.ItemVolumes[T.citem[]]
     return nothing
 end
