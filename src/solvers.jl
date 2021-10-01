@@ -500,9 +500,9 @@ function assemble!(
 end
 
 # for linear, stationary PDEs that can be solved in one step
-function solve_direct!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0, show_details::Bool = false) where {T <: Real}
+function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0, show_details::Bool = false) where {T, Tv, Ti}
 
-    FEs = Array{FESpace,1}([])
+    FEs = Array{FESpace{Tv,Ti},1}([])
     for j=1 : length(Target.FEVectorBlocks)
         push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
@@ -694,7 +694,7 @@ end
 
 
 # solve full system iteratively until fixpoint is reached
-function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0) where {T <: Real}
+function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0) where {T,Tv,Ti}
 
     ## get relevant solver parameters
     fixed_penalty = SC.user_params[:fixed_penalty]
@@ -710,7 +710,7 @@ function solve_fixpoint_full!(Target::FEVector{T}, PDE::PDEDescription, SC::Solv
     skip_update = SC.user_params[:skip_update]
 
     # ASSEMBLE SYSTEM INIT
-    FEs = Array{FESpace,1}([])
+    FEs = Array{FESpace{Tv,Ti},1}([])
     for j = 1 : length(Target.FEVectorBlocks)
         push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
@@ -868,7 +868,7 @@ end
 
 # solve system iteratively until fixpoint is reached
 # by consecutively solving subiterations
-function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription, SC::SolverConfig{T}; time = 0) where {T <: Real}
+function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T}; time = 0) where {T,Tv,Ti}
 
     ## get relevant solver parameters
     subiterations = SC.user_params[:subiterations]
@@ -886,7 +886,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T}, PDE::PDEDescription,
 
     # ASSEMBLE SYSTEM INIT
     assembly_time = @elapsed begin
-        FEs = Array{FESpace,1}([])
+        FEs = Array{FESpace{Tv,Ti},1}([])
         for j=1 : length(Target.FEVectorBlocks)
             push!(FEs,Target.FEVectorBlocks[j].FES)
         end    
@@ -1278,12 +1278,12 @@ Further (very experimental) optional arguments for TimeControlSolver are:
 """
 function TimeControlSolver(
     PDE::PDEDescription,
-    InitialValues::FEVector,    # contains initial values and stores solution of advance! methods
+    InitialValues::FEVector{T,Tv,Ti},    # contains initial values and stores solution of advance! methods
     TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
     dt_testfunction_operator = [],
     dt_action = [],
     nonlinear_dt = [],
-    kwargs...)
+    kwargs...) where {T,Tv,Ti}
 
     ## generate solver configurations
     user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
@@ -1317,9 +1317,9 @@ function TimeControlSolver(
     end
 
     # allocate matrices etc
-    FEs = Array{FESpace,1}([])
+    FEs = Array{FESpace{Tv,Ti},1}(undef,length(InitialValues.FEVectorBlocks))
     for j = 1 : length(InitialValues.FEVectorBlocks)
-        push!(FEs,InitialValues.FEVectorBlocks[j].FES)
+        FEs[j] = InitialValues.FEVectorBlocks[j].FES
     end    
     eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
     AM = Array{FEMatrix{Float64},1}(undef,nsubiterations)

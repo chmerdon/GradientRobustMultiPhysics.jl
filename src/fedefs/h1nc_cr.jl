@@ -35,7 +35,7 @@ isdefined(FEType::Type{<:H1CR}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1CR}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:H1CR}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: H1CR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1CR,APT}
     # preserve face means
     xItemVolumes = FE.xgrid[FaceVolumes]
     xItemNodes = FE.xgrid[FaceNodes]
@@ -56,7 +56,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: H1CR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1CR,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)

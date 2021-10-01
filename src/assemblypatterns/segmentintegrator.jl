@@ -6,7 +6,7 @@
 struct SegmentIntegrator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType, SG <: AbstractElementGeometry, ACT <: AbstractAction}
     FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
     FEB::FEVectorBlock # holds coefficients
-    xItemDofs::DofMapTypes # holds dof numbers
+    xItemDofs::DofMapTypes{Int32} # holds dof numbers
     action::ACT # additional action to postprocess operator evaluation
     action_input::Array{T,1}
     action_result::Array{T,1}
@@ -94,7 +94,7 @@ function integrate!(
     action_result::Array{T,1} = SI.action_result
     coeffs::Array{T,1} = FEB.entries
     basisvals::Union{SharedCValView{T},Array{T,3}} = FEBE.cvals
-    xItemDofs::DofMapTypes = SI.xItemDofs
+    xItemDofs::DofMapTypes{Int32} = SI.xItemDofs
     weights::Array{T,1} = qf.w
 
     fill!(result,0)

@@ -39,25 +39,25 @@ get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Triangle2D}) = [1//3, 1//3, 1//3,
 get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Tetrahedron3D}) = [1//4, 1//4, 1//4, 1//4, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = [1//4, 1//4, 1//4, 1//4, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1MINI, APT}
     nnodes = size(FE.xgrid[Coordinates],2)
     ncells = num_sources(FE.xgrid[CellNodes])
     point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes + ncells, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1MINI, APT}
     # delegate edge nodes to node interpolation
     subitems = slice(FE.xgrid[EdgeNodes], items)
     interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1MINI, APT}
     # delegate face nodes to node interpolation
     subitems = slice(FE.xgrid[FaceNodes], items)
     interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: H1MINI}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1MINI, APT}
     # delegate cell nodes to node interpolation
     subitems = slice(FE.xgrid[CellNodes], items)
     interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)

@@ -37,7 +37,7 @@ isdefined(FEType::Type{<:H1P3}, ::Type{<:Triangle2D}) = true
 
 get_ref_cellmoments(::Type{<:H1P3}, ::Type{<:Triangle2D}) = [1//30, 1//30, 1//30, 3//40, 3//40, 3//40, 3//40, 3//40, 3//40, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P3}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {Tv,Ti,FEType <: H1P3,APT}
     edim = get_edim(FEType)
     coffset = size(FE.xgrid[Coordinates],2)
     if edim == 1
@@ -51,7 +51,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = coffset, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P3}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {Tv,Ti,FEType <: H1P3,APT}
     edim = get_edim(FEType)
     if edim == 3
         # delegate edge nodes to node interpolation
@@ -63,7 +63,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P3}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {Tv,Ti,FEType <: H1P3,APT}
     edim = get_edim(FEType)
     if edim == 2
         # delegate face nodes to node interpolation
@@ -84,7 +84,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
 end
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {FEType <: H1P3}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {Tv,Ti,FEType <: H1P3,APT}
     edim = get_edim(FEType)
     ncells = num_sources(FE.xgrid[CellNodes])
     if edim == 2
@@ -158,7 +158,7 @@ function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P3}, ::Type{<
 end
 
 # we need to change the ordering of the face dofs on faces that have a negative orientation sign
-function get_basissubset(::Type{ON_CELLS}, FE::FESpace{<:H1P3}, EG::Type{<:Triangle2D})
+function get_basissubset(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:H1P3,APT}, EG::Type{<:Triangle2D})  where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces::Int = nfaces_for_geometry(EG)
     ncomponents = get_ncomponents(eltype(FE))

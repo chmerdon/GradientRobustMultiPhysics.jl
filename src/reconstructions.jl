@@ -2,18 +2,16 @@
 abstract type ReconstructionCoefficients{FE1,FE2,AT} <: AbstractGridFloatArray2D end
 abstract type ReconstructionDofs{FE1,FE2,AT} <: AbstractGridIntegerArray2D end
 
-struct ReconstructionHandler{FE1,FE2,AT,EG, FType <: Function}
-    FES::FESpace{FE1,ON_CELLS}
-    FER::FESpace{FE2,ON_CELLS}
+struct ReconstructionHandler{Tv,Ti,FE1,FE2,AT,EG, FType <: Function}
+    FES::FESpace{Tv,Ti,FE1,ON_CELLS}
+    FER::FESpace{Tv,Ti,FE2,ON_CELLS}
     interior_offset::Int
     interior_ndofs::Int
-    interior_coefficients::Matrix{Float64} # coefficients for interior basis functions are precomputed
+    interior_coefficients::Matrix{Tv} # coefficients for interior basis functions are precomputed
     boundary_coefficients::FType # coefficient on boundary are recalculated every time
 end
 
-function ReconstructionHandler(FES,FES_Reconst,AT,EG)
-    FE1 = typeof(FES).parameters[1]
-    FE2 = typeof(FES_Reconst).parameters[1]
+function ReconstructionHandler(FES::FESpace{Tv,Ti,FE1,APT},FES_Reconst::FESpace{Tv,Ti,FE2,APT},AT,EG) where {Tv,Ti,FE1,FE2,APT}
     xgrid = FES.xgrid
     interior_offset = interior_dofs_offset(AT,FE2,EG)
     interior_ndofs = get_ndofs(AT,FE2,EG) - interior_offset
@@ -23,10 +21,10 @@ function ReconstructionHandler(FES,FES_Reconst,AT,EG)
         coeffs = zeros(Float64,0,0)
     end
     rcoeff_handler = get_reconstruction_coefficients!(xgrid, AT, FE1, FE2, EG)
-    return ReconstructionHandler{FE1,FE2,AT,EG, typeof(rcoeff_handler)}(FES,FES_Reconst,interior_offset,interior_ndofs,coeffs,rcoeff_handler)
+    return ReconstructionHandler{Tv,Ti,FE1,FE2,AT,EG, typeof(rcoeff_handler)}(FES,FES_Reconst,interior_offset,interior_ndofs,coeffs,rcoeff_handler)
 end
 
-function get_rcoefficients!(coefficients, RH::ReconstructionHandler{FE1,FE2,AT,EG}, item) where {FE1,FE2,AT,EG}
+function get_rcoefficients!(coefficients, RH::ReconstructionHandler{Tv,Ti,FE1,FE2,AT,EG}, item) where {Tv,Ti,FE1,FE2,AT,EG}
     RH.boundary_coefficients(coefficients, item)
     for dof = 1 : size(coefficients,1), k = 1 : RH.interior_ndofs
         coefficients[dof,RH.interior_offset + k] = RH.interior_coefficients[(dof-1)*RH.interior_ndofs+k, item]

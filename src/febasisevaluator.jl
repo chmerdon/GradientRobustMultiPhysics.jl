@@ -78,7 +78,7 @@ struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, FETy
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
     coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
-    reconst_handler::ReconstructionHandler{FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
+    reconst_handler::ReconstructionHandler{T, Int32, FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
     subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
@@ -106,7 +106,7 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
     coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
-    reconst_handler::ReconstructionHandler{FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
+    reconst_handler::ReconstructionHandler{T, Int32, FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
     subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
@@ -230,7 +230,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
 
     # get effective assembly type for basis
     # depending on the AT and the AT of the FESpace
-    FEAT = EffAT4AssemblyType(typeof(FE).parameters[2],AT)
+    FEAT = EffAT4AssemblyType(apttype(FE),AT)
 
     @debug "Creating FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT, AT =$AT"
 
@@ -484,9 +484,8 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
     
         # update transformation
         update!(FEBE.L2G, item)
-        if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
-        else
+        L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
+        if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
         coeffs::Array{T,2} = FEBE.coefficients
@@ -502,9 +501,9 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
             for dof_i = 1 : ndofs2
                 for k = 1 : ncomponents
                     for l = 1 : ncomponents
-                        tempeval[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][subset[dof_i],l];
+                        tempeval[k,dof_i,i] += L2GM[k,l]*FEBE.refbasisvals[i][subset[dof_i],l];
                     end    
-                    tempeval[k,dof_i,i] *= coeffs[k,dof_i] / FEBE.iteminfo[1]
+                    tempeval[k,dof_i,i] *= coeffs[k,dof_i] / FEBE.L2G.det[]
                 end
             end
         end
@@ -623,9 +622,8 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
     
         # update transformation
         update!(FEBE.L2G, item)
-        if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
-        else
+        L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
+        if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
         FEBE.coeffs_handler(FEBE.coefficients, item)
@@ -637,9 +635,9 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
                 for k = 1 : ncomponents
                     FEBE.cvals[k,dof_i,i] = 0.0;
                     for l = 1 : ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][FEBE.current_subset[dof_i],l];
+                        FEBE.cvals[k,dof_i,i] += L2GM[k,l]*FEBE.refbasisvals[i][FEBE.current_subset[dof_i],l];
                     end    
-                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.iteminfo[1]
+                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.L2G.det[]
                 end
             end
         end
@@ -703,9 +701,8 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
     
         # update transformation
         update!(FEBE.L2G, item)
-        if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
-        else
+        L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
+        if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
         FEBE.coeffs_handler(FEBE.coefficients, item)
@@ -716,9 +713,9 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for l = 1 : ncomponents
-                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[FEOP.parameters[1],l]*FEBE.refbasisvals[i][FEBE.current_subset[dof_i],l];
+                    FEBE.cvals[1,dof_i,i] += L2GM[FEOP.parameters[1],l]*FEBE.refbasisvals[i][FEBE.current_subset[dof_i],l];
                 end    
-                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[FEOP.parameters[1],dof_i] / FEBE.iteminfo[1]
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[FEOP.parameters[1],dof_i] / FEBE.L2G.det[]
             end
         end
     end
@@ -1057,8 +1054,8 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
         update!(FEBE.L2G, item)
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
+        L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
             mapderiv!(FEBE.L2GM2,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
@@ -1072,10 +1069,10 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
                     # compute duc/dxk
                     for j = 1 : edim
                         for m = 1 : edim
-                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
+                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM2[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
                         end
                     end    
-                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] *= FEBE.coefficients[c,dof_i] / FEBE.iteminfo[1]
+                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] *= FEBE.coefficients[c,dof_i] / FEBE.L2G.det[]
                 end
             end
         end
@@ -1366,9 +1363,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
     
         # update transformation
         update!(FEBE.L2G, item)
-        if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
-        else
+        if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
         FEBE.coeffs_handler(FEBE.coefficients, item)
@@ -1385,7 +1380,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
                 for dof_j = 1 : ndofs2
                     if FEBE.coefficients2[dof_i,dof_j] != 0
                         for j = 1 : edim
-                            FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_j] + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]/FEBE.iteminfo[1]
+                            FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_j] + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]/FEBE.L2G.det[]
                         end  
                     end
                 end
@@ -1405,8 +1400,8 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
     
         # update transformation
         update!(FEBE.L2G, item)
+        L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
             mapderiv!(FEBE.L2GM2,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
@@ -1427,10 +1422,10 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
                     # compute duc/dxk
                     for j = 1 : edim
                         for m = 1 : edim
-                            FEBE.coefficients3[k + FEBE.offsets[c],dof_i] += FEBE.L2GM2[k,m] * FEBE.L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
+                            FEBE.coefficients3[k + FEBE.offsets[c],dof_i] += FEBE.L2GM2[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
                         end
                     end    
-                    FEBE.coefficients3[k + FEBE.offsets[c],dof_i] *= FEBE.coefficients[c,dof_i] / FEBE.iteminfo[1]
+                    FEBE.coefficients3[k + FEBE.offsets[c],dof_i] *= FEBE.coefficients[c,dof_i] / FEBE.L2G.det[]
                 end
             end
 
@@ -1459,9 +1454,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
         
         # update transformation
         update!(FEBE.L2G, item)
-        if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
-        else
+        if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
         FEBE.coeffs_handler(FEBE.coefficients, item)
@@ -1474,7 +1467,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
                 for j = 1 : edim
                     FEBE.cvals[1,dof_i,i] += FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],j,i]
                 end  
-                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.iteminfo[1];
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.L2G.det[]
             end
         end   
     end  
@@ -1492,9 +1485,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
         
         # update transformation
         update!(FEBE.L2G, item)
-        if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
-        else
+        if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
         FEBE.coeffs_handler(FEBE.coefficients, item)
@@ -1504,7 +1495,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i]
                 FEBE.cvals[1,dof_i,i] -= FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i]
-                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.iteminfo[1];
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.L2G.det[]
             end
         end    
     end  
@@ -1521,9 +1512,8 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
         
         # update transformation
         update!(FEBE.L2G, item)
-        if !FEBE.L2G.nonlinear
-            piola!(FEBE.iteminfo,FEBE.L2GM,FEBE.L2G,nothing)
-        else
+        L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
+        if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
         fill!(FEBE.cvals,0.0)
@@ -1533,13 +1523,13 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 for k = 1 : 3
-                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,1] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],2,i] # du3/dx2
-                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,1] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],3,i] # - du2/dx3
-                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,2] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],3,i] # du3/dx1
-                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,2] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],1,i] # - du1/dx3
-                    FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i] # du2/dx1
-                    FEBE.cvals[k,dof_i,i] -= FEBE.L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i] # - du1/dx2
-                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]/FEBE.iteminfo[1];
+                    FEBE.cvals[k,dof_i,i] += L2GM[k,1] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],2,i] # du3/dx2
+                    FEBE.cvals[k,dof_i,i] -= L2GM[k,1] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],3,i] # - du2/dx3
+                    FEBE.cvals[k,dof_i,i] += L2GM[k,2] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],3,i] # du3/dx1
+                    FEBE.cvals[k,dof_i,i] -= L2GM[k,2] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],1,i] # - du1/dx3
+                    FEBE.cvals[k,dof_i,i] += L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i] # du2/dx1
+                    FEBE.cvals[k,dof_i,i] -= L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i] # - du1/dx2
+                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]/FEBE.L2G.det[]
                 end
             end
         end    

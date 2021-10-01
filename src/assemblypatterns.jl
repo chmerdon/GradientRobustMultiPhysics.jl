@@ -23,7 +23,7 @@ abstract type DIIType_broken{DiscType,AT,basisAT} <: DIIType end
 # also many redundant stuff within assembly of patterns happens here
 # like chosing the coressponding basis evaluators, quadrature rules and managing the dofs
 struct AssemblyManager{T <: Real}
-    xItemDofs::Array{DofMapTypes,1}                # DofMaps
+    xItemDofs::Array{DofMapTypes{Int32},1}                # DofMaps
     ndofs4EG::Array{Array{Int,1},1}             # ndofs for each finite element on each EG
     nop::Int                                    # number of operators
     qf::Array{QuadratureRule,1}                 # quadrature rules
@@ -41,9 +41,9 @@ struct AssemblyManager{T <: Real}
     dEG::Array{Type{<:AbstractElementGeometry},1}                       # unique dofitem geometries that may appear (for each operator)
     xItemGeometries::GridEGTypes                                        # item geometries over which is assembled
     xDofItemGeometries::Array{GridEGTypes,1}                       # dofitem geometries over which basis is evaluated (for each operator)
-    xDofItems4Item::Array{Union{Nothing,GridAdjacencyTypes},1}       # dofitems <> items adjacency relationship (for each operator)
-    xItemInDofItems::Array{Union{Nothing,GridAdjacencyTypes},1}      # where is the item locally in dofitems
-    xDofItemItemOrientations::Array{Union{Nothing,GridAdjacencyTypes},1} # dofitems <> items orientation relationship
+    xDofItems4Item::Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}       # dofitems <> items adjacency relationship (for each operator)
+    xItemInDofItems::Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}      # where is the item locally in dofitems
+    xDofItemItemOrientations::Array{Union{Nothing,GridAdjacencyTypes{Int32}},1} # dofitems <> items orientation relationship
     xItem2SuperSetItems::Array{Union{Nothing,Vector{Int32}},1}  # only necessary for assembly of discontinuous operators ON_BFACES
 end
 
@@ -421,7 +421,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     discontinuous::Bool = false
     # dii4op = Array{Function,1}(undef,length(FE))
     for j=1:length(FE)
-        dofitemAT[j] = DefaultBasisAssemblyType4Operator(operator[j], AT, typeof(FE[j]).parameters[1])
+        dofitemAT[j] = DefaultBasisAssemblyType4Operator(operator[j], AT, eltype(FE[j]))
         xItemDofs[j] = Dofmap4AssemblyType(FE[j],dofitemAT[j])
 
         #broken_space = FE[j].broken
@@ -570,9 +570,9 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     dofoffset4dofitem = Array{Array{Int,1},1}(undef, length(FE))
     orientation4dofitem = Array{Array{Int,1},1}(undef, length(FE))  
     xDofItemGeometries = Array{GridEGTypes,1}(undef, length(FE))           
-    xDofItems4Item = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))     
-    xItemInDofItems = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))     
-    xDofItemItemOrientations = Array{Union{Nothing,GridAdjacencyTypes},1}(undef, length(FE))
+    xDofItems4Item = Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}(undef, length(FE))     
+    xItemInDofItems = Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}(undef, length(FE))     
+    xDofItemItemOrientations = Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}(undef, length(FE))
     xItem2SuperSetItems = Array{Union{Nothing,Vector{Int32}},1}(undef, length(FE))
     dii4op_types = Array{Type{<:DIIType},1}(undef,length(FE))
 

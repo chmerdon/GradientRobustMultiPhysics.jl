@@ -79,7 +79,7 @@ export GridComponentGeometries4AssemblyType
 export GridComponentRegions4AssemblyType
 
 include("l2gtransformations.jl");
-export L2GTransformer, update!, eval!, mapderiv!, piola!
+export L2GTransformer, update!, eval!, mapderiv!
 
 include("cellfinder.jl")
 export CellFinder

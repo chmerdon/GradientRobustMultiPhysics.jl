@@ -35,7 +35,7 @@ end
 # point evaluation (at vertices of geometry)
 # for lowest order degrees of freedom
 # used e.g. for interpolation into P1, P2, P2B, MINI finite elements
-function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}, ::Type{AT_NODES}, exact_function::UserData{AbstractDataFunction}; items = [], component_offset::Int = 0, time = 0) where {FEType <: AbstractFiniteElement}
+function point_evaluation!(Target::AbstractArray{Tv,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractDataFunction}; items = [], component_offset::Int = 0, time = 0) where {Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     nnodes = size(xCoordinates,2)
@@ -62,7 +62,7 @@ end
 # point evaluation (at vertices of geometry)
 # for lowest order degrees of freedom
 # used e.g. for interpolation into P1, P2, P2B, MINI finite elements
-function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}, ::Type{AT_NODES}, exact_function::UserData{AbstractExtendedDataFunction}; items = [], component_offset::Int = 0, time = 0) where {FEType <: AbstractFiniteElement}
+function point_evaluation!(Target::AbstractArray{Tv,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractExtendedDataFunction}; items = [], component_offset::Int = 0, time = 0) where {Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     nnodes = size(xCoordinates,2)
@@ -88,7 +88,7 @@ function point_evaluation!(Target::AbstractArray{<:Real,1}, FES::FESpace{FEType}
     end
 end
 
-function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{FEType}, ::Type{ON_CELLS}, exact_function::UserData{AbstractDataFunction}; items = [], time = 0) where {FEType <: AbstractFiniteElement, T<:Real} 
+function point_evaluation_broken!(Target::AbstractArray{Tv,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{ON_CELLS}, exact_function::UserData{AbstractDataFunction}; items = [], time = 0) where {Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     xCellNodes = FES.xgrid[CellNodes]
@@ -129,7 +129,7 @@ function get_ref_cellmoments(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:A
     return cellmoments[:,1]
 end
 
-function ensure_cell_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {FEType <: AbstractH1FiniteElement}
+function ensure_cell_moments!(Target::AbstractArray{Tv,1}, FE::FESpace{Tv, Ti, FEType, APT}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
     # note: assumes that cell dof is always the last one and that there are no higher oder cell moments
 
@@ -187,21 +187,21 @@ end
 
 # edge integral means
 # used e.g. for interpolation into P2, P2B finite elements
-function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, AT::Type{<:AbstractAssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {FEType <: AbstractH1FiniteElement}
+function ensure_edge_moments!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AbstractAssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
-    xItemVolumes = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemNodes = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
-    xItemDofs = Dofmap4AssemblyType(FE, AT)
+    xItemVolumes::Array{Tv,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemNodes::GridAdjacencyTypes{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemDofs::DofMapTypes{Ti} = Dofmap4AssemblyType(FE, AT)
 
-    nitems = num_sources(xItemNodes)
+    nitems::Int = num_sources(xItemNodes)
     if items == []
         items = 1 : nitems
     end
-    ncomponents = get_ncomponents(FEType)
-    edim = get_edim(FEType)
+    ncomponents::Int = get_ncomponents(FEType)
+    edim::Int = get_edim(FEType)
 
     # integrate moments of exact_function over edges
-    edgemoments = zeros(Float64,ncomponents,nitems)
+    edgemoments::Array{Tv,2} = zeros(Tv,ncomponents,nitems)
     if order == 0
         nmoments = 1
         mfactor = [1//6; 1//6] # = integral of nodal basis functions over edge
@@ -332,7 +332,7 @@ function interpolate!(Target::FEVectorBlock, source_data::FEVectorBlock; operato
     if xdim_source != xdim_target
         @assert xtrafo !== nothing "grids have different coordinate dimensions, need xtrafo!"
     end
-    FEType = typeof(source_data.FES).parameters[1]
+    FEType = eltype(source_data.FES)
     ncomponents::Int = get_ncomponents(FEType)
     resultdim::Int = Length4Operator(operator,xdim_source,ncomponents)
     EG = xgrid[CellGeometries][1]
@@ -403,8 +403,8 @@ function nodevalues!(Target::AbstractArray{T,2},
 
     xItemGeometries = FE.xgrid[CellGeometries]
     xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[CellRegions]
-    xItemDofs::DofMapTypes = FE[CellDofs]
-    xItemNodes::GridAdjacencyTypes = FE.xgrid[CellNodes]
+    xItemDofs::DofMapTypes{Int32} = FE[CellDofs]
+    xItemNodes::GridAdjacencyTypes{Int32} = FE.xgrid[CellNodes]
 
     if regions == [0]
         try

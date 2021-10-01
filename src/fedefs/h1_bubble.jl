@@ -32,7 +32,7 @@ isdefined(FEType::Type{<:H1BUBBLE}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1BUBBLE}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:H1BUBBLE}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {FEType <: H1BUBBLE}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {Tv,Ti,FEType <: H1BUBBLE, APT}
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
     if items == []

@@ -39,7 +39,7 @@ isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Tetrahedron3D}) = true
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVRT1,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
@@ -93,7 +93,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT1}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVRT1,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems)
@@ -212,7 +212,7 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT1{3}}, ::Type{<:Tetrahedron3D}
     end
 end
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT1{2}}, EG::Type{<:Triangle2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVRT1{2},APT}, EG::Type{<:Triangle2D}) where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
@@ -225,7 +225,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT1{2}}, EG::Type{
     end
 end    
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT1{3}}, EG::Type{<:Tetrahedron3D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVRT1{3},APT}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
@@ -246,7 +246,7 @@ end
 # the RT0 and those two BDM1 face functions are chosen
 # such that they reflect the two moments with respect to the second and third node
 # of the global face enumeration
-function get_basissubset(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT1{3}}, EG::Type{<:Tetrahedron3D})
+function get_basissubset(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVRT1{3},APT}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
     xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
     nfaces::Int = nfaces_for_geometry(EG)
     orientation = xCellFaceOrientations[1,1]

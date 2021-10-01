@@ -10,9 +10,9 @@ $(TYPEDEF)
 
 block of an FEVector that carries coefficients for an associated FESpace and can be assigned as an AbstractArray (getindex, setindex, size, length)
 """
-struct FEVectorBlock{T} <: AbstractArray{T,1}
+struct FEVectorBlock{T,Tv,Ti,FEType,APT} <: AbstractArray{T,1}
     name::String
-    FES::FESpace
+    FES::FESpace{Tv,Ti,FEType,APT}
     offset::Int
     last_index::Int
     entries::Array{T,1} # shares with parent object
@@ -23,8 +23,8 @@ $(TYPEDEF)
 
 a plain array but with an additional layer of several FEVectorBlock subdivisions each carrying coefficients for their associated FESpace
 """
-struct FEVector{T}
-    FEVectorBlocks::Array{FEVectorBlock{T},1}
+struct FEVector{T,Tv,Ti}
+    FEVectorBlocks::Array{FEVectorBlock{T,Tv,Ti},1}
     entries::Array{T,1}
 end
 
@@ -60,7 +60,7 @@ FEVector{T}(name::String, FES::FESpace) where T <: Real
 
 Creates FEVector that has one block.
 """
-function FEVector{T}(name::String, FES::FESpace) where T <: Real
+function FEVector{T}(name::String, FES::FESpace{Tv,Ti,FEType,APT}) where {T,Tv,Ti,FEType,APT}
     return FEVector{T}([name],[FES])
 end
 
@@ -71,22 +71,22 @@ FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 
 Creates FEVector that has one block for each FESpace in FES.
 """
-function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace,1}) where T <: Real
+function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace{Tv,Ti},1}) where {T,Tv,Ti}
     @logmsg DeepInfo "Creating FEVector mit blocks $((p->p.name).(FES))"
     ndofs = 0
     for j = 1:length(FES)
         ndofs += FES[j].ndofs
     end    
     entries = zeros(T,ndofs)
-    Blocks = Array{FEVectorBlock,1}(undef,length(FES))
+    Blocks = Array{FEVectorBlock{T,Tv,Ti},1}(undef,length(FES))
     offset = 0
     for j = 1:length(FES)
-        Blocks[j] = FEVectorBlock{T}(name[j], FES[j], offset , offset+FES[j].ndofs, entries)
+        Blocks[j] = FEVectorBlock{T,Tv,Ti,eltype(FES[j]),apttype(FES[j])}(name[j], FES[j], offset , offset+FES[j].ndofs, entries)
         offset += FES[j].ndofs
     end    
-    return FEVector{T}(Blocks, entries)
+    return FEVector{T,Tv,Ti}(Blocks, entries)
 end
-function FEVector{T}(name::String, FES::Array{<:FESpace,1}) where T <: Real
+function FEVector{T}(name::String, FES::Array{<:FESpace{Tv,Ti},1}) where {T,Tv,Ti}
     names = Array{String,1}(undef, length(FES))
     for j = 1:length(FES)
         names[j] = name * " [$j]"
@@ -118,9 +118,9 @@ $(TYPEDSIGNATURES)
 
 Custom `append` function for `FEVector` that adds a FEVectorBlock at the end.
 """
-function Base.append!(FEF::FEVector{T},name::String,FES::FESpace) where T <: Real
+function Base.append!(FEF::FEVector{T},name::String,FES::FESpace{Tv,Ti,FEType,APT}) where {T,Tv,Ti,FEType,APT}
     append!(FEF.entries,zeros(T,FES.ndofs))
-    newBlock = FEVectorBlock{T}(name, FES, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FES.ndofs, FEF.entries)
+    newBlock = FEVectorBlock{T,Tv,Ti,FEType,APT}(name, FES, FEF.FEVectorBlocks[end].last_index , FEF.FEVectorBlocks[end].last_index+FES.ndofs, FEF.entries)
     push!(FEF.FEVectorBlocks,newBlock)
     return nothing
 end

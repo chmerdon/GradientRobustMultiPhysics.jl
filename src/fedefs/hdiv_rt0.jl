@@ -35,7 +35,7 @@ isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Tetrahedron3D}) = true
 isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Hexahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time=  0) where {FEType <: HDIVRT0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time=  0) where {Tv,Ti,FEType <: HDIVRT0,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
@@ -57,7 +57,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: HDIVRT0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVRT0,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
@@ -108,7 +108,7 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
     end
 end
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVRT0,APT}, EG::Type{<:AbstractElementGeometry}) where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
