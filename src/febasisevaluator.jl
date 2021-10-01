@@ -1055,7 +1055,9 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
         L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
-        if FEBE.L2G.nonlinear
+        if !FEBE.L2G.nonlinear
+            mapderiv!(FEBE.L2GM2,FEBE.L2G,nothing)
+        else
             @error "nonlinear local2global transformations not yet supported"
         end
 
@@ -1067,7 +1069,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
                     # compute duc/dxk
                     for j = 1 : edim
                         for m = 1 : edim
-                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += L2GM2[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
+                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM2[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
                         end
                     end    
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] *= FEBE.coefficients[c,dof_i] / FEBE.L2G.det[]
