@@ -69,21 +69,21 @@ export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
 export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
 export is_timedependent, is_regiondependent, is_itemdependent
 
-# include("assemblytypes.jl");
-# export AbstractAssemblyType
-# export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
-# export ItemType4AssemblyType
-# export GridComponentNodes4AssemblyType
-# export GridComponentVolumes4AssemblyType
-# export GridComponentGeometries4AssemblyType
-# export GridComponentRegions4AssemblyType
+include("assemblytypes.jl");
+export AbstractAssemblyType
+export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
+export ItemType4AssemblyType
+export GridComponentNodes4AssemblyType
+export GridComponentVolumes4AssemblyType
+export GridComponentGeometries4AssemblyType
+export GridComponentRegions4AssemblyType
 
-#include("l2gtransformations.jl");
-#export L2GTransformer, update!, eval!, mapderiv!, piola!
+include("l2gtransformations.jl");
+export L2GTransformer, update!, eval!, mapderiv!, piola!
 
-# include("cellfinder.jl")
-# export CellFinder
-# export gFindLocal!, gFindBruteForce!
+include("cellfinder.jl")
+export CellFinder
+export gFindLocal!, gFindBruteForce!
 
 include("quadrature.jl")
 export QuadratureRule

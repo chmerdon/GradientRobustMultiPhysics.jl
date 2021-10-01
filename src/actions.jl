@@ -175,7 +175,7 @@ function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qite
     end
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem[] != qitem 
-        ExtendableGrids.update!(FEBE.L2G, qitem)
+        update!(FEBE.L2G, qitem)
     end
     # we don't know at contruction time how many quadrature points are needed
     # so we expand the array here if needed
@@ -183,7 +183,7 @@ function update!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qite
         push!(C.x,zeros(T,size(FEBE.FE.xgrid[Coordinates],1)))
     end  
     for i = 1 : length(FEBE.xref)
-        ExtendableGrids.eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
+        eval!(C.x[i],FEBE.L2G,FEBE.xref[i])
     end    
     return nothing
 end
