@@ -20,6 +20,7 @@ Note: To run this example the DifferentialEquations.jl package has to be install
 module ExampleA05_DiffEQ
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 using DifferentialEquations
 using Printf
 

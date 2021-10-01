@@ -16,6 +16,7 @@ with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a given gr
 module Example201_PoissonProblem2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, diffusion = 1, Plotter = nothing)

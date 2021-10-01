@@ -27,6 +27,7 @@ and similar terms on the right-hand side for the inhomogeneous Dirichlet data. T
 module Example230_StokesHdivDG2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)

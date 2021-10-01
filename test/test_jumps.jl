@@ -27,11 +27,11 @@ function test_qpmatchup(xgrid)
         if AM.dofitems[1][2] > 0
             bleft = AM.basisevaler[AM.EG4dofitem[1][1],1,AM.itempos4dofitem[1][1],AM.orientation4dofitem[1][1]]
             bright = AM.basisevaler[AM.EG4dofitem[1][2],1,AM.itempos4dofitem[1][2],AM.orientation4dofitem[1][2]]
-            ExtendableGrids.update!(bleft.L2G,AM.dofitems[1][1])
-            ExtendableGrids.update!(bright.L2G,AM.dofitems[1][2])
+            GradientRobustMultiPhysics.update!(bleft.L2G,AM.dofitems[1][1])
+            GradientRobustMultiPhysics.update!(bright.L2G,AM.dofitems[1][2])
             for i = 1 : length(bleft.xref)
-                ExtendableGrids.eval!(xleft, bleft.L2G, bleft.xref[i])
-                ExtendableGrids.eval!(xright, bright.L2G, bright.xref[i])
+                eval!(xleft, bleft.L2G, bleft.xref[i])
+                eval!(xright, bright.L2G, bright.xref[i])
                 for k = 1 : 3
                     pointerror += (xleft[k] - xright[k])^2
                 end

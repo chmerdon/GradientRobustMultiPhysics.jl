@@ -12,6 +12,7 @@ Then the solution is compared to the solution of the same problem using the cont
 module Example209_FaceLagrangeMultiplier2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## problem data
 function exact_function!(result,x::Array{<:Real,1})

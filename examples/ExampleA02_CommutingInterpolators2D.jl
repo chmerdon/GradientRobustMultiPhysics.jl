@@ -16,6 +16,7 @@ vertices but not in the additional degrees of freedom. For ``k=2``, the interpol
 module ExampleA02_CommutingInterpolators2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## define some function
 function exact_function!(result,x::Array{<:Real,1})

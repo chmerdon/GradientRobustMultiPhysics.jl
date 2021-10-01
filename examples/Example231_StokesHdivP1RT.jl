@@ -20,6 +20,7 @@ leading to an exactly divergence-free discrete velocity.
 module Example231_StokesHdivP1RT
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)

@@ -10,6 +10,7 @@ This example revisits the nonlinear Poisson example from the introductory exampl
 module ExampleA04_CustomLinearSolver
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 using ExtendableSparse
 using Printf
 

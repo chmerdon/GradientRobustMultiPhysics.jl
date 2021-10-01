@@ -23,6 +23,7 @@ The obstacle constraint is realised via a penalty term that is automatically dif
 module Example215_ObstacleProblem2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## define obstacle and penalty kernel
 const χ! = (result,x) -> (result[1] = (cos(4*x[1]*π)*cos(4*x[2]*π) - 1)/20)

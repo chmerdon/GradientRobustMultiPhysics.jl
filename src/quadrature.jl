@@ -529,7 +529,34 @@ function integrate!(
     force_quadrature_rule = nothing)
     
     order = integrand.quadorder
+    resultdim = integrand.dimensions[1]
+    xCoords = grid[Coordinates]
+    dim = size(xCoords,1)
+    @assert dim == integrand.dimensions[2]
+    xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
+    xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
+    xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
+    nitems = num_sources(xItemNodes)
+    NumberType = eltype(integral4items)
+    
+    # find proper quadrature rules
+    EG = grid[GridComponentUniqueGeometries4AssemblyType(AT)]
+    qf = Array{QuadratureRule,1}(undef,length(EG))
+    local2global = Array{L2GTransformer,1}(undef,length(EG))
+    for j = 1 : length(EG)
+        if force_quadrature_rule != nothing
+            qf[j] = force_quadrature_rule;
+        else
+            qf[j] = QuadratureRule{NumberType,EG[j]}(order);
+        end
+        local2global[j] = L2GTransformer{NumberType,EG[j],grid[CoordinateSystem]}(grid,AT)
+    end    
 
+    # loop over items
+    if items == []
+        items = 1 : nitems
+    end
+    x = zeros(NumberType, dim)
     result = zeros(NumberType, resultdim)
     itemET = xItemGeometries[1]
     iEG = 1

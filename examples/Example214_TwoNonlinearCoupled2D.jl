@@ -20,6 +20,7 @@ can be automatically differentiated to solve the problem with Newton's method.
 module Example214_TwoNonlinearCoupled2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## problem data
 const f = [x -> 1, x -> 2*x[2]]

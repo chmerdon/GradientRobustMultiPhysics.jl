@@ -28,6 +28,7 @@ Also, note that a divergence-free reconstruction operator is used for the veloci
 module Example223_NaturalConvection2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## boundary data for temperature on bottom
 T_bottom = DataFunction((T,x) -> (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = "X", quadorder = 4)
