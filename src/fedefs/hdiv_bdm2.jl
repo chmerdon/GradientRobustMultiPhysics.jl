@@ -28,7 +28,7 @@ get_dofmap_pattern(FEType::Type{<:HDIVBDM2{2}}, ::Type{BFaceDofs}, EG::Type{<:Ab
 isdefined(FEType::Type{<:HDIVBDM2}, ::Type{<:Triangle2D}) = true
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HDIVBDM2}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVBDM2,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
@@ -80,7 +80,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     integrate!(Target, FE.xgrid, ON_FACES, edata_function3; items = items, time = time, index_offset = 2*nfaces)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: HDIVBDM2}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVBDM2,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
@@ -221,7 +221,7 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM2{2}}, ::Type{<:Triangle2D})
 end
 
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HDIVBDM2}, EG::Type{<:AbstractElementGeometry2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVBDM2,APT}, EG::Type{<:AbstractElementGeometry2D}) where {Tv,Ti,APT}
     xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaceSigns]
     nfaces::Int = nfaces_for_geometry(EG)
     dim::Int = dim_element(EG)

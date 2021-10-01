@@ -39,18 +39,18 @@ isdefined(FEType::Type{<:H1BR}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:H1BR}, ::Type{<:Tetrahedron3D}) = true
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {FEType <: H1BR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1BR,APT}
     nnodes = size(FE.xgrid[Coordinates],2)
     point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = nnodes, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: H1BR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1BR,APT}
     # delegate edge nodes to node interpolation
     subitems = slice(FE.xgrid[EdgeNodes], items)
     interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 end
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T<:Real, FEType <: H1BR}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti, FEType <: H1BR,APT}
     # delegate face nodes to node interpolation
     subitems = slice(FE.xgrid[FaceNodes], items)
     interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
@@ -93,7 +93,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{FEType}, ::Type{ON
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: H1BR}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1BR,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
@@ -147,7 +147,7 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Quadril
     end
 end
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, ::Type{<:Triangle2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Type{<:Triangle2D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -161,7 +161,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, ::Type{<:Trian
     end
 end
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, ::Type{<:Quadrilateral2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Type{<:Quadrilateral2D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -177,7 +177,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{H1BR{2}}, ::Type{<:Quadr
     end
 end
 
-function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{H1BR{2}}, ::Type{<:Edge1D})
+function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Type{<:Edge1D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
@@ -250,7 +250,7 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Hexahed
 end
 
 
-function get_coefficients(::Type{ON_CELLS},FE::FESpace{H1BR{3}}, ::Type{<:Tetrahedron3D})
+function get_coefficients(::Type{ON_CELLS},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -273,7 +273,7 @@ function get_coefficients(::Type{ON_CELLS},FE::FESpace{H1BR{3}}, ::Type{<:Tetrah
 end    
 
 
-function get_coefficients(::Type{<:ON_FACES},FE::FESpace{H1BR{3}}, ::Type{<:Triangle2D})
+function get_coefficients(::Type{<:ON_FACES},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Triangle2D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
@@ -284,7 +284,7 @@ function get_coefficients(::Type{<:ON_FACES},FE::FESpace{H1BR{3}}, ::Type{<:Tria
     end
 end    
 
-function get_coefficients(::Type{ON_CELLS},FE::FESpace{H1BR{3}}, ::Type{<:Hexahedron3D})
+function get_coefficients(::Type{ON_CELLS},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Hexahedron3D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
@@ -313,7 +313,7 @@ function get_coefficients(::Type{ON_CELLS},FE::FESpace{H1BR{3}}, ::Type{<:Hexahe
 end    
 
 
-function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{H1BR{3}}, ::Type{<:Quadrilateral2D})
+function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Quadrilateral2D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face

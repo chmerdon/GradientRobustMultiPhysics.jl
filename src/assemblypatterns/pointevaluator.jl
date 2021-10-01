@@ -7,7 +7,7 @@ struct PointEvaluator{T <: Real, FEType <: AbstractFiniteElement, EG <: Abstract
     FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
     basisvals::BVT
     FEB::FEVectorBlock{T} # holds coefficients
-    xItemDofs::DofMapTypes # holds dof numbers
+    xItemDofs::DofMapTypes{Int32} # holds dof numbers
     action::ACT # additional action to postprocess operator evaluation
     action_input::Array{T,1}
 end
@@ -50,7 +50,7 @@ function evaluate!(
     action_input::Array{T,1} = PE.action_input
     coeffs::Array{T,1} = FEB.entries
     basisvals::BVT = PE.basisvals
-    xItemDofs::DofMapTypes = PE.xItemDofs
+    xItemDofs::DofMapTypes{Int32} = PE.xItemDofs
 
     fill!(result,0)
     if !(ACT <: NoAction)

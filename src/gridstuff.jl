@@ -22,7 +22,7 @@
 #    return Edge1DWithParent{CEG}
 #end
 
-const GridAdjacencyTypes = Union{<:VariableTargetAdjacency{Int32},Array{Int32,2}}
+const GridAdjacencyTypes{Ti} = Union{<:VariableTargetAdjacency{Ti},Array{Ti,2}}
 const GridEGTypes = Vector{DataType}
 
 
@@ -184,7 +184,7 @@ end
 # FaceNodes = nodes for each face (implicitly defines the enumerations of faces)
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
-    xCellNodes::GridAdjacencyTypes = xgrid[CellNodes]
+    xCellNodes::GridAdjacencyTypes{Int32} = xgrid[CellNodes]
     ncells = num_sources(xCellNodes)
     nnodes = num_sources(xgrid[Coordinates])
     xCellGeometries = xgrid[CellGeometries]
@@ -421,7 +421,7 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{NodePatchGroups})
-    xCellNodes::GridAdjacencyTypes = xgrid[CellNodes]
+    xCellNodes::GridAdjacencyTypes{Int32} = xgrid[CellNodes]
     xNodeCells = atranspose(xCellNodes)
     nnodes = size(xgrid[Coordinates],2)
     ncells = num_sources(xCellNodes)
@@ -461,7 +461,7 @@ end
 # FaceNodes = nodes for each face (implicitly defines the enumerations of faces)
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
 
-    xCellNodes::GridAdjacencyTypes = xgrid[CellNodes]
+    xCellNodes::GridAdjacencyTypes{Int32} = xgrid[CellNodes]
     ncells::Int = num_sources(xCellNodes)
     nnodes::Int = num_sources(xgrid[Coordinates])
     xCellGeometries = xgrid[CellGeometries]
@@ -475,7 +475,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
     xNodeCells = atranspose(xCellNodes)
     max_ncell4node::Int = max_num_targets_per_source(xNodeCells)
 
-    xEdgeCells::GridAdjacencyTypes = VariableTargetAdjacency(Int32)
+    xEdgeCells::GridAdjacencyTypes{Int32} = VariableTargetAdjacency(Int32)
 
 
     # find unique edge enumeration rules
@@ -915,13 +915,13 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceSigns
 end
 
 
-function collectVolumes4Geometries(T::Type{<:Real}, xgrid::ExtendableGrid, ItemType)
+function collectVolumes4Geometries(xgrid::ExtendableGrid{Tv,Ti}, ItemType) where {Tv, Ti}
     # get links to other stuff
-    xCoordinates = xgrid[Coordinates]
-    xCoordinateSystem = xgrid[CoordinateSystem]
-    xItemNodes = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_NODES) ]
-    xGeometries = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_GEOMETRY) ]
-    EG = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_UNIQUEGEOMETRY) ]
+    xCoordinates::Array{Tv,2} = xgrid[Coordinates]
+    xCoordinateSystem::Type{<:AbstractCoordinateSystem} = xgrid[CoordinateSystem]
+    xItemNodes::GridAdjacencyTypes{Int32} = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_NODES) ]
+    xGeometries::GridEGTypes = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_GEOMETRY) ]
+    EG::Array{DataType,1} = xgrid[GridComponent4TypeProperty(ItemType,PROPERTY_UNIQUEGEOMETRY) ]
     nitems::Int = num_sources(xItemNodes)
 
     # get Volume4ElemType handlers
@@ -931,7 +931,7 @@ function collectVolumes4Geometries(T::Type{<:Real}, xgrid::ExtendableGrid, ItemT
     end
 
     # init Volumes
-    xVolumes::Array{T,1} = zeros(T,nitems)
+    xVolumes::Array{Tv,1} = zeros(Tv,nitems)
 
     # loop over items and call handlers
     iEG::Int = 1
@@ -954,31 +954,31 @@ end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_CELL)
+    collectVolumes4Geometries(xgrid, ITEMTYPE_CELL)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_FACE)
+    collectVolumes4Geometries(xgrid, ITEMTYPE_FACE)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaceVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_BFACE)
+    collectVolumes4Geometries(xgrid, ITEMTYPE_BFACE)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_EDGE)
+    collectVolumes4Geometries(xgrid, ITEMTYPE_EDGE)
 end
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BEdgeVolumes})
-    collectVolumes4Geometries(Float64, xgrid, ITEMTYPE_BEDGE)
+    collectVolumes4Geometries(xgrid, ITEMTYPE_BEDGE)
 end
 
 
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{BFaces})
     # get links to other stuff
     xCoordinates = xgrid[Coordinates]
-    xFaceNodes::GridAdjacencyTypes = xgrid[FaceNodes]
-    xBFaceNodes::GridAdjacencyTypes = xgrid[BFaceNodes]
+    xFaceNodes::GridAdjacencyTypes{Int32} = xgrid[FaceNodes]
+    xBFaceNodes::GridAdjacencyTypes{Int32} = xgrid[BFaceNodes]
     nnodes::Int = num_sources(xCoordinates)
     nbfaces::Int = num_sources(xBFaceNodes)
 

@@ -27,22 +27,22 @@ abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
 """
 ````
-struct FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
+struct FESpace{Tv, Ti, FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
     ndofs::Int                            # total number of dofs
-    xgrid::ExtendableGrid                 # link to xgrid 
+    xgrid::ExtendableGrid[Tv,Ti}          # link to xgrid 
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
 end
 ````
 
 A struct that has a finite element type as parameter and carries dofmaps (CellDofs, FaceDofs, BFaceDofs) plus additional grid information and access to arrays holding coefficients if needed.
 """
-struct FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
+struct FESpace{Tv,Ti,FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
-    ndofs::Int64                            # total number of dofs
-    xgrid::ExtendableGrid                 # link to xgrid 
+    ndofs::Int64                          # total number of dofs
+    xgrid::ExtendableGrid{Tv,Ti}          # link to xgrid 
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
 end
 
@@ -59,7 +59,7 @@ Base.setindex!(FES::FESpace,v,DM::Type{<:DofMap}) = FES.dofmaps[DM] = v
 """
 ````
 function FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}(
-    xgrid::ExtendableGrid;
+    xgrid::ExtendableGrid{Tv,Ti};
     name = "",
     broken::Bool = false)
 ````
@@ -69,9 +69,10 @@ The broken switch allows to generate a broken finite element space (that is piec
 If no AT is provided, the space is generated ON_CELLS.
 """
 function FESpace{FEType,AT}(
-    xgrid::ExtendableGrid;
+    xgrid::ExtendableGrid{Tv,Ti};
     name = "",
-    broken::Bool = false) where {FEType <:AbstractFiniteElement, AT<:AbstractAssemblyType}
+    broken::Bool = false) where {Tv, Ti, FEType <:AbstractFiniteElement, AT<:AbstractAssemblyType}
+
     # piecewise constants are always broken
     if FEType <: H1P0
         broken = true
@@ -86,12 +87,11 @@ function FESpace{FEType,AT}(
     end
     
     # first generate some empty FESpace
-    dummyVTA = VariableTargetAdjacency(Int32)
     if name == ""
         name = broken ? "$FEType (broken)" : "$FEType"
     end
     ndofs = count_ndofs(xgrid, FEType, broken)
-    FES = FESpace{FEType,AT}(name,broken,ndofs,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
+    FES = FESpace{Tv, Ti, FEType,AT}(name,broken,ndofs,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
 
     @logmsg DeepInfo "Generated FESpace $name ($AT, ndofs=$ndofs)"
 
@@ -99,18 +99,26 @@ function FESpace{FEType,AT}(
 end
 
 function FESpace{FEType}(
-    xgrid::ExtendableGrid;
+    xgrid::ExtendableGrid{Tv,Ti};
     name = "",
-    broken::Bool = false) where {FEType <:AbstractFiniteElement}
+    broken::Bool = false) where {Tv, Ti, FEType <:AbstractFiniteElement}
     return FESpace{FEType,ON_CELLS}(xgrid; name = name, broken = broken)
 end
 
 """
 $(TYPEDSIGNATURES)
 
-Custom `eltype` function for `FESpace` returns the finite element type of the finite element space.
+Custom `eltype` function for `FESpace` returns the finite element type parameter of the finite element space.
 """
-Base.eltype(::FESpace{FEType}) where {FEType<:AbstractFiniteElement} = FEType
+Base.eltype(::FESpace{Tv, Ti, FEType, APT}) where {Tv, Ti, FEType<:AbstractFiniteElement, APT} = FEType
+
+
+"""
+$(TYPEDSIGNATURES)
+
+returns the assembly type parameter of the finite element space.
+"""
+apttype(::FESpace{Tv, Ti, FEType, APT}) where {Tv, Ti, FEType<:AbstractFiniteElement, APT} = APT
 
 
 """
@@ -118,7 +126,7 @@ $(TYPEDSIGNATURES)
 
 Custom `show` function for `FESpace` that prints some information and all available dofmaps.
 """
-function Base.show(io::IO, FES::FESpace{FEType}) where {FEType<:AbstractFiniteElement}
+function Base.show(io::IO, FES::FESpace{Tv,Ti,FEType,APT}) where {Tv,Ti,FEType<:AbstractFiniteElement,APT}
 	  println("\nFESpace information")
     println("===================")
     println("     name = $(FES.name)")
@@ -138,7 +146,7 @@ const NothingFunction = (x,y) -> nothing
 
 # default coefficient functions that can be overwritten by finite element that has non-default coefficients
 # ( see e.g. h1v_br.jl )
-function get_coefficients(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
+function get_coefficients(::Type{<:AbstractAssemblyType}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
     return NothingFunction
 end    
 
@@ -146,7 +154,7 @@ end
 # meaning that all basis functions on the reference cells are used
 # see 3D implementation of BDM1 for an example how this is can be used the choose
 # different basis functions depending on the face orientations (which in 3D is not just a sign)
-function get_basissubset(::Type{<:AbstractAssemblyType}, FE::FESpace{<:AbstractFiniteElement}, ::Type{<:AbstractElementGeometry})
+function get_basissubset(::Type{<:AbstractAssemblyType}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
     return NothingFunction
 end  
 get_ndofs(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = 0 # element is undefined for this AT or EG
@@ -290,7 +298,7 @@ include("fedefs/hcurl_n0.jl");
 
 
 
-function get_coefficients(::Type{ON_BFACES}, FE::FESpace{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry})
+function get_coefficients(::Type{ON_BFACES}, FE::FESpace{Tv, Ti, FEType, APT}, EG::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
     get_coeffs_on_face = get_coefficients(ON_FACES, FE, EG)
     xBFaces = FE.xgrid[BFaces]
     function closure(coefficients, bface)

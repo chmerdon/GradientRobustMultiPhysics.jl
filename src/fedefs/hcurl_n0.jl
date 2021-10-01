@@ -40,7 +40,7 @@ isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 3
         if items == []
@@ -62,7 +62,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 2
         if items == []
@@ -87,7 +87,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Ty
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{FEType}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {FEType <: HCURLN0}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 2
         # delegate cell faces to face interpolation
@@ -135,7 +135,7 @@ function get_basis(::Type{ON_CELLS}, ::Type{HCURLN0{3}}, ::Type{<:Tetrahedron3D}
     end
 end
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry2D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HCURLN0,APT}, EG::Type{<:AbstractElementGeometry2D}) where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces = nfaces_for_geometry(EG)
     function closure(coefficients, cell)
@@ -147,7 +147,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HCURLN0}, EG::Type{<:A
     end
 end   
 
-function get_coefficients(::Type{ON_CELLS}, FE::FESpace{<:HCURLN0}, EG::Type{<:AbstractElementGeometry3D})
+function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HCURLN0,APT}, EG::Type{<:AbstractElementGeometry3D}) where {Tv,Ti,APT}
     xCellEdgeSigns = FE.xgrid[CellEdgeSigns]
     nedges = nedges_for_geometry(EG)
     function closure(coefficients, cell)

@@ -78,7 +78,7 @@ struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, FETy
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
     coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
-    reconst_handler::ReconstructionHandler{FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
+    reconst_handler::ReconstructionHandler{T, Int32, FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
     subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
@@ -106,7 +106,7 @@ mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElemen
     coefficients2::Array{T,2}            # coefficients for reconstruction
     coefficients3::Array{T,2}            # coefficients for operator (e.g. TangentialGradient)
     coeffs_handler::FType_coeffs         # function to call to get coefficients for finite element
-    reconst_handler::ReconstructionHandler{FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
+    reconst_handler::ReconstructionHandler{T, Int32, FEType,FETypeR,AT,EG} # hanlder for reconstruction coefficients
     subset_handler::FType_subset         # function to call to get linear independent subset of basis on cell
     current_subset::Array{Int,1}         # current indices of subset of linear independent basis functions
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
@@ -230,7 +230,7 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
 
     # get effective assembly type for basis
     # depending on the AT and the AT of the FESpace
-    FEAT = EffAT4AssemblyType(typeof(FE).parameters[2],AT)
+    FEAT = EffAT4AssemblyType(apttype(FE),AT)
 
     @debug "Creating FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT, AT =$AT"
 

@@ -12,7 +12,7 @@ abstract type EdgeDofs <: DofMap end
 abstract type BFaceDofs <: DofMap end
 abstract type BEdgeDofs <: DofMap end
 
-const DofMapTypes = Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}}
+const DofMapTypes{Ti} = Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}}
 
 UCG4DofMap(::Type{CellDofs}) = UniqueCellGeometries
 UCG4DofMap(::Type{FaceDofs}) = UniqueFaceGeometries
@@ -63,11 +63,11 @@ EffAT4AssemblyType(::Type{ON_EDGES},::Type{<:ON_EDGES}) = ON_CELLS
 
 
 function Dofmap4AssemblyType(FES::FESpace, AT::Type{<:AbstractAssemblyType})
-    return FES[Dofmap4AssemblyType(EffAT4AssemblyType(typeof(FES).parameters[2],AT))]
+    return FES[Dofmap4AssemblyType(EffAT4AssemblyType(apttype(FES),AT))]
 end
 
 
-function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) where {FEType <: AbstractFiniteElement}
+function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<:DofMap}) where {Tv, Ti, FEType <: AbstractFiniteElement, APT}
     ## Beware: Automatic broken DofMap generation currently only reliable for CellDofs
 
     @logmsg MoreInfo "Generating $DM for $(FES.name)"
@@ -131,7 +131,7 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
 
 
     offset4component::Int = 0
-    xItemNodes::GridAdjacencyTypes = xgrid[SuperItemNodes4DofMap(DM)]
+    xItemNodes::GridAdjacencyTypes{Int32} = xgrid[SuperItemNodes4DofMap(DM)]
     nitems::Int = num_sources(xItemNodes)
     for k = 1 : length(dofmap_patterns[1])
         if dofmap_patterns[1][k] == 'N'
@@ -264,7 +264,7 @@ function init_dofmap_from_pattern!(FES::FESpace{FEType}, DM::Type{<:DofMap}) whe
 end
 
 
-function init_broken_dofmap!(FES::FESpace{FEType}, DM::Union{Type{BFaceDofs},Type{FaceDofs}}) where {FEType <: AbstractFiniteElement}
+function init_broken_dofmap!(FES::FESpace{Tv,Ti,FEType,APT}, DM::Union{Type{BFaceDofs},Type{FaceDofs}}) where {Tv, Ti, FEType <: AbstractFiniteElement, APT}
     
     ## prepare dofmap patterns
     xgrid = FES.xgrid
