@@ -3,23 +3,23 @@
 ################
 #
 # used to store (sparse) matrix representations of PDEOperators for FESpaces
-# and can have several blocks of different FESpaces
-# acts like an AbstractArray{T,2}
+# and can have several matrix blocks (FEMatrixBlock) of different FESpaces
+# each matrix block acts like an AbstractArray{T,2}
 
 """
 $(TYPEDEF)
 
 block of an FEMatrix that carries coefficients for an associated pair of FESpaces and can be assigned as an two-dimensional AbstractArray (getindex, setindex, size)
 """
-struct FEMatrixBlock{T} <: AbstractArray{T,2}
+struct FEMatrixBlock{TvM,TiM,TvG,TiG,FETypeX,FETypeY,APTX,APTY} <: AbstractArray{TvM,2}
     name::String
-    FESX::FESpace
-    FESY::FESpace
+    FESX::FESpace{TvG,TiG,FETypeX,APTX}
+    FESY::FESpace{TvG,TiG,FETypeY,APTY}
     offsetX::Int64
     offsetY::Int64
     last_indexX::Int64
     last_indexY::Int64
-    entries::AbstractMatrix # shares with parent object
+    entries::AbstractSparseMatrix{TvM,TiM} # shares with parent object
 end
 
 """
@@ -27,9 +27,9 @@ $(TYPEDEF)
 
 an AbstractMatrix (e.g. an ExtendableSparseMatrix) with an additional layer of several FEMatrixBlock subdivisions each carrying coefficients for their associated pair of FESpaces
 """
-struct FEMatrix{T,nbrow,nbcol,nbtotal}
-    FEMatrixBlocks::Array{FEMatrixBlock{T},1}
-    entries::AbstractMatrix
+struct FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}
+    FEMatrixBlocks::Array{FEMatrixBlock{TvM,TiM,TvG,TiG},1}
+    entries::AbstractSparseMatrix{TvM,TiM}
 end
 
 #Add value to matrix if it is nonzero
@@ -58,9 +58,9 @@ function apply_nonzero_pattern!(B::FEMatrixBlock,AT::Type{<:AbstractAssemblyType
 end
 
 Base.getindex(FEF::FEMatrix,i) = FEF.FEMatrixBlocks[i]
-Base.getindex(FEF::FEMatrix{T,nbrow,nbcol},i,j) where {T,nbrow,nbcol} = FEF.FEMatrixBlocks[(i-1)*nbcol+j]
-Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int)=FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
-Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any)=FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
+Base.getindex(FEF::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal},i,j) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal} = FEF.FEMatrixBlocks[(i-1)*nbcol+j]
+Base.getindex(FEB::FEMatrixBlock,i::Int,j::Int) = FEB.entries[FEB.offsetX+i,FEB.offsetY+j]
+Base.getindex(FEB::FEMatrixBlock,i::Any,j::Any) = FEB.entries[FEB.offsetX.+i,FEB.offsetY.+j]
 Base.setindex!(FEB::FEMatrixBlock, v, i::Int, j::Int) = setindex!(FEB.entries,v,FEB.offsetX+i,FEB.offsetY+j)
 
 """
@@ -68,7 +68,7 @@ $(TYPEDSIGNATURES)
 
 Custom `size` function for `FEMatrix` that gives the number of rows and columns of the FEBlock overlay
 """
-Base.size(FEF::FEMatrix) = [typeof(FEF).parameters[2],typeof(FEF).parameters[3]]
+Base.size(::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal} = [nbrow,nbcol]
 
 
 """
@@ -76,7 +76,7 @@ $(TYPEDSIGNATURES)
 
 Custom `length` function for `FEMatrix` that gives the total number of defined FEMatrixBlocks in it
 """
-Base.length(FEF::FEMatrix) = typeof(FEF).parameters[4]
+Base.length(::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal} = nbtotal
 
 """
 $(TYPEDSIGNATURES)
@@ -90,7 +90,7 @@ $(TYPEDSIGNATURES)
 
 Custom `show` function for `FEMatrix` that prints some information on its blocks.
 """
-function Base.show(io::IO, FEM::FEMatrix{T,nbrow}) where {T,nbrow}
+function Base.show(io::IO, FEM::FEMatrix{TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}) where {TvM,TiM,TvG,TiG,nbrow,nbcol,nbtotal}
 	println("\nFEMatrix information")
     println("====================")
     println("  block |  ndofsX |  ndofsY | name (FETypeX, FETypeY) ")
@@ -106,28 +106,34 @@ end
 
 """
 ````
-FEMatrix{T}(name::String, FES::FESpace) where T <: Real
+FEMatrix{TvM,TiM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvG,TiG,FETypeX,APTX}
 ````
 
 Creates FEMatrix with one square block (FES,FES).
 """
-function FEMatrix{T}(name::String, FES::FESpace) where T <: Real
-    entries = ExtendableSparseMatrix{T,Int64}(FES.ndofs,FES.ndofs)
-    Block = FEMatrixBlock{T}(name, FES, FES, 0 , 0, FES.ndofs, FES.ndofs, entries)
-    return FEMatrix{T,1,1,1}([Block], entries)
+function FEMatrix{TvM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvM,TvG,TiG,FETypeX,APTX}
+    return FEMatrix{TvM,Int64}(name::String, FES)
+end
+function FEMatrix{TvM,TiM}(name::String, FES::FESpace{TvG,TiG,FETypeX,APTX}) where {TvM,TiM,TvG,TiG,FETypeX,APTX}
+    entries = ExtendableSparseMatrix{TvM,TiM}(FES.ndofs,FES.ndofs)
+    Block = FEMatrixBlock{TvM,TiM,TvG,TiG,FETypeX,FETypeX,APTX,APTX}(name, FES, FES, 0 , 0, FES.ndofs, FES.ndofs, entries)
+    return FEMatrix{TvM,TiM,TvG,TiG,1,1,1}([Block], entries)
 end
 
 """
 ````
-FEMatrix{T}(name::String, FESX::FESpace, FESY::FESpace) where T <: Real
+FEMatrix{TvM,TiM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpace{TvG,TiG,FETypeY,APTY}) where {TvG,TiG,FETypeX,FETypeY,APTX,APTY}
 ````
 
 Creates FEMatrix with one rectangular block (FESX,FESY).
 """
-function FEMatrix{T}(name::String, FESX::FESpace, FESY::FESpace) where T <: Real
-    entries = ExtendableSparseMatrix{T,Int64}(FESX.ndofs,FESY.ndofs)
-    Block = FEMatrixBlock{T}(name, FESX, FESY, 0 , 0, FESX.ndofs, FESY.ndofs, entries)
-    return FEMatrix{T,1,1,1}([Block], entries)
+function FEMatrix{TvM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpace{TvG,TiG,FETypeY,APTY}) where {TvM,TvG,TiG,FETypeX,FETypeY,APTX,APTY}
+    return FEMatrix{TvM,Int64}(name::String, FESX, FESY)
+end
+function FEMatrix{TvM,TiM}(name::String, FESX::FESpace{TvG,TiG,FETypeX,APTX}, FESY::FESpace{TvG,TiG,FETypeY,APTY}) where {TvM,TiM,TvG,TiG,FETypeX,FETypeY,APTX,APTY}
+    entries = ExtendableSparseMatrix{TvM,TiM}(FESX.ndofs,FESY.ndofs)
+    Block = FEMatrixBlock{TvM,TiM,TvG,TiG,FETypeX,FETypeY,APTX,APTY}(name, FESX, FESY, 0 , 0, FESX.ndofs, FESY.ndofs, entries)
+    return FEMatrix{TvM,TiM,TvG,TiG,1,1,1}([Block], entries)
 end
 
 """
@@ -137,26 +143,29 @@ FEMatrix{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 
 Creates FEMatrix with blocks (FESX[i],FESY[j]) (enumerated row-wise).
 """
-function FEMatrix{T}(name::String, FES::Array{<:FESpace,1}) where T <: Real
+function FEMatrix{TvM}(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvM,TvG,TiG}
+    return FEMatrix{TvM,Int64}(name::String, FES)
+end
+function FEMatrix{TvM,TiM}(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where {TvM,TiM,TvG,TiG}
     ndofs = 0
     for j=1:length(FES)
         ndofs += FES[j].ndofs
     end
-    entries = ExtendableSparseMatrix{T,Int64}(ndofs,ndofs)
+    entries = ExtendableSparseMatrix{TvM,TiM}(ndofs,ndofs)
 
-    Blocks = Array{FEMatrixBlock{T},1}(undef,length(FES)^2)
+    Blocks = Array{FEMatrixBlock{TvM,TiM,TvG,TiG},1}(undef,length(FES)^2)
     offsetX = 0
     offsetY = 0
     for j=1:length(FES)
         offsetY = 0
         for k=1:length(FES)
-            Blocks[(j-1)*length(FES)+k] = FEMatrixBlock{T}(name * " [$j,$k]", FES[j], FES[k], offsetX , offsetY, offsetX+FES[j].ndofs, offsetY+FES[k].ndofs, entries)
+            Blocks[(j-1)*length(FES)+k] = FEMatrixBlock{TvM,TiM,TvG,TiG,eltype(FES[j]),eltype(FES[k]),apttype(FES[j]),apttype(FES[k])}(name * " [$j,$k]", FES[j], FES[k], offsetX , offsetY, offsetX+FES[j].ndofs, offsetY+FES[k].ndofs, entries)
             offsetY += FES[k].ndofs
         end    
         offsetX += FES[j].ndofs
     end    
     
-    return FEMatrix{T,length(FES),length(FES),length(FES)^2}(Blocks, entries)
+    return FEMatrix{TvM,TiM,TvG,TiG,length(FES),length(FES),length(FES)^2}(Blocks, entries)
 end
 
 """
@@ -184,12 +193,12 @@ $(TYPEDSIGNATURES)
 
 Adds FEMatrix B to FEMatrix A.
 """
-function add!(A::FEMatrix{T}, B::FEMatrix{T}; factor = 1, transpose::Bool = false) where {T}
-    AM::ExtendableSparseMatrix{T,Int64} = A.entries
-    BM::ExtendableSparseMatrix{T,Int64} = B.entries
-    cscmat::SparseMatrixCSC{T,Int64} = BM.cscmatrix
-    rows::Array{Int,1} = rowvals(cscmat)
-    valsB::Array{T,1} = cscmat.nzval
+function add!(A::FEMatrix{Tv,Ti}, B::FEMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv,Ti}
+    AM::ExtendableSparseMatrix{Tv,Ti} = A.entries
+    BM::ExtendableSparseMatrix{Tv,Ti} = B.entries
+    cscmat::SparseMatrixCSC{Tv,Ti} = BM.cscmatrix
+    rows::Array{Ti,1} = rowvals(cscmat)
+    valsB::Array{Tv,1} = cscmat.nzval
     ncols::Int = size(cscmat,2)
     arow::Int = 0
     if transpose
@@ -216,12 +225,12 @@ $(TYPEDSIGNATURES)
 
 Adds FEMatrixBlock B to FEMatrixBlock A.
 """
-function addblock!(A::FEMatrixBlock{T}, B::FEMatrixBlock{T}; factor = 1, transpose::Bool = false) where {T}
-    AM::ExtendableSparseMatrix{T,Int64} = A.entries
-    BM::ExtendableSparseMatrix{T,Int64} = B.entries
-    cscmat::SparseMatrixCSC{Float64,Int64} = BM.cscmatrix
-    rows::Array{Int,1} = rowvals(cscmat)
-    valsB::Array{Float64,1} = cscmat.nzval
+function addblock!(A::FEMatrixBlock{Tv,Ti}, B::FEMatrixBlock{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv,Ti}
+    AM::ExtendableSparseMatrix{Tv,Ti} = A.entries
+    BM::ExtendableSparseMatrix{Tv,Ti} = B.entries
+    cscmat::SparseMatrixCSC{Tv,Ti} = BM.cscmatrix
+    rows::Array{Ti,1} = rowvals(cscmat)
+    valsB::Array{Tv,1} = cscmat.nzval
     arow::Int = 0
     acol::Int = 0
     if transpose
@@ -287,10 +296,10 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock{T}, B::FEMatrixBlock{T}, b::FEVectorBlock; factor = 1, transposed::Bool = false) where {T}
-    cscmat::SparseMatrixCSC{T,Int64} = B.entries.cscmatrix
-    rows::Array{Int64,1} = rowvals(cscmat)
-    valsB::Array{T,1} = cscmat.nzval
+function addblock_matmul!(a::FEVectorBlock{Tv}, B::FEMatrixBlock{Tv,Ti}, b::FEVectorBlock{Tv}; factor = 1, transposed::Bool = false) where {Tv,Ti}
+    cscmat::SparseMatrixCSC{Tv,Ti} = B.entries.cscmatrix
+    rows::Array{Ti,1} = rowvals(cscmat)
+    valsB::Array{Tv,1} = cscmat.nzval
     bcol::Int = 0
     row::Int = 0
     arow::Int = 0
@@ -325,10 +334,10 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::AbstractVector{T}, B::FEMatrixBlock{T}, b::AbstractVector; factor = 1, transposed::Bool = false) where {T}
-    cscmat::SparseMatrixCSC{T,Int64} = B.entries.cscmatrix
-    rows::Array{Int64,1} = rowvals(cscmat)
-    valsB::Array{T,1} = cscmat.nzval
+function addblock_matmul!(a::AbstractVector{Tv}, B::FEMatrixBlock{Tv,Ti}, b::AbstractVector{Tv}; factor = 1, transposed::Bool = false) where {Tv,Ti}
+    cscmat::SparseMatrixCSC{Tv,Ti} = B.entries.cscmatrix
+    rows::Array{Ti,1} = rowvals(cscmat)
+    valsB::Array{Tv,1} = cscmat.nzval
     bcol::Int = 0
     row::Int = 0
     arow::Int = 0
@@ -365,7 +374,7 @@ $(TYPEDSIGNATURES)
 
 Adds matrix-vector product B times b to FEVectorBlock a.
 """
-function addblock_matmul!(a::FEVectorBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}, b::FEVectorBlock; factor = 1) where {Tv, Ti <: Integer}
+function addblock_matmul!(a::FEVectorBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}, b::FEVectorBlock{Tv}; factor = 1) where {Tv, Ti <: Integer}
     cscmat::SparseMatrixCSC{Tv,Ti} = B.cscmatrix
     rows::Array{Ti,1} = rowvals(cscmat)
     valsB::Array{Tv,1} = cscmat.nzval

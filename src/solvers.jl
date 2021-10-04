@@ -570,20 +570,21 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     return sqrt(resnorm)
 end
 
-mutable struct AndersonAccelerationManager{T<:Real, maxiterations}
-    LastIterates::Array{FEVector{T},1}
-    LastIteratesTilde::Array{FEVector{T},1}
+mutable struct AndersonAccelerationManager{T,Tv,Ti}
+    LastIterates::Array{FEVector{T,Tv,Ti},1}
+    LastIteratesTilde::Array{FEVector{T,Tv,Ti},1}
     NormOperator::AbstractMatrix{T}
     Matrix::AbstractMatrix{T}
     Rhs::AbstractVector{T}
     alpha::AbstractVector{T}
+    anderson_iterations::Int
     cdepth::Int
-    Target::FEVector{T}
+    Target::FEVector{T,Tv,Ti}
     anderson_unknowns::Array{Int,1}
     damping::T
 end
 
-function AndersonAccelerationManager{T,anderson_iterations}(anderson_metric::String, Target::FEVector; anderson_unknowns = "all", anderson_damping = 1) where {T, anderson_iterations}
+function AndersonAccelerationManager(anderson_metric::String, Target::FEVector{T,Tv,Ti}; anderson_iterations::Int = 1, anderson_unknowns = "all", anderson_damping = 1) where {T, Tv, Ti}
 
     @assert anderson_iterations > 0 "Anderson accelerations needs anderson_iterations > 0!"
     @assert anderson_damping > 0 && anderson_damping <= 1 "Anderson damping factor must be >0 and <=1"
@@ -592,7 +593,7 @@ function AndersonAccelerationManager{T,anderson_iterations}(anderson_metric::Str
     LastIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
 
     ## assemble convergence metric
-    FEs = Array{FESpace,1}([])
+    FEs = Array{FESpace{Tv,Ti},1}([])
     for j = 1 : length(Target.FEVectorBlocks)
         push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
@@ -626,14 +627,13 @@ function AndersonAccelerationManager{T,anderson_iterations}(anderson_metric::Str
         LastIteratesTilde[j] = deepcopy(Target)
         Matrix[j,j] = 1
     end
-    return AndersonAccelerationManager{T,anderson_iterations}(LastIterates,LastIteratesTilde,NormOperator,Matrix,Rhs,alpha,-1,Target,anderson_unknowns, anderson_damping)
+    return AndersonAccelerationManager{T,Tv,Ti}(LastIterates,LastIteratesTilde,NormOperator,Matrix,Rhs,alpha,anderson_iterations,-1,Target,anderson_unknowns, anderson_damping)
 end
 
 # call this every time Target has got its new values
-function update!(AAM::AndersonAccelerationManager)
-    T = typeof(AAM).parameters[1]
-    anderson_iterations = typeof(AAM).parameters[2]
-    AAM.cdepth = min(anderson_iterations,AAM.cdepth)
+function update_anderson!(AAM::AndersonAccelerationManager{T,Tv,Ti}) where {T,Tv,Ti}
+    anderson_iterations::Int = AAM.anderson_iterations
+    cdepth::Int = min(anderson_iterations,AAM.cdepth)
     alpha::Array{T,1} = AAM.alpha
     damping::T = AAM.damping
 
@@ -645,9 +645,9 @@ function update!(AAM::AndersonAccelerationManager)
     # save fixpoint iterate as new tilde iterate
     AAM.LastIteratesTilde[anderson_iterations+1].entries .= AAM.Target.entries
 
-    if AAM.cdepth > 0
+    if cdepth > 0
         # fill matrix until depth (rest of matrix is still identity matrix from init)
-        for j = 1 : AAM.cdepth+1, k = j : AAM.cdepth+1
+        for j = 1 : cdepth+1, k = j : cdepth+1
             AAM.Matrix[j,k] = ldrdmatmul(AAM.LastIteratesTilde[anderson_iterations+2-j].entries, AAM.LastIterates[anderson_iterations+2-j].entries,
                                     AAM.NormOperator,
                                     AAM.LastIteratesTilde[anderson_iterations+2-k].entries, AAM.LastIterates[anderson_iterations+2-k].entries)
@@ -670,7 +670,7 @@ function update!(AAM::AndersonAccelerationManager)
         for u in AAM.anderson_unknowns
             fill!(AAM.Target[u],0)
             offset = AAM.Target[u].offset
-            for a = 1 : AAM.cdepth+1
+            for a = 1 : cdepth+1
                 for j = 1 : AAM.Target[u].FES.ndofs
                     AAM.Target.entries[offset+j] += damping * alpha[a] * AAM.LastIteratesTilde[anderson_iterations+2-a].entries[offset+j]
                     AAM.Target.entries[offset+j] += (1-damping) * alpha[a] * AAM.LastIterates[anderson_iterations+2-a].entries[offset+j]
@@ -735,7 +735,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
     if anderson_iterations > 0
         anderson_time += @elapsed begin    
             @logmsg MoreInfo "Preparing Anderson acceleration for unknown(s) = $anderson_unknowns with convergence metric $anderson_metric and $anderson_iterations iterations"
-            AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
+            AAM = AndersonAccelerationManager(anderson_metric, Target; anderson_iterations = anderson_iterations, anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
         end
     end
     if damping_val > 0
@@ -798,7 +798,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         # POSTPROCESS : ANDERSON ITERATE
         if anderson_iterations > 0
             anderson_time += @elapsed begin
-                update!(AAM)
+                update_anderson!(AAM)
             end
         end
 
@@ -935,7 +935,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
     if anderson_iterations > 0
         anderson_time += @elapsed begin    
             @logmsg MoreInfo "Preparing Anderson acceleration for unknown(s) = $anderson_unknowns with convergence metric $anderson_metric and $anderson_iterations iterations"
-            AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
+            AAM = AndersonAccelerationManager(anderson_metric, Target; anderson_iterations = anderson_iterations, anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
         end
     end
     if damping_val > 0
@@ -1033,7 +1033,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
                 # POSTPROCESS : ANDERSON ITERATE
                 if anderson_iterations > 0
                     anderson_time += @elapsed begin
-                        update!(AAM)
+                        update_anderson!(AAM)
                     end
                 end
 
