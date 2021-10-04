@@ -24,6 +24,7 @@
 
 const GridAdjacencyTypes{Ti} = Union{<:VariableTargetAdjacency{Ti},Array{Ti,2}}
 const GridEGTypes = Vector{DataType}
+const GridRegionTypes{Ti} = Union{VectorOfConstants{Ti}, Array{Ti,1}}
 
 
 # additional ExtendableGrids adjacency types 

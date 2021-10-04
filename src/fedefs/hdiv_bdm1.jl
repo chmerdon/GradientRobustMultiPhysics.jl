@@ -42,19 +42,19 @@ isdefined(FEType::Type{<:HDIVBDM1}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HDIVBDM1}, ::Type{<:Tetrahedron3D}) = true
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVBDM1,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM1,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
     end
 
     # integrate normal flux of exact_function over edges
-    xFaceNormals = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     nfaces = num_sources(xFaceNormals)
     function normalflux_eval()
-        temp = zeros(Float64,ncomponents)
+        temp = zeros(T,ncomponents)
         function closure(result, x, face)
-            eval!(temp, exact_function!, x, time)
+            eval_data!(temp, exact_function!, x, time)
             result[1] = 0.0
             for j = 1 : ncomponents
                 result[1] += temp[j] * xFaceNormals[j,face]
@@ -66,9 +66,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
    
     # integrate normal flux with linear weight (x[1] - 1//2) of exact_function over edges
      function normalflux2_eval()
-        temp = zeros(Float64,ncomponents)
+        temp = zeros(T,ncomponents)
         function closure(result, x, face, xref)
-            eval!(temp, exact_function!, x, time)
+            eval_data!(temp, exact_function!, x, time)
             result[1] = 0.0
             for j = 1 : ncomponents
                 result[1] += temp[j] * xFaceNormals[j,face]
@@ -82,9 +82,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     # integrate normal flux with linear weight (x[2] - 1//2) of exact_function over edges
     if ncomponents == 3
         function normalflux3_eval()
-            temp = zeros(Float64,ncomponents)
+            temp = zeros(T,ncomponents)
             function closure(result, x, face, xref)
-                eval!(temp, exact_function!, x, time)
+                eval_data!(temp, exact_function!, x, time)
                 result[1] = 0.0
                 for j = 1 : ncomponents
                     result[1] += temp[j] * xFaceNormals[j,face]

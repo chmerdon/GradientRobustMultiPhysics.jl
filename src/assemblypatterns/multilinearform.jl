@@ -14,7 +14,7 @@ end
 ````
 function MultilinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
@@ -25,7 +25,7 @@ Creates a MultilinearForm assembly pattern with the given FESpaces, operators an
 """
 function MultilinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
@@ -56,7 +56,7 @@ function assemble!(
     skip_preps::Bool = false,
     factor = 1,
     offset = 0,
-    offsets2 = [0]) where {APT <: APT_MultilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    offsets2 = [0]) where {APT <: APT_MultilinearForm, T <: Real, AT <: AssemblyType}
 
     # prepare assembly
     FE = AP.FES
@@ -66,7 +66,7 @@ function assemble!(
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Int32} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -110,7 +110,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # assemble all but the last operators into action_input
@@ -121,7 +121,7 @@ function assemble!(
                     basisevaler = get_basisevaler(AM, FEid, di)
     
                     # update action on dofitem
-                    update!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
+                    update_action!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
@@ -129,7 +129,7 @@ function assemble!(
 
                     # write evaluation of operator of current FE into action_input
                     for i in eachindex(weights)
-                        eval!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
+                        eval_febe!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
                     end  
                 end
             end
@@ -138,14 +138,14 @@ function assemble!(
         # update action on item/dofitem (of first operator)
         basisevaler4dofitem = get_basisevaler(AM, 1, 1)
         basisxref = basisevaler4dofitem.xref
-        update!(action, basisevaler4dofitem, AM.dofitems[1][1], item, regions[r])
+        update_action!(action, basisevaler4dofitem, AM.dofitems[1][1], item, regions[r])
         
         # multiply last operator of testfunction
         for di = 1 : maxdofitems[end]
             if AM.dofitems[end][di] != 0
                 basisevaler = get_basisevaler(AM, nFE, di[nFE])
                 basisvals = basisevaler.cvals
-                update!(action, basisevaler4dofitem, AM.dofitems[nFE][di], item, regions[r])
+                update_action!(action, basisevaler4dofitem, AM.dofitems[nFE][di], item, regions[r])
                 for i in eachindex(weights)
                     # apply action
                     apply_action!(action_result, action_input[i], action, i, basisxref[i])
@@ -183,7 +183,7 @@ function assemble!(
     FEB::Array{<:FEVectorBlock,1},
     AP::AssemblyPattern{APT,T,AT};
     skip_preps::Bool = false,
-    factor = 1) where {APT <: APT_MultilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    factor = 1) where {APT <: APT_MultilinearForm, T <: Real, AT <: AssemblyType}
 
     FEBarrays = Array{AbstractVector,1}(undef, length(FEB))
     offsets = zeros(Int,length(FEB))

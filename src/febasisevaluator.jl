@@ -9,17 +9,16 @@
 # the mutable subtypes maybe used for assembly where the quadrature points change on each item
 # (e.g. when integrating over cuts through cells in future)
 
-abstract type AbstractFEBasisEvaluator{T} end
-abstract type FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} <: AbstractFEBasisEvaluator{T} end
-abstract type StandardFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs_all, nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
-abstract type ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
+abstract type AbstractFEBasisEvaluator{T, TvG, TiG} end
+abstract type FEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} <: AbstractFEBasisEvaluator{T, TvG, TiG} end
+abstract type StandardFEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs_all, nentries} <: FEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
+abstract type ReconstructionFEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries} <: FEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT, edim, ncomponents, ndofs} end
 
-struct NMStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries, FType_coeffs <: Function, FType_subset <: Function} <: StandardFEBasisEvaluator{T, FEType, EG, FEOP, AT,edim,ncomponents, ndofs, ndofs_all, nentries}
-    FE::FESpace                          # link to full FE (e.g. for coefficients)
-    L2G::L2GTransformer{T, EG}           # local2global mapper
-    L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
-    L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
-    iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
+struct NMStandardFEBasisEvaluator{T, TvG, TiG, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType,edim,ncomponents, ndofs, ndofs_all, nentries, FType_coeffs <: Function, FType_subset <: Function} <: StandardFEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT,edim,ncomponents, ndofs, ndofs_all, nentries}
+    FE::FESpace{TvG,TiG,FEType}                 # link to full FE (e.g. for coefficients)
+    L2G::L2GTransformer{TvG, TiG, EG}    # local2global mapper
+    L2GAinv::Array{TvG,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
+    iteminfo::Array{TvG,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{Array{T,1},1}       # xref of quadrature formula
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
@@ -35,12 +34,11 @@ struct NMStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: Abst
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_subset <: Function} <: StandardFEBasisEvaluator{T, FEType, EG, FEOP, AT,edim,ncomponents, ndofs, ndofs_all, nentries}
-    FE::FESpace                          # link to full FE (e.g. for coefficients)
-    L2G::L2GTransformer{T, EG}           # local2global mapper
-    L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
-    L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
-    iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
+mutable struct MStandardFEBasisEvaluator{T, TvG, TiG, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType,edim,ncomponents, ndofs, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_subset <: Function} <: StandardFEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT,edim,ncomponents, ndofs, ndofs_all, nentries}
+    FE::FESpace{TvG,TiG,FEType}                 # link to full FE (e.g. for coefficients)
+    L2G::L2GTransformer{TvG, TiG, EG}    # local2global mapper
+    L2GAinv::Array{TvG,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
+    iteminfo::Array{TvG,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{Array{T,1},1}            # xref of quadrature formula
     refbasis::FType_basis                # function to call to evaluate basis function on reference geometry
     refbasisvals::Array{Array{T,2},1}    # basis evaluation on EG reference cell 
@@ -60,13 +58,12 @@ mutable struct MStandardFEBasisEvaluator{T, FEType <: AbstractFiniteElement, EG 
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, FETypeR <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
-    FE::FESpace                          # link to full FE (e.g. for coefficients)
-    FE2::FESpace                         # link to reconstruction FE
-    L2G::L2GTransformer{T, EG}           # local2global mapper
-    L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
-    L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
-    iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
+struct NMReconstructionFEBasisEvaluator{T, TvG, TiG, FEType <: AbstractFiniteElement, FETypeR <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_coeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
+    FE::FESpace{TvG,TiG,FEType}                 # link to full FE (e.g. for coefficients)
+    FE2::FESpace{TvG,TiG,FETypeR}                # link to reconstruction FE
+    L2G::L2GTransformer{TvG, TiG, EG}    # local2global mapper
+    L2GAinv::Array{TvG,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
+    iteminfo::Array{TvG,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{Array{T,1},1}            # xref of quadrature formula
     refbasisvals::Array{SMatrix{ndofs_all,ncomponents,T,nentries},1}    # basis evaluation on EG reference cell 
     refbasisderivvals::Array{T,3}        # additional values to evaluate operator
@@ -84,13 +81,12 @@ struct NMReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, FETy
     compressiontargets::Array{Int,1}     # some operators allow for compressed storage (e.g. SymmetricGradient)
 end
 
-mutable struct MReconstructionFEBasisEvaluator{T, FEType <: AbstractFiniteElement, FETypeR <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
-    FE::FESpace                          # link to full FE (e.g. for coefficients)
-    FE2::FESpace                         # link to reconstruction FE
-    L2G::L2GTransformer{T, EG}           # local2global mapper
-    L2GM::Array{T,2}                     # heap for transformation matrix (possibly tinverted)
-    L2GM2::Array{T,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
-    iteminfo::Array{T,1}                 # (e.g. current determinant for Hdiv, current tangent)
+mutable struct MReconstructionFEBasisEvaluator{T, TvG, TiG, FEType <: AbstractFiniteElement, FETypeR <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType,edim,ncomponents, ndofs, ndofs2, ndofs_all,nentries, FType_basis, FType_coeffs <: Function, FType_subset <: Function} <: ReconstructionFEBasisEvaluator{T, TvG, TiG, FEType, EG, FEOP, AT, edim, ncomponents, ndofs, ndofs2, ndofs_all,nentries}
+    FE::FESpace{TvG,TiG,FEType}          # link to full FE (e.g. for coefficients)
+    FE2::FESpace{TvG,TiG,FETypeR}        # link to reconstruction FE
+    L2G::L2GTransformer{TvG, TiG, EG}    # local2global mapper
+    L2GAinv::Array{TvG,2}                    # 2nd heap for transformation matrix (e.g. Piola + mapderiv)
+    iteminfo::Array{TvG,1}                 # (e.g. current determinant for Hdiv, current tangent)
     xref::Array{Array{T,1},1}            # xref of quadrature formula
     refbasis::FType_basis                # function to call to evaluate basis function on reference geometry
     refbasisvals::Array{Array{T,2},1}    # basis evaluation on EG reference cell 
@@ -174,7 +170,7 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, nd
 end
 
 ## relocates evaluation points (needs mutable FEB) used by segment integrator
-function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref) where {T, FEType, EG, FEOP, AT}
+function relocate_xref!(FEB::FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT}, new_xref) where {T, TvG, TiG, FEType, EG, FEOP, AT}
     FEB.xref .= new_xref
     if FEB.derivorder == 0
         for i = 1 : length(new_xref)
@@ -195,7 +191,7 @@ function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref) wh
     end
 end
 
-function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref::AbstractArray{T,1}) where {T, FEType, EG, FEOP, AT}
+function relocate_xref!(FEB::FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT}, new_xref::AbstractArray{T,1}) where {T, TvG, TiG, FEType, EG, FEOP, AT}
     FEB.xref[1] .= new_xref
     if FEB.derivorder == 0
         # evaluate basis functions at quadrature point
@@ -214,23 +210,14 @@ function relocate_xref!(FEB::FEBasisEvaluator{T,FEType,EG,FEOP,AT}, new_xref::Ab
     end
 end
 
-"""
-````
-    FEBasisEvaluator{T <: Real,FEType <: AbstractFiniteElement,EG <: AbstractElementGeometry,FEOP <: AbstractFunctionOperator,AT <: AbstractAssemblyType}(FES::FESpace, qf::QuadratureRule)
-````
-
-Constructor for an evaluator for the basis of the specified FEType (with matching FESpace FES) of the function operator FEOP on the given element geometry EG beeing of AssemblyType AT
-at the points of the quadrature rule qf.
-
-"""
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType}
-    L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
-    L2GM = copy(L2G.A)
-    L2GM2 = copy(L2G.A)
+function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAPT}, xref::Array{Array{T,1},1}; mutable = false) where {T, TvG, TiG, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, FEAPT <: AssemblyType}
+    xgrid = FE.xgrid
+    L2G = L2GTransformer(EG, xgrid,AT)
+    L2GAinv = copy(L2G.A)
 
     # get effective assembly type for basis
     # depending on the AT and the AT of the FESpace
-    FEAT = EffAT4AssemblyType(apttype(FE),AT)
+    FEAT = EffAT4AssemblyType(FEAPT,AT)
 
     @debug "Creating FEBasisEvaluator for $FEType, EG = $EG, operator = $FEOP, FEAT = $FEAT, AT =$AT"
 
@@ -347,24 +334,24 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
 
     citem = 0
     if mutable
-        return MStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return MStandardFEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GAinv,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     else
-        return NMStandardFEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
+        return NMStandardFEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item_all,ndofs4item_all*ncomponents,typeof(coeff_handler),typeof(subset_handler)}(FE,L2G,L2GAinv,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients3, coeff_handler, subset_handler, 1:ndofs4item, compressiontargets)
     end
 end    
 
 # constructor for ReconstructionIdentity, ReconstructionDivergence, ReconstructionGradient
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAPT}, xref::Array{Array{T,1},1}; mutable = false) where {T, TvG, TiG, FEType <: AbstractFiniteElement, FETypeReconst <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: Union{<:ReconstructionIdentity{FETypeReconst},ReconstructionNormalFlux{FETypeReconst},ReconstructionDivergence{FETypeReconst},<:ReconstructionGradient{FETypeReconst}}, AT <: AssemblyType, FEAPT <: AssemblyType}
     
     @debug "Creating FEBasisEvaluator for $FEOP operator of $FEType on $EG"
 
     # generate reconstruction space
     # avoid computation of full dofmap
     # we will just use local basis functions
-    FE2 = FESpace{FETypeReconst}(FE.xgrid)
-    L2G = L2GTransformer{T, EG, FE.xgrid[CoordinateSystem]}(FE.xgrid,AT)
-    L2GM = copy(L2G.A)
-    L2GM2 = copy(L2G.A)
+    xgrid = FE.xgrid
+    FE2 = FESpace{FETypeReconst}(xgrid)
+    L2G = L2GTransformer(EG, xgrid,AT)
+    L2GAinv = copy(L2G.A)
 
     # collect basis function information
     ncomponents::Int = get_ncomponents(FEType)
@@ -427,14 +414,23 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     
     citem = 0
     if mutable
-        return MReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents2,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, reconst_handler, subset_handler,1:ndofs4item2,[])
+        return MReconstructionFEBasisEvaluator{T,TvG,TiG,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents2,typeof(refbasis),typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GAinv,zeros(T,xdim+1),xref,refbasis,refbasisvals,refbasisderivvals,derivorder,Dresult,Dcfg,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler, reconst_handler, subset_handler,1:ndofs4item2,[])
     else
-        return NMReconstructionFEBasisEvaluator{T,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents2,typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GM,L2GM2,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler,reconst_handler,subset_handler,1:ndofs4item2,[])
+        return NMReconstructionFEBasisEvaluator{T,TvG,TiG,FEType,FETypeReconst,EG,FEOP,AT,edim,ncomponents,ndofs4item,ndofs4item2,ndofs4item2_all,ndofs4item2_all*ncomponents2,typeof(coeff_handler),typeof(subset_handler)}(FE,FE2,L2G,L2GAinv,zeros(T,xdim+1),xref,refbasisvals,refbasisderivvals,offsets,offsets2,Ref(citem),current_eval,coefficients, coefficients2,coefficients3,coeff_handler,reconst_handler,subset_handler,1:ndofs4item2,[])
     end
 end    
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T, FEType, EG, FEOP, AT}
-    FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE, Array{Array{T,1},1}(qf.xref); mutable = mutable)
+"""
+````
+FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace, qf::QuadratureRule; mutable = false) where {T <: Real, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType}
+````
+
+Constructor for an evaluator for the basis of the FESpace FES evaluated with the function operator FEOP on the given element geometry EG with AssemblyType AT
+at the points of the quadrature rule qf.
+
+"""
+function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAT}, qf::QuadratureRule; mutable = false) where {T, TvG, TiG, FEType, EG, FEOP, AT, FEAT}
+    FEBasisEvaluator{T,EG,FEOP,AT}(FE, Array{Array{T,1},1}(qf.xref); mutable = mutable)
 end
 
 
@@ -442,14 +438,14 @@ end
 # H1 ELEMENTS (nothing has to be done)
 """
 ````
-    update!(FEBE::FEBasisEvaluator, item::Int)
+    update_febe!(FEBE::FEBasisEvaluator, item::Int)
 ````
 
 Update the FEBasisEvaluator on the given item number of the grid items associated to the AssemblyType. During the update the FEBasisevaluator computes all evaluations of all basis functions at all quadrature points and stores
-them in FEBE.cvals. From there they can be accessed directly or via the eval! functions.
+them in FEBE.cvals. From there they can be accessed directly or via the eval_febe! functions.
 
 """
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Identity,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
         # needs only to be updated if basis sets can change (e.g. for P3 in 2D/3D)
@@ -469,7 +465,7 @@ end
 
 # IDENTITYCOMPONENT OPERATOR
 # H1 ELEMENTS (nothing has to be done)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:IdentityComponent,<:AbstractAssemblyType}, item) where {T}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:IdentityComponent,<:AssemblyType}, item) where {T,TvG,TiG}
     FEBE.citem[] = item
     return nothing
 end
@@ -478,12 +474,12 @@ end
 # H1 ELEMENTS
 # HDIV RECONSTRUCTION
 # Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
-function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionIdentity,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
+function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionIdentity,<:AssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
@@ -533,7 +529,7 @@ end
 
 # RECONSTRUCTION NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
-function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionNormalFlux,<:ON_FACES,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
+function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionNormalFlux,<:ON_FACES,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
@@ -559,7 +555,7 @@ end
 
 # RECONSTRUCTION NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
-function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionNormalFlux,<:ON_BFACES,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
+function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionNormalFlux,<:ON_BFACES,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
@@ -585,14 +581,14 @@ end
 
 # IDENTITY OPERATOR
 # Hcurl ELEMENTS (covariant Piola trafo)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry,<:Identity,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -604,7 +600,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<
                 for k = 1 : ncomponents
                     FEBE.cvals[k,dof_i,i] = 0.0;
                     for l = 1 : ncomponents
-                        FEBE.cvals[k,dof_i,i] += FEBE.L2GM[k,l]*FEBE.refbasisvals[i][dof_i,l];
+                        FEBE.cvals[k,dof_i,i] += FEBE.L2GAinv[k,l]*FEBE.refbasisvals[i][dof_i,l];
                     end    
                     FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]
                 end
@@ -616,12 +612,12 @@ end
 
 # IDENTITY OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Union{Identity,<:IdentityDisc{Jump}},<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Union{Identity,<:IdentityDisc{Jump}},<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
@@ -650,7 +646,7 @@ end
 # IDENTITY OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Identity,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Identity,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
         
@@ -676,7 +672,7 @@ end
 # IDENTITYCOMPONENT OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
 # (no transformation needed, just multiply coefficients)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,FEOP,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,FEOP<:IdentityComponent,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,FEOP,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,FEOP<:IdentityComponent,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
         
@@ -695,12 +691,12 @@ end
 
 # IDENTITYCOMPONENT OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,FEOP,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,FEOP<:IdentityComponent,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,FEOP,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,FEOP<:IdentityComponent,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
@@ -727,7 +723,7 @@ end
 # NORMALFLUX OPERATOR
 # H1 ELEMENTS
 # ON_FACES
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:ON_FACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:ON_FACES,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
@@ -756,7 +752,7 @@ end
 # NORMALFLUX OPERATOR
 # H1 ELEMENTS
 # ON_BFACES
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:ON_BFACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:ON_BFACES,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
@@ -784,7 +780,7 @@ end
 # NORMALFLUX OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
 # ON_FACES
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:NormalFlux,<:ON_FACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:NormalFlux,<:ON_FACES,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
@@ -816,7 +812,7 @@ end
 # NORMALFLUX OPERATOR
 # H1 ELEMENTS WITH COEFFICIENTS
 # ON_BFACES
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,NormalFlux,<:ON_BFACES,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,NormalFlux,<:ON_BFACES,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
@@ -846,7 +842,7 @@ end
 
 # NORMALFLUX OPERATOR
 # Hdiv ELEMENTS (just divide by face volume)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:NormalFlux,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
@@ -864,7 +860,7 @@ end
 
 # TANGENTLFLUX OPERATOR
 # Hcurl ELEMENTS (just divide by face volume)
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry,<:TangentFlux,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry,<:TangentFlux,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
@@ -884,14 +880,14 @@ end
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Hessian,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Hessian,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -907,7 +903,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                     for k = 1 : edim, l = 1 : edim
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : edim, xj = 1 : edim
-                            FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                            FEBE.cvals[(c-1)*edim^2 + (k-1)*edim + l,dof_i,i] += FEBE.L2GAinv[k,xi]*FEBE.L2GAinv[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                         end
                     end    
                 end    
@@ -922,14 +918,14 @@ end
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricHessian{offdiagval},<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs,offdiagval}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricHessian{offdiagval},<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,offdiagval}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -947,11 +943,11 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                         # note: if l > k the derivative is multiplied with offdiagval
                         if k != l
                             for xi = 1 : edim, xj = 1 : edim
-                                FEBE.cvals[FEBE.compressiontargets[(c-1)*edim^2 + (k-1)*edim + l],dof_i,i] += offdiagval * FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                                FEBE.cvals[FEBE.compressiontargets[(c-1)*edim^2 + (k-1)*edim + l],dof_i,i] += offdiagval * FEBE.L2GAinv[k,xi]*FEBE.L2GAinv[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                             end
                         else
                             for xi = 1 : edim, xj = 1 : edim
-                                FEBE.cvals[FEBE.compressiontargets[(c-1)*edim^2 + (k-1)*edim + l],dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                                FEBE.cvals[FEBE.compressiontargets[(c-1)*edim^2 + (k-1)*edim + l],dof_i,i] += FEBE.L2GAinv[k,xi]*FEBE.L2GAinv[l,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                             end
                         end
                     end    
@@ -968,14 +964,14 @@ end
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Laplacian,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Laplacian,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -991,7 +987,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                     for k = 1 : edim
                         # second derivatives partial^2 (x_k x_l)
                         for xi = 1 : edim, xj = 1 : edim
-                            FEBE.cvals[c,dof_i,i] += FEBE.L2GM[k,xi]*FEBE.L2GM[k,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
+                            FEBE.cvals[c,dof_i,i] += FEBE.L2GAinv[k,xi]*FEBE.L2GAinv[k,xj]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + (xi-1)*ndofs*ncomponents + (c-1)*ndofs,xj,i]
                         end
                     end   
                 end    
@@ -1010,14 +1006,14 @@ end
 #
 # Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
 #       i.e. the surface derivative in general
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Gradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Gradient,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1032,7 +1028,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                 for c = 1 : ncomponents, k = 1 : edim
                     for j = 1 : edim
                         # compute duc/dxk
-                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    
@@ -1046,17 +1042,17 @@ end
 # GRADIENT OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
 #
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Gradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Gradient,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         FEBE.coeffs_handler(FEBE.coefficients, item)
         FEBE.subset_handler(FEBE.current_subset, item)
         L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM2,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1069,7 +1065,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:
                     # compute duc/dxk
                     for j = 1 : edim
                         for m = 1 : edim
-                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM2[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
+                            FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GAinv[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
                         end
                     end    
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] *= FEBE.coefficients[c,dof_i] / FEBE.L2G.det[]
@@ -1087,14 +1083,14 @@ end
 # This operator can only be applied to scalar elements and produces the rotated 2D Gradient
 # only works in 2D/Cartesian2D at the moment
 #
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry2D,<:CurlScalar,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry2D,<:CurlScalar,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1108,8 +1104,8 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 FEBE.cvals[2,dof_i,i] = 0.0;
                 for j = 1 : edim
-                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i] # -du/dy
-                    FEBE.cvals[2,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i] # du/dx
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GAinv[2,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i] # -du/dy
+                    FEBE.cvals[2,dof_i,i] += FEBE.L2GAinv[1,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i] # du/dx
                 end    
             end    
         end  
@@ -1124,14 +1120,14 @@ end
 # This operator can only be applied to two-dimensional vector fields and produces the 1D curl
 # only works in 2D/Cartesian2D at the moment
 #
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry2D,<:Curl2D,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry2D,<:Curl2D,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1144,8 +1140,8 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for j = 1 : edim
-                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GM[2,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i]  # -du1/dy
-                    FEBE.cvals[1,dof_i,i] += FEBE.L2GM[1,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[2],j,i]  # du2/dx
+                    FEBE.cvals[1,dof_i,i] -= FEBE.L2GAinv[2,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i],j,i]  # -du1/dy
+                    FEBE.cvals[1,dof_i,i] += FEBE.L2GAinv[1,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[2],j,i]  # du2/dx
                 end    
             end    
         end  
@@ -1158,14 +1154,14 @@ end
 # H1 ELEMENTS
 #
 # only 1D/Cartesian2D at the moment
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:TangentialGradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:TangentialGradient,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1184,7 +1180,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : edim
                         # compute duc/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i] * FEBE.iteminfo[c]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i] * FEBE.iteminfo[c]
                     end    
                 end    
             end    
@@ -1203,14 +1199,14 @@ end
 # in 2D: (du1/dx1, du2/dx2, du1/dx2 + du2/dx1)
 # in 3D: (du1/dx1, du2/dx2, du3/dx3, du1/dx2 + du2/dx1, du1/dx3 + du3/dx1, du2/dx3 + du3/dx2)
 
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricGradient,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricGradient,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if (FEBE.citem[] != item)
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1225,7 +1221,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                 for c = 1 : ncomponents, k = 1 : edim
                     for j = 1 : edim
                         # compute duc/dxk and put it into the right spot in the Voigt vector
-                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
                     end    
                 end    
             end    
@@ -1243,14 +1239,14 @@ end
 #
 # Note: for e.g. EDGE1D/CARTESIAN2D the tangentialderivative is produced,
 #       i.e. the surface derivative in general
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Gradient,<:AbstractAssemblyType,edim, ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Gradient,<:AssemblyType,edim, ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1268,7 +1264,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
                     FEBE.cvals[k + FEBE.offsets[c],dof_i,i] = 0.0;
                     for j = 1 : edim
                         # compute duc/dxk
-                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
+                        FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
                     end    
                     FEBE.cvals[k + FEBE.offsets[c], dof_i,i] *= FEBE.coefficients[c, dof_i]
                 end    
@@ -1282,14 +1278,14 @@ end
 # H1 ELEMENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Divergence,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:Divergence,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1305,7 +1301,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:Ab
                 for k = 1 : edim
                     for j = 1 : edim
                         # compute duk/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[k],j,i]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[k],j,i]
                     end    
                 end    
             end    
@@ -1318,14 +1314,14 @@ end
 # H1 ELEMENTS WITH COEFFICIENTS
 # multiply tinverted jacobian of element trafo with gradient of basis function
 # which yields (by chain rule) the gradient in x coordinates
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Divergence,<:AbstractAssemblyType,edim,ncomponents,ndofs}, item) where {T,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:Divergence,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
     if FEBE.citem[] != item
         FEBE.citem[] = item
 
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1343,7 +1339,7 @@ function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractH1FiniteElementWithC
                 for k = 1 : edim
                     for j = 1 : edim
                         # compute duk/dxk
-                        FEBE.cvals[1,dof_i,i] += FEBE.L2GM[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[k],j,i] * FEBE.coefficients[k, dof_i]
+                        FEBE.cvals[1,dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[k],j,i] * FEBE.coefficients[k, dof_i]
                     end    
                 end    
             end    
@@ -1357,12 +1353,12 @@ end
 # H1 ELEMENTS
 # HDIV RECONSTRUCTION
 # Piola transform Hdiv reference basis and multiply Hdiv coefficients and Trafo coefficients
-function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionDivergence,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
+function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:ReconstructionDivergence,<:AssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1394,15 +1390,15 @@ end
 # RECONSTRUCTION GRADIENT OPERATOR
 # Hdiv ELEMENTS (Piola trafo)
 #
-function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:ReconstructionGradient,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs, ndofs2}
+function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElementWithCoefficients,<:AbstractElementGeometry,<:ReconstructionGradient,<:AssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs, ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
     
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if !FEBE.L2G.nonlinear
-            mapderiv!(FEBE.L2GM2,FEBE.L2G,nothing)
+            mapderiv!(FEBE.L2GAinv,FEBE.L2G,nothing)
         else
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1422,7 +1418,7 @@ function update!(FEBE::ReconstructionFEBasisEvaluator{T,<:AbstractH1FiniteElemen
                     # compute duc/dxk
                     for j = 1 : edim
                         for m = 1 : edim
-                            FEBE.coefficients3[k + FEBE.offsets[c],dof_i] += FEBE.L2GM2[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
+                            FEBE.coefficients3[k + FEBE.offsets[c],dof_i] += FEBE.L2GAinv[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
                         end
                     end    
                     FEBE.coefficients3[k + FEBE.offsets[c],dof_i] *= FEBE.coefficients[c,dof_i] / FEBE.L2G.det[]
@@ -1448,12 +1444,12 @@ end
 # DIVERGENCE OPERATOR
 # HDIV ELEMENTS
 # Piola transformation preserves divergence (up to a factor 1/det(A))
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Divergence,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Divergence,<:AssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
         
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1479,12 +1475,12 @@ end
 # CURL2D OPERATOR
 # HCURL ELEMENTS on 2D domains
 # covariant Piola transformation preserves curl2D (up to a factor 1/det(A))
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry2D,<:Curl2D,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry2D,<:Curl2D,<:AssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
         
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
         end
@@ -1506,12 +1502,12 @@ end
 # CURL3D OPERATOR
 # HCURL ELEMENTS on 3D domains
 # covariant Piola transformation preserves curl3D (up to a factor 1/det(A))
-function update!(FEBE::StandardFEBasisEvaluator{T,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry3D,Curl3D,<:AbstractAssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,edim,ncomponents,ndofs,ndofs2}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHcurlFiniteElement,<:AbstractElementGeometry3D,Curl3D,<:AssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
     if FEBE.citem[] != item
         FEBE.citem[] = item
         
         # update transformation
-        update!(FEBE.L2G, item)
+        update_trafo!(FEBE.L2G, item)
         L2GM::Array{T,2} = FEBE.L2G.A # need matrix for Piola trafo
         if FEBE.L2G.nonlinear
             @error "nonlinear local2global transformations not yet supported"
@@ -1540,13 +1536,13 @@ end
 
 """
 ````
-    eval!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
+    eval_febe!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
 ````
 
 Evaluate the j-th basis function of the FEBasisEvaluator at the i-th quadrature point adn writes the (possibly vector-valued) evaluation into result (beginning at offset and with the specified factor).
 
 """
-function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, j::Int, i::Int, offset::Int = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
+function eval_febe!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, j::Int, i::Int, offset::Int = 0, factor = 1) where {T,TvG,TiG,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
     for k = 1 : size(FEBE.cvals,1)
         result[offset + k] = FEBE.cvals[k,j,i] * factor
     end  
@@ -1555,13 +1551,13 @@ end
 
 """
 ````
-    eval!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
+    eval_febe!(result, FEBE::FEBasisEvaluator, j::Int, i::Int, offset::Int = 0, factor = 1)
 ````
 
 Evaluates the linear combination of the basisfunction with given coefficients at the i-th quadrature point and writes the (possibly vector-valued) evaluation into result (beginning at offset and with the specified factor).
 
 """
-function eval!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, coefficients::Array{T,1}, i::Int, offset = 0, factor = 1) where {T,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
+function eval_febe!(result::Array{T,1}, FEBE::FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}, coefficients::Array{T,1}, i::Int, offset = 0, factor = 1) where {T,TvG,TiG,FEType,FEOP,EG,AT,edim,ncomponents,ndofs}
     for dof_i = 1 : ndofs # ndofs4item
         for k = 1 : size(FEBE.cvals,1)
             result[offset+k] += coefficients[dof_i] * FEBE.cvals[k,dof_i,i] * factor 
@@ -1586,31 +1582,31 @@ Base.size(SCV::SharedCValView{T}) where {T} = [SCV.offsets[end] + size(SCV.cvals
 Base.size(SCV::SharedCValView{T},i) where {T} = (i == 1) ? SCV.offsets[end] + size(SCV.cvals[end],1) : size(SCV.cvals[end],i)
 
 # collects two FEBasisEvaluators
-struct FEBasisEvaluatorPair{T,FEB1Type,FEB2Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
-    FE::FESpace                          # link to full FE (e.g. for coefficients)
+struct FEBasisEvaluatorPair{T,TvG,TiG,FEB1Type,FEB2Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
+    FE::FESpace{TvG,TiG,FEType}                          # link to full FE (e.g. for coefficients)
     FEB1::FEB1Type # first FEBasisEvaluator
     FEB2::FEB2Type # second FEBasisEvaluator
     cvals::SharedCValView{T}
-    L2G::L2GTransformer{T, EG}           # local2global mapper
+    L2G::L2GTransformer{TvG,TiG, EG}           # local2global mapper
     xref::Array{Array{T,1},1} # xref of quadrature formula
 end
 
 # collects three FEBasisEvaluators
-struct FEBasisEvaluatorTriple{T,FEB1Type,FEB2Type,FEB3Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
-    FE::FESpace                          # link to full FE (e.g. for coefficients)
+struct FEBasisEvaluatorTriple{T,TvG,TiG,FEB1Type,FEB2Type,FEB3Type,FEType,EG,FEOP,AT,edim,ncomponents,ndofs} <: FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT,edim,ncomponents,ndofs}
+    FE::FESpace{TvG,TiG,FEType}       # link to full FE (e.g. for coefficients)
     FEB1::FEB1Type # first FEBasisEvaluator
     FEB2::FEB2Type # second FEBasisEvaluator
     FEB3::FEB3Type # third FEBasisEvaluator
     cvals::SharedCValView{T}
-    L2G::L2GTransformer{T, EG}           # local2global mapper
+    L2G::L2GTransformer{TvG,TiG, EG}           # local2global mapper
     xref::Array{Array{T,1},1} # xref of quadrature formula
 end
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: OperatorPair, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAT}, xref::Array{Array{T,1},1}; mutable = false) where {T, TvG, TiG, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: OperatorPair, AT <: AssemblyType, FEAT <: AssemblyType}
     FEOP1 = FEOP.parameters[1]
     FEOP2 = FEOP.parameters[2]
-    FEB1 = FEBasisEvaluator{T,FEType,EG,FEOP1,AT}(FE,xref; mutable = mutable)
-    FEB2 = FEBasisEvaluator{T,FEType,EG,FEOP2,AT}(FE,xref; mutable = mutable)
+    FEB1 = FEBasisEvaluator{T,EG,FEOP1,AT}(FE,xref; mutable = mutable)
+    FEB2 = FEBasisEvaluator{T,EG,FEOP2,AT}(FE,xref; mutable = mutable)
     ncomponents = size(FEB1.cvals,1) + size(FEB2.cvals,1)
     indexes = ones(Int,ncomponents)
     offsets = zeros(Int,ncomponents)
@@ -1621,17 +1617,17 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     cvals = SharedCValView([FEB1.cvals,FEB2.cvals],indexes,offsets)
     edim = dim_element(EG)
     ndofs = size(FEB1.cvals,2)
-    return FEBasisEvaluatorPair{T,typeof(FEB1),typeof(FEB2),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,cvals,FEB1.L2G,FEB1.xref)
+    return FEBasisEvaluatorPair{T,TvG,TiG,typeof(FEB1),typeof(FEB2),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,cvals,FEB1.L2G,FEB1.xref)
 end
 
 
-function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,1},1}; mutable = false) where {T, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: OperatorTriple, AT <: AbstractAssemblyType}
+function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAT}, xref::Array{Array{T,1},1}; mutable = false) where {T, TvG, TiG, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: OperatorTriple, AT <: AssemblyType, FEAT <: AssemblyType}
     FEOP1 = FEOP.parameters[1]
     FEOP2 = FEOP.parameters[2]
     FEOP3 = FEOP.parameters[3]
-    FEB1 = FEBasisEvaluator{T,FEType,EG,FEOP1,AT}(FE,xref; mutable = mutable)
-    FEB2 = FEBasisEvaluator{T,FEType,EG,FEOP2,AT}(FE,xref; mutable = mutable)
-    FEB3 = FEBasisEvaluator{T,FEType,EG,FEOP3,AT}(FE,xref; mutable = mutable)
+    FEB1 = FEBasisEvaluator{T,EG,FEOP1,AT}(FE,xref; mutable = mutable)
+    FEB2 = FEBasisEvaluator{T,EG,FEOP2,AT}(FE,xref; mutable = mutable)
+    FEB3 = FEBasisEvaluator{T,EG,FEOP3,AT}(FE,xref; mutable = mutable)
     ncomponents = size(FEB1.cvals,1) + size(FEB2.cvals,1) + size(FEB3.cvals,1)
     indexes = ones(Int,ncomponents)
     offsets = zeros(Int,ncomponents)
@@ -1646,18 +1642,18 @@ function FEBasisEvaluator{T,FEType,EG,FEOP,AT}(FE::FESpace, xref::Array{Array{T,
     cvals = SharedCValView([FEB1.cvals,FEB2.cvals,FEB3.cvals],indexes,offsets)
     edim = dim_element(EG)
     ndofs = size(FEB1.cvals,2)
-    return FEBasisEvaluatorPair{T,typeof(FEB1),typeof(FEB2),typeof(FEB3),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,FEB3,cvals,FEB1.L2G,FEB1.xref)
+    return FEBasisEvaluatorPair{T,TvG,TiG,typeof(FEB1),typeof(FEB2),typeof(FEB3),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,FEB3,cvals,FEB1.L2G,FEB1.xref)
 end
 
-function update!(FEBE::FEBasisEvaluatorPair, item)
-    update!(FEBE.FEB1, item)
-    update!(FEBE.FEB2, item)
+function update_febe!(FEBE::FEBasisEvaluatorPair, item)
+    update_febe!(FEBE.FEB1, item)
+    update_febe!(FEBE.FEB2, item)
     return nothing
 end
 
-function update!(FEBE::FEBasisEvaluatorTriple, item)
-    update!(FEBE.FEB1, item)
-    update!(FEBE.FEB2, item)
-    update!(FEBE.FEB3, item)
+function update_febe!(FEBE::FEBasisEvaluatorTriple, item)
+    update_febe!(FEBE.FEB1, item)
+    update_febe!(FEBE.FEB2, item)
+    update_febe!(FEBE.FEB3, item)
     return nothing
 end

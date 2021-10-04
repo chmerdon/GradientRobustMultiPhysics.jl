@@ -81,7 +81,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     end
 
     # compute exact face means
-    facemeans = zeros(Float64,ncomponents,nitems)
+    facemeans = zeros(T,ncomponents,nitems)
     integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!; items = items, time = time)
     P1flux::T = 0
     value::T = 0
@@ -109,7 +109,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
 end
 
 
-function interpolate!(Target::AbstractArray{<:T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: H1P1TEB{3},APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: H1P1TEB{3},APT}
     # delegate face nodes to node interpolation
     subitems = slice(FE.xgrid[EdgeNodes], items)
     interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
@@ -129,7 +129,7 @@ function interpolate!(Target::AbstractArray{<:T,1}, FE::FESpace{Tv,Ti,FEType,APT
     end
 
     # compute exact face means
-    edgemeans = zeros(Float64,ncomponents,nitems)
+    edgemeans = zeros(T,ncomponents,nitems)
     integrate!(edgemeans, FE.xgrid, ON_EDGES, exact_function!; items = items, time = time)
     P1flux::T = 0
     value::T = 0
@@ -188,7 +188,7 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1P1TEB{2}}, EG::Type{<:Tria
 end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1P1TEB{2},APT}, ::Type{<:Triangle2D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
         fill!(coefficients,1.0)
@@ -202,7 +202,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1P1TEB{2},APT}, :
 end
 
 function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{Tv,Ti,H1P1TEB{2},APT}, ::Type{<:Edge1D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
         fill!(coefficients,1.0)
@@ -248,7 +248,7 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1P1TEB{3}}, EG::Type{<:Tetr
 end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1P1TEB{3},APT}, ::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
-    xEdgeTangents::Array{Float64,2} = FE.xgrid[EdgeTangents]
+    xEdgeTangents::Array{Tv,2} = FE.xgrid[EdgeTangents]
     xCellEdges = FE.xgrid[CellEdges]
     function closure(coefficients::Array{<:Real,2}, cell)
         fill!(coefficients,1.0)
@@ -260,7 +260,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1P1TEB{3},APT}, :
 end
 
 function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{Tv,Ti,H1P1TEB{3},APT}, ::Type{<:Triangle2D}) where {Tv,Ti,APT}
-    xEdgeTangents::Array{Float64,2} = FE.xgrid[EdgeTangents]
+    xEdgeTangents::Array{Tv,2} = FE.xgrid[EdgeTangents]
     xFaceEdges = FE.xgrid[FaceEdges]
     function closure(coefficients::Array{<:Real,2}, face)
         fill!(coefficients,1.0)

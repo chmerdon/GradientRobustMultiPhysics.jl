@@ -28,19 +28,19 @@ get_dofmap_pattern(FEType::Type{<:HDIVBDM2{2}}, ::Type{BFaceDofs}, EG::Type{<:Ab
 isdefined(FEType::Type{<:HDIVBDM2}, ::Type{<:Triangle2D}) = true
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVBDM2,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM2,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
     end
 
     # integrate normal flux of exact_function over edges
-    xFaceNormals = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     nfaces = num_sources(xFaceNormals)
     function normalflux_eval()
-        temp = zeros(Float64,ncomponents)
+        temp = zeros(T,ncomponents)
         function closure(result, x, face)
-            eval!(temp, exact_function!, x, time)
+            eval_data!(temp, exact_function!, x, time)
             result[1] = 0.0
             for j = 1 : ncomponents
                 result[1] += temp[j] * xFaceNormals[j,face]
@@ -52,9 +52,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
    
     # integrate normal flux with linear weight (x[1] - 1//2) of exact_function over edges
     function normalflux2_eval()
-        temp = zeros(Float64,ncomponents)
+        temp = zeros(T,ncomponents)
         function closure(result, x, face, xref)
-            eval!(temp, exact_function!, x, time)
+            eval_data!(temp, exact_function!, x, time)
             result[1] = 0.0
             for j = 1 : ncomponents
                 result[1] += temp[j] * xFaceNormals[j,face]
@@ -66,9 +66,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     integrate!(Target, FE.xgrid, ON_FACES, edata_function2; items = items, time = time, index_offset = nfaces)
 
     function normalflux3_eval()
-       temp = zeros(Float64,ncomponents)
+       temp = zeros(T,ncomponents)
        function closure(result, x, face, xref)
-           eval!(temp, exact_function!, x, time)
+           eval_data!(temp, exact_function!, x, time)
            result[1] = 0.0
            for j = 1 : ncomponents
                result[1] += temp[j] * xFaceNormals[j,face]
@@ -80,7 +80,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     integrate!(Target, FE.xgrid, ON_FACES, edata_function3; items = items, time = time, index_offset = 2*nfaces)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVBDM2,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM2,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
@@ -92,19 +92,19 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     interior_offset::Int = 9
     nidofs::Int = ndofs - interior_offset
     ncells = num_sources(FE.xgrid[CellNodes])
-    xCellVolumes = FE.xgrid[CellVolumes]
-    xCellDofs = FE[CellDofs]
-    qf = QuadratureRule{Float64,EG}(max(4,2+exact_function!.quadorder))
-    FEB = FEBasisEvaluator{Float64,eltype(FE),EG,Identity,ON_CELLS}(FE, qf)
+    xCellVolumes::Array{Tv,1} = FE.xgrid[CellVolumes]
+    xCellDofs::DofMapTypes{Ti} = FE[CellDofs]
+    qf = QuadratureRule{T,EG}(max(4,2+exact_function!.quadorder))
+    FEB = FEBasisEvaluator{T,EG,Identity,ON_CELLS}(FE, qf)
 
     # evaluation of gradient of P1 functions
     FE3 = H1P1{1}
     FES3 = FESpace{FE3,ON_CELLS}(FE.xgrid)
-    FEBP1 = FEBasisEvaluator{Float64,FE3,EG,Gradient,ON_CELLS}(FES3, qf)
+    FEBP1 = FEBasisEvaluator{T,EG,Gradient,ON_CELLS}(FES3, qf)
     # evaluation of curl of bubble functions
     FE4 = H1BUBBLE{1}
     FES4 = FESpace{FE4,ON_CELLS}(FE.xgrid)
-    FEBB = FEBasisEvaluator{Float64,FE4,EG,CurlScalar,ON_CELLS}(FES4, qf)
+    FEBB = FEBasisEvaluator{T,EG,CurlScalar,ON_CELLS}(FES4, qf)
 
 
     if items == []
@@ -112,20 +112,20 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 
     interiordofs = zeros(Int,nidofs)
-    basisvals::Array{Float64,3} = FEB.cvals
-    basisvalsP1::Array{Float64,3} = FEBP1.cvals
-    basisvalsB::Array{Float64,3} = FEBB.cvals
-    IMM_face = zeros(Float64,nidofs,interior_offset)
-    IMM = zeros(Float64,nidofs,nidofs)
-    lb = zeros(Float64,nidofs)
-    temp::Float64 = 0
-    feval = zeros(Float64,ncomponents)
-    x = zeros(Float64,ncomponents)
+    basisvals::Array{T,3} = FEB.cvals
+    basisvalsP1::Array{T,3} = FEBP1.cvals
+    basisvalsB::Array{T,3} = FEBB.cvals
+    IMM_face = zeros(T,nidofs,interior_offset)
+    IMM = zeros(T,nidofs,nidofs)
+    lb = zeros(T,nidofs)
+    temp::T = 0
+    feval = zeros(T,ncomponents)
+    x = zeros(T,ncomponents)
     for cell in items
         # update basis
-        update!(FEB,cell)
-        update!(FEBP1,cell)
-        update!(FEBB,cell)
+        update_febe!(FEB,cell)
+        update_febe!(FEBP1,cell)
+        update_febe!(FEBB,cell)
         fill!(IMM,0)
         fill!(IMM_face,0)
         fill!(lb,0)
@@ -133,8 +133,8 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         # quadrature loop
         for i = 1 : length(qf.w)
             # right-hand side : f times grad(P1),curl(bubble)
-            eval!(x,FEB.L2G,FEB.xref[i])
-            eval!(feval, exact_function!, x, time)
+            eval_trafo!(x,FEB.L2G,FEB.xref[i])
+            eval_data!(feval, exact_function!, x, time)
             feval .*= xCellVolumes[cell] * qf.w[i]
             for dof = 1:nidofs
                 for k = 1 : ncomponents

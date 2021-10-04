@@ -24,12 +24,12 @@ Creates a TrilinearForm assembly pattern with the given FESpaces, operators and 
 """
 function TrilinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
-    FES::Array{FESpace,1},
+    AT::Type{<:AssemblyType},
+    FES::Array{<:FESpace{Tv,Ti},1},
     operators::Array{DataType,1},
     action::AbstractAction;
     name = "TLF",
-    regions::Array{Int,1} = [0])
+    regions::Array{Int,1} = [0]) where {Tv,Ti}
     @assert length(operators) == 3
     @assert length(FES) == 3
     return  AssemblyPattern{APT_TrilinearForm, T, AT}(name,FES,operators,action,[1,2],regions)
@@ -60,7 +60,7 @@ function assemble!(
     fixed_arguments = [1],
     transposed_assembly::Bool = false,
     skip_preps::Bool = false,
-    factor = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    factor = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AssemblyType}
 
     # prepare assembly
     FE = AP.FES
@@ -69,7 +69,7 @@ function assemble!(
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Int32} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -118,7 +118,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # loop over associated dofitems
@@ -141,7 +141,7 @@ function assemble!(
 
                 # update action on dofitem
                 basisxref = basisevaler[2].xref
-                update!(action, basisevaler[2], dofitem[2], item, regions[r])
+                update_action!(action, basisevaler[2], dofitem[2], item, regions[r])
 
                 # update coeffs of fixed and dofs of free arguments
                 get_coeffs!(coeffs, fixedFE[1], AM, fixed_argument, di[fixed_argument])
@@ -154,11 +154,11 @@ function assemble!(
     
                         # evaluate fixed argument into action
                         fill!(action_input, 0)
-                        eval!(action_input, basisevaler[fixed_argument], coeffs, i, offsets[fixed_argument])
+                        eval_febe!(action_input, basisevaler[fixed_argument], coeffs, i, offsets[fixed_argument])
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]])
+                            eval_febe!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]])
                             apply_action!(action_result, action_input, action, i, basisxref[i])
             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
@@ -175,14 +175,14 @@ function assemble!(
     
                         # evaluate fixed argument into separate vector
                         fill!(evalfixedFE, 0)
-                        eval!(evalfixedFE, basisevaler[fixed_argument], coeffs, i, 0)
+                        eval_febe!(evalfixedFE, basisevaler[fixed_argument], coeffs, i, 0)
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
-                            eval!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, 0)
+                            eval_febe!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, 0)
                             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
-                                eval!(action_input, basisevaler[nonfixed_ids[2]], dof_j, i, offsets[2])
+                                eval_febe!(action_input, basisevaler[nonfixed_ids[2]], dof_j, i, offsets[2])
                                 apply_action!(action_result, action_input, action, i, basisxref[i])
 
                                 temp = 0
@@ -237,7 +237,7 @@ function assemble!(
     fixedFE::Array{<:FEVectorBlock,1};
     skip_preps::Bool = false,
     factor::Real = 1,
-    offset::Int = 0) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    offset::Int = 0) where {APT <: APT_TrilinearForm, T <: Real, AT <: AssemblyType}
 
     # prepare assembly
     FE1 = fixedFE[1]
@@ -248,7 +248,7 @@ function assemble!(
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Int32} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -293,7 +293,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # loop over associated dofitems
@@ -313,7 +313,7 @@ function assemble!(
                 basisxref = basisevaler[2].xref
 
                 # update action on dofitem
-                update!(action, basisevaler[2], dofitem[2], item, regions[r])
+                update_action!(action, basisevaler[2], dofitem[2], item, regions[r])
 
                 # update dofs of free arguments
                 get_coeffs!(coeffs1, FE1, AM, fixed_arguments[1], di[fixed_arguments[1]])
@@ -325,8 +325,8 @@ function assemble!(
                 for i in eachindex(weights)
                     # evaluate first and second component
                     fill!(action_input, 0)
-                    eval!(action_input, basisevaler[fixed_arguments[1]], coeffs1, i)
-                    eval!(action_input, basisevaler[fixed_arguments[2]], coeffs2, i, offsets[2])
+                    eval_febe!(action_input, basisevaler[fixed_arguments[1]], coeffs1, i)
+                    eval_febe!(action_input, basisevaler[fixed_arguments[2]], coeffs2, i, offsets[2])
         
                     # apply action to FE1 and FE2
                     apply_action!(action_result, action_input, action, i, basisxref[i])
@@ -363,7 +363,7 @@ function assemble!(
     fixedFE::Array{<:FEVectorBlock,1};
     skip_preps::Bool = false,
     fixed_arguments = [1,2], # currently the only accepted configuration
-    factor::Real = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    factor::Real = 1) where {APT <: APT_TrilinearForm, T <: Real, AT <: AssemblyType}
 
     assemble!(b.entries, AP, fixedFE; factor = factor, offset = b.offset, skip_preps = skip_preps)
 end

@@ -87,7 +87,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         result[2] = input[3]^2
         return nothing
     end
-    estimator_action = Action(Float64,ActionKernel(eqestimator_kernel, [2,5]; name = "estimator kernel", dependencies = "", quadorder = 3))
+    estimator_action = Action{Float64}(ActionKernel(eqestimator_kernel, [2,5]; name = "estimator kernel", dependencies = "", quadorder = 3))
     EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Divergence, Gradient],estimator_action)
 
     ## setup exact error evaluations
@@ -114,7 +114,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         FES_eta = FESpace{H1P0{1}}(xgrid)
         append!(Solution, "σ_h",FES_eta)
         error4cell = zeros(Float64,2,num_sources(xgrid[CellNodes]))
-        evaluate!(error4cell, EQIntegrator, [DualSolution[1], DualSolution[1], Solution[1]])
+        evaluate!(error4cell, EQIntegrator, Array{FEVectorBlock{Float64,Float64,Int32},1}([DualSolution[1], DualSolution[1], Solution[1]]))
         for j = 1 : num_sources(xgrid[CellNodes])
             Solution[2][j] = error4cell[1,j] + error4cell[2,j]
         end
@@ -126,10 +126,10 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         end
 
         ## calculate L2 error, H1 error, estimator, dual L2 error and write to results
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,[Solution[1]]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,[Solution[1]]))
+        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
         Results[level,3] = sqrt(sum(Solution[2][:]))
-        Results[level,4] = sqrt(evaluate(L2ErrorEvaluatorDual,[DualSolution[1]]))
+        Results[level,4] = sqrt(evaluate(L2ErrorEvaluatorDual,DualSolution[1]))
         if verbosity > 0
             println("  ESTIMATE")
             println("    estim H1 error = $(Results[level,3])")
@@ -234,11 +234,11 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
         blocal = zeros(Float64,maxdofs)
 
         ## init FEBasiEvaluators
-        FEBasis_gradphi = FEBasisEvaluator{Float64,POUFEType,Triangle2D,Gradient,ON_CELLS}(POUFES, POUqf)
-        FEBasis_xref = FEBasisEvaluator{Float64,POUFEType,Triangle2D,Identity,ON_CELLS}(POUFES, qf)
-        FEBasis_graduh = FEBasisEvaluator{Float64,FEType,Triangle2D,Gradient,ON_CELLS}(Solution[1].FES, qf)
-        FEBasis_div = FEBasisEvaluator{Float64,FETypeDual,Triangle2D,Divergence,ON_CELLS}(FESDual, qf)
-        FEBasis_id = FEBasisEvaluator{Float64,FETypeDual,Triangle2D,Identity,ON_CELLS}(FESDual, qf)
+        FEBasis_gradphi = FEBasisEvaluator{Float64,Triangle2D,Gradient,ON_CELLS}(POUFES, POUqf)
+        FEBasis_xref = FEBasisEvaluator{Float64,Triangle2D,Identity,ON_CELLS}(POUFES, qf)
+        FEBasis_graduh = FEBasisEvaluator{Float64,Triangle2D,Gradient,ON_CELLS}(Solution[1].FES, qf)
+        FEBasis_div = FEBasisEvaluator{Float64,Triangle2D,Divergence,ON_CELLS}(FESDual, qf)
+        FEBasis_id = FEBasisEvaluator{Float64,Triangle2D,Identity,ON_CELLS}(FESDual, qf)
 
         ## init system
         A = ExtendableSparseMatrix{Float64,Int}(FESDual.ndofs,FESDual.ndofs)
@@ -275,8 +275,8 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
                 while xCellNodes[localnode,cell] != node
                     localnode += 1
                 end
-                GradientRobustMultiPhysics.update!(FEBasis_gradphi,cell)
-                eval!(gradphi, FEBasis_gradphi, localnode, 1)
+                GradientRobustMultiPhysics.update_febe!(FEBasis_gradphi,cell)
+                eval_febe!(gradphi, FEBasis_gradphi, localnode, 1)
 
                 ## read coefficients for discrete flux
                 for j=1:maxdofs_uh
@@ -284,9 +284,9 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
                 end
 
                 ## update other FE evaluators
-                GradientRobustMultiPhysics.update!(FEBasis_graduh,cell)
-                GradientRobustMultiPhysics.update!(FEBasis_div,cell)
-                GradientRobustMultiPhysics.update!(FEBasis_id,cell)
+                GradientRobustMultiPhysics.update_febe!(FEBasis_graduh,cell)
+                GradientRobustMultiPhysics.update_febe!(FEBasis_div,cell)
+                GradientRobustMultiPhysics.update_febe!(FEBasis_id,cell)
 
                 ## assembly on this cell
                 for i in eachindex(weights)
@@ -294,28 +294,28 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
 
                     ## evaluate grad(u_h) and nodal basis function at quadrature point
                     fill!(graduh,0)
-                    eval!(graduh, FEBasis_graduh, coeffs_uh, i)
-                    eval!(eval_phi, FEBasis_xref, localnode, i)
+                    eval_febe!(graduh, FEBasis_graduh, coeffs_uh, i)
+                    eval_febe!(eval_phi, FEBasis_xref, localnode, i)
 
                     ## compute residual -f*phi_z + grad(u_h) * grad(phi_z) at quadrature point i ( f = 0 in this example !!! )
                     temp = div_penalty * sqrt(xCellVolumes[cell]) * ( graduh[1] * gradphi[1] + graduh[2] * gradphi[2] ) * weight
                     temp2 = div_penalty * sqrt(xCellVolumes[cell]) *weight
                     for dof_i = 1 : maxdofs
-                        eval!(eval_i, FEBasis_id, dof_i, i)
+                        eval_febe!(eval_i, FEBasis_id, dof_i, i)
                         eval_i .*= weight
                         ## right-hand side for best-approximation (grad(u_h)*phi)
                         blocal[dof_i] += (graduh[1]*eval_i[1] + graduh[2]*eval_i[2]) * eval_phi[1]
                         ## mass matrix Hdiv 
                         for dof_j = 1 : maxdofs
-                            eval!(eval_j, FEBasis_id, dof_j, i)
+                            eval_febe!(eval_j, FEBasis_id, dof_j, i)
                             Alocal[dof_i,dof_j] += (eval_i[1]*eval_j[1] + eval_i[2]*eval_j[2])
                         end
                         ## div-div matrix Hdiv * penalty (quick and dirty to avoid Lagrange multiplier)
-                        eval!(eval_i, FEBasis_div, dof_i, i)
+                        eval_febe!(eval_i, FEBasis_div, dof_i, i)
                         blocal[dof_i] += temp * eval_i[1]
                         temp3 = temp2 * eval_i[1]
                         for dof_j = 1 : maxdofs
-                            eval!(eval_j, FEBasis_div, dof_j, i)
+                            eval_febe!(eval_j, FEBasis_div, dof_j, i)
                             Alocal[dof_i,dof_j] += temp3*eval_j[1]
                         end
                     end

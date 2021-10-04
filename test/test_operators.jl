@@ -21,16 +21,16 @@ function test_2nd_derivs()
     qf = QuadratureRule{Float64,Triangle2D}(0)
 
     ## define FE basis Evaluator for Hessian
-    FEBE_L = FEBasisEvaluator{Float64,FEType,Triangle2D,Laplacian,ON_CELLS}(FES, qf)
-    FEBE_H = FEBasisEvaluator{Float64,FEType,Triangle2D,Hessian,ON_CELLS}(FES, qf)
-    FEBE_symH = FEBasisEvaluator{Float64,FEType,Triangle2D,SymmetricHessian{1},ON_CELLS}(FES, qf)
-    FEBE_symH2 = FEBasisEvaluator{Float64,FEType,Triangle2D,SymmetricHessian{sqrt(2)},ON_CELLS}(FES, qf)
+    FEBE_L = FEBasisEvaluator{Float64,Triangle2D,Laplacian,ON_CELLS}(FES, qf)
+    FEBE_H = FEBasisEvaluator{Float64,Triangle2D,Hessian,ON_CELLS}(FES, qf)
+    FEBE_symH = FEBasisEvaluator{Float64,Triangle2D,SymmetricHessian{1},ON_CELLS}(FES, qf)
+    FEBE_symH2 = FEBasisEvaluator{Float64,Triangle2D,SymmetricHessian{sqrt(2)},ON_CELLS}(FES, qf)
 
     ## update on cell 1
-    GradientRobustMultiPhysics.update!(FEBE_L,1)
-    GradientRobustMultiPhysics.update!(FEBE_H,1)
-    GradientRobustMultiPhysics.update!(FEBE_symH,1)
-    GradientRobustMultiPhysics.update!(FEBE_symH2,1)
+    update_febe!(FEBE_L,1)
+    update_febe!(FEBE_H,1)
+    update_febe!(FEBE_symH,1)
+    update_febe!(FEBE_symH2,1)
 
     ## interpolate quadratic testfunction
     Iu = FEVector{Float64}("Iu",FES)
@@ -48,10 +48,10 @@ function test_2nd_derivs()
     symH = zeros(Float64,6)
     symH2 = zeros(Float64,6)
     L = zeros(Float64,2)
-    eval!(L, FEBE_L, Iu.entries[FES[CellDofs][:,1]], 1)
-    eval!(H, FEBE_H, Iu.entries[FES[CellDofs][:,1]], 1)
-    eval!(symH, FEBE_symH, Iu.entries[FES[CellDofs][:,1]], 1)
-    eval!(symH2, FEBE_symH2, Iu.entries[FES[CellDofs][:,1]], 1)
+    eval_febe!(L, FEBE_L, Iu.entries[FES[CellDofs][:,1]], 1)
+    eval_febe!(H, FEBE_H, Iu.entries[FES[CellDofs][:,1]], 1)
+    eval_febe!(symH, FEBE_symH, Iu.entries[FES[CellDofs][:,1]], 1)
+    eval_febe!(symH2, FEBE_symH2, Iu.entries[FES[CellDofs][:,1]], 1)
 
     ## compute errors to expected values
     error_L = sqrt(sum((L - expected_L).^2))

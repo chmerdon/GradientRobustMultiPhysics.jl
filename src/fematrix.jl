@@ -46,7 +46,7 @@ end
     end
 end
 
-function apply_nonzero_pattern!(B::FEMatrixBlock,AT::Type{<:AbstractAssemblyType})
+function apply_nonzero_pattern!(B::FEMatrixBlock,AT::Type{<:AssemblyType})
     dofmapX = Dofmap4AssemblyType(B.FESX,AT)
     dofmapY = Dofmap4AssemblyType(B.FESY,AT)
     @assert num_sources(dofmapX) == num_sources(dofmapY)
@@ -159,7 +159,7 @@ function FEMatrix{TvM,TiM}(name::String, FES::Array{<:FESpace{TvG,TiG},1}) where
     for j=1:length(FES)
         offsetY = 0
         for k=1:length(FES)
-            Blocks[(j-1)*length(FES)+k] = FEMatrixBlock{TvM,TiM,TvG,TiG,eltype(FES[j]),eltype(FES[k]),apttype(FES[j]),apttype(FES[k])}(name * " [$j,$k]", FES[j], FES[k], offsetX , offsetY, offsetX+FES[j].ndofs, offsetY+FES[k].ndofs, entries)
+            Blocks[(j-1)*length(FES)+k] = FEMatrixBlock{TvM,TiM,TvG,TiG,eltype(FES[j]),eltype(FES[k]),assemblytype(FES[j]),assemblytype(FES[k])}(name * " [$j,$k]", FES[j], FES[k], offsetX , offsetY, offsetX+FES[j].ndofs, offsetY+FES[k].ndofs, entries)
             offsetY += FES[k].ndofs
         end    
         offsetX += FES[j].ndofs

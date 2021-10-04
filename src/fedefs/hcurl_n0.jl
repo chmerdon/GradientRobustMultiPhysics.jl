@@ -40,7 +40,7 @@ isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 3
         if items == []
@@ -49,9 +49,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         ncomponents = get_ncomponents(eltype(FE))
         xEdgeTangents = FE.xgrid[EdgeTangents]
         function tangentflux_eval3d()
-            temp = zeros(Float64,ncomponents)
+            temp = zeros(T,ncomponents)
             function closure(result, x, edge)
-                eval!(temp, exact_function!, x, time) 
+                eval_data!(temp, exact_function!, x, time) 
                 result[1] = temp[1] * xEdgeTangents[1,edge]
                 result[1] += temp[2] * xEdgeTangents[2,edge]
                 result[1] += temp[3] * xEdgeTangents[3,edge]
@@ -62,7 +62,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 2
         if items == []
@@ -71,9 +71,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         ncomponents = get_ncomponents(eltype(FE))
         xFaceNormals = FE.xgrid[FaceNormals]
         function tangentflux_eval2d()
-            temp = zeros(Float64,ncomponents)
+            temp = zeros(T,ncomponents)
             function closure(result, x, face)
-                eval!(temp, exact_function!, x, time) 
+                eval_data!(temp, exact_function!, x, time) 
                 result[1] = - temp[1] * xFaceNormals[2,face] # rotated normal = tangent
                 result[1] += temp[2] * xFaceNormals[1,face]
             end   

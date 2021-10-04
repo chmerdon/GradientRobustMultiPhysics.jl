@@ -70,7 +70,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     end
 
     # compute exact face means
-    facemeans = zeros(Float64,ncomponents,nitems)
+    facemeans = zeros(T,ncomponents,nitems)
     integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!; items = items, time = time)
     P1flux::T = 0
     value::T = 0
@@ -148,7 +148,7 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Quadril
 end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Type{<:Triangle2D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
         fill!(coefficients,1.0)
@@ -162,7 +162,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Ty
 end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Type{<:Quadrilateral2D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     xCellFaces = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
         fill!(coefficients,1.0)
@@ -178,7 +178,7 @@ function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Ty
 end
 
 function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{Tv,Ti,H1BR{2},APT}, ::Type{<:Edge1D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
         fill!(coefficients,1.0)
@@ -251,8 +251,8 @@ end
 
 
 function get_coefficients(::Type{ON_CELLS},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
+    xCellFaces::GridAdjacencyTypes{Ti} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
         # multiplication with normal vectors
         fill!(coefficients,1.0)
@@ -274,7 +274,7 @@ end
 
 
 function get_coefficients(::Type{<:ON_FACES},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Triangle2D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
         fill!(coefficients,1.0)
@@ -285,8 +285,8 @@ function get_coefficients(::Type{<:ON_FACES},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::T
 end    
 
 function get_coefficients(::Type{ON_CELLS},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Hexahedron3D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaces]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
+    xCellFaces::GridAdjacencyTypes{Ti} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
         # multiplication with normal vectors
         fill!(coefficients,1.0)
@@ -314,7 +314,7 @@ end
 
 
 function get_coefficients(::Type{<:ON_FACES}, FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Quadrilateral2D}) where {Tv,Ti,APT}
-    xFaceNormals::Array{Float64,2} = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face)
         # multiplication of face bubble with normal vector of face
         fill!(coefficients,1.0)
@@ -331,7 +331,7 @@ end
 ###########################
 
 
-function get_reconstruction_coefficients!(xgrid, ::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVRT0{2}}, ::Type{<:Edge1D})
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVRT0{2}}, ::Type{<:Edge1D}) where {Tv,Ti}
     xFaceVolumes::Array{<:Real,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{<:Real,2} = xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face::Int) 
@@ -345,9 +345,9 @@ function get_reconstruction_coefficients!(xgrid, ::Union{Type{<:ON_FACES}, Type{
 end
 
 
-function get_reconstruction_coefficients!(xgrid, ::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     function closure(coefficients::Array{<:Real,2}, face) 
 
         coefficients[1,1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[1, face]
@@ -368,9 +368,9 @@ function get_reconstruction_coefficients!(xgrid, ::Union{Type{<:ON_FACES}, Type{
 end
 
 
-function get_reconstruction_coefficients!(xgrid,::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Triangle2D})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti},::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Triangle2D}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     nfacenodes::Int = nnodes_for_geometry(EG)
     function closure(coefficients::Array{<:Real,2}, face::Int) 
         for j = 1 : nfacenodes, k = 1 : 3
@@ -383,10 +383,10 @@ function get_reconstruction_coefficients!(xgrid,::Union{Type{<:ON_FACES}, Type{<
     end
 end
 
-function get_reconstruction_coefficients!(xgrid,::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti},::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
+    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     nnodes::Int = size(face_rule,1)
     nfaces::Int = size(face_rule,2)
@@ -410,10 +410,10 @@ function get_reconstruction_coefficients!(xgrid,::Type{ON_CELLS}, FE::Type{<:H1B
     end
 end
 
-function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVRT0{3}}, EG::Type{<:Tetrahedron3D})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVRT0{3}}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
+    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
@@ -435,11 +435,11 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
     end
 end
 
-function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}})
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}}) where {Tv,Ti}
     xFaceVolumes::Array{<:Real,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{<:Real,2} = xgrid[FaceNormals]
-    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
+    xCellFaceSigns::GridAdjacencyTypes{Ti} = xgrid[CellFaceSigns]
+    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     nfaces::Int = size(face_rule,2)
     node::Int = 0
@@ -467,15 +467,15 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
 end
 
 
-function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
-    xCellFaceOrientations::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceOrientations]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
+    xCellFaceOrientations::GridAdjacencyTypes{Ti} = xgrid[CellFaceOrientations]
+    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = face_rule[1,1]
-    face::Int32 = 0
-    BDM1_coeffs::Array{Float64,2} = [-1//36 -1//36 1//18;
+    face::Ti = 0
+    BDM1_coeffs::Array{Tv,2} = [-1//36 -1//36 1//18;
                    -1//36 1//18 -1//36;
                     1//18 -1//36 -1//36]
     orientation::Int = 0

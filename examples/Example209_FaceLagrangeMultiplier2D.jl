@@ -65,7 +65,7 @@ function main(; Plotter = nothing, verbosity = 0)
     L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
     println("\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
     println("\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))")
-    println("\tL2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))")
+    println("\tL2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1], Solution2[1]]))))")
 
     ## plot both solutions
     GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution2[1]], [Identity, Identity]; Plotter = Plotter)

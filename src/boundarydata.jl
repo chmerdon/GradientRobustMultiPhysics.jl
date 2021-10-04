@@ -79,11 +79,11 @@ end
 # then all hoomogeneous Dirichlet boundaries are set to zero
 # then all DirichletBestapprox boundaries are handled (previous data is fixed)
 function boundarydata!(
-    Target::FEVectorBlock,
+    Target::FEVectorBlock{T,Tv,Ti},
     O::BoundaryOperator;
     time = 0,
-    fixed_penalty::Float64 = 1e60,
-    skip_enumerations = false)
+    fixed_penalty::T = 1e60,
+    skip_enumerations = false) where {T,Tv,Ti}
 
     fixed_dofs = []
   
@@ -138,7 +138,7 @@ function boundarydata!(
                     # face interpolation expects continuous dofmaps
                     # quick and dirty fix: use face interpolation and remap dofs to broken dofs
                     FESc = FESpace{FEType}(FE.xgrid)
-                    Targetc = FEVector{Float64}("auxiliary data",FESc)
+                    Targetc = FEVector{T}("auxiliary data",FESc)
                     interpolate!(Targetc[1], FESc, ON_FACES, O.data4bregion[bregion]; items = ifaces, time = time)
                     xBFaceDofsc = FESc[BFaceDofs]
                     dof::Int = 0
@@ -209,14 +209,14 @@ function boundarydata!(
         bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
         FEType = eltype(FE)
         Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
-        b = zeros(Float64,FE.ndofs,1)
-        A = FEMatrix{Float64}("MassMatrixBnd", FE)
+        b = zeros(T,FE.ndofs,1)
+        A = FEMatrix{T}("MassMatrixBnd", FE)
 
         if Dboperator == Identity
             function bnd_rhs_function_h1()
-                temp = zeros(Float64,ncomponents)
+                temp = zeros(T,ncomponents)
                 function closure(result, input, x, region)
-                    eval!(temp, O.data4bregion[region], x, time)
+                    eval_data!(temp, O.data4bregion[region], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j]*input[j] 
@@ -224,16 +224,16 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_h1(), [1, ncomponents]; dependencies = "XR", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
+            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], Action{T}( action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
+            L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == NormalFlux
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hdiv()
-                temp = zeros(Float64,ncomponents)
+                temp = zeros(T,ncomponents)
                 function closure(result, input, x, region, bface)
-                    eval!(temp, O.data4bregion[region], x, time)
+                    eval_data!(temp, O.data4bregion[region], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]
@@ -242,25 +242,25 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data NormalFlux bestapprox")
+            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], Action{T}( action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data NormalFlux bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data NormalFlux bestapprox")    
+            L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data NormalFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hcurl2d()
-                temp = zeros(Float64,ncomponents)
+                temp = zeros(T,ncomponents)
                 function closure(result, input, x, region, bface)
-                    eval!(temp, O.data4bregion[region], x, time)
+                    eval_data!(temp, O.data4bregion[region], x, time)
                     result[1] = -temp[1] * xFaceNormals[2,xBFaces[bface]]
                     result[1] += temp[2] * xFaceNormals[1,xBFaces[bface]]
                     result[1] *= input[1] 
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BFACES, [FE], [Dboperator], Action(Float64, action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
+            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], Action{T}( action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
+            L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains, does not work properly yet
             @warn "Hcurl boundary data in 3D may not work properly yet"
@@ -269,10 +269,10 @@ function boundarydata!(
             xBEdges = FE.xgrid[BEdges]
 
             function bnd_rhs_function_hcurl3d()
-                temp = zeros(Float64,ncomponents)
+                temp = zeros(T,ncomponents)
                 fixed_region::Int = 1
                 function closure(result, input, x, region, bedge)
-                    eval!(temp, O.data4bregion[fixed_region], x, time)
+                    eval_data!(temp, O.data4bregion[fixed_region], x, time)
                     result[1] = temp[1] * xEdgeTangents[1,xBEdges[bedge]]
                     result[1] += temp[2] * xEdgeTangents[2,xBEdges[bedge]]
                     result[1] += temp[3] * xEdgeTangents[3,xBEdges[bedge]]
@@ -280,9 +280,9 @@ function boundarydata!(
                 end   
             end   
             action_kernel = ActionKernel(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(Float64, ON_BEDGES, [FE], [Dboperator], Action(Float64, action_kernel); regions = [0], name = "RHS bnd data TangentFlux bestapprox")
+            RHS_bnd = LinearForm(T, ON_BEDGES, [FE], [Dboperator], Action{T}( action_kernel); regions = [0], name = "RHS bnd data TangentFlux bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(Float64, ON_BEDGES, [FE, FE], [Dboperator, Dboperator]; regions = [0], name = "LHS bnd data TangentFlux bestapprox")    
+            L2ProductBnd = SymmetricBilinearForm(T, ON_BEDGES, [FE, FE], [Dboperator, Dboperator]; regions = [0], name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         end    
 
@@ -301,9 +301,9 @@ function boundarydata!(
         @debug "solving for best-approximation boundary data"
 
         if (true) # compress matrix by removing all dofs in the interior
-            dof2sparsedof = zeros(Int32,FE.ndofs)
-            newcolptr = zeros(Int32,0)
-            newrowval = zeros(Int32,0)
+            dof2sparsedof = zeros(Ti,FE.ndofs)
+            newcolptr = zeros(Int64,0)
+            newrowval = zeros(Int64,0)
             dof = 0
             diff = 0
             for j = 1 : FE.ndofs
@@ -314,8 +314,8 @@ function boundarydata!(
                 end
             end
 
-            smallb = zeros(Float64,dof)
-            sparsedof2dof = zeros(Int32,dof)
+            smallb = zeros(T,dof)
+            sparsedof2dof = zeros(Ti,dof)
             for j = 1 : FE.ndofs
                 if dof2sparsedof[j] > 0
                     push!(newcolptr,A.entries.cscmatrix.colptr[j])
@@ -325,10 +325,10 @@ function boundarydata!(
                 end
             end
             push!(newcolptr,A.entries.cscmatrix.colptr[end])
-            A.entries.cscmatrix = SparseMatrixCSC{Float64,Int32}(dof,dof,newcolptr,newrowval,A.entries.cscmatrix.nzval)
+            A.entries.cscmatrix = SparseMatrixCSC{T,Int64}(dof,dof,newcolptr,newrowval,A.entries.cscmatrix.nzval)
 
             try
-                Target[sparsedof2dof] = SparseArrays.SparseMatrixCSC{Float64,Int64}(A.entries)\smallb
+                Target[sparsedof2dof] = SparseArrays.SparseMatrixCSC{T,Int64}(A.entries)\smallb
             catch
                 Target[sparsedof2dof] = A.entries\smallb
             end
@@ -351,6 +351,3 @@ function boundarydata!(
         return fixed_dofs
     end
 end    
-
-
-

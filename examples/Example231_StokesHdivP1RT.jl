@@ -107,10 +107,10 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,[Solution[1],Solution[2]]))
+        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1],Solution[2]])))
         Results[level,2] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[3]))
         Results[level,3] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
-        Results[level,4] = sqrt(evaluate(L2VeloDivEvaluator,[Solution[1], Solution[2]]))
+        Results[level,4] = sqrt(evaluate(L2VeloDivEvaluator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1], Solution[2]])))
     end    
 
     ## print/show convergence history

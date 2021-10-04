@@ -85,7 +85,7 @@ end
 
 function get_pressure_difference(Solution::FEVector)
     xgrid = Solution[2].FES.xgrid
-    PE = PointEvaluator{Float64,eltype(Solution[2].FES),Triangle2D,Identity,ON_CELLS}(Solution[2].FES, Solution[2])
+    PE = PointEvaluator{Float64}(Triangle2D,Identity,Solution[2].FES, Solution[2])
     CF = CellFinder(xgrid)
     xref = zeros(Float64,2)
     p_left = zeros(Float64,1); x1 = [0.15,0.2]
@@ -126,7 +126,7 @@ function get_draglift(Solution::FEVector, μ)
         result[1] *= -(2/(umean^2*L))
         return nothing
     end 
-    draglift_action = Action(Float64, draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", quadorder = 4)
+    draglift_action = Action{Float64}(draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", quadorder = 4)
     DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     ## test for drag
@@ -134,12 +134,12 @@ function get_draglift(Solution::FEVector, μ)
     xBFaces = Solution[1].FES.xgrid[BFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaces)
-    drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
+    drag = evaluate(DLIntegrator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]]))
 
     ## test for lift
     lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaces)
-    lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
+    lift = evaluate(DLIntegrator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]]))
 
     return [drag,lift]
 end

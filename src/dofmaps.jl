@@ -62,8 +62,8 @@ EffAT4AssemblyType(::Type{ON_EDGES},::Type{<:ON_EDGES}) = ON_CELLS
 
 
 
-function Dofmap4AssemblyType(FES::FESpace, AT::Type{<:AbstractAssemblyType})
-    return FES[Dofmap4AssemblyType(EffAT4AssemblyType(apttype(FES),AT))]
+function Dofmap4AssemblyType(FES::FESpace, AT::Type{<:AssemblyType})
+    return FES[Dofmap4AssemblyType(EffAT4AssemblyType(assemblytype(FES),AT))]
 end
 
 

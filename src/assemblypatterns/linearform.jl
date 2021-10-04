@@ -14,7 +14,7 @@ end
 ````
 function LinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
@@ -23,7 +23,7 @@ function LinearForm(
 
 Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
-function LinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); regions = [0], name = "LF")
+function LinearForm(T::Type{<:Real}, AT::Type{<:AssemblyType}, FES::Array{<:FESpace{Tv,Ti},1}, operators, action = NoAction(); regions = [0], name = "LF") where {Tv,Ti}
     @assert length(operators) == 1
     @assert length(FES) == 1
     return AssemblyPattern{APT_LinearForm, T, AT}(name,FES,operators,action,[1],regions)
@@ -46,7 +46,7 @@ function assemble!(
     AP::AssemblyPattern{APT,T,AT};
     skip_preps::Bool = false,
     factor = 1,
-    offset = 0) where {APT <: APT_LinearForm, T <: Real, AT <: AbstractAssemblyType}
+    offset = 0) where {APT <: APT_LinearForm, T <: Real, AT <: AssemblyType}
 
     # prepare assembly
     FE = AP.FES[1]
@@ -55,7 +55,7 @@ function assemble!(
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Int32} = FE.xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -101,7 +101,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # loop over associated dofitems
@@ -115,12 +115,12 @@ function assemble!(
                 basisevaler = get_basisevaler(AM, 1, di)
 
                 # update action on dofitem
-                update!(action, basisevaler, AM.dofitems[1][di], item, regions[r])
+                update_action!(action, basisevaler, AM.dofitems[1][di], item, regions[r])
 
                 for i in eachindex(weights)
                     for dof_i = 1 : ndofs4dofitem
                         # apply action
-                        eval!(action_input, basisevaler, dof_i, i)
+                        eval_febe!(action_input, basisevaler, dof_i, i)
                         apply_action!(action_result, action_input, action, i, basisevaler.xref[i])
                         for j = 1 : action_resultdim
                             localb[dof_i,j] += action_result[j] * weights[i]
@@ -156,7 +156,7 @@ function assemble!(
     b::FEVectorBlock{T},
     AP::AssemblyPattern{APT,T,AT};
     skip_preps::Bool = false,
-    factor = 1) where {APT <: APT_LinearForm, T <: Real, AT <: AbstractAssemblyType}
+    factor = 1) where {APT <: APT_LinearForm, T <: Real, AT <: AssemblyType}
 
     @assert b.FES == AP.FES[1]
 

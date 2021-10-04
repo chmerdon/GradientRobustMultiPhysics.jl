@@ -18,7 +18,7 @@ function Base.show(io::Core.IO, ::Type{<:H1BUBBLE{ncomponents}}) where{ncomponen
 end
 
 get_ncomponents(FEType::Type{<:H1BUBBLE}) = FEType.parameters[1]
-get_ndofs(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1BUBBLE}, ::Type{<:AbstractElementGeometry1D}) = 2;
 get_polynomialorder(::Type{<:H1BUBBLE}, ::Type{<:Triangle2D}) = 3;
@@ -32,7 +32,7 @@ isdefined(FEType::Type{<:H1BUBBLE}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1BUBBLE}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:H1BUBBLE}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {Tv,Ti,FEType <: H1BUBBLE, APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {T,Tv,Ti,FEType <: H1BUBBLE, APT}
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
     if items == []
@@ -41,7 +41,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         items = filter(!iszero, items)
     end
     ncomponents = get_ncomponents(FEType)
-    integrals4cell = zeros(Float64,ncomponents,ncells)
+    integrals4cell = zeros(T,ncomponents,ncells)
     integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!; items = items, time = time)
     for cell in items
         if cell != 0
@@ -52,7 +52,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end    
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:AbstractElementGeometry1D})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:AbstractElementGeometry1D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents
@@ -61,7 +61,7 @@ function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, ::T
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Triangle2D})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents
@@ -70,7 +70,7 @@ function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, ::T
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents
@@ -79,7 +79,7 @@ function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, ::T
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Tetrahedron3D})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Tetrahedron3D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents

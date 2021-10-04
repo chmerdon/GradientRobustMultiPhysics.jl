@@ -124,27 +124,27 @@ end
 
 
 
-function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVRT1{2}}, EG::Type{<:Triangle2D})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
-    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
-    xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
-    #xCellNodes::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellNodes]
-    #xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVRT1{2}}, EG::Type{<:Triangle2D}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
+    xCellFaceSigns::GridAdjacencyTypes{Ti} = xgrid[CellFaceSigns]
+    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
+    #xCellNodes::GridAdjacencyTypes{Ti}} = xgrid[CellNodes]
+    #xCellVolumes::Array{Tv,1} = xgrid[CellVolumes]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
     nnf::Int = size(face_rule,2)
     ndofs4component::Int = 2*nnf + 1
-    RT1_coeffs::Array{Float64,1} = [-1//12, 1//12]
+    RT1_coeffs::Array{Tv,1} = [-1//12, 1//12]
     #xCoordinates = FE.xgrid[Coordinates]
-    #C = zeros(Float64,2,3)  # vertices
-    #E = zeros(Float64,2,3)  # edge midpoints
-    #M = zeros(Float64,2)    # midpoint of current cell
-    #A = zeros(Float64,2,8)  # integral means of RT 1 functions
-    #b = zeros(Float64,2)    # right-hand side for integral mean
+    #C = zeros(Tv,2,3)  # vertices
+    #E = zeros(Tv,2,3)  # edge midpoints
+    #M = zeros(Tv,2)    # midpoint of current cell
+    #A = zeros(Tv,2,8)  # integral means of RT 1 functions
+    #b = zeros(Tv,2)    # right-hand side for integral mean
     #id::Int = 0
-    #det::Float64 = 0
+    #det::Tv = 0
     function closure(coefficients::Array{<:Real,2}, cell::Int)
         # fill!(coefficients,0.0)
 
@@ -229,17 +229,17 @@ end
 
 
 
-function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVBDM2{2}}, EG::Type{<:Triangle2D})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
-    xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
-    xCellFaces = xgrid[CellFaces]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVBDM2{2}}, EG::Type{<:Triangle2D}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
+    xCellFaceSigns::GridAdjacencyTypes{Ti} = xgrid[CellFaceSigns]
+    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Array{Int,1} = [0] # <-- seems to avoid allocations in line 247
     nnf::Int = size(face_rule,2)
     ndofs4component::Int = 2*nnf + 1
-    coeffs1::Array{Float64,1} = [-1//12, 1//12]
+    coeffs1::Array{Tv,1} = [-1//12, 1//12]
     function closure(coefficients::Array{<:Real,2}, cell::Int)
         # fill!(coefficients,0.0)
 

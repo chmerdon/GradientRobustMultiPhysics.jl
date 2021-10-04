@@ -60,6 +60,9 @@ FEVector{T}(name::String, FES::FESpace) where T <: Real
 
 Creates FEVector that has one block.
 """
+function FEVector(name::String, FES::FESpace{Tv,Ti,FEType,APT}) where {Tv,Ti,FEType,APT}
+    return FEVector{Float64}([name],[FES])
+end
 function FEVector{T}(name::String, FES::FESpace{Tv,Ti,FEType,APT}) where {T,Tv,Ti,FEType,APT}
     return FEVector{T}([name],[FES])
 end
@@ -71,6 +74,9 @@ FEVector{T}(name::String, FES::Array{FESpace,1}) where T <: Real
 
 Creates FEVector that has one block for each FESpace in FES.
 """
+function FEVector(name, FES::Array{<:FESpace{Tv,Ti},1}) where {Tv,Ti}
+    return FEVector{Float64}(name,FES)
+end
 function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace{Tv,Ti},1}) where {T,Tv,Ti}
     @logmsg DeepInfo "Creating FEVector mit blocks $((p->p.name).(FES))"
     ndofs = 0
@@ -81,7 +87,7 @@ function FEVector{T}(name::Array{String,1}, FES::Array{<:FESpace{Tv,Ti},1}) wher
     Blocks = Array{FEVectorBlock{T,Tv,Ti},1}(undef,length(FES))
     offset = 0
     for j = 1:length(FES)
-        Blocks[j] = FEVectorBlock{T,Tv,Ti,eltype(FES[j]),apttype(FES[j])}(name[j], FES[j], offset , offset+FES[j].ndofs, entries)
+        Blocks[j] = FEVectorBlock{T,Tv,Ti,eltype(FES[j]),assemblytype(FES[j])}(name[j], FES[j], offset , offset+FES[j].ndofs, entries)
         offset += FES[j].ndofs
     end    
     return FEVector{T,Tv,Ti}(Blocks, entries)

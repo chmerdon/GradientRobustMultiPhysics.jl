@@ -234,23 +234,23 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
     return UserData{AbstractExtendedDataFunction,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
-@inline function eval!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)
+@inline function eval_data!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)
     UD.negotiated_function(result, input, X, T, R, I, L)
 end
 
-@inline function eval!(result, UD::UserData{AbstractNLActionKernel}, input, input2, X, T, R, I, L)
+@inline function eval_data!(result, UD::UserData{AbstractNLActionKernel}, input, input2, X, T, R, I, L)
     UD.negotiated_function(result, input, input2, X, T, R, I, L)
 end
 
-@inline function eval!(result, UD::UserData{AbstractExtendedDataFunction}, X, T, R, I, L)
+@inline function eval_data!(result, UD::UserData{AbstractExtendedDataFunction}, X, T, R, I, L)
     UD.negotiated_function(result, X, T, R, I, L)
 end
 
-@inline function eval!(result, UD::UserData{AbstractDataFunction}, X, T)
+@inline function eval_data!(result, UD::UserData{AbstractDataFunction}, X, T)
     UD.negotiated_function(result, X, T)
 end
 
-@inline function eval!(result, UD::UserData{AbstractDataFunction}, X, T, R, I, L)
+@inline function eval_data!(result, UD::UserData{AbstractDataFunction}, X, T, R, I, L)
     UD.negotiated_function(result, X, T)
 end
 

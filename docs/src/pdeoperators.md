@@ -95,7 +95,7 @@ function stabilisation_kernel(result, input, item)
     result .= input 
     result .*= xFaceVolumes[item]^2
 end
-action = Action(Float64,stabilisation_kernel, [2,2]; dependencies = "I", quadorder = 0 )
+action = Action{Float64}(stabilisation_kernel, [2,2]; dependencies = "I", quadorder = 0 )
 operator = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES, factor = s, name = "s |F|^2 [∇(u)]⋅[∇(v)]")
 
 ```

@@ -96,9 +96,9 @@ function check_cellfinder(xgrid)
 
     # check xref
     x = zeros(Float64,edim)
-    L2G = L2GTransformer{Float64,xgrid[CellGeometries][cell],xgrid[CoordinateSystem]}(xgrid, ON_CELLS)
-    GradientRobustMultiPhysics.update!(L2G,cell)
-    eval!(x,L2G,xref)
+    L2G = L2GTransformer(xgrid[CellGeometries][cell], xgrid, ON_CELLS)
+    GradientRobustMultiPhysics.update_trafo!(L2G,cell)
+    eval_trafo!(x,L2G,xref)
     
     @info "... found x=$x in cell = $cell by local search (and had to find x=$x_source in cell=$cell_to_find)"
 
@@ -109,9 +109,8 @@ function check_cellfinder(xgrid)
 
     # check xref
     x = zeros(Float64,edim)
-    L2G = L2GTransformer{Float64,xgrid[CellGeometries][cell],xgrid[CoordinateSystem]}(xgrid, ON_CELLS)
-    GradientRobustMultiPhysics.update!(L2G,cell)
-    eval!(x,L2G,xref)
+    GradientRobustMultiPhysics.update_trafo!(L2G,cell)
+    eval_trafo!(x,L2G,xref)
     
     @info "... found x=$x in cell = $cell by brute force (and had to find  x=$x_source in cell=$cell_to_find)"
 

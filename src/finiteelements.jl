@@ -27,7 +27,7 @@ abstract type AbstractHcurlFiniteElement <: AbstractFiniteElement end
 
 """
 ````
-struct FESpace{Tv, Ti, FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
+struct FESpace{Tv, Ti, FEType<:AbstractFiniteElement,AT<:AssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
     ndofs::Int                            # total number of dofs
@@ -38,7 +38,7 @@ end
 
 A struct that has a finite element type as parameter and carries dofmaps (CellDofs, FaceDofs, BFaceDofs) plus additional grid information and access to arrays holding coefficients if needed.
 """
-struct FESpace{Tv,Ti,FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}
+struct FESpace{Tv,Ti,FEType<:AbstractFiniteElement,AT<:AssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
     ndofs::Int64                          # total number of dofs
@@ -58,7 +58,7 @@ Base.setindex!(FES::FESpace,v,DM::Type{<:DofMap}) = FES.dofmaps[DM] = v
 
 """
 ````
-function FESpace{FEType<:AbstractFiniteElement,AT<:AbstractAssemblyType}(
+function FESpace{FEType<:AbstractFiniteElement,AT<:AssemblyType}(
     xgrid::ExtendableGrid{Tv,Ti};
     name = "",
     broken::Bool = false)
@@ -71,7 +71,7 @@ If no AT is provided, the space is generated ON_CELLS.
 function FESpace{FEType,AT}(
     xgrid::ExtendableGrid{Tv,Ti};
     name = "",
-    broken::Bool = false) where {Tv, Ti, FEType <:AbstractFiniteElement, AT<:AbstractAssemblyType}
+    broken::Bool = false) where {Tv, Ti, FEType <:AbstractFiniteElement, AT<:AssemblyType}
 
     # piecewise constants are always broken
     if FEType <: H1P0
@@ -116,9 +116,9 @@ Base.eltype(::FESpace{Tv, Ti, FEType, APT}) where {Tv, Ti, FEType<:AbstractFinit
 """
 $(TYPEDSIGNATURES)
 
-returns the assembly type parameter of the finite element space.
+returns the assembly type parameter of the finite element space, i.e. on which entities of the grid the finite element is defined.
 """
-apttype(::FESpace{Tv, Ti, FEType, APT}) where {Tv, Ti, FEType<:AbstractFiniteElement, APT} = APT
+assemblytype(::FESpace{Tv, Ti, FEType, APT}) where {Tv, Ti, FEType<:AbstractFiniteElement, APT} = APT
 
 
 """
@@ -146,7 +146,7 @@ const NothingFunction = (x,y) -> nothing
 
 # default coefficient functions that can be overwritten by finite element that has non-default coefficients
 # ( see e.g. h1v_br.jl )
-function get_coefficients(::Type{<:AbstractAssemblyType}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
+function get_coefficients(::Type{<:AssemblyType}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
     return NothingFunction
 end    
 
@@ -154,12 +154,12 @@ end
 # meaning that all basis functions on the reference cells are used
 # see 3D implementation of BDM1 for an example how this is can be used the choose
 # different basis functions depending on the face orientations (which in 3D is not just a sign)
-function get_basissubset(::Type{<:AbstractAssemblyType}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
+function get_basissubset(::Type{<:AssemblyType}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
     return NothingFunction
 end  
-get_ndofs(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = 0 # element is undefined for this AT or EG
-get_basis(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = (refbasis,xref) -> nothing
-get_ndofs_all(AT::Type{<:AbstractAssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT, FEType, EG)
+get_ndofs(AT::Type{<:AssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = 0 # element is undefined for this AT or EG
+get_basis(AT::Type{<:AssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = (refbasis,xref) -> nothing
+get_ndofs_all(AT::Type{<:AssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT, FEType, EG)
 isdefined(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = false
 
 

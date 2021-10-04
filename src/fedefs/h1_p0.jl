@@ -14,7 +14,7 @@ function Base.show(io::Core.IO, ::Type{<:H1P0{ncomponents}}) where {ncomponents}
 end
 
 get_ncomponents(FEType::Type{<:H1P0}) = FEType.parameters[1]
-get_ndofs(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P0}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = 0;
 
@@ -24,7 +24,7 @@ get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{BFaceDofs}, EG::Type{<:AbstractE
 
 isdefined(FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {Tv,Ti,FEType <: H1P0,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {T,Tv,Ti,FEType <: H1P0,APT}
     xCoords = FE.xgrid[Coordinates]
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
@@ -35,7 +35,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
     ncomponents = get_ncomponents(FEType)
     xdim = size(xCoords,1)
-    integrals4cell = zeros(Float64,ncomponents,ncells)
+    integrals4cell = zeros(T,ncomponents,ncells)
     integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!; items = items, time = time)
     for cell in items
         if cell != 0
@@ -74,7 +74,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         for k = 1 : ncomponents
