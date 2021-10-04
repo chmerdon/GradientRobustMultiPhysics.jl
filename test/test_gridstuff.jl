@@ -46,8 +46,8 @@ function check_enumeration_consistency(G::Type{<:AbstractElementGeometry}, CellI
     nnodes_per_item = max_num_targets_per_source(xItemNodes)
     ncells = num_sources(xCellNodes)
 
-    @assert nitems_per_cell == size(item_rule,1)
-    @assert nnodes_per_item == size(item_rule,2)
+    @assert nitems_per_cell == size(item_rule,2)
+    @assert nnodes_per_item == size(item_rule,1)
 
     item::Int = 0
     everything_is_consistent = true
@@ -58,7 +58,7 @@ function check_enumeration_consistency(G::Type{<:AbstractElementGeometry}, CellI
             fill!(itemnodes_found,false)
             for n = 1 : nnodes_per_item
                 for k = 1 : nnodes_per_item
-                    if xItemNodes[n,item] == xCellNodes[item_rule[i,k],cell]
+                    if xItemNodes[n,item] == xCellNodes[item_rule[k,i],cell]
                         itemnodes_found[n] = true
                         break
                     end

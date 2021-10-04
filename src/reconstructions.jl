@@ -49,7 +49,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{Reconstructio
     @assert EG == [Triangle2D]
 
     face_rule::Array{Int,2} = face_enum_rule(EG[1])
-    nnf::Int = size(face_rule,1)
+    nnf::Int = size(face_rule,2)
     ndofs4component::Int = 2*nnf + 1
     ndofs1::Int = get_ndofs(AT,FE1,EG[1])
     ncells = num_sources(xCellFaces)
@@ -78,9 +78,9 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{Reconstructio
         end
         
         # get edge midpoints
-        for f = 1 : size(face_rule,1)
+        for f = 1 : nnf
             for n = 1 : 2, k = 1 : 2
-                E[k,f] += C[k,face_rule[f,n]] / 2
+                E[k,f] += C[k,face_rule[n,f]] / 2
             end
         end
 

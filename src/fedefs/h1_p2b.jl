@@ -134,7 +134,7 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
-    nnf::Int = size(face_rule,1)
+    nnf::Int = size(face_rule,2)
     ndofs4component::Int = 2*nnf + 1
     RT1_coeffs::Array{Float64,1} = [-1//12, 1//12]
     #xCoordinates = FE.xgrid[Coordinates]
@@ -161,7 +161,7 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
             #    E[k,f] += C[k,face_rule[f,n]] / 2
             #end
             for n = 1 : 2
-                node = face_rule[f,n]
+                node = face_rule[n,f]
                 for k = 1 : 2
                     # RT0 reconstruction coefficients for node P2 functions on reference element
                     coefficients[ndofs4component*(k-1)+node,2*(f-1)+1] = 1 // 6 * xFaceVolumes[face] * xFaceNormals[k, face]
@@ -237,7 +237,7 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Array{Int,1} = [0] # <-- seems to avoid allocations in line 247
-    nnf::Int = size(face_rule,1)
+    nnf::Int = size(face_rule,2)
     ndofs4component::Int = 2*nnf + 1
     coeffs1::Array{Float64,1} = [-1//12, 1//12]
     function closure(coefficients::Array{<:Real,2}, cell::Int)
@@ -246,7 +246,7 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
         for f = 1 : nnf
             face[1] = xCellFaces[f,cell]
             for n = 1 : 2
-                node = face_rule[f,n]
+                node = face_rule[n,f]
                 for k = 1 : 2
                     # RT0 reconstruction coefficients for node P2 functions on reference element
                     coefficients[ndofs4component*(k-1)+node,3*(f-1)+1] = 1 // 6 * xFaceVolumes[face[1]] * xFaceNormals[k, face[1]]

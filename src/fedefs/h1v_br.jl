@@ -388,21 +388,23 @@ function get_reconstruction_coefficients!(xgrid,::Type{ON_CELLS}, FE::Type{<:H1B
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
+    nnodes::Int = size(face_rule,1)
+    nfaces::Int = size(face_rule,2)
     node::Int = 0
     face::Int = 0
     function closure(coefficients::Array{<:Real,2}, cell::Int) 
         # fill!(coefficients,0.0)
-        for f = 1 : size(face_rule,1)
+        for f = 1 : nfaces
             face = xCellFaces[f,cell]
             # reconstruction coefficients for P1 functions on reference element
-            for n = 1 : size(face_rule,2)
-                node = face_rule[f,n]
+            for n = 1 : nnodes
+                node = face_rule[n,f]
                 for k = 1 : 2
-                    coefficients[size(face_rule,1)*(k-1)+node,f] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[k, face]
+                    coefficients[nfaces*(k-1)+node,f] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[k, face]
                 end
             end
             # reconstruction coefficients for face bubbles on reference element
-            coefficients[2*size(face_rule,1)+f,f] = xFaceVolumes[face]
+            coefficients[2*nfaces+f,f] = xFaceVolumes[face]
         end
         return nothing
     end
@@ -421,7 +423,7 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
             face = xCellFaces[f,cell]
             # reconstruction coefficients for P1 functions on reference element
             for n = 1 : 3
-                node = face_rule[f,n]
+                node = face_rule[n,f]
                 for k = 1 : 3
                     coefficients[4*(k-1)+node,f] = 1 // 3 * xFaceVolumes[face] * xFaceNormals[k, face]
                 end
@@ -439,25 +441,26 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
     xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaceSigns]
     xCellFaces::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
+    nfaces::Int = size(face_rule,2)
     node::Int = 0
     face::Int = 0
     BDM1_coeffs::Array{<:Real,1} = [-1//12, 1//12]
     function closure(coefficients::Array{<:Real,2}, cell::Int) 
         # fill!(coefficients,0.0)
-        for f = 1 : size(face_rule,1)
+        for f = 1 : nfaces
             face = xCellFaces[f,cell]
             for n = 1 : 2
-                node = face_rule[f,n]
+                node = face_rule[n,f]
                 for k = 1 : 2
                     # RT0 reconstruction coefficients for P1 functions on reference element
-                    coefficients[size(face_rule,1)*(k-1)+node,2*(f-1)+1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[k, face]
+                    coefficients[nfaces*(k-1)+node,2*(f-1)+1] = 1 // 2 * xFaceVolumes[face] * xFaceNormals[k, face]
 
                     # BDM1 reconstruction coefficients for P1 functions on reference element
-                    coefficients[size(face_rule,1)*(k-1)+node,2*(f-1)+2] = BDM1_coeffs[n] * xFaceVolumes[face] * xFaceNormals[k, face] * xCellFaceSigns[f, cell]
+                    coefficients[nfaces*(k-1)+node,2*(f-1)+2] = BDM1_coeffs[n] * xFaceVolumes[face] * xFaceNormals[k, face] * xCellFaceSigns[f, cell]
                 end
             end
             # RT0 reconstruction coefficients for face bubbles on reference element
-            coefficients[size(face_rule,1)*2+f,2*(f-1)+1] = xFaceVolumes[face]
+            coefficients[nfaces*2+f,2*(f-1)+1] = xFaceVolumes[face]
         end
         return nothing
     end
@@ -488,7 +491,7 @@ function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1
             index1 = 0
             for k = 1 : 3
                 for n = 1 : 3
-                    node = face_rule[f,n]
+                    node = face_rule[n,f]
                     # RT0 reconstruction coefficients for P1 functions on reference element
                     coefficients[index1+node,index2+1] = 1 // 3 * xFaceNormals[k, face] * xFaceVolumes[face] 
                     orientation = xCellFaceOrientations[f,cell]
