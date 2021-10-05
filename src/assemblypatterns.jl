@@ -22,14 +22,14 @@ abstract type DIIType_broken{DiscType,AT,basisAT} <: DIIType end
 # idea is to store this to avoid recomputation in e.g. an in iterative scheme
 # also many redundant stuff within assembly of patterns happens here
 # like chosing the coressponding basis evaluators, quadrature rules and managing the dofs
-struct AssemblyManager{T <: Real}
-    xItemDofs::Array{DofMapTypes{Int32},1}                # DofMaps
+struct AssemblyManager{T <: Real, Tv <: Real, Ti <: Integer}
+    xItemDofs::Array{DofMapTypes{Ti},1}                # DofMaps
     ndofs4EG::Array{Array{Int,1},1}             # ndofs for each finite element on each EG
     nop::Int                                    # number of operators
-    qf::Array{QuadratureRule,1}                 # quadrature rules
-    basisevaler::Array{AbstractFEBasisEvaluator{T},4}      # finite element basis evaluators
+    qf::Array{QuadratureRule{T},1}                 # quadrature rules
+    basisevaler::Array{AbstractFEBasisEvaluator{T, Tv, Ti},4}      # finite element basis evaluators
     dii4op_types::Array{DataType,1}
-    basisAT::Array{Type{<:AbstractAssemblyType},1}                      
+    basisAT::Array{Type{<:AssemblyType},1}                      
     citem::Base.RefValue{Int}                                           # current item
     dofitems::Array{Array{Int,1},1}                                     # dofitems needed to visit to evaluate operator
     EG4dofitem::Array{Array{Int,1},1}                                   # id to [EG,dEG] = coordinate 1 in basisevaler
@@ -41,10 +41,10 @@ struct AssemblyManager{T <: Real}
     dEG::Array{Type{<:AbstractElementGeometry},1}                       # unique dofitem geometries that may appear (for each operator)
     xItemGeometries::GridEGTypes                                        # item geometries over which is assembled
     xDofItemGeometries::Array{GridEGTypes,1}                       # dofitem geometries over which basis is evaluated (for each operator)
-    xDofItems4Item::Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}       # dofitems <> items adjacency relationship (for each operator)
-    xItemInDofItems::Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}      # where is the item locally in dofitems
-    xDofItemItemOrientations::Array{Union{Nothing,GridAdjacencyTypes{Int32}},1} # dofitems <> items orientation relationship
-    xItem2SuperSetItems::Array{Union{Nothing,Vector{Int32}},1}  # only necessary for assembly of discontinuous operators ON_BFACES
+    xDofItems4Item::Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}       # dofitems <> items adjacency relationship (for each operator)
+    xItemInDofItems::Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}      # where is the item locally in dofitems
+    xDofItemItemOrientations::Array{Union{Nothing,GridAdjacencyTypes{Ti}},1} # dofitems <> items orientation relationship
+    xItem2SuperSetItems::Array{Union{Nothing,Vector{Ti}},1}  # only necessary for assembly of discontinuous operators ON_BFACES
 end
 
 function update_dii4op!(AM, j, DII::Type{<:DIIType}, item)
@@ -192,7 +192,7 @@ function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_broken{Disc
     end
 end
 
-function update!(AM::AssemblyManager, item::Int)
+function update_assembly!(AM::AssemblyManager, item::Int)
     # get dofitem informations
     if AM.citem[] != item
         AM.citem[] = item
@@ -208,7 +208,7 @@ function update!(AM::AssemblyManager, item::Int)
             # update needed basisevaler
             for di = 1 : length(AM.dofitems[j])
                 if AM.dofitems[j][di] != 0
-                    update!(AM.basisevaler[AM.EG4dofitem[j][di],j,AM.itempos4dofitem[j][di],AM.orientation4dofitem[j][di]], AM.dofitems[j][di])
+                    update_febe!(AM.basisevaler[AM.EG4dofitem[j][di],j,AM.itempos4dofitem[j][di],AM.orientation4dofitem[j][di]], AM.dofitems[j][di])
                 end
             end
         end
@@ -248,19 +248,19 @@ each assembly pattern has one of the assembly pattern types (APT) that trigger d
 finite element spaces, operators and an assigned action. The assembly type (AT) determines if the assembly takes
 place on cells, faces or edges etc. (relatively to the assembly type of the first argument of the pattern)
 """
-mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType, ActionType <: AbstractAction}
+mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv <: Real, Ti <: Integer, ActionType <: AbstractAction}
     name::String
-    FES::Array{FESpace,1}
+    FES::Array{<:FESpace{Tv,Ti},1}
     operators::Array{DataType,1}
     newton_args::Array{Int,1}      # which of the operators should be differentiated in this block ? (only relevant for nonlinear form)
     action::ActionType
     apply_action_to::Array{Int,1}
-    regions::Array{Int,1}
-    AM::AssemblyManager{T} # hidden stuff needed for assembly
-    AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS, NoAction}()
-    AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType} = new{APT,T,AT,NoAction}()
-    AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}(name, FES,operators,[],action,apply_to,regions)
-    AssemblyPattern{APT, T, AT}(FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}  = new{APT,T,AT,typeof(action)}("$APT", FES,operators,[],action,apply_to,regions)
+    regions::Array{Ti,1}
+    AM::AssemblyManager{T,Tv,Ti} # hidden stuff needed for assembly
+    AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS, Float64, Int32, NoAction}()
+    AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType} = new{APT,T,AT,Float64,Int32,NoAction}()
+    AssemblyPattern{APT, T, AT}(name,FES::Array{<:FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}(name,FES,operators,[],action,apply_to,regions)
+    AssemblyPattern{APT, T, AT}(FES::Array{<:FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}("$APT", FES,operators,[],action,apply_to,regions)
 end 
 
 function Base.show(io::IO, AP::AssemblyPattern)
@@ -277,7 +277,7 @@ end
 # this function decides which basis should be evaluated for the evaluation of an operator
 # e.g. Hdiv elements can use the face basis for the evaluation of the normal flux operator,
 # but an H1 element must evaluate the cell basis for GradientDisc{Jump} ON_FACES
-function DefaultBasisAssemblyType4Operator(operator::Type{<:AbstractFunctionOperator}, patternAT::Type{<:AbstractAssemblyType}, continuity::Type{<:AbstractFiniteElement})
+function DefaultBasisAssemblyType4Operator(operator::Type{<:AbstractFunctionOperator}, patternAT::Type{<:AssemblyType}, continuity::Type{<:AbstractFiniteElement})
     if patternAT == ON_CELLS
         return ON_CELLS
     elseif patternAT <: Union{<:ON_FACES,<:ON_BFACES}
@@ -325,7 +325,7 @@ function DefaultBasisAssemblyType4Operator(operator::Type{<:AbstractFunctionOper
 end
 
 
-function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyType}, basisAT::Type{<:AbstractAssemblyType}, FO::Type{<:AbstractFunctionOperator})
+function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AssemblyType}, basisAT::Type{<:AssemblyType}, FO::Type{<:AbstractFunctionOperator})
     # check if operator is discontinuous for this AT
     discontinuous = false
     posdt = 0
@@ -351,7 +351,7 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyTy
 end
 
 # default handlers for continuous operators
-function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AbstractAssemblyType}, basisAT::Type{<:AbstractAssemblyType})
+function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AssemblyType}, basisAT::Type{<:AssemblyType})
     xgrid = FES.xgrid
     xItemGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
     return DIIType_continuous, xItemGeometries, nothing, nothing, nothing, nothing
@@ -366,7 +366,6 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_FACES}, basisAT
     xgrid = FES.xgrid
     xFaceCells = xgrid[FaceCells]
     xCellFaces = xgrid[CellFaces]
-    xFaceGeometries = xgrid[FaceGeometries]
     xCellGeometries = xgrid[CellGeometries]
     xCellFaceOrientations = xgrid[CellFaceOrientations]
     return DIIType_discontinuous{DiscType,AT,basisAT}, xCellGeometries, xFaceCells, xCellFaces, xCellFaceOrientations, nothing
@@ -395,18 +394,16 @@ end
 
 
 
+function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}) where {APT <: AssemblyPatternType, T<: Real, AT <: AssemblyType}
+    prepare_assembly!(AP, AP.FES)
+end
 
 
-function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where {APT <: AssemblyPatternType, T<: Real, AT <: AbstractAssemblyType}
+function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv,Ti},1}) where {APT <: AssemblyPatternType, T<: Real, AT <: AssemblyType, Tv, Ti}
 
-    if FES != "from AP"
-        FE = FES
-    else
-        FE = AP.FES
-    end
     bonus_quadorder::Int = AP.action.bonus_quadorder[]
     operator = AP.operators
-    xItemDofs = Array{Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}},1}(undef,length(FE))
+    xItemDofs = Array{Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}},1}(undef,length(FE))
     EG = FE[1].xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
 
     # note: EG are the element geometries related to AT (the real integration domains)
@@ -414,7 +411,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     # find out which operators need to evaluate which basis
     # e.g. FaceJump operators that are assembled ON_CELLS
     # and get the corressponding dofmaps
-    dofitemAT = Array{Type{<:AbstractAssemblyType},1}(undef,length(FE))
+    dofitemAT = Array{Type{<:AssemblyType},1}(undef,length(FE))
     continuous_operators = []
     discontinuous_operators = []
     broken_operators = []
@@ -492,6 +489,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     basisevaler = Array{FEBasisEvaluator,4}(undef, length(EG) + length(EGdofitem), length(FE), (length(discontinuous_operators) > 0) ? maxfaces : 1, (length(discontinuous_operators) > 0) ? maxorientations : 1)
 
     ## first position: basis evaluator of operators on assembly geometry (but only used in continuous or broken mode)
+    same_FE::Int = 0
     for j = 1 : length(EG)
         quadorder = bonus_quadorder
         for k = 1 : length(FE)
@@ -503,17 +501,24 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
         for k = 1 : length(FE)
           #  if dofitemAT[k] == AT
             if !(k in discontinuous_operators)
-                if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
-                    basisevaler[j,k,1,1] = basisevaler[j,1,1,1] # e.g. for symmetric bilinearforms
-                elseif k > 2 && FE[k] == FE[2] && operator[k] == operator[2]
-                    basisevaler[j,k,1,1] = basisevaler[j,2,1,1]
+                # check if the same FESpace and operator is already known
+                # to avoid recomputation of basis evaluations for this spot
+                same_FE = 0
+                for s = 1 : k-1
+                    if (FE[s] == FE[k]) && (operator[s] == operator[k])
+                        same_FE = s
+                        break;
+                    end
+                end
+                if same_FE > 0
+                    basisevaler[j,k,1,1] = basisevaler[j,same_FE,1,1]
                 else    
-                    basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],operator[k],AT}(FE[k], qf[j])
+                    basisevaler[j,k,1,1] = FEBasisEvaluator{T,EG[j],operator[k],AT}(FE[k], qf[j])
                 end    
                 ndofs4EG[k][j] = size(basisevaler[j,k,1,1].cvals,2)
             else
                 # todo: will not be evaluated, but do something reasonable here
-                basisevaler[j,k,1,1] = FEBasisEvaluator{T,eltype(FE[k]),EG[j],Identity,AT}(FE[k], qf[j])
+                basisevaler[j,k,1,1] = FEBasisEvaluator{T,EG[j],Identity,AT}(FE[k], qf[j])
                 ndofs4EG[k][j] = 0
             end
          #   end
@@ -555,7 +560,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
                         qf[EGoffset + j].xref[i] = SVector{xrefdim,T}(xrefFACE2CELL[f](xrefFACE2OFACE[orientation](qf4face.xref[i])))
                         #println("face $f orientation $orientation : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
-                    basisevaler[EGoffset + j,k,f,orientation] = FEBasisEvaluator{T,eltype(FE[k]),EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j])
+                    basisevaler[EGoffset + j,k,f,orientation] = FEBasisEvaluator{T,EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j])
                 end
                 ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j,k,1,1].cvals,2)
             end
@@ -570,10 +575,10 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
     dofoffset4dofitem = Array{Array{Int,1},1}(undef, length(FE))
     orientation4dofitem = Array{Array{Int,1},1}(undef, length(FE))  
     xDofItemGeometries = Array{GridEGTypes,1}(undef, length(FE))           
-    xDofItems4Item = Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}(undef, length(FE))     
-    xItemInDofItems = Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}(undef, length(FE))     
-    xDofItemItemOrientations = Array{Union{Nothing,GridAdjacencyTypes{Int32}},1}(undef, length(FE))
-    xItem2SuperSetItems = Array{Union{Nothing,Vector{Int32}},1}(undef, length(FE))
+    xDofItems4Item = Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}(undef, length(FE))     
+    xItemInDofItems = Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}(undef, length(FE))     
+    xDofItemItemOrientations = Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}(undef, length(FE))
+    xItem2SuperSetItems = Array{Union{Nothing,Vector{Ti}},1}(undef, length(FE))
     dii4op_types = Array{Type{<:DIIType},1}(undef,length(FE))
 
     for j = 1 : length(FE)
@@ -595,7 +600,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}; FES = "from AP") where
 
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
     citem = 0
-    AP.AM = AssemblyManager{T}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op_types,dofitemAT,Ref(citem),dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem,EG,EGdofitem,xItemGeometries,xDofItemGeometries,xDofItems4Item,xItemInDofItems,xDofItemItemOrientations,xItem2SuperSetItems)
+    AP.AM = AssemblyManager{T,Tv,Ti}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op_types,dofitemAT,Ref(citem),dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem,EG,EGdofitem,xItemGeometries,xDofItemGeometries,xDofItems4Item,xItemInDofItems,xDofItemItemOrientations,xItem2SuperSetItems)
 end
 
 # each assembly pattern is in its own file

@@ -16,7 +16,7 @@
 
 abstract type AbstractLinearSystem{Tv,Ti} end
 
-mutable struct SolverConfig{T <: Real}
+mutable struct SolverConfig{T, TvG, TiG}
     is_nonlinear::Bool      # (subiterations pf) PDE were detected to be nonlinear
     is_timedependent::Bool  # (subiterations pf) PDE were detected to be time_dependent
     LHS_AssemblyTriggers::Array{DataType,2} # assembly triggers for blocks in LHS
@@ -94,11 +94,11 @@ function createlinsolver(ST::Type{<:AbstractLinearSystem},x::AbstractVector,A::E
     return ST(x,A,b)
 end
 
-function update!(LS::AbstractLinearSystem)
+function update_factorization!(LS::AbstractLinearSystem)
     # do nothing for an abstract solver
 end
 
-function update!(LS::LinearSystem)
+function update_factorization!(LS::LinearSystem)
     @logmsg MoreInfo "Updating factorization = $(typeof(LS).parameters[3])..."
     ExtendableSparse.update!(LS.factorization)
 end
@@ -108,7 +108,7 @@ function solve!(LS::LinearSystem)
     ldiv!(LS.x,LS.factorization,LS.b)
 end
 
-function set_nonzero_pattern!(A::FEMatrix, AT::Type{<:AbstractAssemblyType} = ON_CELLS)
+function set_nonzero_pattern!(A::FEMatrix, AT::Type{<:AssemblyType} = ON_CELLS)
     @debug "Setting nonzero pattern for FEMatrix..."
     for block = 1 : length(A)
         apply_nonzero_pattern!(A[block],AT)
@@ -117,7 +117,7 @@ end
 
 # check if PDE is nonlinear or time-dependent and which blocks require recalculation
 # and devise some initial solver strategy
-function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Float64)
+function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_params) where {T,TvG,TiG}
 
     ## declare subiterations
     if user_params[:subiterations] == "auto"
@@ -278,7 +278,7 @@ function generate_solver(PDE::PDEDescription, user_params, T::Type{<:Real} = Flo
         user_params[:check_nonlinear_residual] = nonlinear ? true : false
     end
 
-    return SolverConfig{T}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, user_params)
+    return SolverConfig{T,TvG,TiG}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, user_params)
 end
 
 function Base.show(io::IO, SC::SolverConfig)
@@ -500,7 +500,7 @@ function assemble!(
 end
 
 # for linear, stationary PDEs that can be solved in one step
-function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0, show_details::Bool = false) where {T, Tv, Ti}
+function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T,Tv,Ti}; time::Real = 0, show_details::Bool = false) where {T, Tv, Ti}
 
     FEs = Array{FESpace{Tv,Ti},1}([])
     for j=1 : length(Target.FEVectorBlocks)
@@ -539,7 +539,7 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     # SOLVE
     LS = createlinsolver(SC.user_params[:linsolver], Target.entries, A.entries, b.entries)
     flush!(A.entries)
-    update!(LS)
+    update_factorization!(LS)
     solve!(LS)
 
     residuals = zeros(T, length(Target.FEVectorBlocks))
@@ -570,20 +570,21 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     return sqrt(resnorm)
 end
 
-mutable struct AndersonAccelerationManager{T<:Real, maxiterations}
-    LastIterates::Array{FEVector{T},1}
-    LastIteratesTilde::Array{FEVector{T},1}
+mutable struct AndersonAccelerationManager{T,Tv,Ti}
+    LastIterates::Array{FEVector{T,Tv,Ti},1}
+    LastIteratesTilde::Array{FEVector{T,Tv,Ti},1}
     NormOperator::AbstractMatrix{T}
     Matrix::AbstractMatrix{T}
     Rhs::AbstractVector{T}
     alpha::AbstractVector{T}
+    anderson_iterations::Int
     cdepth::Int
-    Target::FEVector{T}
+    Target::FEVector{T,Tv,Ti}
     anderson_unknowns::Array{Int,1}
     damping::T
 end
 
-function AndersonAccelerationManager{T,anderson_iterations}(anderson_metric::String, Target::FEVector; anderson_unknowns = "all", anderson_damping = 1) where {T, anderson_iterations}
+function AndersonAccelerationManager(anderson_metric::String, Target::FEVector{T,Tv,Ti}; anderson_iterations::Int = 1, anderson_unknowns = "all", anderson_damping = 1) where {T, Tv, Ti}
 
     @assert anderson_iterations > 0 "Anderson accelerations needs anderson_iterations > 0!"
     @assert anderson_damping > 0 && anderson_damping <= 1 "Anderson damping factor must be >0 and <=1"
@@ -592,7 +593,7 @@ function AndersonAccelerationManager{T,anderson_iterations}(anderson_metric::Str
     LastIteratesTilde = Array{FEVector,1}(undef, anderson_iterations+1) # auxiliary iterates \tilde u_k
 
     ## assemble convergence metric
-    FEs = Array{FESpace,1}([])
+    FEs = Array{FESpace{Tv,Ti},1}([])
     for j = 1 : length(Target.FEVectorBlocks)
         push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
@@ -626,14 +627,13 @@ function AndersonAccelerationManager{T,anderson_iterations}(anderson_metric::Str
         LastIteratesTilde[j] = deepcopy(Target)
         Matrix[j,j] = 1
     end
-    return AndersonAccelerationManager{T,anderson_iterations}(LastIterates,LastIteratesTilde,NormOperator,Matrix,Rhs,alpha,-1,Target,anderson_unknowns, anderson_damping)
+    return AndersonAccelerationManager{T,Tv,Ti}(LastIterates,LastIteratesTilde,NormOperator,Matrix,Rhs,alpha,anderson_iterations,-1,Target,anderson_unknowns, anderson_damping)
 end
 
 # call this every time Target has got its new values
-function update!(AAM::AndersonAccelerationManager)
-    T = typeof(AAM).parameters[1]
-    anderson_iterations = typeof(AAM).parameters[2]
-    AAM.cdepth = min(anderson_iterations,AAM.cdepth)
+function update_anderson!(AAM::AndersonAccelerationManager{T,Tv,Ti}) where {T,Tv,Ti}
+    anderson_iterations::Int = AAM.anderson_iterations
+    cdepth::Int = min(anderson_iterations,AAM.cdepth)
     alpha::Array{T,1} = AAM.alpha
     damping::T = AAM.damping
 
@@ -645,9 +645,9 @@ function update!(AAM::AndersonAccelerationManager)
     # save fixpoint iterate as new tilde iterate
     AAM.LastIteratesTilde[anderson_iterations+1].entries .= AAM.Target.entries
 
-    if AAM.cdepth > 0
+    if cdepth > 0
         # fill matrix until depth (rest of matrix is still identity matrix from init)
-        for j = 1 : AAM.cdepth+1, k = j : AAM.cdepth+1
+        for j = 1 : cdepth+1, k = j : cdepth+1
             AAM.Matrix[j,k] = ldrdmatmul(AAM.LastIteratesTilde[anderson_iterations+2-j].entries, AAM.LastIterates[anderson_iterations+2-j].entries,
                                     AAM.NormOperator,
                                     AAM.LastIteratesTilde[anderson_iterations+2-k].entries, AAM.LastIterates[anderson_iterations+2-k].entries)
@@ -670,7 +670,7 @@ function update!(AAM::AndersonAccelerationManager)
         for u in AAM.anderson_unknowns
             fill!(AAM.Target[u],0)
             offset = AAM.Target[u].offset
-            for a = 1 : AAM.cdepth+1
+            for a = 1 : cdepth+1
                 for j = 1 : AAM.Target[u].FES.ndofs
                     AAM.Target.entries[offset+j] += damping * alpha[a] * AAM.LastIteratesTilde[anderson_iterations+2-a].entries[offset+j]
                     AAM.Target.entries[offset+j] += (1-damping) * alpha[a] * AAM.LastIterates[anderson_iterations+2-a].entries[offset+j]
@@ -694,7 +694,7 @@ end
 
 
 # solve full system iteratively until fixpoint is reached
-function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T}; time::Real = 0) where {T,Tv,Ti}
+function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T,Tv,Ti}; time::Real = 0) where {T,Tv,Ti}
 
     ## get relevant solver parameters
     fixed_penalty = SC.user_params[:fixed_penalty]
@@ -735,7 +735,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
     if anderson_iterations > 0
         anderson_time += @elapsed begin    
             @logmsg MoreInfo "Preparing Anderson acceleration for unknown(s) = $anderson_unknowns with convergence metric $anderson_metric and $anderson_iterations iterations"
-            AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
+            AAM = AndersonAccelerationManager(anderson_metric, Target; anderson_iterations = anderson_iterations, anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
         end
     end
     if damping_val > 0
@@ -783,7 +783,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         time_solver = @elapsed begin
             flush!(A.entries)
             if j == 1 || (j % skip_update[1] == 0 && skip_update[1] != -1)
-                update!(LS)
+                update_factorization!(LS)
             end
             solve!(LS)
         end
@@ -798,7 +798,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         # POSTPROCESS : ANDERSON ITERATE
         if anderson_iterations > 0
             anderson_time += @elapsed begin
-                update!(AAM)
+                update_anderson!(AAM)
             end
         end
 
@@ -868,7 +868,7 @@ end
 
 # solve system iteratively until fixpoint is reached
 # by consecutively solving subiterations
-function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T}; time = 0) where {T,Tv,Ti}
+function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T,Tv,Ti}; time = 0) where {T,Tv,Ti}
 
     ## get relevant solver parameters
     subiterations = SC.user_params[:subiterations]
@@ -935,7 +935,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
     if anderson_iterations > 0
         anderson_time += @elapsed begin    
             @logmsg MoreInfo "Preparing Anderson acceleration for unknown(s) = $anderson_unknowns with convergence metric $anderson_metric and $anderson_iterations iterations"
-            AAM = AndersonAccelerationManager{T,anderson_iterations}(anderson_metric, Target; anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
+            AAM = AndersonAccelerationManager(anderson_metric, Target; anderson_iterations = anderson_iterations, anderson_unknowns = anderson_unknowns, anderson_damping = anderson_damping)
         end
     end
     if damping_val > 0
@@ -1002,7 +1002,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             time_solver = @elapsed begin
                 flush!(A[s].entries)
                 if iteration == 1 || (iteration % skip_update[s] == 0 && skip_update[s] != -1)
-                    update!(LS[s])
+                    update_factorization!(LS[s])
                 end
                 solve!(LS[s])
             end
@@ -1033,7 +1033,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
                 # POSTPROCESS : ANDERSON ITERATE
                 if anderson_iterations > 0
                     anderson_time += @elapsed begin
-                        update!(AAM)
+                        update_anderson!(AAM)
                     end
                 end
 
@@ -1135,14 +1135,15 @@ Depending on the subiterations and detected/configured nonlinearities the whole 
 
 """
 function solve!(
-    Target::FEVector{T},    # contains initial guess and final solution after solve
+    Target::FEVector{T,Tv,Ti},    # contains initial guess and final solution after solve
     PDE::PDEDescription;
-    kwargs...) where {T <: Real}
+    kwargs...) where {T, Tv, Ti}
 
     ## generate solver configurations
+    xgrid = Target[1].FES.xgrid
     user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
     _update_solver_params!(user_params,kwargs)
-    SC = generate_solver(PDE, user_params, T)
+    SC = SolverConfig{T}(PDE, xgrid, user_params)
 
     ## logging stuff
     if SC.is_timedependent
@@ -1199,35 +1200,35 @@ abstract type AbstractTimeIntegrationRule end
 abstract type BackwardEuler <: AbstractTimeIntegrationRule end
 abstract type CrankNicolson <: AbstractTimeIntegrationRule end
 
-mutable struct TimeControlSolver{T,TIR<:AbstractTimeIntegrationRule}
-    PDE::PDEDescription      # PDE description (operators, data etc.)
-    SC::SolverConfig         # solver configurations (subiterations, penalties etc.)
-    LS::Array{AbstractLinearSystem,1} # array for linear solvers of all subiterations
-    ctime::Real              # current time
-    cstep::Int               # current timestep count
-    last_timestep::Real      # last timestep
-    AM::Array{FEMatrix{T},1}    # heap for mass matrices for each equation package
-    which::Array{Int,1}      # which equations shall have a time derivative?
-    nonlinear_dt::Array{Bool,1} # if true mass matrix is recomputed in each iteration
-    dt_operators::Array{DataType,1} # operators associated with the time derivative
-    dt_actions::Array{<:AbstractAction,1} # actions associated with the time derivative
-    S::Array{FEMatrix{T},1}     # heap for system matrix for each equation package
-    rhs::Array{FEVector{T},1}   # heap for system rhs for each equation package
-    A::Array{FEMatrix{T},1}     # heap for spacial discretisation matrix for each equation package
-    b::Array{FEVector{T},1}     # heap for spacial rhs for each equation package
-    x::Array{FEVector{T},1}     # heap for current solution for each equation package
-    res::Array{FEVector{T},1}   # residual vector
-    X::FEVector{T}              # full solution vector
-    LastIterate::FEVector{T}    # helper variable if maxiterations > 1
-    fixed_dofs::Array{Int,1}            # fixed dof numbes (values are stored in X)
-    eqoffsets::Array{Array{Int,1},1}    # offsets for subblocks of each equation package
-    ALU::Array{Any,1}  # LU decompositions of matrices A
-    statistics::Array{T,2}  # statistics of last timestep
+mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule}
+    PDE::PDEDescription                     # PDE description (operators, data etc.)
+    SC::SolverConfig{T,Tv,Ti}               # solver configurations (subiterations, penalties etc.)
+    LS::Array{AbstractLinearSystem,1}       # array for linear solvers of all subiterations
+    ctime::Tt                               # current time
+    cstep::Int                              # current timestep count
+    last_timestep::Tt                       # last timestep
+    AM::Array{FEMatrix{T,TiM,Tv,Ti},1}          # heap for mass matrices for each equation package
+    which::Array{Int,1}                     # which equations shall have a time derivative?
+    dt_is_nonlinear::Array{Bool,1}             # if true mass matrix is recomputed in each iteration
+    dt_operator::Array{DataType,1}         # operators associated with the time derivative
+    dt_actions::Array{<:AbstractAction,1}   # actions associated with the time derivative
+    S::Array{FEMatrix{T,TiM,Tv,Ti},1}           # heap for system matrix for each equation package
+    rhs::Array{FEVector{T,Tv,Ti},1}         # heap for system rhs for each equation package
+    A::Array{FEMatrix{T,TiM,Tv,Ti},1}           # heap for spacial discretisation matrix for each equation package
+    b::Array{FEVector{T,Tv,Ti},1}           # heap for spacial rhs for each equation package
+    x::Array{FEVector{T,Tv,Ti},1}           # heap for current solution for each equation package
+    res::Array{FEVector{T,Tv,Ti},1}         # residual vector
+    X::FEVector{T,Tv,Ti}                    # full solution vector
+    LastIterate::FEVector{T,Tv,Ti}          # helper variable if maxiterations > 1
+    fixed_dofs::Array{Ti,1}                 # fixed dof numbes (values are stored in X)
+    eqoffsets::Array{Array{Int,1},1}        # offsets for subblocks of each equation package
+    ALU::Array{Any,1}                       # LU decompositions of matrices A
+    statistics::Array{T,2}                  # statistics of last timestep
 end
 
 
 
-function assemble_massmatrix4subiteration!(TCS::TimeControlSolver, i::Int; force::Bool = false)
+function assemble_massmatrix4subiteration!(TCS::TimeControlSolver{T,Tt,Tv,Ti}, i::Int; force::Bool = false) where {T,Tt,Tv,Ti}
     subiterations = TCS.SC.user_params[:subiterations]
     for j = 1 : length(subiterations[i])
         if (subiterations[i][j] in TCS.which) == true 
@@ -1235,14 +1236,14 @@ function assemble_massmatrix4subiteration!(TCS::TimeControlSolver, i::Int; force
             # assembly mass matrix into AM block
             pos = findall(x->x==subiterations[i][j], TCS.which)[1]
 
-            if TCS.nonlinear_dt[pos] == true || force == true
+            if TCS.dt_is_nonlinear[pos] == true || force == true
                 @logmsg DeepInfo "Assembling mass matrix for block [$j,$j] of subiteration $i with action of type $(typeof(TCS.dt_actions[pos]))"
                 A = TCS.AM[i][j,j]
                 FE1 = A.FESX
                 FE2 = A.FESY
-                operator1 = TCS.dt_operators[pos]
-                operator2 = TCS.dt_operators[pos]
-                BLF = SymmetricBilinearForm(Float64, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
+                operator1 = TCS.dt_operator[pos]
+                operator2 = TCS.dt_operator[pos]
+                BLF = SymmetricBilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
                 time = @elapsed assemble!(A, BLF, skip_preps = false)
             end
         end
@@ -1254,41 +1255,45 @@ end
 """
 ````
 function TimeControlSolver(
-    PDE::PDEDescription,
-    Solution::FEVector,    # contains initial values and stores solution of advance method below
-    TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
-    dt_testfunction_operator = [],
-    dt_action = [],
-    nonlinear_dt = [],
-    kwargs...)
+    PDE::PDEDescription,                                        # PDE system description
+    InitialValues::FEVector{T,Tv,Ti},                           # contains initial values and stores solution of advance! methods
+    TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;   # Time integration rule
+    dt_operator = [],                                           # Operator in time derivative (default: Identity) for each subiteration (applied to test and ansatz function)
+    dt_action = [],                                             # Action in time derivative (deulta: NoAction) for each subiteration
+    dt_is_nonlinear = [],                                          # is the time derivative nonlinear?
+    T_time = Float64,                                           # Type for timestep and total time
+    kwargs...) where {T,Tv,Ti}                                  # additional solver arguments
 ````
 
 Creates a time-dependent solver that can be advanced in time with advance!.
 The FEVector Solution stores the initial state but also the solution at the current time.
 The argument TIR carries the time integration rule to be use (e.g. BackwardEuler or CrankNicolson).
+T_time determines the NumberType of the timesteps and total time.
 
 Keyword arguments:
 $(_myprint(default_solver_kwargs(),true))
 
 Further (very experimental) optional arguments for TimeControlSolver are:
-- dt_test_function_operator : (array of) operators applied to testfunctions in time derivative (default: Identity)
+- dt_operator : (array of) operators applied to testfunctions in time derivative (default: Identity)
 - dt_action : (array of) actions that are applied to the ansatz function in the time derivative (to include parameters etc.)
-- nonlinear_dt : (array of) booleans to decide which time derivatives should be recomputed in each timestep
+- dt_is_nonlinear : (array of) booleans to decide which time derivatives should be recomputed in each timestep
 
 """
 function TimeControlSolver(
     PDE::PDEDescription,
     InitialValues::FEVector{T,Tv,Ti},    # contains initial values and stores solution of advance! methods
     TIR::Type{<:AbstractTimeIntegrationRule} = BackwardEuler;
-    dt_testfunction_operator = [],
+    dt_operator = [],
     dt_action = [],
-    nonlinear_dt = [],
+    dt_is_nonlinear = [],
+    T_time = Float64,
     kwargs...) where {T,Tv,Ti}
 
     ## generate solver configurations
     user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
     _update_solver_params!(user_params,kwargs)
-    SC = generate_solver(PDE, user_params, Float64)
+    xgrid = InitialValues[1].FES.xgrid
+    SC = SolverConfig{T}(PDE, xgrid, user_params)
     start_time = user_params[:time]
 
     # generate solver for time-independent problem
@@ -1322,17 +1327,17 @@ function TimeControlSolver(
         FEs[j] = InitialValues.FEVectorBlocks[j].FES
     end    
     eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
-    AM = Array{FEMatrix{Float64},1}(undef,nsubiterations)
-    A = Array{FEMatrix{Float64},1}(undef,nsubiterations)
-    b = Array{FEVector{Float64},1}(undef,nsubiterations)
-    x = Array{FEVector{Float64},1}(undef,nsubiterations)
-    res = Array{FEVector{Float64},1}(undef,nsubiterations)
+    AM = Array{FEMatrix{T},1}(undef,nsubiterations)
+    A = Array{FEMatrix{T},1}(undef,nsubiterations)
+    b = Array{FEVector{T},1}(undef,nsubiterations)
+    x = Array{FEVector{T},1}(undef,nsubiterations)
+    res = Array{FEVector{T},1}(undef,nsubiterations)
     for i = 1 : nsubiterations
-        A[i] = FEMatrix{Float64}("SystemMatrix subiteration $i", FEs[subiterations[i]])
-        AM[i] = FEMatrix{Float64}("MassMatrix subiteration $i", FEs[subiterations[i]])
-        b[i] = FEVector{Float64}("SystemRhs subiteration $i", FEs[subiterations[i]])
-        x[i] = FEVector{Float64}("Solution subiteration $i", FEs[subiterations[i]])
-        res[i] = FEVector{Float64}("Residual subiteration $i", FEs[subiterations[i]])
+        A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[subiterations[i]])
+        AM[i] = FEMatrix{T}("MassMatrix subiteration $i", FEs[subiterations[i]])
+        b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[subiterations[i]])
+        x[i] = FEVector{T}("Solution subiteration $i", FEs[subiterations[i]])
+        res[i] = FEVector{T}("Residual subiteration $i", FEs[subiterations[i]])
         set_nonzero_pattern!(A[i])
         assemble!(A[i],b[i],PDE,SC,InitialValues; time = start_time, equations = subiterations[i], min_trigger = AssemblyInitial)
         eqoffsets[i] = zeros(Int,length(subiterations[i]))
@@ -1347,7 +1352,7 @@ function TimeControlSolver(
     # ASSEMBLE BOUNDARY DATA
     # will be overwritten in solve if time-dependent
     # but fixed_dofs will remain throughout
-    fixed_dofs = []
+    fixed_dofs::Array{Ti,1} = zeros(Ti,0)
     for j = 1 : length(InitialValues.FEVectorBlocks)
         new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j]) .+ InitialValues[j].offset
         append!(fixed_dofs, new_fixed_dofs)
@@ -1376,17 +1381,17 @@ function TimeControlSolver(
             d = subiterations[s][j] # equation of subiteration
             if (d in timedependent_equations) == true 
                 pos = findall(x->x==d, timedependent_equations)[1] # position in timedependent_equations
-                if length(nonlinear_dt) < pos
-                    push!(nonlinear_dt, false)
+                if length(dt_is_nonlinear) < pos
+                    push!(dt_is_nonlinear, false)
                 end
                 if length(dt_action) < pos
                     push!(dt_action, NoAction())
                 end
-                if length(dt_testfunction_operator) < pos
-                    push!(dt_testfunction_operator, Identity)
+                if length(dt_operator) < pos
+                    push!(dt_operator, Identity)
                 end
                 # set diagonal equations block and rhs block to nonlinear
-                if nonlinear_dt[pos] == true
+                if dt_is_nonlinear[pos] == true
                     SC.LHS_AssemblyTriggers[d,d] = AssemblyEachTimeStep
                     SC.RHS_AssemblyTriggers[d] = AssemblyEachTimeStep
                 end
@@ -1395,7 +1400,7 @@ function TimeControlSolver(
     end
 
     dt_action = Array{AbstractAction,1}(dt_action)
-    dt_testfunction_operator = Array{DataType,1}(dt_testfunction_operator)
+    dt_operator = Array{DataType,1}(dt_operator)
 
     if TIR == BackwardEuler
         S = A
@@ -1416,7 +1421,7 @@ function TimeControlSolver(
 
     # generate TimeControlSolver
     statistics = zeros(Float64,length(InitialValues),4)
-    TCS = TimeControlSolver{Float64,TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,nonlinear_dt,dt_testfunction_operator,dt_action,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)), statistics)
+    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,dt_is_nonlinear,dt_operator,dt_action,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{Float64,Int64},1}(undef,length(subiterations)), statistics)
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations
@@ -1437,7 +1442,7 @@ function TimeControlSolver(
 Advances a TimeControlSolver one step in time with the given timestep.
 
 """
-function advance!(TCS::TimeControlSolver{T,TIR}, timestep::Real = 1e-1) where {T,TIR}
+function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1e-1) where {T,Tt,TiM,Tv,Ti,TIR}
     # update timestep counter
     TCS.cstep += 1
     TCS.ctime += timestep
@@ -1454,9 +1459,9 @@ function advance!(TCS::TimeControlSolver{T,TIR}, timestep::Real = 1e-1) where {T
     res = TCS.res
     X = TCS.X
     LS = TCS.LS
-    fixed_dofs::Array{Int,1} = TCS.fixed_dofs
+    fixed_dofs::Array{Ti,1} = TCS.fixed_dofs
     eqoffsets::Array{Array{Int,1},1} = TCS.eqoffsets
-    statistics::Array{T,2} = TCS.statistics
+    statistics::Array{Float64,2} = TCS.statistics
     fill!(statistics,0)
 
     ## get relevant solver parameters
@@ -1599,7 +1604,7 @@ function advance!(TCS::TimeControlSolver{T,TIR}, timestep::Real = 1e-1) where {T
             time_solver = @elapsed begin
                 flush!(S[s].entries)
                 if update_matrix || (TCS.cstep % skip_update[s] == 0 && skip_update[s] != -1)
-                    update!(LS[s])
+                    update_factorization!(LS[s])
                 end
                 solve!(LS[s])
             end
@@ -1734,7 +1739,7 @@ advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_thres
 Advances a TimeControlSolver in time with the given (initial) timestep until stationarity is detected (change of variables below threshold) or a maximal number of time steps is exceeded.
 The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
 """
-function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
+function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing) where {T,Tt}
     statistics = TCS.statistics
     maxiterations = TCS.SC.user_params[:maxiterations]
     show_details = TCS.SC.user_params[:show_iteration_details]
@@ -1747,7 +1752,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             for j = 1 : size(statistics,1)
                 @printf("       ")
             end
-            if do_after_each_timestep != nothing
+            if do_after_each_timestep !== nothing
                 do_after_each_timestep(0, statistics)
             end
             @printf("\n\t        |            |  (total)   |  (total,nits)  |    (s)    |")
@@ -1756,7 +1761,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationar
             for j = 1 : size(statistics,1)
                 @printf("       ")
             end
-            if do_after_each_timestep != nothing
+            if do_after_each_timestep !== nothing
                 do_after_each_timestep(0, statistics)
             end
             @printf("\n\t        |            |  (total)   |    (s)    |")
@@ -1812,7 +1817,7 @@ advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_toler
 Advances a TimeControlSolver in time with the given (initial) timestep until the specified finaltime is reached (up to the specified tolerance).
 The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
 """
-function advance_until_time!(TCS::TimeControlSolver, timestep, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing)
+function advance_until_time!(TCS::TimeControlSolver{T,Tt}, timestep::Tt, finaltime; finaltime_tolerance = 1e-15, do_after_each_timestep = nothing) where {T,Tt}
     statistics = TCS.statistics
     maxiterations = TCS.SC.user_params[:maxiterations]
     show_details = TCS.SC.user_params[:show_iteration_details]
@@ -1891,8 +1896,8 @@ If solver == nothing the solver Rosenbrock23(autodiff = false) will be chosen. F
 Also note that this is a highly experimental feature and will not work for general TimeControlSolvers configuration (e.g. in the case of several subiterations or, it seems,
 saddle point problems). Also have a look at corressponding the example in the advanced examples section.
 """
-function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver, timestep, finaltime; solver = nothing, abstol = 1e-1, reltol = 1e-1, dtmin = 0, adaptive::Bool = true)
-    if solver == nothing 
+function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver{T,Tt}, timestep::Tt, finaltime::Tt; solver = nothing, abstol = 1e-1, reltol = 1e-1, dtmin = 0, adaptive::Bool = true) where {T,Tt}
+    if solver === nothing 
         solver = DiffEQ.Rosenbrock23(autodiff = false)
     end
 
@@ -1906,5 +1911,5 @@ function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver, timestep, f
     sol = DiffEQ.solve(prob,solver, abstol=abstol, reltol=reltol, dt = timestep, dtmin = dtmin, initializealg=DiffEQ.NoInit(), adaptive = adaptive)
 
     ## pickup solution at final time
-    sys.X.entries .= sol[:,end]
+    sys.X.entries .= view(sol,:,size(sol,2))
 end

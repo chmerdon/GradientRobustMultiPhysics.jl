@@ -21,17 +21,17 @@ function test_qpmatchup(xgrid)
     for item = 1 : nitems
 
         # get dofitem informations
-        GradientRobustMultiPhysics.update!(AM, item)
+        GradientRobustMultiPhysics.update_assembly!(AM, item)
 
         # check that quadrature points on both sides match
         if AM.dofitems[1][2] > 0
             bleft = AM.basisevaler[AM.EG4dofitem[1][1],1,AM.itempos4dofitem[1][1],AM.orientation4dofitem[1][1]]
             bright = AM.basisevaler[AM.EG4dofitem[1][2],1,AM.itempos4dofitem[1][2],AM.orientation4dofitem[1][2]]
-            GradientRobustMultiPhysics.update!(bleft.L2G,AM.dofitems[1][1])
-            GradientRobustMultiPhysics.update!(bright.L2G,AM.dofitems[1][2])
+            GradientRobustMultiPhysics.update_trafo!(bleft.L2G,AM.dofitems[1][1])
+            GradientRobustMultiPhysics.update_trafo!(bright.L2G,AM.dofitems[1][2])
             for i = 1 : length(bleft.xref)
-                eval!(xleft, bleft.L2G, bleft.xref[i])
-                eval!(xright, bright.L2G, bright.xref[i])
+                eval_trafo!(xleft, bleft.L2G, bleft.xref[i])
+                eval_trafo!(xright, bright.L2G, bright.xref[i])
                 for k = 1 : 3
                     pointerror += (xleft[k] - xright[k])^2
                 end
@@ -131,8 +131,8 @@ function test_disc_TLF(xgrid, discontinuity)
         result[1] = input[1] * input[2]
         return nothing
     end
-    action = Action(Float64, ActionKernel(action_kernel, [1,2]; quadorder = 0))
-    TestForm = TrilinearForm(Float64, ON_IFACES, Array{FESpace,1}([FE, FE, FE]), [IdentityDisc{discontinuity}, IdentityDisc{Average}, IdentityDisc{Average}], action)
+    action = Action{Float64}( ActionKernel(action_kernel, [1,2]; quadorder = 0))
+    TestForm = TrilinearForm(Float64, ON_IFACES, Array{FESpace{Float64,Int32},1}([FE, FE, FE]), [IdentityDisc{discontinuity}, IdentityDisc{Average}, IdentityDisc{Average}], action)
 
     # average should equal length of interior skeleton
     error = zeros(Float64,4)

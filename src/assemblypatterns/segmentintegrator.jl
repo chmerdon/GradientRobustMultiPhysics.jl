@@ -3,10 +3,10 @@
 #####################
 
 
-struct SegmentIntegrator{T <: Real, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AbstractAssemblyType, SG <: AbstractElementGeometry, ACT <: AbstractAction}
-    FEBE::FEBasisEvaluator{T,FEType,EG,FEOP,AT} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
-    FEB::FEVectorBlock # holds coefficients
-    xItemDofs::DofMapTypes{Int32} # holds dof numbers
+struct SegmentIntegrator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, SG <: AbstractElementGeometry, ACT <: AbstractAction}
+    FEBE::FEBasisEvaluator{T,Tv,Ti,FEType,EG,FEOP,AT} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
+    FEB::FEVectorBlock{T,Tv,Ti} # holds coefficients
+    xItemDofs::DofMapTypes{Ti} # holds dof numbers
     action::ACT # additional action to postprocess operator evaluation
     action_input::Array{T,1}
     action_result::Array{T,1}
@@ -16,43 +16,43 @@ struct SegmentIntegrator{T <: Real, FEType <: AbstractFiniteElement, EG <: Abstr
 end
 
 
-function SegmentIntegrator{T,FEType,EG,FEOP,AT,SG}(FES::FESpace, FEB::FEVectorBlock, order::Int, action::AbstractAction) where {T, FEType, EG, FEOP, AT,SG}
+function SegmentIntegrator{T}(EG,FEOP,SG,FES::FESpace{Tv,Ti,FEType,FEAT}, FEB::FEVectorBlock{T,Tv,Ti}, order::Int, action::AbstractAction = NoAction(); AT = ON_CELLS) where {T, Tv, Ti, FEType, FEAT}
     qf_SG = QuadratureRule{T, SG}(order)
 
     dimfill = dim_element(EG) - dim_element(SG)
     @assert dimfill >= 0
 
     if dimfill > 0
-        xref = Array{Array{Float64,1},1}(undef,length(qf_SG.xref))
+        xref = Array{Array{T,1},1}(undef,length(qf_SG.xref))
         for i = 1 : length(qf_SG.xref)
-            xref[i] = zeros(Float64,dim_element(EG))
+            xref[i] = zeros(T,dim_element(EG))
         end
-        FEBE = FEBasisEvaluator{Float64,FEType,EG,FEOP,AT}(FES, xref; mutable = true)
+        FEBE = FEBasisEvaluator{T,EG,FEOP,AT}(FES, xref; mutable = true)
     else
-        FEBE = FEBasisEvaluator{Float64,FEType,EG,FEOP,AT}(FES, qf_SG; mutable = true)
+        FEBE = FEBasisEvaluator{T,EG,FEOP,AT}(FES, qf_SG; mutable = true)
     end
     DM = Dofmap4AssemblyType(FEB.FES, AT)
 
 
     if typeof(action) <: NoAction
-        action_input = zeros(Float64,size(FEBE.cvals,1))
+        action_input = zeros(T,size(FEBE.cvals,1))
         action_result = action_input
     else
-        action_input = zeros(Float64,action.argsizes[2])
-        action_result = zeros(Float64,action.argsizes[1])
+        action_input = zeros(T,action.argsizes[2])
+        action_result = zeros(T,action.argsizes[1])
     end
     cvol::T = 0
 
-    return SegmentIntegrator{T,FEType,EG,FEOP,AT,SG,typeof(action)}(FEBE, FEB, DM, action, action_input, action_result, Ref(cvol), qf_SG.xref, qf_SG)
+    return SegmentIntegrator{T,Tv,Ti,FEType,EG,FEOP,AT,SG,typeof(action)}(FEBE, FEB, DM, action, action_input, action_result, Ref(cvol), qf_SG.xref, qf_SG)
 end
 
 function integrate!(
     result::Array{T,1},
-    SI::SegmentIntegrator{T},
+    SI::SegmentIntegrator{T,Tv,Ti,FEType,EG,FEOP,AT,SG,ACT},
     w::Array{Array{T,1},1},    # world coordinates
     b::Array{Array{T,1},1},    # barycentric coordinates (w.r.t. item geometry)
     item::Int # cell in which the segment lies (completely)
-    ) where {T}
+    ) where {T,Tv,Ti,FEType,EG,FEOP,AT,SG,ACT}
 
     FEBE = SI.FEBE
     FEB = SI.FEB
@@ -74,19 +74,19 @@ function integrate!(
     relocate_xref!(FEBE, xref)
     
     # update operator eveluation on item
-    update!(FEBE, item)
+    update_febe!(FEBE, item)
 
     # compute volume
     action = SI.action
-    cvol::Base.Ref{Float64} = SI.cvol
-    if typeof(SI).parameters[6] <: AbstractElementGeometry1D
+    cvol::Base.Ref{T} = SI.cvol
+    if SG <: AbstractElementGeometry1D
         cvol[] = sqrt((w[1][1] - w[2][1])^2 + (w[1][2] - w[2][2])^2)
     else
         @error "This segment geometry is not implemented!"
     end
 
     # update_action
-    update!(action, FEBE, item, item, 0) # region is missing currently
+    update_action!(action, FEBE, item, item, 0) # region is missing currently
 
     # do the integration
     qf = SI.qf

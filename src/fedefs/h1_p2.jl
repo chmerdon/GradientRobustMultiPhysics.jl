@@ -117,7 +117,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
 end
 
 
-function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Vertex0D})
+function get_basis(::Type{<:AssemblyType},FEType::Type{<:H1P2}, ::Type{<:Vertex0D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis,xref)
         for k = 1 : ncomponents
@@ -126,7 +126,7 @@ function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Edge1D})
+function get_basis(::Type{<:AssemblyType},FEType::Type{<:H1P2}, ::Type{<:Edge1D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         temp = 1 - xref[1]
@@ -138,7 +138,7 @@ function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Triangle2D})
+function get_basis(::Type{<:AssemblyType},FEType::Type{<:H1P2}, ::Type{<:Triangle2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         temp = 1 - xref[1] - xref[2]
@@ -154,7 +154,7 @@ function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<
 end
 
 
-function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D})
+function get_basis(::Type{<:AssemblyType},FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         temp = 1 - xref[1] - xref[2] - xref[3]
@@ -174,7 +174,7 @@ function get_basis(::Type{<:AbstractAssemblyType},FEType::Type{<:H1P2}, ::Type{<
 end
 
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         refbasis[1,1] = 1 - xref[1]

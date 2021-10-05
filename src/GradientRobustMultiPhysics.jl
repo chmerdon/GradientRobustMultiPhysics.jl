@@ -66,11 +66,11 @@ include("logging.jl")
 
 include("userdata.jl")
 export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
-export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval!
+export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval_data!
 export is_timedependent, is_regiondependent, is_itemdependent
 
 include("assemblytypes.jl");
-export AbstractAssemblyType
+export AssemblyType
 export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
 export ItemType4AssemblyType
 export GridComponentNodes4AssemblyType
@@ -79,7 +79,7 @@ export GridComponentGeometries4AssemblyType
 export GridComponentRegions4AssemblyType
 
 include("l2gtransformations.jl");
-export L2GTransformer, update!, eval!, mapderiv!
+export L2GTransformer, update_trafo!, eval_trafo!, mapderiv!
 
 include("cellfinder.jl")
 export CellFinder
@@ -150,12 +150,12 @@ include("reconstructions.jl")
 export ReconstructionHandler, get_rcoefficients!
 
 include("febasisevaluator.jl")
-export FEBasisEvaluator, update!, eval!
+export FEBasisEvaluator, update_febe!, eval_febe!
 
 
 include("actions.jl")
 export AbstractAction, Action, MultiplyScalarAction, NoAction, fdot_action
-export set_time!
+export set_time!, update_action!, apply_action!
 
 
 include("accumvector.jl")
@@ -173,7 +173,7 @@ export MultilinearForm
 export NonlinearForm
 export prepare_assembly!
 export assemble!, evaluate!, evaluate
-export AssemblyManager, update!
+export AssemblyManager, update_assembly!
 export SegmentIntegrator
 export PointEvaluator
 

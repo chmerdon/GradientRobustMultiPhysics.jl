@@ -21,7 +21,7 @@ function Base.show(io::Core.IO, ::Type{<:H1P1{ncomponents}}) where {ncomponents}
 end
 
 get_ncomponents(FEType::Type{<:H1P1}) = FEType.parameters[1] # is this okay?
-get_ndofs(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Triangle2D}) = 1;
@@ -67,7 +67,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})
     ncomponents::Int = get_ncomponents(FEType)
     edim::Int = dim_element(ET) 
     function closure(refbasis, xref)
@@ -81,7 +81,7 @@ function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ET::Typ
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         a = 1 - xref[1]
@@ -95,7 +95,7 @@ function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ::Type{
     end
 end
 
-function get_basis(::Type{<:AbstractAssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
+function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
     ncomponents = get_ncomponents(FEType)
     function closure(refbasis, xref)
         a = 1 - xref[1]

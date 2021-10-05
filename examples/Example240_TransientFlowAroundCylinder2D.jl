@@ -91,7 +91,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
     end 
     drag::Float64 = 0
     lift::Float64 = 0
-    draglift_action = Action(Float64, draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", quadorder = 0)
+    draglift_action = Action{Float64}( draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", quadorder = 0)
     DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     ## prepare drag/lift calculation
@@ -123,7 +123,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
     end
 
     ## solve (after T[j] is reached the timestep is changed)
-    TCS = TimeControlSolver(Problem, Solution, TIR; timedependent_equations = [1], dt_testfunction_operator = [VeloIdentity], show_iteration_details = true, maxiterations = 5, skip_update = [-1], target_residual = 1e-8)
+    TCS = TimeControlSolver(Problem, Solution, TIR; timedependent_equations = [1], dt_operator = [VeloIdentity], show_iteration_details = true, maxiterations = 5, skip_update = [-1], target_residual = 1e-8, T_time = eltype(timestep))
     for j = 1 : length(T)
         plot_step_count = Int(ceil(plot_step/timestep[j]))
         advance_until_time!(TCS, timestep[j], T[j]; do_after_each_timestep = do_after_each_timestep)

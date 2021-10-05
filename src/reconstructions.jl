@@ -18,7 +18,7 @@ function ReconstructionHandler(FES::FESpace{Tv,Ti,FE1,APT},FES_Reconst::FESpace{
     if interior_ndofs > 0
         coeffs = xgrid[ReconstructionCoefficients{FE1,FE2,AT}]
     else
-        coeffs = zeros(Float64,0,0)
+        coeffs = zeros(Tv,0,0)
     end
     rcoeff_handler = get_reconstruction_coefficients!(xgrid, AT, FE1, FE2, EG)
     return ReconstructionHandler{Tv,Ti,FE1,FE2,AT,EG, typeof(rcoeff_handler)}(FES,FES_Reconst,interior_offset,interior_ndofs,coeffs,rcoeff_handler)
@@ -33,37 +33,37 @@ function get_rcoefficients!(coefficients, RH::ReconstructionHandler{Tv,Ti,FE1,FE
 end
 
 # P2B > RT1/BDM2 reconstruction
-interior_dofs_offset(AT::Type{<:AbstractAssemblyType}, FE::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT,FE,EG)
+interior_dofs_offset(AT::Type{<:AssemblyType}, FE::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT,FE,EG)
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{2}}, ::Type{<:Triangle2D}) = 6
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVBDM2{2}}, ::Type{<:Triangle2D}) = 9
 
-function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{ReconstructionCoefficients{FE1,FE2,AT}}) where {FE1<:H1P2B{2,2}, FE2<:HDIVRT1{2}, AT <: ON_CELLS}
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ReconstructionCoefficients{FE1,FE2,AT}}) where {Tv, Ti, FE1<:H1P2B{2,2}, FE2<:HDIVRT1{2}, AT <: ON_CELLS}
     @info "Computing interior reconstruction coefficients for $FE1 > $FE2 ($AT)"
     xCellFaces = xgrid[CellFaces]
     xCoordinates = xgrid[Coordinates]
     xCellNodes = xgrid[CellNodes]
-    xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
+    xCellVolumes::Array{Tv,1} = xgrid[CellVolumes]
     xCellFaceSigns = xgrid[CellFaceSigns]
     EG = xgrid[UniqueCellGeometries]
 
     @assert EG == [Triangle2D]
 
     face_rule::Array{Int,2} = face_enum_rule(EG[1])
-    nnf::Int = size(face_rule,1)
+    nnf::Int = size(face_rule,2)
     ndofs4component::Int = 2*nnf + 1
     ndofs1::Int = get_ndofs(AT,FE1,EG[1])
-    ncells = num_sources(xCellFaces)
+    ncells::Int = num_sources(xCellFaces)
     rcoeff_handler! = get_reconstruction_coefficients!(xgrid, AT, FE1, FE2, EG[1])
-    coefficients = zeros(Float64,ndofs1,6)
-    interior_coefficients = zeros(Float64,2*ndofs1,ncells)
+    coefficients::Array{Tv,2} = zeros(Tv,ndofs1,6)
+    interior_coefficients::Array{Tv,2} = zeros(Tv,2*ndofs1,ncells)
 
-    C = zeros(Float64,2,3)  # vertices
-    E = zeros(Float64,2,3)  # edge midpoints
-    M = zeros(Float64,2)    # midpoint of current cell
-    A = zeros(Float64,2,8)  # integral means of RT1 functions (from analytic formulas)
-    b = zeros(Float64,2)    # right-hand side for integral mean
+    C = zeros(Tv,2,3)  # vertices
+    E = zeros(Tv,2,3)  # edge midpoints
+    M = zeros(Tv,2)    # midpoint of current cell
+    A = zeros(Tv,2,8)  # integral means of RT1 functions (from analytic formulas)
+    b = zeros(Tv,2)    # right-hand side for integral mean
     dof::Int = 0
-    det::Float64 = 0
+    det::Tv = 0
     for cell = 1 : ncells
 
         # get reconstruction coefficients for boundary dofs
@@ -78,9 +78,9 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{Reconstructio
         end
         
         # get edge midpoints
-        for f = 1 : size(face_rule,1)
+        for f = 1 : nnf
             for n = 1 : 2, k = 1 : 2
-                E[k,f] += C[k,face_rule[f,n]] / 2
+                E[k,f] += C[k,face_rule[n,f]] / 2
             end
         end
 
@@ -141,59 +141,59 @@ end
 
 
 
-function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{ReconstructionCoefficients{FE1,FE2,AT}}) where {FE1<:H1P2B{2,2}, FE2<:HDIVBDM2{2}, AT <: ON_CELLS}
+function ExtendableGrids.instantiate(xgrid::ExtendableGrid{Tv, Ti}, ::Type{ReconstructionCoefficients{FE1,FE2,AT}}) where {Tv, Ti, FE1<:H1P2B{2,2}, FE2<:HDIVBDM2{2}, AT <: ON_CELLS}
     @info "Computing interior reconstruction coefficients for $FE1 > $FE2 ($AT)"
     xCellFaces = xgrid[CellFaces]
-    xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
+    xCellVolumes::Array{Tv,1} = xgrid[CellVolumes]
     EG = xgrid[UniqueCellGeometries]
 
     @assert EG == [Triangle2D]
 
     ndofs1::Int = get_ndofs(AT,FE1,EG[1])
-    ncells = num_sources(xCellFaces)
+    ncells::Int = num_sources(xCellFaces)
     rcoeff_handler! = get_reconstruction_coefficients!(xgrid, AT, FE1, FE2, EG[1])
-    interior_offset = 9
-    interior_ndofs = 3
-    coefficients = zeros(Float64,ndofs1,interior_offset)
-    interior_coefficients = zeros(Float64,interior_ndofs*ndofs1,ncells)
+    interior_offset::Int = 9
+    interior_ndofs::Int = 3
+    coefficients::Array{Tv,2} = zeros(Tv,ndofs1,interior_offset)
+    interior_coefficients::Array{Tv,2} = zeros(Tv,interior_ndofs*ndofs1,ncells)
 
 
-    qf = QuadratureRule{Float64,EG[1]}(4)
-    weights::Array{Float64,1} = qf.w
+    qf = QuadratureRule{Tv,EG[1]}(4)
+    weights::Array{Tv,1} = qf.w
     # evaluation of FE1 and FE2 basis
     FES1 = FESpace{FE1,ON_CELLS}(xgrid)
     FES2 = FESpace{FE2,ON_CELLS}(xgrid)
-    FEB1 = FEBasisEvaluator{Float64,FE1,EG[1],Identity,ON_CELLS}(FES1, qf)
-    FEB2 = FEBasisEvaluator{Float64,FE2,EG[1],Identity,ON_CELLS}(FES2, qf)
+    FEB1 = FEBasisEvaluator{Tv,EG[1],Identity,ON_CELLS}(FES1, qf)
+    FEB2 = FEBasisEvaluator{Tv,EG[1],Identity,ON_CELLS}(FES2, qf)
     # evaluation of gradient of P1 functions
     FE3 = H1P1{1}
     FES3 = FESpace{FE3,ON_CELLS}(xgrid)
-    FEB3 = FEBasisEvaluator{Float64,FE3,EG[1],Gradient,ON_CELLS}(FES3, qf)
+    FEB3 = FEBasisEvaluator{Tv,EG[1],Gradient,ON_CELLS}(FES3, qf)
     # evaluation of curl of bubble functions
     FE4 = H1BUBBLE{1}
     FES4 = FESpace{FE4,ON_CELLS}(xgrid)
-    FEB4 = FEBasisEvaluator{Float64,FE4,EG[1],CurlScalar,ON_CELLS}(FES4, qf)
+    FEB4 = FEBasisEvaluator{Tv,EG[1],CurlScalar,ON_CELLS}(FES4, qf)
 
-    basisvals1::Array{Float64,3} = FEB1.cvals
-    basisvals2::Array{Float64,3} = FEB2.cvals
-    basisvals3::Array{Float64,3} = FEB3.cvals
-    basisvals4::Array{Float64,3} = FEB4.cvals
-    IMM_face = zeros(Float64,interior_ndofs,interior_offset)
-    IMM = zeros(Float64,interior_ndofs,interior_ndofs)
+    basisvals1::Array{Tv,3} = FEB1.cvals
+    basisvals2::Array{Tv,3} = FEB2.cvals
+    basisvals3::Array{Tv,3} = FEB3.cvals
+    basisvals4::Array{Tv,3} = FEB4.cvals
+    IMM_face = zeros(Tv,interior_ndofs,interior_offset)
+    IMM = zeros(Tv,interior_ndofs,interior_ndofs)
     for k = 1 : interior_ndofs
         IMM[k,k] = 1
     end
-    lb = zeros(Float64,interior_ndofs)
-    lx = zeros(Float64,interior_ndofs)
-    temp::Float64 = 0
+    lb = zeros(Tv,interior_ndofs)
+    lx = zeros(Tv,interior_ndofs)
+    temp::Tv = 0
     offset::Int = 0
     IMMfact = lu(IMM)
     for cell = 1 : ncells
         # update basis
-        update!(FEB1,cell)
-        update!(FEB2,cell)
-        update!(FEB3,cell)
-        update!(FEB4,cell)
+        update_febe!(FEB1,cell)
+        update_febe!(FEB2,cell)
+        update_febe!(FEB3,cell)
+        update_febe!(FEB4,cell)
 
         # get reconstruction coefficients for boundary dofs
         rcoeff_handler!(coefficients, cell)

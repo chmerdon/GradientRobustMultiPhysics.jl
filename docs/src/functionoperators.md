@@ -37,7 +37,7 @@ FunctionOperators are building blocks for the weak form and define the operation
 
 ## Jumps and Averages
 
-If one of the operators above is evaluted ON_FACES for a finite element that is not continuous there, the code usual will crash or produce weird results. However, some operators can be transformed into a
+If one of the operators above is evaluted ON_FACES for a finite element that is not continuous there, the code usually will crash or produce weird results. However, some operators can be transformed into a
 Jump- or Average operator and then either the jumps or the average of this operator along the face is assembled. The operator Jump(Identity) for example gives the jump of the
 identity evaluation on both sides of the face.
 

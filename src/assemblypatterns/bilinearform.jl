@@ -34,7 +34,7 @@ end
 ````
 function SymmetricBilinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
@@ -43,7 +43,7 @@ function SymmetricBilinearForm(
 
 Creates a symmetric BilinearForm assembly pattern with the given FESpaces, operators and action etc. Symmetry is not checked automatically, but is assumed during assembly!
 """
-function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "Symmetric BLF", regions = [0], apply_action_to = [1])
+function SymmetricBilinearForm(T::Type{<:Real}, AT::Type{<:AssemblyType}, FES, operators, action = NoAction(); name = "Symmetric BLF", regions = [0], apply_action_to = [1])
     @assert length(operators) == 2
     @assert length(FES) == 2
     @assert apply_action_to in [[1],[2]] "action can only be applied to one argument [1] or [2]"
@@ -54,7 +54,7 @@ end
 ````
 function BilinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
@@ -63,7 +63,7 @@ function BilinearForm(
 
 Creates a general BilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
-function BilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "BLF", regions = [0], apply_action_to = [1])
+function BilinearForm(T::Type{<:Real}, AT::Type{<:AssemblyType}, FES, operators, action = NoAction(); name = "BLF", regions = [0], apply_action_to = [1])
     @assert length(operators) == 2
     @assert length(FES) == 2
     @assert apply_action_to in [[1],[2]] "action can only be applied to one argument [1] or [2]"
@@ -74,7 +74,7 @@ end
 ````
 function LumpedBilinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     FE::Array{FESpace,1},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
@@ -83,7 +83,7 @@ function LumpedBilinearForm(
 
 Creates a LumpedBilinearForm assembly pattern with the given FESpaces, operators and action etc.
 """
-function LumpedBilinearForm(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, FES, operators, action = NoAction(); name = "Lumped BLF", regions = [0], apply_action_to = [1])
+function LumpedBilinearForm(T::Type{<:Real}, AT::Type{<:AssemblyType}, FES, operators, action = NoAction(); name = "Lumped BLF", regions = [0], apply_action_to = [1])
     @assert length(operators) == 2
     @assert length(FES) == 2
     @assert apply_action_to in [[1],[2]] "action can only be applied to one argument [1] or [2]"
@@ -107,13 +107,13 @@ Assembly of a BilinearForm BLF into given two-dimensional AbstractArray (e.g. FE
 """
 function assemble!(
     A::AbstractArray{T,2},
-    AP::AssemblyPattern{APT,T,AT};
+    AP::AssemblyPattern{APT,T,AT,Tv,Ti};
     factor = 1,
     transposed_assembly::Bool = false,
     transpose_copy = nothing,
     skip_preps::Bool = false,
     offsetX = 0,
-    offsetY = 0) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    offsetY = 0) where {APT <: APT_BilinearForm, T <: Real, AT <: AssemblyType,Tv,Ti}
 
     # prepare assembly
     FE = AP.FES
@@ -121,8 +121,8 @@ function assemble!(
         prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemVolumes::Array{Tv,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -146,7 +146,7 @@ function assemble!(
  
     # loop over items
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
-    basisevaler::Array{FEBasisEvaluator,1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
+    basisevaler::Array{FEBasisEvaluator{T,Tv,Ti},1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler[1].cvals
     basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,1),get_maxndofs(AM,2))
@@ -271,7 +271,7 @@ function assemble!(
     end
 
 
-    regions::Array{Int,1} = AP.regions
+    regions::Array{Ti,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
     for item = 1 : nitems
@@ -279,7 +279,7 @@ function assemble!(
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
         # update assembly manager (also updates necessary basisevaler)
-        update!(AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # loop over associated dofitems
@@ -304,7 +304,7 @@ function assemble!(
 
                 # update action on dofitem
                 if apply_action_to > 0
-                    update!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                    update_action!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
                     ndofs4dofitem_action = ndofs4dofitem[apply_action_to]
                 else
                     ndofs4dofitem_action = ndofs4dofitem[1]
@@ -313,10 +313,10 @@ function assemble!(
                 for i in eachindex(weights)
                     for dof_i = 1 : ndofs4dofitem_action
                         if typeof(action) <: NoAction
-                            eval!(action_result, basisevaler[1], dof_i, i)
+                            eval_febe!(action_result, basisevaler[1], dof_i, i)
                             action_result .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
                         else
-                            eval!(action_input, basisevaler[apply_action_to], dof_i, i)
+                            eval_febe!(action_input, basisevaler[apply_action_to], dof_i, i)
                             action_input .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
                             apply_action!(action_result, action_input, action, i, basisxref[i])
                         end
@@ -340,12 +340,12 @@ end
 
 ## wrapper for FEMatrixBlock to avoid use of setindex! functions of FEMAtrixBlock
 function assemble!(
-    A::FEMatrixBlock,
+    A::FEMatrixBlock{TvM,TiM,TvG,TiG},
     AP::AssemblyPattern{APT,T,AT};
     factor = 1,
     skip_preps::Bool = false,
     transposed_assembly::Bool = false,
-    transpose_copy = nothing) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    transpose_copy = nothing) where {APT <: APT_BilinearForm, T <: Real, AT <: AssemblyType, TvM, TiM, TvG, TiG}
 
     if typeof(transpose_copy) <: FEMatrixBlock
         assemble!(A.entries, AP; factor = factor, transposed_assembly = transposed_assembly, transpose_copy = transpose_copy.entries, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
@@ -379,7 +379,7 @@ function assemble!(
     fixed_arguments = [1],
     factor = 1,
     skip_preps::Bool = false,
-    offsets::Array{Int,1} = [0,0]) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    offsets::Array{Int,1} = [0,0]) where {APT <: APT_BilinearForm, T <: Real, AT <: AssemblyType}
     
     # prepare assembly
     FE = AP.FES
@@ -388,7 +388,7 @@ function assemble!(
     end
     AM::AssemblyManager{T} = AP.AM
     xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Int32} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -442,7 +442,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # loop over associated dofitems
@@ -464,7 +464,7 @@ function assemble!(
 
                 # update action on dofitem
                 if apply_action_to > 0
-                    update!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                    update_action!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
                 end
 
                 # update dofs
@@ -473,7 +473,7 @@ function assemble!(
                 for i in eachindex(weights)
                     # evaluate fixed argument
                     fill!(fixedval, 0.0)
-                    eval!(fixedval, basisevaler[fixed_argument], fixed_coeffs, i)
+                    eval_febe!(fixedval, basisevaler[fixed_argument], fixed_coeffs, i)
                     fixedval .*= AM.coeff4dofitem[fixed_argument][di[fixed_argument]]
 
                     if apply_action_to == 0
@@ -502,7 +502,7 @@ function assemble!(
                     else
                         for dof_i = 1 : ndofs4dofitem[free_argument]
                             # apply action to free argument
-                            eval!(action_input, basisevaler[free_argument], dof_i, i)
+                            eval_febe!(action_input, basisevaler[free_argument], dof_i, i)
                             action_input .*= AM.coeff4dofitem[free_argument][di[free_argument]]
                             apply_action!(action_result, action_input, action, i, basisxref[i])
             
@@ -540,7 +540,7 @@ function assemble!(
     FEB::Array{<:FEVectorBlock,1}; # coefficient for fixed argument
     fixed_arguments = [1],
     skip_preps::Bool = false,
-    factor = 1) where {APT <: APT_BilinearForm, T <: Real, AT <: AbstractAssemblyType}
+    factor = 1) where {APT <: APT_BilinearForm, T <: Real, AT <: AssemblyType}
 
    # @assert fixedFE.FES == AP.FES[fixed_argument]
 

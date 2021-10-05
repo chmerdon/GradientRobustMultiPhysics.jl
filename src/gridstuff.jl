@@ -24,6 +24,7 @@
 
 const GridAdjacencyTypes{Ti} = Union{<:VariableTargetAdjacency{Ti},Array{Ti,2}}
 const GridEGTypes = Vector{DataType}
+const GridRegionTypes{Ti} = Union{VectorOfConstants{Ti}, Array{Ti,1}}
 
 
 # additional ExtendableGrids adjacency types 
@@ -300,7 +301,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
 
             # flag face nodes and commons4cells
             for j = nodes_per_cellface:-1:1
-                node = xCellNodes[face_rule[k,j],cell]
+                node = xCellNodes[face_rule[j,k],cell]
                 current_item[j] = node
                 flag4item[node] = true; 
             end
@@ -350,7 +351,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceNodes})
                     # otherwise compare nodes of face and face2
                     same_face = true
                     for j = 1 : nodes_per_cellface
-                        if flag4item[xCellNodes[face_rule2[f2,j],cell2]] == false
+                        if flag4item[xCellNodes[face_rule2[j,f2],cell2]] == false
                             same_face = false
                             break;
                         end    
@@ -564,13 +565,13 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
 
             # flag edge nodes and commons4cells
             for j = 1 : nodes_per_celledge
-                node = xCellNodes[edge_rule[k,j],cell]
+                node = xCellNodes[edge_rule[j,k],cell]
                 current_item[j] = node
                 flag4item[node] = true; 
             end
 
             # get first node and its neighbours
-            node = xCellNodes[edge_rule[k,1],cell]
+            node = xCellNodes[edge_rule[1,k],cell]
             nneighbours = num_targets(xNodeCells,node)
             node_cells[1:nneighbours] = xNodeCells[:,node]
 
@@ -604,7 +605,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
                     common_nodes = 0
                     if nodes_per_celledge == nodes_per_celledge2
                         for j = 1 : nodes_per_celledge2
-                            if flag4item[xCellNodes[edge_rule2[f2,j],cell2]]
+                            if flag4item[xCellNodes[edge_rule2[j,f2],cell2]]
                                 common_nodes += 1
                             else
                                 continue;    
@@ -617,7 +618,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{EdgeNodes})
                         ncells_with_common_edge += 1
                         cells_with_common_edge[ncells_with_common_edge] = cell2
                         pos_in_cells_with_common_edge[ncells_with_common_edge] = f2
-                        if xCellNodes[edge_rule2[f2,1],cell2] == current_item[1]
+                        if xCellNodes[edge_rule2[1,f2],cell2] == current_item[1]
                             sign_in_cells_with_common_edge[ncells_with_common_edge] = 1
                         else
                             sign_in_cells_with_common_edge[ncells_with_common_edge] = -1
@@ -729,7 +730,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{CellFaceOrien
                 n = 0
                 while !found_configuration
                     n += 1
-                    if facenodes[n] == xCellNodes[face_rule[j,1],cell]
+                    if facenodes[n] == xCellNodes[face_rule[1,j],cell]
                         found_configuration = true
                     end
                 end
@@ -849,7 +850,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid, ::Type{FaceEdges})
                     pos += 1
                     found_pos = true
                     for k = 1 : nedgenodes
-                        if flag4edge[xFaceNodes[edge_rule[pos,k], face]] == false
+                        if flag4edge[xFaceNodes[edge_rule[k,pos], face]] == false
                             found_pos = false
                             break;
                         end

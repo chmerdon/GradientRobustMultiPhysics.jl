@@ -41,11 +41,11 @@ function exact_solution_rhs!(ν)
         ## diffusion part
         result[1] = -ν*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
         ## convection part (beta * grad(u))
-        eval!(eval_beta, β, x, 0)
+        eval_data!(eval_beta, β, x, 0)
         result[1] += eval_beta[1] * (x[2]*(2*x[1]-1)*(x[2]-1) + 1)
         result[1] += eval_beta[2] * (x[1]*(2*x[2]-1)*(x[1]-1))
         ## reaction part (alpha*u)
-        eval!(eval_alpha, α, x, 0)
+        eval_data!(eval_alpha, α, x, 0)
         result[1] += eval_alpha[1] * (x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1])
         return nothing
     end
@@ -57,15 +57,15 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
     eval_beta = zeros(Float64,2)
     function action_kernel!(result, input,x)
         ## input = [u,∇u] as a vector of length 3
-        eval!(eval_beta, β, x, 0)
-        eval!(eval_alpha, α, x, 0)
+        eval_data!(eval_beta, β, x, 0)
+        eval_data!(eval_alpha, α, x, 0)
         result[1] = eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
         result[2] = ν * input[2]
         result[3] = ν * input[3]
         ## result will be multiplied with [v,∇v]
         return nothing
     end
-    action = Action(Float64, ActionKernel(action_kernel!, [3,3]; dependencies = "X", quadorder = max(α.quadorder,β.quadorder)))
+    action = Action{Float64}( ActionKernel(action_kernel!, [3,3]; dependencies = "X", quadorder = max(α.quadorder,β.quadorder)))
     return AbstractBilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
 end
 
@@ -104,7 +104,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     if τ > 0
         ## first we define an item-dependent action kernel...
         xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-        stab_action = Action(Float64,(result,input,item) -> (result .= input .* xFaceVolumes[item]^2), [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
+        stab_action = Action{Float64}((result,input,item) -> (result .= input .* xFaceVolumes[item]^2), [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
         JumpStabilisation = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, factor = τ, name = "τ |F|^2 [∇(u)]⋅[∇(v)]")
         add_operator!(Problem, [1,1], JumpStabilisation)
     end

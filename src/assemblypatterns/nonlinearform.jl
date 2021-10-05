@@ -24,7 +24,7 @@ Creates a NonlinearForm assembly pattern.
 """
 function NonlinearForm(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     FES::Array{FESpace,1}, 
     operators::Array{DataType,1},
     action::AbstractAction;
@@ -55,12 +55,12 @@ Assembly of a NonlinearForm assembly pattern into given two-dimensional Abstract
 function assemble!(
     A::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Array{<:FEVectorBlock,1};
+    FEB::Array{<:FEVectorBlock{T,Tv,Ti},1};
     factor = 1,
     transposed_assembly::Bool = false,
     skip_preps::Bool = false,
     offsetX = 0,
-    offsetY = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
+    offsetY = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AssemblyType, Tv, Ti}
 
     # prepare assembly
     FE = AP.FES
@@ -69,8 +69,8 @@ function assemble!(
         prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemVolumes::Array{Tv,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -124,7 +124,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # fill action input with evaluation of current solution
@@ -136,7 +136,7 @@ function assemble!(
                     basisevaler = get_basisevaler(AM, FEid, di)
     
                     # update action on dofitem
-                    # update!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
+                    # update_action!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
@@ -144,7 +144,7 @@ function assemble!(
 
                     # write evaluation of operator of current FE into action_input
                     for i in eachindex(weights)
-                        eval!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
+                        eval_febe!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
                     end  
                 end
             end
@@ -153,7 +153,7 @@ function assemble!(
         # update action on dofitem (not needed yet)
         basisevaler2 = get_basisevaler(AM, nFE, 1)
         basisvals = basisevaler2.cvals
-        update!(action, basisevaler, item, item, regions[r])
+        update_action!(action, basisevaler, item, item, regions[r])
 
         for i in eachindex(weights)
             for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
@@ -162,7 +162,7 @@ function assemble!(
                 # (only of the newton arguments that are associated to the current matrix block)
                 for newarg in newton_args
                     basisevaler = get_basisevaler(AM, newarg, 1)
-                    eval!(action_input2, basisevaler, dof_i, i, offsets[newarg])
+                    eval_febe!(action_input2, basisevaler, dof_i, i, offsets[newarg])
                 end
 
                 # apply nonlinear action
@@ -212,11 +212,11 @@ end
 function assemble!(
     A::FEMatrixBlock,
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Array{<:FEVectorBlock,1};
+    FEB::Array{<:FEVectorBlock{T,Tv,Ti},1};
     factor = 1,
     fixed_arguments = nothing, # ignored
     transposed_assembly::Bool = false,
-    skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
+    skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AssemblyType, Tv, Ti}
 
     assemble!(A.entries, AP, FEB; factor = factor, transposed_assembly = transposed_assembly, offsetX = A.offsetX, offsetY = A.offsetY, skip_preps = skip_preps)
 end
@@ -239,10 +239,10 @@ Assembly of a NonlinearForm AP into given AbstractVector (e.g. FEMatrixBlock).
 function assemble!(
     b::AbstractVector,
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Array{<:FEVectorBlock,1};
+    FEB::Array{<:FEVectorBlock{T,Tv,Ti},1};
     factor = 1,
     skip_preps::Bool = false,
-    offset = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
+    offset = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AssemblyType, Tv, Ti}
 
     # prepare assembly
     FE = AP.FES
@@ -251,8 +251,8 @@ function assemble!(
         prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    xItemVolumes::Array{Tv,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -295,7 +295,7 @@ function assemble!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # fill action input with evluation of current solution
@@ -307,7 +307,7 @@ function assemble!(
                     basisevaler = get_basisevaler(AM, FEid, di)
     
                     # update action on dofitem (not needed for these type of actions yet)
-                    # update!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
+                    # update_action!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
@@ -315,7 +315,7 @@ function assemble!(
 
                     # write evaluation of operator of current FE into action_input
                     for i in eachindex(weights)
-                        eval!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
+                        eval_febe!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
                     end  
                 end
             end
@@ -324,7 +324,7 @@ function assemble!(
         # update action on dofitem (not needed yet)
         basisevaler = get_basisevaler(AM, nFE, 1)
         basisvals = basisevaler.cvals
-        update!(action, basisevaler, item, item, regions[r])
+        update_action!(action, basisevaler, item, item, regions[r])
 
         for i in eachindex(weights)
             apply_action!(action_result, action_input[i], action, i, nothing)
@@ -361,10 +361,136 @@ end
 function assemble!(
     b::FEVectorBlock,
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Array{<:FEVectorBlock,1};
+    FEB::Array{<:FEVectorBlock{T,Tv,Ti},1};
     factor = 1,
     fixed_arguments = [], # ignored
-    skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AbstractAssemblyType}
+    skip_preps::Bool = false) where {APT <: APT_NonlinearForm, T <: Real, AT <: AssemblyType, Tv, Ti}
 
     assemble!(b.entries, AP, FEB; factor = factor, offset = b.offset, skip_preps = skip_preps)
+end
+
+
+
+
+"""
+````
+assemble!(
+    AP::AssemblyPattern{APT,T,AT},         # NonlinearForm pattern
+    FEB::Array{<:FEVectorBlock,1};         # coefficients of current solution for each operator
+    FEBtest::FEVectorBlock;                # coefficients of test function for test function operator
+    factor = 1)                            # factor that is multiplied
+    where {APT <: APT_NonlinearForm, T, AT}
+````
+
+Evaluation of a NonlinearForm AP for given coefficients of ansatz and test function.
+"""
+function evaluate(
+    AP::AssemblyPattern{APT,T,AT},
+    FEB::Array{<:FEVectorBlock,1},
+    FEBtest::FEVectorBlock{T,Tv,Ti};
+    factor = 1,
+    skip_preps::Bool = false,
+    offset = 0) where {APT <: APT_NonlinearForm, T <: Real, AT <: AssemblyType, Tv, Ti}
+
+    # prepare assembly
+    FE = AP.FES
+    nFE = length(FE)
+    if !skip_preps
+        prepare_assembly!(AP)
+    end
+    AM::AssemblyManager{T} = AP.AM
+    xItemVolumes::Array{Tv,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems = length(xItemVolumes)
+
+    # prepare action
+    action = AP.action
+    action_resultdim::Int = action.argsizes[1]
+    maxnweights = get_maxnqweights(AM)
+    action_input = Array{Array{T,1},1}(undef,maxnweights)
+    for j = 1 : maxnweights
+        action_input[j] = zeros(T,action.argsizes[3]) # heap for action input
+    end
+    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
+
+    if AP.regions != [0]
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT in regions = $(AP.regions))"
+    else
+        @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT)"
+    end
+    @debug AP
+
+    # loop over items
+    offsets = zeros(Int,nFE+1)
+    maxdofs = get_maxndofs(AM)
+    basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
+    for j = 1 : nFE
+        basisevaler = get_basisevaler(AM, j, 1)
+        offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
+    end
+    maxdofitems::Array{Int,1} = get_maxdofitems(AM)
+    coeffs = zeros(T,maximum(maxdofs))
+    weights::Array{T,1} = get_qweights(AM)
+    regions::Array{Int,1} = AP.regions
+    allitems::Bool = (regions == [0])
+    nregions::Int = length(regions)
+
+    eval_result::Float64 = 0
+    for item = 1 : nitems
+    for r = 1 : nregions
+    # check if item region is in regions
+    if allitems || xItemRegions[item] == regions[r]
+
+        # update assembly manager (also updates necessary basisevaler)
+        update_assembly!(AM, item)
+        weights = get_qweights(AM)
+
+        # fill action input with evluation of current solution
+        # assemble all but the last operators into action_input
+        for FEid = 1 : nFE - 1
+            for di = 1 : maxdofitems[FEid]
+                if AM.dofitems[FEid][di] != 0
+                    # get correct basis evaluator for dofitem (was already updated by AM)
+                    basisevaler = get_basisevaler(AM, FEid, di)
+    
+                    # update action on dofitem (not needed for these type of actions yet)
+                    # update_action!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
+
+                    # get coefficients of FE number FEid on current dofitem
+                    get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
+                    coeffs .*= AM.coeff4dofitem[FEid][di]
+
+                    # write evaluation of operator of current FE into action_input
+                    for i in eachindex(weights)
+                        eval_febe!(action_input[i], basisevaler, coeffs, i, offsets[FEid])
+                    end  
+                end
+            end
+        end
+
+        # update action on dofitem (not needed yet)
+        basisevaler = get_basisevaler(AM, nFE, 1)
+        update_action!(action, basisevaler, item, item, regions[r])
+
+        # get coefficients of test function
+        get_coeffs!(coeffs, FEBtest, AM, nFE, 1)
+
+        for i in eachindex(weights)
+            apply_action!(action_result, action_input[i], action, i, nothing)
+            action_result .*= weights[i] * xItemVolumes[item] * factor 
+
+            fill!(action_input[i],0)
+            eval_febe!(action_input[i], basisevaler, coeffs, i)
+
+            for k = 1 : action_resultdim
+                eval_result += action_result[k] * action_input[i][k]
+            end
+            fill!(action_input[i],0)
+        end
+        break; # region for loop
+    end # if in region    
+    end # region for loop
+    end # item for loop
+
+    return eval_result
 end

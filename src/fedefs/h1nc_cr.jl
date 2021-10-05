@@ -35,7 +35,7 @@ isdefined(FEType::Type{<:H1CR}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1CR}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:H1CR}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1CR,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: H1CR,APT}
     # preserve face means
     xItemVolumes = FE.xgrid[FaceVolumes]
     xItemNodes = FE.xgrid[FaceNodes]
@@ -47,7 +47,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 
     # compute exact face means
-    facemeans = zeros(Float64,ncomponents,nitems)
+    facemeans = zeros(T,ncomponents,nitems)
     integrate!(facemeans, FE.xgrid, ON_FACES, exact_function!; items = items, time = time)
     for item in items
         for c = 1 : ncomponents
@@ -127,9 +127,9 @@ function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Quadrilate
     end
 end
 
-function get_reconstruction_coefficients!(xgrid, ::Type{ON_CELLS}, FE::Type{<:H1CR}, FER::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry})
-    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1CR}, FER::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) where {Tv,Ti}
+    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     xCellFaces = xgrid[CellFaces]
     ncomponents = get_ncomponents(FE)
     nf::Int = nfaces_for_geometry(EG)

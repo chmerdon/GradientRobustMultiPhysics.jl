@@ -39,19 +39,19 @@ isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Tetrahedron3D}) = true
 
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVRT1,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
     end
 
    # integrate normal flux of exact_function over edges
-   xFaceNormals = FE.xgrid[FaceNormals]
+   xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
    nfaces = num_sources(xFaceNormals)
    function normalflux_eval()
-       temp = zeros(Float64,ncomponents)
+       temp = zeros(T,ncomponents)
        function closure(result, x, face)
-            eval!(temp, exact_function!, x, time)
+            eval_data!(temp, exact_function!, x, time)
             result[1] = 0
             for j = 1 : ncomponents
                result[1] += temp[j] * xFaceNormals[j,face]
@@ -63,9 +63,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
    
    # integrate first moment of normal flux of exact_function over edges
    function normalflux2_eval()
-       temp = zeros(Float64,ncomponents)
+       temp = zeros(T,ncomponents)
        function closure(result, x, face, xref)
-            eval!(temp, exact_function!, x, time)
+            eval_data!(temp, exact_function!, x, time)
             result[1] = 0.0
             for j = 1 : ncomponents
                result[1] += temp[j] * xFaceNormals[j,face]
@@ -78,9 +78,9 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
 
     if ncomponents == 3
         function normalflux3_eval()
-            temp = zeros(Float64,ncomponents)
+            temp = zeros(T,ncomponents)
             function closure(result, x, face, xref)
-                eval!(temp, exact_function!, x, time)
+                eval_data!(temp, exact_function!, x, time)
                 result[1] = 0.0
                 for j = 1 : ncomponents
                     result[1] += temp[j] * xFaceNormals[j,face]
@@ -93,7 +93,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVRT1,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems)
@@ -102,27 +102,27 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     # they are chosen such that integral mean of exact function is preserved on each cell
     ncomponents = get_ncomponents(FEType)
     ncells = num_sources(FE.xgrid[CellNodes])
-    xCellVolumes = FE.xgrid[CellVolumes]
-    xCellDofs = FE[CellDofs]
-    means = zeros(Float64,ncomponents,ncells)
+    xCellVolumes::Array{Tv,1} = FE.xgrid[CellVolumes]
+    xCellDofs::DofMapTypes{Ti} = FE[CellDofs]
+    means = zeros(T,ncomponents,ncells)
     integrate!(means, FE.xgrid, ON_CELLS, exact_function!)
     EG = (ncomponents == 2) ? Triangle2D : Tetrahedron3D
-    qf = QuadratureRule{Float64,EG}(2)
-    FEB = FEBasisEvaluator{Float64,eltype(FE),EG,Identity,ON_CELLS}(FE, qf)
+    qf = QuadratureRule{T,EG}(2)
+    FEB = FEBasisEvaluator{T,EG,Identity,ON_CELLS}(FE, qf)
     if items == []
         items = 1 : ncells
     end
 
-    basisval = zeros(Float64,ncomponents)
-    IMM = zeros(Float64,ncomponents,ncomponents)
+    basisval = zeros(T,ncomponents)
+    IMM = zeros(T,ncomponents,ncomponents)
     interiordofs = zeros(Int,ncomponents)
     interior_offset::Int = (ncomponents == 2) ? 6 : 12
     for cell in items
-        update!(FEB,cell)
+        update_febe!(FEB,cell)
         # compute mean value of facial RT1 dofs
         for dof = 1 : interior_offset
             for i = 1 : length(qf.w)
-                eval!(basisval,FEB, dof, i)
+                eval_febe!(basisval,FEB, dof, i)
                 for k = 1 : ncomponents
                     means[k,cell] -= basisval[k] * Target[xCellDofs[dof,cell]] * xCellVolumes[cell] * qf.w[i]
                 end
@@ -132,7 +132,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         fill!(IMM,0)
         for dof = 1:ncomponents
             for i = 1 : length(qf.w)
-                eval!(basisval,FEB, interior_offset + dof, i)
+                eval_febe!(basisval,FEB, interior_offset + dof, i)
                 for k = 1 : ncomponents
                     IMM[k,dof] += basisval[k] * xCellVolumes[cell] * qf.w[i]
                 end

@@ -428,7 +428,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}; store_parents = false)
                         elseif m <= nnodes4item + nfaces4item
                             edge = m-nnodes4item # local number
                             # find global edge number
-                            edge = intersect(xNodeEdges[:,oldBFaceNodes[bface_enum_rule[edge,1],bface]],xNodeEdges[:,oldBFaceNodes[bface_enum_rule[edge,2],bface]])[1]
+                            edge = intersect(xNodeEdges[:,oldBFaceNodes[bface_enum_rule[1,edge],bface]],xNodeEdges[:,oldBFaceNodes[bface_enum_rule[2,edge],bface]])[1]
                             subitemnodes[k] = oldvertices + edge
                         else
                             subitemnodes[k] = oldvertices + nedges + face

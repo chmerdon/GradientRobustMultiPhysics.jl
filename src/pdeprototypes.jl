@@ -104,7 +104,7 @@ Boundary and right-hand side data or other modifications have to be added afterw
 """
 function PoissonProblem(
     diffusion = 1.0,
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS)
+    AT::Type{<:AssemblyType} = ON_CELLS)
 
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription("Poisson problem")
@@ -131,7 +131,7 @@ function L2BestapproximationProblem(
     unknown_name = "auto",
     equation_name = "L2-bestapproximation equation",
     bestapprox_boundary_regions = [],
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS)
+    AT::Type{<:AssemblyType} = ON_CELLS)
 
     if unknown_name == "auto"
         unknown_name = uexact.name

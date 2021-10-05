@@ -24,11 +24,11 @@ mutable struct MySolver{Tv,Ti} <: GradientRobustMultiPhysics.AbstractLinearSyste
     MySolver{Tv,Ti}(x,A,b) where {Tv,Ti} = new{Tv,Ti}(x,A,b)
 end
 
-## you need to define update! and solve! functions for your new subtype
-function GradientRobustMultiPhysics.update!(LS::MySolver)
+## you need to define update_factorization! and solve! functions for your new subtype
+function GradientRobustMultiPhysics.update_factorization!(LS::MySolver)
     ## this function is called before the solve (if other solver configuration not cause to skip it)
     ## do anything here (e.g. updating the preconditioner)
-    println("\t\tHi! update! is called at start and every skip_update time...")
+    println("\t\tHi! update_factorization! is called at start and every skip_update time...")
 end
 function GradientRobustMultiPhysics.solve!(LS::MySolver)
     ## this function is called to solve the linear system

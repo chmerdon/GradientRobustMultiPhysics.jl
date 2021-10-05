@@ -35,18 +35,18 @@ isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Tetrahedron3D}) = true
 isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Hexahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time=  0) where {Tv,Ti,FEType <: HDIVRT0,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time=  0) where {T,Tv,Ti,FEType <: HDIVRT0,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
     end
 
     # compute exact face means
-    xFaceNormals = FE.xgrid[FaceNormals]
+    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
     function normalflux_eval()
-        temp = zeros(Float64,ncomponents)
+        temp = zeros(T,ncomponents)
         function closure(result, x, face)
-            eval!(temp, exact_function!, x, time) 
+            eval_data!(temp, exact_function!, x, time) 
             result[1] = 0.0
             for j = 1 : ncomponents
                 result[1] += temp[j] * xFaceNormals[j,face]

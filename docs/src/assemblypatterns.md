@@ -8,7 +8,7 @@ Each pattern comes with a number of arguments/quantities with associated [Functi
 The patterns are used to assembly the PDE operators defined in a [PDE Description](@ref).
 
 ```@docs
-GradientRobustMultiPhysics.AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AbstractAssemblyType}
+GradientRobustMultiPhysics.AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType}
 ```
 
 The following table lists all available assembly patterns, their constuctor names and how they can be used for assembly or evaluations.

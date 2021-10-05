@@ -14,7 +14,7 @@ solve!
 
 ## Anderson acceleration
 
-Fixpoint iterations my be accelerated by Anderson acceleration. Concepts and some theoretical background can be found in the reference below. Within this package, Anderson acceleration can be triggered by optional solver arguments: the user can specify the depth of the Anderson acceleration (anderson\_iterations), the damping withing the Anderson iteration (anderson\_damping), the unknwons that should be included in the iteration (anderson\_unknowns) and the convergence metric (anderson\_metric); also see above for a full list of optional solver arguments. In case of subiterations, the Anderson iteration will be called as a postprocessing after the final subiteration.
+Fixpoint iterations my be accelerated by Anderson acceleration. Concepts and some theoretical background can be found in the reference below. Within this package, Anderson acceleration can be triggered by optional solver arguments: the user can specify the depth of the Anderson acceleration (anderson\_iterations), the damping within the Anderson iteration (anderson\_damping), the ids of the unknowns that should be included in the iteration (anderson\_unknowns) and the convergence metric (anderson\_metric); also see above for a full list of optional solver arguments. In case of subiterations, the Anderson iteration will be called as a postprocessing after the final subiteration.
 
 Reference:
 

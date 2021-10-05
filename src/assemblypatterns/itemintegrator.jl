@@ -14,7 +14,7 @@ end
 ````
 function ItemIntegrator(
     T::Type{<:Real},
-    AT::Type{<:AbstractAssemblyType},
+    AT::Type{<:AssemblyType},
     operators::Array{DataType,1}, 
     action::AbstractAction; 
     name = "ItemIntegrator",
@@ -23,8 +23,8 @@ function ItemIntegrator(
 
 Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
-function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AbstractAssemblyType}, operators, action = NoAction(); regions = [0], name = "ItemIntegrator")
-    return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,[],operators,action,1:length(operators),regions)
+function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AssemblyType}, operators, action = NoAction(); regions = [0], name = "ItemIntegrator")
+    return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,Array{FESpace{Float64,Int32},1}([]),operators,action,1:length(operators),regions)
 end
 
 """
@@ -35,7 +35,7 @@ function L2ErrorIntegrator(
     operator::Type{<:AbstractFunctionOperator};
     quadorder = "auto",
     name = "auto",
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    AT::Type{<:AssemblyType} = ON_CELLS,
     time = 0)
 ````
 
@@ -47,7 +47,7 @@ function L2ErrorIntegrator(
     operator = Identity;
     quadorder = "auto",
     name = "auto",
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    AT::Type{<:AssemblyType} = ON_CELLS,
     regions = [0],
     time = 0)
 
@@ -63,7 +63,7 @@ function L2ErrorIntegrator(
     temp = zeros(T,ncomponents)
     function L2error_function(result,input,x)
         fill!(temp,0)
-        eval!(temp,compare_data,x,time)
+        eval_data!(temp,compare_data,x,time)
         for j=1:ncomponents[1], i = 1 : ninputs
             temp[j] -= input[(i-1)*ncomponents+j]
         end    
@@ -79,7 +79,7 @@ function L2ErrorIntegrator(
         name = "L2 error ($(compare_data.name))"
     end
     action_kernel = ActionKernel(L2error_function, [1,ninputs*compare_data.dimensions[1]]; name = name, dependencies = "X", quadorder = quadorder)
-    return ItemIntegrator(T,AT, ops, Action(T, action_kernel); regions = regions, name = name)
+    return ItemIntegrator(T,AT, ops, Action{T}(action_kernel); regions = regions, name = name)
 end
 
 """
@@ -88,7 +88,7 @@ L2NormIntegrator(
     T::Type{<:Real},
     ncomponents::Int,
     operator::Type{<:AbstractFunctionOperator};
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    AT::Type{<:AssemblyType} = ON_CELLS,
     name = "L2 norm",
     quadorder = 2,
     regions = [0])
@@ -100,7 +100,7 @@ function L2NormIntegrator(
     T::Type{<:Real},
     ncomponents::Int,
     operator;
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    AT::Type{<:AssemblyType} = ON_CELLS,
     name = "L2 norm",
     quadorder = 2,
     regions = [0])
@@ -125,7 +125,7 @@ function L2NormIntegrator(
         end    
     end    
     action_kernel = ActionKernel(L2norm_function, [1,ninputs*ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = quadorder)
-    return ItemIntegrator(T,AT, ops, Action(T, action_kernel); regions = regions, name = name)
+    return ItemIntegrator(T,AT, ops, Action{T}(action_kernel); regions = regions, name = name)
 end
 
 """
@@ -134,7 +134,7 @@ function L2DifferenceIntegrator(
     T::Type{<:Real},
     ncomponents::Int,
     operator::Union{Type{<:AbstractFunctionOperator},Array{DataType,1}};
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    AT::Type{<:AssemblyType} = ON_CELLS,
     name = "L2 difference",
     quadorder = 2,
     regions = [0])
@@ -147,7 +147,7 @@ function L2DifferenceIntegrator(
     T::Type{<:Real},
     ncomponents::Int,
     operator;
-    AT::Type{<:AbstractAssemblyType} = ON_CELLS,
+    AT::Type{<:AssemblyType} = ON_CELLS,
     name = "L2 difference",
     quadorder = 2,
     regions = [0])
@@ -159,9 +159,9 @@ function L2DifferenceIntegrator(
     end    
     action_kernel = ActionKernel(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", quadorder = quadorder)
     if typeof(operator) <: DataType
-        return ItemIntegrator(T,AT, [operator, operator], Action(T, action_kernel); regions = regions, name = name)
+        return ItemIntegrator(T,AT, [operator, operator], Action{T}(action_kernel); regions = regions, name = name)
     else
-        return ItemIntegrator(T,AT, [operator[1], operator[2]], Action(T, action_kernel); regions = regions, name = name)
+        return ItemIntegrator(T,AT, [operator[1], operator[2]], Action{T}(action_kernel); regions = regions, name = name)
     end
 end
 
@@ -170,38 +170,42 @@ end
 """
 ````
 function evaluate!(
-    b::AbstractArray{T,2},          # target vector
-    AP::AssemblyPattern{APT,T,AT},  # ItemIntegrator pattern
-    FEB::Array{<:FEVectorBlock,1}   # coefficients for arguments
-    where {APT <: APT_ItemIntegrator, T, AT}
+    b::AbstractArray{T,2},
+    AP::AssemblyPattern{APT,T,AT},
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
+    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
 ````
 
-Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlocks FEB into given two-dimensional Array b.
+Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlock or FEVector FEB into given two-dimensional Array b.
 """
 function evaluate!(
     b::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Array{<:FEVectorBlock,1};
-    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
+    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
+
+    if typeof(FEB) <: FEVectorBlock
+        FEB = [FEB]
+    end
 
     # prepare assembly
-    nFE = length(FEB)
+    nFE::Int = length(FEB)
     if !skip_preps
-        FE = Array{FESpace,1}(undef, nFE)
+        FE = Array{FESpace{Tv,Ti},1}(undef, nFE)
         for j = 1 : nFE
             FE[j] = FEB[j].FES
         end
         @assert length(FEB) == length(AP.operators)
-        prepare_assembly!(AP; FES = FE)
+        prepare_assembly!(AP, FE)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{T,1} = FEB[1].FES.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::Union{VectorOfConstants{Int32}, Array{Int32,1}} = FEB[1].FES.xgrid[GridComponentRegions4AssemblyType(AT)]
-    nitems = length(xItemVolumes)
+    xItemVolumes::Array{Tv,1} = FEB[1].FES.xgrid[GridComponentVolumes4AssemblyType(AT)]
+    xItemRegions::GridRegionTypes{Ti} = FEB[1].FES.xgrid[GridComponentRegions4AssemblyType(AT)]
+    nitems::Int = length(xItemVolumes)
 
     # prepare action
     action = AP.action
-    maxnweights = get_maxnqweights(AM)
+    maxnweights::Int = get_maxnqweights(AM)
     if typeof(action) <: NoAction
         action_resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
         action_input = Array{Array{T,1},1}(undef,maxnweights)
@@ -228,8 +232,8 @@ function evaluate!(
     @debug AP
 
     # loop over items
-    offsets = zeros(Int,nFE+1)
-    maxdofs = get_maxndofs(AM)
+    offsets::Array{Int,1} = zeros(Int,nFE+1)
+    maxdofs::Array{Int,1} = get_maxndofs(AM)
     basisevaler::Array{FEBasisEvaluator,1} = Array{FEBasisEvaluator,1}(undef,nFE)
     for j = 1 : nFE
         basisevaler[j] = get_basisevaler(AM, j, 1)
@@ -248,7 +252,7 @@ function evaluate!(
     if allitems || xItemRegions[item] == regions[r]
 
         # update assembly manager (also updates necessary basisevaler)
-        update!(AP.AM, item)
+        update_assembly!(AM, item)
         weights = get_qweights(AM)
 
         # assemble all operators into action_input
@@ -259,7 +263,7 @@ function evaluate!(
                     basisevaler[FEid] = get_basisevaler(AM, FEid, di)
     
                     # update action on dofitem
-                    update!(action, basisevaler[FEid], AM.dofitems[FEid][di], item, regions[r])
+                    update_action!(action, basisevaler[FEid], AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
@@ -267,7 +271,7 @@ function evaluate!(
 
                     # write evaluation of operator of current FE into action_input
                     for i in eachindex(weights)
-                        eval!(action_input[i], basisevaler[FEid], coeffs, i, offsets[FEid])
+                        eval_febe!(action_input[i], basisevaler[FEid], coeffs, i, offsets[FEid])
                     end  
                 end
             end
@@ -283,7 +287,7 @@ function evaluate!(
         else
             # update action on item/dofitem (of first operator)
             basisxref = basisevaler[1].xref
-            update!(action, basisevaler[1], AM.dofitems[1][1], item, regions[r])
+            update_action!(action, basisevaler[1], AM.dofitems[1][1], item, regions[r])
             # apply action to FEVector and accumulate
             for i in eachindex(weights)
                 apply_action!(action_result, action_input[i], action, i, basisxref[i])
@@ -301,36 +305,38 @@ function evaluate!(
     return nothing
 end
 
+
 """
 ````
 function evaluate(
-    AP::AssemblyPattern{APT,T,AT},  # ItemIntegrator pattern
-    FEB::Array{<:FEVectorBlock,1})  # coefficients for arguments
-    where {APT <: APT_ItemIntegrator, T, AT}
+    AP::AssemblyPattern{APT,T,AT},
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
+    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
 
 ````
 
-Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlocks FEB, only returns accumulation over all items.
+Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlock or FEVector FEB, only returns accumulation over all items.
 """
 function evaluate(
     AP::AssemblyPattern{APT,T,AT},
-    FEB;
-    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AbstractAssemblyType}
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
+    skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
 
     if typeof(FEB) <: FEVectorBlock
-        FEB = [FEB]
+        FE = [FEB.FES]
+    else
+        nFE = length(FEB)
+        if !skip_preps
+            FE = Array{FESpace{Tv,Ti},1}(undef, nFE)
+            for j = 1 : nFE
+                FE[j] = FEB[j].FES
+            end
+        end
     end
 
     # prepare assembly
-    nFE = length(FEB)
-    if !skip_preps
-        FE = Array{FESpace,1}(undef, nFE)
-        for j = 1 : nFE
-            FE[j] = FEB[j].FES
-        end
-        @assert length(FEB) == length(AP.operators)
-        prepare_assembly!(AP; FES = FE)
-    end
+    @assert length(FE) == length(AP.operators)
+    prepare_assembly!(AP,FE)
     AM::AssemblyManager{T} = AP.AM
 
     # quick and dirty : we mask the resulting array as an AbstractArray{T,2} using AccumulatingVector
@@ -342,7 +348,7 @@ function evaluate(
     end
     AV = AccumulatingVector{T}(zeros(T,resultdim), 0)
 
-    evaluate!(AV, AP, FEB; skip_preps = false)
+    evaluate!(AV, AP, FEB; skip_preps = true)
     
     if resultdim == 1
         return AV.entries[1]
