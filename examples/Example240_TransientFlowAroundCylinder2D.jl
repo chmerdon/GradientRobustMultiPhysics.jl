@@ -112,8 +112,8 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
         if step == 0
             @printf("|    DRAG        LIFT")
         else
-            drag = evaluate(DLIntegrator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1],Solution[1],Solution[2],TestFunctionD[1],TestFunctionD[1]]))
-            lift = evaluate(DLIntegrator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1],Solution[1],Solution[2],TestFunctionL[1],TestFunctionL[1]]))
+            drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunctionD[1],TestFunctionD[1]])
+            lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunctionL[1],TestFunctionL[1]])
             @printf("| %.4e  %.4e", drag, lift)
             if mod(step,plot_step_count) == 0 && (step > 1) && Plotter !== nothing
                 interpolate!(UpscaledSolution[1], Solution[1], use_cellparents = true)

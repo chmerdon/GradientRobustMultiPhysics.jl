@@ -259,9 +259,8 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Asse
     AM::AssemblyManager{T,Tv,Ti} # hidden stuff needed for assembly
     AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS, Float64, Int32, NoAction}()
     AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType} = new{APT,T,AT,Float64,Int32,NoAction}()
-    AssemblyPattern{APT, T, AT}(name,FES,operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Float64,Int32,typeof(action)}(name,FES,operators,[],action,apply_to,regions)
-    AssemblyPattern{APT, T, AT}(name,FES::Array{FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}(name, FES,operators,[],action,apply_to,regions)
-    AssemblyPattern{APT, T, AT}(FES::Array{FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}("$APT", FES,operators,[],action,apply_to,regions)
+    AssemblyPattern{APT, T, AT}(name,FES::Array{<:FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}(name,FES,operators,[],action,apply_to,regions)
+    AssemblyPattern{APT, T, AT}(FES::Array{<:FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}("$APT", FES,operators,[],action,apply_to,regions)
 end 
 
 function Base.show(io::IO, AP::AssemblyPattern)
@@ -490,6 +489,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
     basisevaler = Array{FEBasisEvaluator,4}(undef, length(EG) + length(EGdofitem), length(FE), (length(discontinuous_operators) > 0) ? maxfaces : 1, (length(discontinuous_operators) > 0) ? maxorientations : 1)
 
     ## first position: basis evaluator of operators on assembly geometry (but only used in continuous or broken mode)
+    same_FE::Int = 0
     for j = 1 : length(EG)
         quadorder = bonus_quadorder
         for k = 1 : length(FE)
@@ -501,10 +501,17 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
         for k = 1 : length(FE)
           #  if dofitemAT[k] == AT
             if !(k in discontinuous_operators)
-                if k > 1 && FE[k] == FE[1] && operator[k] == operator[1]
-                    basisevaler[j,k,1,1] = basisevaler[j,1,1,1] # e.g. for symmetric bilinearforms
-                elseif k > 2 && FE[k] == FE[2] && operator[k] == operator[2]
-                    basisevaler[j,k,1,1] = basisevaler[j,2,1,1]
+                # check if the same FESpace and operator is already known
+                # to avoid recomputation of basis evaluations for this spot
+                same_FE = 0
+                for s = 1 : k-1
+                    if (FE[s] == FE[k]) && (operator[s] == operator[k])
+                        same_FE = s
+                        break;
+                    end
+                end
+                if same_FE > 0
+                    basisevaler[j,k,1,1] = basisevaler[j,same_FE,1,1]
                 else    
                     basisevaler[j,k,1,1] = FEBasisEvaluator{T,EG[j],operator[k],AT}(FE[k], qf[j])
                 end    

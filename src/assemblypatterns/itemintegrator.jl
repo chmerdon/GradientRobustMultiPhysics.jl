@@ -24,7 +24,7 @@ function ItemIntegrator(
 Creates an ItemIntegrator assembly pattern with the given operators and action etc.
 """
 function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AssemblyType}, operators, action = NoAction(); regions = [0], name = "ItemIntegrator")
-    return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,Array{FESpace{Float64,Int32},1}(undef,0),operators,action,1:length(operators),regions)
+    return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,Array{FESpace{Float64,Int32},1}([]),operators,action,1:length(operators),regions)
 end
 
 """
@@ -172,7 +172,7 @@ end
 function evaluate!(
     b::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Union{FEVector{T,Tv,Ti},FEVectorBlock{T,Tv,Ti},Array{FEVectorBlock{T,Tv,Ti},1}};
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
     skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
 ````
 
@@ -181,7 +181,7 @@ Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlock or FEV
 function evaluate!(
     b::AbstractArray{T,2},
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Union{FEVector{T,Tv,Ti},FEVectorBlock{T,Tv,Ti},Array{FEVectorBlock{T,Tv,Ti},1}};
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
     skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
 
     if typeof(FEB) <: FEVectorBlock
@@ -305,11 +305,12 @@ function evaluate!(
     return nothing
 end
 
+
 """
 ````
 function evaluate(
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Union{FEVector{T,Tv,Ti},FEVectorBlock{T,Tv,Ti},Array{FEVectorBlock{T,Tv,Ti},1}};
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
     skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
 
 ````
@@ -318,7 +319,7 @@ Evaluation of an ItemIntegrator assembly pattern with given FEVectorBlock or FEV
 """
 function evaluate(
     AP::AssemblyPattern{APT,T,AT},
-    FEB::Union{FEVector{T,Tv,Ti},FEVectorBlock{T,Tv,Ti},Array{FEVectorBlock{T,Tv,Ti},1}};
+    FEB::Union{<:FEVector{T,Tv,Ti},<:FEVectorBlock{T,Tv,Ti},Array{<:FEVectorBlock{T,Tv,Ti},1}};
     skip_preps::Bool = false) where {APT <: APT_ItemIntegrator, T<: Real, AT <: AssemblyType, Tv, Ti}
 
     if typeof(FEB) <: FEVectorBlock

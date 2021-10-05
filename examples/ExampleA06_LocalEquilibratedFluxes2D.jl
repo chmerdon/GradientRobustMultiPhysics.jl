@@ -114,7 +114,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         FES_eta = FESpace{H1P0{1}}(xgrid)
         append!(Solution, "σ_h",FES_eta)
         error4cell = zeros(Float64,2,num_sources(xgrid[CellNodes]))
-        evaluate!(error4cell, EQIntegrator, Array{FEVectorBlock{Float64,Float64,Int32},1}([DualSolution[1], DualSolution[1], Solution[1]]))
+        evaluate!(error4cell, EQIntegrator, [DualSolution[1], DualSolution[1], Solution[1]])
         for j = 1 : num_sources(xgrid[CellNodes])
             Solution[2][j] = error4cell[1,j] + error4cell[2,j]
         end

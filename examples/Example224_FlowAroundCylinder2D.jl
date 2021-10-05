@@ -134,12 +134,12 @@ function get_draglift(Solution::FEVector, μ)
     xBFaces = Solution[1].FES.xgrid[BFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaces)
-    drag = evaluate(DLIntegrator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]]))
+    drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     ## test for lift
     lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaces)
-    lift = evaluate(DLIntegrator,Array{FEVectorBlock{Float64,Float64,Int32},1}([Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]]))
+    lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     return [drag,lift]
 end
