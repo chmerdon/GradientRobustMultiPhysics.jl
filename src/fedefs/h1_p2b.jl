@@ -127,9 +127,9 @@ end
 function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVRT1{2}}, EG::Type{<:Triangle2D}) where {Tv,Ti}
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
-    xCellFaceSigns::GridAdjacencyTypes{Ti} = xgrid[CellFaceSigns]
-    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
-    #xCellNodes::GridAdjacencyTypes{Ti}} = xgrid[CellNodes]
+    xCellFaceSigns::Adjacency{Ti} = xgrid[CellFaceSigns]
+    xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
+    #xCellNodes::Adjacency{Ti}} = xgrid[CellNodes]
     #xCellVolumes::Array{Tv,1} = xgrid[CellVolumes]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
@@ -232,8 +232,8 @@ end
 function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1P2B{2,2}}, FER::Type{<:HDIVBDM2{2}}, EG::Type{<:Triangle2D}) where {Tv,Ti}
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
-    xCellFaceSigns::GridAdjacencyTypes{Ti} = xgrid[CellFaceSigns]
-    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
+    xCellFaceSigns::Adjacency{Ti} = xgrid[CellFaceSigns]
+    xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Array{Int,1} = [0] # <-- seems to avoid allocations in line 247

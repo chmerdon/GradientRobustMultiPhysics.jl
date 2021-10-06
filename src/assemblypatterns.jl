@@ -41,9 +41,9 @@ struct AssemblyManager{T <: Real, Tv <: Real, Ti <: Integer}
     dEG::Array{Type{<:AbstractElementGeometry},1}                       # unique dofitem geometries that may appear (for each operator)
     xItemGeometries::GridEGTypes                                        # item geometries over which is assembled
     xDofItemGeometries::Array{GridEGTypes,1}                       # dofitem geometries over which basis is evaluated (for each operator)
-    xDofItems4Item::Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}       # dofitems <> items adjacency relationship (for each operator)
-    xItemInDofItems::Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}      # where is the item locally in dofitems
-    xDofItemItemOrientations::Array{Union{Nothing,GridAdjacencyTypes{Ti}},1} # dofitems <> items orientation relationship
+    xDofItems4Item::Array{Union{Nothing,Adjacency{Ti}},1}       # dofitems <> items adjacency relationship (for each operator)
+    xItemInDofItems::Array{Union{Nothing,Adjacency{Ti}},1}      # where is the item locally in dofitems
+    xDofItemItemOrientations::Array{Union{Nothing,Adjacency{Ti}},1} # dofitems <> items orientation relationship
     xItem2SuperSetItems::Array{Union{Nothing,Vector{Ti}},1}  # only necessary for assembly of discontinuous operators ON_BFACES
 end
 
@@ -575,9 +575,9 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
     dofoffset4dofitem = Array{Array{Int,1},1}(undef, length(FE))
     orientation4dofitem = Array{Array{Int,1},1}(undef, length(FE))  
     xDofItemGeometries = Array{GridEGTypes,1}(undef, length(FE))           
-    xDofItems4Item = Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}(undef, length(FE))     
-    xItemInDofItems = Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}(undef, length(FE))     
-    xDofItemItemOrientations = Array{Union{Nothing,GridAdjacencyTypes{Ti}},1}(undef, length(FE))
+    xDofItems4Item = Array{Union{Nothing,Adjacency{Ti}},1}(undef, length(FE))     
+    xItemInDofItems = Array{Union{Nothing,Adjacency{Ti}},1}(undef, length(FE))     
+    xDofItemItemOrientations = Array{Union{Nothing,Adjacency{Ti}},1}(undef, length(FE))
     xItem2SuperSetItems = Array{Union{Nothing,Vector{Ti}},1}(undef, length(FE))
     dii4op_types = Array{Type{<:DIIType},1}(undef,length(FE))
 

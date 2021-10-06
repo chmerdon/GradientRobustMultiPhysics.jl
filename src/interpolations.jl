@@ -190,7 +190,7 @@ end
 function ensure_edge_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
     xItemVolumes::Array{Tv,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemNodes::GridAdjacencyTypes{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+    xItemNodes::Adjacency{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemDofs::DofMapTypes{Ti} = Dofmap4AssemblyType(FE, AT)
 
     nitems::Int = num_sources(xItemNodes)
@@ -404,7 +404,7 @@ function nodevalues!(Target::AbstractArray{T,2},
     xItemGeometries = FE.xgrid[CellGeometries]
     xItemRegions::GridRegionTypes{Ti} = FE.xgrid[CellRegions]
     xItemDofs::DofMapTypes{Ti} = FE[CellDofs]
-    xItemNodes::GridAdjacencyTypes{Ti} = FE.xgrid[CellNodes]
+    xItemNodes::Adjacency{Ti} = FE.xgrid[CellNodes]
 
     if regions == [0]
         try

@@ -252,7 +252,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
-    xCellFaces::GridAdjacencyTypes{Ti} = FE.xgrid[CellFaces]
+    xCellFaces::Adjacency{Ti} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
         # multiplication with normal vectors
         fill!(coefficients,1.0)
@@ -286,7 +286,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS},FE::FESpace{Tv,Ti,H1BR{3},APT}, ::Type{<:Hexahedron3D}) where {Tv,Ti,APT}
     xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
-    xCellFaces::GridAdjacencyTypes{Ti} = FE.xgrid[CellFaces]
+    xCellFaces::Adjacency{Ti} = FE.xgrid[CellFaces]
     function closure(coefficients::Array{<:Real,2}, cell)
         # multiplication with normal vectors
         fill!(coefficients,1.0)
@@ -386,7 +386,7 @@ end
 function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti},::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVRT0{2}}, EG::Union{Type{<:Triangle2D},Type{<:Parallelogram2D}}) where {Tv,Ti}
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
-    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
+    xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     nnodes::Int = size(face_rule,1)
     nfaces::Int = size(face_rule,2)
@@ -413,7 +413,7 @@ end
 function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVRT0{3}}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti}
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
-    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
+    xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = 0
     face::Int = 0
@@ -438,8 +438,8 @@ end
 function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1BR{2}}, FER::Type{<:HDIVBDM1{2}}, EG::Union{Type{<:Triangle2D}, Type{<:Parallelogram2D}}) where {Tv,Ti}
     xFaceVolumes::Array{<:Real,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{<:Real,2} = xgrid[FaceNormals]
-    xCellFaceSigns::GridAdjacencyTypes{Ti} = xgrid[CellFaceSigns]
-    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
+    xCellFaceSigns::Adjacency{Ti} = xgrid[CellFaceSigns]
+    xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     nfaces::Int = size(face_rule,2)
     node::Int = 0
@@ -470,8 +470,8 @@ end
 function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti}
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
-    xCellFaceOrientations::GridAdjacencyTypes{Ti} = xgrid[CellFaceOrientations]
-    xCellFaces::GridAdjacencyTypes{Ti} = xgrid[CellFaces]
+    xCellFaceOrientations::Adjacency{Ti} = xgrid[CellFaceOrientations]
+    xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
     face_rule::Array{Int,2} = face_enum_rule(EG)
     node::Int = face_rule[1,1]
     face::Ti = 0

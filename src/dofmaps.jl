@@ -131,7 +131,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
 
 
     offset4component::Int = 0
-    xItemNodes::GridAdjacencyTypes{Int32} = xgrid[SuperItemNodes4DofMap(DM)]
+    xItemNodes::Adjacency{Int32} = xgrid[SuperItemNodes4DofMap(DM)]
     nitems::Int = num_sources(xItemNodes)
     for k = 1 : length(dofmap_patterns[1])
         if dofmap_patterns[1][k] == 'N'

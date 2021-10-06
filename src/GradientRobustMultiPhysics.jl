@@ -1,9 +1,9 @@
 module GradientRobustMultiPhysics
 
 using Base: Bool
-using ExtendableGrids
+using ExtendableGrids # + some exports from there
+export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D
 using GridVisualize
-export Edge1D, Triangle2D, Parallelogram2D, Tetrahedron3D, Parallelepiped3D, num_sources, simplexgrid, VectorOfConstants
 using ExtendableSparse
 using SuiteSparse
 using SparseArrays
@@ -18,7 +18,7 @@ using Logging
 
 include("logging.jl")
 
-## stuff that may go to ExtendableGrids
+## stuff that went to ExtendableGrids
 
 # include("shape_specs.jl")
 # export refcoords_for_geometry
