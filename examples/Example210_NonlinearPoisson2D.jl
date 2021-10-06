@@ -31,6 +31,7 @@ module Example210_NonlinearPoisson2D
 
 using GradientRobustMultiPhysics
 using ExtendableSparse
+using ExtendableGrids
 using Printf
 
 ## problem data

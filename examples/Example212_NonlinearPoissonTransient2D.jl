@@ -18,6 +18,7 @@ A manufactureed quadratic-in-space and qaudratic-in-time solution is prescribed 
 module Example212_NonlinearPoissonTransient2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## kernel for nonlinear diffusion operator
 function diffusion_kernel!(result, input)

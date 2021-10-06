@@ -11,6 +11,7 @@ This example demonstrates the usage of rational numbers to calculate e.g. exact 
 module ExampleA01_RationalMassMatrix
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## everything is wrapped in a main function
 function main()

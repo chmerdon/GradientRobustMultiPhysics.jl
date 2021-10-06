@@ -1,6 +1,6 @@
 
-using ExtendableSparse
-using ExtendableGrids
+# using ExtendableSparse
+# using ExtendableGrids
 
 function get_testgrid(::Type{<:Edge1D})
     X=collect(0:0.05:1)
@@ -121,17 +121,17 @@ end
 
 
 function run_grid_tests()
-    # test FACE enumerations
-    @test check_enumeration_consistency(Edge1D, CellFaces, FaceNodes, face_enum_rule)
-    @test check_enumeration_consistency(Triangle2D, CellFaces, FaceNodes, face_enum_rule)
-    @test check_enumeration_consistency(Parallelogram2D, CellFaces, FaceNodes, face_enum_rule)
-    @test check_enumeration_consistency(Tetrahedron3D, CellFaces, FaceNodes, face_enum_rule)
+    # # test FACE enumerations
+    # @test check_enumeration_consistency(Edge1D, CellFaces, FaceNodes, face_enum_rule)
+    # @test check_enumeration_consistency(Triangle2D, CellFaces, FaceNodes, face_enum_rule)
+    # @test check_enumeration_consistency(Parallelogram2D, CellFaces, FaceNodes, face_enum_rule)
+    # @test check_enumeration_consistency(Tetrahedron3D, CellFaces, FaceNodes, face_enum_rule)
     
-    # test EDGE enumerations
-    @test check_enumeration_consistency(Tetrahedron3D, GradientRobustMultiPhysics.CellEdges, GradientRobustMultiPhysics.EdgeNodes, edge_enum_rule)
+    # # test EDGE enumerations
+    # @test check_enumeration_consistency(Tetrahedron3D, GradientRobustMultiPhysics.CellEdges, GradientRobustMultiPhysics.EdgeNodes, edge_enum_rule)
 
-    # todo: check FaceEdges, CellFaceSigns, CellFaceOrientations
-    # todo: FaceCells, EdgeCells
+    # # todo: check FaceEdges, CellFaceSigns, CellFaceOrientations
+    # # todo: FaceCells, EdgeCells
 
 
     @test check_cellfinder(get_testgrid(Edge1D))

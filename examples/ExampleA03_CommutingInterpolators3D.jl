@@ -13,6 +13,7 @@ In this example we verify this identity for $k=1$ (higher order spaces are teste
 
 module ExampleA03_CommutingInterpolators3D
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## define some function
 function exact_function!(result,x::Array{<:Real,1})

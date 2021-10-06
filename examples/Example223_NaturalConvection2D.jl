@@ -28,6 +28,7 @@ Also, note that a divergence-free reconstruction operator is used for the veloci
 module Example223_NaturalConvection2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 using Printf
 
 ## boundary data for temperature on bottom

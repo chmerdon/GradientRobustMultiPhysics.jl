@@ -29,6 +29,7 @@ discretisation solves ``\mathbf{u} = 0`` exactly in test problem 1 and gives muc
 module Example206_PressureRobustness2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 ## problem data
 function HydrostaticTestProblem()

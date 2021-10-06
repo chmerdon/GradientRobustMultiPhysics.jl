@@ -16,6 +16,7 @@ with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a series o
 module Example301_Poisson3D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 using Printf
 
 ## problem data
