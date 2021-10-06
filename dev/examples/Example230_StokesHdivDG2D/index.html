@@ -8,6 +8,7 @@ a_h(u_h,v_h) = \mu \Bigl( \int \nabla_h u_h : \nabla_h v_h dx +  \sum_{F \in \ma
 \end{aligned}\]</p><p>and similar terms on the right-hand side for the inhomogeneous Dirichlet data. The qunatity <span>$\λ$</span> is the SIP parameter.</p><pre><code class="language-julia hljs">module Example230_StokesHdivDG2D
 
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 # flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)
@@ -41,7 +42,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     # initial grid
     xgrid = grid_unitsquare(Triangle2D)
-    xBFaces::Array{Int,1} = xgrid[BFaces]
+    xBFaceFaces::Array{Int,1} = xgrid[BFaceFaces]
     xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
 
@@ -84,13 +85,13 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     veloeval = zeros(Float64,2)
     function hdiv_boundary_kernel(result, input, x, t, item)
         eval_data!(veloeval, u, x, t)
-        result[1] = (input[1] * veloeval[1] + input[2] * veloeval[2]) / xFaceVolumes[xBFaces[item]]
+        result[1] = (input[1] * veloeval[1] + input[2] * veloeval[2]) / xFaceVolumes[xBFaceFaces[item]]
         return nothing
     end
     function hdiv_boundary_kernel2(result, input, x, t, item)
         eval_data!(veloeval, u, x, t)
-        result[1] = (input[1] * xFaceNormals[1,xBFaces[item]] + input[2] * xFaceNormals[2,xBFaces[item]]) * veloeval[1]
-        result[1] += (input[3] * xFaceNormals[1,xBFaces[item]] + input[4] * xFaceNormals[2,xBFaces[item]]) * veloeval[2]
+        result[1] = (input[1] * xFaceNormals[1,xBFaceFaces[item]] + input[2] * xFaceNormals[2,xBFaceFaces[item]]) * veloeval[1]
+        result[1] += (input[3] * xFaceNormals[1,xBFaceFaces[item]] + input[4] * xFaceNormals[2,xBFaceFaces[item]]) * veloeval[2]
         return nothing
     end
     HdivBoundary1 = RhsOperator(Average(Identity), Action{Float64}( hdiv_boundary_kernel, [1,2]; dependencies = &quot;XTI&quot;, quadorder = u.quadorder); name = &quot;- μ λ/h_F u_D v&quot;, factor = λ*μ, AT = ON_BFACES)
@@ -112,7 +113,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
         # refine grid and update grid component references
         xgrid = uniform_refine(xgrid)
-        xBFaces = xgrid[BFaces]
+        xBFaceFaces = xgrid[BFaceFaces]
         xFaceVolumes = xgrid[FaceVolumes]
         xFaceNormals = xgrid[FaceNormals]
 
@@ -175,4 +176,4 @@ Problem =
        272  |     1.11840e-02      3.339  |     1.74718e-02      1.041  |     3.90996e-01      2.018  |
       1056  |     2.73673e-03      2.076  |     8.74172e-03      1.021  |     1.93586e-01      1.036  |
       4160  |     6.80881e-04      2.029  |     4.37158e-03      1.011  |     9.61205e-02      1.021  |
-     16512  |     1.71156e-04      2.003  |     2.18588e-03      1.006  |     4.80277e-02      1.007  |</code></pre><p><img src="../../images/Example230_StokesHdivDG2D_1.png" alt/> <img src="../../images/Example230_StokesHdivDG2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example225_CompressibleStokes2D/">« 225 : Compressible Stokes 2D</a><a class="docs-footer-nextpage" href="../Example231_StokesHdivP1RT/">231 : Stokes <span>$(P1 \oplus RT0) \times P0$</span> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Tuesday 5 October 2021 13:26">Tuesday 5 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+     16512  |     1.71156e-04      2.003  |     2.18588e-03      1.006  |     4.80277e-02      1.007  |</code></pre><p><img src="../../images/Example230_StokesHdivDG2D_1.png" alt/> <img src="../../images/Example230_StokesHdivDG2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example225_CompressibleStokes2D/">« 225 : Compressible Stokes 2D</a><a class="docs-footer-nextpage" href="../Example231_StokesHdivP1RT/">231 : Stokes <span>$(P1 \oplus RT0) \times P0$</span> »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Wednesday 6 October 2021 18:18">Wednesday 6 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
