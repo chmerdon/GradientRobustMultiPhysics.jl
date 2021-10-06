@@ -2,7 +2,6 @@ using Test
 using ExtendableGrids
 using GradientRobustMultiPhysics
 
-include("test_gridstuff.jl")
 include("test_operators.jl")
 include("test_jumps.jl")
 
@@ -801,7 +800,6 @@ end
 
 function run_all_tests()
     begin
-        run_grid_tests()
         run_quadrature_tests()
         run_operator_tests()
         run_face_orientation_and_discontinuities_tests()

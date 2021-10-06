@@ -18,72 +18,11 @@ using Logging
 
 include("logging.jl")
 
-## stuff that went to ExtendableGrids
-
-# include("shape_specs.jl")
-# export refcoords_for_geometry
-# export num_nodes
-# export num_faces
-# export num_edges
-# export local_cellfacenodes
-# export local_celledgenodes
-# export facetype_of_cellface
-# export edgetype_of_celledge
-# export celledges_for_cellface
-# export Volume4ElemType
-# export Normal4ElemType!
-# export Tangent4ElemType!
-
-# include("gridstuff.jl")
-# export Coordinates
-# export CellNodes, CellGeometries, CellVolumes, CellRegions, CellFaces, CellEdges, CellFaceSigns, CellFaceOrientations, CellEdgeSigns
-# export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceEdges, FaceNormals
-# export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTangents
-# export NodePatchGroups
-# export BFaceFaces, BFaceCellPos, BFaceVolumes
-# export BEdgeNodes, BEdgeEdges, BEdgeVolumes, BEdgeGeometries
-# export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries, UniqueBEdgeGeometries
-# export GridComponent4TypeProperty
-# export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
-# export PROPERTY_NODES, PROPERTY_REGION, PROPERTY_VOLUME, PROPERTY_UNIQUEGEOMETRY, PROPERTY_GEOMETRY
-# export get_facegrid, get_bfacegrid, get_edgegrid
-
-# include("meshrefinements.jl")
-# export split_grid_into
-# export uniform_refine
-# export barycentric_refine
-# export CellParents
-
-# include("adaptive_meshrefinements.jl")
-# export bulk_mark
-# export RGB_refine
-
-# include("serialadjacency.jl")
-# export SerialVariableTargetAdjacency
-
-
-
 
 include("userdata.jl")
 export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
 export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval_data!
 export is_timedependent, is_regiondependent, is_itemdependent
-
-#include("assemblytypes.jl");
-#export AssemblyType
-#export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
-#export ItemType4AssemblyType
-#export GridComponentNodes4AssemblyType
-#export GridComponentVolumes4AssemblyType
-#export GridComponentGeometries4AssemblyType
-#export GridComponentRegions4AssemblyType
-
-#include("l2gtransformations.jl");
-#export L2GTransformer, update_trafo!, eval_trafo!, mapderiv!
-
-#include("cellfinder.jl")
-#export CellFinder
-#export gFindLocal!, gFindBruteForce!
 
 include("quadrature.jl")
 export QuadratureRule
@@ -246,13 +185,6 @@ export LinearElasticityProblem
 export PoissonProblem
 export L2BestapproximationProblem
 export H1BestapproximationProblem
-
-# include("commongrids.jl")
-# export reference_domain
-# export grid_unitcube
-# export grid_lshape
-# export grid_unitsquare, grid_unitsquare_mixedgeometries
-# export grid_triangle
 
 include("dataexport.jl")
 export writeVTK!, writeCSV!

@@ -11,23 +11,19 @@ finite element module for Julia focussing on gradient-robust finite element meth
 
 ### Features/Limitations:
 - solves 1D, 2D and 3D problems in Cartesian coordinates
-- type-treed finite elements (scalar and vector-valued)
-    - H1 elements (so far P1, P2, MINI, CR, BR, and currently only in 2D also P2B, P3)
-    - Hdiv elements (so far RT0, BDM1, RT1 in 2D and 3D and currently only in 2D also BDM2)
-    - Hcurl elements (so far only N0 in 2D and 3D)
+- several available finite elements (scalar and vector-valued, H1, Hdiv and Hcurl on different geometries), see [here](https://chmerdon.github.io/GradientRobustMultiPhysics.jl/stable/fems/) for a complete list
 - finite elements can be broken (e.g. piecewise Hdiv) or live on faces or edges (experimental feature)
-- grids by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl) in principle allow for mixed element geometries in the grid
-  (but currently only supported with Triangle2D/Parallelogram2D mixed meshes and certain finite elements)
+- grids by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl) 
 - PDEDescription module for easy and close-to-physics problem description (as variational equations) independent from the actual discretisation
 - Newton terms for nonlinear operators are added automatically by automatic differentiation (experimental feature)
 - solver can run fixed-point iterations between subsets of equations of the PDEDescription (possibly with Anderson acceleration)
-- time-dependent problems can be integrated in time by own backward Euler or Crank-Nicolson implementation or via the external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
+- time-dependent problems can be integrated in time by internal backward Euler or Crank-Nicolson implementation or via the external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
 - reconstruction operators for gradient-robust Stokes discretisations (BR->RT0/BDM1 or CR->RT0 in 2D/3D, and P2B->RT1/BDM2 in 2D, more to come)
 - plotting via functionality of [GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)
 - export into csv files or vtk files (via [WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl))
 
 
-### Minimal Example
+### Quick Example
 
 The following minimal example demonstrates how to setup a Poisson problem.
 
