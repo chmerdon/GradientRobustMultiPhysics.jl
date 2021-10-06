@@ -21,7 +21,7 @@ function Base.show(io::Core.IO, ::Type{<:H1P1{ncomponents}}) where {ncomponents}
 end
 
 get_ncomponents(FEType::Type{<:H1P1}) = FEType.parameters[1] # is this okay?
-get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, EG::Type{<:AbstractElementGeometry}) = num_nodes(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:H1P1}, ::Type{<:Triangle2D}) = 1;

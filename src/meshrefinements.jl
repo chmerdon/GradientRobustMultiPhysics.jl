@@ -57,7 +57,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
         end
         ncells += size(split_rules[iEG],1)
     end
-    xCellNodes = reshape(xCellNodes,nnodes_for_geometry(targetgeometry),ncells)
+    xCellNodes = reshape(xCellNodes,num_nodes(targetgeometry),ncells)
     xgrid[CellNodes] = Array{Int32,2}(xCellNodes)
     xgrid[CellGeometries] = VectorOfConstants(targetgeometry,ncells)
     if typeof(oldCellRegions) <: VectorOfConstants
@@ -67,12 +67,12 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
     end
 
     # find new boundary faces (easy in 2D, not so easy in 3D)
-    if dim_element(targetgeometry) == 2 # BFaces are Edge1D wich stay the same
+    if dim_element(targetgeometry) == 2 # BFaceFaces are Edge1D wich stay the same
         xgrid[BFaceNodes]=source_grid[BFaceNodes]
         xgrid[BFaceRegions]=source_grid[BFaceRegions]
         xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(targetgeometry,1),num_sources(xgrid[BFaceNodes]))
     elseif dim_element(targetgeometry) == 3 
-        # BFaces may be split into different shapes, e.g. from Quadrilateral2D to two Triangle2D
+        # BFaceFaces may be split into different shapes, e.g. from Quadrilateral2D to two Triangle2D
         # and it is hard to predict how they are splitted
         # so we do something lazy here and search for new faces that lie in old bfaces
         oldBFaceNodes = source_grid[BFaceNodes]
@@ -120,7 +120,7 @@ function split_grid_into(source_grid::ExtendableGrid{T,K}, targetgeometry::Type{
             end    
         end
 
-        newBFaceNodes = reshape(newBFaceNodes,nnodes_for_geometry(facetype_of_cellface(targetgeometry,1)),newnbfaces)
+        newBFaceNodes = reshape(newBFaceNodes,num_nodes(facetype_of_cellface(targetgeometry,1)),newnbfaces)
         xgrid[BFaceNodes]=Array{Int32,2}(newBFaceNodes)
         xgrid[BFaceRegions]=Array{Int32,1}(newBFaceRegions)
         xgrid[BFaceGeometries]=VectorOfConstants(facetype_of_cellface(targetgeometry,1),newnbfaces)
@@ -295,9 +295,9 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}; store_parents = false)
     xCellParents = zeros(Int32,0)
     for cell = 1 : num_sources(oldCellNodes)
         itemEG = oldCellGeometries[cell]
-        nnodes4item = nnodes_for_geometry(itemEG)
-        nfaces4item = nfaces_for_geometry(itemEG)
-        nedges4item = nedges_for_geometry(itemEG)
+        nnodes4item = num_nodes(itemEG)
+        nfaces4item = num_faces(itemEG)
+        nedges4item = num_edges(itemEG)
         iEG = findfirst(isequal(itemEG), EG)
         if uniform_refine_needcellmidpoints(itemEG) == true
             # add cell midpoint to Coordinates
@@ -368,10 +368,10 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}; store_parents = false)
 
     # determine new boundary faces
     oldBFaceNodes = source_grid[BFaceNodes]
-    oldBFaces = source_grid[BFaces]
+    oldBFaceFaces = source_grid[BFaceFaces]
     oldBFaceRegions = source_grid[BFaceRegions]
     oldBFaceGeometries = source_grid[BFaceGeometries]
-    oldBFacesCellPos = source_grid[BFaceCellPos]
+    oldBFaceFacesCellPos = source_grid[BFaceCellPos]
     oldFaceCells = source_grid[FaceCells]
     
     if dim == 1
@@ -406,12 +406,12 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}; store_parents = false)
         edge = 0
         newnbfaces = 0
         for bface = 1 : nbfaces
-            face = oldBFaces[bface]
+            face = oldBFaceFaces[bface]
             itemEG = oldBFaceGeometries[bface]
-            nnodes4item = nnodes_for_geometry(itemEG)
-            nfaces4item = nfaces_for_geometry(itemEG)
+            nnodes4item = num_nodes(itemEG)
+            nfaces4item = num_faces(itemEG)
             iEG = findfirst(isequal(itemEG), EG)
-            bface_enum_rule = face_enum_rule(itemEG)
+            blocal_cellfacenodes = local_cellfacenodes(itemEG)
 
             for j = 1 : size(refine_rules[iEG],1)
                 for k = 1 : size(refine_rules[iEG],2)
@@ -428,7 +428,7 @@ function uniform_refine(source_grid::ExtendableGrid{T,K}; store_parents = false)
                         elseif m <= nnodes4item + nfaces4item
                             edge = m-nnodes4item # local number
                             # find global edge number
-                            edge = intersect(xNodeEdges[:,oldBFaceNodes[bface_enum_rule[1,edge],bface]],xNodeEdges[:,oldBFaceNodes[bface_enum_rule[2,edge],bface]])[1]
+                            edge = intersect(xNodeEdges[:,oldBFaceNodes[blocal_cellfacenodes[1,edge],bface]],xNodeEdges[:,oldBFaceNodes[blocal_cellfacenodes[2,edge],bface]])[1]
                             subitemnodes[k] = oldvertices + edge
                         else
                             subitemnodes[k] = oldvertices + nedges + face

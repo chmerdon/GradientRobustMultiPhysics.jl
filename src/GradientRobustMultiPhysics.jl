@@ -22,11 +22,11 @@ include("logging.jl")
 
 # include("shape_specs.jl")
 # export refcoords_for_geometry
-# export nnodes_for_geometry
-# export nfaces_for_geometry
-# export nedges_for_geometry
-# export face_enum_rule
-# export edge_enum_rule
+# export num_nodes
+# export num_faces
+# export num_edges
+# export local_cellfacenodes
+# export local_celledgenodes
 # export facetype_of_cellface
 # export edgetype_of_celledge
 # export celledges_for_cellface
@@ -40,8 +40,8 @@ include("logging.jl")
 # export FaceNodes, FaceGeometries, FaceVolumes, FaceRegions, FaceCells, FaceEdges, FaceNormals
 # export EdgeNodes, EdgeGeometries, EdgeVolumes, EdgeRegions, EdgeCells, EdgeTangents
 # export NodePatchGroups
-# export BFaces, BFaceCellPos, BFaceVolumes
-# export BEdgeNodes, BEdges, BEdgeVolumes, BEdgeGeometries
+# export BFaceFaces, BFaceCellPos, BFaceVolumes
+# export BEdgeNodes, BEdgeEdges, BEdgeVolumes, BEdgeGeometries
 # export unique, UniqueCellGeometries, UniqueFaceGeometries, UniqueBFaceGeometries, UniqueEdgeGeometries, UniqueBEdgeGeometries
 # export GridComponent4TypeProperty
 # export ITEMTYPE_CELL, ITEMTYPE_FACE, ITEMTYPE_BFACE, ITEMTYPE_EDGE, ITEMTYPE_BEDGE
@@ -69,21 +69,21 @@ export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
 export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval_data!
 export is_timedependent, is_regiondependent, is_itemdependent
 
-include("assemblytypes.jl");
-export AssemblyType
-export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
-export ItemType4AssemblyType
-export GridComponentNodes4AssemblyType
-export GridComponentVolumes4AssemblyType
-export GridComponentGeometries4AssemblyType
-export GridComponentRegions4AssemblyType
+#include("assemblytypes.jl");
+#export AssemblyType
+#export AT_NODES, ON_CELLS, ON_FACES, ON_IFACES, ON_BFACES, ON_EDGES, ON_BEDGES
+#export ItemType4AssemblyType
+#export GridComponentNodes4AssemblyType
+#export GridComponentVolumes4AssemblyType
+#export GridComponentGeometries4AssemblyType
+#export GridComponentRegions4AssemblyType
 
-include("l2gtransformations.jl");
-export L2GTransformer, update_trafo!, eval_trafo!, mapderiv!
+#include("l2gtransformations.jl");
+#export L2GTransformer, update_trafo!, eval_trafo!, mapderiv!
 
-include("cellfinder.jl")
-export CellFinder
-export gFindLocal!, gFindBruteForce!
+#include("cellfinder.jl")
+#export CellFinder
+#export gFindLocal!, gFindBruteForce!
 
 include("quadrature.jl")
 export QuadratureRule

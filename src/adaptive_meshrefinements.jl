@@ -213,10 +213,10 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
 
     # determine new boundary faces
     oldBFaceNodes = source_grid[BFaceNodes]
-    oldBFaces = source_grid[BFaces]
+    oldBFaceFaces = source_grid[BFaceFaces]
     oldBFaceRegions = source_grid[BFaceRegions]
     oldBFaceGeometries = source_grid[BFaceGeometries]
-    oldBFacesCellPos = source_grid[BFaceCellPos]
+    oldBFaceFacesCellPos = source_grid[BFaceCellPos]
     oldFaceCells = source_grid[FaceCells]
     
     xBFaceRegions = zeros(Int32,0)
@@ -235,13 +235,13 @@ function RGB_refine(source_grid::ExtendableGrid{T,K}, facemarkers::Array{Bool,1}
     edge = 0
     newbfaces = 0
     for bface = 1 : nbfaces
-        face = oldBFaces[bface]
+        face = oldBFaceFaces[bface]
         itemEG = oldBFaceGeometries[bface]
         if facemarkers[face] == true
-            nnodes4item = nnodes_for_geometry(itemEG)
-            nfaces4item = nfaces_for_geometry(itemEG)
+            nnodes4item = num_nodes(itemEG)
+            nfaces4item = num_faces(itemEG)
             iEG = findfirst(isequal(itemEG), EG)
-            bface_enum_rule = face_enum_rule(itemEG)
+            blocal_cellfacenodes = local_cellfacenodes(itemEG)
 
             for j = 1 : size(refine_rules[iEG],1)
                 for k = 1 : size(refine_rules[iEG],2)

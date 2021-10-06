@@ -131,7 +131,7 @@ function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{O
     xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
     #xCellNodes::Adjacency{Ti}} = xgrid[CellNodes]
     #xCellVolumes::Array{Tv,1} = xgrid[CellVolumes]
-    face_rule::Array{Int,2} = face_enum_rule(EG)
+    face_rule::Array{Int,2} = local_cellfacenodes(EG)
     node::Int = 0
     face::Int = 0
     nnf::Int = size(face_rule,2)
@@ -234,7 +234,7 @@ function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{O
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     xCellFaceSigns::Adjacency{Ti} = xgrid[CellFaceSigns]
     xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
-    face_rule::Array{Int,2} = face_enum_rule(EG)
+    face_rule::Array{Int,2} = local_cellfacenodes(EG)
     node::Int = 0
     face::Array{Int,1} = [0] # <-- seems to avoid allocations in line 247
     nnf::Int = size(face_rule,2)

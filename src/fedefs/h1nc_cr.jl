@@ -19,7 +19,7 @@ end
 
 get_ncomponents(FEType::Type{<:H1CR}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = FEType.parameters[1]
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1CR}, EG::Type{<:AbstractElementGeometry}) = num_faces(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Edge1D}) = 1; # 0 on continuous edges, but = 1 on edges with jumps
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Triangle2D}) = 1;
@@ -132,7 +132,7 @@ function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{O
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     xCellFaces = xgrid[CellFaces]
     ncomponents = get_ncomponents(FE)
-    nf::Int = nfaces_for_geometry(EG)
+    nf::Int = num_faces(EG)
     face::Int = 0
     function closure(coefficients, cell::Int) 
         # fill!(coefficients,0.0)

@@ -61,7 +61,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     
     ## initial grid
     xgrid = grid_unitsquare(Triangle2D)
-    xBFaces::Array{Int,1} = xgrid[BFaces]
+    xBFaceFaces::Array{Int,1} = xgrid[BFaceFaces]
     xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     
@@ -104,13 +104,13 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     veloeval = zeros(Float64,2)
     function hdiv_boundary_kernel(result, input, x, t, item)
         eval_data!(veloeval, u, x, t)
-        result[1] = (input[1] * veloeval[1] + input[2] * veloeval[2]) / xFaceVolumes[xBFaces[item]]
+        result[1] = (input[1] * veloeval[1] + input[2] * veloeval[2]) / xFaceVolumes[xBFaceFaces[item]]
         return nothing
     end
     function hdiv_boundary_kernel2(result, input, x, t, item)
         eval_data!(veloeval, u, x, t)
-        result[1] = (input[1] * xFaceNormals[1,xBFaces[item]] + input[2] * xFaceNormals[2,xBFaces[item]]) * veloeval[1]
-        result[1] += (input[3] * xFaceNormals[1,xBFaces[item]] + input[4] * xFaceNormals[2,xBFaces[item]]) * veloeval[2]
+        result[1] = (input[1] * xFaceNormals[1,xBFaceFaces[item]] + input[2] * xFaceNormals[2,xBFaceFaces[item]]) * veloeval[1]
+        result[1] += (input[3] * xFaceNormals[1,xBFaceFaces[item]] + input[4] * xFaceNormals[2,xBFaceFaces[item]]) * veloeval[2]
         return nothing
     end
     HdivBoundary1 = RhsOperator(Average(Identity), Action{Float64}( hdiv_boundary_kernel, [1,2]; dependencies = "XTI", quadorder = u.quadorder); name = "- μ λ/h_F u_D v", factor = λ*μ, AT = ON_BFACES)
@@ -132,7 +132,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
         ## refine grid and update grid component references
         xgrid = uniform_refine(xgrid)
-        xBFaces = xgrid[BFaces]
+        xBFaceFaces = xgrid[BFaceFaces]
         xFaceVolumes = xgrid[FaceVolumes]
         xFaceNormals = xgrid[FaceNormals]
 

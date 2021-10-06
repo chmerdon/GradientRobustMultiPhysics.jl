@@ -160,7 +160,7 @@ end
 # we need to change the ordering of the face dofs on faces that have a negative orientation sign
 function get_basissubset(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:H1P3,APT}, EG::Type{<:Triangle2D})  where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    nfaces::Int = nfaces_for_geometry(EG)
+    nfaces::Int = num_faces(EG)
     ncomponents = get_ncomponents(eltype(FE))
     function closure(subset_ids::Array{Int,1}, cell)
         for j = 1 : nfaces

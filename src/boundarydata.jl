@@ -96,7 +96,7 @@ function boundarydata!(
     if length(O.regions4boundarytype) > 0
         xBFaceDofs = FE[BFaceDofs]
         nbfaces = num_sources(xBFaceDofs)
-        xBFaces = FE.xgrid[BFaces]
+        xBFaceFaces = FE.xgrid[BFaceFaces]
         xBFaceRegions = FE.xgrid[BFaceRegions]
     end
 
@@ -122,7 +122,7 @@ function boundarydata!(
                 bregiondofs = []
                 for bface = 1 : nbfaces
                     if xBFaceRegions[bface] == InterDirichletBoundaryRegions[r]
-                        append!(ifaces,xBFaces[bface])
+                        append!(ifaces,xBFaceFaces[bface])
                         append!(ibfaces,bface)
                         append!(bregiondofs,xBFaceDofs[:,bface])
                     end
@@ -236,7 +236,7 @@ function boundarydata!(
                     eval_data!(temp, O.data4bregion[region], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
-                        result[1] += temp[j] * xFaceNormals[j,xBFaces[bface]]
+                        result[1] += temp[j] * xFaceNormals[j,xBFaceFaces[bface]]
                     end 
                     result[1] *= input[1] 
                 end   
@@ -252,8 +252,8 @@ function boundarydata!(
                 temp = zeros(T,ncomponents)
                 function closure(result, input, x, region, bface)
                     eval_data!(temp, O.data4bregion[region], x, time)
-                    result[1] = -temp[1] * xFaceNormals[2,xBFaces[bface]]
-                    result[1] += temp[2] * xFaceNormals[1,xBFaces[bface]]
+                    result[1] = -temp[1] * xFaceNormals[2,xBFaceFaces[bface]]
+                    result[1] += temp[2] * xFaceNormals[1,xBFaceFaces[bface]]
                     result[1] *= input[1] 
                 end   
             end   
@@ -266,16 +266,16 @@ function boundarydata!(
             @warn "Hcurl boundary data in 3D may not work properly yet"
             xEdgeTangents = FE.xgrid[EdgeTangents]
             xBEdgeRegions = FE.xgrid[BEdgeRegions]
-            xBEdges = FE.xgrid[BEdges]
+            xBEdgeEdges = FE.xgrid[BEdgeEdges]
 
             function bnd_rhs_function_hcurl3d()
                 temp = zeros(T,ncomponents)
                 fixed_region::Int = 1
                 function closure(result, input, x, region, bedge)
                     eval_data!(temp, O.data4bregion[fixed_region], x, time)
-                    result[1] = temp[1] * xEdgeTangents[1,xBEdges[bedge]]
-                    result[1] += temp[2] * xEdgeTangents[2,xBEdges[bedge]]
-                    result[1] += temp[3] * xEdgeTangents[3,xBEdges[bedge]]
+                    result[1] = temp[1] * xEdgeTangents[1,xBEdgeEdges[bedge]]
+                    result[1] += temp[2] * xEdgeTangents[2,xBEdgeEdges[bedge]]
+                    result[1] += temp[3] * xEdgeTangents[3,xBEdgeEdges[bedge]]
                     result[1] *= input[1]
                 end   
             end   

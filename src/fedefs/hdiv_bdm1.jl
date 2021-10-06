@@ -19,9 +19,9 @@ end
 get_ncomponents(FEType::Type{<:HDIVBDM1}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry1D}) = 2
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 3
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 2*nfaces_for_geometry(EG)
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 3*nfaces_for_geometry(EG)
-get_ndofs_all(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 4*nfaces_for_geometry(EG) # in 3D only 3 of 4 face dofs are used depending on orientation
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry2D}) = 2*num_faces(EG)
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 3*num_faces(EG)
+get_ndofs_all(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM1}, EG::Type{<:AbstractElementGeometry3D}) = 4*num_faces(EG) # in 3D only 3 of 4 face dofs are used depending on orientation
 
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Edge1D}) = 1;
 get_polynomialorder(::Type{<:HDIVBDM1{2}}, ::Type{<:Triangle2D}) = 1;
@@ -194,7 +194,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVBDM1,APT}, EG::Type{<:AbstractElementGeometry2D}) where {Tv,Ti,APT}
     xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaceSigns]
-    nfaces::Int = nfaces_for_geometry(EG)
+    nfaces::Int = num_faces(EG)
     dim::Int = dim_element(EG)
     function closure(coefficients::Array{<:Real,2}, cell::Int)
         fill!(coefficients,1.0)
@@ -210,7 +210,7 @@ end
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<: HDIVBDM1,APT}, EG::Type{<:AbstractElementGeometry3D}) where {Tv,Ti,APT}
     xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}}  = FE.xgrid[CellFaceSigns]
     xCellFaceOrientations::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaceOrientations]
-    nfaces::Int = nfaces_for_geometry(EG)
+    nfaces::Int = num_faces(EG)
     dim::Int = dim_element(EG)
     function closure(coefficients::Array{<:Real,2}, cell::Int)
         fill!(coefficients,1.0)
@@ -229,7 +229,7 @@ end
 # of the global face enumeration
 function get_basissubset(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVBDM1,APT}, EG::Type{<:AbstractElementGeometry3D}) where {Tv,Ti,APT}
     xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
-    nfaces::Int = nfaces_for_geometry(EG)
+    nfaces::Int = num_faces(EG)
     orientation = xCellFaceOrientations[1,1]
     shift4orientation1::Array{Int,1} = [1,0,1,2]
     shift4orientation2::Array{Int,1} = [2,2,0,1]

@@ -45,8 +45,8 @@ evaluates the normal-flux of the finite element function.
 
 only available on FACES/BFACES and currently only for H1 and Hdiv elements
 """
-abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
-abstract type NormalFluxDisc{DT<:DiscontinuityTreatment} <: NormalFlux end # v_h * n_F # only for Hdiv/H1 on Faces/BFaces
+abstract type NormalFlux <: AbstractFunctionOperator end # v_h * n_F # only for Hdiv/H1 on Faces/BFaceFaces
+abstract type NormalFluxDisc{DT<:DiscontinuityTreatment} <: NormalFlux end # v_h * n_F # only for Hdiv/H1 on Faces/BFaceFaces
 """
 $(TYPEDEF)
 

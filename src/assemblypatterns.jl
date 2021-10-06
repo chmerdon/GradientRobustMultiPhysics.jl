@@ -387,9 +387,9 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:ON_BFACES}, basisA
     xFaceCells = xgrid[FaceCells]
     xCellFaces = xgrid[CellFaces]
     xCellGeometries = xgrid[CellGeometries]
-    xBFaces = xgrid[BFaces]
+    xBFaceFaces = xgrid[BFaceFaces]
     xCellFaceOrientations = xgrid[CellFaceOrientations]
-    return DIIType_discontinuous{DiscType,AT,basisAT}, xCellGeometries, xFaceCells, xCellFaces, xCellFaceOrientations, xBFaces
+    return DIIType_discontinuous{DiscType,AT,basisAT}, xCellGeometries, xFaceCells, xCellFaces, xCellFaceOrientations, xBFaceFaces
 end
 
 
@@ -479,7 +479,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
     maxfaces = 0
     maxorientations = 0
     for j = 1 : length(EGdofitem)        
-        maxfaces = max(maxfaces,nfaces_for_geometry(EGdofitem[j]))
+        maxfaces = max(maxfaces,num_faces(EGdofitem[j]))
     end
     if length(discontinuous_operators) > 0
         for j = 1 : length(EG)  
@@ -535,7 +535,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
                 quadorder += get_polynomialorder(eltype(FE[k]), EGdofitem[j]) + QuadratureOrderShift4Operator(operator[k])
             end
             quadorder = max(quadorder,0)        
-            nfaces4cell = nfaces_for_geometry(EGdofitem[j])
+            nfaces4cell = num_faces(EGdofitem[j])
             EGface = facetype_of_cellface(EGdofitem[j], 1)
             EGfaceid = 0
             for f = 1 : length(EG)

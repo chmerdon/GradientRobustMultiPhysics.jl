@@ -220,9 +220,9 @@ function count_ndofs(xgrid, FEType, broken)
                 dofs4item_single[4] += quantifier
             end
         end
-        ndofs4EG[j] = nnodes_for_geometry(EG[j]) * (ncomponents * dofs4item4component[1] + dofs4item_single[1])
-        ndofs4EG[j] += nfaces_for_geometry(EG[j]) * (ncomponents * dofs4item4component[2] + dofs4item_single[2])
-        ndofs4EG[j] += nedges_for_geometry(EG[j]) * (ncomponents * dofs4item4component[3] + dofs4item_single[3])
+        ndofs4EG[j] = num_nodes(EG[j]) * (ncomponents * dofs4item4component[1] + dofs4item_single[1])
+        ndofs4EG[j] += num_faces(EG[j]) * (ncomponents * dofs4item4component[2] + dofs4item_single[2])
+        ndofs4EG[j] += num_edges(EG[j]) * (ncomponents * dofs4item4component[3] + dofs4item_single[3])
         ndofs4EG[j] += ncomponents * dofs4item4component[4] + dofs4item_single[4]
         if broken == true
             totaldofs += ndofs4EG[j] * ncells4EG[j][2]
@@ -300,9 +300,9 @@ include("fedefs/hcurl_n0.jl");
 
 function get_coefficients(::Type{ON_BFACES}, FE::FESpace{Tv, Ti, FEType, APT}, EG::Type{<:AbstractElementGeometry}) where {Tv,Ti,FEType <: AbstractFiniteElement, APT}
     get_coeffs_on_face = get_coefficients(ON_FACES, FE, EG)
-    xBFaces = FE.xgrid[BFaces]
+    xBFaceFaces = FE.xgrid[BFaceFaces]
     function closure(coefficients, bface)
-        get_coeffs_on_face(coefficients, xBFaces[bface])
+        get_coeffs_on_face(coefficients, xBFaceFaces[bface])
         return nothing
     end
 end    

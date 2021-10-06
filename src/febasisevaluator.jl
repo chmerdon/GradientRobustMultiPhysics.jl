@@ -561,7 +561,7 @@ function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH
 
         # get local reconstruction coefficients
         # and accumulate
-        get_rcoefficients!(FEBE.coefficients2, FEBE.reconst_handler, FEBE.FE.xgrid[BFaces][item])
+        get_rcoefficients!(FEBE.coefficients2, FEBE.reconst_handler, FEBE.FE.xgrid[BFaceFaces][item])
 
         fill!(FEBE.cvals,0.0)
         xItemVolumes::Array{T,1} = FEBE.L2G.ItemVolumes
@@ -758,7 +758,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1Finit
 
         # fetch normal of item
         for k = 1 : ncomponents
-            FEBE.iteminfo[k] = FEBE.coefficients3[k,FEBE.FE.xgrid[BFaces][item]]
+            FEBE.iteminfo[k] = FEBE.coefficients3[k,FEBE.FE.xgrid[BFaceFaces][item]]
         end
 
         if FEBE.subset_handler != NothingFunction
@@ -818,7 +818,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1Finit
 
         # fetch normal of item
         for k = 1 : ncomponents
-            FEBE.iteminfo[k] = FEBE.coefficients3[k,FEBE.FE.xgrid[BFaces][item]]
+            FEBE.iteminfo[k] = FEBE.coefficients3[k,FEBE.FE.xgrid[BFaceFaces][item]]
         end
         
         # get coefficients

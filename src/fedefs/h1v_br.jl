@@ -19,8 +19,8 @@ function Base.show(io::Core.IO, ::Type{<:H1BR{edim}}) where {edim}
 end
 
 get_ncomponents(FEType::Type{<:H1BR}) = FEType.parameters[1]
-get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = 1 + nnodes_for_geometry(EG) * FEType.parameters[1]
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) + nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = 1 + num_nodes(EG) * FEType.parameters[1]
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1BR}, EG::Type{<:AbstractElementGeometry}) = num_faces(EG) + num_nodes(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1BR{2}}, ::Type{<:Triangle2D}) = 2;
@@ -78,7 +78,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     nitemnodes::Int = 0
     for item in items
         itemEG = xItemGeometries[item]
-        nitemnodes = nnodes_for_geometry(itemEG)
+        nitemnodes = num_nodes(itemEG)
         # compute normal flux (minus linear part)
         value = 0
         for c = 1 : ncomponents
@@ -371,7 +371,7 @@ end
 function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti},::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FE::Type{<:H1BR{3}}, FER::Type{<:HDIVBDM1{3}}, EG::Type{<:Triangle2D}) where {Tv,Ti}
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
-    nfacenodes::Int = nnodes_for_geometry(EG)
+    nfacenodes::Int = num_nodes(EG)
     function closure(coefficients::Array{<:Real,2}, face::Int) 
         for j = 1 : nfacenodes, k = 1 : 3
             coefficients[(j-1)*3 + j,1] = 1 // nfacenodes * xFaceVolumes[face] * xFaceNormals[k, face]
@@ -387,7 +387,7 @@ function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti},::Type{ON
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
-    face_rule::Array{Int,2} = face_enum_rule(EG)
+    face_rule::Array{Int,2} = local_cellfacenodes(EG)
     nnodes::Int = size(face_rule,1)
     nfaces::Int = size(face_rule,2)
     node::Int = 0
@@ -414,7 +414,7 @@ function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{O
     xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
-    face_rule::Array{Int,2} = face_enum_rule(EG)
+    face_rule::Array{Int,2} = local_cellfacenodes(EG)
     node::Int = 0
     face::Int = 0
     function closure(coefficients::Array{<:Real,2}, cell::Int) 
@@ -440,7 +440,7 @@ function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{O
     xFaceNormals::Array{<:Real,2} = xgrid[FaceNormals]
     xCellFaceSigns::Adjacency{Ti} = xgrid[CellFaceSigns]
     xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
-    face_rule::Array{Int,2} = face_enum_rule(EG)
+    face_rule::Array{Int,2} = local_cellfacenodes(EG)
     nfaces::Int = size(face_rule,2)
     node::Int = 0
     face::Int = 0
@@ -472,7 +472,7 @@ function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{O
     xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
     xCellFaceOrientations::Adjacency{Ti} = xgrid[CellFaceOrientations]
     xCellFaces::Adjacency{Ti} = xgrid[CellFaces]
-    face_rule::Array{Int,2} = face_enum_rule(EG)
+    face_rule::Array{Int,2} = local_cellfacenodes(EG)
     node::Int = face_rule[1,1]
     face::Ti = 0
     BDM1_coeffs::Array{Tv,2} = [-1//36 -1//36 1//18;

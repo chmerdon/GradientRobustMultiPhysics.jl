@@ -18,8 +18,8 @@ end
 
 get_ncomponents(FEType::Type{<:HCURLN0}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}, Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HCURLN0}, EG::Type{<:AbstractElementGeometry}) = 1
-get_ndofs(::Type{ON_CELLS}, FEType::Type{HCURLN0{2}}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG)
-get_ndofs(::Type{ON_CELLS}, FEType::Type{HCURLN0{3}}, EG::Type{<:AbstractElementGeometry}) = nedges_for_geometry(EG)
+get_ndofs(::Type{ON_CELLS}, FEType::Type{HCURLN0{2}}, EG::Type{<:AbstractElementGeometry}) = num_faces(EG)
+get_ndofs(::Type{ON_CELLS}, FEType::Type{HCURLN0{3}}, EG::Type{<:AbstractElementGeometry}) = num_edges(EG)
 
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry1D}) = 0;
 get_polynomialorder(::Type{<:HCURLN0{2}}, ::Type{<:AbstractElementGeometry2D}) = 1;
@@ -137,7 +137,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HCURLN0,APT}, EG::Type{<:AbstractElementGeometry2D}) where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    nfaces = nfaces_for_geometry(EG)
+    nfaces = num_faces(EG)
     function closure(coefficients, cell)
         # multiplication with normal vector signs
         for j = 1 : nfaces,  k = 1 : size(coefficients,1)
@@ -149,7 +149,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HCURLN0,APT}, EG::Type{<:AbstractElementGeometry3D}) where {Tv,Ti,APT}
     xCellEdgeSigns = FE.xgrid[CellEdgeSigns]
-    nedges = nedges_for_geometry(EG)
+    nedges = num_edges(EG)
     function closure(coefficients, cell)
         # multiplication with normal vector signs
         for j = 1 : nedges,  k = 1 : size(coefficients,1)

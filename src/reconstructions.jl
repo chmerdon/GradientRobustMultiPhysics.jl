@@ -48,7 +48,7 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid{Tv,Ti}, ::Type{Recons
 
     @assert EG == [Triangle2D]
 
-    face_rule::Array{Int,2} = face_enum_rule(EG[1])
+    face_rule::Array{Int,2} = local_cellfacenodes(EG[1])
     nnf::Int = size(face_rule,2)
     ndofs4component::Int = 2*nnf + 1
     ndofs1::Int = get_ndofs(AT,FE1,EG[1])

@@ -16,7 +16,7 @@ end
 
 get_ncomponents(FEType::Type{<:HDIVBDM2}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVBDM2}, EG::Type{<:AbstractElementGeometry1D}) = 3
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM2}, EG::Type{<:AbstractElementGeometry2D}) = 3*nfaces_for_geometry(EG) + 3
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVBDM2}, EG::Type{<:AbstractElementGeometry2D}) = 3*num_faces(EG) + 3
 
 get_polynomialorder(::Type{<:HDIVBDM2{2}}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:HDIVBDM2{2}}, ::Type{<:Triangle2D}) = 2;
@@ -223,7 +223,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVBDM2,APT}, EG::Type{<:AbstractElementGeometry2D}) where {Tv,Ti,APT}
     xCellFaceSigns::Union{VariableTargetAdjacency{Int32},Array{Int32,2}} = FE.xgrid[CellFaceSigns]
-    nfaces::Int = nfaces_for_geometry(EG)
+    nfaces::Int = num_faces(EG)
     dim::Int = dim_element(EG)
     function closure(coefficients::Array{<:Real,2}, cell::Int)
         fill!(coefficients,1.0)

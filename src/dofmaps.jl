@@ -36,8 +36,8 @@ ItemEdges4DofMap(::Type{CellDofs}) = CellEdges
 ItemEdges4DofMap(::Type{FaceDofs}) = FaceEdges
 ItemEdges4DofMap(::Type{BFaceDofs}) = FaceEdges
 
-Sub2Sup4DofMap(::Type{BFaceDofs}) = BFaces
-Sub2Sup4DofMap(::Type{BEdgeDofs}) = BEdges
+Sub2Sup4DofMap(::Type{BFaceDofs}) = BFaceFaces
+Sub2Sup4DofMap(::Type{BEdgeDofs}) = BEdgeEdges
 
 Dofmap4AssemblyType(::Type{ON_CELLS}) = CellDofs
 Dofmap4AssemblyType(::Type{<:ON_FACES}) = FaceDofs
@@ -91,20 +91,20 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
             dofmap_patterns[j] *= pattern[2*k-1]
             dofmap_quantifiers[j][k] = parse(Int,pattern[2*k])
             if dofmap_patterns[j][k] == 'N'
-                dofs4item4component += nnodes_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item4component += num_nodes(EG[j])*dofmap_quantifiers[j][k]
             elseif dofmap_patterns[j][k] == 'F'
-                dofs4item4component += nfaces_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item4component += num_faces(EG[j])*dofmap_quantifiers[j][k]
                 need_faces = true
             elseif dofmap_patterns[j][k] == 'E'
-                dofs4item4component += nedges_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item4component += num_edges(EG[j])*dofmap_quantifiers[j][k]
                 need_edges = true
             elseif dofmap_patterns[j][k] == 'I'
                 dofs4item4component += dofmap_quantifiers[j][k]
             elseif dofmap_patterns[j][k] == 'f'
-                dofs4item_single += nfaces_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item_single += num_faces(EG[j])*dofmap_quantifiers[j][k]
                 need_faces = true
             elseif dofmap_patterns[j][k] == 'e'
-                dofs4item_single += nedges_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item_single += num_edges(EG[j])*dofmap_quantifiers[j][k]
                 need_edges = true
             elseif dofmap_patterns[j][k] == 'i'
                 dofs4item_single += dofmap_quantifiers[j][k]
@@ -163,9 +163,9 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
     nfaces4EG::Array{Int,1} = zeros(Int,length(EG))
     nedges4EG::Array{Int,1} = zeros(Int,length(EG))
     for j = 1 : length(EG)
-        nnodes4EG[j] = nnodes_for_geometry(EG[j])
-        nfaces4EG[j] = nfaces_for_geometry(EG[j])
-        nedges4EG[j] = nedges_for_geometry(EG[j])
+        nnodes4EG[j] = num_nodes(EG[j])
+        nfaces4EG[j] = num_faces(EG[j])
+        nedges4EG[j] = num_edges(EG[j])
     end
 
     if FES.broken == true
@@ -229,7 +229,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
         for k = 1 : length(pattern)
             q = dofmap_quantifiers[iEG][k]
             if pattern[k] == 'f'
-                for n = 1 : nfaces_for_geometry(itemEG)
+                for n = 1 : num_faces(itemEG)
                     for m = 1 : q
                         pos += 1
                         itemdofs[pos] = xItemFaces[n,item] + offset + (m-1)*nfaces
@@ -237,7 +237,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
                 end
                 offset += nfaces*q
             elseif pattern[k] == 'e'
-                for n = 1 : nedges_for_geometry(itemEG)
+                for n = 1 : num_edges(itemEG)
                     for m = 1 : q
                         pos += 1
                         itemdofs[pos] = xItemEdges[n,item] + offset + (m-1)*nedges
@@ -286,22 +286,22 @@ function init_broken_dofmap!(FES::FESpace{Tv,Ti,FEType,APT}, DM::Union{Type{BFac
             dofmap_patterns[j] *= pattern[2*k-1]
             dofmap_quantifiers[j][k] = parse(Int,pattern[2*k])
             if dofmap_patterns[j][k] == 'N'
-                dofs4item4component += nnodes_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item4component += num_nodes(EG[j])*dofmap_quantifiers[j][k]
                 need_nodes = true
             #elseif dofmap_patterns[j][k] == 'F'
-            #    dofs4item4component += nfaces_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+            #    dofs4item4component += num_faces(EG[j])*dofmap_quantifiers[j][k]
             #    need_faces = true
             elseif dofmap_patterns[j][k] == 'E'
-                dofs4item4component += nedges_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item4component += num_edges(EG[j])*dofmap_quantifiers[j][k]
                 need_edges = true
             elseif dofmap_patterns[j][k] in ['I','C']
                 dofs4item4component += dofmap_quantifiers[j][k]
                 need_faces = true
             #elseif dofmap_patterns[j][k] == 'f'
-            #    dofs4item_single += nfaces_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+            #    dofs4item_single += num_faces(EG[j])*dofmap_quantifiers[j][k]
             #    need_faces = true
             elseif dofmap_patterns[j][k] == 'e'
-                dofs4item_single += nedges_for_geometry(EG[j])*dofmap_quantifiers[j][k]
+                dofs4item_single += num_edges(EG[j])*dofmap_quantifiers[j][k]
                 need_edges = true
             elseif dofmap_patterns[j][k] in ['i','c'] 
                 dofs4item_single += dofmap_quantifiers[j][k]
@@ -320,7 +320,7 @@ function init_broken_dofmap!(FES::FESpace{Tv,Ti,FEType,APT}, DM::Union{Type{BFac
     xFaceGeometries = xgrid[ItemGeometries4DofMap(DM)]
     xFaceDofs = VariableTargetAdjacency(Int32)
     if DM == BFaceDofs
-        xRealFace = FES.xgrid[BFaces]
+        xRealFace = FES.xgrid[BFaceFaces]
         nfaces = length(xRealFace)
     elseif DM == FaceDofs
         nfaces = num_sources(xFaceNodes)

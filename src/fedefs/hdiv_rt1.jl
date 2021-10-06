@@ -18,9 +18,9 @@ end
 get_ncomponents(FEType::Type{<:HDIVRT1}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVRT1}, EG::Type{<:AbstractElementGeometry1D}) = 2
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:HDIVRT1}, EG::Type{<:Triangle2D}) = 3
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVRT1}, EG::Type{<:Triangle2D}) = 2*nfaces_for_geometry(EG) + 2
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVRT1}, EG::Type{<:Tetrahedron3D}) = 3*nfaces_for_geometry(EG) + 3
-get_ndofs_all(::Type{ON_CELLS}, FEType::Type{<:HDIVRT1}, EG::Type{<:Tetrahedron3D}) = 4*nfaces_for_geometry(EG) + 3 # in 3D only 3 of 4 face dofs are used depending on orientation
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVRT1}, EG::Type{<:Triangle2D}) = 2*num_faces(EG) + 2
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:HDIVRT1}, EG::Type{<:Tetrahedron3D}) = 3*num_faces(EG) + 3
+get_ndofs_all(::Type{ON_CELLS}, FEType::Type{<:HDIVRT1}, EG::Type{<:Tetrahedron3D}) = 4*num_faces(EG) + 3 # in 3D only 3 of 4 face dofs are used depending on orientation
 
 get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry1D}) = 1;
 get_polynomialorder(::Type{<:HDIVRT1{3}}, ::Type{<:AbstractElementGeometry2D}) = 1;
@@ -214,7 +214,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVRT1{2},APT}, EG::Type{<:Triangle2D}) where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    nfaces = nfaces_for_geometry(EG)
+    nfaces = num_faces(EG)
     function closure(coefficients, cell)
         fill!(coefficients,1.0)
         # multiplication with normal vector signs (only RT0)
@@ -227,7 +227,7 @@ end
 
 function get_coefficients(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVRT1{3},APT}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
-    nfaces = nfaces_for_geometry(EG)
+    nfaces = num_faces(EG)
     function closure(coefficients, cell)
         fill!(coefficients,1.0)
         # multiplication with normal vector signs (only RT0)
@@ -248,7 +248,7 @@ end
 # of the global face enumeration
 function get_basissubset(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:HDIVRT1{3},APT}, EG::Type{<:Tetrahedron3D}) where {Tv,Ti,APT}
     xCellFaceOrientations = FE.xgrid[CellFaceOrientations]
-    nfaces::Int = nfaces_for_geometry(EG)
+    nfaces::Int = num_faces(EG)
     orientation = xCellFaceOrientations[1,1]
     shift4orientation1::Array{Int,1} = [1,0,1,2]
     shift4orientation2::Array{Int,1} = [2,2,0,1]

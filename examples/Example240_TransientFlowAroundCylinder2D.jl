@@ -97,11 +97,11 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
     ## prepare drag/lift calculation
     TestFunctionD = FEVector{Float64}("drag testfunction",Solution[1].FES)
     TestFunctionL = FEVector{Float64}("lift testfunction",Solution[1].FES)
-    xBFaces = Solution[1].FES.xgrid[BFaces]
+    xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
     lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
-    interpolate!(TestFunctionD[1], ON_FACES, dragtest; items = xBFaces)
-    interpolate!(TestFunctionL[1], ON_FACES, lifttest; items = xBFaces)
+    interpolate!(TestFunctionD[1], ON_FACES, dragtest; items = xBFaceFaces)
+    interpolate!(TestFunctionL[1], ON_FACES, lifttest; items = xBFaceFaces)
     
     ## prepare viewer
     vis=GridVisualizer(Plotter=Plotter, resolution = (1200,300), isolines = 7, flimits = (-0.6,2.2))

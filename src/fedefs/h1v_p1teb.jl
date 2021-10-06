@@ -20,11 +20,11 @@ function Base.show(io::Core.IO, ::Type{<:H1P1TEB{edim}}) where {edim}
 end
 
 get_ncomponents(FEType::Type{<:H1P1TEB}) = FEType.parameters[1]
-get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P1TEB{2}}, EG::Type{<:AbstractElementGeometry}) = 1 + nnodes_for_geometry(EG) * FEType.parameters[1]
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1P1TEB{2}}, EG::Type{<:AbstractElementGeometry}) = nfaces_for_geometry(EG) + nnodes_for_geometry(EG) * FEType.parameters[1]
-get_ndofs(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}}, FEType::Type{<:H1P1TEB{3}}, EG::Type{<:AbstractElementGeometry}) = 1 + nnodes_for_geometry(EG) * FEType.parameters[1]
-get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P1TEB{3}}, EG::Type{<:AbstractElementGeometry}) = nedges_for_geometry(EG) + nnodes_for_geometry(EG) * FEType.parameters[1]
-get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1P1TEB{3}}, EG::Type{<:AbstractElementGeometry}) = nedges_for_geometry(EG) + nnodes_for_geometry(EG) * FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P1TEB{2}}, EG::Type{<:AbstractElementGeometry}) = 1 + num_nodes(EG) * FEType.parameters[1]
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1P1TEB{2}}, EG::Type{<:AbstractElementGeometry}) = num_faces(EG) + num_nodes(EG) * FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}}, FEType::Type{<:H1P1TEB{3}}, EG::Type{<:AbstractElementGeometry}) = 1 + num_nodes(EG) * FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P1TEB{3}}, EG::Type{<:AbstractElementGeometry}) = num_edges(EG) + num_nodes(EG) * FEType.parameters[1]
+get_ndofs(::Type{ON_CELLS}, FEType::Type{<:H1P1TEB{3}}, EG::Type{<:AbstractElementGeometry}) = num_edges(EG) + num_nodes(EG) * FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P1TEB{2}}, ::Type{<:Edge1D}) = 2
 get_polynomialorder(::Type{<:H1P1TEB{2}}, ::Type{<:Triangle2D}) = 2
@@ -89,7 +89,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     nitemnodes::Int = 0
     for item in items
         itemEG = xItemGeometries[item]
-        nitemnodes = nnodes_for_geometry(itemEG)
+        nitemnodes = num_nodes(itemEG)
         # compute normal flux (minus linear part)
         value = 0
         for c = 1 : ncomponents
@@ -137,7 +137,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     nitemnodes::Int = 0
     for item in items
         itemEG = xItemGeometries[item]
-        nitemnodes = nnodes_for_geometry(itemEG)
+        nitemnodes = num_nodes(itemEG)
         # compute normal flux (minus linear part)
         value = 0
         for c = 1 : ncomponents

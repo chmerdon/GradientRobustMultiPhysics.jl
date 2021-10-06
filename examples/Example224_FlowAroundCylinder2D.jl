@@ -131,14 +131,14 @@ function get_draglift(Solution::FEVector, μ)
 
     ## test for drag
     TestFunction = FEVector{Float64}("drag testfunction",Solution[1].FES)
-    xBFaces = Solution[1].FES.xgrid[BFaces]
+    xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
-    interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaces)
+    interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaceFaces)
     drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     ## test for lift
     lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
-    interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaces)
+    interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaceFaces)
     lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     return [drag,lift]

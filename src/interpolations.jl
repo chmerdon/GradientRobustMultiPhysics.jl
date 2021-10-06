@@ -156,9 +156,9 @@ function ensure_cell_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FE
     cellintegrals = zeros(T,ncomponents,ncells)
     integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = 0)
     cellEG = uniqueEG[1]
-    nitemnodes::Int = nnodes_for_geometry(cellEG)
-    nitemfaces::Int = nfaces_for_geometry(cellEG)
-    nitemedges::Int = nedges_for_geometry(cellEG)
+    nitemnodes::Int = num_nodes(cellEG)
+    nitemfaces::Int = num_faces(cellEG)
+    nitemedges::Int = num_edges(cellEG)
     offset::Int = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
     cellmoments::Array{T,1} = cell_moments[1]
     iEG::Int = 1
@@ -167,9 +167,9 @@ function ensure_cell_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FE
             if cellEG != xCellGeometries[item]
                 iEG = findfirst(isequal(cellEG), EG)
                 cellEG = xCellGeometries[item]
-                nitemnodes = nnodes_for_geometry(cellEG)
-                nitemfaces = nfaces_for_geometry(cellEG)
-                nitemedges = nedges_for_geometry(cellEG)
+                nitemnodes = num_nodes(cellEG)
+                nitemfaces = num_faces(cellEG)
+                nitemedges = num_edges(cellEG)
                 offset = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
                 cellmoments = cell_moments[iEG]
             end
@@ -246,9 +246,9 @@ function ensure_edge_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FE
     end
 end
 
-# remap boundary face interpolation to faces by using BFaces (if there is no special function by the finite element defined)
+# remap boundary face interpolation to faces by using BFaceFaces (if there is no special function by the finite element defined)
 function interpolate!(Target::FEVectorBlock, FES::FESpace, ::Type{ON_BFACES}, source_data; items = items, time = time)
-    interpolate!(Target, FES, ON_FACES, source_data; items = FES.xgrid[BFaces][items], time = time)
+    interpolate!(Target, FES, ON_FACES, source_data; items = FES.xgrid[BFaceFaces][items], time = time)
 end
 
 """

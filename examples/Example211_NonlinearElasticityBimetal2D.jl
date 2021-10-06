@@ -21,7 +21,7 @@ Note: For the mesh generation the additional packages SimplexGridFactory and Tri
 module Example211_NonlinearElasticityBimetal2D
 
 using GradientRobustMultiPhysics
-using ExtendableSparse
+using ExtendableGrids
 using SimplexGridFactory
 using Triangulate
 using GridVisualize
