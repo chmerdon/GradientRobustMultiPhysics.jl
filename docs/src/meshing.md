@@ -7,20 +7,9 @@ Grid generators for simplex grids can be found e.g. in the external module [Simp
 Cells, faces and edges of the mesh are associated to AbstractElementGeometries (defined by [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl)) that are used to dispatch functionality (local/global transformation, enumeration rules, set of basis functions, volume calculation, refinements etc.). See further below for a list of recognized element geometries.
 
 
-## Available Global Mesh Manipulations
-
-```@autodocs
-Modules = [GradientRobustMultiPhysics]
-Pages = ["meshrefinements.jl", "commongrids.jl"]
-Order   = [:type, :function]
-```
-
-
 ## Recognized Geometries and Reference Domains
 
-The following list contains all recognized subtypes of ExtendableGrids.AbstractElementGeometries and their reference domains.
-Moreover, each geometry has a number of rules that define the geometries and the local enumeration of its nodes, faces and edges,
-see [source code of shape_specs.jl](https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/src/shape_specs.jl) for details
+The following list contains all subtypes of ExtendableGrids.AbstractElementGeometries and their reference domains for which the package offers finite elements on them.
 
 ----
 ##### Edge1D <: AbstractElementGeometry1D

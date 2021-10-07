@@ -47,7 +47,7 @@ end
 
 # actions that do depend on x
 # and require additional managament of global evaluation points
-mutable struct XAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+struct XAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
     kernel::KernelType
     name::String
     citem::Base.RefValue{Int}
@@ -59,7 +59,7 @@ end
 
 # actions that do depend on x and t
 # and require additional managament of global evaluation points
-mutable struct XTAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+struct XTAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
     kernel::KernelType
     name::String
     citem::Base.RefValue{Int}
@@ -87,9 +87,9 @@ function Action{T}(kernel::UserData{<:AbstractActionKernel}; name = "user action
     ctime::T = 0
     if is_xdependent(kernel)
         if is_timedependent(kernel)
-            return XTAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), Ref(ctime), kernel.quadorder[1], kernel.dimensions, Array{T,1}(undef,0))
+            return XTAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), Ref(ctime), kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
         else
-            return XAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), kernel.quadorder[1], kernel.dimensions, Array{T,1}(undef,0))
+            return XAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
         end
     else
         if is_timedependent(kernel)
@@ -179,48 +179,50 @@ function update_action!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluato
     return nothing
 end
 
-function apply_action!(result::Array{T,1}, input::Array{T,1}, C::AbstractAction, i::Int, xref) where {T <: Real}
+function apply_action!(result, input, C::AbstractAction, i, xref) where {T}
     return nothing
 end
 
-function apply_action!(result::Array{T,1}, input::Array{T,1}, C::Action{T}, i::Int, xref) where {T <: Real}
+function apply_action!(result, input, C::Action{T}, i, xref) where {T}
     eval_data!(result, C.kernel, input, nothing, nothing, C.cregion[], C.citem[], xref);
     return nothing
 end
 
-function apply_action!(result::Array{T,1}, input::Array{T,1}, C::XAction{T}, i::Int, xref) where {T <: Real}
-    eval_data!(result, C.kernel, input, C.x[i], nothing, C.cregion[], C.citem[], xref);
+const test_x = [0,0]
+
+function apply_action!(result, input, C::XAction{T}, i, xref) where {T}
+    eval_data!(result, C.kernel, input, C.x[i], nothing, C.cregion[], C.citem[], xref)
     return nothing
 end
 
-function apply_action!(result::Array{T,1}, input::Array{T,1}, C::TAction{T}, i::Int, xref) where {T <: Real}
+function apply_action!(result, input, C::TAction{T}, i, xref) where {T}
     eval_data!(result, C.kernel, input, nothing, C.ctime[], C.cregion[], C.citem[], xref);
     return nothing
 end
 
-function apply_action!(result::Array{T,1}, input::Array{T,1}, C::XTAction{T}, i::Int, xref) where {T <: Real}
+function apply_action!(result, input, C::XTAction{T}, i, xref) where {T}
     eval_data!(result, C.kernel, input, C.x[i], C.ctime[], C.cregion[], C.citem[], xref);
     return nothing
 end
 
 ## apply! function for action in nonlinear assemblies
 
-function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::Action{T}, i::Int, xref) where {T <: Real}
+function apply_action!(result, input_last, input_ansatz, C::Action{T}, i, xref) where {T}
     eval_data!(result, C.kernel, input_last, input_ansatz, nothing, nothing, C.cregion[], C.citem[], xref);
     return nothing
 end
 
-function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::XAction{T}, i::Int, xref) where {T <: Real}
+function apply_action!(result, input_last, input_ansatz, C::XAction{T}, i, xref) where {T}
     eval_data!(result, C.kernel, input_last, input_ansatz, C.x[i], nothing, C.cregion[], C.citem[], xref);
     return nothing
 end
 
-function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::TAction{T}, i::Int, xref) where {T <: Real}
+function apply_action!(result, input_last, input_ansatz, C::TAction{T}, i, xref) where {T}
     eval_data!(result, C.kernel, input_last, input_ansatz, nothing, C.ctime[], C.cregion[], C.citem[], xref);
     return nothing
 end
 
-function apply_action!(result::Array{<:Real,1}, input_last::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, C::XTAction{T}, i::Int, xref) where {T <: Real}
+function apply_action!(result, input_last, input_ansatz, C::XTAction{T}, i, xref) where {T}
     eval_data!(result, C.kernel, input_last, input_ansatz, C.x[i], C.ctime[], C.cregion[], C.citem[], xref);
     return nothing
 end

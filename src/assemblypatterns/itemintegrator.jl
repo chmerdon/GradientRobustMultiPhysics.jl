@@ -40,6 +40,7 @@ function L2ErrorIntegrator(
 ````
 
 Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error.
+If quadorder is left on "auto" two times the quadorder of the data is used in the evaluation.
 """
 function L2ErrorIntegrator(
     T::Type{<:Real},
@@ -51,7 +52,7 @@ function L2ErrorIntegrator(
     regions = [0],
     time = 0)
 
-    ninputs = 1
+    ninputs::Int = 1
     ops = operator
     if typeof(operator) <: DataType
         ops = [operator]
@@ -60,17 +61,19 @@ function L2ErrorIntegrator(
     end
 
     ncomponents::Int = compare_data.dimensions[1]
-    temp = zeros(T,ncomponents)
+    temp::Array{T,1} = zeros(T,ncomponents)
+    
     function L2error_function(result,input,x)
         fill!(temp,0)
         eval_data!(temp,compare_data,x,time)
-        for j=1:ncomponents[1], i = 1 : ninputs
-            temp[j] -= input[(i-1)*ncomponents+j]
-        end    
         result[1] = 0
-        for j=1:ncomponents[1]
+        for j=1:ncomponents
+            for i = 1 : ninputs
+                temp[j] -= input[(i-1)*ncomponents+j]
+            end
             result[1] += temp[j].^2
-        end
+        end    
+        return nothing
     end    
     if quadorder == "auto"
         quadorder = 2 * compare_data.quadorder
@@ -105,7 +108,7 @@ function L2NormIntegrator(
     quadorder = 2,
     regions = [0])
 
-    ninputs = 1
+    ninputs::Int = 1
     ops = operator
     if typeof(operator) <: DataType
         ops = [operator]
@@ -113,7 +116,7 @@ function L2NormIntegrator(
         ninputs = length(operator)
     end
 
-    temp = zeros(T,ncomponents)
+    temp::Array{T,1} = zeros(T,ncomponents)
     function L2norm_function(result,input)
         fill!(temp,0)
         for j=1:ncomponents, i = 1 : ninputs

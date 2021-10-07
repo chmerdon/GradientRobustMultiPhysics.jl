@@ -196,7 +196,6 @@ and quadorder determines the additional quadrature order to be used if this func
 """
 function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "user data function", dependencies::String = "", quadorder::Int = 0)
 
-    nf = (result,X,T,R,I,L) -> f(result) # no other dependencies
     if dependencies == "X"
         nf = (result,X,T,R,I,L) -> f(result, X)
     elseif dependencies == "T"
@@ -229,6 +228,8 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
         nf = (result,X,T,R,I,L) -> f(result, X, I, L)
     elseif dependencies == "XTRIL"
         nf = (result,X,T,R,I,L) -> f(result, X, T, R, I, L)
+    else
+        nf = (result,X,T,R,I,L) -> f(result) # no other dependencies
     end
 
     return UserData{AbstractExtendedDataFunction,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)

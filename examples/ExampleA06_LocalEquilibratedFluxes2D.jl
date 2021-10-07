@@ -83,11 +83,10 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
     ## this can be realised via a kernel function
     function eqestimator_kernel(result, input)
         ## input = [Identity(sigma_h), Divergence(sigma_h), Gradient(u_h)]
-        result[1] = (input[1] - input[4])^2 + (input[2] - input[5])^2
-        result[2] = input[3]^2
+        result[1] = (input[1] - input[4])^2 + (input[2] - input[5])^2 + input[3]^2
         return nothing
     end
-    estimator_action = Action{Float64}(ActionKernel(eqestimator_kernel, [2,5]; name = "estimator kernel", dependencies = "", quadorder = 3))
+    estimator_action = Action{Float64}(ActionKernel(eqestimator_kernel, [1,5]; name = "estimator kernel", dependencies = "", quadorder = 3))
     EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Divergence, Gradient],estimator_action)
 
     ## setup exact error evaluations
@@ -111,13 +110,8 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         ## evaluate eqilibration error estimator adn append it to Solution vector (for plotting etc.)
         DualSolution = get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
         NDofsDual[level] = length(DualSolution.entries)
-        FES_eta = FESpace{H1P0{1}}(xgrid)
-        append!(Solution, "σ_h",FES_eta)
-        error4cell = zeros(Float64,2,num_sources(xgrid[CellNodes]))
+        error4cell = zeros(Float64,1,num_sources(xgrid[CellNodes]))
         evaluate!(error4cell, EQIntegrator, [DualSolution[1], DualSolution[1], Solution[1]])
-        for j = 1 : num_sources(xgrid[CellNodes])
-            Solution[2][j] = error4cell[1,j] + error4cell[2,j]
-        end
 
         if verbosity > 0
             println("\n  SOLVE LEVEL $level")
@@ -128,7 +122,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         ## calculate L2 error, H1 error, estimator, dual L2 error and write to results
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
-        Results[level,3] = sqrt(sum(Solution[2][:]))
+        Results[level,3] = sqrt(sum(view(error4cell,1,:)))
         Results[level,4] = sqrt(evaluate(L2ErrorEvaluatorDual,DualSolution[1]))
         if verbosity > 0
             println("  ESTIMATE")
@@ -148,7 +142,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         else
             ## adaptive mesh refinement
             ## refine by red-green-blue refinement (incl. closuring)
-            facemarker = bulk_mark(xgrid, Solution[2], theta)
+            facemarker = bulk_mark(xgrid, error4cell[:], theta)
             xgrid = RGB_refine(xgrid, facemarker)
         end
     end

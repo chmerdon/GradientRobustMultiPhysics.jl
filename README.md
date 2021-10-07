@@ -29,6 +29,7 @@ The following minimal example demonstrates how to setup a Poisson problem.
 
 ```julia
 using GradientRobustMultiPhysics
+using ExtendableGrids
 
 # build/load any grid (here: a uniform-refined 2D unit square into triangles)
 xgrid = uniform_refine(grid_unitsquare(Triangle2D),4)
@@ -42,15 +43,18 @@ add_unknown!(Problem; unknown_name = "u", equation_name = "Poisson equation")
 # add left-hand side PDEoperator(s) (here: only Laplacian with diffusion coefficient 1e-3)
 add_operator!(Problem, [1,1], LaplaceOperator(1e-3))
 
+# define right-hand side function (as a constant DataFunction, x and t dependency explained in documentation)
+f = DataFunction([1]; name = "f")
+
 # add right-hand side data (here: f = [1] in region(s) [1])
-add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], DataFunction([1]; name = "f")))
+add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], f))
 
 # add boundary data (here: zero data for boundary regions 1:4)
 add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
 
 # discretise = choose FEVector with appropriate FESpaces
 FEType = H1P2{1,2} # quadratic element with 1 component in 2D
-Solution = FEVector{Float64}("u_h",FESpace{FEType}(xgrid))
+Solution = FEVector("u_h",FESpace{FEType}(xgrid))
 
 # inspect problem and Solution vector structure
 @show Problem Solution

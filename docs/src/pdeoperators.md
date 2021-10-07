@@ -32,9 +32,8 @@ Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``
 
 ## Assembly Type
 
-Many PDE operators need a specification that decides to which parts of the mesh the PDEOperator is associated (e.g. cells, faces, bfaces, edges), this is prescribed via the AssemblyType.
-In other words they define on which entities the PDEOperators lives and assembles. Additionally, the assembly types can be used as an argument for [Finite Element Interpolations](@ref).
-The following assembly types are available. 
+Many PDE operators need a specification that decides on which set of entities of the mesh (e.g. cells, faces, bfaces, edges) a PDEOperator lives and has to be assembled. This can be steered by the AssemblyType of ExtendableGrids.
+The AssemblyType can be also used as an argument for [Finite Element Interpolations](@ref). The following AssemblyTypes are available. 
 
 | AssemblyType     | Description                                                      |
 | :--------------- | :--------------------------------------------------------------- |

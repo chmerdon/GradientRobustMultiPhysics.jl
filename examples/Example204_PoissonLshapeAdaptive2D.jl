@@ -19,7 +19,7 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 ## exact solution u for the Poisson problem
-function exact_function!(result,x::Array{<:Real,1})
+function exact_function!(result,x)
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
@@ -28,7 +28,7 @@ function exact_function!(result,x::Array{<:Real,1})
     result[1] *= (x[1]^2 + x[2]^2)^(1/3)
 end
 ## ... and its gradient
-function exact_function_gradient!(result,x::Array{<:Real,1})
+function exact_function_gradient!(result,x)
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
@@ -107,52 +107,68 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
 
         ## create a solution vector and solve the problem
         println("------- LEVEL $level")
-        FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("u_h",FES)
-        solve!(Solution, Problem)
+        @time begin
+            FES = FESpace{FEType}(xgrid)
+            Solution = FEVector{Float64}("u_h",FES)
+            solve!(Solution, Problem)
+            print("@time    solver =")
+        end 
         NDofs[level] = length(Solution[1])
+        
 
         ## calculate local error estimator contributions
-        xFaceVolumes = xgrid[FaceVolumes]
-        xFaceNormals = xgrid[FaceNormals]
-        xCellVolumes = xgrid[CellVolumes]
-        vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
-        jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
-        evaluate!(vol_error,volIntegrator,Solution[1])
-        evaluate!(jump_error,jumpIntegrator,Solution[1])
+        @time begin
+            xFaceVolumes = xgrid[FaceVolumes]
+            xFaceNormals = xgrid[FaceNormals]
+            xCellVolumes = xgrid[CellVolumes]
+            vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
+            jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
+            evaluate!(vol_error,volIntegrator,Solution[1])
+            evaluate!(jump_error,jumpIntegrator,Solution[1])
 
-        ## calculate exact L2 error, H1 error and total estimator
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
-        Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
-        println("\tη = $(Results[level,3])\n\te = $(Results[level,2])")
+            ## calculate total estimator
+            Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
+            print("@time  estimate =")
+        end
+
+        ## calculate exact L2 error, H1 error 
+        @time begin
+            Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
+            Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+            print("@time exacteval =")
+        end
 
         if level == nlevels
             break;
         end
 
         ## mesh refinement
-        if theta >= 1
-            ## uniform mesh refinement
-            xgrid = uniform_refine(xgrid)
-        else
-            ## adaptive mesh refinement
-            ## compute refinement indicators
-            nfaces = num_sources(xgrid[FaceNodes])
-            refinement_indicators = sum(jump_error, dims = 1)
-            xFaceCells = xgrid[FaceCells]
-            cell::Int = 0
-            for face = 1 : nfaces, k = 1 : 2
-                cell = xFaceCells[k,face]
-                if cell > 0
-                    refinement_indicators[face] += vol_error[1,cell]
+        @time begin
+            if theta >= 1
+                ## uniform mesh refinement
+                xgrid = uniform_refine(xgrid)
+            else
+                ## adaptive mesh refinement
+                ## compute refinement indicators
+                nfaces = num_sources(xgrid[FaceNodes])
+                refinement_indicators::Array{Float64,1} = view(jump_error,1,:)
+                xFaceCells = xgrid[FaceCells]
+                cell::Int = 0
+                for face = 1 : nfaces, k = 1 : 2
+                    cell = xFaceCells[k,face]
+                    if cell > 0
+                        refinement_indicators[face] += vol_error[1,cell]
+                    end
                 end
-            end
 
-            ## refine by red-green-blue refinement (incl. closuring)
-            facemarker = bulk_mark(xgrid, refinement_indicators, theta; indicator_AT = ON_FACES)
-            xgrid = RGB_refine(xgrid, facemarker)
+                ## refine by red-green-blue refinement (incl. closuring)
+                facemarker = bulk_mark(xgrid, refinement_indicators, theta; indicator_AT = ON_FACES)
+                xgrid = RGB_refine(xgrid, facemarker)
+            end
+            print("@time    refine =")
         end
+
+        println("\tη = $(Results[level,3])\n\te = $(Results[level,2])")
     end
     
     ## plot
