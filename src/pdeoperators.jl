@@ -635,18 +635,18 @@ function GenerateNonlinearForm(
         # from the given action_kernel of the operator G
 
         # for differentation other dependencies of the action_kernel are fixed
-        result_temp = Vector{Float64}(undef,argsizes[1])
-        input_temp = Vector{Float64}(undef,argsizes[3])
-        jac_temp = Matrix{Float64}(undef,argsizes[1],argsizes[3])
+        result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
+        input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[3])
+        jac_temp::Matrix{Float64} = Matrix{Float64}(undef,argsizes[1],argsizes[3])
         Dresult = DiffResults.DiffResult(result_temp,jac_temp)
         Dresult = DiffResults.JacobianResult(result_temp,input_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-        temp = zeros(Float64, argsizes[1])
+        temp::Array{Float64,1} = zeros(Float64, argsizes[1])
         if dependencies == "X"
             reduced_action_kernel_x(x) = (result,input) -> action_kernel(result,input,x)
             cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_x([1.0,1.0,1.0]), result_temp, input_temp)
             function newton_kernel_x(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x)
-                ForwardDiff.jacobian!(Dresult, reduced_action_kernel_x(x), result, input_current, cfg)
+                ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_x(x), result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
                 for j = 1 : argsizes[1]
                     result[j] = 0
@@ -675,7 +675,7 @@ function GenerateNonlinearForm(
             reduced_action_kernel_t(t) = (result,input) -> action_kernel(result,input,t)
             cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_t(0.0), result_temp, input_temp)
             function newton_kernel_t(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, t)
-                ForwardDiff.jacobian!(Dresult, reduced_action_kernel_t(t), result, input_current, cfg)
+                ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_t(t), result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
                 for j = 1 : argsizes[1]
                     result[j] = 0
@@ -704,7 +704,7 @@ function GenerateNonlinearForm(
             reduced_action_kernel_xt(x,t) = (result,input) -> action_kernel(result,input,x,t)
             cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_xt([1.0,1.0,1.0],0.0), result_temp, input_temp)
             function newton_kernel_xt(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x, t)
-                ForwardDiff.jacobian!(Dresult, reduced_action_kernel_xt(x,t), result, input_current, cfg)
+                ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_xt(x,t), result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
                 for j = 1 : argsizes[1]
                     result[j] = 0
@@ -731,8 +731,8 @@ function GenerateNonlinearForm(
             action_rhs = Action{Float64}( rhs_action_kernel)
         elseif dependencies == ""
             cfg = ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
-            function newton_kernel(result::Vector{T}, input_current::Vector{T}, input_ansatz::Vector{T}) where {T}
-                Dresult = ForwardDiff.jacobian!(Dresult, action_kernel, result, input_current, cfg)
+            function newton_kernel(result, input_current, input_ansatz)
+                Dresult = ForwardDiff.vector_mode_jacobian!(Dresult, action_kernel, result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
                 for j = 1 : argsizes[1]
                     result[j] = 0
@@ -744,7 +744,7 @@ function GenerateNonlinearForm(
             end
 
             # the action for the RHS just evaluates DG and G at input_current
-            function rhs_kernel(result::Array{<:Real,1}, input_current::Array{<:Real,1})
+            function rhs_kernel(result, input_current)
                 fill!(result,0)
                 newton_kernel(result, input_current, input_current)
                 action_kernel(temp, input_current)
@@ -934,7 +934,7 @@ function ConvectionOperator(
         name = "((β ⋅ $(ansatzfunction_operator)) u, $testfunction_operator(v))"
     end
 
-    O = PDEOperator{Float64, APT_BilinearForm, AT}(name, [ansatzfunction_operator, testfunction_operator], Action{T}(action_kernel), [1], 1, regions, store, AssemblyAuto)
+    O = PDEOperator{T, APT_BilinearForm, AT}(name, [ansatzfunction_operator, testfunction_operator], Action{T}(action_kernel), [1], 1, regions, store, AssemblyAuto)
     O.transposed_assembly = transposed_assembly
     return O
 end
@@ -954,7 +954,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     else
         @error "No storage functionality available for this operator!"
     end
-    O.storage = ExtendableSparseMatrix{Float64,Int64}(FES[1].ndofs,FES[2].ndofs)
+    O.storage = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
     assemble!(O.storage, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
     flush!(O.storage)
@@ -973,7 +973,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     else
         @error "No storage functionality available for this operator!"
     end
-    O.storage = zeros(Float64,FES[1].ndofs)
+    O.storage = zeros(T,FES[1].ndofs)
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
     assemble!(O.storage, Pattern; factor = factor, skip_preps = false)
 end
@@ -1397,14 +1397,14 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
     
     # ensure that flux field is long enough
     if length(O.fluxes) < nfaces
-        O.fluxes = zeros(Float64,1,nfaces)
+        O.fluxes = zeros(T,1,nfaces)
     end
     # compute normal fluxes of component beta
     c::Int = O.beta_from
     fill!(O.fluxes,0)
     if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
         @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
-        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(Float64, ON_FACES, [NormalFlux]; name = "u ⋅ n")
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(T, ON_FACES, [NormalFlux]; name = "u ⋅ n")
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],CurrentSolution[c], skip_preps = false)
     else
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],CurrentSolution[c], skip_preps = true)

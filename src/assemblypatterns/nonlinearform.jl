@@ -273,8 +273,8 @@ function assemble!(
     @debug AP
 
     # loop over items
-    offsets = zeros(Int,nFE+1)
-    maxdofs = get_maxndofs(AM)
+    offsets::Array{Int,1} = zeros(Int,nFE+1)
+    maxdofs::Array{Int,1} = get_maxndofs(AM)
     basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler.cvals
     for j = 1 : nFE
@@ -283,7 +283,7 @@ function assemble!(
     end
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     localb::Array{T,1} = zeros(T,get_maxndofs(AM,nFE))
-    coeffs = zeros(T,maximum(maxdofs))
+    coeffs::Array{T,1} = zeros(T,maximum(maxdofs))
     weights::Array{T,1} = get_qweights(AM)
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])

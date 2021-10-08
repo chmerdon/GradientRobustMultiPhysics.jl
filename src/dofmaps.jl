@@ -116,7 +116,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
         dofs4item_single = 0
     end
 
-    nnodes::Int32 = size(xgrid[Coordinates],2)
+    nnodes::Int = size(xgrid[Coordinates],2)
     ncells::Int = num_sources(xgrid[CellNodes])
     xItemNodes = xgrid[SuperItemNodes4DofMap(DM)]
     xItemGeometries = xgrid[ItemGeometries4DofMap(DM)]
@@ -131,7 +131,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
 
 
     offset4component::Int = 0
-    xItemNodes::Adjacency{Int32} = xgrid[SuperItemNodes4DofMap(DM)]
+    xItemNodes::Adjacency{Ti} = xgrid[SuperItemNodes4DofMap(DM)]
     nitems::Int = num_sources(xItemNodes)
     for k = 1 : length(dofmap_patterns[1])
         if dofmap_patterns[1][k] == 'N'
@@ -169,18 +169,18 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
     end
 
     if FES.broken == true
-        xItemDofs = SerialVariableTargetAdjacency(Int32)
+        xItemDofs = SerialVariableTargetAdjacency(Ti)
     else
-        xItemDofs = VariableTargetAdjacency(Int32)
+        xItemDofs = VariableTargetAdjacency(Ti)
     end
     itemEG = EG[1]
     pattern::String = dofmap_patterns[1]
-    iEG::Int32 = 1
-    k::Int32 = 0
-    itemdofs::Array{Int32,1} = zeros(Int32,maxdofs4item)
-    offset::Int32 = 0
-    pos::Int32 = 0
-    q::Int32 = 0
+    iEG::Int = 1
+    k::Int = 0
+    itemdofs::Array{Ti,1} = zeros(Ti,maxdofs4item)
+    offset::Int = 0
+    pos::Int = 0
+    q::Int = 0
     for subitem = 1 : nsubitems
         itemEG = xItemGeometries[subitem]
         item = sub2sup(subitem)
@@ -318,7 +318,7 @@ function init_broken_dofmap!(FES::FESpace{Tv,Ti,FEType,APT}, DM::Union{Type{BFac
     xCellDofs = FES[CellDofs]
     xFaceNodes = FES.xgrid[SuperItemNodes4DofMap(DM)]
     xFaceGeometries = xgrid[ItemGeometries4DofMap(DM)]
-    xFaceDofs = VariableTargetAdjacency(Int32)
+    xFaceDofs = VariableTargetAdjacency(Ti)
     if DM == BFaceDofs
         xRealFace = FES.xgrid[BFaceFaces]
         nfaces = length(xRealFace)

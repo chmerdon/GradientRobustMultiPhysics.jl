@@ -127,7 +127,7 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, nd
 
         function jacobian_wrap(x)
             fill!(result_temp,0.0)
-            ForwardDiff.jacobian!(Dresult, refbasis, result_temp, x, Dcfg)
+            ForwardDiff.vector_mode_jacobian!(Dresult, refbasis, result_temp, x, Dcfg)
             return DiffResults.jacobian(Dresult)
         end
         if derivorder == 1 ## first order derivatives

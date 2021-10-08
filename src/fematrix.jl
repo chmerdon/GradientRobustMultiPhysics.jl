@@ -173,10 +173,10 @@ $(TYPEDSIGNATURES)
 
 Custom `fill` function for `FEMatrixBlock` (only fills the block, not the complete FEMatrix).
 """
-function Base.fill!(B::FEMatrixBlock, value)
-    cscmat::SparseMatrixCSC{Float64,Int64} = B.entries.cscmatrix
+function Base.fill!(B::FEMatrixBlock{Tv,Ti}, value) where {Tv,Ti}
+    cscmat::SparseMatrixCSC{Tv,Ti} = B.entries.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
-    valsB::Array{Float64,1} = cscmat.nzval
+    valsB::Array{Tv,1} = cscmat.nzval
     for col = B.offsetY+1:B.last_indexY
         for r in nzrange(cscmat, col)
             if rows[r] > B.offsetX && rows[r] <= B.last_indexX

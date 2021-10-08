@@ -192,7 +192,7 @@ function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_broken{Disc
     end
 end
 
-function update_assembly!(AM::AssemblyManager, item::Int)
+function update_assembly!(AM::AssemblyManager, item)
     # get dofitem informations
     if AM.citem[] != item
         AM.citem[] = item
@@ -230,12 +230,12 @@ end
 @inline get_maxdofitems(AM::AssemblyManager) = length.(AM.dofitems)
 
 @inline get_dof(AM::AssemblyManager, op::Int, dofitem::Int, dof_i::Int) = AM.xItemDofs[op][dof_i + AM.dofoffset4dofitem[op][dofitem], AM.dofitems[op][dofitem]]
-function get_dofs!(dofs::Array{Int,1}, AM::AssemblyManager, op::Int, dofitem::Int)
+@inline function get_dofs!(dofs::Array{Int,1}, AM::AssemblyManager, op::Int, dofitem::Int)
     for dof_i = 1 : AM.ndofs4EG[op][AM.EG4dofitem[op][dofitem]]
         dofs[dof_i] = AM.xItemDofs[op][dof_i + AM.dofoffset4dofitem[op][dofitem], AM.dofitems[op][dofitem]]
     end
 end
-function get_coeffs!(coeffs::Array{T,1}, FE::AbstractArray{T,1}, AM::AssemblyManager, op::Int, dofitem::Int, offset::Int = 0) where {T <: Real}
+@inline function get_coeffs!(coeffs::Array{T,1}, FE::AbstractArray{T,1}, AM::AssemblyManager{T}, op::Int, dofitem::Int, offset::Int = 0) where {T <: Real}
     for dof_i = 1 : AM.ndofs4EG[op][AM.EG4dofitem[op][dofitem]]
         coeffs[dof_i] = FE[offset + AM.xItemDofs[op][dof_i + AM.dofoffset4dofitem[op][dofitem], AM.dofitems[op][dofitem]]]
     end

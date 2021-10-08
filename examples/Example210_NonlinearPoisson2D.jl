@@ -123,7 +123,7 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
 
         ## solve
         @show Solution
-        solve!(Solution, Problem; linsolver = factorization)
+        solve!(Solution, Problem; linsolver = factorization, show_statistics = true)
 
         ## calculate L2 and H1 error and save data
         NDofs[level] = length(Solution.entries)
