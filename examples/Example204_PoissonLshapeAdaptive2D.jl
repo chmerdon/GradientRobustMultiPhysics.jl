@@ -111,9 +111,10 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             FES = FESpace{FEType}(xgrid)
             Solution = FEVector{Float64}("u_h",FES)
             solve!(Solution, Problem)
-            print("@time    solver =")
+            NDofs[level] = length(Solution[1])
+            println("\t ndof =  $(NDofs[level])")
+            print("@time  solver =")
         end 
-        NDofs[level] = length(Solution[1])
         
 
         ## calculate local error estimator contributions
@@ -128,14 +129,14 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
 
             ## calculate total estimator
             Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
-            print("@time  estimate =")
+            print("@time  η eval =")
         end
 
         ## calculate exact L2 error, H1 error 
         @time begin
             Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
             Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
-            print("@time exacteval =")
+            print("@time  e eval =")
         end
 
         if level == nlevels
@@ -165,10 +166,10 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
                 facemarker = bulk_mark(xgrid, refinement_indicators, theta; indicator_AT = ON_FACES)
                 xgrid = RGB_refine(xgrid, facemarker)
             end
-            print("@time    refine =")
+            print("@time  refine =")
         end
 
-        println("\tη = $(Results[level,3])\n\te = $(Results[level,2])")
+        println("\t    η =  $(Results[level,3])\n\t    e =  $(Results[level,2])")
     end
     
     ## plot

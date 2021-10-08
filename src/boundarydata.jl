@@ -91,12 +91,11 @@ function boundarydata!(
     xdim::Int = size(FE.xgrid[Coordinates],1) 
     FEType = eltype(FE)
     ncomponents::Int = get_ncomponents(FEType)
-    xBFaceDofs = nothing
     nbfaces::Int = 0
     if length(O.regions4boundarytype) > 0
-        xBFaceDofs = FE[BFaceDofs]
+        xBFaceDofs::DofMapTypes{Ti} = FE[BFaceDofs]
         nbfaces = num_sources(xBFaceDofs)
-        xBFaceFaces = FE.xgrid[BFaceFaces]
+        xBFaceFaces::Array{Ti,1} = FE.xgrid[BFaceFaces]
         xBFaceRegions = FE.xgrid[BFaceRegions]
     end
 
@@ -193,28 +192,29 @@ function boundarydata!(
     if length(BADirichletBoundaryRegions) > 0
 
         # find Dirichlet dofs
-        BAdofs = []
+        BAdofs::Array{Ti,1} = zeros(Ti,0)
         for bface = 1 : nbfaces
             for r = 1 : length(BADirichletBoundaryRegions)
                 if xBFaceRegions[bface] == BADirichletBoundaryRegions[r]
-                    append!(BAdofs,xBFaceDofs[:,bface])
+                    for dof = 1 : num_targets(xBFaceDofs,bface)
+                        push!(BAdofs,xBFaceDofs[dof,bface])
+                    end
                     break
                 end    
             end    
         end
-        BAdofs = Base.unique(BAdofs)
+        Base.unique!(BAdofs)
 
         @debug "BA-DBnd = $BADirichletBoundaryRegions (ndofs = $(length(BAdofs)))"
 
-        bonus_quadorder = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
-        FEType = eltype(FE)
+        bonus_quadorder::Int = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
         Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
-        b = zeros(T,FE.ndofs,1)
+        b::Array{T,2} = zeros(T,FE.ndofs,1)
         A = FEMatrix{T}("MassMatrixBnd", FE)
 
         if Dboperator == Identity
             function bnd_rhs_function_h1()
-                temp = zeros(T,ncomponents)
+                temp::Array{T,1} = zeros(T,ncomponents)
                 function closure(result, input, x, region)
                     eval_data!(temp, O.data4bregion[region], x, time)
                     result[1] = 0.0
@@ -288,24 +288,24 @@ function boundarydata!(
 
         # fix already set dofs by other boundary conditions
         for j in fixed_dofs
-            A[1][j,j] = fixed_penalty
-            b[j] = Target[j]*fixed_penalty
+            _addnz(A.entries,j,j,fixed_penalty,1)
+            b[j,1] = Target[j]*fixed_penalty
         end
 
         flush!(A.entries)
         # add new fixed dofs from best approximation boundary
         append!(fixed_dofs,BAdofs)
-        fixed_dofs = Base.unique(fixed_dofs)
+        fixed_dofs::Array{Ti,1} = Base.unique(fixed_dofs)
 
         # solve best approximation problem on boundary and write into Target
         @debug "solving for best-approximation boundary data"
 
         if (true) # compress matrix by removing all dofs in the interior
-            dof2sparsedof = zeros(Ti,FE.ndofs)
-            newcolptr = zeros(Int64,0)
-            newrowval = zeros(Int64,0)
+            dof2sparsedof::Array{Ti,1} = zeros(Ti,FE.ndofs)
+            newcolptr::Array{Int64,1} = zeros(Int64,0)
+            newrowval::Array{Int64,1} = zeros(Int64,0)
             dof = 0
-            diff = 0
+            diff::Int64 = 0
             for j = 1 : FE.ndofs
                 diff = A.entries.cscmatrix.colptr[j] != A.entries.cscmatrix.colptr[j+1]
                 if diff > 0
@@ -314,8 +314,8 @@ function boundarydata!(
                 end
             end
 
-            smallb = zeros(T,dof)
-            sparsedof2dof = zeros(Ti,dof)
+            smallb::Array{T,1} = zeros(T,dof)
+            sparsedof2dof::Array{Ti,1} = zeros(Ti,dof)
             for j = 1 : FE.ndofs
                 if dof2sparsedof[j] > 0
                     push!(newcolptr,A.entries.cscmatrix.colptr[j])
@@ -327,11 +327,11 @@ function boundarydata!(
             push!(newcolptr,A.entries.cscmatrix.colptr[end])
             A.entries.cscmatrix = SparseMatrixCSC{T,Int64}(dof,dof,newcolptr,newrowval,A.entries.cscmatrix.nzval)
 
-            try
-                Target[sparsedof2dof] = SparseArrays.SparseMatrixCSC{T,Int64}(A.entries)\smallb
-            catch
+            #try
                 Target[sparsedof2dof] = A.entries\smallb
-            end
+           # catch
+           #     Target[sparsedof2dof] = A.entries\smallb
+           # end
         else # old way: penalize all interior dofs
 
             for j in setdiff(1:FE.ndofs,fixed_dofs)

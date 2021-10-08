@@ -82,12 +82,12 @@ function _update_solver_params!(user_params,kwargs)
 end
 
 
-struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization} <: AbstractLinearSystem{Tv,Ti} 
+struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization{Tv,Ti}} <: AbstractLinearSystem{Tv,Ti} 
     x::AbstractVector{Tv}
     A::ExtendableSparseMatrix{Tv,Ti}
     b::AbstractVector{Tv}
     factorization::FT
-    LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} = new{Tv,Ti,FT}(x,A,b,FT(A))
+    LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} = new{Tv,Ti,FT}(x,A,b,FT(A,nothing,0))
 end
 
 function createlinsolver(ST::Type{<:AbstractLinearSystem},x::AbstractVector,A::ExtendableSparseMatrix,b::AbstractVector)
@@ -125,11 +125,13 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     end
     ## declare linear solver
     if user_params[:linsolver] == "UMFPACK"
-        user_params[:linsolver] = LinearSystem{Float64, Int64, ExtendableSparse.LUFactorization}
+        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.LUFactorization{T,Int64}}
     elseif user_params[:linsolver] == "MKLPARDISO"
-        user_params[:linsolver] = LinearSystem{Float64, Int64, ExtendableSparse.MKLPardisoLU}
+        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.MKLPardisoLU{T,Int64}}
+    elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization{T,Int64}
+        user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]}
     elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
-        user_params[:linsolver] = LinearSystem{Float64, Int64, user_params[:linsolver]}
+        user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]{T,Int64}}
     end
     while length(user_params[:skip_update]) < length(user_params[:subiterations])
         push!(user_params[:skip_update], 1)
@@ -529,8 +531,8 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
 
     # PENALIZE FIXED DOFS
     # (from boundary conditions and constraints)
-    fixed_dofs = Base.unique(fixed_dofs)
-    fixed_penalty = SC.user_params[:fixed_penalty]
+    fixed_dofs::Array{Ti,1} = Base.unique(fixed_dofs)
+    fixed_penalty::T = SC.user_params[:fixed_penalty]
     for j = 1 : length(fixed_dofs)
         b.entries[fixed_dofs[j]] = fixed_penalty * Target.entries[fixed_dofs[j]]
         A[1][fixed_dofs[j],fixed_dofs[j]] = fixed_penalty
@@ -542,16 +544,18 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     update_factorization!(LS)
     solve!(LS)
 
-    residuals = zeros(T, length(Target.FEVectorBlocks))
+   # @time Target.entries .= A.entries\b.entries
+
+    residuals::Array{T,1} = zeros(T, length(Target.FEVectorBlocks))
     # CHECK RESIDUAL
-    residual = A.entries*Target.entries - b.entries
+    residual::Array{T,1} = A.entries*Target.entries - b.entries
     residual[fixed_dofs] .= 0
     for j = 1 : length(Target.FEVectorBlocks)
         for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
             residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
         end
     end
-    resnorm = sum(residuals)
+    resnorm::T = sum(residuals)
     residuals = sqrt.(residuals)
 
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
@@ -951,7 +955,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
 
 
     ## INIT SOLVERS
-    LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
+    LS = Array{AbstractLinearSystem{T,Int64},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
         LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
     end
@@ -1203,7 +1207,7 @@ abstract type CrankNicolson <: AbstractTimeIntegrationRule end
 mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule}
     PDE::PDEDescription                     # PDE description (operators, data etc.)
     SC::SolverConfig{T,Tv,Ti}               # solver configurations (subiterations, penalties etc.)
-    LS::Array{AbstractLinearSystem,1}       # array for linear solvers of all subiterations
+    LS::Array{AbstractLinearSystem{T,TiM},1}  # array for linear solvers of all subiterations
     ctime::Tt                               # current time
     cstep::Int                              # current timestep count
     last_timestep::Tt                       # last timestep
@@ -1411,7 +1415,7 @@ function TimeControlSolver(
     end
 
     # INIT LINEAR SOLVERS
-    LS = Array{AbstractLinearSystem,1}(undef,nsubiterations)
+    LS = Array{AbstractLinearSystem{T,Int64},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
         LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,S[s].entries,rhs[s].entries)
     end
