@@ -57,11 +57,10 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
     # this can be realised via a kernel function
     function eqestimator_kernel(result, input)
         # input = [Identity(sigma_h), Divergence(sigma_h), Gradient(u_h)]
-        result[1] = (input[1] - input[4])^2 + (input[2] - input[5])^2
-        result[2] = input[3]^2
+        result[1] = (input[1] - input[4])^2 + (input[2] - input[5])^2 + input[3]^2
         return nothing
     end
-    estimator_action = Action{Float64}(ActionKernel(eqestimator_kernel, [2,5]; name = &quot;estimator kernel&quot;, dependencies = &quot;&quot;, quadorder = 3))
+    estimator_action = Action{Float64}(ActionKernel(eqestimator_kernel, [1,5]; name = &quot;estimator kernel&quot;, dependencies = &quot;&quot;, quadorder = 3))
     EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Divergence, Gradient],estimator_action)
 
     # setup exact error evaluations
@@ -85,13 +84,8 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         # evaluate eqilibration error estimator adn append it to Solution vector (for plotting etc.)
         DualSolution = get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
         NDofsDual[level] = length(DualSolution.entries)
-        FES_eta = FESpace{H1P0{1}}(xgrid)
-        append!(Solution, &quot;σ_h&quot;,FES_eta)
-        error4cell = zeros(Float64,2,num_sources(xgrid[CellNodes]))
+        error4cell = zeros(Float64,1,num_sources(xgrid[CellNodes]))
         evaluate!(error4cell, EQIntegrator, [DualSolution[1], DualSolution[1], Solution[1]])
-        for j = 1 : num_sources(xgrid[CellNodes])
-            Solution[2][j] = error4cell[1,j] + error4cell[2,j]
-        end
 
         if verbosity &gt; 0
             println(&quot;\n  SOLVE LEVEL $level&quot;)
@@ -102,7 +96,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         # calculate L2 error, H1 error, estimator, dual L2 error and write to results
         Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
         Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
-        Results[level,3] = sqrt(sum(Solution[2][:]))
+        Results[level,3] = sqrt(sum(view(error4cell,1,:)))
         Results[level,4] = sqrt(evaluate(L2ErrorEvaluatorDual,DualSolution[1]))
         if verbosity &gt; 0
             println(&quot;  ESTIMATE&quot;)
@@ -122,7 +116,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         else
             # adaptive mesh refinement
             # refine by red-green-blue refinement (incl. closuring)
-            facemarker = bulk_mark(xgrid, Solution[2], theta)
+            facemarker = bulk_mark(xgrid, error4cell[:], theta)
             xgrid = RGB_refine(xgrid, facemarker)
         end
     end
@@ -353,4 +347,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
       1449  |     3.21579e-04      2.006  |     2.38132e-02      1.039  |     2.52979e-02      1.047  |     8.53990e-03      1.110  |
       2572  |     1.69915e-04      2.224  |     1.79144e-02      0.992  |     1.89986e-02      0.998  |     6.33427e-03      1.041  |
       4413  |     1.05219e-04      1.775  |     1.35609e-02      1.031  |     1.43703e-02      1.034  |     4.74815e-03      1.068  |
-      7688  |     5.77602e-05      2.161  |     1.02798e-02      0.998  |     1.08851e-02      1.001  |     3.57847e-03      1.019  |</code></pre><p><img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_1.png" alt/> <img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA05_DiffEQ/">« A05 : Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Wednesday 6 October 2021 19:01">Wednesday 6 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      7688  |     5.77602e-05      2.161  |     1.02798e-02      0.998  |     1.08851e-02      1.001  |     3.57847e-03      1.019  |</code></pre><p><img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_1.png" alt/> <img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA05_DiffEQ/">« A05 : Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Friday 8 October 2021 06:15">Friday 8 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
