@@ -23,10 +23,11 @@ module Example222_NavierStokesAnderson2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 using Printf
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_iterations = 10, target_residual = 1e-12, maxiterations = 50, switch_to_newton_tolerance = 1e-4)
+function main(; verbosity = 0, Plotter = nothing, μ = 5e-4, anderson_iterations = 10, target_residual = 1e-12, maxiterations = 50, switch_to_newton_tolerance = 1e-4)
 
     ## set log level
     set_verbosity(verbosity)
@@ -38,7 +39,7 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
 
     ## load Navier-Stokes problem prototype and assign data
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = false, store = false)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = true, auto_newton = false, store = false)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
     @show Problem
@@ -51,14 +52,18 @@ function main(; verbosity = 0, Plotter = nothing, viscosity = 5e-4, anderson_ite
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = "l2", anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
 
     ## solve rest with Newton
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = true, auto_newton = true, store = true)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = true, auto_newton = true, store = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
     @show Problem
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual)
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1],Solution[2]], [Identity, Identity]; Plotter = Plotter)
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,1),clear=true,resolution=(600,600))
+    nodevals = zeros(Float64,2,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[1], Identity)
+    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=1)
+    vectorplot!(p[1,1],xgrid,nodevals;Plotter=Plotter, spacing = 0.1, clear = false, title = "u (quiver)")
 end
 
 end

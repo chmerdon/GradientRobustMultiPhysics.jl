@@ -187,7 +187,7 @@ function count_ndofs(xgrid, FEType, broken)
     EG = xgrid[UniqueCellGeometries]
     xItemGeometries = xgrid[CellGeometries]
     ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
-    ndofs4EG = zeros(Int, length(EG))
+    ndofs4EG::Array{Int,1} = zeros(Int, length(EG))
     ncomponents::Int = get_ncomponents(FEType)
     dofs4item4component = zeros(Int,4)
     dofs4item_single = zeros(Int,4)

@@ -29,13 +29,13 @@ module Example223_NaturalConvection2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
+using GridVisualize
 
 ## boundary data for temperature on bottom
 T_bottom = DataFunction((T,x) -> (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = "X", quadorder = 4)
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefinements = 6, anderson = false)
+function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 6, anderson = false)
 
     ## set log level
     set_verbosity(verbosity)
@@ -49,7 +49,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefi
     RIdentity = ReconstructionIdentity{HDIVBDM1{2}}
 
     ## load Stokes prototype and add a unknown for the temperature
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, store = true)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false, store = true)
     add_unknown!(Problem; unknown_name = "T", equation_name = "temperature equation")
     Problem.name = "natural convection problem"
 
@@ -97,7 +97,12 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefi
     println("\tNu = $(evaluate(NuIntegrator,Solution[3]))")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[3]], [Identity, Identity]; Plotter = Plotter)
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(800,400))
+    nodevals = zeros(Float64,2,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[1], Identity)
+    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=0)
+    vectorplot!(p[1,1],xgrid,nodevals;Plotter=Plotter, spacing = 0.1, clear = false, title = "u (quiver)")
+    scalarplot!(p[1,2],xgrid,view(Solution.entries,Solution[3].offset+1:Solution[3].last_index);Plotter=Plotter, title = "T")
 end
 
 end

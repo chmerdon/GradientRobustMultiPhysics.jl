@@ -418,9 +418,9 @@ function nodevalues!(Target::AbstractArray{T,2},
 
     # setup basisevaler for each unique cell geometries
     EG = FE.xgrid[UniqueCellGeometries]
-    ndofs4EG = Array{Int,1}(undef,length(EG))
+    ndofs4EG::Array{Int,1} = Array{Int,1}(undef,length(EG))
     qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler = Array{FEBasisEvaluator{T,Tv,Ti},1}(undef,length(EG))
+    basisevaler::Array{FEBasisEvaluator{T,Tv,Ti},1} = Array{FEBasisEvaluator{T,Tv,Ti},1}(undef,length(EG))
     for j = 1 : length(EG)
         qf[j] = VertexRule(EG[j])
         basisevaler[j] = FEBasisEvaluator{T,EG[j],operator,ON_CELLS}(FE, qf[j])
@@ -439,7 +439,7 @@ function nodevalues!(Target::AbstractArray{T,2},
     ncomponents::Int = get_ncomponents(FEType)
     iEG::Int = 1
     node::Int = 0
-    dof::Int = 0
+    dof::Ti = 0
     flag4node = zeros(Bool,nnodes)
     temp::Array{T,1} = zeros(T,cvals_resultdim)
     weights::Array{T,1} = qf[1].w
