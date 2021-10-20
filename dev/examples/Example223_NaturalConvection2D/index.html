@@ -7,13 +7,13 @@
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
+using GridVisualize
 
 # boundary data for temperature on bottom
 T_bottom = DataFunction((T,x) -&gt; (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = &quot;X&quot;, quadorder = 4)
 
 # everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefinements = 6, anderson = false)
+function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 6, anderson = false)
 
     # set log level
     set_verbosity(verbosity)
@@ -27,7 +27,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefi
     RIdentity = ReconstructionIdentity{HDIVBDM1{2}}
 
     # load Stokes prototype and add a unknown for the temperature
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, store = true)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false, store = true)
     add_unknown!(Problem; unknown_name = &quot;T&quot;, equation_name = &quot;temperature equation&quot;)
     Problem.name = &quot;natural convection problem&quot;
 
@@ -75,7 +75,12 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, viscosity = 1, nrefi
     println(&quot;\tNu = $(evaluate(NuIntegrator,Solution[3]))&quot;)
 
     # plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[3]], [Identity, Identity]; Plotter = Plotter)
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(800,400))
+    nodevals = zeros(Float64,2,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[1], Identity)
+    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=0)
+    vectorplot!(p[1,1],xgrid,nodevals;Plotter=Plotter, spacing = 0.1, clear = false, title = &quot;u (quiver)&quot;)
+    scalarplot!(p[1,2],xgrid,view(Solution.entries,Solution[3].offset+1:Solution[3].last_index);Plotter=Plotter, title = &quot;T&quot;)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example223_NaturalConvection2D.main()
@@ -153,21 +158,21 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 7.511895e-12 | 9.615916e+02
-	      2   | 1.005001e-11 | 5.931504e+02
-	      3   | 7.639259e-12 | 6.568060e+02
-	      4   | 8.921239e-12 | 3.990824e+02
-	      5   | 8.245271e-12 | 2.340174e+02
-	      6   | 8.325302e-12 | 1.387982e+02
-	      7   | 8.121587e-12 | 8.267079e+01
+	      1   | 7.530335e-12 | 9.615916e+02
+	      2   | 1.025068e-11 | 5.931504e+02
+	      3   | 7.635705e-12 | 6.568060e+02
+	      4   | 8.995870e-12 | 3.990824e+02
+	      5   | 8.376341e-12 | 2.340174e+02
+	      6   | 8.602293e-12 | 1.387982e+02
+	      7   | 8.387308e-12 | 8.267079e+01
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 6.858799e-12 | 2.205491e+01
-	      2   | 6.762332e-12 | 1.839015e+00
-	      3   | 6.855682e-12 | 9.514267e-03
-	      4   | 6.898512e-12 | 3.288516e-07
-	      5   | 6.782606e-12 | 7.308358e-12
+	      1   | 6.828149e-12 | 2.205491e+01
+	      2   | 6.755539e-12 | 1.839015e+00
+	      3   | 6.917562e-12 | 9.514267e-03
+	      4   | 6.844738e-12 | 3.288516e-07
+	      5   | 6.890896e-12 | 7.434440e-12
 
-	Nu = 13.97802371664831</code></pre><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.7 on <span class="colophon-date" title="Friday 8 October 2021 14:32">Friday 8 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	Nu = 13.978023716648316</code></pre><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.9 on <span class="colophon-date" title="Wednesday 20 October 2021 08:23">Wednesday 20 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
