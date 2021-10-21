@@ -3,40 +3,51 @@
 ##################
 
 
-struct PointEvaluator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, ACT <: AbstractAction, BVT}
-    FEBE::FEBasisEvaluator{T,Tv,Ti,FEType,EG,FEOP,AT} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
-    basisvals::BVT
+struct PointEvaluator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: AbstractFiniteElement, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, ACT <: AbstractAction}
+    FEBE::Array{FEBasisEvaluator{T,Tv,Ti,FEType},1} ## evaluates the FE basis on the possible element geometries
     FEB::FEVectorBlock{T,Tv,Ti} # holds coefficients
+    EG::Array{DataType,1} # Element geometries
+    xItemGeometries::GridEGTypes
     xItemDofs::DofMapTypes{Ti} # holds dof numbers
     action::ACT # additional action to postprocess operator evaluation
     action_input::Array{T,1}
 end
 
 
-function PointEvaluator{T}(EG, FEOP, FES::FESpace{Tv,Ti,FEType,FEAT}, FEB::FEVectorBlock{T,Tv,Ti}, action::AbstractAction = NoAction(); AT = ON_CELLS) where {T, Tv, Ti, FEType, FEAT}
-    qf = QuadratureRule{T, EG}(0) # dummy quadrature
+function PointEvaluator(FEB::FEVectorBlock{T,Tv,Ti}, FEOP,action::AbstractAction = NoAction(); AT = ON_CELLS) where {T, Tv, Ti}
     
-    FEBE = FEBasisEvaluator{T,EG,FEOP,AT}(FES, qf; mutable = true)
+    xgrid = FEB.FES.xgrid
+    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
+    xItemGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
+    qf = QuadratureRule{T, EG[1]}(0) # dummy quadrature
+
+    FEType = eltype(FEB.FES)
+    FEBE = Array{FEBasisEvaluator{T,Tv,Ti,FEType},1}(undef,length(EG))
+    
+    for j = 1 : length(EG)
+        FEBE[j] = FEBasisEvaluator{T,EG[j],FEOP,AT}(FEB.FES, qf; mutable = true)
+    end
     
     DM = Dofmap4AssemblyType(FEB.FES, AT)
 
     if typeof(action) <: NoAction
-        action_input = zeros(T,size(FEBE.cvals,1))
+        action_input = zeros(T,size(FEBE[1].cvals,1))
     else
         action_input = zeros(T,action.argsizes[2])
     end
 
-    return PointEvaluator{T,Tv,Ti,FEType,EG,FEOP,AT,typeof(action),typeof(FEBE.cvals)}(FEBE, FEBE.cvals, FEB, DM, action, action_input)
+    return PointEvaluator{T,Tv,Ti,FEType,FEOP,AT,typeof(action)}(FEBE, FEB, EG, xItemGeometries, DM, action, action_input)
 end
 
 function evaluate!(
-    result::AbstractArray{T,1},
-    PE::PointEvaluator{T, Tv, Ti, FEType, EG, FEOP, AT, ACT, BVT},
-    xref::Array{T,1},
-    item::Int # cell used to evaluate local coordinates
-    ) where  {T, Tv, Ti, FEType, EG, FEOP, AT, ACT, BVT}
+    result,
+    PE::PointEvaluator{T, Tv, Ti, FEType, FEOP, AT, ACT},
+    xref,
+    item # cell used to evaluate local coordinates
+    ) where  {T, Tv, Ti, FEType, FEOP, AT, ACT}
 
-    FEBE = PE.FEBE
+    iEG::Int = findfirst(isequal(PE.xItemGeometries[item]), PE.EG)
+    FEBE = PE.FEBE[iEG]
     FEB = PE.FEB
 
     # update basis evaluations at xref
@@ -49,7 +60,7 @@ function evaluate!(
     action = PE.action
     action_input::Array{T,1} = PE.action_input
     coeffs::Array{T,1} = FEB.entries
-    basisvals::BVT = PE.basisvals
+    basisvals::Array{T,3} = FEBE.cvals
     xItemDofs::DofMapTypes{Ti} = PE.xItemDofs
 
     fill!(result,0)
@@ -68,6 +79,5 @@ function evaluate!(
             result[k] += coeffs[xItemDofs[dof_i,item] + FEB.offset] * basisvals[k,dof_i,1]
         end
     end
-
     return nothing
 end

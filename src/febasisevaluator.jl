@@ -169,30 +169,11 @@ function prepareFEBasisDerivs!(refbasisderivvals, refbasis, xref, derivorder, nd
     return Dresult, Dcfg, refbasisderivvals
 end
 
-## relocates evaluation points (needs mutable FEB) used by segment integrator
+## relocates evaluation points (needs mutable FEB) used by segment integrator/point evaluator
 function relocate_xref!(FEB::FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT}, new_xref) where {T, TvG, TiG, FEType, EG, FEOP, AT}
-    FEB.xref .= new_xref
-    if FEB.derivorder == 0
-        for i = 1 : length(new_xref)
-            # evaluate basis functions at quadrature point
-            FEB.refbasis(FEB.refbasisvals[i], new_xref[i])
-        end    
-        if FEOP <: Identity || FEOP <: IdentityDisc
-            for i = 1 : length(new_xref), j = 1 : size(FEB.refbasisvals[1],1), k = 1 : size(FEB.refbasisvals[1],2)
-                FEB.cvals[k,j,i] = FEB.refbasisvals[i][j,k]
-            end
-        elseif FEOP <: IdentityComponent
-            for i = 1 : length(new_xref), j = 1 : size(FEB.refbasisvals[1],1)
-                FEB.cvals[1,j,i] = FEB.refbasisvals[i][j,FEOP.parameters[1]]
-            end
-        end
-    elseif FEB.derivorder > 0
-        prepareFEBasisDerivs!(FEB.refbasisderivvals, FEB.refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
+    for j = 1 : length(FEB.xref[1])
+        FEB.xref[1][j] = new_xref[j]
     end
-end
-
-function relocate_xref!(FEB::FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT}, new_xref::AbstractArray{T,1}) where {T, TvG, TiG, FEType, EG, FEOP, AT}
-    FEB.xref[1] .= new_xref
     if FEB.derivorder == 0
         # evaluate basis functions at quadrature point
         FEB.refbasis(FEB.refbasisvals[1], new_xref)
@@ -208,6 +189,7 @@ function relocate_xref!(FEB::FEBasisEvaluator{T,TvG,TiG,FEType,EG,FEOP,AT}, new_
     elseif FEB.derivorder > 0
         prepareFEBasisDerivs!(FEB.refbasisderivvals, FEB.refbasis, FEB.xref, FEB.derivorder, size(FEB.refbasisvals[1],1), length(FEB.offsets); Dcfg = FEB.Dcfg, Dresult = FEB.Dresult)
     end
+    return nothing
 end
 
 function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAPT}, xref::Array{Array{T,1},1}; mutable = false) where {T, TvG, TiG, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, FEAPT <: AssemblyType}

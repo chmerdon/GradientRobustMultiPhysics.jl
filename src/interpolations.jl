@@ -335,14 +335,19 @@ function interpolate!(Target::FEVectorBlock{T,Tv,Ti}, source_data::FEVectorBlock
     FEType = eltype(source_data.FES)
     ncomponents::Int = get_ncomponents(FEType)
     resultdim::Int = Length4Operator(operator,xdim_source,ncomponents)
-    EG = xgrid[CellGeometries][1]
-    PE = PointEvaluator{T}(EG,operator,source_data.FES, source_data)
+    PE = PointEvaluator(source_data, operator)
     xref = zeros(T,xdim_source)
     x_source = zeros(T,xdim_source)
     cell::Int = 1
     lastnonzerocell::Int = 1
     same_cells::Bool = xgrid == Target.FES.xgrid
     CF::CellFinder{Tv,Ti} = CellFinder(xgrid)
+
+    EG = xgrid[GridComponentUniqueGeometries4AssemblyType(ON_CELLS)]
+    quadorder::Int = get_polynomialorder(FEType,EG[1])
+    for j = 2 : length(EG)
+        quadorder = max(quadorder, get_polynomialorder(FEType,EG[j]))
+    end
 
     if same_cells || use_cellparents == true
         xCellParents::Array{Ti,1} = Target.FES.xgrid[CellParents]
@@ -361,7 +366,7 @@ function interpolate!(Target::FEVectorBlock{T,Tv,Ti}, source_data::FEVectorBlock
             evaluate!(result,PE,xref,cell)
             return nothing
         end
-        fe_function = ExtendedDataFunction(point_evaluation_parentgrid!, [resultdim, xdim_target]; dependencies = "XI", quadorder = get_polynomialorder(FEType,EG))
+        fe_function = ExtendedDataFunction(point_evaluation_parentgrid!, [resultdim, xdim_target]; dependencies = "XI", quadorder = quadorder)
     else
         function point_evaluation_arbitrarygrids!(result, x)
             if xtrafo !== nothing
@@ -384,7 +389,7 @@ function interpolate!(Target::FEVectorBlock{T,Tv,Ti}, source_data::FEVectorBlock
             end
             return nothing
         end
-        fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", quadorder = get_polynomialorder(FEType,EG))
+        fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", quadorder = quadorder)
     end
     interpolate!(Target, ON_CELLS, fe_function; items = items)
 end
