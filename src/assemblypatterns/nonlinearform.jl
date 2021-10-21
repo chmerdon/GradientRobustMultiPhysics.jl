@@ -95,14 +95,14 @@ function assemble!(
     newton_args = AP.newton_args
     offsets = zeros(Int,nFE+1)
     maxdofs = get_maxndofs(AM)
-    basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
-    basisevaler2::FEBasisEvaluator = get_basisevaler(AM, nFE, 1)
+    basisevaler = get_basisevaler(AM, 1, 1)
+    basisevaler2 = get_basisevaler(AM, nFE, 1)
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler.cvals
     for j = 1 : nFE
         basisevaler = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
     end
-    action_input2 = zeros(T,offsets[end-1])
+    action_input2::Array{T,1} = zeros(T,offsets[end-1])
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,newton_args[1]),get_maxndofs(AM,nFE))
     coeffs = zeros(T,maximum(maxdofs))
@@ -275,7 +275,7 @@ function assemble!(
     # loop over items
     offsets::Array{Int,1} = zeros(Int,nFE+1)
     maxdofs::Array{Int,1} = get_maxndofs(AM)
-    basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
+    basisevaler = get_basisevaler(AM, 1, 1)
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler.cvals
     for j = 1 : nFE
         basisevaler = get_basisevaler(AM, j, 1)
@@ -423,7 +423,7 @@ function evaluate(
     # loop over items
     offsets = zeros(Int,nFE+1)
     maxdofs = get_maxndofs(AM)
-    basisevaler::FEBasisEvaluator = get_basisevaler(AM, 1, 1)
+    basisevaler::FEBasisEvaluator{T,Tv,Ti} = get_basisevaler(AM, 1, 1)
     for j = 1 : nFE
         basisevaler = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)

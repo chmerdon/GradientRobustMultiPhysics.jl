@@ -134,6 +134,7 @@ function make_all(; add_examples_output::Bool = true)
                 ],
             "Postprocessing" => Any[
                     "itemintegrators.md",
+                    "pointevaluators.md",
                     "viewers.md",
                     "export.md"
                 ],

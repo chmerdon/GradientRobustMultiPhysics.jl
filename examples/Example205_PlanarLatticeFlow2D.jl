@@ -29,6 +29,7 @@ module Example205_PlanarLatticeFlow2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## exact solution
 function exact_velocity!(ν)
@@ -90,7 +91,14 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
     println("|| p - p_h || = $(sqrt(evaluate(L2errorP,Solution[2])))")
        
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; Plotter = Plotter, isolines = 9)
+    nodevals = zeros(Float64,2,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[1], Identity)
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(1000,500))
+    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=0)
+    PE = PointEvaluator(Solution[1], Identity)
+    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.05, clear = false, title = "u (abs + quiver)")
+    nodevalues!(nodevals, Solution[2], Identity)
+    scalarplot!(p[1,2],xgrid,view(nodevals,1,:); Plotter=Plotter, title = "p")
 end
 
 end

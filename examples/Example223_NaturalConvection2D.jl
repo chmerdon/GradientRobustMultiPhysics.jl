@@ -86,10 +86,10 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
 
     ## solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
     if anderson
-        solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = "l2", anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true)
+        solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = "l2", anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true, show_statistics = true)
     else
-        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e2, damping = 0.55, show_solver_config = true)
-        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e-8, damping = 0, show_solver_config = false)
+        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e2, damping = 0.55, show_solver_config = true, show_statistics = true)
+        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e-8, damping = 0, show_solver_config = false, show_statistics = true)
     end
     
     ## compute Nusselt number along bottom boundary
@@ -97,11 +97,13 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     println("\tNu = $(evaluate(NuIntegrator,Solution[3]))")
 
     ## plot
-    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(800,400))
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(1000,500))
     nodevals = zeros(Float64,2,num_nodes(xgrid))
     nodevalues!(nodevals, Solution[1], Identity)
-    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=0)
-    vectorplot!(p[1,1],xgrid,nodevals;Plotter=Plotter, spacing = 0.1, clear = false, title = "u (quiver)")
+    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=1)
+
+    PE = PointEvaluator(Solution[1],Identity)
+    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.1, clear = false, title = "u (abs + quiver)")
     scalarplot!(p[1,2],xgrid,view(Solution.entries,Solution[3].offset+1:Solution[3].last_index);Plotter=Plotter, title = "T")
 end
 

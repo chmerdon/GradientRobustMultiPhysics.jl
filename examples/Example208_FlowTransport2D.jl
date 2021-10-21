@@ -33,8 +33,7 @@ module Example208_FlowTransport2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
-
+using GridVisualize
 
 ## boundary data
 function inlet_velocity!(result,x::Array{<:Real,1})
@@ -75,7 +74,7 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = user_function_inlet_velocity)
 
     ## add transport equation of species
-    add_unknown!(Problem; unknown_name = "concentration", equation_name = "transport equation")
+    add_unknown!(Problem; unknown_name = "c", equation_name = "transport equation")
     if FVtransport == true
         ## finite volume upwind discretisation
         FETypeTransport = H1P0{1}
@@ -112,7 +111,14 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[3]], [Identity, Identity]; add_grid_plot = false, Plotter = Plotter, subplots_per_column = 1, resolution = (1000,800), isolines = 9)
+    nodevals = zeros(Float64,2,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[1], Identity)
+    p=GridVisualizer(;Plotter=Plotter,layout=(2,1),clear=true,resolution=(800,800))
+    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=0)
+    PE = PointEvaluator(Solution[1], Identity)
+    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.25, clear = false, title = "u (abs + quiver)")
+    nodevalues!(nodevals, Solution[3], Identity)
+    scalarplot!(p[2,1],xgrid,view(nodevals,1,:); Plotter=Plotter, title = "c")
 end
 
 end

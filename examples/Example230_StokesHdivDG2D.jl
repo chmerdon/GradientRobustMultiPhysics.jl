@@ -28,6 +28,7 @@ module Example230_StokesHdivDG2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)
@@ -128,6 +129,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## loop over levels
     Results = zeros(Float64,nlevels,3); NDofs = zeros(Int,nlevels)
+    Solution = nothing
     for level = 1 : nlevels
 
         ## refine grid and update grid component references
@@ -143,15 +145,22 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         ## solve
         solve!(Solution, Problem; time = T)
 
-        ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1], Solution[2]], [IdentityComponent{1}, IdentityComponent{2}, Identity]; Plotter = Plotter)
-
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
         Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
         Results[level,2] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
         Results[level,3] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
     end    
+
+    ## plot
+    nodevals = zeros(Float64,2,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[1], Identity)
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(1000,500))
+    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=0)
+    PE = PointEvaluator(Solution[1], Identity)
+    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.05, clear = false, title = "u (abs + quiver)")
+    nodevalues!(nodevals, Solution[2], Identity)
+    scalarplot!(p[1,2],xgrid,view(nodevals,1,:); Plotter=Plotter, title = "p")
 
     ## print/show convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_h) ||"])

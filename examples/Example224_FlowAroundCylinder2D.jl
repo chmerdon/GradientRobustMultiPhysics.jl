@@ -26,6 +26,7 @@ using GradientRobustMultiPhysics
 using Triangulate
 using SimplexGridFactory
 using ExtendableGrids
+using GridVisualize
 
 ## inlet data for Karman vortex street example
 ## as in DFG benchmark 2D-1 (Re = 20, laminar)
@@ -71,7 +72,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
     Solution = FEVector{Float64}(["u_h","p_h"],FES)
 
     ## solve
-    solve!(Solution, Problem; maxiterations = 50, target_residual = 1e-10)
+    solve!(Solution, Problem; maxiterations = 50, target_residual = 1e-10, show_statistics = true)
 
     ## postprocess : compute drag/lift (see function below)
     draglift = get_draglift(Solution, μ)
@@ -79,8 +80,15 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
     println("[drag, lift] = $draglift")
     println("p difference = $pdiff")
 
-    ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; add_grid_plot = true, Plotter = Plotter, use_subplots = false, resolution = (800,400))
+    ## plots via GridVisualize
+    p=GridVisualizer(;Plotter=Plotter,layout=(3,1),clear=true,resolution=(1000,600))
+    scalarplot!(p[1,1],xgrid,view(Solution.entries,1:num_nodes(xgrid)),levels=0)
+    PE = PointEvaluator(Solution[1], Identity)
+    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = [0.15,0.04], vscale = 0.5, clear = false, title = "u (abs + quiver)")
+    nodevals = zeros(Float64,1,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[2], Identity)
+    scalarplot!(p[2,1],xgrid,view(nodevals,1,:);Plotter=Plotter, title = "p")
+    gridplot!(p[3,1],xgrid;Plotter=Plotter, title = "grid")
 end
 
 function get_pressure_difference(Solution::FEVector)

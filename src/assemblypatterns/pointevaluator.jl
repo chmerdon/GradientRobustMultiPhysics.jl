@@ -39,6 +39,11 @@ function PointEvaluator(FEB::FEVectorBlock{T,Tv,Ti}, FEOP,action::AbstractAction
     return PointEvaluator{T,Tv,Ti,FEType,FEOP,AT,typeof(action)}(FEBE, FEB, EG, xItemGeometries, DM, action, action_input)
 end
 
+# get function handle for evaluation (can be used directly in vectorplot! of GridVisualize)
+function evaluate(PE::PointEvaluator)
+    return (result,xref,item) -> evaluate!(result,PE,xref,item)
+end
+
 function evaluate!(
     result,
     PE::PointEvaluator{T, Tv, Ti, FEType, FEOP, AT, ACT},

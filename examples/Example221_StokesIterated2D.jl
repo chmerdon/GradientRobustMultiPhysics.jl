@@ -20,7 +20,7 @@ Given intermediate solutions  ``\mathbf{u}_h`` and  ``p_h`` the next approximati
 \begin{aligned}
 (\nabla \mathbf{u}_h^{next}, \nabla \mathbf{v}_h) + ((\mathbf{u}_h^{next} \cdot \nabla) \mathbf{u}_h^{next}, \mathbf{v}_h) + \epsilon (\mathrm{div}_h(\mathbf{u}_h) ,\mathrm{div}_h(\mathbf{v}_h)) & = (\mathbf{f},\mathbf{v}_h) + (p_h,\mathrm{div}(\mathbf{v}_h))
 && \text{for all } \mathbf{v}_h \in \mathbf{V}_h\\
-(p^{next}_h,q_h) & = (p_h,q_h) - (\mathrm{div}(\mathbf{u}_H^{next}),q_h) && \text{for all } q_h \in Q_h
+(p^{next}_h,q_h) & = (p_h,q_h) - (\mathrm{div}(\mathbf{u}_h^{next}),q_h) && \text{for all } q_h \in Q_h
 \end{aligned}
 ```
 
@@ -35,8 +35,7 @@ module Example221_StokesIterated2D
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using ExtendableSparse
-using SparseArrays
-using Printf
+using GridVisualize
 
 ## data for Hagen-Poiseuille flow
 function exact_pressure!(viscosity)
@@ -103,6 +102,12 @@ function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty
     println("|| p - p_h || = $(sqrt(evaluate(L2ErrorEvaluatorP,Solution[2])))")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; Plotter = Plotter)
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(1000,500))
+    scalarplot!(p[1,1],xgrid,view(Solution.entries,1:num_nodes(xgrid)),levels=0)
+    PE = PointEvaluator(Solution[1], Identity)
+    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = [0.2,0.05], clear = false, title = "u (abs + quiver)")
+    nodevals = zeros(Float64,1,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[2], Identity)
+    scalarplot!(p[1,2],xgrid,view(nodevals,1,:); Plotter=Plotter, title = "p")
 end
 end

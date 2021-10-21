@@ -49,21 +49,23 @@ function main(; verbosity = 0, Plotter = nothing, μ = 5e-4, anderson_iterations
     Solution = FEVector{Float64}(["u_h", "p_h"],FES)
 
     ## solve with anderson iterations until 1e-4
-    solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = "l2", anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance)
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = "l2", anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance, show_statistics = true)
 
     ## solve rest with Newton
     Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = true, auto_newton = true, store = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
     @show Problem
-    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual)
+    solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual, show_statistics = true)
 
     ## plot
     p=GridVisualizer(;Plotter=Plotter,layout=(1,1),clear=true,resolution=(600,600))
     nodevals = zeros(Float64,2,num_nodes(xgrid))
     nodevalues!(nodevals, Solution[1], Identity)
     scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=1)
-    vectorplot!(p[1,1],xgrid,nodevals;Plotter=Plotter, spacing = 0.1, clear = false, title = "u (quiver)")
+
+    PE = PointEvaluator(Solution[1],Identity)
+    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.1, clear = false, title = "u (abs + quiver)")
 end
 
 end

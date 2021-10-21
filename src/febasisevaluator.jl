@@ -475,13 +475,14 @@ function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH
         # and save it in refbasisderivvals
         tempeval::Array{T,3} = FEBE.refbasisderivvals
         fill!(tempeval,0)
+        det = FEBE.L2G.det # 1 alloc
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs2
                 for k = 1 : ncomponents
                     for l = 1 : ncomponents
                         tempeval[k,dof_i,i] += L2GM[k,l]*FEBE.refbasisvals[i][subset[dof_i],l];
                     end    
-                    tempeval[k,dof_i,i] *= coeffs[k,dof_i] / FEBE.L2G.det[]
+                    tempeval[k,dof_i,i] *= coeffs[k,dof_i] / det
                 end
             end
         end
@@ -608,6 +609,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFin
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
+        det = FEBE.L2G.det # 1 alloc
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 for k = 1 : ncomponents
@@ -615,7 +617,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFin
                     for l = 1 : ncomponents
                         FEBE.cvals[k,dof_i,i] += L2GM[k,l]*FEBE.refbasisvals[i][FEBE.current_subset[dof_i],l];
                     end    
-                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / FEBE.L2G.det[]
+                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / det
                 end
             end
         end
@@ -687,13 +689,14 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFin
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
+        det = FEBE.L2G.det # 1 alloc
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for l = 1 : ncomponents
                     FEBE.cvals[1,dof_i,i] += L2GM[FEOP.parameters[1],l]*FEBE.refbasisvals[i][FEBE.current_subset[dof_i],l];
                 end    
-                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[FEOP.parameters[1],dof_i] / FEBE.L2G.det[]
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[FEOP.parameters[1],dof_i] / det
             end
         end
     end
@@ -1040,7 +1043,8 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFin
         end
 
         # use Piola transformation on basisvals
-        fill!(FEBE.cvals,0.0);
+        fill!(FEBE.cvals,0.0)
+        det = FEBE.L2G.det # 1 alloc
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 for c = 1 : ncomponents, k = 1 : edim
@@ -1050,7 +1054,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFin
                             FEBE.cvals[k + FEBE.offsets[c],dof_i,i] += FEBE.L2GAinv[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
                         end
                     end    
-                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] *= FEBE.coefficients[c,dof_i] / FEBE.L2G.det[]
+                    FEBE.cvals[k + FEBE.offsets[c],dof_i,i] *= FEBE.coefficients[c,dof_i] / det
                 end
             end
         end
@@ -1353,15 +1357,17 @@ function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH
         # use Piola transformation on Hdiv basis
         # and accumulate according to reconstruction coefficients
         fill!(FEBE.cvals,0.0)
+        det = FEBE.L2G.det # 1 alloc
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs # ndofs4item (H1)
                 for dof_j = 1 : ndofs2
                     if FEBE.coefficients2[dof_i,dof_j] != 0
                         for j = 1 : edim
-                            FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_j] + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]/FEBE.L2G.det[]
+                            FEBE.cvals[1,dof_i,i] += FEBE.coefficients2[dof_i,dof_j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_j] + FEBE.offsets2[j],j,i] * FEBE.coefficients[1,dof_j]
                         end  
                     end
                 end
+                FEBE.cvals[1,dof_i,i] /= det
             end
         end  
     end
@@ -1395,6 +1401,7 @@ function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH
         for i = 1 : length(FEBE.xref)
             # calculate gradients of Hdiv basis functions and save them to coefficients3
             fill!(FEBE.coefficients3,0)
+            det = FEBE.L2G.det
             for dof_i = 1 : ndofs2
                 for c = 1 : ncomponents, k = 1 : edim
                     # compute duc/dxk
@@ -1403,7 +1410,7 @@ function update_febe!(FEBE::ReconstructionFEBasisEvaluator{T,TvG,TiG,<:AbstractH
                             FEBE.coefficients3[k + FEBE.offsets[c],dof_i] += FEBE.L2GAinv[k,m] * L2GM[c,j] * FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],m,i];
                         end
                     end    
-                    FEBE.coefficients3[k + FEBE.offsets[c],dof_i] *= FEBE.coefficients[c,dof_i] / FEBE.L2G.det[]
+                    FEBE.coefficients3[k + FEBE.offsets[c],dof_i] *= FEBE.coefficients[c,dof_i] / det
                 end
             end
 
@@ -1439,13 +1446,14 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFin
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
+        det = FEBE.L2G.det
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;
                 for j = 1 : edim
                     FEBE.cvals[1,dof_i,i] += FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[j],j,i]
                 end  
-                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.L2G.det[]
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i] / det
             end
         end   
     end  
@@ -1469,11 +1477,12 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHcurlFi
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on basisvals
+        det = FEBE.L2G.det
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i]
                 FEBE.cvals[1,dof_i,i] -= FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i]
-                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i]/FEBE.L2G.det[]
+                FEBE.cvals[1,dof_i,i] *= FEBE.coefficients[1,dof_i] / det
             end
         end    
     end  
@@ -1498,6 +1507,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHcurlFi
         FEBE.coeffs_handler(FEBE.coefficients, item)
 
         # use Piola transformation on basisvals
+        det = FEBE.L2G.det
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 for k = 1 : 3
@@ -1507,7 +1517,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHcurlFi
                     FEBE.cvals[k,dof_i,i] -= L2GM[k,2] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[3],1,i] # - du1/dx3
                     FEBE.cvals[k,dof_i,i] += L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[2],1,i] # du2/dx1
                     FEBE.cvals[k,dof_i,i] -= L2GM[k,3] * FEBE.refbasisderivvals[dof_i + FEBE.offsets2[1],2,i] # - du1/dx2
-                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i]/FEBE.L2G.det[]
+                    FEBE.cvals[k,dof_i,i] *= FEBE.coefficients[k,dof_i] / det
                 end
             end
         end    
