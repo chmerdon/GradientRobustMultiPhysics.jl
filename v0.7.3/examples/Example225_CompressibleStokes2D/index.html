@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>225 : Compressible Stokes 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example214_TwoNonlinearCoupled2D/">214 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D</a></li><li class="is-active"><a class="tocitem" href>225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example231_StokesHdivP1RT/">231 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>225 : Compressible Stokes 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example225_CompressibleStokes2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Compressible-Stokes-2D"><a class="docs-heading-anchor" href="#:-Compressible-Stokes-2D">225 : Compressible Stokes 2D</a><a id=":-Compressible-Stokes-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Compressible-Stokes-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example225_CompressibleStokes2D.jl">source code</a>)</p><p>This example solves the compressible Stokes equations where one seeks a (vector-valued) velocity <span>$\mathbf{u}$</span>, a density <span>$\varrho$</span> and a pressure <span>$p$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + \lambda \nabla(\mathrm{div}(\mathbf{u})) + \nabla p &amp; = \mathbf{f} + \varrho \mathbf{g}\\
+\mathrm{div}(\varrho \mathbf{u}) &amp; = 0\\
+        p &amp; = eos(\varrho)\\
+        \int_\Omega \varrho \, dx &amp; = M\\
+        \varrho &amp; \geq 0.
+\end{aligned}\]</p><p>Here eos <span>$eos$</span> is some equation of state function that describes the dependence of the pressure on the density (and further physical quantities like temperature in a more general setting). Moreover, <span>$\mu$</span> and <span>$\lambda$</span> are Lame parameters and <span>$\mathbf{f}$</span> and <span>$\mathbf{g}$</span> are given right-hand side data.</p><p>In this example we solve a analytical toy problem with the prescribed solution</p><p class="math-container">\[\begin{aligned}
+\mathbf{u}(\mathbf{x}) &amp; =0\\
+\varrho(\mathbf{x}) &amp; = 1 - (x_2 - 0.5)/c\\
+p &amp;= eos(\varrho) := c \varrho^\gamma
+\end{aligned}\]</p><p>such that <span>$\mathbf{f} = 0$</span> and <span>$\mathbf{g}$</span> nonzero to match the prescribed solution. This example is designed to study the well-balanced property of a discretisation. Note that a gradient-robust discretisation (set reconstruct = true below) has a much smaller L2 velocity error (i.e. approximatse the well-balanced state much better). For larger c the problem gets more incompressible which reduces the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density. See reference below for more details.</p><div class="admonition is-category-reference"><header class="admonition-header">Reference</header><div class="admonition-body"><p>&quot;A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem&quot;,<br/>M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon,<br/>Computer Methods in Applied Mechanics and Engineering 367 (2020),<br/><a href="https://doi.org/10.1016/j.cma.2020.113069">&gt;Journal-Link&lt;</a> <a href="https://arxiv.org/abs/1911.01295">&gt;Preprint-Link&lt;</a></p></div></div><pre><code class="language-julia hljs">module Example225_CompressibleStokes2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using Printf
+
+# the equation of state
+function equation_of_state!(c,γ)
+    function closure(pressure,density)
+        for j = 1 : length(density)
+            pressure[j] = c*density[j]^γ
+        end
+    end
+end
+
+# the exact density (used for initial value of density if configured so)
+function ϱ_exact!(M,c)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[1] = M*(1.0 - (x[2] - 0.5)/c)
+    end
+end
+
+# gravity right-hand side (just gravity but with opposite sign!)
+function gravity!(γ,c)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2) * γ # = - ϱ^(γ-2) * γ
+    end
+end
+# gravity right-hand side (just gravity but with opposite sign!)
+function rhs!(γ,c)
+    function closure(result,x::Array{&lt;:Real,1})
+        result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-1) * γ # = - ϱ^(γ-2) * γ
+    end
+end
+
+# everything is wrapped in a main function
+function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ = 1e-3, λ = -2/3*μ, Plotter = nothing, nlevels = 3)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load mesh and exact solution
+    xgrid = simplexgrid(&quot;assets/2d_mountainrange.sg&quot;)
+    u = DataFunction([0,0]; name = &quot;u&quot;)
+    ∇u = DataFunction([0,0,0,0]; name = &quot;∇u&quot;)
+    ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = &quot;ϱ&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+
+    # compute mass of exact density on grid (bit smaller than M due to mountains)
+    Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
+
+    # prepare error calculation
+    VeloError = L2ErrorIntegrator(Float64, u, Identity; quadorder = 4)
+    VeloGradError = L2ErrorIntegrator(Float64, ∇u, Gradient; quadorder = 2)
+    DensityError = L2ErrorIntegrator(Float64, ϱ, Identity; quadorder = 2)
+    Results = zeros(Float64,6,nlevels)
+    NDoFs = zeros(Int,nlevels)
+
+    # set finite element types [velocity, density,  pressure]
+    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel x P0
+
+    # solve
+    Solution = [nothing, nothing]
+    for lvl = 1 : nlevels
+        if lvl &gt; 1
+            xgrid = uniform_refine(xgrid)
+        end
+
+        # generate FESpaces and solution vector
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
+        Solution = [FEVector{Float64}([&quot;u_h (BR)&quot;, &quot;ϱ_h (BR)&quot;, &quot;p_h (BR)&quot;],FES),FEVector{Float64}([&quot;u_h (BR+)&quot;, &quot;ϱ_h (BR+)&quot;, &quot;p_h (BR+)&quot;],FES)]
+        NDoFs[lvl] = length(Solution[1].entries)
+
+        # solve with and without reconstruction
+        for reconstruct in [true, false]
+            Target = Solution[reconstruct+1]
+            setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, c = c, M = Mreal, λ = λ, μ = μ, γ = γ)
+            Results[reconstruct ? 2 : 1,lvl] = sqrt(evaluate(VeloError,Target[1]))
+            Results[reconstruct ? 4 : 3,lvl] = sqrt(evaluate(VeloGradError,Target[1]))
+            Results[reconstruct ? 6 : 5,lvl] = sqrt(evaluate(DensityError,Target[2]))
+
+            # check error in mass constraint
+            Md = sum(Target[2][:] .* xgrid[CellVolumes])
+            @printf(&quot;\tmass_error = %.4e - %.4e = %.4e \n&quot;,Mreal, Md, abs(Mreal-Md))
+        end
+    end
+
+    # print convergence history tables
+    print_convergencehistory(NDoFs, Results[1:2,:]&#39;; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||u-u_h|| (BR)&quot;,&quot;||u-u_h|| (BR+)&quot;], xlabel = &quot;ndof&quot;)
+    print_convergencehistory(NDoFs, Results[3:4,:]&#39;; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||∇(u-u_h)|| (BR)&quot;,&quot;||∇(u-u_h)|| (BR+)&quot;], xlabel = &quot;ndof&quot;)
+    print_convergencehistory(NDoFs, Results[5:6,:]&#39;; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||ϱ-ϱ_h|| (BR)&quot;,&quot;||ϱ-ϱ_h|| (BR+)&quot;], xlabel = &quot;ndof&quot;)
+
+    # plot everything
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1][1],Solution[1][2],Solution[2][1],Solution[2][2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
+end
+
+function setup_and_solve!(Solution, xgrid;
+    c = 1, γ = 1, M = 1, μ = 1, λ = 0,
+    use_gravity = true,
+    reconstruct = true,
+    timestep = μ / (M*c),
+    maxTimeSteps = 500,
+    stationarity_threshold = c*1e-14/μ)
+
+    # generate empty PDEDescription for three unknowns (u, ϱ. p)
+    Problem = PDEDescription(&quot;compressible Stokes problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;v&quot;, equation_name = &quot;momentum equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;ϱ&quot;, equation_name = &quot;continuity equation&quot;)
+    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;equation of state&quot;)
+    add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
+
+    # momentum equation
+    hdiv_space = HDIVBDM1{2} # HDIVRT0{2} also works
+    VeloIdentity = reconstruct ? ReconstructionIdentity{hdiv_space} : Identity
+    VeloDivergence = reconstruct ? ReconstructionDivergence{hdiv_space} : Divergence
+    add_operator!(Problem, [1,1], LaplaceOperator(2*μ; store = true))
+    if λ != 0
+        add_operator!(Problem, [1,1], AbstractBilinearForm([VeloDivergence,VeloDivergence]; name = &quot;λ (div(u),div(v))&quot;, factor = λ, store = true))
+    end
+    add_operator!(Problem, [1,3], AbstractBilinearForm([Divergence,Identity]; name = &quot;(div(v),p)&quot;, factor = -1, store = true))
+
+    if use_gravity
+        # discrete gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
+        g = DataFunction(gravity!(γ,c), [2,2]; name = &quot;g&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+        add_operator!(Problem, [1,2], AbstractBilinearForm([VeloIdentity,Identity], fdot_action(Float64, g); factor = -1, name = &quot;(g ⋅ v) ϱ&quot;, store = true))
+    else
+        # exact gravity term for right-hand side
+        f = DataFunction(rhs!(γ,c), [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+        add_rhsdata!(Problem, 1,  RhsOperator(VeloIdentity, [0], f; store = true))
+    end
+
+    # continuity equation (by FV upwind on triangles)
+    add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
+
+    # equation of state (by best-approximation, P0 mass matrix is diagonal)
+    eos_action = Action{Float64}( equation_of_state!(c,γ),[1,1]; dependencies = &quot;&quot;, quadorder = 1)
+    add_operator!(Problem, [3,2], AbstractBilinearForm([Identity,Identity],eos_action; name = &quot;(p,eos(ϱ))&quot;, apply_action_to = [2])) # cannot be stored if eos is nonlinear!
+    add_operator!(Problem, [3,3], AbstractBilinearForm([Identity,Identity]; name = &quot;(p,q)&quot;, factor = -1, store = true))
+
+    # initial values for density (constant) and pressure (by equation of state)
+    fill!(Solution[2], M/sum(xgrid[CellVolumes]))
+    equation_of_state!(c,γ)(Solution[3],Solution[2])
+
+    # time-dependent solver with three equations [1] velocity, [2] density, [3] pressure
+    # solved iteratively [1] =&gt; [2] =&gt; [3] in each pseudo time step until stationarity
+    TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
+                                        subiterations = [[1],[2],[3]], # solve [1], then [2], then [3]
+                                        skip_update = [-1,1,-1], # only matrix of eq [2] changes
+                                        timedependent_equations = [2], # only eq [2] is time-dependent
+                                        maxiterations = 1,
+                                        check_nonlinear_residual = false,
+                                        show_iteration_details = false)
+    advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
+end
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example225_CompressibleStokes2D.main()
+	mass_error = 8.9026e-01 - 8.9026e-01 = 3.3307e-15 
+	mass_error = 8.9026e-01 - 8.9026e-01 = 3.1086e-15 
+	mass_error = 8.9026e-01 - 8.9026e-01 = 7.7716e-16 
+	mass_error = 8.9026e-01 - 8.9026e-01 = 7.7716e-16 
+	mass_error = 8.9026e-01 - 8.9026e-01 = 6.2172e-15 
+	mass_error = 8.9026e-01 - 8.9026e-01 = 6.8834e-15 
+
+    ndof    |   ||u-u_h|| (BR)     order  |   ||u-u_h|| (BR+)    order  |
+============|=============================|=============================|
+       167  |     4.71437e-01      0.000  |     1.28783e-03      0.000  |
+       602  |     1.63767e-01      1.649  |     3.84703e-04      1.885  |
+      2282  |     4.54389e-02      1.924  |     9.32730e-05      2.127  |
+
+    ndof    |  ||∇(u-u_h)|| (BR)   order  | ||∇(u-u_h)|| (BR+)   order  |
+============|=============================|=============================|
+       167  |     9.53773e+00      0.000  |     2.47878e-02      0.000  |
+       602  |     6.81732e+00      0.524  |     9.94591e-03      1.424  |
+      2282  |     3.77126e+00      0.889  |     2.46695e-03      2.092  |
+
+    ndof    |   ||ϱ-ϱ_h|| (BR)     order  |   ||ϱ-ϱ_h|| (BR+)    order  |
+============|=============================|=============================|
+       167  |     6.24901e-03      0.000  |     5.64017e-03      0.000  |
+       602  |     2.94689e-03      1.172  |     2.82008e-03      1.081  |
+      2282  |     1.44808e-03      1.066  |     1.41004e-03      1.040  |</code></pre><p><img src="../../images/Example225_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example224_FlowAroundCylinder2D/">« 224 : Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 21 October 2021 20:09">Thursday 21 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
