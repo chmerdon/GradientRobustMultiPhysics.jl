@@ -76,10 +76,7 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
 
     # solve
-    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9)
-
-    # compute bending statistics
-    compute_statistics(xgrid, Solution[1], scale, α, ΔT, E)
+    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)
 
     # displace mesh and plot
     gridplot(xgrid, Plotter = Plotter, title = &quot;initial bimetal&quot;, fignumber = 1)
@@ -124,54 +121,6 @@ function bimetal_strip2D(; material_border = 0.5, scale = [1,1], maxvol = prod(s
     return xgrid
 end
 
-
-function compute_statistics(xgrid, Solution, scaling, α, ΔT, E)
-    xCoordinates = xgrid[Coordinates]
-    nnodes = size(xCoordinates,2)</code></pre><p>find vertex number closest to (0,d/2) find vertex number farthest away from (L,d/2)</p><pre><code class="language-julia hljs">    level::Float64 = scaling[1]/2
-    origin_point::Int = 0
-    farthest_point::Int = 0
-    closest_distance::Float64 = 1e30
-    farthest_distance::Float64 = 1e30
-    dist::Float64 = 0
-    for j = 1 : nnodes
-        dist = (level - xCoordinates[2,j])^2 + xCoordinates[1,j]^2
-        if dist &lt; closest_distance
-            closest_distance = dist
-            origin_point =  j
-        end
-        dist = (level - xCoordinates[2,j])^2 + (scaling[2] - xCoordinates[1,j])^2
-        if dist &lt; farthest_distance
-            farthest_distance = dist
-            farthest_point =  j
-        end
-    end
-
-    # compute bending arc at midoint
-    nodevals = zeros(Float64,2,nnodes)
-    nodevalues!(nodevals, Solution; continuous = true)
-    dist_unbend = sqrt(sum((xCoordinates[:,origin_point] - xCoordinates[:,farthest_point]).^2))
-    dist_bend = sqrt(sum((xCoordinates[:,origin_point] - xCoordinates[:,farthest_point] - nodevals[:,farthest_point]).^2))
-    dist_farthest = sqrt(sum((nodevals[:,farthest_point]).^2))
-    angle_rad = 2*acos((dist_unbend.^2+dist_bend.^2-dist_farthest.^2)/(2*dist_unbend*dist_bend))
-    angle = angle_rad * 180/pi
-    R = dist_bend*sin((π-angle_rad)/2)/sin(angle_rad)
-    curvature = 1/R
-    @info &quot;dist_bend = $(dist_bend)&quot;
-    @info &quot;simulation ===&gt; R = $R | curvature = $curvature | angle = $(angle)°&quot;
-
-    # compare with analytic results (formula from wikipedia or youtube SOLIDWORKS - Thermal load ... video)
-    curvature = abs(24 * (α[1]-α[2]) * ΔT[1] / (scaling[1]*(E[1]/E[2]+E[2]/E[1]+14)))
-    R = 1/curvature
-    x = 1-dist_bend^2/(2*R^2)
-    try
-        angle = acos(x) * 180/pi
-        @info &quot;analytic2  ===&gt; R = $R | curvature = $curvature | angle = $(angle)°&quot;
-    catch
-        @info &quot;analytic2  ===&gt; R = $R | curvature = $curvature | angle = error&quot;
-    end
-
-end
-
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example211_NonlinearElasticityBimetal2D.main()
 
 PDE-DESCRIPTION
@@ -194,10 +143,10 @@ PDE-DESCRIPTION
 
 Problem = 
 
-	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
-	--------------------------------------
-	      1   | 6.990361e-13 | 2.097176e+00
-	      2   | 8.669097e-13 | 2.059942e-02
-	      3   | 9.305488e-13 | 2.699072e-06
-	      4   | 9.476336e-13 | 1.352000e-12
-</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/> <img src="../../images/Example211_NonlinearElasticityBimetal2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 21 October 2021 19:54">Thursday 21 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	      1   | 6.990361e-13 | 2.097176e+00 | 1.03e-01/9.96e-03/1.19e-01
+	      2   | 8.669097e-13 | 2.059942e-02 | 7.91e-02/8.26e-03/8.76e-02
+	      3   | 9.305488e-13 | 2.699072e-06 | 7.89e-02/7.83e-03/8.70e-02
+	      4   | 9.476336e-13 | 1.352000e-12 | 7.94e-02/8.31e-03/8.80e-02
+</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/> <img src="../../images/Example211_NonlinearElasticityBimetal2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 22 October 2021 10:38">Friday 22 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
