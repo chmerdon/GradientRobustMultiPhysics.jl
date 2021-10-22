@@ -56,8 +56,7 @@ function main(; verbosity = 0, μ = 1, Plotter = nothing)
     solve!(Solution, Problem)
 
     ## plot solution (for e.g. Plotter = PyPlot)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
-    
+    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)    
 end
 
 end

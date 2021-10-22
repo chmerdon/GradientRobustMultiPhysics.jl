@@ -3,9 +3,9 @@ abstract type AbstractAction end
 
 
 # dummy action that does nothing (but can be only used with certain assembly patterns)
-struct NoAction <: AbstractAction
+mutable struct NoAction <: AbstractAction
     name::String
-    bonus_quadorder::Base.RefValue{Int}
+    bonus_quadorder::Int
 end
 
 """
@@ -16,7 +16,7 @@ function NoAction()
 Creates a NoAction that causes the assembly pattern to ignore the action assembly.
 """
 function NoAction(; name = "no action", quadorder = 0)
-    return NoAction(name,Ref(quadorder))
+    return NoAction(name,quadorder)
 end
 
 ## dummy array that is infinitely long and only has nothing entries
@@ -25,33 +25,33 @@ end
 #end
 #Base.getindex(::InfNothingArray,i) = nothing
 
-struct Action{T <: Real,KernelType <: UserData{<:AbstractActionKernel}, nsizes} <: AbstractAction
+mutable struct Action{T <: Real,KernelType <: UserData{<:AbstractActionKernel}, nsizes} <: AbstractAction
     kernel::KernelType
     name::String
-    citem::Base.RefValue{Int}
-    cregion::Base.RefValue{Int}
+    citem::Int
+    cregion::Int
     bonus_quadorder::Int
     argsizes::SVector{nsizes,Int}
 end
 
 # actions that do depend on t
-struct TAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+mutable struct TAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
     kernel::KernelType
     name::String
-    citem::Base.RefValue{Int}
-    cregion::Base.RefValue{Int}
-    ctime::Base.RefValue{T}
+    citem::Int
+    cregion::Int
+    ctime::T
     bonus_quadorder::Int
     argsizes::SVector{nsizes,Int}
 end
 
 # actions that do depend on x
 # and require additional managament of global evaluation points
-struct XAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+mutable struct XAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
     kernel::KernelType
     name::String
-    citem::Base.RefValue{Int}
-    cregion::Base.RefValue{Int}
+    citem::Int
+    cregion::Int
     bonus_quadorder::Int
     argsizes::SVector{nsizes,Int}
     x::Array{Array{T,1},1}
@@ -59,12 +59,12 @@ end
 
 # actions that do depend on x and t
 # and require additional managament of global evaluation points
-struct XTAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
+mutable struct XTAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
     kernel::KernelType
     name::String
-    citem::Base.RefValue{Int}
-    cregion::Base.RefValue{Int}
-    ctime::Base.RefValue{T}
+    citem::Int
+    cregion::Int
+    ctime::T
     bonus_quadorder::Int
     argsizes::SVector{nsizes,Int}
     x::Array{Array{T,1},1}
@@ -87,15 +87,15 @@ function Action{T}(kernel::UserData{<:AbstractActionKernel}; name = "user action
     ctime::T = 0
     if is_xdependent(kernel)
         if is_timedependent(kernel)
-            return XTAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), Ref(ctime), kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
+            return XTAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, ctime, kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
         else
-            return XAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
+            return XAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
         end
     else
         if is_timedependent(kernel)
-            return TAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), Ref(ctime), kernel.quadorder[1], kernel.dimensions)
+            return TAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, ctime, kernel.quadorder[1], kernel.dimensions)
         else
-            return Action{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, Ref(citem), Ref(cregion), kernel.quadorder[1], kernel.dimensions)
+            return Action{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, kernel.quadorder[1], kernel.dimensions)
         end
     end
 end
@@ -127,7 +127,7 @@ end
 
 function set_time!(C::Union{XTAction,TAction}, time)
     if is_timedependent(C.kernel)
-        C.ctime[] = time
+        C.ctime = time
     end
     return nothing
 end
@@ -139,30 +139,30 @@ end
 
 function update_action!(C::Action, FEBE::FEBasisEvaluator, qitem, vitem, region)
     if is_regiondependent(C.kernel)
-        C.cregion[] = region
+        C.cregion = region
     end
     if is_itemdependent(C.kernel)
-        C.citem[] = vitem
+        C.citem = vitem
     end
     return nothing
 end
 
 function update_action!(C::TAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region::Int) 
     if is_regiondependent(C.kernel)
-        C.cregion[] = region
+        C.cregion = region
     end
     if is_itemdependent(C.kernel)
-        C.citem[] = vitem
+        C.citem = vitem
     end
     return nothing
 end
 
 function update_action!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qitem, vitem, region) where {T}
     if is_regiondependent(C.kernel)
-        C.cregion[] = region
+        C.cregion = region
     end
     if is_itemdependent(C.kernel)
-        C.citem[] = vitem
+        C.citem = vitem
     end
     # compute global coordinates for function evaluation
     if FEBE.L2G.citem[] != qitem 

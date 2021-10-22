@@ -12,7 +12,7 @@ This example computes the solution ``\mathbf{u}`` of the linear elasticity probl
 ```
 with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and the stiffness tensor
 ```math
-\mathbb{C} \epsilon(\mathbf{u}) = 2 \mu \epsilon( \mathbf{u}) + \lambda \mathrm{tr}(\epsilon( \mathbf{u}))
+\mathbb{C} \epsilon(\mathbf{u}) = 2 \mu \epsilon( \mathbf{u}) + \λ \mathrm{tr}(\epsilon( \mathbf{u}))
 ```
 for isotropic media.
 
@@ -25,7 +25,8 @@ module Example202_LinearElasticity2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
+
+const g = DataFunction([0,10]; name = "g")
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing)
@@ -38,16 +39,16 @@ function main(; verbosity = 0, Plotter = nothing)
     xgrid = uniform_refine(xgrid,2)
 
     ## problem parameters
-    elasticity_modulus = 1000 # elasticity modulus
-    poisson_number = 1//3 # Poisson number
-    shear_modulus = (1/(1+poisson_number))*elasticity_modulus
-    lambda = (poisson_number/(1-2*poisson_number))*shear_modulus
+    E = 1000 # elasticity modulus 
+    ν = 1//3 # Poisson number 
+    μ = (1/(1+ν))*E
+    λ = (ν/(1-2*ν))*μ
 
     ## PDE description via prototype
-    Problem = LinearElasticityProblem(2; shear_modulus = shear_modulus, lambda = lambda)
+    Problem = LinearElasticityProblem(2; shear_modulus = μ, lambda = λ)
 
     ## add boundary data
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [2], DataFunction([0,10]; name = "g"); AT = ON_BFACES))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [2], g; AT = ON_BFACES))
     add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
 
     ## show and solve PDE

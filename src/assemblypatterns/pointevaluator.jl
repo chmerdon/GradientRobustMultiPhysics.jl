@@ -37,7 +37,7 @@ function PointEvaluator(FEB::FEVectorBlock{T,Tv,Ti}, FEOP,action::AbstractAction
     FEBE = Array{FEBasisEvaluator{T,Tv,Ti,FEType},1}(undef,length(EG))
     
     for j = 1 : length(EG)
-        FEBE[j] = FEBasisEvaluator{T,EG[j],FEOP,AT}(FEB.FES, qf; mutable = true)
+        FEBE[j] = FEBasisEvaluator{T,EG[j],FEOP,AT}(FEB.FES, qf)
     end
     
     DM = Dofmap4AssemblyType(FEB.FES, AT)

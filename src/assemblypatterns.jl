@@ -22,7 +22,7 @@ abstract type DIIType_broken{DiscType,AT,basisAT} <: DIIType end
 # idea is to store this to avoid recomputation in e.g. an in iterative scheme
 # also many redundant stuff within assembly of patterns happens here
 # like chosing the coressponding basis evaluators, quadrature rules and managing the dofs
-struct AssemblyManager{T <: Real, Tv <: Real, Ti <: Integer}
+mutable struct AssemblyManager{T <: Real, Tv <: Real, Ti <: Integer}
     xItemDofs::Array{DofMapTypes{Ti},1}                # DofMaps
     ndofs4EG::Array{Array{Int,1},1}             # ndofs for each finite element on each EG
     nop::Int                                    # number of operators
@@ -30,7 +30,7 @@ struct AssemblyManager{T <: Real, Tv <: Real, Ti <: Integer}
     basisevaler::Array{AbstractFEBasisEvaluator{T, Tv, Ti},4}      # finite element basis evaluators
     dii4op_types::Array{DataType,1}
     basisAT::Array{Type{<:AssemblyType},1}                      
-    citem::Base.RefValue{Int}                                           # current item
+    citem::Int                                          # current item
     dofitems::Array{Array{Int,1},1}                                     # dofitems needed to visit to evaluate operator
     EG4dofitem::Array{Array{Int,1},1}                                   # id to [EG,dEG] = coordinate 1 in basisevaler
     itempos4dofitem::Array{Array{Int,1},1}                              # local EG position in dEG = coordinate 3 in basisevaler
@@ -195,7 +195,7 @@ end
 function update_assembly!(AM::AssemblyManager, item)
     # get dofitem informations
     if AM.citem[] != item
-        AM.citem[] = item
+        AM.citem = item
         for j = 1 : AM.nop
             # update dofitem information for assembly of operator
             # would like to avoid the if but dispatching by AM.dii4op_types[j] seems to cause allocations
@@ -599,8 +599,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
     end
 
     xItemGeometries = FE[1].xgrid[GridComponentGeometries4AssemblyType(AT)]
-    citem = 0
-    AP.AM = AssemblyManager{T,Tv,Ti}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op_types,dofitemAT,Ref(citem),dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem,EG,EGdofitem,xItemGeometries,xDofItemGeometries,xDofItems4Item,xItemInDofItems,xDofItemItemOrientations,xItem2SuperSetItems)
+    AP.AM = AssemblyManager{T,Tv,Ti}(xItemDofs,ndofs4EG,length(FE),qf,basisevaler,dii4op_types,dofitemAT,0,dofitems,EG4dofitem,itempos4dofitem,coeff4dofitem,dofoffset4dofitem,orientation4dofitem,EG,EGdofitem,xItemGeometries,xDofItemGeometries,xDofItems4Item,xItemInDofItems,xDofItemItemOrientations,xItem2SuperSetItems)
 end
 
 # each assembly pattern is in its own file

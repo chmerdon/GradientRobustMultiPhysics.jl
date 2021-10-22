@@ -21,6 +21,7 @@ module Example203_ReactionConvectionDiffusion2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## coefficient functions
 const β = DataFunction([1,0]; name = "β")
@@ -75,9 +76,9 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     ## set log level
     set_verbosity(verbosity)
     
-    ## load a mesh of the unit square (this one has triangles and quads in it)
+    ## load a mesh of the unit square
     ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
-    xgrid = grid_unitsquare_mixedgeometries(); # initial grid
+    xgrid = grid_unitsquare(Triangle2D); # initial grid
 
     ## negotiate data functions to the package
     u = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "X", quadorder = 4)
@@ -118,8 +119,8 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
 
     ## refinement loop over levels
+    Solution = nothing
     for level = 1 : nlevels
-
         ## uniform mesh refinement
         xgrid = uniform_refine(xgrid)
         xFaceVolumes = xgrid[FaceVolumes] # update xFaceVolumes used in stabilisation definition
@@ -141,11 +142,18 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
         Results[level,2] = sqrt(evaluate(L2ErrorEvaluator,Interpolation[1]))
         Results[level,3] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
         Results[level,4] = sqrt(evaluate(H1ErrorEvaluator,Interpolation[1]))
-        
-        ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
     end    
 
+    ## plot
+    nodevals = zeros(Float64,2,num_nodes(xgrid))
+    nodevalues!(nodevals, Solution[1], Identity)
+    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(900,400))
+    scalarplot!(p[1,1],xgrid,view(nodevals,1,:),levels=11, title = "u_h")
+    nodevalues!(nodevals, Solution[1], Gradient)
+    PE = PointEvaluator(Solution[1], Gradient)
+    scalarplot!(p[1,2],xgrid,view(sum(nodevals.^2, dims = 1),:),levels=0)
+    vectorplot!(p[1,2],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
+    
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| u - Iu ||", "|| ∇(u - u_h) ||", "|| ∇(u - Iu) ||"])
     plot_convergencehistory(NDofs, Results; add_h_powers = [2,3], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| u - Iu ||", "|| ∇(u - u_h) ||", "|| ∇(u - Iu) ||"])
