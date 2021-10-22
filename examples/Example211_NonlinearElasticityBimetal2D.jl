@@ -93,10 +93,7 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     Solution = FEVector{Float64}("u_h",FES)
 
     ## solve
-    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9)
-
-    ## compute bending statistics
-    compute_statistics(xgrid, Solution[1], scale, α, ΔT, E)
+    solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)
 
     ## displace mesh and plot
     gridplot(xgrid, Plotter = Plotter, title = "initial bimetal", fignumber = 1)
@@ -139,58 +136,6 @@ function bimetal_strip2D(; material_border = 0.5, scale = [1,1], maxvol = prod(s
 
     xgrid = simplexgrid(builder)
     return xgrid
-end
-
-
-function compute_statistics(xgrid, Solution, scaling, α, ΔT, E)
-    xCoordinates = xgrid[Coordinates]
-    nnodes = size(xCoordinates,2)
-
-    # find vertex number closest to (0,d/2)
-    # find vertex number farthest away from (L,d/2)
-    level::Float64 = scaling[1]/2
-    origin_point::Int = 0
-    farthest_point::Int = 0
-    closest_distance::Float64 = 1e30
-    farthest_distance::Float64 = 1e30
-    dist::Float64 = 0
-    for j = 1 : nnodes
-        dist = (level - xCoordinates[2,j])^2 + xCoordinates[1,j]^2
-        if dist < closest_distance
-            closest_distance = dist
-            origin_point =  j
-        end
-        dist = (level - xCoordinates[2,j])^2 + (scaling[2] - xCoordinates[1,j])^2
-        if dist < farthest_distance
-            farthest_distance = dist
-            farthest_point =  j
-        end
-    end
-
-    ## compute bending arc at midoint
-    nodevals = zeros(Float64,2,nnodes)
-    nodevalues!(nodevals, Solution; continuous = true)
-    dist_unbend = sqrt(sum((xCoordinates[:,origin_point] - xCoordinates[:,farthest_point]).^2))
-    dist_bend = sqrt(sum((xCoordinates[:,origin_point] - xCoordinates[:,farthest_point] - nodevals[:,farthest_point]).^2))
-    dist_farthest = sqrt(sum((nodevals[:,farthest_point]).^2))
-    angle_rad = 2*acos((dist_unbend.^2+dist_bend.^2-dist_farthest.^2)/(2*dist_unbend*dist_bend))
-    angle = angle_rad * 180/pi
-    R = dist_bend*sin((π-angle_rad)/2)/sin(angle_rad)
-    curvature = 1/R
-    @info "dist_bend = $(dist_bend)"
-    @info "simulation ===> R = $R | curvature = $curvature | angle = $(angle)°"
-
-    ## compare with analytic results (formula from wikipedia or youtube SOLIDWORKS - Thermal load ... video)
-    curvature = abs(24 * (α[1]-α[2]) * ΔT[1] / (scaling[1]*(E[1]/E[2]+E[2]/E[1]+14)))
-    R = 1/curvature
-    x = 1-dist_bend^2/(2*R^2)
-    try
-        angle = acos(x) * 180/pi 
-        @info "analytic2  ===> R = $R | curvature = $curvature | angle = $(angle)°"
-    catch
-        @info "analytic2  ===> R = $R | curvature = $curvature | angle = error"
-    end
-
 end
 
 end

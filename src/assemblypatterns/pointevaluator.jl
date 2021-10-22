@@ -3,6 +3,11 @@
 ##################
 
 
+"""
+$(TYPEDEF)
+
+structure that allows to evaluate a FEVectorBlock at arbitrary points
+"""
 struct PointEvaluator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: AbstractFiniteElement, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, ACT <: AbstractAction}
     FEBE::Array{FEBasisEvaluator{T,Tv,Ti,FEType},1} ## evaluates the FE basis on the possible element geometries
     FEB::FEVectorBlock{T,Tv,Ti} # holds coefficients
@@ -14,6 +19,13 @@ struct PointEvaluator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: AbstractFi
 end
 
 
+"""
+````
+function PointEvaluator(FEB::FEVectorBlock, FEOP::AbstractFunctionOperator, action::AbstractAction = NoAction(); AT = ON_CELLS)
+````
+constructor for PointEvaluator that evaluate the given FEVectorBlock with the specified operator (possibly postprocessed by an action) at arbitrary points
+inside entities of the given assembly type
+"""
 function PointEvaluator(FEB::FEVectorBlock{T,Tv,Ti}, FEOP,action::AbstractAction = NoAction(); AT = ON_CELLS) where {T, Tv, Ti}
     
     xgrid = FEB.FES.xgrid
@@ -39,11 +51,32 @@ function PointEvaluator(FEB::FEVectorBlock{T,Tv,Ti}, FEOP,action::AbstractAction
     return PointEvaluator{T,Tv,Ti,FEType,FEOP,AT,typeof(action)}(FEBE, FEB, EG, xItemGeometries, DM, action, action_input)
 end
 
-# get function handle for evaluation (can be used directly in vectorplot! of GridVisualize)
+"""
+````
+function evaluate(PE::PointEvaluator)
+````
+Returns the function
+    (result,xref,cell) --> evaluate!(result,PE,xref,cell)
+
+(e.g. to be used as a callback function in vectorplot!)
+"""
 function evaluate(PE::PointEvaluator)
     return (result,xref,item) -> evaluate!(result,PE,xref,item)
 end
 
+"""
+````
+function evaluate!(
+    result,                     # target for result
+    PE::PointEvaluator,         
+    xref,                       # local coordinates inside item
+    item                        # item number
+    ) where  {T, Tv, Ti, FEType, FEOP, AT, ACT}
+````
+Evaluates the PointEvaluator at the point with the given local coordinates insides the item with the specified item number.
+(To get the local coordinates, currently a CellFinder has to be maintained manually, this might change in future.)
+
+"""
 function evaluate!(
     result,
     PE::PointEvaluator{T, Tv, Ti, FEType, FEOP, AT, ACT},

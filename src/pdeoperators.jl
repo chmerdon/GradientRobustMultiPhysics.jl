@@ -637,14 +637,14 @@ function GenerateNonlinearForm(
         # for differentation other dependencies of the action_kernel are fixed
         result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
         input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[3])
-        jac_temp::Matrix{Float64} = Matrix{Float64}(undef,argsizes[1],argsizes[3])
-        Dresult = DiffResults.DiffResult(result_temp,jac_temp)
+        #jac_temp::Matrix{Float64} = Matrix{Float64}(undef,argsizes[1],argsizes[3])
+        #Dresult = DiffResults.DiffResult(result_temp,jac_temp)
         Dresult = DiffResults.JacobianResult(result_temp,input_temp)
         jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
         temp::Array{Float64,1} = zeros(Float64, argsizes[1])
         if dependencies == "X"
             reduced_action_kernel_x(x) = (result,input) -> action_kernel(result,input,x)
-            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_x([1.0,1.0,1.0]), result_temp, input_temp)
+            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_x([1.0,1.0,1.0]), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel_x(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x)
                 ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_x(x), result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
@@ -673,7 +673,7 @@ function GenerateNonlinearForm(
             action_rhs = Action{Float64}( rhs_action_kernel)
         elseif dependencies == "T"
             reduced_action_kernel_t(t) = (result,input) -> action_kernel(result,input,t)
-            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_t(0.0), result_temp, input_temp)
+            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_t(0.0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel_t(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, t)
                 ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_t(t), result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
@@ -702,7 +702,7 @@ function GenerateNonlinearForm(
             action_rhs = Action{Float64}( rhs_action_kernel)
         elseif dependencies == "XT"
             reduced_action_kernel_xt(x,t) = (result,input) -> action_kernel(result,input,x,t)
-            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_xt([1.0,1.0,1.0],0.0), result_temp, input_temp)
+            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_xt([1.0,1.0,1.0],0.0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel_xt(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x, t)
                 ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_xt(x,t), result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
@@ -730,9 +730,9 @@ function GenerateNonlinearForm(
             rhs_action_kernel = ActionKernel(rhs_kernel_xt, argsizes; dependencies = dependencies, quadorder = quadorder)
             action_rhs = Action{Float64}( rhs_action_kernel)
         elseif dependencies == ""
-            cfg = ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp)
+            cfg = ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel(result, input_current, input_ansatz)
-                Dresult = ForwardDiff.vector_mode_jacobian!(Dresult, action_kernel, result, input_current, cfg)
+                Dresult = ForwardDiff.chunk_mode_jacobian!(Dresult, action_kernel, result, input_current, cfg)
                 jac = DiffResults.jacobian(Dresult)
                 for j = 1 : argsizes[1]
                     result[j] = 0
