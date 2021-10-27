@@ -6,6 +6,7 @@
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 # flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)
@@ -77,6 +78,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
 
     # loop over levels
+    Solution = nothing
     for level = 1 : nlevels
         # refine grid and update grid component references
         xgrid = uniform_refine(xgrid)
@@ -88,9 +90,6 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         # solve
         solve!(Solution, Problem; time = T)
 
-        # plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; Plotter = Plotter)
-
         # compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
         Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,[Solution[1],Solution[2]]))
@@ -98,6 +97,14 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         Results[level,3] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
         Results[level,4] = sqrt(evaluate(L2VeloDivEvaluator,[Solution[1], Solution[2]]))
     end
+
+    # plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1200,400))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false, title = &quot;u_P1 (abs + quiver)&quot;)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]; abs = true),1,:), levels = 3)
+    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution[2], Identity)), spacing = 0.05, clear = false, title = &quot;u_RT (abs + quiver)&quot;)
+    scalarplot!(p[1,3],xgrid,view(nodevalues(Solution[3]),1,:), levels = 11, title = &quot;p_h&quot;)
 
     # print/show convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| p - p_h ||&quot;, &quot;|| ∇(u - u_P1) ||&quot;, &quot;|| div(u_h) ||&quot;])
@@ -141,8 +148,8 @@ Problem =
 
     ndofs   |    || u - u_h ||     order  |    || p - p_h ||     order  |  || ∇(u - u_P1) ||   order  |   || div(u_h) ||     order  |
 ============|=============================|=============================|=============================|=============================|
-        70  |     4.52039e-02      0.000  |     3.48542e-02      0.000  |     7.89870e-01      0.000  |     1.53908e-16      0.000  |
-       250  |     9.42941e-03      2.463  |     1.74735e-02      1.085  |     3.90158e-01      1.108  |     2.38971e-16      -0.691  |
-       946  |     2.23973e-03      2.160  |     8.74218e-03      1.041  |     1.93064e-01      1.057  |     9.86762e-16      -2.131  |
-      3682  |     5.61233e-04      2.037  |     4.37163e-03      1.020  |     9.62761e-02      1.024  |     1.83856e-15      -0.916  |
-     14530  |     1.45636e-04      1.965  |     2.18585e-03      1.010  |     4.81117e-02      1.011  |     2.59773e-15      -0.504  |</code></pre><p><img src="../../images/Example231_StokesHdivP1RT_1.png" alt/> <img src="../../images/Example231_StokesHdivP1RT_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example230_StokesHdivDG2D/">« 230 : Stokes Hdiv-DG 2D</a><a class="docs-footer-nextpage" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 22 October 2021 21:42">Friday 22 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+        70  |     4.52039e-02      0.000  |     3.48542e-02      0.000  |     7.89870e-01      0.000  |     1.22643e-16      0.000  |
+       250  |     9.42941e-03      2.463  |     1.74735e-02      1.085  |     3.90158e-01      1.108  |     2.16062e-16      -0.890  |
+       946  |     2.23973e-03      2.160  |     8.74218e-03      1.041  |     1.93064e-01      1.057  |     5.17224e-16      -1.312  |
+      3682  |     5.61233e-04      2.037  |     4.37163e-03      1.020  |     9.62761e-02      1.024  |     1.41454e-15      -1.481  |
+     14530  |     1.45636e-04      1.965  |     2.18585e-03      1.010  |     4.81117e-02      1.011  |     2.35181e-15      -0.741  |</code></pre><p><img src="../../images/Example231_StokesHdivP1RT_1.png" alt/> <img src="../../images/Example231_StokesHdivP1RT_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example230_StokesHdivDG2D/">« 230 : Stokes Hdiv-DG 2D</a><a class="docs-footer-nextpage" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

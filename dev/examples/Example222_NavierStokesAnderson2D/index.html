@@ -42,13 +42,10 @@ function main(; verbosity = 0, Plotter = nothing, μ = 5e-4, anderson_iterations
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, maxiterations = maxiterations, target_residual = target_residual, show_statistics = true)
 
     # plot
-    p=GridVisualizer(;Plotter=Plotter,layout=(1,1),clear=true,resolution=(600,600))
-    nodevals = zeros(Float64,2,num_nodes(xgrid))
-    nodevalues!(nodevals, Solution[1], Identity)
-    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=1)
-
-    PE = PointEvaluator(Solution[1],Identity)
-    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.1, clear = false, title = &quot;u (abs + quiver)&quot;)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_h (abs + quiver)&quot;)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example222_NavierStokesAnderson2D.main()
@@ -82,15 +79,15 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 2.343474e-17 | 8.063241e-03 | 2.23e-01/4.85e-01/7.10e-01
-	      2   | 2.409920e-17 | 4.186558e-03 | 2.23e-01/4.16e-01/6.41e-01
-	      3   | 3.214444e-17 | 2.062310e-03 | 2.23e-01/2.44e-01/4.71e-01
-	      4   | 2.859198e-17 | 6.651686e-04 | 2.23e-01/2.52e-01/4.80e-01
-	      5   | 2.982468e-17 | 5.562696e-04 | 2.23e-01/2.52e-01/4.80e-01
-	      6   | 3.017390e-17 | 3.504737e-04 | 2.23e-01/2.56e-01/4.85e-01
-	      7   | 2.917963e-17 | 3.225783e-04 | 2.22e-01/2.45e-01/4.73e-01
-	      8   | 2.963707e-17 | 1.990759e-04 | 2.23e-01/2.55e-01/4.85e-01
-	      9   | 2.977928e-17 | 8.282842e-05 | 2.22e-01/2.51e-01/4.81e-01
+	      1   | 2.371139e-17 | 8.063241e-03 | 2.82e-01/4.35e-01/7.20e-01
+	      2   | 2.417482e-17 | 4.186558e-03 | 2.83e-01/5.26e-01/8.12e-01
+	      3   | 3.163859e-17 | 2.062310e-03 | 2.74e-01/4.96e-01/7.75e-01
+	      4   | 2.798891e-17 | 6.651686e-04 | 2.92e-01/3.01e-01/5.98e-01
+	      5   | 2.893519e-17 | 5.562696e-04 | 2.83e-01/3.01e-01/5.90e-01
+	      6   | 2.902720e-17 | 3.504737e-04 | 2.87e-01/2.95e-01/5.88e-01
+	      7   | 2.972862e-17 | 3.225783e-04 | 2.85e-01/2.98e-01/5.90e-01
+	      8   | 2.916243e-17 | 1.990759e-04 | 2.85e-01/2.99e-01/5.92e-01
+	      9   | 2.973245e-17 | 8.282842e-05 | 2.79e-01/2.98e-01/5.86e-01
 
 
 PDE-DESCRIPTION
@@ -122,7 +119,7 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 2.995708e-17 | 8.735238e-07 | 5.66e-01/3.14e-01/8.83e-01
-	      2   | 2.850040e-17 | 4.117803e-10 | 5.66e-01/2.61e-01/8.30e-01
-	      3   | 2.827752e-17 | 6.586375e-16 | 5.68e-01/2.50e-01/8.23e-01
-</code></pre><p><img src="../../images/Example222_NavierStokesAnderson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example221_StokesIterated2D/">« 221 : Stokes iterated penalty method 2D</a><a class="docs-footer-nextpage" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 22 October 2021 21:42">Friday 22 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	      1   | 2.941146e-17 | 8.735238e-07 | 7.95e-01/3.86e-01/1.19e+00
+	      2   | 2.961347e-17 | 4.117803e-10 | 8.02e-01/3.29e-01/1.14e+00
+	      3   | 2.827158e-17 | 6.583227e-16 | 7.76e-01/2.96e-01/1.08e+00
+</code></pre><p><img src="../../images/Example222_NavierStokesAnderson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example221_StokesIterated2D/">« 221 : Stokes iterated penalty method 2D</a><a class="docs-footer-nextpage" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -6,11 +6,12 @@
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 const g = DataFunction([0,10]; name = &quot;g&quot;)
 
 # everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing)
+function main(; verbosity = 0, E = 1000, ν = 0.4, Plotter = nothing)
 
     # set log level
     set_verbosity(verbosity)
@@ -19,9 +20,7 @@ function main(; verbosity = 0, Plotter = nothing)
     xgrid = simplexgrid(&quot;assets/2d_grid_cookmembrane.sg&quot;)
     xgrid = uniform_refine(xgrid,2)
 
-    # problem parameters
-    E = 1000 # elasticity modulus
-    ν = 1//3 # Poisson number
+    # compute Lame&#39; coefficients from E and ν
     μ = (1/(1+ν))*E
     λ = (ν/(1-2*ν))*μ
 
@@ -40,7 +39,10 @@ function main(; verbosity = 0, Plotter = nothing)
 
     # plot stress on displaced mesh
     displace_mesh!(xgrid, Solution[1]; magnify = 4)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = &quot;u_h&quot;)
+    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = 5, clear = false, title = &quot;u_h (abs + quiver)&quot;)
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], SymmetricGradient{1/√2}; abs = true),1,:), levels=11, title = &quot;ϵ(u_h) (abs)&quot;)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example202_LinearElasticity2D.main()
@@ -61,4 +63,4 @@ PDE-DESCRIPTION
    BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [4]
                           
 
-Problem = </code></pre><p><img src="../../images/Example202_LinearElasticity2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example201_PoissonProblem2D/">« 201 : Poisson-Problem 2D</a><a class="docs-footer-nextpage" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 22 October 2021 21:42">Friday 22 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Problem = </code></pre><p><img src="../../images/Example202_LinearElasticity2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example201_PoissonProblem2D/">« 201 : Poisson-Problem 2D</a><a class="docs-footer-nextpage" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

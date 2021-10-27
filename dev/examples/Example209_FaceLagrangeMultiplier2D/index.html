@@ -3,6 +3,7 @@
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 # problem data
 function exact_function!(result,x::Array{&lt;:Real,1})
@@ -10,6 +11,7 @@ function exact_function!(result,x::Array{&lt;:Real,1})
     result[2] = x[2] + 1
     return nothing
 end
+const u = DataFunction(exact_function!, [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 3)
 
 # everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0)
@@ -21,8 +23,7 @@ function main(; Plotter = nothing, verbosity = 0)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
 
     # define bestapproximation problem
-    user_function = DataFunction(exact_function!, [2,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-    Problem = L2BestapproximationProblem(user_function; name = &quot;constrained L2-bestapproximation problem&quot;, bestapprox_boundary_regions = [])
+    Problem = L2BestapproximationProblem(u; name = &quot;constrained L2-bestapproximation problem&quot;, bestapprox_boundary_regions = [])
 
     # we want to use a broken space and give the constraint of no normal jumps on interior faces
     # in form of a Lagrange multiplier, since there is no NormalFluxDisc{Jump} operator yet,
@@ -42,9 +43,8 @@ function main(; Plotter = nothing, verbosity = 0)
     Solution = FEVector{Float64}([&quot;u_h (Hdiv-broken)&quot;, &quot;LM face jumps&quot;],FES)
     solve!(Solution, Problem)
 
-    # solve again with Hdiv-continuous element
-    # to see that we get the same result
-    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
+    # solve again with Hdiv-continuous element to see that we get the same result
+    Problem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [])
     FES = FESpace{FEType[1]}(xgrid)
 
     # solve
@@ -52,17 +52,21 @@ function main(; Plotter = nothing, verbosity = 0)
     solve!(Solution2, Problem)
 
     # calculate L2 error of both solutions and their difference
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
     L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
     println(&quot;\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
     println(&quot;\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))&quot;)
     println(&quot;\tL2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))&quot;)
 
     # plot both solutions
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution2[1]], [Identity, Identity]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_1 (abs + quiver)&quot;)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_2 (abs + quiver)&quot;)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example209_FaceLagrangeMultiplier2D.main()
-	L2error(Hdiv-broken) = 0.0004715248381994809
-	L2error(Hdiv-cont.) = 0.00047152483819947713
-	L2error(difference) = 5.616912853180266e-16</code></pre><p><img src="../../images/Example209_FaceLagrangeMultiplier2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example208_FlowTransport2D/">« 208 : Flow + Transport 2D</a><a class="docs-footer-nextpage" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 22 October 2021 21:42">Friday 22 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	L2error(Hdiv-broken) = 0.0004715248381994763
+	L2error(Hdiv-cont.) = 0.00047152483819947594
+	L2error(difference) = 5.610414426352323e-16</code></pre><p><img src="../../images/Example209_FaceLagrangeMultiplier2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example208_FlowTransport2D/">« 208 : Flow + Transport 2D</a><a class="docs-footer-nextpage" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

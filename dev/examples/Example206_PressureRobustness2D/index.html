@@ -6,6 +6,7 @@
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 # problem data
 function HydrostaticTestProblem()
@@ -19,12 +20,12 @@ function HydrostaticTestProblem()
         result[1] = 3*x[1]^2
         result[2] = 3*x[2]^2
     end
-    user_function_velocity = DataFunction([0,0]; name = &quot;u_exact&quot;)
-    user_function_pressure = DataFunction(P1_pressure!, [1,2]; name = &quot;p_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-    user_function_velocity_gradient = DataFunction([0,0,0,0]; name = &quot;grad(u_exact)&quot;)
-    user_function_rhs = DataFunction(P1_rhs!, [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    u = DataFunction([0,0]; name = &quot;u&quot;)
+    p = DataFunction(P1_pressure!, [1,2]; name = &quot;p&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    ∇u = DataFunction([0,0,0,0]; name = &quot;∇u&quot;)
+    f = DataFunction(P1_rhs!, [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 2)
 
-    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, false
+    return p,u,∇u,f,false
 end
 
 function PotentialFlowTestProblem()
@@ -44,12 +45,12 @@ function PotentialFlowTestProblem()
         result[3] = -6*x[2];
         result[4] = -6*x[1];
     end
-    user_function_velocity = DataFunction(P2_velo!, [2,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 2)
-    user_function_pressure = DataFunction(P2_pressure!, [1,2]; name = &quot;p_exact&quot;, dependencies = &quot;X&quot;, quadorder = 4)
-    user_function_velocity_gradient = DataFunction(P2_velogradient!, [4,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
-    user_function_rhs = DataFunction([0,0]; name = &quot;f&quot;)
+    u = DataFunction(P2_velo!, [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    p = DataFunction(P2_pressure!, [1,2]; name = &quot;p&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+    ∇u = DataFunction(P2_velogradient!, [4,2]; name = &quot;∇u&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    f = DataFunction([0,0]; name = &quot;f&quot;)
 
-    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, true
+    return p,u,∇u,f,true
 end
 
 
@@ -57,18 +58,18 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
 
     # load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]
-    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = Problem()
+    p,u,∇u,f,nonlinear = Problem()
 
     # setup classical (Problem) and pressure-robust scheme (Problem2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
-    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
     Problem2 = deepcopy(Problem)
     Problem.name = &quot;Stokes problem (classical)&quot;
     Problem2.name = &quot;Stokes problem (p-robust)&quot;
 
     # assign right-hand side
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], rhs!))
-    add_rhsdata!(Problem2, 1, RhsOperator(ReconstructionOperator, [0], rhs!))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem2, 1, RhsOperator(ReconstructionOperator, [0], f))
 
     # assign convection term
     if nonlinear
@@ -77,24 +78,24 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     end
 
     # define bestapproximation problems
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!; bestapprox_boundary_regions = [])
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [1,2,3,4])
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(p; bestapprox_boundary_regions = [])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
 
     # define ItemIntegrators for L2/H1 error computation
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity!, Identity)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, exact_pressure!, Identity)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity_gradient!, Gradient)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, p, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient)
     Results = zeros(Float64, nlevels, 9)
     NDofs = zeros(Int, nlevels)
 
     # loop over refinement levels
+    Solution = nothing
     Solution2 = nothing
     for level = 1 : nlevels
 
         # uniform mesh refinement
         xgrid = uniform_refine(xgrid)
-        xFaceVolumes = xgrid[FaceVolumes]
 
         # get FESpaces
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
@@ -132,7 +133,13 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;||∇(u-u_c)||&quot;, &quot;||∇(u-u_r)||&quot;, &quot;||∇(u-Su)||&quot;])
 
     # plot p-robust solution
-    GradientRobustMultiPhysics.plot(xgrid, [Solution2[1],Solution2[2],Solution2[1]], [Identity, Identity, ReconstructionDivergence{HDIVRT1{2}}]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_c (abs + quiver)&quot;)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_c&quot;)
+    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_r (abs + quiver)&quot;)
+    scalarplot!(p[2,2],xgrid,view(nodevalues(Solution2[2]),1,:), levels = 11, title = &quot;p_r&quot;)
 
     # return last L2 error of p-robust method for testing
     return Results[end,2]
@@ -140,7 +147,7 @@ end
 
 
 # everything is wrapped in a main function
-function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plotter = nothing)
+function main(; problem = 2, verbosity = 0, nlevels = 3, viscosity = 1e-2, Plotter = nothing)
 
     # set log level
     set_verbosity(verbosity)
@@ -155,7 +162,7 @@ function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plott
     end
 
     # set grid and problem parameters
-    xgrid = grid_unitsquare_mixedgeometries() # initial grid
+    xgrid = grid_unitsquare(Triangle2D) # initial grid
 
     # choose finite element discretisation
     #FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
@@ -199,186 +206,154 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.236688e-16 | 2.895609e+00
-	      2   | 1.406203e-15 | 1.339936e+00
-	      3   | 1.470123e-15 | 5.449108e-01
-	      4   | 1.154716e-15 | 4.187236e-01
-	      5   | 1.131557e-15 | 3.581365e-01
-	      6   | 1.108805e-15 | 2.487759e-01
-	      7   | 1.375887e-15 | 1.126170e-01
-	      8   | 1.372339e-15 | 1.160680e-01
-	      9   | 1.155671e-15 | 5.821474e-02
-	     10   | 1.106859e-15 | 1.677214e-02
-	     11   | 1.756663e-15 | 1.120038e-02
-	     12   | 1.387269e-15 | 8.025213e-03
-	     13   | 9.578806e-16 | 3.535567e-03
-	     14   | 1.211301e-15 | 4.227218e-03
-	     15   | 1.496921e-15 | 1.489109e-03
-	     16   | 1.640563e-15 | 1.173412e-03
-	     17   | 1.003432e-15 | 3.414371e-04
-	     18   | 1.135826e-15 | 8.826711e-05
-	     19   | 1.344456e-15 | 6.230044e-05
-	     20   | 1.459423e-15 | 8.662361e-06
+	      1   | 1.612948e-16 | 3.907408e+00
+	      2   | 1.469228e-15 | 1.274009e+00
+	      3   | 1.010836e-15 | 1.579942e+00
+	      4   | 1.615966e-15 | 6.859809e-01
+	      5   | 1.433089e-15 | 4.477920e-01
+	      6   | 1.377279e-15 | 3.162627e-01
+	      7   | 1.301056e-15 | 3.153493e-01
+	      8   | 1.541122e-15 | 3.439853e-01
+	      9   | 1.642042e-15 | 2.469638e-01
+	     10   | 1.541013e-15 | 1.880776e-01
+	     11   | 1.535378e-15 | 2.331640e-01
+	     12   | 1.240200e-15 | 1.719761e-01
+	     13   | 1.282140e-15 | 1.236650e-01
+	     14   | 1.528755e-15 | 1.532406e-01
+	     15   | 1.698935e-15 | 6.657050e-02
+	     16   | 1.541068e-15 | 4.815822e-02
+	     17   | 8.861793e-16 | 3.579211e-02
+	     18   | 1.515619e-15 | 1.615671e-02
+	     19   | 1.066903e-15 | 1.255390e-02
+	     20   | 1.547617e-15 | 5.543517e-03
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.236688e-16 | 3.534926e+00
-	      2   | 1.188927e-15 | 5.435230e-02
-	      3   | 1.322675e-15 | 3.054699e-02
-	      4   | 1.236151e-15 | 3.059500e-02
-	      5   | 1.367311e-15 | 6.895439e-03
-	      6   | 1.238878e-15 | 4.410285e-03
-	      7   | 1.350141e-15 | 1.791402e-03
-	      8   | 1.416202e-15 | 7.588429e-04
-	      9   | 1.846389e-15 | 1.307062e-04
-	     10   | 1.521539e-15 | 2.445028e-05
-	     11   | 1.256126e-15 | 1.159652e-05
-	     12   | 8.784343e-16 | 2.445646e-06
-	     13   | 1.479338e-15 | 1.143082e-06
-	     14   | 1.349106e-15 | 1.031267e-07
-	     15   | 1.121685e-15 | 2.687431e-08
-	     16   | 1.475961e-15 | 9.406191e-09
-	     17   | 1.248557e-15 | 4.387991e-09
-	     18   | 1.067293e-15 | 5.760525e-10
-	     19   | 1.361425e-15 | 1.089005e-10
-	     20   | 1.532908e-15 | 4.340769e-11
+	      1   | 1.612948e-16 | 4.356218e+00
+	      2   | 1.172560e-15 | 3.427807e-01
+	      3   | 1.364506e-15 | 2.616497e-01
+	      4   | 1.498416e-15 | 2.423814e-01
+	      5   | 1.472767e-15 | 1.985077e-01
+	      6   | 1.210817e-15 | 1.334100e-01
+	      7   | 1.369305e-15 | 5.475030e-02
+	      8   | 1.267493e-15 | 2.884838e-02
+	      9   | 1.319606e-15 | 4.588907e-03
+	     10   | 1.121757e-15 | 2.626320e-03
+	     11   | 1.344801e-15 | 1.422550e-03
+	     12   | 1.206752e-15 | 7.924977e-04
+	     13   | 1.212329e-15 | 6.584443e-04
+	     14   | 1.433698e-15 | 6.852785e-04
+	     15   | 1.719849e-15 | 2.363456e-04
+	     16   | 1.472076e-15 | 1.426986e-05
+	     17   | 1.252801e-15 | 5.132736e-06
+	     18   | 1.451334e-15 | 1.535328e-06
+	     19   | 1.203815e-15 | 2.103704e-07
+	     20   | 1.898376e-15 | 6.903053e-08
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.276542e-16 | 1.841178e+00
-	      2   | 1.375485e-15 | 3.185853e-01
-	      3   | 1.563978e-15 | 6.501545e-02
-	      4   | 1.366699e-15 | 1.931097e-02
-	      5   | 1.408674e-15 | 6.847968e-03
-	      6   | 1.450240e-15 | 6.699510e-03
-	      7   | 1.539588e-15 | 2.290010e-03
-	      8   | 1.428069e-15 | 1.178035e-03
-	      9   | 1.259090e-15 | 2.019969e-04
-	     10   | 1.222971e-15 | 3.661873e-05
-	     11   | 1.385393e-15 | 2.226621e-05
-	     12   | 1.144956e-15 | 4.055847e-06
-	     13   | 1.362287e-15 | 9.572098e-07
-	     14   | 1.298056e-15 | 2.268293e-07
-	     15   | 1.460703e-15 | 8.131273e-08
-	     16   | 1.501211e-15 | 2.318637e-08
-	     17   | 1.513053e-15 | 6.883499e-09
-	     18   | 1.531744e-15 | 1.392542e-09
-	     19   | 1.620489e-15 | 1.159120e-09
-	     20   | 1.221942e-15 | 2.472836e-10
+	      1   | 1.617930e-16 | 2.498491e+00
+	      2   | 1.158183e-15 | 4.264672e-01
+	      3   | 1.315374e-15 | 1.466834e-01
+	      4   | 1.193721e-15 | 1.233691e-01
+	      5   | 1.382712e-15 | 2.575874e-02
+	      6   | 1.034702e-15 | 1.584287e-02
+	      7   | 1.363124e-15 | 1.023577e-02
+	      8   | 1.303047e-15 | 1.453320e-03
+	      9   | 1.417647e-15 | 5.978589e-04
+	     10   | 1.262643e-15 | 4.218207e-04
+	     11   | 1.183077e-15 | 1.503106e-04
+	     12   | 1.168980e-15 | 4.639181e-05
+	     13   | 1.072877e-15 | 7.099509e-06
+	     14   | 1.247434e-15 | 2.661706e-06
+	     15   | 1.220322e-15 | 9.314383e-07
+	     16   | 1.199224e-15 | 3.788933e-07
+	     17   | 1.314983e-15 | 2.119052e-07
+	     18   | 1.259643e-15 | 4.316282e-08
+	     19   | 1.242931e-15 | 1.071468e-08
+	     20   | 1.278526e-15 | 5.244141e-09
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.276542e-16 | 2.190743e+00
-	      2   | 1.357890e-15 | 4.814096e-03
-	      3   | 1.795018e-15 | 1.359334e-03
-	      4   | 1.671335e-15 | 6.018365e-04
-	      5   | 1.398513e-15 | 3.277272e-04
-	      6   | 1.358698e-15 | 1.231593e-04
-	      7   | 1.483829e-15 | 3.396347e-05
-	      8   | 1.604454e-15 | 1.207964e-05
-	      9   | 1.217958e-15 | 2.518529e-06
-	     10   | 1.489488e-15 | 4.715978e-07
-	     11   | 1.642164e-15 | 5.111220e-08
-	     12   | 1.539655e-15 | 1.958835e-08
-	     13   | 1.685683e-15 | 4.776487e-09
-	     14   | 1.576938e-15 | 2.834607e-09
-	     15   | 1.577950e-15 | 4.306005e-10
-	     16   | 1.366062e-15 | 7.896022e-11
+	      1   | 1.617930e-16 | 2.776075e+00
+	      2   | 1.316897e-15 | 4.423908e-02
+	      3   | 1.146369e-15 | 3.071828e-02
+	      4   | 1.287652e-15 | 3.349017e-02
+	      5   | 1.260965e-15 | 4.497733e-03
+	      6   | 1.273214e-15 | 1.488965e-03
+	      7   | 1.297656e-15 | 9.470225e-04
+	      8   | 1.201230e-15 | 3.312038e-04
+	      9   | 1.601835e-15 | 5.202048e-05
+	     10   | 1.364825e-15 | 1.296677e-05
+	     11   | 1.142192e-15 | 1.988109e-06
+	     12   | 1.314586e-15 | 5.441005e-07
+	     13   | 1.258220e-15 | 1.996136e-07
+	     14   | 1.161735e-15 | 4.121641e-08
+	     15   | 1.399004e-15 | 9.881627e-09
+	     16   | 1.651054e-15 | 3.023854e-09
+	     17   | 1.175496e-15 | 1.504867e-09
+	     18   | 1.275399e-15 | 4.526099e-10
+	     19   | 1.385695e-15 | 3.113924e-11
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.686069e-16 | 1.037693e+00
-	      2   | 1.448536e-15 | 6.205070e-02
-	      3   | 1.424340e-15 | 1.370371e-02
-	      4   | 1.457456e-15 | 2.735524e-03
-	      5   | 1.441272e-15 | 7.618342e-04
-	      6   | 1.415357e-15 | 1.733140e-04
-	      7   | 1.554767e-15 | 5.850901e-05
-	      8   | 1.503966e-15 | 1.581379e-05
-	      9   | 1.693408e-15 | 2.639635e-06
-	     10   | 1.526648e-15 | 6.144868e-07
-	     11   | 1.590250e-15 | 1.471499e-07
-	     12   | 1.411224e-15 | 2.695707e-08
-	     13   | 1.469065e-15 | 7.264071e-09
-	     14   | 1.416326e-15 | 1.921211e-09
-	     15   | 1.463785e-15 | 6.053306e-10
-	     16   | 1.380188e-15 | 1.141194e-10
-	     17   | 1.520177e-15 | 1.738955e-11
+	      1   | 1.920113e-16 | 1.399826e+00
+	      2   | 1.127805e-15 | 1.018196e-01
+	      3   | 1.253693e-15 | 1.753466e-02
+	      4   | 1.185432e-15 | 3.761296e-03
+	      5   | 1.170607e-15 | 6.421894e-04
+	      6   | 1.168088e-15 | 2.238335e-04
+	      7   | 1.203673e-15 | 1.034672e-04
+	      8   | 1.226758e-15 | 2.554042e-05
+	      9   | 1.314108e-15 | 1.210502e-05
+	     10   | 1.179130e-15 | 2.795871e-06
+	     11   | 1.277447e-15 | 3.545141e-07
+	     12   | 1.216909e-15 | 9.131551e-08
+	     13   | 1.267877e-15 | 2.694435e-08
+	     14   | 1.146581e-15 | 3.825650e-09
+	     15   | 1.174199e-15 | 1.085089e-09
+	     16   | 1.187419e-15 | 3.259653e-10
+	     17   | 1.288880e-15 | 7.760323e-11
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 2.686069e-16 | 1.217573e+00
-	      2   | 1.667153e-15 | 5.548380e-04
-	      3   | 1.464032e-15 | 1.241344e-04
-	      4   | 1.688014e-15 | 3.784206e-05
-	      5   | 1.418778e-15 | 1.066551e-05
-	      6   | 1.434077e-15 | 4.499323e-06
-	      7   | 1.328256e-15 | 8.200007e-07
-	      8   | 1.678580e-15 | 1.295708e-07
-	      9   | 1.542875e-15 | 2.819667e-08
-	     10   | 1.497246e-15 | 6.869162e-09
-	     11   | 1.538070e-15 | 1.173502e-09
-	     12   | 1.485170e-15 | 2.554460e-10
-	     13   | 1.405945e-15 | 6.348800e-11
-
-
-	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
-	--------------------------------------
-	      1   | 4.977189e-16 | 5.507688e-01
-	      2   | 1.502412e-15 | 9.716689e-03
-	      3   | 1.459110e-15 | 1.789684e-03
-	      4   | 1.599114e-15 | 3.930624e-04
-	      5   | 1.526028e-15 | 1.143424e-04
-	      6   | 1.486395e-15 | 2.400959e-05
-	      7   | 1.593987e-15 | 8.112497e-06
-	      8   | 1.536093e-15 | 2.260995e-06
-	      9   | 1.562419e-15 | 4.274699e-07
-	     10   | 1.606258e-15 | 7.999490e-08
-	     11   | 1.494083e-15 | 1.341215e-08
-	     12   | 1.583492e-15 | 2.840186e-09
-	     13   | 1.530098e-15 | 7.196124e-10
-	     14   | 1.492155e-15 | 1.285133e-10
-	     15   | 1.535969e-15 | 3.873067e-11
-
-
-	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
-	--------------------------------------
-	      1   | 4.977189e-16 | 6.416617e-01
-	      2   | 1.556205e-15 | 8.066181e-05
-	      3   | 1.650132e-15 | 1.612409e-05
-	      4   | 1.558058e-15 | 4.779746e-06
-	      5   | 1.617355e-15 | 1.200918e-06
-	      6   | 1.570851e-15 | 4.125628e-07
-	      7   | 1.617404e-15 | 9.613403e-08
-	      8   | 1.650602e-15 | 1.893123e-08
-	      9   | 1.671277e-15 | 4.361211e-09
-	     10   | 1.578528e-15 | 8.769816e-10
-	     11   | 1.601001e-15 | 1.896565e-10
-	     12   | 1.553185e-15 | 3.998195e-11
+	      1   | 1.920113e-16 | 1.552312e+00
+	      2   | 1.245373e-15 | 1.953562e-03
+	      3   | 1.444446e-15 | 6.017487e-04
+	      4   | 1.373396e-15 | 2.624481e-04
+	      5   | 1.357055e-15 | 1.586135e-04
+	      6   | 1.306242e-15 | 4.238678e-05
+	      7   | 1.371301e-15 | 1.525526e-05
+	      8   | 1.310769e-15 | 6.411477e-06
+	      9   | 1.399467e-15 | 1.331816e-06
+	     10   | 1.367619e-15 | 1.827395e-07
+	     11   | 1.296194e-15 | 6.848769e-08
+	     12   | 1.393885e-15 | 2.056931e-08
+	     13   | 1.243372e-15 | 6.517358e-09
+	     14   | 1.325120e-15 | 1.560778e-09
+	     15   | 1.232634e-15 | 2.615673e-10
+	     16   | 1.540907e-15 | 5.853307e-11
 
 
     ndofs   |      ||u-u_c||       order  |      ||u-u_r||       order  |      ||u-Πu||        order  |
 ============|=============================|=============================|=============================|
-       122  |     1.11543e+00      0.000  |     1.18505e-01      0.000  |     2.54921e-02      0.000  |
-       434  |     4.81112e-01      1.325  |     1.22629e-02      3.575  |     5.78066e-03      2.339  |
-      1634  |     1.59473e-01      1.666  |     2.65129e-03      2.310  |     1.35412e-03      2.190  |
-      6338  |     4.62337e-02      1.827  |     6.73737e-04      2.021  |     3.26202e-04      2.100  |
+        70  |     1.13125e+00      0.000  |     6.88280e-01      0.000  |     5.40140e-02      0.000  |
+       250  |     6.40409e-01      0.894  |     1.00924e-01      3.016  |     1.27605e-02      2.267  |
+       946  |     2.18402e-01      1.617  |     6.15065e-03      4.205  |     3.02624e-03      2.163  |
 
     ndofs   |      ||p-p_c||       order  |      ||p-p_r||       order  |      ||p-πp||        order  |
 ============|=============================|=============================|=============================|
-       122  |     1.71119e+00      0.000  |     1.07372e+00      0.000  |     1.07051e+00      0.000  |
-       434  |     7.67359e-01      1.264  |     5.46447e-01      1.065  |     5.46367e-01      1.060  |
-      1634  |     3.50717e-01      1.181  |     2.74613e-01      1.038  |     2.74597e-01      1.038  |
-      6338  |     1.56053e-01      1.195  |     1.37479e-01      1.021  |     1.37476e-01      1.021  |
+        70  |     1.59543e+00      0.000  |     1.31333e+00      0.000  |     1.15315e+00      0.000  |
+       250  |     1.03859e+00      0.674  |     5.91329e-01      1.254  |     5.79567e-01      1.081  |
+       946  |     4.47697e-01      1.265  |     2.90098e-01      1.070  |     2.90014e-01      1.041  |
 
     ndofs   |    ||∇(u-u_c)||      order  |    ||∇(u-u_r)||      order  |     ||∇(u-Su)||      order  |
 ============|=============================|=============================|=============================|
-       122  |     2.01313e+01      0.000  |     1.98681e+00      0.000  |     6.76182e-01      0.000  |
-       434  |     1.34246e+01      0.639  |     4.18114e-01      2.456  |     3.34586e-01      1.109  |
-      1634  |     8.67723e+00      0.658  |     1.76224e-01      1.303  |     1.66341e-01      1.054  |
-      6338  |     4.83987e+00      0.861  |     8.45715e-02      1.083  |     8.29298e-02      1.027  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example205_PlanarLatticeFlow2D/">« 205 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 22 October 2021 21:42">Friday 22 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+        70  |     1.76102e+01      0.000  |     9.63537e+00      0.000  |     1.13867e+00      0.000  |
+       250  |     1.46160e+01      0.293  |     1.95442e+00      2.507  |     5.66582e-01      1.097  |
+       946  |     8.87338e+00      0.750  |     3.87639e-01      2.431  |     2.81678e-01      1.050  |</code></pre><p><img src="../../images/Example206_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example205_PlanarLatticeFlow2D/">« 205 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
