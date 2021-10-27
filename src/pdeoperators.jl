@@ -272,10 +272,10 @@ function HookStiffnessOperator2D(μ, λ;
     name = "(C(μ,λ) ϵ(u),ϵ(v))", 
     AT::Type{<:AssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0], 
-    ϵ = SymmetricGradient, 
+    ϵ = SymmetricGradient{1}, 
     store::Bool = false)
 
-    @assert ϵ == SymmetricGradient
+    @assert ϵ <: SymmetricGradient
 
     function tensor_apply_2d(result, input)
         result[1] = (λ + 2*μ)*input[1] + λ*input[2]
@@ -312,10 +312,10 @@ function HookStiffnessOperator3D(μ, λ;
     name = "(C(μ,λ) ϵ(u),ϵ(v))", 
     AT::Type{<:AssemblyType} = ON_CELLS,
     regions::Array{Int,1} = [0],
-    ϵ = SymmetricGradient,
+    ϵ = SymmetricGradient{1},
     store::Bool = false)
 
-    @assert ϵ == SymmetricGradient
+    @assert ϵ <: SymmetricGradient
 
     function tensor_apply_3d(result, input)
         result[1] = (λ + 2*μ)*input[1] + λ*(input[2] + input[3])

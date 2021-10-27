@@ -400,6 +400,7 @@ function nodevalues!(Target::AbstractArray{T,2},
     Source::AbstractArray{T,1},
     FE::FESpace{Tv,Ti,FEType,AT},
     operator::Type{<:AbstractFunctionOperator} = Identity;
+    abs::Bool = false,
     regions::Array{Int,1} = [0],
     target_offset::Int = 0,
     source_offset::Int = 0,
@@ -432,7 +433,8 @@ function nodevalues!(Target::AbstractArray{T,2},
         ndofs4EG[j] = size(basisevaler[j].cvals,2)
     end    
     cvals_resultdim::Int = size(basisevaler[1].cvals,1)
-    @assert size(Target,1) >= cvals_resultdim
+    target_resultdim::Int = abs ? 1 : cvals_resultdim
+    @assert size(Target,1) >= target_resultdim "too small target dimension"
 
     nitems::Int = num_sources(xItemDofs)
     nnodes::Int = num_sources(FE.xgrid[Coordinates])
@@ -447,6 +449,7 @@ function nodevalues!(Target::AbstractArray{T,2},
     dof::Ti = 0
     flag4node = zeros(Bool,nnodes)
     temp::Array{T,1} = zeros(T,cvals_resultdim)
+    localT = zeros(T,cvals_resultdim)
     weights::Array{T,1} = qf[1].w
 
     if zero_target
@@ -475,7 +478,8 @@ function nodevalues!(Target::AbstractArray{T,2},
 
                 for i in eachindex(weights) # vertices
                     node = xItemNodes[i,item]
-                     if continuous == false || flag4node[node] == false
+                    fill!(localT,0)
+                    if continuous == false || flag4node[node] == false
                         nneighbours[node] += 1
                         flag4node[node] = true
                         begin
@@ -483,8 +487,18 @@ function nodevalues!(Target::AbstractArray{T,2},
                                 dof = xItemDofs[dof_i,item]
                                 eval_febe!(temp, basisevaler[iEG], dof_i, i)
                                 for k = 1 : cvals_resultdim
-                                    Target[k+target_offset,node] += temp[k] * Source[source_offset + dof]
+                                    localT[k] += Source[source_offset + dof] * temp[k]
+                                    #Target[k+target_offset,node] += temp[k] * Source[source_offset + dof]
                                 end
+                            end
+                        end
+                        if abs
+                            for k = 1 : cvals_resultdim
+                                Target[1+target_offset,node] += localT[k]^2
+                            end
+                        else
+                            for k = 1 : cvals_resultdim
+                                Target[k+target_offset,node] += localT[k]
                             end
                         end
                     end
@@ -495,8 +509,14 @@ function nodevalues!(Target::AbstractArray{T,2},
     end # item for loop
 
     if continuous == false
-        for node = 1 : nnodes, k = 1 : cvals_resultdim
+        for node = 1 : nnodes, k = 1 : target_resultdim
             Target[k+target_offset,node] /= nneighbours[node]
+        end
+    end
+
+    if abs
+        for node = 1 : nnodes
+            Target[1+target_offset,node] = sqrt(Target[1+target_offset,node])
         end
     end
 
@@ -525,6 +545,45 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::FEVectorBlock, ope
 end
 
 
+"""
+````
+function nodevalues(
+    Source::FEVectorBlock,
+    operator::Type{<:AbstractFunctionOperator} = Identity;
+    regions::Array{Int,1} = [0],
+    target_offset::Int = 0,   # start to write into Target after offset
+    zero_target::Bool = true, # target vector is zeroed
+    continuous::Bool = false)
+````
+
+Evaluates the finite element function with the coefficient vector Source
+and the specified FunctionOperator at all the nodes of the (specified regions of the)
+grid and returns an array with the values.
+Discontinuous (continuous = false) quantities are averaged.
+"""
+function nodevalues(Source::FEVectorBlock{T}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], continuous::Bool = false) where {T}
+    if abs
+        nvals = 1
+    else
+        xdim = size(Source.FES.xgrid[Coordinates],2)
+        ncomponents = get_ncomponents(eltype(Source.FES))
+        nvals = Length4Operator(operator, xdim, ncomponents)
+    end
+    Target = zeros(T,nvals,num_nodes(Source.FES.xgrid))
+    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, abs = abs)
+    return Target
+end
+
+
+
+
+"""
+````
+function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 1)
+````
+Moves all nodes of the grid by adding the displacement field in Source (expects a vector-valued finite element)
+times a magnify value.
+"""
 function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 1)
     nnodes = size(xgrid[Coordinates],2)
     nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(Source.FES)),nnodes)

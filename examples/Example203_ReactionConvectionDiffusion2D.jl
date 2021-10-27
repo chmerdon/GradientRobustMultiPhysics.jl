@@ -145,14 +145,10 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     end    
 
     ## plot
-    nodevals = zeros(Float64,2,num_nodes(xgrid))
-    nodevalues!(nodevals, Solution[1], Identity)
-    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(900,400))
-    scalarplot!(p[1,1],xgrid,view(nodevals,1,:),levels=11, title = "u_h")
-    nodevalues!(nodevals, Solution[1], Gradient)
-    PE = PointEvaluator(Solution[1], Gradient)
-    scalarplot!(p[1,2],xgrid,view(sum(nodevals.^2, dims = 1),:),levels=0)
-    vectorplot!(p[1,2],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
+    p=GridVisualizer(; Plotter=Plotter, layout=(1,2), clear=true, resolution=(1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels=11, title = "u_h")
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels=7)
+    vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
     
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| u - Iu ||", "|| ∇(u - u_h) ||", "|| ∇(u - Iu) ||"])

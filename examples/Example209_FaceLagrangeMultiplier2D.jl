@@ -13,6 +13,7 @@ module Example209_FaceLagrangeMultiplier2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## problem data
 function exact_function!(result,x::Array{<:Real,1})
@@ -20,6 +21,7 @@ function exact_function!(result,x::Array{<:Real,1})
     result[2] = x[2] + 1
     return nothing
 end
+const u = DataFunction(exact_function!, [2,2]; name = "u", dependencies = "X", quadorder = 3)
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0)
@@ -31,8 +33,7 @@ function main(; Plotter = nothing, verbosity = 0)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
 
     ## define bestapproximation problem
-    user_function = DataFunction(exact_function!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 3)
-    Problem = L2BestapproximationProblem(user_function; name = "constrained L2-bestapproximation problem", bestapprox_boundary_regions = [])
+    Problem = L2BestapproximationProblem(u; name = "constrained L2-bestapproximation problem", bestapprox_boundary_regions = [])
 
     ## we want to use a broken space and give the constraint of no normal jumps on interior faces
     ## in form of a Lagrange multiplier, since there is no NormalFluxDisc{Jump} operator yet,
@@ -52,9 +53,8 @@ function main(; Plotter = nothing, verbosity = 0)
     Solution = FEVector{Float64}(["u_h (Hdiv-broken)", "LM face jumps"],FES)
     solve!(Solution, Problem)
     
-    ## solve again with Hdiv-continuous element
-    ## to see that we get the same result
-    Problem = L2BestapproximationProblem(user_function; bestapprox_boundary_regions = [])
+    ## solve again with Hdiv-continuous element to see that we get the same result
+    Problem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [])
     FES = FESpace{FEType[1]}(xgrid)
 
     ## solve
@@ -62,14 +62,18 @@ function main(; Plotter = nothing, verbosity = 0)
     solve!(Solution2, Problem)
 
     ## calculate L2 error of both solutions and their difference
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
     L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
     println("\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
     println("\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))")
     println("\tL2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))")
 
     ## plot both solutions
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution2[1]], [Identity, Identity]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = "u_1 (abs + quiver)")
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = "u_2 (abs + quiver)")
 end
 
 end

@@ -21,6 +21,7 @@ module Example231_StokesHdivP1RT
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)
@@ -92,6 +93,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
 
     ## loop over levels
+    Solution = nothing
     for level = 1 : nlevels
         ## refine grid and update grid component references
         xgrid = uniform_refine(xgrid)
@@ -103,9 +105,6 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         ## solve
         solve!(Solution, Problem; time = T)
 
-        ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2], Solution[3]], [Identity, Identity, Identity]; Plotter = Plotter)
-
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
         Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,[Solution[1],Solution[2]]))
@@ -114,6 +113,14 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         Results[level,4] = sqrt(evaluate(L2VeloDivEvaluator,[Solution[1], Solution[2]]))
     end    
 
+    ## plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1200,400))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false, title = "u_P1 (abs + quiver)")
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]; abs = true),1,:), levels = 3)
+    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution[2], Identity)), spacing = 0.05, clear = false, title = "u_RT (abs + quiver)")
+    scalarplot!(p[1,3],xgrid,view(nodevalues(Solution[3]),1,:), levels = 11, title = "p_h")
+    
     ## print/show convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_P1) ||", "|| div(u_h) ||"])
     plot_convergencehistory(NDofs, Results[:,1:3]; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_h) ||"])

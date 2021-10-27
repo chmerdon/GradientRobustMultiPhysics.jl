@@ -17,6 +17,7 @@ module Example201_PoissonProblem2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## right-hand side function
 const f = DataFunction([1]; name = "f")
@@ -56,7 +57,10 @@ function main(; verbosity = 0, μ = 1, Plotter = nothing)
     solve!(Solution, Problem)
 
     ## plot solution (for e.g. Plotter = PyPlot)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)    
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_h")
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels=7)
+    vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
 end
 
 end

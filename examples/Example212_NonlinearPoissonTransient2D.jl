@@ -19,6 +19,7 @@ module Example212_NonlinearPoissonTransient2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## kernel for nonlinear diffusion operator
 function diffusion_kernel!(result, input)
@@ -86,8 +87,10 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     if testmode == true
         return Results[end,2]
     else
-        ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+        p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+        scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_h")
+        scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels=7)
+        vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
 
         ## print/plot convergence history
         print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])

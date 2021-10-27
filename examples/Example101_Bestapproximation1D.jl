@@ -57,13 +57,9 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1)
         
     ## evaluate/interpolate function at nodes and plot
     if Plotter !== nothing
-        nodevals = zeros(Float64,1,size(xgrid[Coordinates],2))
-        nodevalues!(nodevals,Solution[1],FES)
         p=GridVisualizer(Plotter=Plotter,layout=(1,1))
-        scalarplot!(p[1,1],xgrid, view(nodevals,1,:), color=(0,1,0), label = "u_h (coarse bestapprox)")
-        nodevals_fine = zeros(Float64,1,size(xgrid_fine[Coordinates],2))
-        nodevalues!(nodevals_fine,Interpolation[1],FES_fine)
-        scalarplot!(p[1,1],xgrid_fine, view(nodevals_fine,1,:), clear = false, color = (1,0,0), label = "u_h (fine interpolation)",show=true)
+        scalarplot!(p[1,1],xgrid, view(nodevalues(Solution[1]),1,:), color=(0,0.7,0), label = "u_h (coarse bestapprox)")
+        scalarplot!(p[1,1],xgrid_fine, view(nodevalues(Interpolation[1]),1,:), clear = false, color = (1,0,0), label = "u_h (fine interpolation)", legend = :best)
     end
 end
 

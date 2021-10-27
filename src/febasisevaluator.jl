@@ -243,7 +243,7 @@ function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAPT}, xref:
         # specifications for special operators (e.g. compressing Voigt notation)
         if FEOP == TangentialGradient
             coefficients3 = FE.xgrid[FaceNormals]
-        elseif FEOP == SymmetricGradient
+        elseif FEOP <: SymmetricGradient
             # the following mapping tells where each entry of the full gradient lands in the reduced vector
             @assert ncomponents == edim "SymmetricGradient requires a square matrix as gradient (ncomponents == dim is needed)"
             @assert edim > 1 "SymmetricGradient makes only sense for dim > 1, please use Gradient"
@@ -1136,7 +1136,7 @@ end
 # in 2D: (du1/dx1, du2/dx2, du1/dx2 + du2/dx1)
 # in 3D: (du1/dx1, du2/dx2, du3/dx3, du1/dx2 + du2/dx1, du1/dx3 + du3/dx1, du2/dx3 + du3/dx2)
 
-function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricGradient,<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs}
+function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1FiniteElement,<:AbstractElementGeometry,<:SymmetricGradient{offdiagval},<:AssemblyType,edim,ncomponents,ndofs}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,offdiagval}
     if (FEBE.citem[] != item)
         FEBE.citem = item
 
@@ -1158,7 +1158,11 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1Finit
                 for c = 1 : ncomponents, k = 1 : edim
                     for j = 1 : edim
                         # compute duc/dxk and put it into the right spot in the Voigt vector
-                        FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
+                        if k != c
+                            FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += offdiagval * FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
+                        else
+                            FEBE.cvals[FEBE.compressiontargets[k + FEBE.offsets[c]],dof_i,i] += FEBE.L2GAinv[k,j]*FEBE.refbasisderivvals[FEBE.current_subset[dof_i] + FEBE.offsets2[c],j,i]
+                        end
                     end    
                 end    
             end    

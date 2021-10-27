@@ -30,6 +30,7 @@ module Example206_PressureRobustness2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## problem data
 function HydrostaticTestProblem()
@@ -43,12 +44,12 @@ function HydrostaticTestProblem()
         result[1] = 3*x[1]^2
         result[2] = 3*x[2]^2
     end
-    user_function_velocity = DataFunction([0,0]; name = "u_exact")
-    user_function_pressure = DataFunction(P1_pressure!, [1,2]; name = "p_exact", dependencies = "X", quadorder = 3)
-    user_function_velocity_gradient = DataFunction([0,0,0,0]; name = "grad(u_exact)")
-    user_function_rhs = DataFunction(P1_rhs!, [2,2]; name = "f", dependencies = "X", quadorder = 2)
+    u = DataFunction([0,0]; name = "u")
+    p = DataFunction(P1_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 3)
+    ∇u = DataFunction([0,0,0,0]; name = "∇u")
+    f = DataFunction(P1_rhs!, [2,2]; name = "f", dependencies = "X", quadorder = 2)
 
-    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, false
+    return p,u,∇u,f,false
 end
 
 function PotentialFlowTestProblem()
@@ -68,12 +69,12 @@ function PotentialFlowTestProblem()
         result[3] = -6*x[2];
         result[4] = -6*x[1];
     end
-    user_function_velocity = DataFunction(P2_velo!, [2,2]; name = "u_exact", dependencies = "X", quadorder = 2)
-    user_function_pressure = DataFunction(P2_pressure!, [1,2]; name = "p_exact", dependencies = "X", quadorder = 4)
-    user_function_velocity_gradient = DataFunction(P2_velogradient!, [4,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 1)
-    user_function_rhs = DataFunction([0,0]; name = "f")
+    u = DataFunction(P2_velo!, [2,2]; name = "u", dependencies = "X", quadorder = 2)
+    p = DataFunction(P2_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 4)
+    ∇u = DataFunction(P2_velogradient!, [4,2]; name = "∇u", dependencies = "X", quadorder = 1)
+    f = DataFunction([0,0]; name = "f")
 
-    return user_function_pressure,user_function_velocity,user_function_velocity_gradient,user_function_rhs, true
+    return p,u,∇u,f,true
 end
 
 
@@ -81,18 +82,18 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
 
     ## load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]
-    exact_pressure!, exact_velocity!, exact_velocity_gradient!, rhs!, nonlinear = Problem()
+    p,u,∇u,f,nonlinear = Problem()
 
     ## setup classical (Problem) and pressure-robust scheme (Problem2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
-    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = exact_velocity!)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
     Problem2 = deepcopy(Problem)
     Problem.name = "Stokes problem (classical)"
     Problem2.name = "Stokes problem (p-robust)"
 
     ## assign right-hand side
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], rhs!))
-    add_rhsdata!(Problem2, 1, RhsOperator(ReconstructionOperator, [0], rhs!))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem2, 1, RhsOperator(ReconstructionOperator, [0], f))
 
     ## assign convection term
     if nonlinear
@@ -101,24 +102,24 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     end
 
     ## define bestapproximation problems
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(exact_pressure!; bestapprox_boundary_regions = [])
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(exact_velocity_gradient!, exact_velocity!; bestapprox_boundary_regions = [1,2,3,4])
+    L2VelocityBestapproximationProblem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [1,2,3,4])
+    L2PressureBestapproximationProblem = L2BestapproximationProblem(p; bestapprox_boundary_regions = [])
+    H1VelocityBestapproximationProblem = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity!, Identity)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, exact_pressure!, Identity)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, exact_velocity_gradient!, Gradient)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, p, Identity)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient)
     Results = zeros(Float64, nlevels, 9)
     NDofs = zeros(Int, nlevels)
     
     ## loop over refinement levels
+    Solution = nothing
     Solution2 = nothing
     for level = 1 : nlevels
 
         ## uniform mesh refinement
         xgrid = uniform_refine(xgrid)
-        xFaceVolumes = xgrid[FaceVolumes]
 
         ## get FESpaces
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
@@ -156,7 +157,13 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -> X.^(-1/2), ylabels = ["||∇(u-u_c)||", "||∇(u-u_r)||", "||∇(u-Su)||"])
 
     ## plot p-robust solution
-    GradientRobustMultiPhysics.plot(xgrid, [Solution2[1],Solution2[2],Solution2[1]], [Identity, Identity, ReconstructionDivergence{HDIVRT1{2}}]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = "u_c (abs + quiver)")
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = "p_c")
+    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
+    vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = "u_r (abs + quiver)")
+    scalarplot!(p[2,2],xgrid,view(nodevalues(Solution2[2]),1,:), levels = 11, title = "p_r")
 
     ## return last L2 error of p-robust method for testing
     return Results[end,2]
@@ -164,7 +171,7 @@ end
 
 
 ## everything is wrapped in a main function
-function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plotter = nothing)
+function main(; problem = 2, verbosity = 0, nlevels = 3, viscosity = 1e-2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -179,7 +186,7 @@ function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plott
     end
 
     ## set grid and problem parameters
-    xgrid = grid_unitsquare_mixedgeometries() # initial grid
+    xgrid = grid_unitsquare(Triangle2D) # initial grid
 
     ## choose finite element discretisation
     #FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction

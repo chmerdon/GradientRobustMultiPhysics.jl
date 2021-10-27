@@ -32,7 +32,7 @@ module Example210_NonlinearPoisson2D
 using GradientRobustMultiPhysics
 using ExtendableSparse
 using ExtendableGrids
-using Printf
+using GridVisualize
 
 ## problem data
 function exact_function!(result,x)
@@ -135,7 +135,10 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
         return Results[end,2]
     else
         ## plot
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+        p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+        scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_h")
+        scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels=7)
+        vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
 
         ## print/plot convergence history
         print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])

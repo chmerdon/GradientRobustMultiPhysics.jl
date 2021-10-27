@@ -96,9 +96,11 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)
 
     ## displace mesh and plot
-    gridplot(xgrid, Plotter = Plotter, title = "initial bimetal", fignumber = 1)
-    displace_mesh!(xgrid,Solution[1])
-    gridplot(xgrid, Plotter = Plotter, title = "displaced bimetal", fignumber = 2)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = "u_h")
+    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [100,25], clear = false, title = "u_h (abs + quiver)")
+    displace_mesh!(xgrid, Solution[1])
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = "u_h")
 end
 
 

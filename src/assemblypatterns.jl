@@ -330,10 +330,12 @@ function DofitemInformation4Operator(FES::FESpace, AT::Type{<:AssemblyType}, bas
     discontinuous = false
     posdt = 0
     for j = 1 : length(FO.parameters)
-        if FO.parameters[j] <: DiscontinuityTreatment
-            discontinuous = true
-            posdt = j
-            break;
+        if !(typeof(FO.parameters[j]) <: Real)
+            if FO.parameters[j] <: DiscontinuityTreatment
+                discontinuous = true
+                posdt = j
+                break;
+            end
         end
     end
     if discontinuous
@@ -425,7 +427,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
         # check if operator is requested discontinuous
         discontinuous = false
         for k = 1 : length(operator[j].parameters)
-            if typeof(operator[j].parameters[k]) != Int64
+            if !(typeof(operator[j].parameters[k]) <: Real)
                 if operator[j].parameters[k] <: DiscontinuityTreatment
                     discontinuous = true
                 end

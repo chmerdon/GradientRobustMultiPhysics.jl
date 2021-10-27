@@ -25,11 +25,12 @@ module Example202_LinearElasticity2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 const g = DataFunction([0,10]; name = "g")
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing)
+function main(; verbosity = 0, E = 1000, ν = 0.4, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -38,9 +39,7 @@ function main(; verbosity = 0, Plotter = nothing)
     xgrid = simplexgrid("assets/2d_grid_cookmembrane.sg")
     xgrid = uniform_refine(xgrid,2)
 
-    ## problem parameters
-    E = 1000 # elasticity modulus 
-    ν = 1//3 # Poisson number 
+    ## compute Lame' coefficients from E and ν
     μ = (1/(1+ν))*E
     λ = (ν/(1-2*ν))*μ
 
@@ -59,7 +58,10 @@ function main(; verbosity = 0, Plotter = nothing)
 
     ## plot stress on displaced mesh
     displace_mesh!(xgrid, Solution[1]; magnify = 4)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[1]], [Identity, Gradient]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = "u_h")
+    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = 5, clear = false, title = "u_h (abs + quiver)")
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], SymmetricGradient{1/√2}; abs = true),1,:), levels=11, title = "ϵ(u_h) (abs)")
 end
 
 end

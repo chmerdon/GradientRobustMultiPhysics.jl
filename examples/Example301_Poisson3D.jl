@@ -17,7 +17,7 @@ module Example301_Poisson3D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
+using GridVisualize
 
 ## problem data
 function exact_function!(result,x::Array{<:Real,1})
@@ -30,6 +30,11 @@ function exact_gradient!(result,x::Array{<:Real,1})
     result[3] = x[1]
     return nothing
 end
+
+## negotiate data functions to the package
+const u = DataFunction(exact_function!, [1,3]; name = "u", dependencies = "X", quadorder = 2)
+const ∇u = DataFunction(exact_gradient!, [3,3]; name = "∇(u)", dependencies = "X", quadorder = 1)
+const f = DataFunction([-2]; name = "f") # = -Δu = -2
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
@@ -44,19 +49,14 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     ## set finite element type used for discretisation
     FEType = H1P1{1}
 
-    ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,3]; name = "u", dependencies = "X", quadorder = 2)
-    user_function_gradient = DataFunction(exact_gradient!, [3,3]; name = "∇(u)", dependencies = "X", quadorder = 1)
-    user_function_rhs = DataFunction([-2]; name = "f")
-
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(1.0)
-    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = user_function)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs))
+    add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = u)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
 
     ## prepare error calculation
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u)
+    H1ErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient)
     Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
 
     ## loop over levels
@@ -79,7 +79,8 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     end
 
     ## plot (Plotter = GLMakie should work)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,1), clear = true, resolution = (500,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 5, title = "u_h")
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/3), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])

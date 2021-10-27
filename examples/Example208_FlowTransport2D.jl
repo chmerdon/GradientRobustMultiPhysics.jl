@@ -111,14 +111,10 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     println("\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]")
 
     ## plot
-    nodevals = zeros(Float64,2,num_nodes(xgrid))
-    nodevalues!(nodevals, Solution[1], Identity)
-    p=GridVisualizer(;Plotter=Plotter,layout=(2,1),clear=true,resolution=(800,800))
-    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=0)
-    PE = PointEvaluator(Solution[1], Identity)
-    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.25, clear = false, title = "u (abs + quiver)")
-    nodevalues!(nodevals, Solution[3], Identity)
-    scalarplot!(p[2,1],xgrid,view(nodevals,1,:); Plotter=Plotter, title = "c")
+    p = GridVisualizer(; Plotter = Plotter, layout=(2,1), clear = true, resolution = (800,800))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 0)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.25, clear = false, title = "u_h (abs + quiver)")
+    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[3]),1,:), levels = 11, title = "c_h")
 end
 
 end

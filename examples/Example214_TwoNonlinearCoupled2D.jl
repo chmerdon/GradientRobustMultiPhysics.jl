@@ -21,6 +21,7 @@ module Example214_TwoNonlinearCoupled2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## problem data
 const f = [x -> 1, x -> 2*x[2]]
@@ -70,6 +71,8 @@ function main(; verbosity = 0, Plotter = nothing)
     solve!(Solution, Problem)
 
     ## plot solution (for e.g. Plotter = PyPlot)
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1], Solution[2]], [Identity, Identity]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_1")
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[2]),1,:), levels = 11, title = "u_2")
 end
 end

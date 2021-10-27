@@ -81,14 +81,10 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
     println("p difference = $pdiff")
 
     ## plots via GridVisualize
-    p=GridVisualizer(;Plotter=Plotter,layout=(3,1),clear=true,resolution=(1000,600))
-    scalarplot!(p[1,1],xgrid,view(Solution.entries,1:num_nodes(xgrid)),levels=0)
-    PE = PointEvaluator(Solution[1], Identity)
-    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = [0.15,0.04], vscale = 0.5, clear = false, title = "u (abs + quiver)")
-    nodevals = zeros(Float64,1,num_nodes(xgrid))
-    nodevalues!(nodevals, Solution[2], Identity)
-    scalarplot!(p[2,1],xgrid,view(nodevals,1,:);Plotter=Plotter, title = "p")
-    gridplot!(p[3,1],xgrid;Plotter=Plotter, title = "grid")
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = [0.2,0.04], clear = false, title = "u_h (abs + quiver)")
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = "p_h")
 end
 
 function get_pressure_difference(Solution::FEVector)

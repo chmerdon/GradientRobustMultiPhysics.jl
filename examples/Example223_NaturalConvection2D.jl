@@ -97,14 +97,10 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     println("\tNu = $(evaluate(NuIntegrator,Solution[3]))")
 
     ## plot
-    p=GridVisualizer(;Plotter=Plotter,layout=(1,2),clear=true,resolution=(1000,500))
-    nodevals = zeros(Float64,2,num_nodes(xgrid))
-    nodevalues!(nodevals, Solution[1], Identity)
-    scalarplot!(p[1,1],xgrid,view(sum(nodevals.^2, dims = 1),1,:),levels=1)
-
-    PE = PointEvaluator(Solution[1],Identity)
-    vectorplot!(p[1,1],xgrid,evaluate(PE);Plotter=Plotter, spacing = 0.1, clear = false, title = "u (abs + quiver)")
-    scalarplot!(p[1,2],xgrid,view(Solution.entries,Solution[3].offset+1:Solution[3].last_index);Plotter=Plotter, title = "T")
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 0)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = "u_h (abs + quiver)")
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[3]),1,:), levels = 11, title = "T_h")
 end
 
 end

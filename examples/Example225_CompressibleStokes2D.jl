@@ -46,7 +46,7 @@ module Example225_CompressibleStokes2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
-using Printf
+using GridVisualize
 
 ## the equation of state
 function equation_of_state!(c,γ)
@@ -124,7 +124,7 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
 
             ## check error in mass constraint
             Md = sum(Target[2][:] .* xgrid[CellVolumes])
-            @printf("\tmass_error = %.4e - %.4e = %.4e \n",Mreal, Md, abs(Mreal-Md))
+            println("\tmass_error = $Mreal - $Md = $(abs(Mreal-Md))")
         end
     end
 
@@ -134,7 +134,13 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     print_convergencehistory(NDoFs, Results[5:6,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||ϱ-ϱ_h|| (BR)","||ϱ-ϱ_h|| (BR+)"], xlabel = "ndof") 
 
     ## plot everything
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1][1],Solution[1][2],Solution[2][1],Solution[2][2]], [Identity, Identity, Identity, Identity]; add_grid_plot = true, Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1][1]; abs = true),1,:), levels = 0)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1][1], Identity)), spacing = 0.1, clear = false, title = "u_h (BR) (abs + quiver)")
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[1][2]),1,:), levels = 11, title = "p_h (BR)")
+    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[2][1]; abs = true),1,:), levels = 0)
+    vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution[2][1], Identity)), spacing = 0.1, clear = false, title = "u_h (BR+) (abs + quiver)")
+    scalarplot!(p[2,2],xgrid,view(nodevalues(Solution[2][2]),1,:), levels = 11, title = "p_h (BR+)")
 end
 
 function setup_and_solve!(Solution, xgrid; 

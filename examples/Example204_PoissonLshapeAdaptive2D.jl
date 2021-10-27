@@ -17,6 +17,7 @@ module Example204_PoissonLshapeAdaptive2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## exact solution u for the Poisson problem
 function exact_function!(result,x)
@@ -173,7 +174,9 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     end
     
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; add_grid_plot = true, Plotter = Plotter)
+    p=GridVisualizer(; Plotter=Plotter, layout=(1,2), clear=true, resolution=(1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels=11, title = "u_h")
+    gridplot!(p[1,2], xgrid; linewidth = 1)
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])

@@ -2,6 +2,8 @@
 """
 $(TYPEDSIGNATURES)
 
+DEPRECATED (use GridVisualize interfaces directly in combination with nodalvalues and PointEvaluator)
+
 Plots scalar plots of nodval values of operators applied to the given vector of FEVectorBlocks (Sources) (this meands operator[j] is applied to block j)
 via GridVisualizer (see documentation there for possible kwargs), either in one window with subplots (default) or several single plots.
 If the operator evaluation is vector-valued the absolute value of this vector is plotted (quiver plots not supported by this interface yet).

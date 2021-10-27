@@ -82,9 +82,10 @@ abstract type ReconstructionGradientDisc{FEreconst<:AbstractFiniteElement, DT<:D
 """
 $(TYPEDEF)
 
-evaluates the symmetric part of the gradient of the finite element function.
+evaluates the symmetric part of the gradient of the finite element function and returns its Voigt compression
+(off-diagonals on position [j,k] and [k,j] are added together and weighted with offdiagval).
 """
-abstract type SymmetricGradient <: AbstractFunctionOperator end # sym(D_geom(v_h))
+abstract type SymmetricGradient{offdiagval} <: AbstractFunctionOperator where {offdiagval} end # sym(D_geom(v_h))
 """
 $(TYPEDEF)
 
@@ -187,7 +188,7 @@ NeededDerivative4Operator(::Type{<:IdentityComponent}) = 0
 NeededDerivative4Operator(::Type{<:NormalFlux}) = 0
 NeededDerivative4Operator(::Type{<:TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:Gradient}) = 1
-NeededDerivative4Operator(::Type{SymmetricGradient}) = 1
+NeededDerivative4Operator(::Type{<:SymmetricGradient}) = 1
 NeededDerivative4Operator(::Type{TangentialGradient}) = 1
 NeededDerivative4Operator(::Type{Laplacian}) = 2
 NeededDerivative4Operator(::Type{Hessian}) = 2
@@ -213,7 +214,7 @@ DefaultName4Operator(::Type{TangentFlux}) = "TangentialFlux"
 DefaultName4Operator(::Type{TangentFluxDisc{Jump}}) = "[[TangentialFlux]]"
 DefaultName4Operator(::Type{TangentFluxDisc{Average}}) = "{{TangentialFlux}}"
 DefaultName4Operator(::Type{<:Gradient}) = "∇"
-DefaultName4Operator(::Type{SymmetricGradient}) = "ϵ"
+DefaultName4Operator(::Type{<:SymmetricGradient}) = "ϵ"
 DefaultName4Operator(::Type{TangentialGradient}) = "TangentialGradient"
 DefaultName4Operator(::Type{Laplacian}) = "Δ"
 DefaultName4Operator(::Type{Hessian}) = "H"
@@ -236,14 +237,14 @@ Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents
 Length4Operator(::Type{<:IdentityComponent}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:NormalFlux}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:TangentFlux}, xdim::Int, ncomponents::Int) = 1
-Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = ceil(ncomponents/xdim)
+Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = Int(ceil(ncomponents/xdim))
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
-Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : ceil(xdim*(ncomponents/xdim)))
+Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : Int(ceil(xdim*(ncomponents/xdim))))
 Length4Operator(::Type{Curl2D}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{Curl3D}, xdim::Int, ncomponents::Int) = 3
 Length4Operator(::Type{<:Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
-Length4Operator(::Type{SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ceil(ncomponents/xdim)
+Length4Operator(::Type{<:SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*Int(ceil(ncomponents/xdim))
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 Length4Operator(::Type{<:SymmetricHessian}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ncomponents
 Length4Operator(::Type{Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
@@ -257,7 +258,7 @@ QuadratureOrderShift4Operator(::Type{CurlScalar}) = -1
 QuadratureOrderShift4Operator(::Type{Curl2D}) = -1
 QuadratureOrderShift4Operator(::Type{Curl3D}) = -1
 QuadratureOrderShift4Operator(::Type{<:Divergence}) = -1
-QuadratureOrderShift4Operator(::Type{SymmetricGradient}) = -1
+QuadratureOrderShift4Operator(::Type{<:SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{TangentialGradient}) = -1
 QuadratureOrderShift4Operator(::Type{Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{Hessian}) = -2
