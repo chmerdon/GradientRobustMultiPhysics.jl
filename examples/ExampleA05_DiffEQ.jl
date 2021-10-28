@@ -22,8 +22,6 @@ module ExampleA05_DiffEQ
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using DifferentialEquations
-using Printf
-
 
 ## problem data
 function exact_solution!(result,x::Array{<:Real,1}, t)
@@ -106,9 +104,6 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
             ## use time control solver by GradientRobustMultiPhysics
             advance_until_time!(sys, timestep, T)
         end
-
-        ## plot solution at final time
-        GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
 
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)

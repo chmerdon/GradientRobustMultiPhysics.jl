@@ -401,6 +401,7 @@ function nodevalues!(Target::AbstractArray{T,2},
     FE::FESpace{Tv,Ti,FEType,AT},
     operator::Type{<:AbstractFunctionOperator} = Identity;
     abs::Bool = false,
+    factor = 1,
     regions::Array{Int,1} = [0],
     target_offset::Int = 0,
     source_offset::Int = 0,
@@ -492,6 +493,7 @@ function nodevalues!(Target::AbstractArray{T,2},
                                 end
                             end
                         end
+                        localT .*= factor
                         if abs
                             for k = 1 : cvals_resultdim
                                 Target[1+target_offset,node] += localT[k]^2
@@ -531,6 +533,8 @@ function nodevalues!(
     Source::FEVectorBlock,
     operator::Type{<:AbstractFunctionOperator} = Identity;
     regions::Array{Int,1} = [0],
+    abs::Bool = false,
+    factor = 1,
     target_offset::Int = 0,   # start to write into Target after offset
     zero_target::Bool = true, # target vector is zeroed
     continuous::Bool = false)
@@ -540,8 +544,8 @@ Evaluates the finite element function with the coefficient vector Source
 and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into Target.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
-    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, zero_target = zero_target, target_offset = target_offset)
+function nodevalues!(Target::AbstractArray{<:Real,2}, Source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
+    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, abs = abs, factor = factor, zero_target = zero_target, target_offset = target_offset)
 end
 
 
@@ -551,6 +555,8 @@ function nodevalues(
     Source::FEVectorBlock,
     operator::Type{<:AbstractFunctionOperator} = Identity;
     regions::Array{Int,1} = [0],
+    abs::Bool = false,
+    factor = 1,
     target_offset::Int = 0,   # start to write into Target after offset
     zero_target::Bool = true, # target vector is zeroed
     continuous::Bool = false)
@@ -561,7 +567,7 @@ and the specified FunctionOperator at all the nodes of the (specified regions of
 grid and returns an array with the values.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues(Source::FEVectorBlock{T}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], continuous::Bool = false) where {T}
+function nodevalues(Source::FEVectorBlock{T}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous::Bool = false) where {T}
     if abs
         nvals = 1
     else
@@ -570,7 +576,7 @@ function nodevalues(Source::FEVectorBlock{T}, operator::Type{<:AbstractFunctionO
         nvals = Length4Operator(operator, xdim, ncomponents)
     end
     Target = zeros(T,nvals,num_nodes(Source.FES.xgrid))
-    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, abs = abs)
+    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, factor = factor, abs = abs)
     return Target
 end
 
@@ -589,5 +595,15 @@ function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 
     nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(Source.FES)),nnodes)
     nodevalues!(nodevals, Source, Identity)
     xgrid[Coordinates] .+= magnify * nodevals
+end
+
+
+function displace_mesh(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 1)
+    xgrid_displaced = deepcopy(xgrid)
+    nnodes = size(xgrid[Coordinates],2)
+    nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(Source.FES)),nnodes)
+    nodevalues!(nodevals, Source, Identity)
+    xgrid_displaced[Coordinates] .+= magnify * nodevals
+    return xgrid_displaced
 end
 

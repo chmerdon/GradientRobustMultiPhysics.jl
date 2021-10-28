@@ -16,8 +16,11 @@ function make_all(which = []; Plotter2D = PyPlot, Plotter3D = GLMakie)
         base,ext=splitext(example_source)
         if example_source[1:7] == "Example" && ext==".jl"
             number = example_source[8:10]
-            dim = parse(Int,example_source[8])
-            @show number dim
+            if example_source[8] == 'A'
+                dim = 2
+            else
+                dim = parse(Int,example_source[8])
+            end
             if dim == 3
                 Plotter = Plotter3D
             else

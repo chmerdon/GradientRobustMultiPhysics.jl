@@ -35,11 +35,13 @@ function L2ErrorIntegrator(
     operator::Type{<:AbstractFunctionOperator};
     quadorder = "auto",
     name = "auto",
+    factor = 1,
     AT::Type{<:AssemblyType} = ON_CELLS,
     time = 0)
 ````
 
-Creates an ItemIntegrator that compares FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error.
+Creates an ItemIntegrator that compares discrete FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error
+|| compare_data(x) - factor*discrete(x) ||.
 If quadorder is left on "auto" two times the quadorder of the data is used in the evaluation.
 """
 function L2ErrorIntegrator(
@@ -49,6 +51,7 @@ function L2ErrorIntegrator(
     quadorder = "auto",
     name = "auto",
     AT::Type{<:AssemblyType} = ON_CELLS,
+    factor = 1,
     regions = [0],
     time = 0)
 
@@ -69,7 +72,7 @@ function L2ErrorIntegrator(
         result[1] = 0
         for j=1:ncomponents
             for i = 1 : ninputs
-                temp[j] -= input[(i-1)*ncomponents+j]
+                temp[j] -= input[(i-1)*ncomponents+j]*factor
             end
             result[1] += temp[j].^2
         end    

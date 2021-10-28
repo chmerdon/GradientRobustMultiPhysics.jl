@@ -83,7 +83,7 @@ export fill!, addblock!, addblock_matmul!, lrmatmul, add!
 
 export get_reconstruction_matrix
 
-export displace_mesh!
+export displace_mesh,displace_mesh!
 
 include("reconstructions.jl")
 export ReconstructionHandler, get_rcoefficients!

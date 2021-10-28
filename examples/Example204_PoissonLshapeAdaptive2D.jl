@@ -174,9 +174,10 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     end
     
     ## plot
-    p=GridVisualizer(; Plotter=Plotter, layout=(1,2), clear=true, resolution=(1000,500))
+    p=GridVisualizer(; Plotter=Plotter, layout=(1,3), clear=true, resolution=(1200,400))
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels=11, title = "u_h")
     gridplot!(p[1,2], xgrid; linewidth = 1)
+    gridplot!(p[1,3], xgrid; linewidth = 1, xlimits = [-0.0001,0.0001], ylimits = [-0.0001,0.0001])
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])

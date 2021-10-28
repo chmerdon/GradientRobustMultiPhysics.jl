@@ -12,7 +12,7 @@ module ExampleA04_CustomLinearSolver
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using ExtendableSparse
-using Printf
+using GridVisualize
 
 
 ## first define a subtype of AbstractLinearSystem, which is later given as an optional parameter to the problem solve! call
@@ -96,7 +96,10 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     println("\tH1error = $(sqrt(evaluate(H1ErrorEvaluator,Solution[1])))")
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid, [Solution[1]], [Identity]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_h")
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels=7)
+    vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
 end
 
 

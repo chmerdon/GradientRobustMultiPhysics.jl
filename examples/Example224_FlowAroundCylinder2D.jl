@@ -41,14 +41,14 @@ const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies =
 
 
 ## everything is wrapped in a main function
-function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
+function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
 
     ## load grid (see function below)
     xgrid = make_grid(W,H; n = Int(ceil(sqrt(1/maxvol))), maxvol = maxvol)
 
     ## Bernardi--Raugel element + reconstruction operator
-    FETypes = [H1BR{2}, H1P0{1}]; 
-    VeloIdentity = ReconstructionIdentity{HDIVBDM1{2}} # div-free reconstruction operator for Identity
+    FETypes = [H1P2B{2,2}, H1P1{1}]; 
+    VeloIdentity = ReconstructionIdentity{HDIVBDM2{2}} # div-free reconstruction operator for Identity
 
     ## PDE description
     Problem = PDEDescription("NSE problem (μ = $μ)")
@@ -81,10 +81,12 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
     println("p difference = $pdiff")
 
     ## plots via GridVisualize
-    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3)
-    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = [0.2,0.04], clear = false, title = "u_h (abs + quiver)")
-    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = "p_h")
+    p = GridVisualizer(; Plotter = Plotter, layout = (4,1), clear = true, resolution = (800,1200))
+    gridplot!(p[1,1],xgrid, linewidth = 1)
+    gridplot!(p[2,1],xgrid, linewidth = 1, xlimits = [0,0.3], ylimits = [0.1,0.3])
+    scalarplot!(p[3,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 0, colorbarticks = 7)
+    vectorplot!(p[3,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = [0.2,0.04], clear = false, title = "u_h (abs + quiver)")
+    scalarplot!(p[4,1],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = "p_h")
 end
 
 function get_pressure_difference(Solution::FEVector)

@@ -12,12 +12,13 @@ module ExampleA07_InterpolationBetweenMeshes
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 ## function to interpolate
 function data!(ν)
     function closure(result,x::Array{<:Real,1})
-        result[1] = sin(2*pi*x[1])*sin(2*pi*x[2]);
-        result[2] = cos(2*pi*x[1])*cos(2*pi*x[2]);
+        result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
+        result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
     end
 end
 
@@ -52,7 +53,9 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     @time interpolate!(FEFunction2[1], FEFunction1[1], use_cellparents = true)
 
     ## plot
-    GradientRobustMultiPhysics.plot(xgrid1, [FEFunction1[1], FEFunction2[1]], [Identity, Identity]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid1, view(nodevalues(FEFunction1[1]),1,:), levels = 11, title = "u_h (coarse grid)")
+    scalarplot!(p[1,2], xgrid2, view(nodevalues(FEFunction2[1]),1,:), levels = 11, title = "u_h (fine grid)")
 end
 
 end
