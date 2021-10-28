@@ -79,11 +79,11 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)
 
     # displace mesh and plot
-    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = &quot;u_h&quot;)
-    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [100,25], clear = false, title = &quot;u_h (abs + quiver)&quot;)
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,1), clear = true, resolution = (800,600))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 0, colorbarticks = 7)
+    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [50,25], xlimits = [0, scale[2]+10], ylimits = [-100,scale[1]], clear = false, title = &quot;u_h (abs + quiver)&quot;)
     displace_mesh!(xgrid, Solution[1])
-    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = &quot;u_h&quot;)
+    gridplot!(p[2,1], xgrid, linewidth = &quot;1&quot;, title = &quot;displaced mesh&quot;)
 end
 
 
@@ -147,8 +147,8 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 6.879819e-13 | 2.097176e+00 | 1.09e-01/4.60e-02/1.63e-01
-	      2   | 7.402806e-13 | 2.059942e-02 | 1.07e-01/1.12e-02/1.19e-01
-	      3   | 7.878147e-13 | 2.699072e-06 | 1.09e-01/1.06e-02/1.20e-01
-	      4   | 9.361716e-13 | 1.230407e-12 | 1.19e-01/1.08e-02/1.30e-01
-</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/> <img src="../../images/Example211_NonlinearElasticityBimetal2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	      1   | 6.879819e-13 | 2.097176e+00 | 9.41e-02/4.47e-02/1.48e-01
+	      2   | 7.402806e-13 | 2.059942e-02 | 9.68e-02/9.95e-03/1.07e-01
+	      3   | 7.878147e-13 | 2.699072e-06 | 9.65e-02/1.01e-02/1.07e-01
+	      4   | 9.361716e-13 | 1.230407e-12 | 9.51e-02/1.18e-02/1.07e-01
+</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 28 October 2021 14:04">Thursday 28 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

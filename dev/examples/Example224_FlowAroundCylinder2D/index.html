@@ -23,14 +23,14 @@ const inflow = DataFunction(bnd_inlet!, [2,2]; name = &quot;u_inflow&quot;, depe
 
 
 # everything is wrapped in a main function
-function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
+function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
 
     # load grid (see function below)
     xgrid = make_grid(W,H; n = Int(ceil(sqrt(1/maxvol))), maxvol = maxvol)
 
     # Bernardi--Raugel element + reconstruction operator
-    FETypes = [H1BR{2}, H1P0{1}];
-    VeloIdentity = ReconstructionIdentity{HDIVBDM1{2}} # div-free reconstruction operator for Identity
+    FETypes = [H1P2B{2,2}, H1P1{1}];
+    VeloIdentity = ReconstructionIdentity{HDIVBDM2{2}} # div-free reconstruction operator for Identity
 
     # PDE description
     Problem = PDEDescription(&quot;NSE problem (μ = $μ)&quot;)
@@ -63,10 +63,12 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 5e-4)
     println(&quot;p difference = $pdiff&quot;)
 
     # plots via GridVisualize
-    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3)
-    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = [0.2,0.04], clear = false, title = &quot;u_h (abs + quiver)&quot;)
-    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
+    p = GridVisualizer(; Plotter = Plotter, layout = (4,1), clear = true, resolution = (800,1200))
+    gridplot!(p[1,1],xgrid, linewidth = 1)
+    gridplot!(p[2,1],xgrid, linewidth = 1, xlimits = [0,0.3], ylimits = [0.1,0.3])
+    scalarplot!(p[3,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 0, colorbarticks = 7)
+    vectorplot!(p[3,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = [0.2,0.04], clear = false, title = &quot;u_h (abs + quiver)&quot;)
+    scalarplot!(p[4,1],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
 end
 
 function get_pressure_difference(Solution::FEVector)
@@ -201,11 +203,11 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 2.158694e-17 | 1.903511e-03 | 9.79e-01/2.70e-01/1.25e+00
-	      2   | 2.309762e-17 | 5.517788e-04 | 1.03e+00/1.86e-01/1.22e+00
-	      3   | 2.042380e-17 | 2.927442e-05 | 9.97e-01/1.85e-01/1.19e+00
-	      4   | 2.281003e-17 | 1.036895e-07 | 1.01e+00/2.00e-01/1.21e+00
-	      5   | 2.295749e-17 | 1.089343e-12 | 9.87e-01/1.96e-01/1.19e+00
+	      1   | 2.679418e-17 | 1.899986e-03 | 1.11e+00/3.26e-01/1.45e+00
+	      2   | 2.681033e-17 | 5.392003e-04 | 1.11e+00/2.78e-01/1.39e+00
+	      3   | 2.862207e-17 | 2.926551e-05 | 1.13e+00/2.51e-01/1.39e+00
+	      4   | 2.655874e-17 | 1.060798e-07 | 1.13e+00/2.91e-01/1.43e+00
+	      5   | 2.846392e-17 | 1.119312e-12 | 1.10e+00/2.82e-01/1.39e+00
 
-[drag, lift] = [5.574275662599664, 0.012138554422720174]
-p difference = [0.11612370212308319]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/> <img src="../../images/Example224_FlowAroundCylinder2D_2.png" alt/> <img src="../../images/Example224_FlowAroundCylinder2D_3.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[drag, lift] = [5.558270082490448, 0.010488569316222607]
+p difference = [0.11865484048663101]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 28 October 2021 14:04">Thursday 28 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

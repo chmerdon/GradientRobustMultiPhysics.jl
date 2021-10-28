@@ -3,12 +3,13 @@
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
+using GridVisualize
 
 # function to interpolate
 function data!(ν)
     function closure(result,x::Array{&lt;:Real,1})
-        result[1] = sin(2*pi*x[1])*sin(2*pi*x[2]);
-        result[2] = cos(2*pi*x[1])*cos(2*pi*x[2]);
+        result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
+        result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
     end
 end
 
@@ -43,9 +44,11 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     @time interpolate!(FEFunction2[1], FEFunction1[1], use_cellparents = true)
 
     # plot
-    GradientRobustMultiPhysics.plot(xgrid1, [FEFunction1[1], FEFunction2[1]], [Identity, Identity]; Plotter = Plotter)
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid1, view(nodevalues(FEFunction1[1]),1,:), levels = 11, title = &quot;u_h (coarse grid)&quot;)
+    scalarplot!(p[1,2], xgrid2, view(nodevalues(FEFunction2[1]),1,:), levels = 11, title = &quot;u_h (fine grid)&quot;)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA07_InterpolationBetweenMeshes.main()
-  1.232251 seconds (1.45 M allocations: 86.101 MiB, 4.42% gc time, 21.70% compilation time)
-  0.522691 seconds (585.17 k allocations: 28.330 MiB, 94.61% compilation time)</code></pre><p><img src="../../images/ExampleA07_InterpolationBetweenMeshes_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA06_LocalEquilibratedFluxes2D/">« A06 : Local Equilibrated Fluxes 2D</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 27 October 2021 18:45">Wednesday 27 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  1.220244 seconds (1.44 M allocations: 85.999 MiB, 2.87% gc time, 23.57% compilation time)
+  0.579704 seconds (584.49 k allocations: 28.289 MiB, 6.21% gc time, 95.47% compilation time)</code></pre><p><img src="../../images/ExampleA07_InterpolationBetweenMeshes_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA06_LocalEquilibratedFluxes2D/">« A06 : Local Equilibrated Fluxes 2D</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 28 October 2021 14:04">Thursday 28 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
