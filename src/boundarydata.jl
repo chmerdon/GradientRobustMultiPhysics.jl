@@ -82,7 +82,7 @@ function boundarydata!(
     Target::FEVectorBlock{T,Tv,Ti},
     O::BoundaryOperator;
     time = 0,
-    fixed_penalty::T = 1e60,
+    fixed_penalty = 1e60,
     skip_enumerations = false) where {T,Tv,Ti}
 
     fixed_dofs = []

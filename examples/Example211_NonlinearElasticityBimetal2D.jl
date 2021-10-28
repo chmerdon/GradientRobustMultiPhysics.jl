@@ -97,8 +97,8 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
 
     ## displace mesh and plot
     p = GridVisualizer(; Plotter = Plotter, layout = (2,1), clear = true, resolution = (800,600))
-    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 0, colorbarticks = 7)
-    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [50,25], xlimits = [0, scale[2]+10], ylimits = [-100,scale[1]], clear = false, title = "u_h (abs + quiver)")
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 0, colorbarticks = 7, xlimits = [0, scale[2]+10], ylimits = [-100,scale[1]])
+    vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = [50,25], clear = false, title = "u_h (abs + quiver)")
     displace_mesh!(xgrid, Solution[1])
     gridplot!(p[2,1], xgrid, linewidth = "1", title = "displaced mesh")
 end

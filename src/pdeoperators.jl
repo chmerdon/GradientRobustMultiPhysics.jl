@@ -984,11 +984,11 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,
     FES = Array{FESpace{TvG,TiG},1}(undef, 2)
     FES[1] = O.transposed_assembly ? A.FESY : A.FESX
     FES[2] = O.transposed_assembly ? A.FESX : A.FESY
-    return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    return AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{T,Tv,Ti}, CurrentSolution::FEVector{T,Tv,Ti}; non_fixed::Int = 1, fixed_id = 1) where{T,Tv,Ti,APT<:APT_BilinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_BilinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
     FES = Array{FESpace{Tv,Ti},1}(undef, 2)
     if length(O.fixed_arguments) == 1
@@ -1002,14 +1002,14 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{T,Tv
         FES[non_fixed] = b.FES
         FES[non_fixed == 1 ? 2 : 1] = CurrentSolution[fixed_id].FES
     end
-    return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{T,Tv,Ti}, CurrentSolution; non_fixed::Int = 1, fixed_id = 1) where{T,Tv,Ti,APT<:APT_LinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_LinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{Tv,Ti},1}(undef, 1)
+    FES = Array{FESpace{TvG,TiG},1}(undef, 1)
     FES[1] = b.FES
-    return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
 
@@ -1027,12 +1027,12 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,
         FES[1] = O.transposed_assembly ? A.FESY : A.FESX
         FES[2] = O.transposed_assembly ? A.FESX : A.FESY
     end
-    return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    return AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{T,Tv,Ti}, CurrentSolution::FEVector{T,Tv,Ti}; non_fixed::Int = 1, fixed_id = 1) where{T,Tv,Ti,APT<:APT_TrilinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_TrilinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{Tv,Ti},1}(undef, 3)
+    FES = Array{FESpace{TvG,TiG},1}(undef, 3)
     FES[O.fixed_arguments[1]] = CurrentSolution[O.fixed_arguments_ids[1]].FES
     if length(O.fixed_arguments) == 2
         # a restricted Trilineraform is assembled as a RHS operator
@@ -1051,7 +1051,7 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{T,Tv
             FES[non_fixed == 1 ? 3 : 2] = O.transposed_assembly ? b.FES : CurrentSolution[fixed_id].FES
         end
     end
-    return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
 
@@ -1062,20 +1062,20 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,
         FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
     end
     push!(FES,A.FESX) # testfunction always refers to matrix row in this pattern !!!
-    AP = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    AP = AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
     AP.newton_args = O.newton_arguments
     return AP
 end
 
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{T,Tv,Ti}, CurrentSolution::FEVector) where{T,Tv,Ti,APT<:APT_NonlinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector) where{T,TvV,TvG,TiG,APT<:APT_NonlinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{Tv,Ti},1}(undef, length(O.fixed_arguments))
+    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
     for a = 1 : length(O.fixed_arguments)
         FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
     end
     push!(FES,b.FES)
-    return AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
+    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
 end
 
 
@@ -1244,9 +1244,9 @@ end
 ###### OTHER OPERATORS #######
 ##############################
 
-struct DiagonalOperator <: AbstractPDEOperator
+struct DiagonalOperator{T} <: AbstractPDEOperator
     name::String
-    value::Real
+    value::T
     onlyz::Bool
     regions::Array{Int,1}
 end
@@ -1260,8 +1260,42 @@ if _onlyz_ == true only values that are zero are changed
 
 can only be applied in PDE LHS
 """
-function DiagonalOperator(value::Real = 1.0, onlynz::Bool = true; regions::Array{Int,1} = [0])
-    return DiagonalOperator("Diag($value)",value, onlynz, regions)
+function DiagonalOperator(value::Real = 1.0; name = "auto", onlynz::Bool = true, regions::Array{Int,1} = [0])
+    if name == "auto"
+        name = "diag($value)"
+    end
+    return DiagonalOperator{typeof(value)}(name, value, onlynz, regions)
+end
+
+
+function assemble!(A::FEMatrixBlock{TvM,TiM,TvG,TiG}, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator{T}, CurrentSolution; time::Real = 0) where {T,TvM,TiM,TvG,TiG}
+    @debug "Assembling DiagonalOperator $(O.name)"
+    FE1 = A.FESX
+    FE2 = A.FESY
+    @assert FE1 == FE2
+    xCellDofs::DofMapTypes{TiG} = FE1[CellDofs]
+    xCellRegions::GridRegionTypes{TiG} = FE1.xgrid[CellRegions]
+    ncells::Int = num_sources(xCellDofs)
+    dof::Int = 0
+    value::T = O.value
+    Am::ExtendableSparseMatrix{TvM,TiM} = A.entries
+    for item = 1 : ncells
+        for r = 1 : length(O.regions) 
+            # check if item region is in regions
+            if xCellRegions[item] == O.regions[r] || O.regions[r] == 0
+                for k = 1 : num_targets(xCellDofs,item)
+                    dof = xCellDofs[k,item] + A.offsetX
+                    if O.onlyz == true
+                        if Am[dof,dof] == zero(TvM)
+                           _addnz(A.entries,dof,dof,value,1)
+                        end
+                    else
+                        _addnz(A.entries,dof,dof,value,1)
+                    end    
+                end
+            end
+        end
+    end
 end
 
 
@@ -1280,6 +1314,18 @@ can only be applied in PDE RHS
 """
 function CopyOperator(copy_from, factor)
     return CopyOperator("CopyOperator",copy_from, factor)
+end
+
+
+function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0) 
+    for j = 1 : length(b)
+        b[j] = CurrentSolution[O.copy_from][j] * O.factor
+    end
+end
+
+
+function check_PDEoperator(O::CopyOperator, involved_equations)
+    return true, true, AssemblyAlways
 end
 
 
@@ -1316,45 +1362,10 @@ end
 function check_PDEoperator(O::FVConvectionDiffusionOperator, involved_equations)
     return O.beta_from in involved_equations, false, AssemblyAlways
 end
-function check_PDEoperator(O::CopyOperator, involved_equations)
-    return true, true, AssemblyAlways
-end
 
 function check_dependency(O::FVConvectionDiffusionOperator, arg::Int)
     return O.beta_from == arg
 end
-
-
-
-
-function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::DiagonalOperator, CurrentSolution::FEVector; time::Real = 0)
-    @debug "Assembling DiagonalOperator $(O.name)"
-    FE1 = A.FESX
-    FE2 = A.FESY
-    @assert FE1 == FE2
-    xCellDofs = FE1[CellDofs]
-    xCellRegions = FE1.xgrid[CellRegions]
-    ncells = num_sources(xCellDofs)
-    dof::Int = 0
-    for item = 1 : ncells
-        for r = 1 : length(O.regions) 
-            # check if item region is in regions
-            if xCellRegions[item] == O.regions[r] || O.regions[r] == 0
-                for k = 1 : num_targets(xCellDofs,item)
-                    dof = xCellDofs[k,item]
-                    if O.onlyz == true
-                        if A[dof,dof] == 0
-                            A[dof,dof] = O.value
-                        end
-                    else
-                        A[dof,dof] = O.value
-                    end    
-                end
-            end
-        end
-    end
-end
-
 
 
 #= 
@@ -1448,14 +1459,6 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
         end
     end
 end
-
-
-function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::CopyOperator, CurrentSolution::FEVector; time::Real = 0) 
-    for j = 1 : length(b)
-        b[j] = CurrentSolution[O.copy_from][j] * O.factor
-    end
-end
-
 
 
 #####################################

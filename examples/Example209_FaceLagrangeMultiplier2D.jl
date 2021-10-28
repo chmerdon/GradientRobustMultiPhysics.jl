@@ -35,38 +35,35 @@ function main(; Plotter = nothing, verbosity = 0)
     ## define bestapproximation problem
     Problem = L2BestapproximationProblem(u; name = "constrained L2-bestapproximation problem", bestapprox_boundary_regions = [])
 
-    ## we want to use a broken space and give the constraint of no normal jumps on interior faces
-    ## in form of a Lagrange multiplier, since there is no NormalFluxDisc{Jump} operator yet,
-    ## we have to use the full identity and multiply the normal vector in an action
+    ## we want to use a broken space and constrain the normal jumps on interior faces
+    ## in form of a Lagrange multiplier which needs an additional unknown
     add_unknown!(Problem; unknown_name = "LM face jumps", equation_name = "face jump constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(NormalFluxDisc{Jump}; AT = ON_IFACES))
-    ## the diagonal operator sets the Lagrange multiplier on all face boundary regions to zero
-    add_operator!(Problem, [2,2], DiagonalOperator("Diag(1)", 1.0, true, [1,2,3,4]))
+    ## the diagonal operator sets the Lagrange multiplier on all boundary face regions to zero
+    add_operator!(Problem, [2,2], DiagonalOperator(1; regions = [1,2,3,4]))
 
     ## choose some (inf-sup stable) finite element types
-    ## first space is the Hdiv element
-    ## second will be used for the Lagrange multiplier space on faces
+    ## first space is the Hdiv element that lives ON_CELLS
+    ## second will be used for the Lagrange multiplier space that lives ON_FACES
     FEType = [HDIVRT1{2}, H1P1{1}]
-    FES = [FESpace{FEType[1]}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
+    FES = [FESpace{FEType[1], ON_CELLS}(xgrid; broken = true),FESpace{FEType[2], ON_FACES}(xgrid; broken = true)]
 
     ## solve
-    Solution = FEVector{Float64}(["u_h (Hdiv-broken)", "LM face jumps"],FES)
+    Solution = FEVector(["u_h (Hdiv-broken)", "LM face jumps"],FES)
     solve!(Solution, Problem)
     
-    ## solve again with Hdiv-continuous element to see that we get the same result
+    ## solve again with the (unbroken) Hdiv-continuous element to test that we get the same result
+    ## note: for an FESpace living ON_CELLS and broken = false is the default
     Problem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [])
-    FES = FESpace{FEType[1]}(xgrid)
-
-    ## solve
-    Solution2 = FEVector{Float64}("u_h (Hdiv-cont.)",FES)
+    Solution2 = FEVector("u_h (Hdiv-cont.)",FESpace{FEType[1]}(xgrid))
     solve!(Solution2, Problem)
 
     ## calculate L2 error of both solutions and their difference
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
-    L2DiffEvaluator = L2DifferenceIntegrator(Float64, 2, Identity)
-    println("\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-    println("\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2ErrorEvaluator,Solution2[1])))")
-    println("\tL2error(difference) = $(sqrt(evaluate(L2DiffEvaluator,[Solution[1], Solution2[1]])))")
+    L2Error  = L2ErrorIntegrator(Float64, u, Identity)
+    L2Diff = L2DifferenceIntegrator(Float64, 2, Identity)
+    println("\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2Error,Solution[1])))")
+    println("\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2Error,Solution2[1])))")
+    println("\tL2error(difference) = $(sqrt(evaluate(L2Diff,[Solution[1], Solution2[1]])))")
 
     ## plot both solutions
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
@@ -74,6 +71,6 @@ function main(; Plotter = nothing, verbosity = 0)
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = "u_1 (abs + quiver)")
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
     vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = "u_2 (abs + quiver)")
-end
 
+end
 end
