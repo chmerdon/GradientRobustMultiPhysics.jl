@@ -990,7 +990,7 @@ end
 
 function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_BilinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{Tv,Ti},1}(undef, 2)
+    FES = Array{FESpace{TvG,TiG},1}(undef, 2)
     if length(O.fixed_arguments) == 1
         # assume it is a restricted bilinearform
         non_fixed = O.fixed_arguments[1] == 1 ? 2 : 1
