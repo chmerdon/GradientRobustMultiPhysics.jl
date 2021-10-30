@@ -358,8 +358,8 @@ function interpolate!(Target::FEVectorBlock{T,Tv,Ti}, source_data::FEVectorBlock
                 lastnonzerocell = xCellParents[target_cell]
             end
             if xtrafo !== nothing
-               xtrafo(x_source, x)
-               cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
+                xtrafo(x_source, x)
+                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
             else
                 cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell)
             end
