@@ -111,7 +111,8 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubble to P1 basis
-        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+1,1] = 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+1,2] = refbasis[offset+1,1]
     end
 end
 
@@ -122,9 +123,12 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Triangl
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
-        refbasis[offset+2,:] .= 6 * xref[2] * xref[1]
-        refbasis[offset+3,:] .= 6 * refbasis[1,1] * xref[2]
+        refbasis[offset+1,1] = 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+2,1] = 6 * xref[2] * xref[1]
+        refbasis[offset+3,1] = 6 * refbasis[1,1] * xref[2]
+        refbasis[offset+1,2] = refbasis[offset+1,1]
+        refbasis[offset+2,2] = refbasis[offset+2,1]
+        refbasis[offset+3,2] = refbasis[offset+3,1]
     end
 end
 
@@ -140,10 +144,14 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Quadril
         # add face bubbles to Q1 basis
         a = 1 - xref[1]
         b = 1 - xref[2]
-        refbasis[offset+1,:] .= 6*xref[1]*a*b
-        refbasis[offset+2,:] .= 6*xref[2]*xref[1]*b
-        refbasis[offset+3,:] .= 6*xref[1]*xref[2]*a
-        refbasis[offset+4,:] .= 6*xref[2]*a*b
+        refbasis[offset+1,1] = 6*xref[1]*a*b
+        refbasis[offset+2,1] = 6*xref[2]*xref[1]*b
+        refbasis[offset+3,1] = 6*xref[1]*xref[2]*a
+        refbasis[offset+4,1] = 6*xref[2]*a*b
+        refbasis[offset+1,2] = refbasis[offset+1,1]
+        refbasis[offset+2,2] = refbasis[offset+2,1]
+        refbasis[offset+3,2] = refbasis[offset+3,1]
+        refbasis[offset+4,2] = refbasis[offset+4,1]
     end
 end
 
@@ -198,7 +206,9 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 60 * xref[1] * refbasis[1,1] * xref[2]
+        refbasis[offset+1,1] = 60 * xref[1] * refbasis[1,1] * xref[2]
+        refbasis[offset+1,2] = refbasis[offset+1,1]
+        refbasis[offset+1,3] = refbasis[offset+1,1]
     end
 end
 
@@ -209,7 +219,9 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 36 * xref[1] * (1 - xref[1]) * (1 - xref[2]) * xref[2]
+        refbasis[offset+1,1] = 36 * xref[1] * (1 - xref[1]) * (1 - xref[2]) * xref[2]
+        refbasis[offset+1,2] = refbasis[offset+1,1]
+        refbasis[offset+1,3] = refbasis[offset+1,1]
     end
 end
 
@@ -220,10 +232,13 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Tetrahe
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 60 * xref[1] * refbasis[1,1] * xref[2]
-        refbasis[offset+2,:] .= 60 * refbasis[1,1] * xref[1] * xref[3]
-        refbasis[offset+3,:] .= 60 * xref[1] * xref[2] * xref[3]
-        refbasis[offset+4,:] .= 60 * refbasis[1,1] * xref[2] * xref[3]
+        refbasis[offset+1,1] = 60 * xref[1] * refbasis[1,1] * xref[2]
+        refbasis[offset+2,1] = 60 * refbasis[1,1] * xref[1] * xref[3]
+        refbasis[offset+3,1] = 60 * xref[1] * xref[2] * xref[3]
+        refbasis[offset+4,1] = 60 * refbasis[1,1] * xref[2] * xref[3]
+        for j = 1 : 4, k = 2 : 3
+            refbasis[offset+j,k] = refbasis[offset+j,1]
+        end
     end
 end
 
@@ -240,12 +255,15 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Hexahed
         a = 1 - xref[1]
         b = 1 - xref[2]
         c = 1 - xref[3]
-        refbasis[offset+1,:] .= 36*a*b*xref[1]*xref[2]*c # bottom
-        refbasis[offset+2,:] .= 36*a*xref[1]*c*xref[3]*b # front
-        refbasis[offset+3,:] .= 36*a*b*c*xref[2]*xref[3] # left
-        refbasis[offset+4,:] .= 36*a*xref[1]*c*xref[3]*xref[2] # back
-        refbasis[offset+5,:] .= 36*xref[1]*b*c*xref[2]*xref[3] # right
-        refbasis[offset+6,:] .= 36*a*b*xref[1]*xref[2]*xref[3] # top
+        refbasis[offset+1,1] = 36*a*b*xref[1]*xref[2]*c # bottom
+        refbasis[offset+2,1] = 36*a*xref[1]*c*xref[3]*b # front
+        refbasis[offset+3,1] = 36*a*b*c*xref[2]*xref[3] # left
+        refbasis[offset+4,1] = 36*a*xref[1]*c*xref[3]*xref[2] # back
+        refbasis[offset+5,1] = 36*xref[1]*b*c*xref[2]*xref[3] # right
+        refbasis[offset+6,1] = 36*a*b*xref[1]*xref[2]*xref[3] # top
+        for j = 1 : 6, k = 2 : 3
+            refbasis[offset+j,k] = refbasis[offset+j,1]
+        end
     end
 end
 

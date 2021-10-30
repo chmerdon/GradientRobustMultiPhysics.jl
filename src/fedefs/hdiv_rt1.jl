@@ -163,52 +163,60 @@ end
 
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT1{2}}, ::Type{<:Triangle2D})
+    temp = 0.0
     function closure(refbasis,xref)
         temp = 1//2 - xref[1] - xref[2]
+
         # RT0 basis
-        refbasis[1,:] .= [xref[1], xref[2]-1];
-        refbasis[3,:] .= [xref[1], xref[2]];
-        refbasis[5,:] .= [xref[1]-1, xref[2]];
-        # additional RT1 face basis functions
-        refbasis[2,:] .= -12*temp .* refbasis[1,:];
-        refbasis[4,:] .= -(12*(xref[1] - 1//2)) .* refbasis[3,:];
-        refbasis[6,:] .= -(12*(xref[2] - 1//2)) .* refbasis[5,:];
-        # interior functions
-        refbasis[7,:] .= 12*xref[2] .* refbasis[1,:];
-        refbasis[8,:] .= 12*xref[1] .* refbasis[5,:];
+        refbasis[1,1] = xref[1];        refbasis[1,2] = xref[2]-1
+        refbasis[3,1] = xref[1];        refbasis[3,2] = xref[2]
+        refbasis[5,1] = xref[1]-1;      refbasis[5,2] = xref[2]
+
+        for k = 1 : 2
+            # additional RT1 face basis functions
+            refbasis[2,k] = -12*temp * refbasis[1,k]
+            refbasis[4,k] = -(12*(xref[1] - 1//2)) * refbasis[3,k]
+            refbasis[6,k] = -(12*(xref[2] - 1//2)) * refbasis[5,k]
+            # interior functions
+            refbasis[7,k] = 12*xref[2] * refbasis[1,k]
+            refbasis[8,k] = 12*xref[1] * refbasis[5,k]
+        end
     end
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT1{3}}, ::Type{<:Tetrahedron3D})
+    temp = 0.0
     function closure(refbasis,xref)
         temp = 1 - xref[1] - xref[2] - xref[3]
         # RT0 basis
-        refbasis[1,:] .= 2*[xref[1], xref[2], xref[3]-1]
-        refbasis[5,:] .= 2*[xref[1], xref[2]-1, xref[3]]
-        refbasis[9,:] .= 2*[xref[1], xref[2], xref[3]]
-        refbasis[13,:] .= 2*[xref[1]-1, xref[2], xref[3]]
+        refbasis[1,1] = 2*xref[1];      refbasis[1,2] = 2*xref[2];      refbasis[1,3] = 2*(xref[3]-1)
+        refbasis[5,1] = 2*xref[1];      refbasis[5,2] = 2*(xref[2]-1);  refbasis[5,3] = 2*xref[3]
+        refbasis[9,1] = 2*xref[1];      refbasis[9,2] = 2*xref[2];      refbasis[9,3] = 2*xref[3]
+        refbasis[13,1] = 2*(xref[1]-1);  refbasis[13,2] = 2*xref[2];      refbasis[13,3] = 2*xref[3]
 
-        # additional RT1 face basis functions (2 per face)       # Test with (phi_1-1/3,phi_3-1/3,phi_2-1/3)
-        refbasis[2,:] .= -12*(2*temp+xref[2]-1) .* refbasis[1,:]; # [1,0,-1]
-        refbasis[3,:] .= -12*(2*xref[2]+xref[1]-1) .* refbasis[1,:]; # [-1,1,0]
-        refbasis[4,:] .= 12*(2*xref[2]+temp-1) .* refbasis[1,:]; # [0,-1,1]
+        for k = 1 : 3
+            # additional RT1 face basis functions (2 per face)          # Test with (phi_1-1/3,phi_3-1/3,phi_2-1/3)
+            refbasis[2,k] = -12*(2*temp+xref[2]-1) * refbasis[1,k];     # [1,0,-1]
+            refbasis[3,k] = -12*(2*xref[2]+xref[1]-1) * refbasis[1,k];  # [-1,1,0]
+            refbasis[4,k] = 12*(2*xref[2]+temp-1) * refbasis[1,k];      # [0,-1,1]
 
-        refbasis[6,:] .= -12*(2*temp+xref[1]-1)  .* refbasis[5,:];
-        refbasis[7,:] .= -12*(2*xref[1]+xref[3]-1) .* refbasis[5,:];
-        refbasis[8,:] .= 12*(2*xref[1]+temp-1) .* refbasis[5,:];
+            refbasis[6,k] = -12*(2*temp+xref[1]-1) * refbasis[5,k];
+            refbasis[7,k] = -12*(2*xref[1]+xref[3]-1) * refbasis[5,k];
+            refbasis[8,k] = 12*(2*xref[1]+temp-1) * refbasis[5,k];
 
-        refbasis[10,:] .= -12*(2*xref[1]+xref[2]-1)  .* refbasis[9,:];
-        refbasis[11,:] .= -12*(2*xref[2]+xref[3]-1)  .* refbasis[9,:];
-        refbasis[12,:] .= 12*(2*xref[2]+xref[1]-1)  .* refbasis[9,:];
+            refbasis[10,k] = -12*(2*xref[1]+xref[2]-1) * refbasis[9,k];
+            refbasis[11,k] = -12*(2*xref[2]+xref[3]-1) * refbasis[9,k];
+            refbasis[12,k] = 12*(2*xref[2]+xref[1]-1) * refbasis[9,k];
 
-        refbasis[14,:] .= -12*(2*temp+xref[3]-1) .* refbasis[13,:];
-        refbasis[15,:] .= -12*(2*xref[3]+xref[2]-1) .* refbasis[13,:];
-        refbasis[16,:] .= 12*(2*xref[3]+temp-1) .* refbasis[13,:];
+            refbasis[14,k] = -12*(2*temp+xref[3]-1) * refbasis[13,k];
+            refbasis[15,k] = -12*(2*xref[3]+xref[2]-1) * refbasis[13,k];
+            refbasis[16,k] = 12*(2*xref[3]+temp-1) * refbasis[13,k];
 
-        # interior functions
-        refbasis[17,:] .= 12*xref[3] .* refbasis[1,:];
-        refbasis[18,:] .= 12*xref[2] .* refbasis[5,:];
-        refbasis[19,:] .= 12*xref[1] .* refbasis[13,:];
+            # interior functions
+            refbasis[17,k] = 12*xref[3] * refbasis[1,k];
+            refbasis[18,k] = 12*xref[2] * refbasis[5,k];
+            refbasis[19,k] = 12*xref[1] * refbasis[13,k];
+        end
     end
 end
 

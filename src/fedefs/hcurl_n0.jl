@@ -102,36 +102,38 @@ end
 
 # on faces dofs are only tangential fluxes
 function get_basis(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}, Type{<:ON_BFACES}, Type{<:ON_FACES}}, ::Type{<:HCURLN0}, ::Type{<:AbstractElementGeometry})
-    function closure(refbasis,xref)
+    function closure(refbasis, xref)
         refbasis[1,1] = 1
     end
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HCURLN0{2}}, ::Type{<:Triangle2D})
     function closure(refbasis,xref)
-        refbasis[1,:] .= [1.0-xref[2], xref[1]]
-        refbasis[2,:] .= [-xref[2], xref[1]]
-        refbasis[3,:] .= [-xref[2], xref[1]-1.0]
+        refbasis[1,1] = 1-xref[2];      refbasis[1,2] = xref[1]
+        refbasis[2,1] = -xref[2];       refbasis[2,2] = xref[1]
+        refbasis[3,1] = -xref[2];       refbasis[3,2] = xref[1]-1
+        return nothing
     end
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HCURLN0{2}}, ::Type{<:Quadrilateral2D})
     function closure(refbasis,xref)
-        refbasis[1,:] .= [1 - xref[2], 0.0]
-        refbasis[2,:] .= [0.0, xref[1]]
-        refbasis[3,:] .= [-xref[2], 0.0]
-        refbasis[4,:] .= [0.0, xref[1]-1.0]
+        refbasis[1,1] = 1 - xref[2];    refbasis[1,2] = 0
+        refbasis[2,1] = 0;              refbasis[2,2] = xref[1]
+        refbasis[3,1] = -xref[2];       refbasis[3,2] = 0
+        refbasis[4,1] = 0;              refbasis[4,2] = xref[1]-1
+        return nothing
     end
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HCURLN0{3}}, ::Type{<:Tetrahedron3D})
     function closure(refbasis,xref)
-        refbasis[1,:] .= [1.0-xref[2]-xref[3], xref[1], xref[1]] # edge 1 = [1,2]
-        refbasis[2,:] .= [xref[2], 1-xref[3]-xref[1], xref[2]]   # edge 2 = [1,3]
-        refbasis[3,:] .= [xref[3], xref[3], 1-xref[1]-xref[2]]
-        refbasis[4,:] .= [-xref[2], xref[1], 0]
-        refbasis[5,:] .= [-xref[3], 0, xref[1]]
-        refbasis[6,:] .= [0, -xref[3], xref[2]]
+        refbasis[1,1] = 1.0-xref[2]-xref[3];    refbasis[1,2] = xref[1];            refbasis[1,3] = xref[1]             # edge 1 = [1,2]
+        refbasis[2,1] = xref[2];                refbasis[2,2] = 1-xref[3]-xref[1];  refbasis[2,3] = xref[2]             # edge 2 = [1,3]
+        refbasis[3,1] = xref[3];                refbasis[3,2] = xref[3];            refbasis[3,3] = 1-xref[1]-xref[2]
+        refbasis[4,1] = -xref[2];               refbasis[4,2] = xref[1];            refbasis[4,3] = 0
+        refbasis[5,1] = -xref[3];               refbasis[5,2] = 0;                  refbasis[5,3] = xref[1]
+        refbasis[6,1] = 0;                      refbasis[6,2] = -xref[3];           refbasis[6,3] = xref[2]
     end
 end
 

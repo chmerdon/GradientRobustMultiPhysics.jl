@@ -418,9 +418,7 @@ function nodevalues!(Target::AbstractArray{T,2},
             regions = Array{Int,1}(Base.unique(xItemRegions[:]))
         catch
             regions = [xItemRegions[1]]
-        end        
-    else
-        regions = Array{Int,1}(regions)    
+        end
     end
 
     # setup basisevaler for each unique cell geometries
@@ -444,13 +442,12 @@ function nodevalues!(Target::AbstractArray{T,2},
     item::Int = 0
     itemET = EG[1]
     nregions::Int = length(regions)
-    ncomponents::Int = get_ncomponents(FEType)
     iEG::Int = 1
     node::Int = 0
     dof::Ti = 0
-    flag4node = zeros(Bool,nnodes)
+    flag4node::Array{Bool,1} = zeros(Bool,nnodes)
     temp::Array{T,1} = zeros(T,cvals_resultdim)
-    localT = zeros(T,cvals_resultdim)
+    localT::Array{T,1} = zeros(T,cvals_resultdim)
     weights::Array{T,1} = qf[1].w
 
     if zero_target

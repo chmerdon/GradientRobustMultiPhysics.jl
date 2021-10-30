@@ -199,24 +199,28 @@ function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVBD
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM2{2}}, ::Type{<:Triangle2D})
+    temp = 0.0
     function closure(refbasis, xref)
         temp = 1 - xref[1] - xref[2]
+
         # RT0 basis
-        refbasis[1,:] .= [xref[1], xref[2]-1]
-        refbasis[4,:] .= [xref[1], xref[2]]
-        refbasis[7,:] .= [xref[1]-1, xref[2]]
+        refbasis[1,1] = xref[1];    refbasis[1,2] = xref[2]-1
+        refbasis[4,1] = xref[1];    refbasis[4,2] = xref[2]
+        refbasis[7,1] = xref[1]-1;  refbasis[7,2] = xref[2]
         # additional BDM1 functions on faces
-        refbasis[2,:] .= 2*[3*xref[1], 3-6*xref[1]-3*xref[2]]    # = 6*refbasis[1,:] + 12*[0,phi_1]       # phi2-weighted linear moment
-        refbasis[5,:] .= 2*[-3*xref[1], 3*xref[2]]               # = 6*refbasis[3,:] + 12*[-phi_2,0]      # phi3-weighted linear moment
-        refbasis[8,:] .= 2*[-3+3*xref[1]+6*xref[2], -3*xref[2]]  # = 6*refbasis[5,:] + 12*[phi_3,-phi_3]  # phi1-weighted linear moment
-        # additional BDM2 face functions on faces
-        refbasis[3,:] .= -15*((temp - 1//2)*refbasis[2,:] + refbasis[1,:])
-        refbasis[6,:] .= -15*((xref[1] - 1//2)*refbasis[5,:] + refbasis[4,:])
-        refbasis[9,:] .= -15*((xref[2] - 1//2)*refbasis[8,:] + refbasis[7,:])
-        # additional BDM2 interior functions
-        refbasis[10,:] .= xref[2] * refbasis[2,:]
-        refbasis[11,:] .= temp * refbasis[5,:]
-        refbasis[12,:] .= xref[1] * refbasis[8,:]
+        refbasis[2,1] = 6*xref[1];                  refbasis[2,2] = 6-12*xref[1]-6*xref[2]      
+        refbasis[5,1] = -6*xref[1];                 refbasis[5,2] = 6*xref[2]                   
+        refbasis[8,1] = 6*(xref[1]-1)+12*xref[2];   refbasis[8,2] = -6*xref[2]    
+        for k = 1 : 2              
+            # additional BDM2 face functions on faces
+            refbasis[3,k] = -15*((temp - 1//2)*refbasis[2,k] + refbasis[1,k])
+            refbasis[6,k] = -15*((xref[1] - 1//2)*refbasis[5,k] + refbasis[4,k])
+            refbasis[9,k] = -15*((xref[2] - 1//2)*refbasis[8,k] + refbasis[7,k])
+            # additional BDM2 interior functions
+            refbasis[10,k] = xref[2] * refbasis[2,k]
+            refbasis[11,k] = temp * refbasis[5,k]
+            refbasis[12,k] = xref[1] * refbasis[8,k]
+        end
     end
 end
 

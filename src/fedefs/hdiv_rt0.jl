@@ -72,39 +72,40 @@ end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{2}}, ::Type{<:Triangle2D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= [xref[1], xref[2]-1]
-        refbasis[2,:] .= [xref[1], xref[2]]
-        refbasis[3,:] .= [xref[1]-1, xref[2]]
+        refbasis[1,1] = xref[1];    refbasis[1,2] = xref[2]-1
+        refbasis[2,1] = xref[1];    refbasis[2,2] = xref[2]
+        refbasis[3,1] = xref[1]-1;  refbasis[3,2] = xref[2]
     end
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{2}}, ::Type{<:Quadrilateral2D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= [0, xref[2]-1]
-        refbasis[2,:] .= [xref[1], 0]
-        refbasis[3,:] .= [0, xref[2]]
-        refbasis[4,:] .= [xref[1]-1, 0]
+        refbasis[1,1] = 0;           refbasis[1,2] = xref[2]-1
+        refbasis[2,1] = xref[1];     refbasis[2,2] = 0
+        refbasis[3,1] = 0;           refbasis[3,2] = xref[2]
+        refbasis[4,1] = xref[1]-1;   refbasis[4,2] = 0
     end
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{3}}, ::Type{<:Tetrahedron3D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= 2*[xref[1], xref[2], xref[3]-1]
-        refbasis[2,:] .= 2*[xref[1], xref[2]-1, xref[3]]
-        refbasis[3,:] .= 2*[xref[1], xref[2], xref[3]]
-        refbasis[4,:] .= 2*[xref[1]-1, xref[2], xref[3]]
+        refbasis[1,1] = 2*xref[1];      refbasis[1,2] = 2*xref[2];      refbasis[1,3] = 2*(xref[3]-1)
+        refbasis[2,1] = 2*xref[1];      refbasis[2,2] = 2*(xref[2]-1);  refbasis[2,3] = 2*xref[3]
+        refbasis[3,1] = 2*xref[1];      refbasis[3,2] = 2*xref[2];      refbasis[3,3] = 2*xref[3]
+        refbasis[4,1] = 2*(xref[1]-1);  refbasis[4,2] = 2*xref[2];      refbasis[4,3] = 2*xref[3]
     end
     # note: factor 2 is chosen, such that normal-flux integrated over faces is 1 again
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVRT0{3}}, ::Type{<:Hexahedron3D})
     function closure(refbasis, xref)
-        refbasis[1,:] .= [0, 0, xref[3]-1]
-        refbasis[2,:] .= [0, xref[2]-1, 0]
-        refbasis[3,:] .= [xref[1], 0, 0]
-        refbasis[4,:] .= [0, xref[2], 0]
-        refbasis[5,:] .= [xref[1]-1, 0, 0]
-        refbasis[6,:] .= [0, 0, xref[3]]
+        fill!(refbasis,0)
+        refbasis[1,3] = xref[3]-1
+        refbasis[2,2] = xref[2]-1
+        refbasis[3,1] = xref[1]
+        refbasis[4,2] = xref[2]
+        refbasis[5,1] = xref[1]-1
+        refbasis[6,3] = xref[3]
     end
 end
 

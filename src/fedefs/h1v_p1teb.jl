@@ -170,7 +170,8 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubble to P1 basis
-        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+1,1] = 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+1,2] = refbasis[offset+1,1]
     end
 end
 
@@ -181,9 +182,12 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1P1TEB{2}}, EG::Type{<:Tria
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
-        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
-        refbasis[offset+2,:] .= 6 * xref[2] * xref[1]
-        refbasis[offset+3,:] .= 6 * refbasis[1,1] * xref[2]
+        refbasis[offset+1,1] = 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+2,1] = 6 * xref[2] * xref[1]
+        refbasis[offset+3,1] = 6 * refbasis[1,1] * xref[2]
+        refbasis[offset+1,2] = refbasis[offset+1,1]
+        refbasis[offset+2,2] = refbasis[offset+2,1]
+        refbasis[offset+3,2] = refbasis[offset+3,1]
     end
 end
 
@@ -224,9 +228,12 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add edge bubbles to P1 basis
-        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
-        refbasis[offset+2,:] .= 6 * xref[2] * xref[1]
-        refbasis[offset+3,:] .= 6 * refbasis[1,1] * xref[2]
+        refbasis[offset+1,1] = 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+2,1] = 6 * xref[2] * xref[1]
+        refbasis[offset+3,1] = 6 * refbasis[1,1] * xref[2]
+        for j = 1 : 3, k = 2 : 3
+            refbasis[offset+j,k] = refbasis[offset+j,1]
+        end
     end
 end
 
@@ -237,12 +244,15 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1P1TEB{3}}, EG::Type{<:Tetr
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add edge bubbles to P1 basis
-        refbasis[offset+1,:] .= 6 * xref[1] * refbasis[1,1]
-        refbasis[offset+2,:] .= 6 * xref[2] * refbasis[1,1]
-        refbasis[offset+3,:] .= 6 * xref[3] * refbasis[1,1]
-        refbasis[offset+4,:] .= 6 * xref[1] * xref[2]
-        refbasis[offset+5,:] .= 6 * xref[1] * xref[3]
-        refbasis[offset+6,:] .= 6 * xref[2] * xref[3]
+        refbasis[offset+1,1] = 6 * xref[1] * refbasis[1,1]
+        refbasis[offset+2,1] = 6 * xref[2] * refbasis[1,1]
+        refbasis[offset+3,1] = 6 * xref[3] * refbasis[1,1]
+        refbasis[offset+4,1] = 6 * xref[1] * xref[2]
+        refbasis[offset+5,1] = 6 * xref[1] * xref[3]
+        refbasis[offset+6,1] = 6 * xref[2] * xref[3]
+        for j = 1 : 6, k = 2 : 3
+            refbasis[offset+j,k] = refbasis[offset+j,1]
+        end
         return nothing
     end
 end

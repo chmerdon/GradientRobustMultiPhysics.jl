@@ -95,8 +95,6 @@ function evaluate!(
     update_febe!(FEBE, item)
 
     # evaluate
-    action = PE.action
-    action_input::Array{T,1} = PE.action_input
     coeffs::Array{T,1} = FEB.entries
     basisvals::Array{T,3} = FEBE.cvals
     xItemDofs::DofMapTypes{Ti} = PE.xItemDofs
@@ -104,6 +102,8 @@ function evaluate!(
     fill!(result,0)
     if !(ACT <: NoAction)
         # update_action
+        action = PE.action
+        action_input::Array{T,1} = PE.action_input
         update_action!(action, FEBE, item, item, 0) # region is missing currently
 
         # evaluate operator
