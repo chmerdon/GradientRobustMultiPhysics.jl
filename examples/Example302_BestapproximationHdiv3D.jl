@@ -16,13 +16,13 @@ using ExtendableGrids
 using GridVisualize
 
 ## define some vector field that should be approximated
-function exact_function!(result,x::Array{<:Real,1})
+function exact_function!(result,x)
     result[1] = x[1]^3+x[3]^2
     result[2] = -x[1]^2 + x[2] + 1
     result[3] = x[1]*x[2]
 end
 ## define its divergence
-function exact_divergence!(result,x::Array{<:Real,1})
+function exact_divergence!(result,x)
     result[1] = 3*x[1]*x[1] + 1
 end
 
@@ -65,10 +65,10 @@ function main(; verbosity = 0, Plotter = nothing)
     scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Divergence),1,:), levels = 5, title = "div(u_h)")
 
     ## calculate L2 error and L2 divergence error
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
-    L2DivergenceErrorEvaluator = L2ErrorIntegrator(Float64, div_u, Divergence)
-    println("\tL2error(Id) = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))")
-    println("\tL2error(div) = $(sqrt(evaluate(L2DivergenceErrorEvaluator,Solution[1])))")
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    L2DivergenceError = L2ErrorIntegrator(Float64, div_u, Divergence)
+    println("\tL2error(Id) = $(sqrt(evaluate(L2Error,Solution[1])))")
+    println("\tL2error(div) = $(sqrt(evaluate(L2DivergenceError,Solution[1])))")
 end
 
 end

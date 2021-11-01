@@ -69,7 +69,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     add_operator!(Problem, [1,1], LaplaceOperator(μ))
 
     ## add stabilising term for RT0 block (lumped diagonal div-div matrix)
-    add_operator!(Problem, [2,2], AbstractBilinearForm([Divergence, Divergence]; name = "α (div u_RT,div v_RT) [lumped]", factor = α, APT = APT_LumpedBilinearForm))
+    add_operator!(Problem, [2,2], BilinearForm([Divergence, Divergence]; name = "α (div u_RT,div v_RT) [lumped]", factor = α, APT = APT_LumpedBilinearForm))
 
     ## add Lagrange multiplier for divergence of velocity
     add_operator!(Problem, [1,3], LagrangeMultiplier(Divergence))
@@ -86,9 +86,9 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     @show Problem
 
     ## prepare error calculation
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, u, [Identity, Identity]; time = T)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, p, Identity; time = T)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
+    L2VelocityError = L2ErrorIntegrator(Float64, u, [Identity, Identity]; time = T)
+    L2PressureError = L2ErrorIntegrator(Float64, p, Identity; time = T)
+    H1VelocityError = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
     L2VeloDivEvaluator = L2NormIntegrator(Float64,1 , [Divergence, Divergence])
     Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
 
@@ -100,16 +100,16 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
         ## generate FES spaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-        Solution = FEVector{Float64}(["u_P1", "u_RT", "p_h"],FES)
+        Solution = FEVector(["u_P1", "u_RT", "p_h"],FES)
 
         ## solve
         solve!(Solution, Problem; time = T)
 
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,[Solution[1],Solution[2]]))
-        Results[level,2] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[3]))
-        Results[level,3] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
+        Results[level,1] = sqrt(evaluate(L2VelocityError,[Solution[1],Solution[2]]))
+        Results[level,2] = sqrt(evaluate(L2PressureError,Solution[3]))
+        Results[level,3] = sqrt(evaluate(H1VelocityError,Solution[1]))
         Results[level,4] = sqrt(evaluate(L2VeloDivEvaluator,[Solution[1], Solution[2]]))
     end    
 

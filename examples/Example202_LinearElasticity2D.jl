@@ -43,17 +43,15 @@ function main(; verbosity = 0, E = 1000, ν = 0.4, Plotter = nothing)
     μ = (1/(1+ν))*E
     λ = (ν/(1-2*ν))*μ
 
-    ## PDE description via prototype
+    ## PDE description via prototype and add data
     Problem = LinearElasticityProblem(2; shear_modulus = μ, lambda = λ)
-
-    ## add boundary data
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [2], g; AT = ON_BFACES))
     add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
 
     ## show and solve PDE
     @show Problem
     FEType = H1P1{2} # P1-Courant FEM will be used
-    Solution = FEVector{Float64}("displacement",FESpace{FEType}(xgrid))
+    Solution = FEVector("u_h",FESpace{FEType}(xgrid))
     solve!(Solution, Problem)
 
     ## plot stress on displaced mesh

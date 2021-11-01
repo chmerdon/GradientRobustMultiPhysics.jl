@@ -54,8 +54,8 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
 
     ## define error evaluators
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity; time = T)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity; time = T)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
     NDofs = zeros(Int,nlevels)
     Results = zeros(Float64,nlevels,2)
     
@@ -67,7 +67,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("u_h",FES)
+        Solution = FEVector("u_h",FES)
 
         ## set initial solution
         interpolate!(Solution[1], u) 
@@ -80,8 +80,8 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
         ## calculate L2 and H1 error and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
     end
 
     if testmode == true

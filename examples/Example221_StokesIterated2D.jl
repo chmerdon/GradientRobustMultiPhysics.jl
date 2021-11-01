@@ -10,7 +10,7 @@ This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of t
 \mathrm{div}(u) & = 0
 \end{aligned}
 ```
-with some viscosity parameter ``\mu``.
+with some μ parameter ``\mu``.
 
 Here we solve the simple Hagen-Poiseuille flow on the two-dimensional unit square domain with the iterated penalty method
 for the Bernardi--Raugel finite element method.
@@ -18,7 +18,7 @@ Given intermediate solutions  ``\mathbf{u}_h`` and  ``p_h`` the next approximati
 
 ```math
 \begin{aligned}
-(\nabla \mathbf{u}_h^{next}, \nabla \mathbf{v}_h) + ((\mathbf{u}_h^{next} \cdot \nabla) \mathbf{u}_h^{next}, \mathbf{v}_h) + \epsilon (\mathrm{div}_h(\mathbf{u}_h) ,\mathrm{div}_h(\mathbf{v}_h)) & = (\mathbf{f},\mathbf{v}_h) + (p_h,\mathrm{div}(\mathbf{v}_h))
+(\nabla \mathbf{u}_h^{next}, \nabla \mathbf{v}_h) + ((\mathbf{u}_h^{next} \cdot \nabla) \mathbf{u}_h^{next}, \mathbf{v}_h) + \lambda (\mathrm{div}_h(\mathbf{u}_h) ,\mathrm{div}_h(\mathbf{v}_h)) & = (\mathbf{f},\mathbf{v}_h) + (p_h,\mathrm{div}(\mathbf{v}_h))
 && \text{for all } \mathbf{v}_h \in \mathbf{V}_h\\
 (p^{next}_h,q_h) & = (p_h,q_h) - (\mathrm{div}(\mathbf{u}_h^{next}),q_h) && \text{for all } q_h \in Q_h
 \end{aligned}
@@ -38,19 +38,19 @@ using ExtendableSparse
 using GridVisualize
 
 ## data for Hagen-Poiseuille flow
-function exact_pressure!(viscosity)
-    function closure(result,x::Array{<:Real,1})
-        result[1] = viscosity*(-2*x[1]+1.0)
+function exact_pressure!(μ)
+    function closure(result,x)
+        result[1] = μ*(-2*x[1]+1.0)
     end
 end
-function exact_velocity!(result,x::Array{<:Real,1})
+function exact_velocity!(result,x)
     result[1] = x[2]*(1.0-x[2]);
     result[2] = 0.0;
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty = 1e4, viscosity = 1.0)
-
+function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
+ 
     ## set verbosity level
     set_verbosity(verbosity)
 
@@ -65,7 +65,7 @@ function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty
 
     ## negotiate data functions to the package
     u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "X", quadorder = 2)
-    p = DataFunction(exact_pressure!(viscosity), [1,2]; name = "p", dependencies = "X", quadorder = 1)
+    p = DataFunction(exact_pressure!(μ), [1,2]; name = "p", dependencies = "X", quadorder = 1)
 
     ## generate Stokes problem
     Problem = PDEDescription("NSE (iterated penalty)")
@@ -77,29 +77,29 @@ function main(; verbosity = 0, Plotter = nothing, nonlinear = false, div_penalty
     add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = u)
 
     ## velocity update equation
-    add_operator!(Problem, [1,1], LaplaceOperator(viscosity; store = true))
-    add_operator!(Problem, [1,2], AbstractBilinearForm([Divergence, Identity]; name = "(div(v),p)", store = true, factor = -1))
+    add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
+    add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity]; name = "(div(v),p)", store = true, factor = -1))
     add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; auto_newton = true))
 
     ## add penalty for discrete divergence
-    add_operator!(Problem, [1,1], AbstractBilinearForm([PenaltyDivergence, PenaltyDivergence]; name = "ϵ (div_h(u),div_h(v))", store = true, factor = div_penalty))
+    add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; name = "ϵ (div_h(u),div_h(v))", store = true, factor = λ))
 
     ## pressure update equation
-    PressureMAMA = AbstractBilinearForm([Identity, Identity]; name = "(p,q)", store = true)
-    add_operator!(Problem, [2,1], AbstractBilinearForm([Identity, Divergence]; name = "(q,div(u))", store = true, factor = div_penalty))
+    PressureMAMA = BilinearForm([Identity, Identity]; name = "(p,q)", store = true)
+    add_operator!(Problem, [2,1], BilinearForm([Identity, Divergence]; name = "(q,div(u))", store = true, factor = λ))
     add_operator!(Problem, [2,2], PressureMAMA)
     add_rhsdata!(Problem, 2, restrict_operator(PressureMAMA; fixed_arguments = [1], fixed_arguments_ids = [2]))
 
     ## show and solve problem
     @show Problem
-    Solution = FEVector{Float64}(["u_h","p_h"],[FES[1],FES[2]])
+    Solution = FEVector(["u_h","p_h"],[FES[1],FES[2]])
     solve!(Solution, Problem; subiterations = [[1],[2]], maxiterations = 20, show_solver_config = true)
 
     ## calculate L2 error
-    L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, u, Identity)
-    L2ErrorEvaluatorP = L2ErrorIntegrator(Float64, p, Identity)
-    println("|| u - u_h || = $(sqrt(evaluate(L2ErrorEvaluatorV,Solution[1])))")
-    println("|| p - p_h || = $(sqrt(evaluate(L2ErrorEvaluatorP,Solution[2])))")
+    L2ErrorV = L2ErrorIntegrator(Float64, u, Identity)
+    L2ErrorP = L2ErrorIntegrator(Float64, p, Identity)
+    println("|| u - u_h || = $(sqrt(evaluate(L2ErrorV,Solution[1])))")
+    println("|| p - p_h || = $(sqrt(evaluate(L2ErrorP,Solution[2])))")
 
     ## plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))

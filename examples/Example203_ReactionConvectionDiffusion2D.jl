@@ -28,17 +28,17 @@ const β = DataFunction([1,0]; name = "β")
 const α = DataFunction([0.01]; name = "α")
 
 ## problem data and expected exact solution
-function exact_solution!(result,x::Array{<:Real,1})
+function exact_solution!(result,x)
     result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
 end    
-function exact_solution_gradient!(result,x::Array{<:Real,1})
+function exact_solution_gradient!(result,x)
     result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1
     result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
 end    
 function exact_solution_rhs!(ν)
     eval_alpha = zeros(Float64,1)
     eval_beta = zeros(Float64,2)
-    function closure(result,x::Array{<:Real,1})
+    function closure(result,x)
         ## diffusion part
         result[1] = -ν*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
         ## convection part (beta * grad(u))
@@ -66,8 +66,8 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
         ## result will be multiplied with [v,∇v]
         return nothing
     end
-    action = Action{Float64}( ActionKernel(action_kernel!, [3,3]; dependencies = "X", quadorder = max(α.quadorder,β.quadorder)))
-    return AbstractBilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
+    action = Action(action_kernel!, [3,3]; dependencies = "X", quadorder = max(α.quadorder,β.quadorder))
+    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
 end
 
 ## everything is wrapped in a main function
@@ -77,7 +77,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     set_verbosity(verbosity)
     
     ## load a mesh of the unit square
-    ## it also has four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
+    ## with four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
     xgrid = grid_unitsquare(Triangle2D); # initial grid
 
     ## negotiate data functions to the package
@@ -95,18 +95,16 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
 
     ## add boundary data to unknown 1 (there is only one in this example)
-    ## on boundary regions where the solution is linear the data only needs to be interpolated
-    ## on boundary regions where the solution is zero homoegeneous boundary conditions can be used
-    add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = u)
-    add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = u)
-    add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = u)   # u_h =  u in bregions 1 and 3
+    add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = u)    # u_h = Iu in bregion 2
+    add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)              # u_h =  0 in bregion 4
 
     ## add a gradient jump (interior penalty) stabilisation for dominant convection
     if τ > 0
         ## first we define an item-dependent action kernel...
         xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-        stab_action = Action{Float64}((result,input,item) -> (result .= input .* xFaceVolumes[item]^2), [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
-        JumpStabilisation = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, factor = τ, name = "τ |F|^2 [∇(u)]⋅[∇(v)]")
+        stab_action = Action((result,input,item) -> (result .= input .* xFaceVolumes[item]^2), [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
+        JumpStabilisation = BilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, factor = τ, name = "τ |F|^2 [∇(u)]⋅[∇(v)]")
         add_operator!(Problem, [1,1], JumpStabilisation)
     end
 
@@ -114,8 +112,8 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     @show Problem
 
     ## define ItemIntegrators for L2/H1 error computation and some arrays to store the errors
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
     Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
 
     ## refinement loop over levels
@@ -127,27 +125,27 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("u_h",FES)
+        Solution = FEVector("u_h",FES)
 
         ## solve PDE
         solve!(Solution, Problem)
 
         ## interpolate (just for comparison)
-        Interpolation = FEVector{Float64}("I(u)",FES)
+        Interpolation = FEVector("I(u)",FES)
         interpolate!(Interpolation[1], u)
 
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(L2ErrorEvaluator,Interpolation[1]))
-        Results[level,3] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
-        Results[level,4] = sqrt(evaluate(H1ErrorEvaluator,Interpolation[1]))
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2Error,Interpolation[1]))
+        Results[level,3] = sqrt(evaluate(H1Error,Solution[1]))
+        Results[level,4] = sqrt(evaluate(H1Error,Interpolation[1]))
     end    
 
     ## plot
-    p=GridVisualizer(; Plotter=Plotter, layout=(1,2), clear=true, resolution=(1000,500))
-    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels=11, title = "u_h")
-    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels=7)
+    p=GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_h")
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels = 7)
     vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), spacing = 0.1, clear = false, title = "∇u_h (abs + quiver)")
     
     ## print/plot convergence history

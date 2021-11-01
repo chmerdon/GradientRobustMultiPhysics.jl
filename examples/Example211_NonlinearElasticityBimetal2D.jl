@@ -90,7 +90,7 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     ## create finite element space and solution vector
     FEType = H1P2{2,2}
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector{Float64}("u_h",FES)
+    Solution = FEVector("u_h",FES)
 
     ## solve
     solve!(Solution, Problem; maxiterations = 10, target_residual = 1e-9, show_statistics = true)

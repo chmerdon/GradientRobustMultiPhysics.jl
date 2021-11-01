@@ -37,10 +37,10 @@ function HydrostaticTestProblem()
     ## Stokes problem with f = grad(p)
     ## u = 0
     ## p = x^3+y^3 - 1//2
-    function P1_pressure!(result,x::Array{<:Real,1})
+    function P1_pressure!(result,x)
         result[1] = x[1]^3 + x[2]^3 - 1//2
     end
-    function P1_rhs!(result,x::Array{<:Real,1})
+    function P1_rhs!(result,x)
         result[1] = 3*x[1]^2
         result[2] = 3*x[2]^2
     end
@@ -56,14 +56,14 @@ function PotentialFlowTestProblem()
     ## NavierStokes with f = 0
     ## u = grad(h) with h = x^3 - 3xy^2
     ## p = - |grad(h)|^2 + 14//5
-    function P2_pressure!(result,x::Array{<:Real,1})
+    function P2_pressure!(result,x)
         result[1] = - 1//2 * (9*(x[1]^4 + x[2]^4) + 18*x[1]^2*x[2]^2) + 14//5
     end
-    function P2_velo!(result,x::Array{<:Real,1})
+    function P2_velo!(result,x)
         result[1] = 3*x[1]^2 - 3*x[2]^2;
         result[2] = -6*x[1]*x[2];
     end
-    function P2_velogradient!(result,x::Array{<:Real,1})
+    function P2_velogradient!(result,x)
         result[1] = 6*x[1]
         result[2] = -6*x[2];
         result[3] = -6*x[2];
@@ -102,20 +102,19 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
     end
 
     ## define bestapproximation problems
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [1,2,3,4])
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(p; bestapprox_boundary_regions = [])
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
+    BAP_L2_u = L2BestapproximationProblem(u; bestapprox_boundary_regions = [1,2,3,4])
+    BAP_L2_p = L2BestapproximationProblem(p; bestapprox_boundary_regions = [])
+    BAP_H1_u = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, p, Identity)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error_u = L2ErrorIntegrator(Float64, u, Identity)
+    L2Error_p = L2ErrorIntegrator(Float64, p, Identity)
+    H1Error_u = L2ErrorIntegrator(Float64, ∇u, Gradient)
     Results = zeros(Float64, nlevels, 9)
     NDofs = zeros(Int, nlevels)
     
     ## loop over refinement levels
-    Solution = nothing
-    Solution2 = nothing
+    Solution, Solution2 = nothing, nothing
     for level = 1 : nlevels
 
         ## uniform mesh refinement
@@ -123,32 +122,32 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_res
 
         ## get FESpaces
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-        Solution = FEVector{Float64}(["u_c (classic)", "p_c (classic)"],FES)
-        Solution2 = FEVector{Float64}(["u_r (p-robust)", "p_r (p-robust)"],FES)
+        Solution = FEVector(["u_c (classic)", "p_c (classic)"],FES)
+        Solution2 = FEVector(["u_r (p-robust)", "p_r (p-robust)"],FES)
 
         ## solve both problems
         solve!(Solution, Problem; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
         solve!(Solution2, Problem2; maxiterations = maxiterations, target_residual = target_residual, anderson_iterations = 5)
 
         ## solve bestapproximation problems
-        L2VelocityBestapproximation = FEVector{Float64}("Πu",FES[1])
-        L2PressureBestapproximation = FEVector{Float64}("πp",FES[2])
-        H1VelocityBestapproximation = FEVector{Float64}("Su",FES[1])
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem)
-        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem)
+        BA_L2_u = FEVector("Πu",FES[1])
+        BA_L2_p = FEVector("πp",FES[2])
+        BA_H1_u = FEVector("Su",FES[1])
+        solve!(BA_L2_u, BAP_L2_u)
+        solve!(BA_L2_p, BAP_L2_p)
+        solve!(BA_H1_u, BAP_H1_u)
 
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution2[1]))
-        Results[level,3] = sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1]))
-        Results[level,4] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
-        Results[level,5] = sqrt(evaluate(L2PressureErrorEvaluator,Solution2[2]))
-        Results[level,6] = sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1]))
-        Results[level,7] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
-        Results[level,8] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution2[1]))
-        Results[level,9] = sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1]))
+        Results[level,1] = sqrt(evaluate(L2Error_u,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2Error_u,Solution2[1]))
+        Results[level,3] = sqrt(evaluate(L2Error_u,BA_L2_u[1]))
+        Results[level,4] = sqrt(evaluate(L2Error_p,Solution[2]))
+        Results[level,5] = sqrt(evaluate(L2Error_p,Solution2[2]))
+        Results[level,6] = sqrt(evaluate(L2Error_p,BA_L2_p[1]))
+        Results[level,7] = sqrt(evaluate(H1Error_u,Solution[1]))
+        Results[level,8] = sqrt(evaluate(H1Error_u,Solution2[1]))
+        Results[level,9] = sqrt(evaluate(H1Error_u,BA_H1_u[1]))
     end
 
     ## print convergence history

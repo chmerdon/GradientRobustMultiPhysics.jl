@@ -336,7 +336,7 @@ end
 
 """
 ````
-function AbstractBilinearForm(
+function BilinearForm(
     operators::Array{AbstractFunctionOperator,1},
     action::AbstractAction = NoAction();
     name = "auto",
@@ -356,7 +356,7 @@ The optional arguments AT and regions specifies on which grid item the operator 
 (which is advisable if it is not alone i an otherweise nonlinear block of a PDEDescription). With the optional argument APT one can trigger different subpatterns
 like APT_SymmetricBilinearForm (assembles only a triangular block) or APT_LumpedBilinearForm (assembles only the diagonal).
 """
-function AbstractBilinearForm(
+function BilinearForm(
     operators::Array{DataType,1},
     action::AbstractAction = NoAction();
     name = "auto",
@@ -384,7 +384,7 @@ end
 
 """
 ````
-function AbstractTrilinearForm(
+function TrilinearForm(
     operators::Array{AbstractFunctionOperator,1},
     a_from::Int,
     a_to::Int,
@@ -405,7 +405,7 @@ The optional arguments AT and regions specifies on which grid item the operator 
 
 Also note that this operator is always marked as nonlinear by the Solver configuration.
 """
-function AbstractTrilinearForm(
+function TrilinearForm(
     operators::Array{DataType,1},
     a_from::Int,
     a_to::Int,
@@ -553,7 +553,7 @@ function ConvectionRotationFormOperator(
         O.transposed_assembly = true
         return O
     else
-        @error "The rotation form of the convection operator is currently only available in 2D (in 3D please implement it yourself using AbstractTrilinearForm and a user-defined action)"
+        @error "The rotation form of the convection operator is currently only available in 2D (in 3D please implement it yourself using TrilinearForm and a user-defined action)"
     end
 end
 
@@ -1082,7 +1082,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-assembles the operator O into the given FEMatrixBlock A using FESpaces from A. An FEVector CurrentSolution is only needed if the operator involves fixed arguments, e.g. if O is a AbstractTrilinearForm.
+assembles the operator O into the given FEMatrixBlock A using FESpaces from A. An FEVector CurrentSolution is only needed if the operator involves fixed arguments, e.g. if O is a TrilinearForm.
 """
 function assemble_operator!(A::FEMatrixBlock, O::PDEOperator, CurrentSolution::Union{Nothing,FEVector} = nothing; Pattern = nothing, skip_preps::Bool = false, time::Real = 0, At = nothing)
     if Pattern === nothing

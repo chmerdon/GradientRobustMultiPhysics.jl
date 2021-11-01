@@ -123,15 +123,15 @@ export AbstractPDEOperator
 
 export BackwardEulerTimeDerivative
 
-export AbstractBilinearForm
+export BilinearForm
 export StiffnessOperator, LaplaceOperator
 export HookStiffnessOperator3D, HookStiffnessOperator2D, HookStiffnessOperator1D
 export ReactionOperator
 export ConvectionOperator, ConvectionRotationFormOperator
 export LagrangeMultiplier
 
-export AbstractTrilinearForm
-export AbstractMultilinearForm
+export TrilinearForm
+export MultilinearForm
 export AbstractNonlinearForm, NonlinearForm
 
 export FVConvectionDiffusionOperator

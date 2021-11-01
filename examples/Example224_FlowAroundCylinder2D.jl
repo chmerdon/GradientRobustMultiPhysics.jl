@@ -69,7 +69,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
 
     ## generate FESpaces and Solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-    Solution = FEVector{Float64}(["u_h","p_h"],FES)
+    Solution = FEVector(["u_h","p_h"],FES)
 
     ## solve
     solve!(Solution, Problem; maxiterations = 50, target_residual = 1e-10, show_statistics = true)
@@ -132,11 +132,11 @@ function get_draglift(Solution::FEVector, μ)
         result[1] *= -(2/(umean^2*L))
         return nothing
     end 
-    draglift_action = Action{Float64}(draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", quadorder = 4)
+    draglift_action = Action(draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", quadorder = 4)
     DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     ## test for drag
-    TestFunction = FEVector{Float64}("drag testfunction",Solution[1].FES)
+    TestFunction = FEVector("drag testfunction",Solution[1].FES)
     xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaceFaces)

@@ -36,11 +36,11 @@ using ExtendableGrids
 using GridVisualize
 
 ## boundary data
-function inlet_velocity!(result,x::Array{<:Real,1})
+function inlet_velocity!(result,x)
     result[1] = 4*x[2]*(1-x[2]);
     result[2] = 0;
 end
-function inlet_concentration!(result,x::Array{<:Real,1})
+function inlet_concentration!(result,x)
     result[1] = 1-x[2];
 end
 
@@ -63,15 +63,15 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     #####################################################################################
 
     ## negotiate data functions to the package
-    user_function_inlet_velocity = DataFunction(inlet_velocity!, [2,2]; name = "inflow", dependencies = "X", quadorder = 2)
-    user_function_inlet_species = DataFunction(inlet_concentration!, [1,2]; name = "inlet concentration", dependencies = "X", quadorder = 1)
+    u_inlet = DataFunction(inlet_velocity!, [2,2]; name = "u (inlet)", dependencies = "X", quadorder = 2)
+    c_inlet = DataFunction(inlet_concentration!, [1,2]; name = "c (inlet)", dependencies = "X", quadorder = 1)
 
     ## load Stokes problem prototype and assign boundary data
     ## (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
     Problem.name = "Stokes + Transport"
     add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)
-    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = user_function_inlet_velocity)
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = u_inlet)
 
     ## add transport equation of species
     add_unknown!(Problem; unknown_name = "c", equation_name = "transport equation")
@@ -87,7 +87,7 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
         add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
     end
     ## with boundary data (i.e. inlet concentration)
-    add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = user_function_inlet_species)
+    add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = c_inlet)
     @show Problem
     
     ## generate FESpaces and a solution vector for all 3 unknowns

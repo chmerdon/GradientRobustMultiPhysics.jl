@@ -19,11 +19,11 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 ## define some function
-function exact_function!(result,x::Array{<:Real,1})
+function exact_function!(result,x)
     result[1] = x[1]^2-x[2]^4 + 1
 end
 ## and its CurlScalar = (-dy,dx) 
-function exact_curl!(result,x::Array{<:Real,1})
+function exact_curl!(result,x)
     result[1] = 4*x[2]^3
     result[2] = 2*x[1]
 end
@@ -35,8 +35,8 @@ function main(;order::Int = 2, testmode = false)
     xgrid = uniform_refine(reference_domain(Triangle2D),2)
 
     ## negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
-    user_function_curl = DataFunction(exact_curl!, [2,2]; name = "Curl(u_exact)", dependencies = "X", quadorder = 3)
+    u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
+    u_curl = DataFunction(exact_curl!, [2,2]; name = "Curl(u_exact)", dependencies = "X", quadorder = 3)
 
     ## choose commuting interpolators pair
     if order == 1
@@ -47,14 +47,14 @@ function main(;order::Int = 2, testmode = false)
 
     ## do the H1 interpolation of the function
     FESH1 = FESpace{FE[1]}(xgrid)
-    H1Interpolation = FEVector{Float64}("H1-Interpolation",FESH1)
-    interpolate!(H1Interpolation[1], user_function)
+    H1Interpolation = FEVector("H1-Interpolation",FESH1)
+    interpolate!(H1Interpolation[1], u)
 
     ## do the Hdiv interpolation of the Curl of the function
     ## since integrals over faces have to be computed exactly we need to tune the quadrature order
     FESHdiv = FESpace{FE[2]}(xgrid)
-    HdivCurlInterpolation = FEVector{Float64}("Hdiv-Interpolation",FESHdiv)
-    interpolate!(HdivCurlInterpolation[1], user_function_curl)
+    HdivCurlInterpolation = FEVector("Hdiv-Interpolation",FESHdiv)
+    interpolate!(HdivCurlInterpolation[1], u_curl)
 
     ## Checking the identity:
     ## Both sides of the identity are finite element function of FEtype testFE
@@ -62,7 +62,7 @@ function main(;order::Int = 2, testmode = false)
     
     ## first: generate the test space and some matching FEVector
     FEStest = FESpace{testFE}(xgrid; broken = true)
-    error = FEVector{Float64}("ErrorVector",FEStest)
+    error = FEVector("ErrorVector",FEStest)
 
     ## Define bilinear forms that represents testing each side of the identity with the testspace functions
     BLF1 = BilinearForm(Float64, ON_CELLS, [FEStest, FESHdiv], [Identity, Identity])

@@ -20,11 +20,11 @@ using ExtendableGrids
 using GridVisualize
 
 ## problem data
-function exact_function!(result,x::Array{<:Real,1})
+function exact_function!(result,x)
     result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
     return nothing
 end
-function exact_gradient!(result,x::Array{<:Real,1})
+function exact_gradient!(result,x)
     result[1] = x[3] - x[2]
     result[2] = - x[1] + 2*x[2]
     result[3] = x[1]
@@ -52,11 +52,11 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(1.0)
     add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
 
     ## prepare error calculation
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error = L2ErrorIntegrator(Float64, u)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
     Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
 
     ## loop over levels
@@ -67,15 +67,15 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
         
         ## create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("u_h",FES)
+        Solution = FEVector("u_h",FES)
 
         ## solve the problem
         solve!(Solution, Problem)
 
         ## calculate L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
     end
 
     ## plot (Plotter = GLMakie should work)

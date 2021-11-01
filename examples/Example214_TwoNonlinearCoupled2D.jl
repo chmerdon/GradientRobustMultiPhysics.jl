@@ -62,7 +62,7 @@ function main(; verbosity = 0, Plotter = nothing)
     ## discretise (here: u1 with P3, u2 with P2)
     FETypes = [H1P3{1,2},H1P2{1,2}]
     FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid)]
-    Solution = FEVector{Float64}(["u1","u2"],FES)
+    Solution = FEVector(["u1","u2"],FES)
 
     ## show problem and Solution structure
     @show Problem Solution

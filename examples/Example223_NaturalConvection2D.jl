@@ -75,14 +75,14 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
         end
         add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", ADnewton = true, quadorder = 0)  )
     end
-    add_operator!(Problem,[1,3], AbstractBilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = "-Ra v⋅g T", store = true))
+    add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = "-Ra v⋅g T", store = true))
 
     ## show final problem description
     @show Problem
     
     ## construct FESpaces and Solution veector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-    Solution = FEVector{Float64}(["v_h", "p_h", "T_h"],FES)
+    Solution = FEVector(["v_h", "p_h", "T_h"],FES)
 
     ## solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
     if anderson

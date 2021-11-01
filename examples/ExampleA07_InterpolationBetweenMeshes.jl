@@ -16,7 +16,7 @@ using GridVisualize
 
 ## function to interpolate
 function data!(ν)
-    function closure(result,x::Array{<:Real,1})
+    function closure(result,x)
         result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
         result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
     end
@@ -42,8 +42,8 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     ## generate coressponding finite element spaces and FEVectors
     FES1 = FESpace{FEType1}(xgrid1)
     FES2 = FESpace{FEType2}(xgrid2)
-    FEFunction1 = FEVector{Float64}("$FEType1 on grid 1",FES1)
-    FEFunction2 = FEVector{Float64}("$FEType2 on grid 2",FES2)
+    FEFunction1 = FEVector("$FEType1 on grid 1",FES1)
+    FEFunction2 = FEVector("$FEType2 on grid 2",FES2)
 
     ## interpolate function onto first grid
     interpolate!(FEFunction1[1], u)

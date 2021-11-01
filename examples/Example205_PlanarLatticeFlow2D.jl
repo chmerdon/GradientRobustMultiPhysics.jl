@@ -33,18 +33,18 @@ using GridVisualize
 
 ## exact solution
 function exact_velocity!(ν)
-    function closure(result,x::Array{<:Real,1},t)
+    function closure(result,x,t)
         result[1] = exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
         result[2] = exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
     end
 end
 function exact_pressure!(ν)
-    function closure(result,x::Array{<:Real,1}, t)
+    function closure(result,x, t)
         result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
     end
 end
 function rhs!(ν)
-    function closure(result,x::Array{<:Real,1},t)
+    function closure(result,x,t)
         result[1] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
         result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
     end
@@ -81,7 +81,7 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
 
     ## create finite element spaces and solve
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
-    Solution = FEVector{Float64}(["u_h","p_h"],FES)
+    Solution = FEVector(["u_h","p_h"],FES)
     solve!(Solution, Problem)
 
     ## calculate L2 errors for u and p
@@ -92,7 +92,7 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
        
     ## plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels=5)
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 5)
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false, title = "u_h (abs + quiver)")
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = "p_h")
 end

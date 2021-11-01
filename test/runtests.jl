@@ -741,7 +741,7 @@ function run_timeintegration_tests()
         ## setup problem
         Problem = PDEDescription("time-dependent test problem for $(pair[1]) time integration rule")
         add_unknown!(Problem; unknown_name = "u", equation_name = "test equation")
-        add_operator!(Problem, [1,1], AbstractBilinearForm([Identity,Identity]; name = "(u,v)", store = true))
+        add_operator!(Problem, [1,1], BilinearForm([Identity,Identity]; name = "(u,v)", store = true))
         add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = u)
         add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
 

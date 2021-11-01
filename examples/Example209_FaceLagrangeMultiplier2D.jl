@@ -59,7 +59,7 @@ function main(; Plotter = nothing, verbosity = 0)
     solve!(Solution2, Problem)
 
     ## calculate L2 error of both solutions and their difference
-    L2Error  = L2ErrorIntegrator(Float64, u, Identity)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
     L2Diff = L2DifferenceIntegrator(Float64, 2, Identity)
     println("\tL2error(Hdiv-broken) = $(sqrt(evaluate(L2Error,Solution[1])))")
     println("\tL2error(Hdiv-cont.) = $(sqrt(evaluate(L2Error,Solution2[1])))")

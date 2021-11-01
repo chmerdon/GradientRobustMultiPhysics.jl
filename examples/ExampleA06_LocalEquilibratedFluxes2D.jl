@@ -35,7 +35,7 @@ using ExtendableSparse
 using GridVisualize
 
 ## exact solution u for the Poisson problem
-function exact_function!(result,x::Array{<:Real,1})
+function exact_function!(result,x)
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
@@ -44,7 +44,7 @@ function exact_function!(result,x::Array{<:Real,1})
     result[1] *= (x[1]^2 + x[2]^2)^(1/3)
 end
 ## ... and its gradient
-function exact_function_gradient!(result,x::Array{<:Real,1})
+function exact_function_gradient!(result,x)
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
@@ -72,12 +72,12 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
     FETypeDual = HDIVBDM1{2}
     
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
-    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "∇(u)", dependencies = "X", quadorder = 4)
+    u = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
+    ∇u = DataFunction(exact_function_gradient!, [2,2]; name = "∇u", dependencies = "X", quadorder = 4)
 
     ## setup Poisson problem
     Problem = PoissonProblem()
-    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = user_function)
+    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = u)
     add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
 
     ## define error estimator : || sigma_h - nabla u_h ||^2_{L^2(T)}
@@ -87,13 +87,13 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         result[1] = (input[1] - input[4])^2 + (input[2] - input[5])^2 + input[3]^2
         return nothing
     end
-    estimator_action = Action{Float64}(ActionKernel(eqestimator_kernel, [1,5]; name = "estimator kernel", dependencies = "", quadorder = 3))
+    estimator_action = Action(eqestimator_kernel, [1,5]; name = "estimator kernel", dependencies = "", quadorder = 3)
     EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Divergence, Gradient],estimator_action)
 
     ## setup exact error evaluations
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
-    L2ErrorEvaluatorDual = L2ErrorIntegrator(Float64, user_function_gradient, Identity)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2ErrorDual = L2ErrorIntegrator(Float64, ∇u, Identity)
 
     ## refinement loop (only uniform for now)
     NDofs = zeros(Int, nlevels)
@@ -104,7 +104,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
 
         ## create a solution vector and solve the problem
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}("u_h",FES)
+        Solution = FEVector("u_h",FES)
         solve!(Solution, Problem)
         NDofs[level] = length(Solution[1])
 
@@ -121,10 +121,10 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
         end
 
         ## calculate L2 error, H1 error, estimator, dual L2 error and write to results
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
         Results[level,3] = sqrt(sum(view(error4cell,1,:)))
-        Results[level,4] = sqrt(evaluate(L2ErrorEvaluatorDual,DualSolution[1]))
+        Results[level,4] = sqrt(evaluate(L2ErrorDual,DualSolution[1]))
         if verbosity > 0
             println("  ESTIMATE")
             println("    estim H1 error = $(Results[level,3])")
@@ -162,10 +162,9 @@ end
 
 ## this function computes the local equilibrated fluxes
 ## by solving local problems on (disjunct group of) node patches
-function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosity::Int = 1)
+function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
     ## needed grid stuff
     xCellNodes::Array{Int32,2} = xgrid[CellNodes]
-    xCellFaces::Array{Int32,2} = xgrid[CellFaces]
     xFaceNodes::Array{Int32,2} = xgrid[FaceNodes]
     xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     xNodeCells = atranspose(xCellNodes)
@@ -176,7 +175,6 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
     group4node = xgrid[NodePatchGroups]
 
     ## init equilibration space (and Lagrange multiplier space)
-    FEType = eltype(Solution[1].FES)
     FESDual = FESpace{FETypeDual}(xgrid)
     xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = FESDual[CellDofs]
     xFaceDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = FESDual[FaceDofs]
@@ -196,7 +194,6 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
     dofs_on_face::Int = max_num_targets_per_source(xFaceDofs)
     div_penalty::Float64 = 1e5
     bnd_penalty::Float64 = 1e30
-    maxcells::Int = max_num_targets_per_source(xNodeCells)
     maxdofs::Int = max_num_targets_per_source(xItemDofs)
     maxdofs_uh::Int = max_num_targets_per_source(xItemDofs_uh)
 
@@ -242,7 +239,6 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual; verbosit
         A = ExtendableSparseMatrix{Float64,Int}(FESDual.ndofs,FESDual.ndofs)
         b = zeros(Float64,FESDual.ndofs)
         X[group] = zeros(Float64,FESDual.ndofs)
-        x = zeros(Float64,FESDual.ndofs)
 
         ## find dofs at boundary of node patches
         is_boundarydof = zeros(Bool,FESDual.ndofs)

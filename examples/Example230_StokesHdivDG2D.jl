@@ -95,9 +95,9 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         result[2] = input[3] * xFaceNormals[1,item] + input[4] * xFaceNormals[2,item]
         return nothing
     end
-    HdivLaplace2 = AbstractBilinearForm([Jump(Identity), Jump(Identity)], Action{Float64}( hdiv_laplace2_kernel, [2,2]; dependencies = "I", quadorder = 0); name = "μ/h_F [u] [v]", factor = λ*μ, AT = ON_FACES)
-    HdivLaplace3 = AbstractBilinearForm([Jump(Identity), Average(Gradient)], Action{Float64}( hdiv_laplace3_kernel, [4,2]; dependencies = "I", quadorder = 0); name = "-μ [u] {grad(v)*n}", factor = -μ, AT = ON_FACES)
-    HdivLaplace4 = AbstractBilinearForm([Average(Gradient), Jump(Identity)], Action{Float64}( hdiv_laplace4_kernel, [2,4]; dependencies = "I", quadorder = 0); name = "-μ {grad(u)*n} [v] ", factor = -μ, AT = ON_FACES)
+    HdivLaplace2 = BilinearForm([Jump(Identity), Jump(Identity)], Action( hdiv_laplace2_kernel, [2,2]; dependencies = "I", quadorder = 0); name = "μ/h_F [u] [v]", factor = λ*μ, AT = ON_FACES)
+    HdivLaplace3 = BilinearForm([Jump(Identity), Average(Gradient)], Action( hdiv_laplace3_kernel, [4,2]; dependencies = "I", quadorder = 0); name = "-μ [u] {grad(v)*n}", factor = -μ, AT = ON_FACES)
+    HdivLaplace4 = BilinearForm([Average(Gradient), Jump(Identity)], Action( hdiv_laplace4_kernel, [2,4]; dependencies = "I", quadorder = 0); name = "-μ {grad(u)*n} [v] ", factor = -μ, AT = ON_FACES)
 
     ## additional terms for tangential part at boundary
     ## note: we use average operators here to force evaluation of all basis functions and not only of the face basis functions
@@ -114,8 +114,8 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         result[1] += (input[3] * xFaceNormals[1,xBFaceFaces[item]] + input[4] * xFaceNormals[2,xBFaceFaces[item]]) * veloeval[2]
         return nothing
     end
-    HdivBoundary1 = RhsOperator(Average(Identity), Action{Float64}( hdiv_boundary_kernel, [1,2]; dependencies = "XTI", quadorder = u.quadorder); name = "- μ λ/h_F u_D v", factor = λ*μ, AT = ON_BFACES)
-    HdivBoundary2 = RhsOperator(Average(Gradient), Action{Float64}( hdiv_boundary_kernel2, [1,4]; dependencies = "XTI", quadorder = u.quadorder); name = "- μ u_D grad(v)*n", factor = -μ, AT = ON_BFACES)
+    HdivBoundary1 = RhsOperator(Average(Identity), Action( hdiv_boundary_kernel, [1,2]; dependencies = "XTI", quadorder = u.quadorder); name = "- μ λ/h_F u_D v", factor = λ*μ, AT = ON_BFACES)
+    HdivBoundary2 = RhsOperator(Average(Gradient), Action( hdiv_boundary_kernel2, [1,4]; dependencies = "XTI", quadorder = u.quadorder); name = "- μ u_D grad(v)*n", factor = -μ, AT = ON_BFACES)
 
     ## assign DG operators to problem descriptions
     add_operator!(Problem, [1,1], HdivLaplace2)       
@@ -140,7 +140,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
         ## generate FES spaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
-        Solution = FEVector{Float64}(["u_h", "p_h"],FES)
+        Solution = FEVector(["u_h", "p_h"],FES)
 
         ## solve
         solve!(Solution, Problem; time = T)

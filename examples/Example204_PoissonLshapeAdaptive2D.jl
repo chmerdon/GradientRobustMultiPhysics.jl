@@ -20,7 +20,7 @@ using ExtendableGrids
 using GridVisualize
 
 ## exact solution u for the Poisson problem
-function exact_function!(result,x)
+function u!(result,x)
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
@@ -29,7 +29,7 @@ function exact_function!(result,x)
     result[1] *= (x[1]^2 + x[2]^2)^(1/3)
 end
 ## ... and its gradient
-function exact_function_gradient!(result,x)
+function ∇u!(result,x)
     result[1] = atan(x[2],x[1])
     if result[1] < 0
         result[1] += 2*pi
@@ -63,17 +63,17 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     end
     
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 5)
-    user_function_gradient = DataFunction(exact_function_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 4)
+    u = DataFunction(u!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
+    ∇u = DataFunction(∇u!, [2,2]; name = "∇u", dependencies = "X", quadorder = 4)
 
     ## setup Poisson problem
     Problem = PoissonProblem()
-    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = user_function)
+    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = u)
     add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
 
     ## setup exact error evaluations
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
 
     ## define error estimator
     ## kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)
@@ -87,18 +87,15 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
     ## note: f = 0 here, but integrand can also be made x-dpendent to allow for non-homogeneous rhs
     function L2vol_integrand(result, input, item)
-        result[1] = 0
-        for j = 1 : length(input)
-            result[1] += input[j]^2 * xCellVolumes[item]
-        end
+        result[1] = input[1]^2 * xCellVolumes[item]
         return nothing
     end
     ## ... which generates an action...
-    eta_jumps_action = Action{Float64}( L2jump_integrand, [1,2]; name = "estimator kernel jumps", dependencies = "I", quadorder = 2)
-    eta_vol_action = Action{Float64}( L2vol_integrand, [1,2]; name = "estimator kernel volume", dependencies = "I", quadorder = 1)
+    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = "kernel of η (jumps)", dependencies = "I", quadorder = 2)
+    eta_vol_action = Action(L2vol_integrand, [1,1]; name = "kernel of η (vol)", dependencies = "I", quadorder = 1)
     ## ... which is used inside an ItemIntegrator
-    jumpIntegrator = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = "η_F")
-    volIntegrator = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = "η_T")
+    ηF = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = "η_F")
+    ηT = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = "η_T")
           
     ## refinement loop
     NDofs = zeros(Int, nlevels)
@@ -125,8 +122,8 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             xCellVolumes = xgrid[CellVolumes]
             vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
             jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
-            evaluate!(vol_error,volIntegrator,Solution[1])
-            evaluate!(jump_error,jumpIntegrator,Solution[1])
+            evaluate!(vol_error,ηT,Solution[1])
+            evaluate!(jump_error,ηF,Solution[1])
 
             ## calculate total estimator
             Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
@@ -135,8 +132,8 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
 
         ## calculate exact L2 error, H1 error 
         @time begin
-            Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-            Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+            Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+            Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
             print("@time  e eval =")
         end
 
@@ -146,11 +143,9 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
 
         ## mesh refinement
         @time begin
-            if theta >= 1
-                ## uniform mesh refinement
+            if theta >= 1 ## uniform mesh refinement
                 xgrid = uniform_refine(xgrid)
-            else
-                ## adaptive mesh refinement
+            else ## adaptive mesh refinement
                 ## compute refinement indicators
                 nfaces = num_sources(xgrid[FaceNodes])
                 refinement_indicators::Array{Float64,1} = view(jump_error,1,:)
@@ -174,8 +169,8 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     end
     
     ## plot
-    p=GridVisualizer(; Plotter=Plotter, layout=(1,3), clear=true, resolution=(1200,400))
-    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels=11, title = "u_h")
+    p=GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1200,400))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_h")
     gridplot!(p[1,2], xgrid; linewidth = 1)
     gridplot!(p[1,3], xgrid; linewidth = 1, xlimits = [-0.0001,0.0001], ylimits = [-0.0001,0.0001])
 

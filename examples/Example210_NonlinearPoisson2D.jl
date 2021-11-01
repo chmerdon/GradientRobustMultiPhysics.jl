@@ -55,14 +55,14 @@ function rhs!(q,p,κ)
     end
     return closure
 end
-function diffusion_kernel1!(result::Array{<:Real,1}, input::Array{<:Real,1})
+function diffusion_kernel1!(result, input)
     ## input[1,2:3] = [u, grad(u)]
     result[1] = (1+input[1]^2)*input[2]
     result[2] = (1+input[1]^2)*input[3]
     return nothing
 end 
 function diffusion_kernel2!(p,κ)
-    function closure(result::Array{<:Real,1}, input::Array{<:Real,1})
+    function closure(result, input)
         ## input[1:2] = [grad(u)]
         ## we use result[1] as temporary storage to compute (κ + |∇u|)^(p-2)
         result[1] = (κ + input[1]^2 + input[2]^2)^((p-2)/2)
@@ -84,9 +84,9 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
     xgrid = grid_unitsquare(Triangle2D)
 
     ## negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 2)
-    user_function_gradient = DataFunction(exact_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 1)
-    user_function_rhs = DataFunction(rhs!(q,p,κ), [1,2]; dependencies = "X", name = "f", quadorder = 4)
+    u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 2)
+    ∇u = DataFunction(exact_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 1) 
+    f = DataFunction(rhs!(q,p,κ), [1,2]; dependencies = "X", name = "f", quadorder = 4)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
@@ -101,13 +101,13 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
     Problem = PDEDescription("nonlinear Poisson problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
-    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f; store = true))
     @show Problem
 
     ## prepare error calculation
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
     NDofs = zeros(Int,nlevels)
     Results = zeros(Float64,nlevels,2)
 
@@ -127,8 +127,8 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
 
         ## calculate L2 and H1 error and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
     end
 
     if testmode == true

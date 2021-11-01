@@ -25,4 +25,4 @@ NeumannBoundary can be implemented as a RhsOperator with AT = ON_BFACES and spec
 
 PeriodicBoundary can be implemented as a CombineDofs <: AbstractGlobalConstraint
 
-SymmetryBoundary can be implemented by penalisation as an AbstractBilinearForm on AT = ON_BFACES and specified boundary regions with operator NormalFlux and some penalty factor.
+SymmetryBoundary can be implemented by penalisation as an BilinearForm on AT = ON_BFACES and specified boundary regions with operator NormalFlux and some penalty factor.

@@ -59,20 +59,20 @@ end
 
 ## the exact density (used for initial value of density if configured so)
 function ϱ_exact!(M,c)
-    function closure(result,x::Array{<:Real,1})
+    function closure(result,x)
         result[1] = M*(1.0 - (x[2] - 0.5)/c)
     end
 end
 
 ## gravity right-hand side (just gravity but with opposite sign!)
 function gravity!(γ,c)
-    function closure(result,x::Array{<:Real,1})
+    function closure(result,x)
         result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2) * γ # = - ϱ^(γ-2) * γ
     end
 end   
 ## gravity right-hand side (just gravity but with opposite sign!)
 function rhs!(γ,c)
-    function closure(result,x::Array{<:Real,1})
+    function closure(result,x)
         result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-1) * γ # = - ϱ^(γ-2) * γ
     end
 end   
@@ -111,7 +111,7 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
 
         ## generate FESpaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-        Solution = [FEVector{Float64}(["u_h (BR)", "ϱ_h (BR)", "p_h (BR)"],FES),FEVector{Float64}(["u_h (BR+)", "ϱ_h (BR+)", "p_h (BR+)"],FES)]
+        Solution = [FEVector(["u_h (BR)", "ϱ_h (BR)", "p_h (BR)"],FES),FEVector(["u_h (BR+)", "ϱ_h (BR+)", "p_h (BR+)"],FES)]
         NDoFs[lvl] = length(Solution[1].entries)
 
         ## solve with and without reconstruction
@@ -164,14 +164,14 @@ function setup_and_solve!(Solution, xgrid;
     VeloDivergence = reconstruct ? ReconstructionDivergence{hdiv_space} : Divergence
     add_operator!(Problem, [1,1], LaplaceOperator(2*μ; store = true))
     if λ != 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm([VeloDivergence,VeloDivergence]; name = "λ (div(u),div(v))", factor = λ, store = true))
+        add_operator!(Problem, [1,1], BilinearForm([VeloDivergence,VeloDivergence]; name = "λ (div(u),div(v))", factor = λ, store = true))
     end
-    add_operator!(Problem, [1,3], AbstractBilinearForm([Divergence,Identity]; name = "(div(v),p)", factor = -1, store = true))
+    add_operator!(Problem, [1,3], BilinearForm([Divergence,Identity]; name = "(div(v),p)", factor = -1, store = true))
 
     if use_gravity
         ## discrete gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
         g = DataFunction(gravity!(γ,c), [2,2]; name = "g", dependencies = "X", quadorder = 4)
-        add_operator!(Problem, [1,2], AbstractBilinearForm([VeloIdentity,Identity], fdot_action(Float64, g); factor = -1, name = "(g ⋅ v) ϱ", store = true))
+        add_operator!(Problem, [1,2], BilinearForm([VeloIdentity,Identity], fdot_action(Float64, g); factor = -1, name = "(g ⋅ v) ϱ", store = true))
     else
         ## exact gravity term for right-hand side
         f = DataFunction(rhs!(γ,c), [2,2]; name = "f", dependencies = "X", quadorder = 4)
@@ -182,9 +182,9 @@ function setup_and_solve!(Solution, xgrid;
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
 
     ## equation of state (by best-approximation, P0 mass matrix is diagonal)
-    eos_action = Action{Float64}( equation_of_state!(c,γ),[1,1]; dependencies = "", quadorder = 1)
-    add_operator!(Problem, [3,2], AbstractBilinearForm([Identity,Identity],eos_action; name = "(p,eos(ϱ))", apply_action_to = [2])) # cannot be stored if eos is nonlinear!
-    add_operator!(Problem, [3,3], AbstractBilinearForm([Identity,Identity]; name = "(p,q)", factor = -1, store = true))
+    eos_action = Action( equation_of_state!(c,γ),[1,1]; dependencies = "", quadorder = 1)
+    add_operator!(Problem, [3,2], BilinearForm([Identity,Identity],eos_action; name = "(p,eos(ϱ))", apply_action_to = [2])) # cannot be stored if eos is nonlinear!
+    add_operator!(Problem, [3,3], BilinearForm([Identity,Identity]; name = "(p,q)", factor = -1, store = true))
 
     ## initial values for density (constant) and pressure (by equation of state)
     fill!(Solution[2], M/sum(xgrid[CellVolumes]))

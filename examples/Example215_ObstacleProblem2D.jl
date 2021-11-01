@@ -27,6 +27,7 @@ using ExtendableGrids
 using GridVisualize
 
 ## define obstacle and penalty kernel
+const f = DataFunction([-1])
 const χ! = (result,x) -> (result[1] = (cos(4*x[1]*π)*cos(4*x[2]*π) - 1)/20)
 function obstacle_penalty_kernel!(result, input, x)
     χ!(result,x)
@@ -48,11 +49,11 @@ function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 
     add_operator!(Problem, [1,1], LaplaceOperator(1.0; store = true))
     add_operator!(Problem, [1,1], NonlinearForm([Identity], [1], Identity, obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = penalty, quadorder = 2, ADnewton = true) )
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], DataFunction([-1]); store = true))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f; store = true))
         
     ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector{Float64}("u_h",FES)
+    Solution = FEVector("u_h",FES)
 
     ## solve
     @show Problem Solution

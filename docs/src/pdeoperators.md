@@ -15,16 +15,16 @@ Click on them or scroll down to find out more details.
 
 | Main constructors                   | Special constructors                     | Mathematically                                                                                                 |
 | :---------------------------------- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
-| [`AbstractBilinearForm`](@ref)      |                                          | ``(\mathrm{A}(\mathrm{FO}_1(u)),\mathrm{FO}_2(v))`` or ``(\mathrm{FO}_1(u),\mathrm{A}(\mathrm{FO}_2(v)))``     |
+| [`BilinearForm`](@ref)              |                                          | ``(\mathrm{A}(\mathrm{FO}_1(u)),\mathrm{FO}_2(v))`` or ``(\mathrm{FO}_1(u),\mathrm{A}(\mathrm{FO}_2(v)))``     |
 |                                     | [`LaplaceOperator`](@ref)                | ``(\kappa \nabla u,\nabla v)``                                                                                 |
 |                                     | [`ReactionOperator`](@ref)               | ``(\alpha u, v)``                                                                                              |
 |                                     | [`LagrangeMultiplier`](@ref)             | ``(\mathrm{FO}_1(u), v)`` (automatically assembles 2nd transposed block)                                       |
 |                                     | [`ConvectionOperator`](@ref)             | ``(\beta \cdot \nabla u, v)`` (beta is function)                                                               |
 |                                     | [`HookStiffnessOperator2D`](@ref)        | ``(\mathbb{C} \epsilon(u),\epsilon(v))`` (also 1D or 3D variants exist)                                        |
-| [`AbstractTrilinearForm`](@ref)     |                                          | ``(\mathrm{A}(\mathrm{FO}_1(a),\mathrm{FO}_2(u)),\mathrm{FO}_3(v))``                                           |
+| [`TrilinearForm`](@ref)             |                                          | ``(\mathrm{A}(\mathrm{FO}_1(a),\mathrm{FO}_2(u)),\mathrm{FO}_3(v))``                                           |
 |                                     | [`ConvectionOperator`](@ref)             | ``((a \cdot \nabla) u, v)`` (a is registered unknown)                                                          |
 |                                     | [`ConvectionRotationFormOperator`](@ref) | ``((a \times \nabla) u,v)`` (a is registered unknown, only 2D for now)                                         |
-| [`NonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
+| [`NonlinearForm`](@ref)             |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
 | [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))`` or ``\mathrm{A}(\mathrm{FO}(v))``                                                 |
 
 Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Action](@ref) (see [`NonlinearForm`](@ref) for details).
@@ -76,8 +76,8 @@ RhsOperator
 It is possible to define custom bilineraforms and trilinearforms by specifiyng [Function Operators](@ref) and (in case of bilinearform optionally) an [Action](@ref).
 
 ```@docs
-AbstractBilinearForm
-AbstractTrilinearForm
+BilinearForm
+TrilinearForm
 ```
 
 ### Examples
@@ -86,7 +86,7 @@ Below some examples for operators are given:
 
 ```julia
 # Example 1 : div-div bilinearform with a factor λ (e.g. for divergence-penalisation)
-operator = AbstractBilinearForm([Divergence,Divergence]; factor = λ, name = "λ (div(u),div(v))")
+operator = BilinearForm([Divergence,Divergence]; factor = λ, name = "λ (div(u),div(v))")
 
 # Example 2 : Gradient jump stabilisation with an item-dependent action and a factor s (e.g. for convection stabilisation)
 xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
@@ -94,8 +94,8 @@ function stabilisation_kernel(result, input, item)
     result .= input 
     result .*= xFaceVolumes[item]^2
 end
-action = Action{Float64}(stabilisation_kernel, [2,2]; dependencies = "I", quadorder = 0 )
-operator = AbstractBilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES, factor = s, name = "s |F|^2 [∇(u)]⋅[∇(v)]")
+action = Action(stabilisation_kernel, [2,2]; dependencies = "I", quadorder = 0 )
+operator = BilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES, factor = s, name = "s |F|^2 [∇(u)]⋅[∇(v)]")
 
 ```
 

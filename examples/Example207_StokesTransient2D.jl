@@ -34,21 +34,21 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 ## problem data
-function exact_pressure!(result,x::Array{<:Real,1})
+function exact_pressure!(result,x)
     result[1] = sin(x[1]+x[2]) - 2*sin(1)+sin(2)
 end
-function exact_velocity!(result,x::Array{<:Real,1},t::Real)
+function exact_velocity!(result,x,t)
     result[1] = (1+t)*cos(x[2]);
     result[2] = (1+t)*sin(x[1]);
 end
-function exact_velocity_gradient!(result,x::Array{<:Real,1},t::Real)
+function exact_velocity_gradient!(result,x,t)
     result[1] = 0.0
     result[2] = -(1+t)*sin(x[2]);
     result[3] = (1+t)*cos(x[1]);
     result[4] = 0.0;
 end
 function exact_rhs!(viscosity)
-    function closure(result,x::Array{<:Real,1},t::Real)
+    function closure(result,x,t)
         result[1] = viscosity*(1+t)*cos(x[2]) + cos(x[1]+x[2]) + cos(x[2])
         result[2] = viscosity*(1+t)*sin(x[1]) + cos(x[1]+x[2]) + sin(x[1])
     end
@@ -84,30 +84,30 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     ## negotiate data functions to the package
     ## note that dependencies "XT" marks the function to be x- and t-dependent
     ## that causes the solver to automatically reassemble associated operators in each time step
-    user_function_velocity = DataFunction(exact_velocity!, [2,2]; name = "u_exact", dependencies = "XT", quadorder = 5)
-    user_function_pressure = DataFunction(exact_pressure!, [1,2]; name = "p_exact", dependencies = "X", quadorder = 5)
-    user_function_velocity_gradient = DataFunction(exact_velocity_gradient!, [4,2]; name = "grad(u_exact)", dependencies = "XT", quadorder = 4)
+    u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "XT", quadorder = 5)
+    p = DataFunction(exact_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 5)
+    ∇u = DataFunction(exact_velocity_gradient!, [4,2]; name = "∇u", dependencies = "XT", quadorder = 4)
     user_function_rhs = DataFunction(exact_rhs!(viscosity), [2,2]; name = "f", dependencies = "XT", quadorder = 5)
 
     ## load Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
-    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function_velocity)
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
     add_rhsdata!(Problem, 1, RhsOperator(testfunction_operator, [1], user_function_rhs))
 
     ## add grad-div stabilisation
     if graddiv > 0
-        add_operator!(Problem, [1,1], AbstractBilinearForm("graddiv-stabilisation (div x div)", Divergence, Divergence; factor = graddiv))
+        add_operator!(Problem, [1,1], BilinearForm("graddiv-stabilisation (div x div)", Divergence, Divergence; factor = graddiv))
     end
 
     ## define bestapproximation problems
-    L2PressureBestapproximationProblem = L2BestapproximationProblem(user_function_pressure; bestapprox_boundary_regions = [])
-    L2VelocityBestapproximationProblem = L2BestapproximationProblem(user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
-    H1VelocityBestapproximationProblem = H1BestapproximationProblem(user_function_velocity_gradient, user_function_velocity; bestapprox_boundary_regions = [1,2,3,4])
+    BAP_L2_p = L2BestapproximationProblem(p; bestapprox_boundary_regions = [])
+    BAP_L2_u = L2BestapproximationProblem(u; bestapprox_boundary_regions = [1,2,3,4])
+    BAP_H1_u = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation and arrays to store them
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity, Identity; time = T)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, user_function_pressure, Identity)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, user_function_velocity_gradient, Gradient; time = T)
+    L2VelocityError = L2ErrorIntegrator(Float64, u, Identity; time = T)
+    L2PressureError = L2ErrorIntegrator(Float64, p, Identity)
+    H1VelocityError = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T) 
     Results = zeros(Float64, nlevels, 6)
     NDofs = zeros(Int, nlevels)
     
@@ -121,32 +121,32 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = broken_p)]
 
         ## generate solution fector
-        Solution = FEVector{Float64}(["velocity", "pressure"],FES)
+        Solution = FEVector(["u_h", "p_h"],FES)
 
         ## set initial solution ( = bestapproximation at time 0)
-        L2VelocityBestapproximation = FEVector{Float64}("L2-Bestapproximation velocity",FES[1])
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = 0)
-        Solution[1][:] = L2VelocityBestapproximation[1][:]
+        BA_L2_u = FEVector("L2-Bestapproximation velocity",FES[1])
+        solve!(BA_L2_u, BAP_L2_u; time = 0)
+        Solution[1][:] = BA_L2_u[1][:]
 
         ## generate time-dependent solver and chance rhs data
         TCS = TimeControlSolver(Problem, Solution, CrankNicolson; timedependent_equations = [1], skip_update = [-1], dt_operator = [testfunction_operator])
         advance_until_time!(TCS, timestep, T)
 
         ## solve bestapproximation problems at final time for comparison
-        L2PressureBestapproximation = FEVector{Float64}("L2-Bestapproximation pressure",FES[2])
-        H1VelocityBestapproximation = FEVector{Float64}("H1-Bestapproximation velocity",FES[1])
-        solve!(L2VelocityBestapproximation, L2VelocityBestapproximationProblem; time = T)
-        solve!(L2PressureBestapproximation, L2PressureBestapproximationProblem)
-        solve!(H1VelocityBestapproximation, H1VelocityBestapproximationProblem; time = T)
+        BA_L2_p = FEVector("L2-Bestapproximation pressure",FES[2])
+        BA_H1_u = FEVector("H1-Bestapproximation velocity",FES[1])
+        solve!(BA_L2_u, BAP_L2_u; time = T)
+        solve!(BA_L2_p, BAP_L2_p)
+        solve!(BA_H1_u, BAP_H1_u; time = T)
 
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2VelocityErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(L2VelocityErrorEvaluator,L2VelocityBestapproximation[1]))
-        Results[level,3] = sqrt(evaluate(L2PressureErrorEvaluator,Solution[2]))
-        Results[level,4] = sqrt(evaluate(L2PressureErrorEvaluator,L2PressureBestapproximation[1]))
-        Results[level,5] = sqrt(evaluate(H1VelocityErrorEvaluator,Solution[1]))
-        Results[level,6] = sqrt(evaluate(H1VelocityErrorEvaluator,H1VelocityBestapproximation[1]))
+        Results[level,1] = sqrt(evaluate(L2VelocityError,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2VelocityError,BA_L2_u[1]))
+        Results[level,3] = sqrt(evaluate(L2PressureError,Solution[2]))
+        Results[level,4] = sqrt(evaluate(L2PressureError,BA_L2_p[1]))
+        Results[level,5] = sqrt(evaluate(H1VelocityError,Solution[1]))
+        Results[level,6] = sqrt(evaluate(H1VelocityError,BA_H1_u[1]))
     end    
 
     ## print convergence history

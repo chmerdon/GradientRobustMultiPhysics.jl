@@ -46,7 +46,7 @@ function main(; verbosity = 0, Plotter = nothing, μ = 5e-4, anderson_iterations
 
     ## generate FESpaces
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
-    Solution = FEVector{Float64}(["u_h", "p_h"],FES)
+    Solution = FEVector(["u_h", "p_h"],FES)
 
     ## solve with anderson iterations until 1e-4
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = "l2", anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance, show_statistics = true)

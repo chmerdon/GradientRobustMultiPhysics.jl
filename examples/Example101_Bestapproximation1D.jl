@@ -41,12 +41,12 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1)
     FES = FESpace{FEType}(xgrid)
 
     ## generate a solution vector and solve the problem on the coarse grid
-    Solution = FEVector{Float64}("u_h",FES)
+    Solution = FEVector("u_h",FES)
     solve!(Solution, Problem)
     
     ## we want to compare our discrete solution with a finer interpolation of u
     FES_fine = FESpace{FEType}(xgrid_fine)
-    Interpolation = FEVector{Float64}("u_h (fine)",FES_fine)
+    Interpolation = FEVector("u_h (fine)",FES_fine)
     interpolate!(Interpolation[1], ON_CELLS, u)
 
     ## calculate the L2 errors
