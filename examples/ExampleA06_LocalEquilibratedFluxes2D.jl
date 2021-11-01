@@ -17,7 +17,7 @@ where ``\sigma_h`` discretisates the exact ``\sigma`` in the dual mixed problem
 by some local equilibration strategy, see reference below for details.
 
 This examples demonstrates the use of low-level structures to assemble individual problems
-and a strategy solve several small problems in parallel.
+and a strategy to solve several small problems in parallel by use of non-overlapping node patch groups.
 
 !!! reference
 
@@ -58,7 +58,7 @@ function exact_function_gradient!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
+function main(; verbosity = 0, order = 2, nlevels = 15, theta = 1//2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -68,8 +68,15 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
 
     ## choose some finite elements for primal and dual problem (= for equilibrated fluxes)
     ## (local equilibration for Pk needs at least BDMk)
-    FEType = H1P1{1}
-    FETypeDual = HDIVBDM1{2}
+    if order == 1
+        FEType = H1P1{1}
+        FETypeDual = HDIVBDM1{2}
+    elseif order == 2 
+        FEType = H1P2{1,2}
+        FETypeDual = HDIVBDM2{2}
+    else
+        @error "order must be 1 or 2"
+    end
     
     ## negotiate data functions to the package
     u = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
@@ -156,7 +163,7 @@ function main(; verbosity = 0, nlevels = 15, theta = 1//2, Plotter = nothing)
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
 end
 
 
@@ -165,11 +172,10 @@ end
 function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
     ## needed grid stuff
     xCellNodes::Array{Int32,2} = xgrid[CellNodes]
-    xFaceNodes::Array{Int32,2} = xgrid[FaceNodes]
     xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     xNodeCells = atranspose(xCellNodes)
     nnodes::Int = num_sources(xNodeCells)
-    nfaces::Int = num_sources(xFaceNodes)
+    ncells = size(xCellNodes,2)
 
     ## get node patch groups that can be solved in parallel
     group4node = xgrid[NodePatchGroups]
@@ -177,21 +183,19 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
     ## init equilibration space (and Lagrange multiplier space)
     FESDual = FESpace{FETypeDual}(xgrid)
     xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = FESDual[CellDofs]
-    xFaceDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = FESDual[FaceDofs]
     xItemDofs_uh::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Solution[1].FES[CellDofs]
     DualSolution = FEVector{Float64}("σ_h",FESDual)
-    
+
     ## partition of unity and their gradients
     POUFEType = H1P1{1}
     POUFES = FESpace{POUFEType}(xgrid)
     POUqf = QuadratureRule{Float64,Triangle2D}(0)
 
     ## quadrature formulas
-    qf = QuadratureRule{Float64,Triangle2D}(2*get_polynomialorder(FETypeDual, Triangle2D))
+    qf = QuadratureRule{Float64,Triangle2D}(2*get_polynomialorder(FETypeDual, Triangle2D)+1)
     weights::Array{Float64,1} = qf.w
 
     ## some constants
-    dofs_on_face::Int = max_num_targets_per_source(xFaceDofs)
     div_penalty::Float64 = 1e5
     bnd_penalty::Float64 = 1e30
     maxdofs::Int = max_num_targets_per_source(xItemDofs)
@@ -240,23 +244,25 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
         b = zeros(Float64,FESDual.ndofs)
         X[group] = zeros(Float64,FESDual.ndofs)
 
-        ## find dofs at boundary of node patches
-        is_boundarydof = zeros(Bool,FESDual.ndofs)
-        boundary_face::Bool = false
-        for face = 1 : nfaces
-            boundary_face = true
-            for k = 1 : 2
-                if group4node[xFaceNodes[k,face]] == group
-                    boundary_face = false
+        ## find dofs at boundary of current node patches
+        ## and in interior of cells outside of current node patch group
+        is_noninvolveddof = zeros(Bool,FESDual.ndofs)
+        outside_cell::Bool = false
+        for cell = 1 : ncells
+            outside_cell = true
+            for k = 1 : 3
+                if group4node[xCellNodes[k,cell]] == group
+                    outside_cell = false
                     break
                 end
             end
-            if (boundary_face)
-                for j = 1 : dofs_on_face
-                    is_boundarydof[xFaceDofs[j,face]] = true
+            if (outside_cell) # mark interior dofs of outside cell
+                for j = 1 : maxdofs
+                    is_noninvolveddof[xItemDofs[j,cell]] = true
                 end
             end
         end
+        
 
         for node = 1 : nnodes
         if group4node[node] == group
@@ -264,12 +270,12 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
                 cell = xNodeCells[c,node]
 
                 ## find local node number of global node z
-                ## and evaluate (constatn) gradient of nodal basis function phi_z
+                ## and evaluate (constant) gradient of nodal basis function phi_z
                 localnode = 1
                 while xCellNodes[localnode,cell] != node
                     localnode += 1
                 end
-                GradientRobustMultiPhysics.update_febe!(FEBasis_gradphi,cell)
+                update_febe!(FEBasis_gradphi,cell)
                 eval_febe!(gradphi, FEBasis_gradphi, localnode, 1)
 
                 ## read coefficients for discrete flux
@@ -278,9 +284,9 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
                 end
 
                 ## update other FE evaluators
-                GradientRobustMultiPhysics.update_febe!(FEBasis_graduh,cell)
-                GradientRobustMultiPhysics.update_febe!(FEBasis_div,cell)
-                GradientRobustMultiPhysics.update_febe!(FEBasis_id,cell)
+                update_febe!(FEBasis_graduh,cell)
+                update_febe!(FEBasis_div,cell)
+                update_febe!(FEBasis_id,cell)
 
                 ## assembly on this cell
                 for i in eachindex(weights)
@@ -334,7 +340,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
 
         ## penalize dofs at boundary of node patches
         for j = 1 : FESDual.ndofs
-            if is_boundarydof[j]
+            if is_noninvolveddof[j]
                 A[j,j] = bnd_penalty
                 b[j] = 0
             end
