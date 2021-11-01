@@ -132,7 +132,7 @@ export LagrangeMultiplier
 
 export AbstractTrilinearForm
 export AbstractMultilinearForm
-export AbstractNonlinearForm, GenerateNonlinearForm
+export AbstractNonlinearForm, NonlinearForm
 
 export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator

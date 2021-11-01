@@ -55,12 +55,10 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1)
     println("\t|| u - u_h || = $L2error")
     println("\t|| u - u_h (fine) ||= $L2error_fine")
         
-    ## evaluate/interpolate function at nodes and plot
-    if Plotter !== nothing
-        p=GridVisualizer(Plotter=Plotter,layout=(1,1))
-        scalarplot!(p[1,1],xgrid, view(nodevalues(Solution[1]),1,:), color=(0,0.7,0), label = "u_h (coarse bestapprox)")
-        scalarplot!(p[1,1],xgrid_fine, view(nodevalues(Interpolation[1]),1,:), clear = false, color = (1,0,0), label = "u_h (fine interpolation)", legend = :best)
-    end
+    ## evaluate/interpolate function at nodes and plot_trisurf
+    p=GridVisualizer(Plotter=Plotter,layout=(1,1))
+    scalarplot!(p[1,1],xgrid, view(nodevalues(Solution[1]),1,:), color=(0,0.7,0), label = "u_h (coarse bestapprox)")
+    scalarplot!(p[1,1],xgrid_fine, view(nodevalues(Interpolation[1]),1,:), clear = false, color = (1,0,0), label = "u_h (fine interpolation)", legend = :best)
 end
 
 end

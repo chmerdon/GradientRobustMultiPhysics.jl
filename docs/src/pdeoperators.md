@@ -24,10 +24,10 @@ Click on them or scroll down to find out more details.
 | [`AbstractTrilinearForm`](@ref)     |                                          | ``(\mathrm{A}(\mathrm{FO}_1(a),\mathrm{FO}_2(u)),\mathrm{FO}_3(v))``                                           |
 |                                     | [`ConvectionOperator`](@ref)             | ``((a \cdot \nabla) u, v)`` (a is registered unknown)                                                          |
 |                                     | [`ConvectionRotationFormOperator`](@ref) | ``((a \times \nabla) u,v)`` (a is registered unknown, only 2D for now)                                         |
-| [`GenerateNonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
+| [`NonlinearForm`](@ref)     |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
 | [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))`` or ``\mathrm{A}(\mathrm{FO}(v))``                                                 |
 
-Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Action](@ref) (see [`GenerateNonlinearForm`](@ref) for details).
+Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Action](@ref) (see [`NonlinearForm`](@ref) for details).
 
 
 ## Assembly Type
@@ -113,7 +113,7 @@ LagrangeMultiplier
 Nonlinear Operators can be setup in two ways. The manual way requires the user to define an action with a nonlinear action kernel (see [Action Kernel](@ref)) that specifies the linearisation of the nonlinearity. There is also an automatic way where the user specifies only a function (where the input can be used nonlinearly) which is then automatically differentiated to generate the linearised action kernel, see below for details.
 
 ```@docs
-GenerateNonlinearForm
+NonlinearForm
 ```
 
 

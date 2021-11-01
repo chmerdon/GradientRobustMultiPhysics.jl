@@ -196,7 +196,7 @@ function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAPT}, xref:
 
     # compute refbasisderivvals and further coefficients needed for operator eval
     derivorder = NeededDerivative4Operator(FEOP)
-    edim = dim_element(EG)
+    edim = max(1,dim_element(EG))
     xdim = size(FE.xgrid[Coordinates],1)
     resultdim = Int(Length4Operator(FEOP,edim,ncomponents))
     coefficients3 = zeros(T,0,0)

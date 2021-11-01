@@ -490,7 +490,7 @@ function ConvectionOperator(
         if name == "auto"
             name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) u, $(testfunction_operator)(v))"
         end
-        return GenerateNonlinearForm(name, [beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; ADnewton = true, quadorder = quadorder)     
+        return NonlinearForm([beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; name = name, ADnewton = true, quadorder = quadorder)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
         action_kernel = ActionKernel(convection_function_fe,argsizes; dependencies = "", quadorder = quadorder)
@@ -563,14 +563,14 @@ end
 
 """
 ````
-function GenerateNonlinearForm(
-    name::String,
+function NonlinearForm(
     operator1::Array{DataType,1},
     coeff_from::Array{Int,1},
     operator2::Type{<:AbstractFunctionOperator},
     action_kernel::Function,
     argsizes::Array{Int,1},
     dim::Int;
+    name::String = "nonlinear form",
     AT::Type{<:AssemblyType} = ON_CELLS,
     ADnewton::Bool = false,
     action_kernel_rhs = nothing,
@@ -607,13 +607,13 @@ which will lead to copies of the operator assigned also to off-diagonal blocks w
 The subblock assignment of the copies is done automatically by the add_operator! function.
 
 """
-function GenerateNonlinearForm(
-    name::String,
+function NonlinearForm(
     operator1::Array{DataType,1},
     coeff_from::Array{Int,1},
     operator2::Type{<:AbstractFunctionOperator},
     action_kernel::Function,
     argsizes::Array{Int,1};
+    name::String = "nonlinear form",
     AT::Type{<:AssemblyType} = ON_CELLS,
     ADnewton::Bool = false,
     action_kernel_rhs = nothing,

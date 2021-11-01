@@ -90,9 +90,9 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = GenerateNonlinearForm("(1+u^2) ∇u ⋅ ∇v", [Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; quadorder = 4, ADnewton = true) 
+        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 4, ADnewton = true) 
     elseif q == 2
-        nonlin_diffusion = GenerateNonlinearForm("(κ+|∇u|^2) ∇u ⋅ ∇v", [Gradient], [1], Gradient, diffusion_kernel2!(p,κ), [2,2]; quadorder = 5, ADnewton = true)   
+        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, diffusion_kernel2!(p,κ), [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 5, ADnewton = true)   
     else 
         @error "only q ∈ [1,2] !"
     end

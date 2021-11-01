@@ -111,7 +111,7 @@ function QuadratureRule{T,ET}(order::Int) where {T<:Real, ET <: AbstractElementG
     xref = Vector{Array{T,1}}(undef,1);
     xref[1] = ones(T,1)
     w = [1]
-    return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
+    return SQuadratureRule{T, ET, 1, length(w)}(name, xref, w)
 end
 
 

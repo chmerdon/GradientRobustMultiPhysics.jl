@@ -251,6 +251,10 @@ end
     UD.negotiated_function(result, X, T)
 end
 
+@inline function eval_data!(result, UD::UserData{AbstractDataFunction})
+    UD.negotiated_function(result, nothing, nothing)
+end
+
 @inline function eval_data!(result, UD::UserData{AbstractDataFunction}, X, T, R, I, L)
     UD.negotiated_function(result, X, T)
 end
@@ -273,5 +277,30 @@ end
 
 @inline function is_ldependent(UD::UserData)
     return occursin("L", UD.dependencies)
+end
+
+
+"""
+````
+function nodevalues(nodevals, xgrid::ExtendableGrid{Tv,Ti}, UD::UserData; time = 0) where {Tv,Ti}
+````
+
+Returns a 2D array with the node values of the data function for the given grid.
+"""
+function nodevalues(xgrid::ExtendableGrid{Tv,Ti}, UD::UserData; T = Float64, time = 0) where {Tv,Ti}
+    xCoordinates::Array{Tv,2} = xgrid[Coordinates]
+    nnodes::Int = size(xCoordinates,2)
+
+    @assert UD.dimensions[2] == size(xCoordinates,1) "UserData input dimension expected to match dimension of coordinates of grid"
+
+    result = zeros(T,UD.dimensions[1])
+    nodevals = zeros(T,UD.dimensions[1],nnodes)
+    for j = 1 : nnodes
+        eval_data!(result,UD,view(xCoordinates,:,j),time)
+        for k = 1 : UD.dimensions[1]
+            nodevals[k,j] = result[k]
+        end
+    end
+    return nodevals
 end
 
