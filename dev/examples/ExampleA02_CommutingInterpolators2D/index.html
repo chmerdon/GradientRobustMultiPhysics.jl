@@ -5,11 +5,11 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 # define some function
-function exact_function!(result,x::Array{&lt;:Real,1})
+function exact_function!(result,x)
     result[1] = x[1]^2-x[2]^4 + 1
 end
 # and its CurlScalar = (-dy,dx)
-function exact_curl!(result,x::Array{&lt;:Real,1})
+function exact_curl!(result,x)
     result[1] = 4*x[2]^3
     result[2] = 2*x[1]
 end
@@ -21,8 +21,8 @@ function main(;order::Int = 2, testmode = false)
     xgrid = uniform_refine(reference_domain(Triangle2D),2)
 
     # negotiate exact_function! and exact_curl! to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 4)
-    user_function_curl = DataFunction(exact_curl!, [2,2]; name = &quot;Curl(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 3)
+    u = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+    u_curl = DataFunction(exact_curl!, [2,2]; name = &quot;Curl(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 3)
 
     # choose commuting interpolators pair
     if order == 1
@@ -33,14 +33,14 @@ function main(;order::Int = 2, testmode = false)
 
     # do the H1 interpolation of the function
     FESH1 = FESpace{FE[1]}(xgrid)
-    H1Interpolation = FEVector{Float64}(&quot;H1-Interpolation&quot;,FESH1)
-    interpolate!(H1Interpolation[1], user_function)
+    H1Interpolation = FEVector(&quot;H1-Interpolation&quot;,FESH1)
+    interpolate!(H1Interpolation[1], u)
 
     # do the Hdiv interpolation of the Curl of the function
     # since integrals over faces have to be computed exactly we need to tune the quadrature order
     FESHdiv = FESpace{FE[2]}(xgrid)
-    HdivCurlInterpolation = FEVector{Float64}(&quot;Hdiv-Interpolation&quot;,FESHdiv)
-    interpolate!(HdivCurlInterpolation[1], user_function_curl)
+    HdivCurlInterpolation = FEVector(&quot;Hdiv-Interpolation&quot;,FESHdiv)
+    interpolate!(HdivCurlInterpolation[1], u_curl)
 
     # Checking the identity:
     # Both sides of the identity are finite element function of FEtype testFE
@@ -48,7 +48,7 @@ function main(;order::Int = 2, testmode = false)
 
     # first: generate the test space and some matching FEVector
     FEStest = FESpace{testFE}(xgrid; broken = true)
-    error = FEVector{Float64}(&quot;ErrorVector&quot;,FEStest)
+    error = FEVector(&quot;ErrorVector&quot;,FEStest)
 
     # Define bilinear forms that represents testing each side of the identity with the testspace functions
     BLF1 = BilinearForm(Float64, ON_CELLS, [FEStest, FESHdiv], [Identity, Identity])
@@ -78,4 +78,4 @@ function test()
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA02_CommutingInterpolators2D.main()
-error(Curl(I_H1P2{1,2}(psi) - I_HDIVRT1{2}(Curl(psi))) = 1.6883384559505932e-16</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA01_RationalMassMatrix/">« A01 : Rational Mass Matrix</a><a class="docs-footer-nextpage" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 30 October 2021 19:39">Saturday 30 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+error(Curl(I_H1P2{1,2}(psi) - I_HDIVRT1{2}(Curl(psi))) = 1.6883384559505932e-16</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA01_RationalMassMatrix/">« A01 : Rational Mass Matrix</a><a class="docs-footer-nextpage" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 1 November 2021 19:43">Monday 1 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

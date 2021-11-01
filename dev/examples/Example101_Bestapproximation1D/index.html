@@ -32,12 +32,12 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1)
     FES = FESpace{FEType}(xgrid)
 
     # generate a solution vector and solve the problem on the coarse grid
-    Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+    Solution = FEVector(&quot;u_h&quot;,FES)
     solve!(Solution, Problem)
 
     # we want to compare our discrete solution with a finer interpolation of u
     FES_fine = FESpace{FEType}(xgrid_fine)
-    Interpolation = FEVector{Float64}(&quot;u_h (fine)&quot;,FES_fine)
+    Interpolation = FEVector(&quot;u_h (fine)&quot;,FES_fine)
     interpolate!(Interpolation[1], ON_CELLS, u)
 
     # calculate the L2 errors
@@ -46,14 +46,12 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1)
     println(&quot;\t|| u - u_h || = $L2error&quot;)
     println(&quot;\t|| u - u_h (fine) ||= $L2error_fine&quot;)
 
-    # evaluate/interpolate function at nodes and plot
-    if Plotter !== nothing
-        p=GridVisualizer(Plotter=Plotter,layout=(1,1))
-        scalarplot!(p[1,1],xgrid, view(nodevalues(Solution[1]),1,:), color=(0,0.7,0), label = &quot;u_h (coarse bestapprox)&quot;)
-        scalarplot!(p[1,1],xgrid_fine, view(nodevalues(Interpolation[1]),1,:), clear = false, color = (1,0,0), label = &quot;u_h (fine interpolation)&quot;, legend = :best)
-    end
+    # evaluate/interpolate function at nodes and plot_trisurf
+    p=GridVisualizer(Plotter=Plotter,layout=(1,1))
+    scalarplot!(p[1,1],xgrid, view(nodevalues(Solution[1]),1,:), color=(0,0.7,0), label = &quot;u_h (coarse bestapprox)&quot;)
+    scalarplot!(p[1,1],xgrid_fine, view(nodevalues(Interpolation[1]),1,:), clear = false, color = (1,0,0), label = &quot;u_h (fine interpolation)&quot;, legend = :best)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example101_Bestapproximation1D.main()
 	|| u - u_h || = 3.944249709670143e-5
-	|| u - u_h (fine) ||= 4.025193150126114e-8</code></pre><p><img src="../../images/Example101_Bestapproximation1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../examples_intro/">« About the examples</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 30 October 2021 19:39">Saturday 30 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	|| u - u_h (fine) ||= 4.025193150126114e-8</code></pre><p><img src="../../images/Example101_Bestapproximation1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../examples_intro/">« About the examples</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 1 November 2021 19:43">Monday 1 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

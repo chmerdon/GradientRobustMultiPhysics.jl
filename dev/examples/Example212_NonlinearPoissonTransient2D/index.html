@@ -30,7 +30,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1)
 
     # prepare nonlinear expression (1+u^2)*grad(u)
-    nonlin_diffusion = GenerateNonlinearForm(&quot;(1+u^2) ∇u ⋅ ∇v&quot;, [Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; quadorder = 2, ADnewton = true)
+    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = &quot;(1+u^2) ∇u ⋅ ∇v&quot;, quadorder = 2, ADnewton = true)
 
     # generate problem description and assign nonlinear operator and data
     Problem = PDEDescription(&quot;nonlinear Poisson problem&quot;)
@@ -40,8 +40,8 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
 
     # define error evaluators
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity; time = T)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity; time = T)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
     NDofs = zeros(Int,nlevels)
     Results = zeros(Float64,nlevels,2)
 
@@ -53,7 +53,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
         # generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        Solution = FEVector(&quot;u_h&quot;,FES)
 
         # set initial solution
         interpolate!(Solution[1], u)
@@ -66,8 +66,8 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
         # calculate L2 and H1 error and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
     end
 
     if testmode == true
@@ -89,4 +89,4 @@ function test()
     return max(error1,error2)
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example212_NonlinearPoissonTransient2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example211_NonlinearElasticityBimetal2D/">« 211 : Nonlinear Elasticity Bimetal 2D</a><a class="docs-footer-nextpage" href="../Example214_TwoNonlinearCoupled2D/">214 : Two nonlinearly coupled PDEs (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 30 October 2021 19:39">Saturday 30 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example212_NonlinearPoissonTransient2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example211_NonlinearElasticityBimetal2D/">« 211 : Nonlinear Elasticity Bimetal 2D</a><a class="docs-footer-nextpage" href="../Example214_TwoNonlinearCoupled2D/">214 : Two nonlinearly coupled PDEs (2D) »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 1 November 2021 19:43">Monday 1 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

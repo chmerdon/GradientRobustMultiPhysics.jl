@@ -8,11 +8,11 @@ using ExtendableGrids
 using GridVisualize
 
 # problem data
-function exact_function!(result,x::Array{&lt;:Real,1})
+function exact_function!(result,x)
     result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
     return nothing
 end
-function exact_gradient!(result,x::Array{&lt;:Real,1})
+function exact_gradient!(result,x)
     result[1] = x[3] - x[2]
     result[2] = - x[1] + 2*x[2]
     result[3] = x[1]
@@ -40,11 +40,11 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     # create Poisson problem via prototype and add data
     Problem = PoissonProblem(1.0)
     add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
 
     # prepare error calculation
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error = L2ErrorIntegrator(Float64, u)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
     Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
 
     # loop over levels
@@ -55,15 +55,15 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
 
         # create finite element space and solution vector
         FES = FESpace{FEType}(xgrid)
-        Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+        Solution = FEVector(&quot;u_h&quot;,FES)
 
         # solve the problem
         solve!(Solution, Problem)
 
         # calculate L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
-        Results[level,1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
-        Results[level,2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
     end
 
     # plot (Plotter = GLMakie should work)
@@ -82,4 +82,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
         27  |     3.38581e-02      0.000  |     4.38269e-01      0.000  |
        125  |     8.97264e-03      2.600  |     2.25880e-01      1.298  |
        729  |     2.28139e-03      2.330  |     1.13818e-01      1.166  |
-      4913  |     5.73658e-04      2.171  |     5.70179e-02      1.087  |</code></pre><p><img src="../../images/Example301_Poisson3D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example240_TransientFlowAroundCylinder2D/">« 240 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 30 October 2021 19:39">Saturday 30 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      4913  |     5.73658e-04      2.171  |     5.70179e-02      1.087  |</code></pre><p><img src="../../images/Example301_Poisson3D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example240_TransientFlowAroundCylinder2D/">« 240 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 1 November 2021 19:43">Monday 1 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

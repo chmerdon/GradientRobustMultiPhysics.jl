@@ -30,22 +30,22 @@ end
 
 
 # problem data
-function exact_function!(result,x::Array{&lt;:Real,1})
+function exact_function!(result,x)
     result[1] = x[1]*x[2]
     return nothing
 end
-function exact_gradient!(result,x::Array{&lt;:Real,1})
+function exact_gradient!(result,x)
     result[1] = x[2]
     result[2] = x[1]
     return nothing
 end
-function rhs!(result,x::Array{&lt;:Real,1})
+function rhs!(result,x)
     result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1]) # = -div((1+u^2)*grad(u))
     return nothing
 end
 
 # everything is wrapped in a main function
-function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P1{1}, testmode = false, skip_update = 2)
+function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P1{1}, skip_update = 2)
 
     # set log level
     set_verbosity(verbosity)
@@ -54,38 +54,38 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
 
     # negotiate data functions to the package
-    user_function = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 2)
-    user_function_gradient = DataFunction(exact_gradient!, [2,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
-    user_function_rhs = DataFunction(rhs!, [1,2]; dependencies = &quot;X&quot;, name = &quot;f&quot;, quadorder = 4)
+    u = DataFunction(exact_function!, [1,2]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    u_gradient = DataFunction(exact_gradient!, [2,2]; name = &quot;grad(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+    u_rhs = DataFunction(rhs!, [1,2]; dependencies = &quot;X&quot;, name = &quot;f&quot;, quadorder = 4)
 
     # prepare nonlinear expression (1+u^2)*grad(u)
-    function diffusion_kernel!(result::Array{&lt;:Real,1}, input::Array{&lt;:Real,1})
+    function diffusion_kernel!(result, input)
         # input = [u, grad(u)]
         result[1] = (1+input[1]^2)*input[2]
         result[2] = (1+input[1]^2)*input[3]
         return nothing
     end
-    nonlin_diffusion = GenerateNonlinearForm(&quot;((1+u^2)*grad(u))*grad(v)&quot;, [Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; quadorder = 2, ADnewton = true)
+    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = &quot;((1+u^2)*grad(u))*grad(v)&quot;, quadorder = 2, ADnewton = true)
 
     # generate problem description and assign nonlinear operator and data
     Problem = PDEDescription(&quot;nonlinear Poisson problem&quot;)
     add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;nonlinear Poisson equation&quot;)
     add_operator!(Problem, [1,1], nonlin_diffusion)
-    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = user_function)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], user_function_rhs; store = true))
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], u_rhs; store = true))
 
     # create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)
-    Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+    Solution = FEVector(&quot;u_h&quot;,FES)
 
     # solve the problem (here the newly defined linear solver type is used)
     solve!(Solution, Problem; linsolver = MySolver{Float64,Int64}, skip_update = [skip_update])
 
     # calculate error
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, user_function, Identity)
-    H1ErrorEvaluator = L2ErrorIntegrator(Float64, user_function_gradient, Gradient)
-    println(&quot;\tL2error = $(sqrt(evaluate(L2ErrorEvaluator,Solution[1])))&quot;)
-    println(&quot;\tH1error = $(sqrt(evaluate(H1ErrorEvaluator,Solution[1])))&quot;)
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    H1Error = L2ErrorIntegrator(Float64, u_gradient, Gradient)
+    println(&quot;\tL2error = $(sqrt(evaluate(L2Error,Solution[1])))&quot;)
+    println(&quot;\tH1error = $(sqrt(evaluate(H1Error,Solution[1])))&quot;)
 
     # plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
@@ -101,15 +101,15 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	--------------------------------------
 		Hi! update_factorization! is called at start and every skip_update time...
 		Hi! solve! under way...
-	      1   | 8.496007e-15 | 2.924738e-02
+	      1   | 8.452621e-15 | 2.924738e-02
 		Hi! update_factorization! is called at start and every skip_update time...
 		Hi! solve! under way...
-	      2   | 8.208313e-15 | 4.905172e-04
+	      2   | 8.786607e-15 | 4.905172e-04
 		Hi! solve! under way...
-	      3   | 8.896962e-15 | 1.346748e-07
+	      3   | 9.250634e-15 | 1.346748e-07
 		Hi! update_factorization! is called at start and every skip_update time...
 		Hi! solve! under way...
-	      4   | 9.095080e-15 | 1.967146e-14
+	      4   | 8.938063e-15 | 1.844386e-14
 
-	L2error = 2.5922889562396984e-5
-	H1error = 0.009021109569311974</code></pre><p><img src="../../images/ExampleA04_CustomLinearSolver_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA03_CommutingInterpolators3D/">« A03 : Commuting Interpolators 3D</a><a class="docs-footer-nextpage" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 30 October 2021 19:39">Saturday 30 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	L2error = 2.592288956240462e-5
+	H1error = 0.009021109569311967</code></pre><p><img src="../../images/ExampleA04_CustomLinearSolver_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA03_CommutingInterpolators3D/">« A03 : Commuting Interpolators 3D</a><a class="docs-footer-nextpage" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 1 November 2021 19:43">Monday 1 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -51,7 +51,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
 
     # generate FESpaces and Solution vector
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
-    Solution = FEVector{Float64}([&quot;u_h&quot;,&quot;p_h&quot;],FES)
+    Solution = FEVector([&quot;u_h&quot;,&quot;p_h&quot;],FES)
 
     # solve
     solve!(Solution, Problem; maxiterations = 50, target_residual = 1e-10, show_statistics = true)
@@ -114,11 +114,11 @@ function get_draglift(Solution::FEVector, μ)
         result[1] *= -(2/(umean^2*L))
         return nothing
     end
-    draglift_action = Action{Float64}(draglift_kernel, [1,13]; name = &quot;drag/lift by testfunction&quot;, dependencies = &quot;&quot;, quadorder = 4)
+    draglift_action = Action(draglift_kernel, [1,13]; name = &quot;drag/lift by testfunction&quot;, dependencies = &quot;&quot;, quadorder = 4)
     DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     # test for drag
-    TestFunction = FEVector{Float64}(&quot;drag testfunction&quot;,Solution[1].FES)
+    TestFunction = FEVector(&quot;drag testfunction&quot;,Solution[1].FES)
     xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
     dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = &quot;drag test&quot;, dependencies = &quot;X&quot;, quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaceFaces)
@@ -203,11 +203,11 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 2.499205e-17 | 1.899986e-03 | 9.36e-01/2.85e-01/1.23e+00
-	      2   | 2.670545e-17 | 5.392003e-04 | 9.34e-01/2.25e-01/1.16e+00
-	      3   | 2.674340e-17 | 2.926551e-05 | 9.39e-01/2.35e-01/1.18e+00
-	      4   | 2.674620e-17 | 1.060798e-07 | 9.28e-01/2.38e-01/1.17e+00
-	      5   | 2.635039e-17 | 1.119313e-12 | 9.37e-01/2.09e-01/1.15e+00
+	      1   | 2.679418e-17 | 1.899986e-03 | 1.34e+00/3.82e-01/1.74e+00
+	      2   | 2.652568e-17 | 5.392003e-04 | 1.30e+00/2.99e-01/1.60e+00
+	      3   | 2.650535e-17 | 2.926551e-05 | 1.30e+00/3.12e-01/1.62e+00
+	      4   | 2.649280e-17 | 1.060798e-07 | 1.31e+00/4.25e-01/1.74e+00
+	      5   | 2.646591e-17 | 1.119312e-12 | 1.33e+00/2.81e-01/1.62e+00
 
-[drag, lift] = [5.558270082490449, 0.01048856931621747]
-p difference = [0.11865484048663102]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 30 October 2021 19:39">Saturday 30 October 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[drag, lift] = [5.558270082490449, 0.010488569316221929]
+p difference = [0.11865484048663108]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 1 November 2021 19:43">Monday 1 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
