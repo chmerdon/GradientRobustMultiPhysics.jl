@@ -92,7 +92,7 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     
     ## generate FESpaces and a solution vector for all 3 unknowns
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true), FESpace{FETypeTransport}(xgrid)]
-    Solution = FEVector{Float64}(["v_h", "p_h", "c_h"],FES)
+    Solution = FEVector(["v_h", "p_h", "c_h"],FES)
 
     ## first solve the decoupled flow problem equations [1,2]
     solve!(Solution, Problem; subiterations = [[1,2]], maxiterations = 5, target_residual = 1e-12)

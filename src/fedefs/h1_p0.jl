@@ -25,7 +25,6 @@ get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{BFaceDofs}, EG::Type{<:AbstractE
 isdefined(FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = true
 
 function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {T,Tv,Ti,FEType <: H1P0,APT}
-    xCoords = FE.xgrid[Coordinates]
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
     if items == []
@@ -34,7 +33,6 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
         items = filter(!iszero, items)
     end
     ncomponents = get_ncomponents(FEType)
-    xdim = size(xCoords,1)
     integrals4cell = zeros(T,ncomponents,ncells)
     integrate!(integrals4cell, FE.xgrid, ON_CELLS, exact_function!; items = items, time = time)
     for cell in items
@@ -56,7 +54,6 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     xCoords = FE.xgrid[Coordinates]
     xCellNodes = FE.xgrid[CellNodes]
     xNodeCells = atranspose(xCellNodes)
-    ncells = num_sources(xCellNodes)
     FEType = eltype(FE)
     ncomponents = get_ncomponents(FEType)
     value = 0.0
@@ -74,8 +71,7 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, FEType::Type{H1P0{ncomponents}}, ::Type{<:AbstractElementGeometry}) where {ncomponents}
     function closure(refbasis, xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 1.0

@@ -52,8 +52,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     end    
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:AbstractElementGeometry1D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, ::Type{H1BUBBLE{ncomponents}}, ::Type{<:AbstractElementGeometry1D}) where {ncomponents}
     function closure(refbasis, xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 6*xref[1]*(1-xref[1])
@@ -61,8 +60,7 @@ function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Ab
     end
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Triangle2D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, ::Type{H1BUBBLE{ncomponents}}, ::Type{<:Triangle2D}) where {ncomponents}
     function closure(refbasis, xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 60*(1-xref[1]-xref[2])*xref[1]*xref[2]
@@ -70,8 +68,7 @@ function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Tr
     end
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Quadrilateral2D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, ::Type{H1BUBBLE{ncomponents}}, ::Type{<:Quadrilateral2D}) where {ncomponents}
     function closure(refbasis, xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 36 *(1-xref[1])*(1-xref[2])*xref[1]*xref[2]
@@ -79,8 +76,7 @@ function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Qu
     end
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1BUBBLE}, ::Type{<:Tetrahedron3D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, ::Type{H1BUBBLE{ncomponents}}, ::Type{<:Tetrahedron3D}) where {ncomponents}
     function closure(refbasis, xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 840*(1-xref[1]-xref[2]-xref[3])*xref[1]*xref[2]*xref[3]

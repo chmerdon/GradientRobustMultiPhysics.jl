@@ -67,8 +67,7 @@ end
 # all basis functions on a cell are nonzero on all edges,
 # but only the dof associated to the face is evaluated
 # when using get_basis on faces
-function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1CR}, ::Type{<:AbstractElementGeometry})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{H1CR{ncomponents}}, ::Type{<:AbstractElementGeometry}) where {ncomponents}
     function closure(refbasis, xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 1
@@ -76,53 +75,37 @@ function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:
     end
 end
 
-function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Triangle2D})
-    ncomponents = get_ncomponents(FEType)
-    temp = 0.0
+function get_basis(::Type{ON_CELLS}, ::Type{<:H1CR{ncomponents}}, ET::Type{<:Triangle2D}) where {ncomponents}
     function closure(refbasis, xref)
-        temp = 2*(xref[1]+xref[2]) - 1
+        refbasis[end] = 2*(xref[1]+xref[2]) - 1
         for k = 1 : ncomponents
             refbasis[3*k-2,k] = 1 - 2*xref[2]
-            refbasis[3*k-1,k] = temp
+            refbasis[3*k-1,k] = refbasis[end]
             refbasis[3*k,k] = 1 - 2*xref[1]
         end
     end
 end
 
-function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Tetrahedron3D})
-    ncomponents = get_ncomponents(FEType)
-    temp = 0.0
+function get_basis(::Type{ON_CELLS}, ::Type{H1CR{ncomponents}}, ET::Type{<:Tetrahedron3D}) where {ncomponents}
     function closure(refbasis, xref)
-        temp = 3*(xref[1]+xref[2]+xref[3]) - 2
+        refbasis[end] = 3*(xref[1]+xref[2]+xref[3]) - 2
         for k = 1 : ncomponents
             refbasis[4*k-3,k] = 1 - 3*xref[3]
             refbasis[4*k-2,k] = 1 - 3*xref[2]
-            refbasis[4*k-1,k] = temp
+            refbasis[4*k-1,k] = refbasis[end]
             refbasis[4*k,k] = 1 - 3*xref[1]
         end
     end
 end
 
-function get_basis(::Type{ON_CELLS}, FEType::Type{<:H1CR}, ET::Type{<:Quadrilateral2D})
-    ncomponents = get_ncomponents(FEType)
-    a = 0.0
-    b = 0.0
-    temp = 0.0
-    temp2 = 0.0
-    temp3 = 0.0
-    temp4 = 0.0
+function get_basis(::Type{ON_CELLS}, ::Type{H1CR{ncomponents}}, ET::Type{<:Quadrilateral2D}) where {ncomponents}
     function closure(refbasis, xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        temp = xref[1]*a + b*b - 1//4
-        temp2 = xref[2]*b + xref[1]*xref[1] - 1//4
-        temp3 = xref[1]*a + xref[2]*xref[2] - 1//4
-        temp4 = xref[2]*b + a*a - 1//4
-        for k = 1 : ncomponents
-            refbasis[4*k-3,k] = temp
-            refbasis[4*k-2,k] = temp2
-            refbasis[4*k-1,k] = temp3
-            refbasis[4*k,k] = temp4
+        refbasis[1,1] = xref[1]*(1 - xref[1]) + (1 - xref[2])^2 - 1//4
+        refbasis[2,1] = xref[2]*(1 - xref[2]) + xref[1]*xref[1] - 1//4
+        refbasis[3,1] = xref[1]*(1 - xref[1]) + xref[2]*xref[2] - 1//4
+        refbasis[4,1] = xref[2]*(1 - xref[2]) + (1 - xref[1])^2 - 1//4
+        for k = 2 : ncomponents, j = 1 : 4
+            refbasis[4*(k-1)+j,k] = refbasis[j,1]
         end
     end
 end

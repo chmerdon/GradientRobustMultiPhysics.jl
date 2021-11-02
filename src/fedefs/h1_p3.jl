@@ -19,6 +19,7 @@ end
 get_ncomponents(FEType::Type{<:H1P3}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1P3}) = FEType.parameters[2]
 
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P3}, EG::Type{<:AbstractElementGeometry0D}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P3}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = FEType.parameters[1]*Int(factorial(FEType.parameters[2]+2)/(6*factorial(FEType.parameters[2]-1)))
 get_ndofs(::Type{<:ON_CELLS},FEType::Type{<:H1P3}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = FEType.parameters[1]*Int(factorial(FEType.parameters[2]+3)/(6*factorial(FEType.parameters[2])))
 
@@ -115,8 +116,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
 end
 
 
-function get_basis(::Type{<:AssemblyType},::Type{<:H1P3}, ::Type{<:Vertex0D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType},::Type{H1P3{ncomponents,edim}}, ::Type{<:Vertex0D}) where {ncomponents,edim}
     function closure(refbasis,xref)
         for k = 1 : ncomponents
             refbasis[k,k] = 1
@@ -124,44 +124,41 @@ function get_basis(::Type{<:AssemblyType},::Type{<:H1P3}, ::Type{<:Vertex0D})
     end
 end
 
-function get_basis(::Type{<:AssemblyType},FEType::Type{<:H1P3}, ::Type{<:Edge1D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, ::Type{H1P3{ncomponents,edim}}, ::Type{<:Edge1D}) where {ncomponents,edim}
     function closure(refbasis, xref)
-        temp = 1 - xref[1]
+        refbasis[end] = 1 - xref[1]
         for k = 1 : ncomponents
-            refbasis[4*k-3,k] = 9 // 2 * temp * (temp - 1//3) * (temp - 2//3)            # node 1 (scaled such that 1 at x = 0)
-            refbasis[4*k-2,k] = 9 // 2 * xref[1] * (xref[1] - 1//3) * (xref[1] - 2//3)   # node 2 (scaled such that 1 at x = 1)
-            refbasis[4*k-1,k] = -27/2*xref[1]*temp*(xref[1] - 2//3)                          # face 1 (scaled such that 1 at x = 1//3)
-            refbasis[4*k,k] = 27//2*xref[1]*temp*(xref[1] - 1//3)                            # face 2 (scaled such that 1 at x = 2//3)
+            refbasis[4*k-3,k] = 9 // 2 * refbasis[end] * (refbasis[end] - 1//3) * (refbasis[end] - 2//3)    # node 1 (scaled such that 1 at x = 0)
+            refbasis[4*k-2,k] = 9 // 2 * xref[1] * (xref[1] - 1//3) * (xref[1] - 2//3)                      # node 2 (scaled such that 1 at x = 1)
+            refbasis[4*k-1,k] = -27/2*xref[1]*refbasis[end]*(xref[1] - 2//3)                                # face 1 (scaled such that 1 at x = 1//3)
+            refbasis[4*k,k] = 27//2*xref[1]*refbasis[end]*(xref[1] - 1//3)                                  # face 2 (scaled such that 1 at x = 2//3)
         end
     end
 end
 
-function get_basis(::Type{<:AssemblyType},FEType::Type{<:H1P3}, ::Type{<:Triangle2D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, ::Type{H1P3{ncomponents,edim}}, ::Type{<:Triangle2D}) where {ncomponents,edim}
     function closure(refbasis, xref)
-        temp = 1 - xref[1] - xref[2]
+        refbasis[end] = 1 - xref[1] - xref[2]
         for k = 1 : ncomponents
-            refbasis[10*k-9,k] =  9 // 2 * temp * (temp - 1//3) * (temp - 2//3)            # node 1
-            refbasis[10*k-8,k] =  9 // 2 * xref[1] * (xref[1] - 1//3) * (xref[1] - 2//3)   # node 2
-            refbasis[10*k-7,k] =  9 // 2 * xref[2] * (xref[2] - 1//3) * (xref[2] - 2//3)   # node 3
-            refbasis[10*k-6,k] = 27 // 2 * xref[1]*temp*(temp - 1//3)                      # face 1.1
-            refbasis[10*k-5,k] = 27 // 2 * xref[1]*temp*(xref[1] - 1//3)                   # face 1.2
-            refbasis[10*k-4,k] = 27 // 2 * xref[2]*xref[1]*(xref[1] - 1//3)                # face 2.1
-            refbasis[10*k-3,k] = 27 // 2 * xref[2]*xref[1]*(xref[2] - 1//3)                # face 2.2
-            refbasis[10*k-2,k] = 27 // 2 * temp*xref[2]*(xref[2] - 1//3)                   # face 3.1
-            refbasis[10*k-1,k] = 27 // 2 * temp*xref[2]*(temp - 1//3)                      # face 3.2
-            refbasis[10*k,k] = 60*xref[1]*xref[2]*temp                                     # cell (scaled such that cell integral is 1)
+            refbasis[10*k-9,k] =  9 // 2 * refbasis[end] * (refbasis[end] - 1//3) * (refbasis[end] - 2//3)  # node 1
+            refbasis[10*k-8,k] =  9 // 2 * xref[1] * (xref[1] - 1//3) * (xref[1] - 2//3)                    # node 2
+            refbasis[10*k-7,k] =  9 // 2 * xref[2] * (xref[2] - 1//3) * (xref[2] - 2//3)                    # node 3
+            refbasis[10*k-6,k] = 27 // 2 * xref[1]*refbasis[end]*(refbasis[end] - 1//3)                     # face 1.1
+            refbasis[10*k-5,k] = 27 // 2 * xref[1]*refbasis[end]*(xref[1] - 1//3)                           # face 1.2
+            refbasis[10*k-4,k] = 27 // 2 * xref[2]*xref[1]*(xref[1] - 1//3)                                 # face 2.1
+            refbasis[10*k-3,k] = 27 // 2 * xref[2]*xref[1]*(xref[2] - 1//3)                                 # face 2.2
+            refbasis[10*k-2,k] = 27 // 2 * refbasis[end]*xref[2]*(xref[2] - 1//3)                           # face 3.1
+            refbasis[10*k-1,k] = 27 // 2 * refbasis[end]*xref[2]*(refbasis[end] - 1//3)                     # face 3.2
+            refbasis[10*k,k] = 60*xref[1]*xref[2]*refbasis[end]                                             # cell (scaled such that cell integral is 1)
         end
     end
     return closure
 end
 
 # we need to change the ordering of the face dofs on faces that have a negative orientation sign
-function get_basissubset(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,<:H1P3,APT}, EG::Type{<:Triangle2D})  where {Tv,Ti,APT}
+function get_basissubset(::Type{ON_CELLS}, FE::FESpace{Tv,Ti,H1P3{ncomponents,edim},APT}, EG::Type{<:Triangle2D})  where {ncomponents,edim,Tv,Ti,APT}
     xCellFaceSigns = FE.xgrid[CellFaceSigns]
     nfaces::Int = num_faces(EG)
-    ncomponents = get_ncomponents(eltype(FE))
     function closure(subset_ids::Array{Int,1}, cell)
         for j = 1 : nfaces
             if xCellFaceSigns[j,cell] != 1

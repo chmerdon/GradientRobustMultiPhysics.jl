@@ -169,11 +169,11 @@ end
 
 ## this function computes the local equilibrated fluxes
 ## by solving local problems on (disjunct group of) node patches
-function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
+function get_local_equilibration_estimator(xgrid::ExtendableGrid{Tv,Ti}, Solution::FEVector{T,Tv,Ti}, FETypeDual) where {T,Tv,Ti}
     ## needed grid stuff
-    xCellNodes::Array{Int32,2} = xgrid[CellNodes]
-    xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
-    xNodeCells = atranspose(xCellNodes)
+    xCellNodes::Array{Ti,2} = xgrid[CellNodes]
+    xCellVolumes::Array{Tv,1} = xgrid[CellVolumes]
+    xNodeCells::Adjacency{Ti} = atranspose(xCellNodes)
     nnodes::Int = num_sources(xNodeCells)
     ncells = size(xCellNodes,2)
 
@@ -182,22 +182,22 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
 
     ## init equilibration space (and Lagrange multiplier space)
     FESDual = FESpace{FETypeDual}(xgrid)
-    xItemDofs::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = FESDual[CellDofs]
-    xItemDofs_uh::Union{VariableTargetAdjacency{Int32},SerialVariableTargetAdjacency{Int32},Array{Int32,2}} = Solution[1].FES[CellDofs]
-    DualSolution = FEVector{Float64}("σ_h",FESDual)
+    xItemDofs::Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}} = FESDual[CellDofs]
+    xItemDofs_uh::Union{VariableTargetAdjacency{Ti},SerialVariableTargetAdjacency{Ti},Array{Ti,2}} = Solution[1].FES[CellDofs]
+    DualSolution = FEVector{T}("σ_h",FESDual)
 
     ## partition of unity and their gradients
     POUFEType = H1P1{1}
     POUFES = FESpace{POUFEType}(xgrid)
-    POUqf = QuadratureRule{Float64,Triangle2D}(0)
+    POUqf = QuadratureRule{Tv,Triangle2D}(0)
 
     ## quadrature formulas
-    qf = QuadratureRule{Float64,Triangle2D}(2*get_polynomialorder(FETypeDual, Triangle2D)+1)
-    weights::Array{Float64,1} = qf.w
+    qf = QuadratureRule{Tv,Triangle2D}(2*get_polynomialorder(FETypeDual, Triangle2D))
+    weights::Array{Tv,1} = qf.w
 
     ## some constants
-    div_penalty::Float64 = 1e5
-    bnd_penalty::Float64 = 1e30
+    div_penalty::T = 1e5
+    bnd_penalty::T = 1e30
     maxdofs::Int = max_num_targets_per_source(xItemDofs)
     maxdofs_uh::Int = max_num_targets_per_source(xItemDofs_uh)
 
@@ -209,40 +209,39 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
         groups[j] = groups[2*j]
         groups[2*j] = a
     end
-    X = Array{Array{Float64,1},1}(undef,maxgroups)
+    X = Array{Array{T,1},1}(undef,maxgroups)
 
     Threads.@threads for group in groups
         grouptime = @elapsed begin
         @info "  Starting equilibrating patch group $group on thread $(Threads.threadid())... "
         ## temporary variables
         localnode::Int = 0
-        graduh = zeros(Float64,2)
-        gradphi = zeros(Float64,2)
-        coeffs_uh = zeros(Float64, maxdofs_uh)
-        eval_i = zeros(Float64,2)
-        eval_j = zeros(Float64,2)
-        eval_phi = zeros(Float64,1)
+        graduh = zeros(T,2)
+        gradphi = zeros(Tv,2)
+        coeffs_uh = zeros(Tv, maxdofs_uh)
+        eval_i = zeros(Tv,2)
+        eval_j = zeros(Tv,2)
+        eval_phi = zeros(Tv,1)
         cell::Int = 0
         dofi::Int = 0
         dofj::Int = 0
-        weight::Float64 = 0
-        temp::Float64 = 0
-        temp2::Float64 = 0
-        temp3::Float64 = 0
-        Alocal = zeros(Float64,maxdofs,maxdofs)
-        blocal = zeros(Float64,maxdofs)
+        weight::Tv = 0
+        temp::Tv = 0
+        temp2::Tv = 0
+        temp3::Tv = 0
+        Alocal = zeros(Tv,maxdofs,maxdofs)
+        blocal = zeros(Tv,maxdofs)
 
         ## init FEBasiEvaluators
-        FEBasis_gradphi = FEBasisEvaluator{Float64,Triangle2D,Gradient,ON_CELLS}(POUFES, POUqf)
-        FEBasis_xref = FEBasisEvaluator{Float64,Triangle2D,Identity,ON_CELLS}(POUFES, qf)
-        FEBasis_graduh = FEBasisEvaluator{Float64,Triangle2D,Gradient,ON_CELLS}(Solution[1].FES, qf)
-        FEBasis_div = FEBasisEvaluator{Float64,Triangle2D,Divergence,ON_CELLS}(FESDual, qf)
-        FEBasis_id = FEBasisEvaluator{Float64,Triangle2D,Identity,ON_CELLS}(FESDual, qf)
+        FEBasis_gradphi = FEBasisEvaluator{Tv,Triangle2D,Gradient,ON_CELLS}(POUFES, POUqf)
+        FEBasis_xref = FEBasisEvaluator{Tv,Triangle2D,Identity,ON_CELLS}(POUFES, qf)
+        FEBasis_graduh = FEBasisEvaluator{Tv,Triangle2D,Gradient,ON_CELLS}(Solution[1].FES, qf)
+        FEBasis_div = FEBasisEvaluator{Tv,Triangle2D,Divergence,ON_CELLS}(FESDual, qf)
+        FEBasis_id = FEBasisEvaluator{Tv,Triangle2D,Identity,ON_CELLS}(FESDual, qf)
 
         ## init system
-        A = ExtendableSparseMatrix{Float64,Int}(FESDual.ndofs,FESDual.ndofs)
-        b = zeros(Float64,FESDual.ndofs)
-        X[group] = zeros(Float64,FESDual.ndofs)
+        A = ExtendableSparseMatrix{Tv,Int64}(FESDual.ndofs,FESDual.ndofs)
+        b = zeros(Tv,FESDual.ndofs)
 
         ## find dofs at boundary of current node patches
         ## and in interior of cells outside of current node patch group
@@ -284,6 +283,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
                 end
 
                 ## update other FE evaluators
+                
                 update_febe!(FEBasis_graduh,cell)
                 update_febe!(FEBasis_div,cell)
                 update_febe!(FEBasis_id,cell)
@@ -298,15 +298,15 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
                     eval_febe!(eval_phi, FEBasis_xref, localnode, i)
 
                     ## compute residual -f*phi_z + grad(u_h) * grad(phi_z) at quadrature point i ( f = 0 in this example !!! )
-                    temp = div_penalty * sqrt(xCellVolumes[cell]) * ( graduh[1] * gradphi[1] + graduh[2] * gradphi[2] ) * weight
-                    temp2 = div_penalty * sqrt(xCellVolumes[cell]) *weight
+                    temp2 = div_penalty * sqrt(xCellVolumes[cell]) * weight
+                    temp = temp2*( graduh[1] * gradphi[1] + graduh[2] * gradphi[2] )
                     for dof_i = 1 : maxdofs
                         eval_febe!(eval_i, FEBasis_id, dof_i, i)
                         eval_i .*= weight
                         ## right-hand side for best-approximation (grad(u_h)*phi)
                         blocal[dof_i] += (graduh[1]*eval_i[1] + graduh[2]*eval_i[2]) * eval_phi[1]
                         ## mass matrix Hdiv 
-                        for dof_j = 1 : maxdofs
+                        for dof_j = dof_i : maxdofs
                             eval_febe!(eval_j, FEBasis_id, dof_j, i)
                             Alocal[dof_i,dof_j] += (eval_i[1]*eval_j[1] + eval_i[2]*eval_j[2])
                         end
@@ -314,7 +314,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
                         eval_febe!(eval_i, FEBasis_div, dof_i, i)
                         blocal[dof_i] += temp * eval_i[1]
                         temp3 = temp2 * eval_i[1]
-                        for dof_j = 1 : maxdofs
+                        for dof_j = dof_i : maxdofs
                             eval_febe!(eval_j, FEBasis_div, dof_j, i)
                             Alocal[dof_i,dof_j] += temp3*eval_j[1]
                         end
@@ -327,7 +327,11 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
                     b[dofi] += blocal[dof_i]
                     for dof_j = 1 : maxdofs
                         dofj = xItemDofs[dof_j,cell]
-                        _addnz(A,dofi,dofj,Alocal[dof_i,dof_j],1)
+                        if dof_j < dof_i # use that Alocal is symmetric
+                            _addnz(A,dofi,dofj,Alocal[dof_j,dof_i],1)
+                        else
+                            _addnz(A,dofi,dofj,Alocal[dof_i,dof_j],1)
+                        end
                     end
                 end
 
@@ -338,7 +342,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
         end
         end 
 
-        ## penalize dofs at boundary of node patches
+        ## penalize dofs that are not involved
         for j = 1 : FESDual.ndofs
             if is_noninvolveddof[j]
                 A[j,j] = bnd_penalty
@@ -347,7 +351,7 @@ function get_local_equilibration_estimator(xgrid, Solution, FETypeDual)
         end
 
         ## solve local problem   
-        X[group] .= A\b
+        X[group] = A\b
     end
 
     @info "Finished equilibration patch group $group on thread $(Threads.threadid()) in $(grouptime)s "

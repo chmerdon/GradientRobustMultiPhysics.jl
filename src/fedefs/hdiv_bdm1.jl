@@ -148,7 +148,6 @@ function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVBD
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D})
-    temp = 0.0
     function closure(refbasis, xref)
         # RT0 basis
         refbasis[1,1] = 2*xref[1];      refbasis[1,2] = 2*xref[2];      refbasis[1,3] = 2*(xref[3]-1)
@@ -159,19 +158,19 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D
         # note: we define three additional functions per face
         #       and later select only two linear independent ones that match the local enumeration/orientation
         #       of the global/local face nodes + a possible sign change managed by coefficient_handler
-        temp = 1 - xref[1] - xref[2] - xref[3]
+        refbasis[end] = 1 - xref[1] - xref[2] - xref[3] # store last barycentric coordinate
         # FACE1 [1,3,2], normal = [0,0,-1], |E| = 1/2, xref[3] = 0
         # phi = [-gamma*phi2,-beta*phi3,alpha*phi1+beta*phi3+gamma*phi2]
         # [J1,J2,J3] = linear moments of normal flux weighted with (phi_1-1/3), (phi_3-1/3), (phi_2-1/3)
-        refbasis[2,1] = 24*xref[1];         refbasis[2,2] = 0;                      refbasis[2,3] = 24*(temp-xref[1])           # [1,0,-1]
-        refbasis[3,1] = 0;                  refbasis[3,2] = -24*xref[2];            refbasis[3,3] = -24*(temp-xref[2])          # [0,-1,1]
+        refbasis[2,1] = 24*xref[1];         refbasis[2,2] = 0;                      refbasis[2,3] = 24*(refbasis[end]-xref[1])           # [1,0,-1]
+        refbasis[3,1] = 0;                  refbasis[3,2] = -24*xref[2];            refbasis[3,3] = -24*(refbasis[end]-xref[2])          # [0,-1,1]
         refbasis[4,1] = -24*xref[1];        refbasis[4,2] = 24*xref[2];             refbasis[4,3] = -24(xref[2]-xref[1])        # [-1,1,0]
         
         # FACE2 [1 2 4], normal = [0,-1,0], |E| = 1/2, xref[2] = 0
         # phi = [-beta*phi2,alpha*phi1+beta*phi2+gamma*phi4,-gamma*phi4]
         # [J1,J2,J3] = linear moments of normal flux weighted with (phi_1-1/3), (phi_2-1/3), (phi_4-1/3)
-        refbasis[6,1] = 0;                  refbasis[6,2] = 24*(temp-xref[3]);      refbasis[6,3] = 24*xref[3]                  # [1,0,-1]
-        refbasis[7,1] = -24*xref[1];        refbasis[7,2] = -24*(temp-xref[1]);     refbasis[7,3] = 0                           # [0,-1,1]
+        refbasis[6,1] = 0;                  refbasis[6,2] = 24*(refbasis[end]-xref[3]);      refbasis[6,3] = 24*xref[3]                  # [1,0,-1]
+        refbasis[7,1] = -24*xref[1];        refbasis[7,2] = -24*(refbasis[end]-xref[1]);     refbasis[7,3] = 0                           # [0,-1,1]
         refbasis[8,1] = 24*xref[1];         refbasis[8,2] = -24(xref[1]-xref[3]);   refbasis[8,3] = -24*xref[3]                 # [-1,1,0]
 
         # FACE3 [2 3 4], normal = [1,1,1]/sqrt(3), |E| = sqrt(3)/2, xref[1]+xref[2]+xref[3] = 1
@@ -184,8 +183,8 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM1{3}}, ::Type{<:Tetrahedron3D
         # FACE4 [1 4 3], normal = [-1,0,0], |E| = 1/2, xref[1] = 0
         # phi = [alpha*phi1+beta*phi4+gamma*phi3,-gamma*phi3,-beta*phi4]
         # [J1,J2,J3] = linear moments of normal flux weighted with (phi_1-1/3), (phi_4-1/3), (phi_3-1/3)
-        refbasis[14,1] = 24*(temp-xref[2]);         refbasis[14,2] = 24*xref[2];    refbasis[14,3] = 0                          # [1,0,-1]
-        refbasis[15,1] = -24*(temp-xref[3]);        refbasis[15,2] = 0;             refbasis[15,3] = -24*xref[3]                # [0,-1,1]
+        refbasis[14,1] = 24*(refbasis[end]-xref[2]);         refbasis[14,2] = 24*xref[2];    refbasis[14,3] = 0                          # [1,0,-1]
+        refbasis[15,1] = -24*(refbasis[end]-xref[3]);        refbasis[15,2] = 0;             refbasis[15,3] = -24*xref[3]                # [0,-1,1]
         refbasis[16,1] = -24*(xref[3]-xref[2]);     refbasis[16,2] = -24*xref[2];   refbasis[16,3] = 24*xref[3]                 # [-1,1,0]
     end
 

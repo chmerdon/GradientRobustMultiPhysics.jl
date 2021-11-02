@@ -67,8 +67,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}})
-    ncomponents::Int = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, FEType::Type{H1P1{ncomponents}}, ET::Type{<:Union{Vertex0D,AbstractElementGeometry1D,Triangle2D,Tetrahedron3D}}) where {ncomponents}
     edim::Int = dim_element(ET) 
     function closure(refbasis, xref)
         for k = 1 : ncomponents
@@ -81,35 +80,37 @@ function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, ET::Type{<:Unio
     end
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Quadrilateral2D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, FEType::Type{H1P1{ncomponents}}, ::Type{<:Quadrilateral2D}) where {ncomponents}
     function closure(refbasis, xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        for k = 1 : ncomponents
-            refbasis[4*k-3,k] = a*b
-            refbasis[4*k-2,k] = xref[1]*b
-            refbasis[4*k-1,k] = xref[1]*xref[2]
-            refbasis[4*k,k]   = xref[2]*a
+        refbasis[1,1] = 1 - xref[1]
+        refbasis[2,1] = 1 - xref[2]
+        
+        refbasis[3,1] = xref[1]*xref[2]
+        refbasis[4,1] = xref[2]*refbasis[1,1]
+        refbasis[1,1] = refbasis[1,1]*refbasis[2,1]
+        refbasis[2,1] = xref[1]*refbasis[2,1]
+        
+        for k = 2 : ncomponents, j = 1 : 4
+            refbasis[4*(k-1)+j,k] = refbasis[j,1]
         end
     end
 end
 
-function get_basis(::Type{<:AssemblyType}, FEType::Type{<:H1P1}, ::Type{<:Hexahedron3D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(::Type{<:AssemblyType}, FEType::Type{H1P1{ncomponents}}, ::Type{<:Hexahedron3D}) where {ncomponents}
     function closure(refbasis, xref)
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        c = 1 - xref[3]
-        for k = 1 : ncomponents
-            refbasis[8*k-7,k] = a*b*c
-            refbasis[8*k-6,k] = xref[1]*b*c 
-            refbasis[8*k-5,k] = xref[1]*xref[2]*c
-            refbasis[8*k-4,k] = xref[2]*a*c
-            refbasis[8*k-3,k] = xref[3]*a*b
-            refbasis[8*k-2,k] = xref[1]*b*xref[3]
-            refbasis[8*k-1,k] = xref[1]*xref[2]*xref[3]
-            refbasis[8*k,k] = a*xref[2]*xref[3]
+        refbasis[1,1] = 1 - xref[1]
+        refbasis[2,1] = 1 - xref[2]
+        refbasis[3,1] = 1 - xref[3]
+        refbasis[4,1] = xref[2]*refbasis[1,1]*refbasis[3,1]
+        refbasis[5,1] = xref[3]*refbasis[1,1]*refbasis[2,1]
+        refbasis[7,1] = xref[1]*xref[2]*xref[3]
+        refbasis[6,1] = xref[1]*refbasis[2,1]*xref[3]
+        refbasis[8,1] = refbasis[1,1]*xref[2]*xref[3]
+        refbasis[1,1] = refbasis[1,1]*refbasis[2,1]*refbasis[3,1]
+        refbasis[2,1] = xref[1]*refbasis[2,1]*refbasis[3,1]
+        refbasis[3,1] = xref[1]*xref[2]*refbasis[3,1]
+        for k = 2 : ncomponents, j = 1 : 8
+            refbasis[8*(k-1)+j,k] = refbasis[j,1]
         end
     end
 end

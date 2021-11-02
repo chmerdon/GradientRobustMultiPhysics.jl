@@ -105,9 +105,8 @@ end
 ############
 
 function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{H1BR{2}}, EG::Type{<:Edge1D})
-    ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
-    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{2}, EG)
+    offset = get_ndofs(AT, H1P1{2}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubble to P1 basis
@@ -117,9 +116,8 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
 end
 
 function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Triangle2D})
-    ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
-    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
+    refbasis_P1 = get_basis(AT, H1P1{2}, EG)
+    offset = get_ndofs(AT, H1P1{2}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -134,20 +132,15 @@ end
 
 
 function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Quadrilateral2D})
-    ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
-    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
-    a = 0.0
-    b = 0.0
+    refbasis_P1 = get_basis(AT, H1P1{2}, EG)
+    offset = get_ndofs(AT, H1P1{2}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to Q1 basis
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        refbasis[offset+1,1] = 6*xref[1]*a*b
-        refbasis[offset+2,1] = 6*xref[2]*xref[1]*b
-        refbasis[offset+3,1] = 6*xref[1]*xref[2]*a
-        refbasis[offset+4,1] = 6*xref[2]*a*b
+        refbasis[offset+1,1] = 6*xref[1]*(1 - xref[1])*(1 - xref[2])
+        refbasis[offset+2,1] = 6*xref[2]*xref[1]*(1 - xref[2])
+        refbasis[offset+3,1] = 6*xref[1]*xref[2]*(1 - xref[1])
+        refbasis[offset+4,1] = 6*xref[2]*(1 - xref[1])*(1 - xref[2])
         refbasis[offset+1,2] = refbasis[offset+1,1]
         refbasis[offset+2,2] = refbasis[offset+2,1]
         refbasis[offset+3,2] = refbasis[offset+3,1]
@@ -199,10 +192,9 @@ end
 # 3D basis #
 ############
 
-function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{H1BR{3}}, EG::Type{<:Triangle2D})
-    ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
-    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
+function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{H1BR{3}}, EG::Type{<:Triangle2D})
+    refbasis_P1 = get_basis(AT, H1P1{3}, EG)
+    offset = get_ndofs(AT, H1P1{3}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -212,10 +204,9 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
     end
 end
 
-function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
-    ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
-    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
+function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
+    refbasis_P1 = get_basis(AT, H1P1{3}, EG)
+    offset = get_ndofs(AT, H1P1{3}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -225,10 +216,9 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{
     end
 end
 
-function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D})
-    ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
-    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
+function get_basis(AT::Type{ON_CELLS}, ::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D})
+    refbasis_P1 = get_basis(AT, H1P1{3}, EG)
+    offset = get_ndofs(AT, H1P1{3}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -242,25 +232,18 @@ function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Tetrahe
     end
 end
 
-function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
-    ncomponents = get_ncomponents(FEType)
-    refbasis_P1 = get_basis(AT, H1P1{ncomponents}, EG)
-    offset = get_ndofs(AT, H1P1{ncomponents}, EG)
-    a = 0.0
-    b = 0.0
-    c = 0.0
+function get_basis(AT::Type{ON_CELLS}, ::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
+    refbasis_P1 = get_basis(AT, H1P1{3}, EG)
+    offset = get_ndofs(AT, H1P1{3}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to Q1 basis
-        a = 1 - xref[1]
-        b = 1 - xref[2]
-        c = 1 - xref[3]
-        refbasis[offset+1,1] = 36*a*b*xref[1]*xref[2]*c # bottom
-        refbasis[offset+2,1] = 36*a*xref[1]*c*xref[3]*b # front
-        refbasis[offset+3,1] = 36*a*b*c*xref[2]*xref[3] # left
-        refbasis[offset+4,1] = 36*a*xref[1]*c*xref[3]*xref[2] # back
-        refbasis[offset+5,1] = 36*xref[1]*b*c*xref[2]*xref[3] # right
-        refbasis[offset+6,1] = 36*a*b*xref[1]*xref[2]*xref[3] # top
+        refbasis[offset+1,1] = 36*(1 - xref[1])*(1 - xref[2])*xref[1]*xref[2]*(1 - xref[3]) # bottom
+        refbasis[offset+2,1] = 36*(1 - xref[1])*xref[1]*(1 - xref[3])*xref[3]*(1 - xref[2]) # front
+        refbasis[offset+3,1] = 36*(1 - xref[1])*(1 - xref[2])*(1 - xref[3])*xref[2]*xref[3] # left
+        refbasis[offset+4,1] = 36*(1 - xref[1])*xref[1]*(1 - xref[3])*xref[3]*xref[2]       # back
+        refbasis[offset+5,1] = 36*xref[1]*(1 - xref[2])*(1 - xref[3])*xref[2]*xref[3]       # right
+        refbasis[offset+6,1] = 36*(1 - xref[1])*(1 - xref[2])*xref[1]*xref[2]*xref[3]       # top
         for j = 1 : 6, k = 2 : 3
             refbasis[offset+j,k] = refbasis[offset+j,1]
         end

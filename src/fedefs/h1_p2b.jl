@@ -101,14 +101,12 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     ensure_cell_moments!(Target, FE, exact_function!; facedofs = 1, edgedofs = 0, items = items, time = time)
 end
 
-function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P2B}, EG::Type{<:AbstractElementGeometry})
+function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{H1P2B{ncomponents,edim}}, EG::Type{<:AbstractElementGeometry}) where {ncomponents,edim}
     # on faces same as P2
-    return get_basis(AT, H1P2{get_ncomponents(FEType), get_edim(FEType)}, EG)
+    return get_basis(AT, H1P2{ncomponents, edim}, EG)
 end
 
-function get_basis(AT::Type{ON_CELLS}, FEType::Type{<:H1P2B}, EG::Type{<:Triangle2D})
-    ncomponents = get_ncomponents(FEType)
-    edim = get_edim(FEType)
+function get_basis(AT::Type{ON_CELLS}, ::Type{H1P2B{ncomponents,edim}}, EG::Type{<:Triangle2D}) where {ncomponents,edim}
     refbasis_P2 = get_basis(AT, H1P2{1,edim}, EG)
     offset = get_ndofs(AT, H1P2{1,edim}, EG) + 1
     function closure(refbasis, xref)

@@ -19,6 +19,7 @@ end
 
 get_ncomponents(FEType::Type{<:H1MINI}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1MINI}) = FEType.parameters[2]
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry0D}) = FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry}) = num_nodes(EG) * FEType.parameters[1]
 get_ndofs(::Type{<:ON_CELLS}, FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry}) = (1+num_nodes(EG)) * FEType.parameters[1]
 
@@ -79,13 +80,12 @@ function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Re
     end    
 end
 
-function get_basis(AT::Union{Type{<:ON_FACES},Type{<:ON_BFACES}}, FEType::Type{<:H1MINI}, EG::Type{<:AbstractElementGeometry})
+function get_basis(AT::Union{Type{<:ON_FACES},Type{<:ON_BFACES}}, ::Type{H1MINI{ncomponents,edim}}, EG::Type{<:AbstractElementGeometry}) where {ncomponents,edim}
     # on faces same as P1
-    return get_basis(AT, H1P1{get_ncomponents(FEType)}, EG)
+    return get_basis(AT, H1P1{ncomponents}, EG)
 end
 
-function get_basis(AT::Type{<:ON_CELLS}, FEType::Type{<:H1MINI}, EG::Type{<:Triangle2D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(AT::Type{<:ON_CELLS}, ::Type{H1MINI{ncomponents,edim}}, EG::Type{<:Triangle2D}) where {ncomponents,edim}
     refbasis_P1 = get_basis(AT, H1P1{1}, EG)
     offset = get_ndofs(AT, H1P1{1}, EG) + 1
     function closure(refbasis, xref)
@@ -98,8 +98,7 @@ function get_basis(AT::Type{<:ON_CELLS}, FEType::Type{<:H1MINI}, EG::Type{<:Tria
     end
 end
 
-function get_basis(AT::Type{<:ON_CELLS}, FEType::Type{<:H1MINI}, EG::Type{<:Quadrilateral2D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(AT::Type{<:ON_CELLS}, ::Type{H1MINI{ncomponents,edim}}, EG::Type{<:Quadrilateral2D}) where {ncomponents,edim}
     refbasis_P1 = get_basis(AT, H1P1{1}, EG)
     offset = get_ndofs(AT, H1P1{1}, EG) + 1
     function closure(refbasis, xref)
@@ -112,8 +111,7 @@ function get_basis(AT::Type{<:ON_CELLS}, FEType::Type{<:H1MINI}, EG::Type{<:Quad
     end
 end
 
-function get_basis(AT::Type{<:ON_CELLS}, FEType::Type{<:H1MINI}, EG::Type{<:Tetrahedron3D})
-    ncomponents = get_ncomponents(FEType)
+function get_basis(AT::Type{<:ON_CELLS}, ::Type{H1MINI{ncomponents,edim}}, EG::Type{<:Tetrahedron3D}) where {ncomponents,edim}
     refbasis_P1 = get_basis(AT, H1P1{1}, EG)
     offset = get_ndofs(AT, H1P1{1}, EG) + 1
     function closure(refbasis, xref)

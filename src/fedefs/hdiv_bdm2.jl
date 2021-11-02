@@ -199,9 +199,8 @@ function get_basis(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{<:HDIVBD
 end
 
 function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM2{2}}, ::Type{<:Triangle2D})
-    temp = 0.0
     function closure(refbasis, xref)
-        temp = 1 - xref[1] - xref[2]
+        refbasis[end] = 1 - xref[1] - xref[2]
 
         # RT0 basis
         refbasis[1,1] = xref[1];    refbasis[1,2] = xref[2]-1
@@ -213,12 +212,12 @@ function get_basis(::Type{ON_CELLS}, ::Type{HDIVBDM2{2}}, ::Type{<:Triangle2D})
         refbasis[8,1] = 6*(xref[1]-1)+12*xref[2];   refbasis[8,2] = -6*xref[2]    
         for k = 1 : 2              
             # additional BDM2 face functions on faces
-            refbasis[3,k] = -15*((temp - 1//2)*refbasis[2,k] + refbasis[1,k])
+            refbasis[3,k] = -15*((refbasis[end] - 1//2)*refbasis[2,k] + refbasis[1,k])
             refbasis[6,k] = -15*((xref[1] - 1//2)*refbasis[5,k] + refbasis[4,k])
             refbasis[9,k] = -15*((xref[2] - 1//2)*refbasis[8,k] + refbasis[7,k])
             # additional BDM2 interior functions
             refbasis[10,k] = xref[2] * refbasis[2,k]
-            refbasis[11,k] = temp * refbasis[5,k]
+            refbasis[11,k] = refbasis[end] * refbasis[5,k]
             refbasis[12,k] = xref[1] * refbasis[8,k]
         end
     end
