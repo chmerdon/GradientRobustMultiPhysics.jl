@@ -57,7 +57,7 @@ export AbstractFiniteElement
 export FESpace
 
 export AbstractH1FiniteElement
-export H1BUBBLE, H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR, H1P3
+export H1BUBBLE, H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR, H1P3, H1Pk
 
 export AbstractH1FiniteElementWithCoefficients
 export H1BR, H1P1TEB

@@ -292,6 +292,8 @@ include("fedefs/h1_p2.jl");
 include("fedefs/h1_p2b.jl");
 # third order
 include("fedefs/h1_p3.jl");
+# arbitrary order
+include("fedefs/h1_pk.jl");
 
 # Hcurl-conforming elements
 include("fedefs/hcurl_n0.jl");
