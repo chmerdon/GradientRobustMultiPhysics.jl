@@ -260,7 +260,8 @@ include("interpolations.jl")
 
 # dummy functions
 get_edim(FEType::Type{<:AbstractFiniteElement}) = 0 # not defined
-get_polynomialorder(::Type{<:AbstractFiniteElement}, ::Type{<:Vertex0D}) = 0;
+get_polynomialorder(::Type{<:AbstractFiniteElement}, ::Type{<:Vertex0D}) = 0
+interior_dofs_offset(AT::Type{<:AssemblyType}, FE::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = -1 # should be specified by element if needed
 
 
 ###########################

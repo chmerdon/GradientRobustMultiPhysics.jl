@@ -27,6 +27,8 @@ get_dofmap_pattern(FEType::Type{<:HDIVBDM2{2}}, ::Type{BFaceDofs}, EG::Type{<:Ab
 
 isdefined(FEType::Type{<:HDIVBDM2}, ::Type{<:Triangle2D}) = true
 
+interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVBDM2{2}}, ::Type{<:Triangle2D}) = 9
+
 
 function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM2,APT}
     ncomponents = get_ncomponents(FEType)

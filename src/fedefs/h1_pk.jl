@@ -18,8 +18,8 @@ end
 get_ncomponents(FEType::Type{<:H1Pk}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1Pk}) = FEType.parameters[2]
 
-get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1Pk}, EG::Type{<:AbstractElementGeometry0D}) = FEType.parameters[1]
-get_ndofs(::Type{<:AssemblyType}, FEType::Type{H1Pk{n,e,order}}, EG::Type{<:AbstractElementGeometry1D}) where {n,e,order} = 1 + order
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{H1Pk{n,e,order}}, EG::Type{<:AbstractElementGeometry0D}) where {n,e,order} = n
+get_ndofs(::Type{<:AssemblyType}, FEType::Type{H1Pk{n,e,order}}, EG::Type{<:AbstractElementGeometry1D}) where {n,e,order} = (1 + order)*n
 
 get_polynomialorder(::Type{H1Pk{n,e,order}}, ::Type{<:AbstractElementGeometry}) where {n,e,order} = order
 
@@ -27,6 +27,8 @@ get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Type{CellDofs}, EG::Type{<:Abstrac
 get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry0D}) where {n,e,order} = "N1"
 
 isdefined(FEType::Type{<:H1Pk}, ::Type{<:AbstractElementGeometry1D}) = true
+
+interior_dofs_offset(::Type{<:AssemblyType}, ::Type{<:H1Pk}, ::Type{Edge1D}) = 2
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,H1Pk{ncomponents,edim,order},APT}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {ncomponents,edim,order,Tv,Ti,APT}
     coffset = size(FE.xgrid[Coordinates],2)
@@ -99,7 +101,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,H1Pk{nc
 
         # preserve cell integral
         if order > 1
-            ensure_edge_moments!(Target, FE, ON_CELLS, exact_function!; order = order-2, items = items, time = time)
+            ensure_moments!(Target, FE, ON_CELLS, exact_function!; order = order-2, items = items, time = time)
         end
     end
 end

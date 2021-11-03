@@ -210,8 +210,11 @@ function run_basic_fe_tests()
                     H1P0{1},
                     H1P1{1}, 
                     H1P2{1,1}, 
-                    H1P3{1,1}]
-    ExpectedOrders1D = [0,1,2,3]
+                    H1P3{1,1},
+                    H1Pk{1,1,3},
+                    H1Pk{1,1,4},
+                    H1Pk{1,1,5}]
+    ExpectedOrders1D = [0,1,2,3,3,4,5,6,7]
     TestCatalog2D = [
                     HCURLN0{2},
                     HDIVRT0{2},
@@ -326,8 +329,12 @@ function run_basic_fe_tests()
     TestCatalog1D = [
                     H1P0{1},
                     H1P1{1}, 
-                    H1P2{1,1}]
-    ExpectedOrders1D = [0,1,2]
+                    H1P2{1,1},
+                    H1P3{1,1},
+                    H1Pk{1,1,3},
+                    H1Pk{1,1,4},
+                    H1Pk{1,1,5}]
+    ExpectedOrders1D = [0,1,2,3,3,4,5,6,7]
     TestCatalog2D = [
                     HCURLN0{2},
                     HDIVRT0{2},
@@ -431,8 +438,14 @@ function run_basic_fe_tests()
     # list of FETypes that should be tested
     TestCatalog1D = [
                     H1P1{1}, 
-                    H1P2{1,1}]
-    ExpectedOrders1D = [1,2]
+                    H1P2{1,1},
+                    H1P3{1,1},
+                    H1Pk{1,1,3},
+                    H1Pk{1,1,4},
+                    H1Pk{1,1,5},
+                    H1Pk{1,1,6},
+                    H1Pk{1,1,7}]
+    ExpectedOrders1D = [0,1,2,3,3,4,5,6,7]
     TestCatalog2D = [
                     H1P1{2}, 
                     H1CR{2},

@@ -15,9 +15,10 @@ function ReconstructionHandler(FES::FESpace{Tv,Ti,FE1,APT},FES_Reconst::FESpace{
     xgrid = FES.xgrid
     interior_offset = interior_dofs_offset(AT,FE2,EG)
     interior_ndofs = get_ndofs(AT,FE2,EG) - interior_offset
-    if interior_ndofs > 0
+    if interior_offset != -1 && interior_ndofs > 0
         coeffs = xgrid[ReconstructionCoefficients{FE1,FE2,AT}]
     else
+        interior_ndofs = 0
         coeffs = zeros(Tv,0,0)
     end
     rcoeff_handler = get_reconstruction_coefficients!(xgrid, AT, FE1, FE2, EG)
@@ -32,11 +33,7 @@ function get_rcoefficients!(coefficients, RH::ReconstructionHandler{Tv,Ti,FE1,FE
     return nothing
 end
 
-# P2B > RT1/BDM2 reconstruction
-interior_dofs_offset(AT::Type{<:AssemblyType}, FE::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT,FE,EG)
-interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{2}}, ::Type{<:Triangle2D}) = 6
-interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVBDM2{2}}, ::Type{<:Triangle2D}) = 9
-
+# interior coefficients for P2B > RT1/BDM2 reconstruction
 function ExtendableGrids.instantiate(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ReconstructionCoefficients{FE1,FE2,AT}}) where {Tv, Ti, FE1<:H1P2B{2,2}, FE2<:HDIVRT1{2}, AT <: ON_CELLS}
     @info "Computing interior reconstruction coefficients for $FE1 > $FE2 ($AT)"
     xCellFaces = xgrid[CellFaces]

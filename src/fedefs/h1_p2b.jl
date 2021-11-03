@@ -31,6 +31,9 @@ get_dofmap_pattern(FEType::Type{<:H1P2B}, ::Type{BFaceDofs}, EG::Type{<:Abstract
 
 isdefined(FEType::Type{<:H1P2B}, ::Type{<:Triangle2D}) = true
 
+interior_dofs_offset(::Type{<:ON_FACES}, ::Type{H1P2B{ncomponents,edim}}, ::Type{Edge1D}) where {ncomponents,edim} = 2
+interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{H1P2B{ncomponents,edim}}, ::Type{Triangle2D}) where {ncomponents,edim} = 6
+
 get_ref_cellmoments(::Type{<:H1P2B}, ::Type{<:Triangle2D}) = [0//1, 0//1, 0//1, 1//3, 1//3, 1//3, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
@@ -54,7 +57,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform edge mean interpolation
-        ensure_edge_moments!(Target, FE, ON_EDGES, exact_function!; items = items, time = time)
+        ensure_moments!(Target, FE, ON_EDGES, exact_function!; items = items, time = time)
     end
 end
 
@@ -66,7 +69,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform face mean interpolation
-        ensure_edge_moments!(Target, FE, ON_FACES, exact_function!; items = items, time = time)
+        ensure_moments!(Target, FE, ON_FACES, exact_function!; items = items, time = time)
     elseif edim == 3
         # delegate face edges to edge interpolation
         subitems = slice(FE.xgrid[FaceEdges], items)
@@ -98,7 +101,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 
     # fix cell bubble value by preserving integral mean
-    ensure_cell_moments!(Target, FE, exact_function!; facedofs = 1, edgedofs = 0, items = items, time = time)
+    ensure_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
 end
 
 function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{H1P2B{ncomponents,edim}}, EG::Type{<:AbstractElementGeometry}) where {ncomponents,edim}

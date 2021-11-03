@@ -40,6 +40,8 @@ get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Triangle2D}) = [1//3, 1//3, 1//3,
 get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Tetrahedron3D}) = [1//4, 1//4, 1//4, 1//4, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 get_ref_cellmoments(::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = [1//4, 1//4, 1//4, 1//4, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
+interior_dofs_offset(::Type{ON_CELLS}, ::Type{H1MINI{ncomponents,edim}}, EG::Type{<:AbstractElementGeometry}) where {ncomponents,edim} = num_nodes(EG)
+
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1MINI, APT}
     nnodes = size(FE.xgrid[Coordinates],2)
     ncells = num_sources(FE.xgrid[CellNodes])
@@ -64,7 +66,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
     # fix cell bubble value by preserving integral mean
-    ensure_cell_moments!(Target, FE, exact_function!; items = items, time = time)
+    ensure_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
 end
 
 function nodevalues!(Target::AbstractArray{<:Real,2}, Source::AbstractArray{<:Real,1}, FE::FESpace{<:H1MINI})

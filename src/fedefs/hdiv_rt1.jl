@@ -38,6 +38,8 @@ get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Type{BFaceDofs}, EG::Type{<:Tri
 isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Tetrahedron3D}) = true
 
+interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{2}}, ::Type{<:Triangle2D}) = 6
+interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{3}}, ::Type{<:Tetrahedron3D}) = 9
 
 function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
     ncomponents = get_ncomponents(FEType)

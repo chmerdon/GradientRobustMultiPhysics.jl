@@ -35,6 +35,8 @@ get_dofmap_pattern(FEType::Type{<:H1P3}, ::Union{Type{FaceDofs},Type{BFaceDofs}}
 isdefined(FEType::Type{<:H1P3}, ::Type{<:AbstractElementGeometry1D}) = true
 isdefined(FEType::Type{<:H1P3}, ::Type{<:Triangle2D}) = true
 
+interior_dofs_offset(::Type{<:AssemblyType}, ::Type{H1P3{ncomponents,edim}}, ::Type{Edge1D}) where {ncomponents,edim} = 2
+interior_dofs_offset(::Type{<:AssemblyType}, ::Type{H1P3{ncomponents,edim}}, ::Type{Triangle2D}) where {ncomponents,edim} = 9
 
 get_ref_cellmoments(::Type{<:H1P3}, ::Type{<:Triangle2D}) = [1//30, 1//30, 1//30, 3//40, 3//40, 3//40, 3//40, 3//40, 3//40, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
@@ -60,7 +62,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform edge mean interpolation
-        ensure_edge_moments!(Target, FE, ON_EDGES, exact_function!; order = 1, items = items, time = time)
+        ensure_moments!(Target, FE, ON_EDGES, exact_function!; order = 1, items = items, time = time)
     end
 end
 
@@ -72,7 +74,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform face mean interpolation
-        ensure_edge_moments!(Target, FE, ON_FACES, exact_function!; items = items, order = 1, time = time)
+        ensure_moments!(Target, FE, ON_FACES, exact_function!; items = items, order = 1, time = time)
     elseif edim == 3
         # delegate face edges to edge interpolation
         subitems = slice(FE.xgrid[FaceEdges], items)
@@ -87,14 +89,13 @@ end
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {Tv,Ti,FEType <: H1P3,APT}
     edim = get_edim(FEType)
-    ncells = num_sources(FE.xgrid[CellNodes])
     if edim == 2
         # delegate cell faces to face interpolation
         subitems = slice(FE.xgrid[CellFaces], items)
         interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
         
         # fix cell bubble value by preserving integral mean
-        ensure_cell_moments!(Target, FE, exact_function!; facedofs = 2, items = items, time = time)
+        ensure_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
     elseif edim == 3
         # todo
         # delegate cell edges to edge interpolation
@@ -104,14 +105,14 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         # fixe face means
 
         # fix cell bubble value by preserving integral mean
-        ensure_cell_moments!(Target, FE, exact_function!; facedofs = 1, edgedofs = 2, items = items, time = time)
+        ensure_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
     elseif edim == 1
         # delegate cell nodes to node interpolation
         subitems = slice(FE.xgrid[CellNodes], items)
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # preserve cell integral
-        ensure_edge_moments!(Target, FE, ON_CELLS, exact_function!; order = 1, items = items, time = time)
+        ensure_moments!(Target, FE, ON_CELLS, exact_function!; order = 1, items = items, time = time)
     end
 end
 

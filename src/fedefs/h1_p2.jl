@@ -22,6 +22,7 @@ get_ncomponents(FEType::Type{<:H1P2}) = FEType.parameters[1]
 get_edim(FEType::Type{<:H1P2}) = FEType.parameters[2]
 
 get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P2}, EG::Type{<:AbstractElementGeometry0D}) = FEType.parameters[1]
+get_ndofs(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}}, FEType::Type{<:H1P2}, EG::Type{<:AbstractElementGeometry1D}) = 3*FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2])*(FEType.parameters[2]+1)/2*FEType.parameters[1])
 get_ndofs(::Type{<:ON_CELLS},FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2]+1)*(FEType.parameters[2]+2)/2*FEType.parameters[1])
 get_ndofs(::Type{<:ON_CELLS},FEType::Type{<:H1P2}, EG::Type{<:Quadrilateral2D}) = 8*FEType.parameters[1]
@@ -30,7 +31,6 @@ get_polynomialorder(::Type{<:H1P2}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Triangle2D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = 3;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Tetrahedron3D}) = 2;
-
 
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1F1"
@@ -47,6 +47,8 @@ isdefined(FEType::Type{<:H1P2}, ::Type{<:AbstractElementGeometry1D}) = true
 isdefined(FEType::Type{<:H1P2}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D}) = true
+
+interior_dofs_offset(::Type{<:AssemblyType}, ::Type{H1P2{ncomponents,edim}}, ::Type{Edge1D}) where {ncomponents,edim} = 2
 
 function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], bonus_quadorder::Int = 0, time = 0) where {Tv,Ti,FEType <: H1P2,APT}
     edim = get_edim(FEType)
@@ -70,7 +72,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform edge mean interpolation
-        ensure_edge_moments!(Target, FE, ON_EDGES, exact_function!; items = items, time = time)
+        ensure_moments!(Target, FE, ON_EDGES, exact_function!; items = items, time = time)
     end
 end
 
@@ -82,7 +84,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # perform face mean interpolation
-        ensure_edge_moments!(Target, FE, ON_FACES, exact_function!; items = items, time = time)
+        ensure_moments!(Target, FE, ON_FACES, exact_function!; items = items, time = time)
     elseif edim == 3
         # delegate face edges to edge interpolation
         subitems = slice(FE.xgrid[FaceEdges], items)
@@ -111,7 +113,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
         interpolate!(Target, FE, AT_NODES, exact_function!; items = subitems, time = time)
 
         # preserve cell integral
-        ensure_edge_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
+        ensure_moments!(Target, FE, ON_CELLS, exact_function!; items = items, time = time)
     end
 end
 

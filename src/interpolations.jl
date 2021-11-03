@@ -118,131 +118,243 @@ function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{Tv, T
 end
 
 
-# fall back function that is used if element does not define the cell moments directly (see below)
-# (so far only needed for H1-conforming elements with interpolations that preserve cell means)
-function get_ref_cellmoments(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}, AT::Type{<:AssemblyType} = ON_CELLS)
-    ndofs = get_ndofs(AT, FEType, EG)
-    ncomponents = get_ncomponents(FEType)
-    cellmoments = zeros(Float64, ndofs, ncomponents)
-    refbasis = get_basis(AT, FEType, EG)
-    ref_integrate!(cellmoments, EG, get_polynomialorder(FEType, EG), refbasis)
-    return cellmoments[:,1]
-end
+# # fall back function that is used if element does not define the cell moments directly (see below)
+# # (so far only needed for H1-conforming elements with interpolations that preserve cell means)
+# function get_ref_cellmoments(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}, AT::Type{<:AssemblyType} = ON_CELLS)
+#     ndofs = get_ndofs(AT, FEType, EG)
+#     ncomponents = get_ncomponents(FEType)
+#     cellmoments = zeros(Float64, ndofs, ncomponents)
+#     refbasis = get_basis(AT, FEType, EG)
+#     ref_integrate!(cellmoments, EG, get_polynomialorder(FEType, EG), refbasis)
+#     return cellmoments[:,1]
+# end
 
-function ensure_cell_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+# function ensure_cell_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
-    # note: assumes that cell dof is always the last one and that there are no higher oder cell moments
+#     # note: assumes that cell dof is always the last one and that there are no higher oder cell moments
 
-    xgrid = FE.xgrid
-    xItemVolumes = xgrid[CellVolumes]
-    xItemNodes = xgrid[CellNodes]
-    xItemDofs = FE[CellDofs]
-    xCellGeometries = xgrid[CellGeometries]
-    ncells = num_sources(xItemNodes)
-    nnodes = size(xgrid[Coordinates],2)
-    ncomponents = get_ncomponents(FEType)
-    if items == []
-        items = 1 : ncells
-    end
+#     xgrid = FE.xgrid
+#     xItemVolumes = xgrid[CellVolumes]
+#     xItemNodes = xgrid[CellNodes]
+#     xItemDofs = FE[CellDofs]
+#     xCellGeometries = xgrid[CellGeometries]
+#     ncells = num_sources(xItemNodes)
+#     nnodes = size(xgrid[Coordinates],2)
+#     ncomponents = get_ncomponents(FEType)
+#     if items == []
+#         items = 1 : ncells
+#     end
 
-    # compute referencebasis cell moments
-    uniqueEG = xgrid[UniqueCellGeometries]
-    cell_moments = Array{Array{T,1},1}(undef, length(uniqueEG))
-    for j = 1 : length(uniqueEG)
-        cell_moments[j] = get_ref_cellmoments(FEType,uniqueEG[j])
-    end
+#     # compute referencebasis cell moments
+#     uniqueEG = xgrid[UniqueCellGeometries]
+#     cell_moments = Array{Array{T,1},1}(undef, length(uniqueEG))
+#     for j = 1 : length(uniqueEG)
+#         cell_moments[j] = get_ref_cellmoments(FEType,uniqueEG[j])
+#     end
 
-    # compute exact cell integrals
-    cellintegrals = zeros(T,ncomponents,ncells)
-    integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = 0)
-    cellEG = uniqueEG[1]
-    nitemnodes::Int = num_nodes(cellEG)
-    nitemfaces::Int = num_faces(cellEG)
-    nitemedges::Int = num_edges(cellEG)
-    offset::Int = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
-    cellmoments::Array{T,1} = cell_moments[1]
-    iEG::Int = 1
-    for item in items
-        if length(uniqueEG) > 1
-            if cellEG != xCellGeometries[item]
-                iEG = findfirst(isequal(cellEG), EG)
-                cellEG = xCellGeometries[item]
-                nitemnodes = num_nodes(cellEG)
-                nitemfaces = num_faces(cellEG)
-                nitemedges = num_edges(cellEG)
-                offset = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
-                cellmoments = cell_moments[iEG]
-            end
-        end
-        for c = 1 : ncomponents
-            # subtract integral of lower order dofs
-            for dof = 1 : offset - 1
-                cellintegrals[c,item] -= Target[xItemDofs[(c-1)*offset + dof,item]] * xItemVolumes[item] * cellmoments[dof]
-            end
-            # set cell bubble such that cell mean is preserved
-            Target[xItemDofs[c*offset,item]] = cellintegrals[c,item] / (cellmoments[offset] * xItemVolumes[item])
-        end
-    end
-end
+#     # compute exact cell integrals
+#     cellintegrals = zeros(T,ncomponents,ncells)
+#     integrate!(cellintegrals, xgrid, ON_CELLS, exact_function!; items = items, time = 0)
+#     cellEG = uniqueEG[1]
+#     nitemnodes::Int = num_nodes(cellEG)
+#     nitemfaces::Int = num_faces(cellEG)
+#     nitemedges::Int = num_edges(cellEG)
+#     offset::Int = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
+#     cellmoments::Array{T,1} = cell_moments[1]
+#     iEG::Int = 1
+#     for item in items
+#         if length(uniqueEG) > 1
+#             if cellEG != xCellGeometries[item]
+#                 iEG = findfirst(isequal(cellEG), EG)
+#                 cellEG = xCellGeometries[item]
+#                 nitemnodes = num_nodes(cellEG)
+#                 nitemfaces = num_faces(cellEG)
+#                 nitemedges = num_edges(cellEG)
+#                 offset = nitemnodes*nodedofs + nitemfaces*facedofs + nitemedges*edgedofs + 1
+#                 cellmoments = cell_moments[iEG]
+#             end
+#         end
+#         for c = 1 : ncomponents
+#             # subtract integral of lower order dofs
+#             for dof = 1 : offset - 1
+#                 cellintegrals[c,item] -= Target[xItemDofs[(c-1)*offset + dof,item]] * xItemVolumes[item] * cellmoments[dof]
+#             end
+#             # set cell bubble such that cell mean is preserved
+#             Target[xItemDofs[c*offset,item]] = cellintegrals[c,item] / (cellmoments[offset] * xItemVolumes[item])
+#         end
+#     end
+# end
 
-# edge integral means
-# used e.g. for interpolation into P2, P2B finite elements
-function ensure_edge_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+# # edge integral means
+# # used e.g. for interpolation into P2, P2B finite elements
+# function ensure_edge_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+#     xItemVolumes::Array{Tv,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
+#     xItemNodes::Adjacency{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
+#     xItemDofs::DofMapTypes{Ti} = Dofmap4AssemblyType(FE, AT)
+
+#     nitems::Int = num_sources(xItemNodes)
+#     if items == []
+#         items = 1 : nitems
+#     end
+#     ncomponents::Int = get_ncomponents(FEType)
+#     edim::Int = get_edim(FEType)
+
+#     # integrate moments of exact_function over edges
+#     edgemoments::Array{Tv,2} = zeros(Tv,ncomponents,nitems)
+#     if order == 0
+#         nmoments = 1
+#         mfactor = [1//6; 1//6] # = integral of nodal basis functions over edge
+#         invdfactor = [3//2;] # = inverse integral of edge bubble over edge
+#         coffset = 3
+#     elseif order == 1
+#         nmoments = 2
+#         mfactor = 9//2 .* [-1//180 -2//135; 2//135 1//180] # = moments of nodal basis functions over edge
+#         dfactor = 27//2 .* [-1//270 -7//540; 7//540 1//270]' # = integrals of interior edge functions over edge
+#         invdfactor = inv(dfactor)
+#         coffset = 4
+#     end
+
+#     function edgemoments_eval(m)
+#         function closure(result, x, xref)
+#             eval_data!(result, exact_function, x, time)
+#             if order == 1
+#                 result .*= (xref[1] - m//3)
+#             end
+#         end   
+#     end   
+#     for item in items
+#         for n = 1 : nmoments, c = 1 : ncomponents
+#             Target[xItemDofs[coffset*(c-1)+2+n,item]] = 0
+#         end
+#     end
+#     for m = 1 : nmoments
+#         edata_function = ExtendedDataFunction(edgemoments_eval(m), [ncomponents, edim]; dependencies = "XL", quadorder = exact_function.quadorder+1)
+#         integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
+#         for item in items
+#             for c = 1 : ncomponents
+#                 # subtract edge mean value of P1 part
+#                 for dof = 1 : 2
+#                     edgemoments[c,item] -= Target[xItemDofs[(c-1)*coffset + dof,item]] * xItemVolumes[item] * mfactor[dof, m]
+#                 end
+#                 # set P2 edge bubble such that edge mean is preserved
+#                 for n = 1 : nmoments
+#                     Target[xItemDofs[coffset*(c-1)+2+n,item]] += invdfactor[n,m] * edgemoments[c,item] / xItemVolumes[item]
+#                 end
+#             end
+#         end
+#         fill!(edgemoments,0)
+#     end
+# end
+
+# sets interior dofs sucht that the specified order of moments (e.g. integral test with Pk) are ensured
+# while all dofs on the exterior are fixed, by solving a local problem on each cell (all with the same mass matrix)
+#
+# used for interpolation operators of elements with interior degrees of freedom (after setting the exterior ones with other methods)
+# e.g. H1P2 ON_EDGES, H1MINI ON_CELLS, H1P2B ON_EDGES, ON_FACES, ON_CELLS
+function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; FEType_ref = "auto", order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
     xItemVolumes::Array{Tv,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemNodes::Adjacency{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
     xItemDofs::DofMapTypes{Ti} = Dofmap4AssemblyType(FE, AT)
+    EGs = FE.xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
+
+    @assert length(EGs) == 1 "ensure_moments! currently only works with grids with a single element geometry"
+    EG = EGs[1]
 
     nitems::Int = num_sources(xItemNodes)
     if items == []
         items = 1 : nitems
     end
     ncomponents::Int = get_ncomponents(FEType)
-    edim::Int = get_edim(FEType)
+    edim::Int = dim_element(EG)
+    coffset::Int = get_ndofs(AT,FEType,EG) / ncomponents
+    interior_offset = interior_dofs_offset(AT,FEType,EG)
+
+    ## get basis for moments
+    ## here we assume that the FEType looks like a H1Pk element on EG (which is true for all H1Pk elements)
+    if order == 0
+        ## the order of that element is order+1
+        FEType_moments = H1P0{ncomponents}
+    elseif order == 1
+        FEType_moments = H1P1{ncomponents}
+    elseif order == 2
+        FEType_moments = H1P2{ncomponents,edim}
+    else
+        @assert edim == 1
+        FEType_moments = H1Pk{ncomponents,edim,order}
+    end
+
+    if FEType_ref == "auto"
+        if AT == ON_CELLS
+            FEType_ref = FEType
+        else
+            if edim == 2 && order == 0
+                FEType_ref = H1P2{ncomponents,edim}
+            elseif edim == 1
+                FEType_ref = H1Pk{ncomponents,edim,order+2}
+            else
+                @error "not yet supported"
+            end
+        end
+    end
+
+    ## calculate moments times basis functions
+    moments_basis! = get_basis(ON_CELLS,FEType_moments,EG)
+    nmoments = get_ndofs_all(ON_CELLS,FEType_moments,EG)
+    xgrid_ref = reference_domain(EG)
+    FES_moments = FESpace{FEType_moments}(xgrid_ref)
+    FE_onref = FESpace{FEType_ref}(xgrid_ref)
+    MOMxBASIS_BLF = BilinearForm(Float64,ON_CELLS,[FES_moments,FE_onref],[Identity,Identity])
+    MOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FES_moments,FE_onref)
+    assemble!(MOMxBASIS[1],MOMxBASIS_BLF)
+    MOMxBASIS = MOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
+
+    ## extract quadratic matrix for interior dofs
+    nmoments4c::Int = nmoments / ncomponents
+    idofs = zeros(Int,0)
+    for c = 1 : ncomponents, m = 1 : nmoments4c
+        push!(idofs, (c-1)*coffset + interior_offset + m)
+    end
+    MOMxINTERIOR = zeros(length(idofs),size(MOMxBASIS,2))
+    for j = 1 : length(idofs), k = 1 : size(MOMxBASIS,2)
+        MOMxINTERIOR[j,k] = MOMxBASIS[idofs[j],k]
+    end
+    invA = inv(MOMxINTERIOR)
+
+    ## evaluator for moments of exact function
+    f_eval = zeros(Float64,ncomponents)
+    moments_eval = zeros(Float64,nmoments,ncomponents)
+    function f_times_moments(result, x, xref)
+        moments_basis!(moments_eval,xref)
+        eval_data!(f_eval, exact_function, x, time)
+        fill!(result,0)
+        for m = 1 : nmoments, k = 1 : ncomponents
+            result[m] += f_eval[k]*moments_eval[m,k]
+        end
+        return nothing
+    end   
 
     # integrate moments of exact_function over edges
-    edgemoments::Array{Tv,2} = zeros(Tv,ncomponents,nitems)
-    if order == 0
-        nmoments = 1
-        mfactor = [1//6; 1//6] # = integral of nodal basis functions over edge
-        invdfactor = [3//2;] # = inverse integral of edge bubble over edge
-        coffset = 3
-    elseif order == 1
-        nmoments = 2
-        mfactor = 9//2 .* [-1//180 -2//135; 2//135 1//180] # = moments of nodal basis functions over edge
-        dfactor = 27//2 .* [-1//270 -7//540; 7//540 1//270]' # = integrals of interior edge functions over edge
-        invdfactor = inv(dfactor)
-        coffset = 4
-    end
-    function edgemoments_eval(m)
-        function closure(result, x, xref)
-            eval_data!(result, exact_function, x, time)
-            if order == 1
-                result .*= (xref[1] - m//3)
-            end
-        end   
-    end   
+    edgemoments::Array{Tv,2} = zeros(Tv,ncomponents*nmoments,nitems)
+    xdim = size(FE.xgrid[Coordinates],1)
+    edata_function = ExtendedDataFunction(f_times_moments, [ncomponents*nmoments, xdim]; dependencies = "XL", quadorder = exact_function.quadorder+order)
+    integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
+
+    ## set interior dofs
+    ## interior_dofs = invMAMA*(f_moments - lower_moments) = invMAMA*(f_moments - MOMxBASIS*boundary_dofs)
+    localdof::Int = 0
     for item in items
-        for n = 1 : nmoments, c = 1 : ncomponents
-            Target[xItemDofs[coffset*(c-1)+2+n,item]] = 0
+        for m = 1 : nmoments, exdof = 1 : interior_offset, c = 1 : ncomponents
+            localdof = coffset*(c-1)+exdof
+            edgemoments[m,item] -= Target[xItemDofs[localdof,item]] * MOMxBASIS[localdof,m] * xItemVolumes[item]
         end
-    end
-    for m = 1 : nmoments
-        edata_function = ExtendedDataFunction(edgemoments_eval(m), [ncomponents, edim]; dependencies = "XL", quadorder = exact_function.quadorder+1)
-        integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
-        for item in items
-            for c = 1 : ncomponents
-                # subtract edge mean value of P1 part
-                for dof = 1 : 2
-                    edgemoments[c,item] -= Target[xItemDofs[(c-1)*coffset + dof,item]] * xItemVolumes[item] * mfactor[dof, m]
-                end
-                # set P2 edge bubble such that edge mean is preserved
-                for n = 1 : nmoments
-                    Target[xItemDofs[coffset*(c-1)+2+n,item]] += invdfactor[n,m] * edgemoments[c,item] / xItemVolumes[item]
-                end
+        for m = 1 : nmoments, c = 1 : ncomponents
+            localdof = idofs[m]
+            Target[xItemDofs[localdof,item]] = 0
+            for n = 1 : nmoments
+                Target[xItemDofs[localdof,item]] += invA[n,m] * edgemoments[n,item] / xItemVolumes[item]
             end
         end
-        fill!(edgemoments,0)
     end
 end
 
