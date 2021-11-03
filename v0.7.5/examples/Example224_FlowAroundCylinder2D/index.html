@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>224 : Flow around a cylinder 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example214_TwoNonlinearCoupled2D/">214 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li class="is-active"><a class="tocitem" href>224 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example231_StokesHdivP1RT/">231 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>224 : Flow around a cylinder 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>224 : Flow around a cylinder 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example224_FlowAroundCylinder2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Flow-around-a-cylinder-2D"><a class="docs-heading-anchor" href="#:-Flow-around-a-cylinder-2D">224 : Flow around a cylinder 2D</a><a id=":-Flow-around-a-cylinder-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Flow-around-a-cylinder-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example224_FlowAroundCylinder2D.jl">source code</a>)</p><p>This example solves the DFG Navier-Stokes benchmark problem</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = 0\\
+\mathrm{div}(u) &amp; = 0
+\end{aligned}\]</p><p>on a rectangular 2D domain with a circular obstacle, see <a href="examples/www.mathematik.tu-dortmund.de/~featflow/en/benchmarks/cfdbenchmarking/flow/dfg_benchmark1_re20.html">here</a> for details.</p><p>This script demonstrates the employment of external grid generators and the computation of drag and lift coefficients.</p><p>Note: This example needs the additional packages Triangulate and SimplexGridFactory to generate the mesh.</p><pre><code class="language-julia hljs">module Example224_FlowAroundCylinder2D
+
+using GradientRobustMultiPhysics
+using Triangulate
+using SimplexGridFactory
+using ExtendableGrids
+using GridVisualize
+
+# inlet data for Karman vortex street example
+# as in DFG benchmark 2D-1 (Re = 20, laminar)
+const umax = 0.3
+const umean = 2//3 * umax
+const L, W, H = 0.1, 2.2, 0.41
+function bnd_inlet!(result,x)
+    result[1] = 4*umax*x[2]*(H-x[2])/(H*H);
+    result[2] = 0.0;
+end
+const inflow = DataFunction(bnd_inlet!, [2,2]; name = &quot;u_inflow&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+
+
+# everything is wrapped in a main function
+function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
+
+    # load grid (see function below)
+    xgrid = make_grid(W,H; n = Int(ceil(sqrt(1/maxvol))), maxvol = maxvol)
+
+    # Bernardi--Raugel element + reconstruction operator
+    FETypes = [H1P2B{2,2}, H1P1{1}];
+    VeloIdentity = ReconstructionIdentity{HDIVBDM2{2}} # div-free reconstruction operator for Identity
+
+    # PDE description
+    Problem = PDEDescription(&quot;NSE problem (μ = $μ)&quot;)
+    add_unknown!(Problem; equation_name = &quot;momentum equation&quot;, unknown_name = &quot;u&quot;)
+    add_unknown!(Problem; equation_name = &quot;incompressibility constraint&quot;, unknown_name = &quot;p&quot;)
+
+    # add operators (Laplacian, Div-LagrangeMultierplier, Convection)
+    add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
+    add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, auto_newton = true))
+
+    # add boundary data (bregion 2 is outflow, 4 is inflow, 5 is cylinder)
+    add_boundarydata!(Problem, 1, [1,3,5], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = inflow)
+
+    # inspect problem
+    @show Problem
+
+    # generate FESpaces and Solution vector
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
+    Solution = FEVector([&quot;u_h&quot;,&quot;p_h&quot;],FES)
+
+    # solve
+    solve!(Solution, Problem; maxiterations = 50, target_residual = 1e-10, show_statistics = true)
+
+    # postprocess : compute drag/lift (see function below)
+    draglift = get_draglift(Solution, μ)
+    pdiff = get_pressure_difference(Solution)
+    println(&quot;[drag, lift] = $draglift&quot;)
+    println(&quot;p difference = $pdiff&quot;)
+
+    # plots via GridVisualize
+    p = GridVisualizer(; Plotter = Plotter, layout = (4,1), clear = true, resolution = (800,1200))
+    gridplot!(p[1,1],xgrid, linewidth = 1)
+    gridplot!(p[2,1],xgrid, linewidth = 1, xlimits = [0,0.3], ylimits = [0.1,0.3])
+    scalarplot!(p[3,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 0, colorbarticks = 7)
+    vectorplot!(p[3,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = [0.2,0.04], clear = false, title = &quot;u_h (abs + quiver)&quot;)
+    scalarplot!(p[4,1],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
+end
+
+function get_pressure_difference(Solution::FEVector)
+    xgrid = Solution[2].FES.xgrid
+    PE = PointEvaluator(Solution[2], Identity)
+    CF = CellFinder(xgrid)
+    xref = zeros(Float64,2)
+    p_left = zeros(Float64,1); x1 = [0.15,0.2]
+    p_right = zeros(Float64,1); x2 = [0.25,0.2]
+    cell::Int = gFindLocal!(xref, CF, x1; icellstart = 1)
+    if cell == 0
+        cell = gFindBruteForce!(xref, CF, x1)
+    end
+    evaluate!(p_left,PE,xref,cell)
+    cell = gFindLocal!(xref, CF, x2; icellstart = 1)
+    if cell == 0
+        cell = gFindBruteForce!(xref, CF, x2)
+    end
+    evaluate!(p_right,PE,xref,cell)
+    return p_left - p_right
+end
+
+function get_draglift(Solution::FEVector, μ)
+
+    # this function is interpolated for drag/lift test function creation
+    function circle_bnd_testfunction(component)
+        function closure!(result,x)
+            fill!(result,0)
+            if sqrt((x[1] - 0.2)^2 + (x[2] - 0.2)^2) &lt;= 0.06
+                result[component] = 1
+            end
+        end
+    end
+
+    # drag lift calcuation by testfunctions
+    function draglift_kernel(result, input)
+        # input = [ u, grad(u), p , v , grad(v)]
+        #         [1:2,  3:6,   7 ,8:9,  10:13 ]
+        result[1] = μ * (input[3]*input[10] + input[4]*input[11] + input[5]*input[12] + input[6]*input[13])
+        result[1] += (input[1] * input[3] + input[2] * input[4]) * input[8]
+        result[1] += (input[1] * input[5] + input[2] * input[6]) * input[9]
+        result[1] -= input[7] * (input[10] + input[13])
+        result[1] *= -(2/(umean^2*L))
+        return nothing
+    end
+    draglift_action = Action(draglift_kernel, [1,13]; name = &quot;drag/lift by testfunction&quot;, dependencies = &quot;&quot;, quadorder = 4)
+    DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
+
+    # test for drag
+    TestFunction = FEVector(&quot;drag testfunction&quot;,Solution[1].FES)
+    xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
+    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = &quot;drag test&quot;, dependencies = &quot;X&quot;, quadorder = 0)
+    interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaceFaces)
+    drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
+
+    # test for lift
+    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = &quot;lift test&quot;, dependencies = &quot;X&quot;, quadorder = 0)
+    interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaceFaces)
+    lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
+
+    return [drag,lift]
+end
+
+# grid generator script using SimplexGridBuilder/Triangulate
+function make_grid(W,H; n=20,maxvol=0.1)
+	builder=SimplexGridBuilder(Generator=Triangulate)
+    function circlehole!(builder, center, radius; n=20)
+        points=[point!(builder, center[1]+radius*sin(t),center[2]+radius*cos(t)) for t in range(0,2π,length=n)]
+        for i=1:n-1
+            facet!(builder,points[i],points[i+1])
+        end
+        facet!(builder,points[end],points[1])
+        holepoint!(builder,center)
+    end
+    p1=point!(builder,0,0)
+    p2=point!(builder,W,0)
+    p3=point!(builder,W,H)
+    p4=point!(builder,0,H)
+
+    # heuristic refinement around cylinder
+    refine_radius = 0.25
+    maxrefinefactor = 1//20
+    function unsuitable(x1,y1,x2,y2,x3,y3,area)
+        if area&gt;maxvol*min(max(4*maxrefinefactor,abs((x1+x2+x3)/3 - 0.2)),1/maxrefinefactor)
+            return true
+        end
+        dist = sqrt( ( (x1+x2+x3)/3 - 0.2 )^2 + ( (y1+y2+y3)/3 - 0.2)^2) - 0.05
+        myarea= dist &lt; refine_radius ? maxvol*max(maxrefinefactor,1-(refine_radius - dist)/refine_radius) : maxvol
+        if area&gt;myarea
+           return true
+        else
+            return false
+        end
+    end
+
+    facetregion!(builder,1); facet!(builder,p1,p2)
+    facetregion!(builder,2); facet!(builder,p2,p3)
+    facetregion!(builder,3); facet!(builder,p3,p4)
+    facetregion!(builder,4); facet!(builder,p4,p1)
+    facetregion!(builder,5); circlehole!(builder, (0.2,0.2),0.05,n=n)
+
+    simplexgrid(builder,maxvolume=16*maxvol, unsuitable = unsuitable)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example224_FlowAroundCylinder2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = NSE problem (μ = 0.001)
+
+     id   | unknown name / equation name
+    [1]   | u / momentum equation 
+    [2]   | p / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 0.001 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [4]
+                         HomogeneousDirichletBoundary -&gt; [1, 3, 5]
+                          
+   BoundaryOperator[2] : 
+
+Problem = 
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	      1   | 2.499205e-17 | 1.899986e-03 | 9.66e-01/2.89e-01/1.27e+00
+	      2   | 2.670545e-17 | 5.392003e-04 | 9.67e-01/2.11e-01/1.18e+00
+	      3   | 2.674340e-17 | 2.926551e-05 | 9.68e-01/2.14e-01/1.19e+00
+	      4   | 2.674620e-17 | 1.060798e-07 | 9.68e-01/2.12e-01/1.18e+00
+	      5   | 2.635039e-17 | 1.119313e-12 | 9.54e-01/2.19e-01/1.18e+00
+
+[drag, lift] = [5.558270082490449, 0.01048856931621747]
+p difference = [0.11865484048663102]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 3 November 2021 22:37">Wednesday 3 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
