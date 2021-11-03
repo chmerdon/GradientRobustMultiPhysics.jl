@@ -6,9 +6,9 @@
 This demonstrates the assignment of mxied Robin boundary condition for a nonlinear 1D convection-diffusion-reaction PDE on the unit interval, i.e.
 ```math
 \begin{aligned}
--\partial u / \partial x^2 + u \partial u / \partial x + u & = f \quad \text{in } \Omega\\
-u + \partial u / \partial_x & = g at \Gamma_1 = \lbrace 0 \brace\\
-u & = u_D at \Gamma_2 = \lbrace 1 \rbrace
+-\partial u / \partial x^2 + u \partial u / \partial x + u & = f && \text{in } \Omega\\
+u + \partial u / \partial_x & = g && \text{at } \Gamma_1 = \{ 0 \}\\
+u & = u_D && \text{at } \Gamma_2 = \{ 1 \}
 \end{aligned}
 ```
 tested with data ``f(x) = e^{2x}``, ``g = 2`` and ``u_D = e`` such that ``u(x) = e^x`` is the exact solution.
@@ -26,7 +26,7 @@ const u = DataFunction((result,x) -> (result[1] = exp(x[1]);), [1,1]; name = "u"
 const g = DataFunction([2]; name = "g")
 const uD = DataFunction([exp(1)]; name = "u_D")
 
-# kernel for the (nonlinear) reaction-convection-diffusion oeprator
+## kernel for the (nonlinear) reaction-convection-diffusion oeprator
 function operator_kernel!(result, input)
     ## input = [u,∇u] as a vector of length 2
     result[1] = input[1] * input[2] + input[1] # convection + reaction (will be multiplied with v)
@@ -34,7 +34,7 @@ function operator_kernel!(result, input)
     return nothing
 end
 
-# kernel for Robin boundary condition
+## kernel for Robin boundary condition
 function robin_kernel!(result, input)
     ## input = [u]
     eval_data!(result,g)
@@ -76,11 +76,11 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     Solution = FEVector("u_h",FES)
     solve!(Solution, Problem)
 
-    # compute L2 error
+    ## compute L2 error
     L2error = L2ErrorIntegrator(Float64,u)
     println("L2error = $(evaluate(L2error,Solution[1]))")
     
-    # plot discrete and exact solution (on finer grid)
+    ## plot discrete and exact solution (on finer grid)
     p=GridVisualizer(Plotter = Plotter, layout = (1,1))
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), color=(0,0.7,0), label = "u_h", markershape = :x, markersize = 10, markevery = 1)
     xgrid_fine = simplexgrid(0:h_fine:1)
