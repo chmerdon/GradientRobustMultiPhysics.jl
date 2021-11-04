@@ -3,7 +3,7 @@
 # 102 : Robin-Boundary Conditions 1D
 ([source code](SOURCE_URL))
 
-This demonstrates the assignment of mxied Robin boundary condition for a nonlinear 1D convection-diffusion-reaction PDE on the unit interval, i.e.
+This demonstrates the assignment of a mixed Robin boundary condition for a nonlinear 1D convection-diffusion-reaction PDE on the unit interval, i.e.
 ```math
 \begin{aligned}
 -\partial u / \partial x^2 + u \partial u / \partial x + u & = f && \text{in } \Omega\\
@@ -78,7 +78,7 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
 
     ## compute L2 error
     L2error = L2ErrorIntegrator(Float64,u)
-    println("L2error = $(evaluate(L2error,Solution[1]))")
+    println("L2error = $(sqrt(evaluate(L2error,Solution[1])))")
     
     ## plot discrete and exact solution (on finer grid)
     p=GridVisualizer(Plotter = Plotter, layout = (1,1))

@@ -214,7 +214,7 @@ function run_basic_fe_tests()
                     H1Pk{1,1,3},
                     H1Pk{1,1,4},
                     H1Pk{1,1,5}]
-    ExpectedOrders1D = [0,1,2,3,3,4,5,6,7]
+    ExpectedOrders1D = [0,1,2,3,3,4,5]
     TestCatalog2D = [
                     HCURLN0{2},
                     HDIVRT0{2},
@@ -229,9 +229,10 @@ function run_basic_fe_tests()
                     H1BR{2},
                     H1P2{2,2}, 
                     H1P2B{2,2}, 
-                    H1P3{2,2}
+                    H1P3{2,2},
+                    H1Pk{2,2,3}
                     ]
-    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3,3]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -349,8 +350,11 @@ function run_basic_fe_tests()
                     H1BR{2},
                     H1P2{2,2},
                     H1P2B{2,2},
-                    H1P3{2,2}]
-    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3]
+                    H1P3{2,2},
+                    H1Pk{2,2,3},
+                    H1Pk{2,2,4},
+                    H1Pk{2,2,5}]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3,3,4,5]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},

@@ -280,7 +280,6 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     elseif order == 2
         FEType_moments = H1P2{ncomponents,edim}
     else
-        @assert edim == 1
         FEType_moments = H1Pk{ncomponents,edim,order}
     end
 

@@ -29,21 +29,11 @@ Evaluations of the other AssemblyPatterns may be possible in a future update, bu
 
 #### Constructor details
 
-Below all constructors are detailed. (For the ItemIntegrator see [Item Integrators](@ref).)
+Below all assembly pattern types, constructor functions and evaluate/assembly functions are detailed. (For more on the ItemIntegrator also see [Item Integrators](@ref).)
 
-```@docs
-GradientRobustMultiPhysics.LinearForm
-GradientRobustMultiPhysics.BilinearForm
-GradientRobustMultiPhysics.TrilinearForm
-GradientRobustMultiPhysics.MultilinearForm
-GradientRobustMultiPhysics.NonlinearForm
+```@autodocs
+Modules = [GradientRobustMultiPhysics]
+Pages = ["itemintegrator.jl","bilinearform.jl","trilinearform.jl","multilinearform.jl","nonlinearform.jl"]
+Order   = [:type, :function]
 ```
 
-
-#### Assemble
-
-Below all assemble! functions of the patterns are listed. (For evaluation of the ItemIntegrator see [Item Integrators](@ref).)
-
-```@docs
-assemble!
-```

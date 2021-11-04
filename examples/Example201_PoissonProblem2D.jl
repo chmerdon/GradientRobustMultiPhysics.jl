@@ -23,13 +23,13 @@ using GridVisualize
 const f = DataFunction([1]; name = "f")
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, μ = 1, Plotter = nothing)
+function main(; verbosity = 0, μ = 1, order = 2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
 
     ## build/load any grid (here: a uniform-refined 2D unit square into triangles)
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D),5)
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D),4)
 
     ## create empty PDE description
     Problem = PDEDescription("Poisson problem")
@@ -47,7 +47,7 @@ function main(; verbosity = 0, μ = 1, Plotter = nothing)
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
 
     ## discretise = choose FEVector with appropriate FESpaces
-    FEType = H1P2{1,2}
+    FEType = H1Pk{1,2,order}
     Solution = FEVector("u_h",FESpace{FEType}(xgrid))
 
     ## show problem and Solution structure

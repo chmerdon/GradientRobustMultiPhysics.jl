@@ -21,7 +21,8 @@ AbstractFiniteElement
 │  ├─ H1P1
 │  ├─ H1P2
 │  ├─ H1P2B
-│  └─ H1P3
+│  ├─ H1P3
+│  └─ H1Pk
 ├─ AbstractHcurlFiniteElement
 │  └─ HCURLN0
 └─ AbstractHdivFiniteElement
@@ -33,8 +34,8 @@ AbstractFiniteElement
 
 
 #### Remarks
-- each type depends on one or two parameters, the first one is always the number of components (ncomponents) that determines if the
-  finite element is scalar- or veector-valued; some elements additionaly require the parameter edim <: Int if they are structurally different in different space dimensions
+- each type depends on one/two or three parameters, the first one is always the number of components (ncomponents) that determines if the
+  finite element is scalar- or veector-valued; some elements additionaly require the parameter edim <: Int if they are structurally different in different space dimensions; arbitrary order elements require a third parameter that determines the order
 - each finite elements mainly comes with a set of basis functions in reference coordinates for each applicable AbstractElementGeometry and degrees of freedom maps for each [Assembly Type](@ref) (coded as a string)
 - broken finite elements are possible via the broken switch in the [FESpace](@ref) constructor
 - the type steers how the basis functions are transformed from local to global coordinates and how FunctionOperators are evaluated
@@ -63,6 +64,7 @@ The following table lists all curently implemented finite elements and on which 
 | [`H1P2`](@ref) | ✓ (N1F1, 12) | ✓ (N1F1, 16) | ✓ (N1E1, 30) |   |
 | [`H1P2B`](@ref) | ✓ (N1F1I1, 14) |   |   |   |
 | [`H1P3`](@ref) | ✓ (N1F2I1, 20) |   |   |   |
+| [`H1Pk`](@ref) | ✓ (order-dep) |   |   |   |
 | AbstractHcurlFiniteElement |   |   |   |   |
 | [`HCURLN0`](@ref) | ✓ (f1, 3) | ✓ (f1, 4) | ✓ (e1, 6) |   |
 | AbstractHdivFiniteElement |   |   |   |   |
@@ -165,6 +167,16 @@ The interpolation of a given function into this space performs point evaluations
 
 ```@docs
 H1P3
+```
+
+### Pk finite element (experimental)
+
+The Pk finite element method generically generates polynomials of abitrary order k on simplices (Edge1D, Triangle2D so far).
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves cell and face integrals in 2D (depending on the order and the element dimension).
+
+```@docs
+H1Pk
 ```
 
 ### Crouzeix-Raviart (CR) finite element
