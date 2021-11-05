@@ -13,9 +13,8 @@ Writes the specified FEVector into a vtk datafile with the given filename. Each 
 is saved as separate VTKPointData. Vector-valued quantities also generate a data field
 that represents the absolute value of the vector field at each grid point (if vectorabs is true).
 """
-function writeVTK!(filename::String, Data::Array{<:FEVectorBlock,1}; operators = [], names = [], vectorabs::Bool = true, add_regions = false, caplength::Int = 40)
+function writeVTK!(filename::String, Data::Array{<:FEVectorBlock,1}; xgrid = Data[1].FES.xgrid, operators = [], names = [], vectorabs::Bool = true, add_regions = false, caplength::Int = 40)
     # open grid
-    xgrid = Data[1].FES.xgrid
     xCoordinates = xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     nnodes = size(xCoordinates,2)
@@ -52,7 +51,7 @@ function writeVTK!(filename::String, Data::Array{<:FEVectorBlock,1}; operators =
     end
     nodedata = zeros(Float64, maxcomponents, nnodes)
     
-    for d = 1 : length(Data)
+    for d = 1 : nblocks
         # get node values
         ncomponents = Length4Operator(operators[d], xdim, get_ncomponents(eltype(Data[d].FES))) 
         nodevalues!(nodedata, Data[d], Data[d].FES, operators[d])
