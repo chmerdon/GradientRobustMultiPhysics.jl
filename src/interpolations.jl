@@ -435,7 +435,7 @@ function interpolate!(Target::FEVectorBlock,
 Interpolates the given finite element function into the finite element space assigned to the Target FEVectorBlock. 
 (Currently not the most efficient way as it is based on the PointEvaluation pattern and cell search.)
 """
-function interpolate!(Target::FEVectorBlock{T,Tv,Ti}, source_data::FEVectorBlock{T,Tv,Ti}; operator = Identity, xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false) where {T,Tv,Ti}
+function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBlock{T2,Tv,Ti}; operator = Identity, xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false) where {T1,T2,Tv,Ti}
     # wrap point evaluation into function that is put into normal interpolate!
     xgrid = source_data.FES.xgrid
     xdim_source::Int = size(xgrid[Coordinates],1)
@@ -447,8 +447,8 @@ function interpolate!(Target::FEVectorBlock{T,Tv,Ti}, source_data::FEVectorBlock
     ncomponents::Int = get_ncomponents(FEType)
     resultdim::Int = Length4Operator(operator,xdim_source,ncomponents)
     PE = PointEvaluator(source_data, operator)
-    xref = zeros(T,xdim_source)
-    x_source = zeros(T,xdim_source)
+    xref = zeros(Tv,xdim_source)
+    x_source = zeros(Tv,xdim_source)
     cell::Int = 1
     lastnonzerocell::Int = 1
     same_cells::Bool = xgrid == Target.FES.xgrid
@@ -652,7 +652,7 @@ Evaluates the finite element function with the coefficient vector Source
 and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into Target.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues!(Target::AbstractArray{<:Real,2}, Source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
+function nodevalues!(Target, Source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
     nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, abs = abs, factor = factor, zero_target = zero_target, target_offset = target_offset)
 end
 

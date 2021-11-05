@@ -1690,7 +1690,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                     resnorm = norm(res[s].entries)
                 else
                     for j = 1 : nsubitblocks
-                        statistics[subiterations[s][j],3] .= statistics[subiterations[s][j],1]
+                        statistics[subiterations[s][j],3] = statistics[subiterations[s][j],1]
                     end
                 end
             else
@@ -1900,7 +1900,7 @@ If solver == nothing the solver Rosenbrock23(autodiff = false) will be chosen. F
 Also note that this is a highly experimental feature and will not work for general TimeControlSolvers configuration (e.g. in the case of several subiterations or, it seems,
 saddle point problems). Also have a look at corressponding the example in the advanced examples section.
 """
-function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver{T,Tt}, timestep::Tt, finaltime::Tt; solver = nothing, abstol = 1e-1, reltol = 1e-1, dtmin = 0, adaptive::Bool = true) where {T,Tt}
+function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver{T,Tt}, timestep::Tt, finaltime; solver = nothing, abstol = 1e-1, reltol = 1e-1, dtmin = 0, adaptive::Bool = true) where {T,Tt}
     if solver === nothing 
         solver = DiffEQ.Rosenbrock23(autodiff = false)
     end
