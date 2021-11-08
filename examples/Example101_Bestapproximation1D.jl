@@ -61,8 +61,8 @@ function main(; Plotter = nothing, verbosity = 0, order = 3, h = 0.5, h_fine = 1
         
     ## evaluate/interpolate function at nodes and plot_trisurf
     p=GridVisualizer(Plotter=Plotter,layout=(1,1))
-    scalarplot!(p[1,1],xgrid_fine, view(nodevalues(SolutionUpscaled[1]),1,:), color=(0,0.7,0), label = "u_h (P$order, coarse bestapprox)")
-    scalarplot!(p[1,1],xgrid_fine, view(nodevalues(Interpolation[1]),1,:), clear = false, color = (1,0,0), label = "u_h (P1, fine interpolation)", legend = :best)
+    scalarplot!(p[1,1],xgrid_fine, nodevalues_view(SolutionUpscaled[1])[1], color=(0,0.7,0), label = "u_h (P$order, coarse bestapprox)")
+    scalarplot!(p[1,1],xgrid_fine, nodevalues_view(Interpolation[1])[1], clear = false, color = (1,0,0), label = "u_h (P1, fine interpolation)", legend = :best)
 end
 
 end

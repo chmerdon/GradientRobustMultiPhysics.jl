@@ -72,7 +72,7 @@ function main(; verbosity = 0, Plotter = nothing)
 
     ## plot solution (for e.g. Plotter = PyPlot)
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = "u_1")
-    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[2]),1,:), levels = 11, title = "u_2")
+    scalarplot!(p[1,1], xgrid, nodevalues_view(Solution[1])[1], levels = 11, title = "u_1")
+    scalarplot!(p[1,2], xgrid, nodevalues_view(Solution[2])[1], levels = 11, title = "u_2")
 end
 end

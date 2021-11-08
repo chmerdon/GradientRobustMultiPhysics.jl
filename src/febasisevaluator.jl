@@ -390,7 +390,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractH1Finit
             FEBE.subset_handler(FEBE.current_subset, item)
             for i = 1 : length(FEBE.xref)
                 for dof_i = 1 : ndofs, k = 1 : ncomponents
-                    FEBE.cvals[k,dof_i,i] += FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k]
+                    FEBE.cvals[k,dof_i,i] = FEBE.refbasisvals[i][FEBE.current_subset[dof_i],k]
                 end
             end
         end
@@ -1392,7 +1392,7 @@ end
 # HDIV ELEMENTS
 # Piola transformation preserves divergence (up to a factor 1/det(A))
 function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFiniteElement,<:AbstractElementGeometry,<:Divergence,<:AssemblyType,edim,ncomponents,ndofs,ndofs2}, item) where {T,TvG,TiG,edim,ncomponents,ndofs,ndofs2}
-    if FEBE.citem[] != item
+   if FEBE.citem[] != item
         FEBE.citem = item
         
         # update transformation
@@ -1404,7 +1404,7 @@ function update_febe!(FEBE::StandardFEBasisEvaluator{T,TvG,TiG,<:AbstractHdivFin
         FEBE.subset_handler(FEBE.current_subset, item)
 
         # use Piola transformation on basisvals
-        det = FEBE.L2G.det
+        det::TvG = FEBE.L2G.det
         for i = 1 : length(FEBE.xref)
             for dof_i = 1 : ndofs
                 FEBE.cvals[1,dof_i,i] = 0.0;

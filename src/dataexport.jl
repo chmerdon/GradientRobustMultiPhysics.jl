@@ -38,8 +38,6 @@ function writeVTK!(filename::String, Data::Array{<:FEVectorBlock,1}; xgrid = Dat
     nblocks::Int = length(Data)
     ncomponents::Int = 0
     maxcomponents::Int = 0
-    nfields::Int = 0
-    block::Int = 0
     for d = 1 : nblocks
         while length(operators) < d
             push!(operators, Identity)

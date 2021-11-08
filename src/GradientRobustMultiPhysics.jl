@@ -75,7 +75,9 @@ export get_basis, get_coefficients, get_basissubset
 export reconstruct!
 
 export interpolate! # must be defined separately by each FEdefinition
-export nodevalues,nodevalues! # = P1interpolation, abstract averaging method that works for any element, but can be overwritten by FEdefinition to something simpler
+export nodevalues
+export nodevalues!
+export nodevalues_view
 
 export FEVectorBlock, FEVector
 export FEMatrixBlock, FEMatrix, _addnz

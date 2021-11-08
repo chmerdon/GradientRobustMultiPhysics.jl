@@ -82,7 +82,7 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     
     ## plot discrete and exact solution (on finer grid)
     p=GridVisualizer(Plotter = Plotter, layout = (1,1))
-    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), color=(0,0.7,0), label = "u_h", markershape = :x, markersize = 10, markevery = 1)
+    scalarplot!(p[1,1], xgrid, nodevalues_view(Solution[1])[1], color=(0,0.7,0), label = "u_h", markershape = :x, markersize = 10, markevery = 1)
     xgrid_fine = simplexgrid(0:h_fine:1)
     scalarplot!(p[1,1], xgrid_fine, view(nodevalues(xgrid_fine,u),1,:), clear = false, color = (1,0,0), label = "u", legend = :best, markershape = :none)
 end

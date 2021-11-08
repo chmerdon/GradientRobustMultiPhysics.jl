@@ -301,7 +301,7 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     end
 
     moments_basis! = get_basis(ON_CELLS,FEType_moments,EG)
-    nmoments = get_ndofs_all(ON_CELLS,FEType_moments,EG)
+    nmoments::Int = get_ndofs_all(ON_CELLS,FEType_moments,EG)
     xgrid_ref = reference_domain(EG)
     nmoments4c::Int = nmoments / ncomponents
     idofs = zeros(Int,0)
@@ -309,12 +309,13 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
         push!(idofs, (c-1)*coffset + interior_offset + m)
     end
 
+    MOMxBASIS::Array{Float64,2} = zeros(Float64,0,0)
     if (bestapprox) # interior dofs are set by best-approximation
         FE_onref = FESpace{FEType_ref}(xgrid_ref)
         MOMxBASIS_BLF = SymmetricBilinearForm(Float64,ON_CELLS,[FE_onref,FE_onref],[Identity,Identity])
-        MOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FE_onref,FE_onref)
-        assemble!(MOMxBASIS[1],MOMxBASIS_BLF)
-        MOMxBASIS = MOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
+        FEMMOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FE_onref,FE_onref)
+        assemble!(FEMMOMxBASIS[1],MOMxBASIS_BLF)
+        MOMxBASIS = FEMMOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
 
         ## extract quadratic matrix for interior dofs
         MOMxINTERIOR = zeros(length(idofs),length(idofs))
@@ -329,9 +330,9 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
         FES_moments = FESpace{FEType_moments}(xgrid_ref)
         FE_onref = FESpace{FEType_ref}(xgrid_ref)
         MOMxBASIS_BLF = BilinearForm(Float64,ON_CELLS,[FES_moments,FE_onref],[Identity,Identity])
-        MOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FES_moments,FE_onref)
-        assemble!(MOMxBASIS[1],MOMxBASIS_BLF)
-        MOMxBASIS = MOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
+        FEMMOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FES_moments,FE_onref)
+        assemble!(FEMMOMxBASIS[1],MOMxBASIS_BLF)
+        MOMxBASIS = FEMMOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
 
         ## extract quadratic matrix for interior dofs
         MOMxINTERIOR = zeros(length(idofs),size(MOMxBASIS,2))
@@ -344,8 +345,8 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     ### get permutation of dofs on reference EG and real cells
     subset_handler = get_basissubset(AT, FE, EG)
     current_subset = Array{Int,1}(1:size(MOMxBASIS,1))
-    doforder_ref = FE_onref[CellDofs][:,1]
-    invA = inv(MOMxINTERIOR)
+    doforder_ref::Array{Int,1} = FE_onref[CellDofs][:,1]
+    invA::Array{Float64,2} = inv(MOMxINTERIOR)
 
     ## evaluator for moments of exact function
     f_eval = zeros(Float64,ncomponents)
@@ -368,30 +369,31 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     end   
 
     # integrate moments of exact_function over edges
-    edgemoments::Array{Tv,2} = zeros(Tv,nmoments,nitems)
+    edgemoments::Array{T,2} = zeros(T,nmoments,nitems)
     xdim = size(FE.xgrid[Coordinates],1)
     edata_function = ExtendedDataFunction(f_times_moments, [nmoments, xdim]; dependencies = "XL", quadorder = exact_function.quadorder + (bestapprox ? order_FE : order))
     integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
 
     localdof::Int = 0
-    for item in items
+    for item::Int in items
         if subset_handler != NothingFunction
             subset_handler(current_subset, item)
         end
 
-        for m = 1 : nmoments, exdof = 1 : interior_offset, c = 1 : ncomponents
+        for m::Int = 1 : nmoments, exdof = 1 : interior_offset, c = 1 : ncomponents
             localdof = coffset*(c-1)+exdof
             edgemoments[m,item] -= Target[xItemDofs[localdof,item]] * MOMxBASIS[doforder_ref[current_subset[localdof]],m] * xItemVolumes[item]
         end
-        for m = 1 : nmoments
+        for m::Int = 1 : nmoments
             localdof = idofs[m]
             Target[xItemDofs[localdof,item]] = 0
-            for n = 1 : nmoments
+            for n::Int = 1 : nmoments
                 Target[xItemDofs[localdof,item]] += invA[n,m] * edgemoments[n,item]
             end
             Target[xItemDofs[localdof,item]] /= xItemVolumes[item]
         end
     end
+    return nothing
 end
 
 # remap boundary face interpolation to faces by using BFaceFaces (if there is no special function by the finite element defined)
@@ -544,6 +546,25 @@ end
 
 
 
+"""
+````
+function nodevalues!(
+    Target::AbstractArray{<:Real,2},
+    Source::AbstractArray{T,1},
+    FE::FESpace{Tv,Ti,FEType,AT},
+    operator::Type{<:AbstractFunctionOperator} = Identity;
+    regions::Array{Int,1} = [0],
+    abs::Bool = false,
+    factor = 1,
+    target_offset::Int = 0,   # start to write into Target after offset
+    zero_target::Bool = true, # target vector is zeroed
+    continuous::Bool = false)
+````
+
+Evaluates the finite element function with the coefficient vector Source (interpreted as a coefficient vector for the FESpace FE)
+and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into Target.
+Discontinuous (continuous = false) quantities are averaged.
+"""
 function nodevalues!(Target::AbstractArray{T,2},
     Source::AbstractArray{T,1},
     FE::FESpace{Tv,Ti,FEType,AT},
@@ -712,7 +733,14 @@ and the specified FunctionOperator at all the nodes of the (specified regions of
 grid and returns an array with the values.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues(Source::FEVectorBlock{T}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous::Bool = false) where {T}
+function nodevalues(Source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
+    if continuous == "auto"
+        if FEType <: AbstractH1FiniteElement && operator == Identity
+            continuous = true
+        else
+            continuous = false
+        end
+    end
     if abs
         nvals = 1
     else
@@ -724,6 +752,35 @@ function nodevalues(Source::FEVectorBlock{T}, operator::Type{<:AbstractFunctionO
     nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, factor = factor, abs = abs)
     return Target
 end
+
+"""
+````
+function nodevalues_view(
+    Source::FEVectorBlock,
+    operator::Type{<:AbstractFunctionOperator} = Identity)
+````
+
+Returns a vector of views of the nodal values of the Source block (currently works for unbroken H1-conforming elements) that directly accesses the coefficients.
+"""
+function nodevalues_view(Source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity) where {T,Tv,Ti,APT,FEType}
+
+    if (FEType <: AbstractH1FiniteElement) && (operator == Identity) && (Source.FES.broken == false)
+        # give a direct view without computing anything
+        ncomponents = get_ncomponents(FEType)
+        array_of_views = []
+        offset::Int = Source.offset
+        coffset::Int = Source.FES.ndofs / ncomponents
+        nnodes::Int = num_nodes(Source.FES.xgrid)
+        for k = 1 : ncomponents
+            push!(array_of_views,view(Source.entries,offset+1:offset+nnodes))
+            offset += coffset
+        end
+        return array_of_views
+    else
+        @error "nodevalues_view node evalable for FEType = $FEType and operator = $operator"
+    end
+end
+
 
 
 
@@ -740,6 +797,15 @@ function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 
     nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(Source.FES)),nnodes)
     nodevalues!(nodevals, Source, Identity)
     xgrid[Coordinates] .+= magnify * nodevals
+
+    # remove all keys from grid components that might have changed and need a reinstantiation
+    delete!(xgrid.components,CellVolumes)
+    delete!(xgrid.components,FaceVolumes)
+    delete!(xgrid.components,EdgeVolumes)
+    delete!(xgrid.components,FaceNormals)
+    delete!(xgrid.components,EdgeTangents)
+    delete!(xgrid.components,BFaceVolumes)
+    delete!(xgrid.components,BEdgeVolumes)
 end
 
 
