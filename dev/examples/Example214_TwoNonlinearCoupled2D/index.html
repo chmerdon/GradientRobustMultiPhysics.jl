@@ -60,46 +60,4 @@ function main(; verbosity = 0, Plotter = nothing)
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 11, title = &quot;u_1&quot;)
     scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;u_2&quot;)
 end
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example214_TwoNonlinearCoupled2D.main()
-
-PDE-DESCRIPTION
-===============
-  system name = Problem
-
-     id   | unknown name / equation name
-    [1]   | u1 / Equation for u1 
-    [2]   | u2 / Equation for u2 
-
-  LHS block | PDEOperator(s)
-    [1,1]   | ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v) [AD-Newton] [∂u1] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-    [1,2]   | ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v) [AD-Newton] [∂u2] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-    [2,1]   | ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v) [AD-Newton] [∂u1] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-    [2,2]   | ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v) [AD-Newton] [∂u2] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-
-  RHS block | PDEOperator(s)
-     [1]    | ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-     [2]    | ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
-
-   BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 2, 3, 4]
-                          
-   BoundaryOperator[2] : HomogeneousDirichletBoundary -&gt; [1, 2, 3, 4]
-                          
-
-Problem = 
-Solution = 
-FEVector information
-====================
-   block  |  ndofs  | name (FEType) 
- [    1]  |    4705 | u1 (H1P3{1,2})
- [    2]  |    2113 | u2 (H1P2{1,2})
-
-
-	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
-	--------------------------------------
-	      1   | 4.155834e-15 | 9.824796e-02
-	      2   | 2.587627e-15 | 1.810300e-02
-	      3   | 1.989142e-15 | 1.549532e-03
-	      4   | 1.987387e-15 | 1.656753e-05
-	      5   | 1.967407e-15 | 1.966716e-09
-	      6   | 1.947778e-15 | 3.484383e-15
-</code></pre><p><img src="../../images/Example214_TwoNonlinearCoupled2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example212_NonlinearPoissonTransient2D/">« 212 : Nonlinear Poisson Transient 2D</a><a class="docs-footer-nextpage" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 6 November 2021 11:44">Saturday 6 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example214_TwoNonlinearCoupled2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example212_NonlinearPoissonTransient2D/">« 212 : Nonlinear Poisson Transient 2D</a><a class="docs-footer-nextpage" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 12:57">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

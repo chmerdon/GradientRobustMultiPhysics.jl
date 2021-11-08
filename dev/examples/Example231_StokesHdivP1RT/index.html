@@ -110,46 +110,4 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     print_convergencehistory(NDofs, Results; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| p - p_h ||&quot;, &quot;|| ∇(u - u_P1) ||&quot;, &quot;|| div(u_h) ||&quot;])
     plot_convergencehistory(NDofs, Results[:,1:3]; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), Plotter = Plotter, ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| p - p_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;])
 end
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example231_StokesHdivP1RT.main()
-
-PDE-DESCRIPTION
-===============
-  system name = Stokes problem
-
-     id   | unknown name / equation name
-    [1]   | u_P1 / momentum equation (P1 part) 
-    [2]   | u_RT / momentum equation (RT0 part) 
-    [3]   | p / incompressibility constraint 
-
-  LHS block | PDEOperator(s)
-    [1,1]   | 0.001 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-    [1,2]   | none
-    [1,3]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
-    [2,1]   | none
-    [2,2]   | α (div u_RT,div v_RT) [lumped] (APT = LumpedBilinearForm, AT = ON_CELLS, regions = [0])
-    [2,3]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
-    [3,1]   | none
-    [3,2]   | none
-    [3,3]   | none
-
-  RHS block | PDEOperator(s)
-     [1]    | (f, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [1])
-     [2]    | (f, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [1])
-     [3]    | none
-
-   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
-                         
-   BoundaryOperator[2] : HomogeneousDirichletBoundary -&gt; [1, 2, 3, 4]
-                          
-   BoundaryOperator[3] : 
-
-  GlobalConstraints[1] : Mean[3] != 0 
-Problem = 
-
-    ndofs   |    || u - u_h ||     order  |    || p - p_h ||     order  |  || ∇(u - u_P1) ||   order  |   || div(u_h) ||     order  |
-============|=============================|=============================|=============================|=============================|
-        70  |     4.52039e-02      0.000  |     3.48542e-02      0.000  |     7.89870e-01      0.000  |     1.22643e-16      0.000  |
-       250  |     9.42941e-03      2.463  |     1.74735e-02      1.085  |     3.90158e-01      1.108  |     2.16062e-16      -0.890  |
-       946  |     2.23973e-03      2.160  |     8.74218e-03      1.041  |     1.93064e-01      1.057  |     5.17224e-16      -1.312  |
-      3682  |     5.61233e-04      2.037  |     4.37163e-03      1.020  |     9.62761e-02      1.024  |     1.41454e-15      -1.481  |
-     14530  |     1.45636e-04      1.965  |     2.18585e-03      1.010  |     4.81117e-02      1.011  |     2.35181e-15      -0.741  |</code></pre><p><img src="../../images/Example231_StokesHdivP1RT_1.png" alt/> <img src="../../images/Example231_StokesHdivP1RT_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example230_StokesHdivDG2D/">« 230 : Stokes Hdiv-DG 2D</a><a class="docs-footer-nextpage" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Saturday 6 November 2021 11:44">Saturday 6 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example231_StokesHdivP1RT_1.png" alt/> <img src="../../images/Example231_StokesHdivP1RT_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example230_StokesHdivDG2D/">« 230 : Stokes Hdiv-DG 2D</a><a class="docs-footer-nextpage" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 12:57">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
