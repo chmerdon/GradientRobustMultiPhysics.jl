@@ -83,4 +83,73 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = [0.25,0.1], clear = false, title = &quot;u_h (abs + quiver)&quot;)
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
 end
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 12:57">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example221_StokesIterated2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = NSE (iterated penalty)
+
+     id   | unknown name / equation name
+    [1]   | u / velocity update 
+    [2]   | p / pressure update 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((id(u) ⋅ ∇) u, id(v)) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+            | ϵ (div_h(u),div_h(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (div(v),p) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,1]   | (q,div(u)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,2]   | (p,q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | ((id(u) ⋅ ∇) u, id(v)) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | (p,q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+
+   BoundaryOperator[1] : InterpolateDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = false
+  anderson_iterations = 0
+  subiterations = [[1], [2]]
+  show_iteration_details = true
+  timedependent_equations = Any[]
+  anderson_unknowns = [1]
+  show_statistics = false
+  anderson_metric = l2
+  skip_update = [1, 1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization{Float64, Int64}}
+  damping = 0
+  time = 0
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = true
+  fixed_penalty = 1.0e60
+  target_residual = 1.0e-10
+  maxiterations = 20
+  AssemblyTriggers = 
+         LHS_AT[1] :  A  T 
+         LHS_AT[2] :  T  I 
+         RHS_AT[1] :  A 
+         RHS_AT[2] :  A 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2]; [2, 1] [2]]
+
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.045853e-11 | 1.145706e-01
+	      2   | 2.067699e-11 | 4.876621e-05
+	      3   | 2.019771e-11 | 2.635035e-08
+	      4   | 2.076446e-11 | 4.311700e-11
+
+|| u - u_h || = 0.00015826122827419144
+|| p - p_h || = 0.020919592761189876</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 17:15">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

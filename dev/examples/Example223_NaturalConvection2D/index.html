@@ -81,4 +81,96 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[3]),1,:), levels = 11, title = &quot;T_h&quot;)
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 12:57">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example223_NaturalConvection2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = natural convection problem
+
+     id   | unknown name / equation name
+    [1]   | velocity / momentum equation 
+    [2]   | pressure / incompressibility constraint 
+    [3]   | T / temperature equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] [∂velocity] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,3]   | -Ra v⋅g T (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+    [2,3]   | none
+    [3,1]   | (R(u)⋅∇(T)) V [AD-Newton] [∂velocity] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [3,2]   | none
+    [3,3]   | ∇(T)⋅∇(V) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | (R(u)⋅∇(T)) V [AD-Newton] [∂T] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | none
+     [3]    | (R(u)⋅∇(T)) V [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+
+   BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 2, 3]
+                          
+   BoundaryOperator[2] : 
+   BoundaryOperator[3] : BestapproxDirichletBoundary -&gt; [1]
+                         HomogeneousDirichletBoundary -&gt; [3]
+                          
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = false
+  anderson_iterations = 0
+  subiterations = UnitRange{Int64}[1:3]
+  show_iteration_details = true
+  timedependent_equations = Any[]
+  anderson_unknowns = [1]
+  show_statistics = true
+  anderson_metric = l2
+  skip_update = [1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization{Float64, Int64}}
+  damping = 0.55
+  time = 0
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = true
+  fixed_penalty = 1.0e60
+  target_residual = 100.0
+  maxiterations = 100
+  AssemblyTriggers = 
+         LHS_AT[1] :  A  I  I 
+         LHS_AT[2] :  N  N  N 
+         LHS_AT[3] :  A  N  A 
+         RHS_AT[1] :  A 
+         RHS_AT[2] :  N 
+         RHS_AT[3] :  A 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2] [1, 3]; [2, 1] [2] [2, 3]; [3, 1] [3, 2] [3, 1]]
+
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	      1   | 7.530335e-12 | 9.615916e+02 | 2.00e+00/2.09e-01/2.27e+00
+	      2   | 1.025068e-11 | 5.931504e+02 | 8.70e-01/2.04e-01/1.08e+00
+	      3   | 7.635705e-12 | 6.568060e+02 | 8.66e-01/1.75e-01/1.04e+00
+	      4   | 8.995870e-12 | 3.990824e+02 | 8.71e-01/1.87e-01/1.06e+00
+	      5   | 8.376341e-12 | 2.340174e+02 | 8.62e-01/1.91e-01/1.06e+00
+	      6   | 8.602293e-12 | 1.387982e+02 | 8.71e-01/1.83e-01/1.06e+00
+	      7   | 8.387308e-12 | 8.267079e+01 | 8.60e-01/1.68e-01/1.03e+00
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	      1   | 6.828149e-12 | 2.205491e+01 | 8.69e-01/2.38e-01/1.11e+00
+	      2   | 6.755539e-12 | 1.839015e+00 | 8.77e-01/1.75e-01/1.05e+00
+	      3   | 6.917562e-12 | 9.514267e-03 | 8.71e-01/1.91e-01/1.06e+00
+	      4   | 6.844738e-12 | 3.288516e-07 | 8.68e-01/1.77e-01/1.05e+00
+	      5   | 6.890896e-12 | 7.434440e-12 | 8.76e-01/1.78e-01/1.06e+00
+
+	Nu = 13.978023716648316</code></pre><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 17:15">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -135,4 +135,33 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     plot_convergencehistory(NDofs, Results; add_h_powers = [2,3], X_to_h = X -&gt; X.^(-1/2), Plotter = Plotter, ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| u - Iu ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;|| ∇(u - Iu) ||&quot;])
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example203_ReactionConvectionDiffusion2D_1.png" alt/> <img src="../../images/Example203_ReactionConvectionDiffusion2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example202_LinearElasticity2D/">« 202 : Linear Elasticity</a><a class="docs-footer-nextpage" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 12:57">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example203_ReactionConvectionDiffusion2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = reaction-convection-diffusion problem
+
+     id   | unknown name / equation name
+    [1]   | u / reaction-convection-diffusion equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | ν(∇u,∇v) + (αu + β⋅∇u, v) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+            | τ |F|^2 [∇(u)]⋅[∇(v)] (APT = BilinearForm, AT = ON_IFACES, regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | (f, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 3]
+                         InterpolateDirichletBoundary -&gt; [2]
+                         HomogeneousDirichletBoundary -&gt; [4]
+                          
+
+Problem = 
+
+    ndofs   |    || u - u_h ||     order  |    || u - Iu ||      order  |  || ∇(u - u_h) ||    order  |   || ∇(u - Iu) ||    order  |
+============|=============================|=============================|=============================|=============================|
+        41  |     2.12526e-03      0.000  |     7.66225e-04      0.000  |     2.58888e-02      0.000  |     1.45087e-02      0.000  |
+       145  |     1.79758e-04      3.911  |     9.34178e-05      3.332  |     4.95325e-03      2.618  |     3.57540e-03      2.218  |
+       545  |     1.83002e-05      3.451  |     1.16023e-05      3.151  |     1.11069e-03      2.258  |     8.90584e-04      2.100  |
+      2113  |     1.93925e-06      3.313  |     1.44793e-06      3.072  |     2.58474e-04      2.152  |     2.22441e-04      2.047  |
+      8321  |     2.15115e-07      3.208  |     1.80918e-07      3.035  |     6.17161e-05      2.090  |     5.55975e-05      2.023  |</code></pre><p><img src="../../images/Example203_ReactionConvectionDiffusion2D_1.png" alt/> <img src="../../images/Example203_ReactionConvectionDiffusion2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example202_LinearElasticity2D/">« 202 : Linear Elasticity</a><a class="docs-footer-nextpage" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 17:15">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

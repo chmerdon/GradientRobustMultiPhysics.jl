@@ -123,4 +123,32 @@ function bimetal_strip2D(; material_border = 0.5, scale = [1,1], maxvol = prod(s
     return xgrid
 end
 
-end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 12:57">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example211_NonlinearElasticityBimetal2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = nonlinear elasticity problem
+
+     id   | unknown name / equation name
+    [1]   | u / displacement equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | C(ϵ(u)-ϵT):∇v [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [1])
+            | C(ϵ(u)-ϵT):∇v [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [2])
+
+  RHS block | PDEOperator(s)
+     [1]    | C(ϵ(u)-ϵT):∇v [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [1])
+            | C(ϵ(u)-ϵT):∇v [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [2])
+
+   BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 11]
+                          
+
+Problem = 
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	      1   | 6.879819e-13 | 2.097176e+00 | 1.08e-01/4.03e-02/1.57e-01
+	      2   | 7.402806e-13 | 2.059942e-02 | 1.07e-01/1.05e-02/1.18e-01
+	      3   | 7.878147e-13 | 2.699072e-06 | 1.08e-01/1.04e-02/1.18e-01
+	      4   | 9.361716e-13 | 1.230407e-12 | 1.07e-01/1.07e-02/1.18e-01
+</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 8 November 2021 17:15">Monday 8 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
