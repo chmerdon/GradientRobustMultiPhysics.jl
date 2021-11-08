@@ -152,7 +152,7 @@ function make_all(; add_examples_output::Bool = true)
     
 end
 
-make_all(; add_examples_output = true)
+make_all(; add_examples_output = false)
 
 deploydocs(
     repo = "github.com/chmerdon/GradientRobustMultiPhysics.jl",

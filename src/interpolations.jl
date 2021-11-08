@@ -258,6 +258,8 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     xItemDofs::DofMapTypes{Ti} = Dofmap4AssemblyType(FE, AT)
     EGs = FE.xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
 
+    bestapprox::Bool = false # if true interior dofs are set acoording to a constrained bestapproximation, otherwise to preserve the moments up to order, might become a kwarg later
+
     @assert length(EGs) == 1 "ensure_moments! currently only works with grids with a single element geometry"
     EG = EGs[1]
 
@@ -267,6 +269,7 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     end
     ncomponents::Int = get_ncomponents(FEType)
     edim::Int = dim_element(EG)
+    order_FE = get_polynomialorder(FEType, EG)
     coffset::Int = get_ndofs(AT,FEType,EG) / ncomponents
     interior_offset = interior_dofs_offset(AT,FEType,EG)
 
@@ -297,62 +300,96 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
         end
     end
 
-    ## calculate moments times basis functions
     moments_basis! = get_basis(ON_CELLS,FEType_moments,EG)
     nmoments = get_ndofs_all(ON_CELLS,FEType_moments,EG)
     xgrid_ref = reference_domain(EG)
-    FES_moments = FESpace{FEType_moments}(xgrid_ref)
-    FE_onref = FESpace{FEType_ref}(xgrid_ref)
-    MOMxBASIS_BLF = BilinearForm(Float64,ON_CELLS,[FES_moments,FE_onref],[Identity,Identity])
-    MOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FES_moments,FE_onref)
-    assemble!(MOMxBASIS[1],MOMxBASIS_BLF)
-    MOMxBASIS = MOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
-
-    ## extract quadratic matrix for interior dofs
     nmoments4c::Int = nmoments / ncomponents
     idofs = zeros(Int,0)
     for c = 1 : ncomponents, m = 1 : nmoments4c
         push!(idofs, (c-1)*coffset + interior_offset + m)
     end
-    MOMxINTERIOR = zeros(length(idofs),size(MOMxBASIS,2))
-    for j = 1 : length(idofs), k = 1 : size(MOMxBASIS,2)
-        MOMxINTERIOR[j,k] = MOMxBASIS[idofs[j],k]
+
+    if (bestapprox) # interior dofs are set by best-approximation
+        FE_onref = FESpace{FEType_ref}(xgrid_ref)
+        MOMxBASIS_BLF = SymmetricBilinearForm(Float64,ON_CELLS,[FE_onref,FE_onref],[Identity,Identity])
+        MOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FE_onref,FE_onref)
+        assemble!(MOMxBASIS[1],MOMxBASIS_BLF)
+        MOMxBASIS = MOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
+
+        ## extract quadratic matrix for interior dofs
+        MOMxINTERIOR = zeros(length(idofs),length(idofs))
+        for j = 1 : length(idofs), k = 1 : length(idofs)
+            MOMxINTERIOR[j,k] = MOMxBASIS[idofs[j],idofs[k]]
+        end
+        moments_eval = zeros(Float64,size(MOMxBASIS,1),ncomponents)
+        moments_basis! = get_basis(ON_CELLS,FEType_ref,EG)
+        MOMxBASIS = MOMxBASIS[:,idofs]
+    else # interior dofs are set by moments
+        ## calculate moments times basis functions
+        FES_moments = FESpace{FEType_moments}(xgrid_ref)
+        FE_onref = FESpace{FEType_ref}(xgrid_ref)
+        MOMxBASIS_BLF = BilinearForm(Float64,ON_CELLS,[FES_moments,FE_onref],[Identity,Identity])
+        MOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FES_moments,FE_onref)
+        assemble!(MOMxBASIS[1],MOMxBASIS_BLF)
+        MOMxBASIS = MOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
+
+        ## extract quadratic matrix for interior dofs
+        MOMxINTERIOR = zeros(length(idofs),size(MOMxBASIS,2))
+        for j = 1 : length(idofs), k = 1 : size(MOMxBASIS,2)
+            MOMxINTERIOR[j,k] = MOMxBASIS[idofs[j],k]
+        end
+        moments_eval = zeros(Float64,nmoments,ncomponents)
     end
+
+    ### get permutation of dofs on reference EG and real cells
+    subset_handler = get_basissubset(AT, FE, EG)
+    current_subset = Array{Int,1}(1:size(MOMxBASIS,1))
+    doforder_ref = FE_onref[CellDofs][:,1]
     invA = inv(MOMxINTERIOR)
 
     ## evaluator for moments of exact function
     f_eval = zeros(Float64,ncomponents)
-    moments_eval = zeros(Float64,nmoments,ncomponents)
     function f_times_moments(result, x, xref)
-        moments_basis!(moments_eval,xref)
+        fill!(moments_eval,0)
         eval_data!(f_eval, exact_function, x, time)
         fill!(result,0)
-        for m = 1 : nmoments, k = 1 : ncomponents
-            result[m] += f_eval[k]*moments_eval[m,k]
+        if (bestapprox)
+            moments_basis!(moments_eval,xref)
+            for m = 1 : nmoments, k = 1 : ncomponents
+                result[m] += f_eval[k]*moments_eval[idofs[m],k]
+            end
+        else
+            moments_basis!(moments_eval,xref)
+            for m = 1 : nmoments, k = 1 : ncomponents
+                result[m] += f_eval[k]*moments_eval[m,k]
+            end
         end
         return nothing
     end   
 
     # integrate moments of exact_function over edges
-    edgemoments::Array{Tv,2} = zeros(Tv,ncomponents*nmoments,nitems)
+    edgemoments::Array{Tv,2} = zeros(Tv,nmoments,nitems)
     xdim = size(FE.xgrid[Coordinates],1)
-    edata_function = ExtendedDataFunction(f_times_moments, [ncomponents*nmoments, xdim]; dependencies = "XL", quadorder = exact_function.quadorder+order)
+    edata_function = ExtendedDataFunction(f_times_moments, [nmoments, xdim]; dependencies = "XL", quadorder = exact_function.quadorder + (bestapprox ? order_FE : order))
     integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
 
-    ## set interior dofs
-    ## interior_dofs = invMAMA*(f_moments - lower_moments) = invMAMA*(f_moments - MOMxBASIS*boundary_dofs)
     localdof::Int = 0
     for item in items
+        if subset_handler != NothingFunction
+            subset_handler(current_subset, item)
+        end
+
         for m = 1 : nmoments, exdof = 1 : interior_offset, c = 1 : ncomponents
             localdof = coffset*(c-1)+exdof
-            edgemoments[m,item] -= Target[xItemDofs[localdof,item]] * MOMxBASIS[localdof,m] * xItemVolumes[item]
+            edgemoments[m,item] -= Target[xItemDofs[localdof,item]] * MOMxBASIS[doforder_ref[current_subset[localdof]],m] * xItemVolumes[item]
         end
-        for m = 1 : nmoments, c = 1 : ncomponents
+        for m = 1 : nmoments
             localdof = idofs[m]
             Target[xItemDofs[localdof,item]] = 0
             for n = 1 : nmoments
-                Target[xItemDofs[localdof,item]] += invA[n,m] * edgemoments[n,item] / xItemVolumes[item]
+                Target[xItemDofs[localdof,item]] += invA[n,m] * edgemoments[n,item]
             end
+            Target[xItemDofs[localdof,item]] /= xItemVolumes[item]
         end
     end
 end

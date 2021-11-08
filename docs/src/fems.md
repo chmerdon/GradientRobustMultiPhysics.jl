@@ -173,7 +173,7 @@ H1P3
 
 The Pk finite element method generically generates polynomials of abitrary order k on simplices (Edge1D, Triangle2D so far).
 
-The interpolation of a given function into this space performs point evaluations at the nodes and preserves cell and face integrals in 2D (depending on the order and the element dimension).
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves cell and face integrals in 2D (moment order depends on the order and the element dimension).
 
 ```@docs
 H1Pk

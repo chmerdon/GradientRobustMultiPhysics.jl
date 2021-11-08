@@ -230,9 +230,11 @@ function run_basic_fe_tests()
                     H1P2{2,2}, 
                     H1P2B{2,2}, 
                     H1P3{2,2},
-                    H1Pk{2,2,3}
+                    H1Pk{2,2,3},
+                    H1Pk{2,2,4},
+                    H1Pk{2,2,5}
                     ]
-    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3,3]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3,3,4,5]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
@@ -616,13 +618,14 @@ function run_stokes_tests()
                     [H1BR{2},H1P0{1},true],
                     [H1P1TEB{2},H1P1{1},false],
                     [H1P2{2,2},H1P1{1},false],
-                    [H1P2B{2,2},H1P1{1},true]]
+                    [H1P2B{2,2},H1P1{1},true],
+                    [H1P3{2,2},H1P2{1,2},false]]
     TestCatalogParallelogram2D = [
                     [H1CR{2},H1P0{1},true],
                   #  [H1MINI{2,2},H1CR{1},false],
                     [H1BR{2},H1P0{1},true],
                     [H1P2{2,2},H1P1{1},false]]
-    ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[1,1],[2,1],[2,1]]
+    ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[1,1],[2,1],[2,1],[3,2]]
     ExpectedOrdersParallelogram2D = [[1,0],[1,0],[2,1],[2,1]]
     TestCatalog3D = [
                     [H1BR{3},H1P0{1},true],
