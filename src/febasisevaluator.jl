@@ -1592,7 +1592,6 @@ function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAT}, xref::
     cvals = SharedCValView([FEB1.cvals,FEB2.cvals,FEB3.cvals],indexes,offsets)
     edim = dim_element(EG)
     ndofs = size(FEB1.cvals,2)
-    @show indexes offsets
     return FEBasisEvaluatorTriple{T,TvG,TiG,typeof(FEB1),typeof(FEB2),typeof(FEB3),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,FEB3,cvals,FEB1.L2G,FEB1.xref)
 end
 
