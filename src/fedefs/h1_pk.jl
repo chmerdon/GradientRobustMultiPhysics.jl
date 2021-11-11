@@ -28,7 +28,7 @@ get_polynomialorder(::Type{H1Pk{n,e,order}}, ::Type{<:AbstractElementGeometry}) 
 get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Type{<:CellDofs}, EG::Type{<:Triangle2D}) where {n,e,order} = (order == 1) ? "N1" : ((order == 2) ? "N1F$(order-1)" : "N1F$(order-1)I$(Int((order-2)*(order-1)/2))")
 get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Type{<:CellDofs}, EG::Type{<:AbstractElementGeometry1D}) where {n,e,order} = (order == 1) ? "N1" : "N1I$(order-1)"
 get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry0D}) where {n,e,order} = "N1"
-get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry1D}) where {n,e,order} = "N1I$(order-1)C$(Int((order-2)*(order-1)/2))"
+get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry1D}) where {n,e,order} = (order == 1) ? "N1" : "N1I$(order-1)"
 
 isdefined(FEType::Type{<:H1Pk}, ::Type{<:AbstractElementGeometry1D}) = true
 isdefined(FEType::Type{<:H1Pk}, ::Type{<:Triangle2D}) = true

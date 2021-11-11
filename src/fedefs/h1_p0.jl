@@ -19,8 +19,7 @@ get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P0}, EG::Type{<:AbstractEleme
 get_polynomialorder(::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = 0;
 
 get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
-get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "C1"
-get_dofmap_pattern(FEType::Type{<:H1P0}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "C1"
+get_dofmap_pattern(FEType::Type{<:H1P0}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry}) = "C1"
 
 isdefined(FEType::Type{<:H1P0}, ::Type{<:AbstractElementGeometry}) = true
 

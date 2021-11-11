@@ -31,8 +31,7 @@ get_polynomialorder(::Type{<:H1BR{3}}, ::Type{<:Parallelogram2D}) = 4;
 get_polynomialorder(::Type{<:H1BR{3}}, ::Type{<:Hexahedron3D}) = 5;
 
 get_dofmap_pattern(FEType::Type{<:H1BR}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "N1f1"
-get_dofmap_pattern(FEType::Type{<:H1BR}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1i1"
-get_dofmap_pattern(FEType::Type{<:H1BR}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1i1"
+get_dofmap_pattern(FEType::Type{<:H1BR}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry}) = "N1i1"
 
 isdefined(FEType::Type{<:H1BR}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1BR}, ::Type{<:Quadrilateral2D}) = true

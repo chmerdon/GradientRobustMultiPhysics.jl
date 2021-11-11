@@ -163,8 +163,8 @@ export apply_constraint!
 include("pdedescription.jl")
 export PDEDescription
 export add_unknown!
-export add_operator!
-export add_rhsdata!
+export add_operator!, replace_operator!
+export add_rhsdata!, replace_rhsdata!
 export add_boundarydata!
 export add_constraint!
 

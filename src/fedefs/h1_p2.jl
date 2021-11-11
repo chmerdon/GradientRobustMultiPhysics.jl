@@ -35,12 +35,9 @@ get_polynomialorder(::Type{<:H1P2}, ::Type{<:Tetrahedron3D}) = 2;
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1F1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry3D}) = "N1E1"
-get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry0D}) = "N1"
-get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
-get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1E1"
-get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry0D}) = "N1"
-get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
-get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "N1E1"
+get_dofmap_pattern(FEType::Type{<:H1P2}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry0D}) = "N1"
+get_dofmap_pattern(FEType::Type{<:H1P2}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
+get_dofmap_pattern(FEType::Type{<:H1P2}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry2D}) = "N1E1"
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
 
 isdefined(FEType::Type{<:H1P2}, ::Type{<:AbstractElementGeometry1D}) = true

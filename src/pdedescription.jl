@@ -150,6 +150,21 @@ function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::AbstractPDE
     return length(PDE.LHSOperators[position[1],position[2]])
 end
 
+
+"""
+$(TYPEDSIGNATURES)
+
+Replaces the operator at position[id] of the left-hand side of the PDEDescription with the given PDEOperator.
+"""
+function replace_operator!(PDE::PDEDescription,position::Array{Int,1},id::Int,O::AbstractPDEOperator; equation_name::String = "")
+    PDE.LHSOperators[position[1],position[2]][id] = O
+    if equation_name != ""
+        PDE.equation_names[position[1]] = equation_name
+    end
+    @logmsg DeepInfo "Replaced operator at LHS block $position[$id] of PDEDescription $(PDE.name) with $(O.name)"
+end
+
+
 """
 $(TYPEDSIGNATURES)
 
@@ -214,6 +229,16 @@ function add_rhsdata!(PDE::PDEDescription,position::Int,O::AbstractPDEOperator)
     push!(PDE.RHSOperators[position],O)
     @logmsg DeepInfo "Added operator $(O.name) to RHS block $position of PDEDescription $(PDE.name)"
     return length(PDE.RHSOperators[position])
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Replaces the operator at position[id] of the right-hand side of the PDEDescription with the given PDEOperator.
+"""
+function replace_rhsdata!(PDE::PDEDescription,position::Int,id::Int,O::AbstractPDEOperator)
+    PDE.RHSOperators[position][id] = O
+    @logmsg DeepInfo "Replaced operator at RHS block $position[$id] of PDEDescription $(PDE.name) with $(O.name)"
 end
 
 """

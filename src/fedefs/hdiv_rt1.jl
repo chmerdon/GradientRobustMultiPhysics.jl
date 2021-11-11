@@ -28,12 +28,10 @@ get_polynomialorder(::Type{<:HDIVRT1{2}}, ::Type{<:AbstractElementGeometry2D}) =
 get_polynomialorder(::Type{<:HDIVRT1{3}}, ::Type{<:AbstractElementGeometry3D}) = 2;
 
 get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{CellDofs}, EG::Type{<:Triangle2D}) = "f2i2"
-get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i2"
-get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i2"
+get_dofmap_pattern(FEType::Type{<:HDIVRT1{2}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry1D}) = "i2"
 
 get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Type{CellDofs}, EG::Type{<:Tetrahedron3D}) = "f3i3"
-get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Type{FaceDofs}, EG::Type{<:Triangle2D}) = "i3"
-get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Type{BFaceDofs}, EG::Type{<:Triangle2D}) = "i3"
+get_dofmap_pattern(FEType::Type{<:HDIVRT1{3}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:Triangle2D}) = "i3"
 
 isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Tetrahedron3D}) = true

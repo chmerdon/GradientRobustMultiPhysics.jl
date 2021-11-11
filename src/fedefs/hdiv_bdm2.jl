@@ -22,8 +22,7 @@ get_polynomialorder(::Type{<:HDIVBDM2{2}}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:HDIVBDM2{2}}, ::Type{<:Triangle2D}) = 2;
 
 get_dofmap_pattern(FEType::Type{<:HDIVBDM2{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "f3i3"
-get_dofmap_pattern(FEType::Type{<:HDIVBDM2{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i3"
-get_dofmap_pattern(FEType::Type{<:HDIVBDM2{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "i3"
+get_dofmap_pattern(FEType::Type{<:HDIVBDM2{2}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry}) = "i3"
 
 isdefined(FEType::Type{<:HDIVBDM2}, ::Type{<:Triangle2D}) = true
 

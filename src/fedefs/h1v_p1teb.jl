@@ -33,12 +33,10 @@ get_polynomialorder(::Type{<:H1P1TEB{3}}, ::Type{<:Triangle2D}) = 2
 get_polynomialorder(::Type{<:H1P1TEB{3}}, ::Type{<:Tetrahedron3D}) = 2
 
 get_dofmap_pattern(FEType::Type{<:H1P1TEB{2}}, ::Type{CellDofs}, EG::Type{<:Triangle2D}) = "N1f1"
-get_dofmap_pattern(FEType::Type{<:H1P1TEB{2}}, ::Type{FaceDofs}, EG::Type{<:Edge1D}) = "N1i1"
-get_dofmap_pattern(FEType::Type{<:H1P1TEB{2}}, ::Type{BFaceDofs}, EG::Type{<:Edge1D}) = "N1i1"
+get_dofmap_pattern(FEType::Type{<:H1P1TEB{2}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:Edge1D}) = "N1i1"
 get_dofmap_pattern(FEType::Type{<:H1P1TEB{3}}, ::Type{EdgeDofs}, EG::Type{<:Edge1D}) = "N1i1"
 get_dofmap_pattern(FEType::Type{<:H1P1TEB{3}}, ::Type{CellDofs}, EG::Type{<:Tetrahedron3D}) = "N1e1"
-get_dofmap_pattern(FEType::Type{<:H1P1TEB{3}}, ::Type{FaceDofs}, EG::Type{<:Triangle2D}) = "N1e1"
-get_dofmap_pattern(FEType::Type{<:H1P1TEB{3}}, ::Type{BFaceDofs}, EG::Type{<:Triangle2D}) = "N1e1"
+get_dofmap_pattern(FEType::Type{<:H1P1TEB{3}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:Triangle2D}) = "N1e1"
 
 isdefined(FEType::Type{<:H1P1TEB}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1P1TEB}, ::Type{<:Tetrahedron3D}) = true

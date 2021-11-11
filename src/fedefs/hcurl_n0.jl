@@ -27,14 +27,11 @@ get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry1D}) =
 get_polynomialorder(::Type{<:HCURLN0{3}}, ::Type{<:AbstractElementGeometry3D}) = 1;
 
 get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry2D}) = "f1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{2}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
 
 get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry3D}) = "e1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "e1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{EdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry2D}) = "e1"
-get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Type{BEdgeDofs}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry2D}) = "e1"
+get_dofmap_pattern(FEType::Type{<:HCURLN0{3}}, ::Union{Type{EdgeDofs},Type{BEdgeDofs}}, EG::Type{<:AbstractElementGeometry1D}) = "i1"
 
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Quadrilateral2D}) = true

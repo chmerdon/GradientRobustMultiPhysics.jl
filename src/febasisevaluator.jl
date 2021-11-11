@@ -1586,13 +1586,14 @@ function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAT}, xref::
         offsets[size(FEB1.cvals,1)+j] = size(FEB1.cvals,1)
     end
     for j = 1 : size(FEB3.cvals,1)
-        indexes[size(FEB1.cvals,1)+size(FEB1.cvals,2)+j] = 2
-        offsets[size(FEB1.cvals,1)+size(FEB1.cvals,2)+j] = size(FEB1.cvals,1)
+        indexes[size(FEB1.cvals,1)+size(FEB2.cvals,1)+j] = 3
+        offsets[size(FEB1.cvals,1)+size(FEB2.cvals,1)+j] = size(FEB1.cvals,1)+size(FEB2.cvals,1)
     end
     cvals = SharedCValView([FEB1.cvals,FEB2.cvals,FEB3.cvals],indexes,offsets)
     edim = dim_element(EG)
     ndofs = size(FEB1.cvals,2)
-    return FEBasisEvaluatorPair{T,TvG,TiG,typeof(FEB1),typeof(FEB2),typeof(FEB3),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,FEB3,cvals,FEB1.L2G,FEB1.xref)
+    @show indexes offsets
+    return FEBasisEvaluatorTriple{T,TvG,TiG,typeof(FEB1),typeof(FEB2),typeof(FEB3),FEType, EG, FEOP, AT, edim, ncomponents, ndofs}(FEB1.FE,FEB1,FEB2,FEB3,cvals,FEB1.L2G,FEB1.xref)
 end
 
 function update_febe!(FEBE::FEBasisEvaluatorPair, item)

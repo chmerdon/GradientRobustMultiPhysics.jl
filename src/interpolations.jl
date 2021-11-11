@@ -735,7 +735,7 @@ Discontinuous (continuous = false) quantities are averaged.
 """
 function nodevalues(Source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
     if continuous == "auto"
-        if FEType <: AbstractH1FiniteElement && operator == Identity
+        if FEType <: AbstractH1FiniteElement && operator == Identity && !Source.FES.broken
             continuous = true
         else
             continuous = false
@@ -769,7 +769,7 @@ function nodevalues_view(Source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Ty
         ncomponents = get_ncomponents(FEType)
         array_of_views = []
         offset::Int = Source.offset
-        coffset::Int = Source.FES.ndofs / ncomponents
+        coffset::Int = Source.FES.coffset
         nnodes::Int = num_nodes(Source.FES.xgrid)
         for k = 1 : ncomponents
             push!(array_of_views,view(Source.entries,offset+1:offset+nnodes))

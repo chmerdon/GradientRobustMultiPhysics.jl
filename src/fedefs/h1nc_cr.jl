@@ -27,8 +27,7 @@ get_polynomialorder(::Type{<:H1CR}, ::Type{<:Quadrilateral2D}) = 2;
 get_polynomialorder(::Type{<:H1CR}, ::Type{<:Tetrahedron3D}) = 1;
 
 get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "F1"
-get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
-get_dofmap_pattern(FEType::Type{<:H1CR}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "I1"
+get_dofmap_pattern(FEType::Type{<:H1CR}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry}) = "I1"
 
 isdefined(FEType::Type{<:H1CR}, ::Type{<:AbstractElementGeometry1D}) = true
 isdefined(FEType::Type{<:H1CR}, ::Type{<:Triangle2D}) = true

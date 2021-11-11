@@ -29,8 +29,7 @@ get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = FEType.
 get_polynomialorder(FEType::Type{<:H1MINI}, ::Type{<:Tetrahedron3D}) = 4;
 
 get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry}) = "N1I1"
-get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{FaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
-get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Type{BFaceDofs}, EG::Type{<:AbstractElementGeometry}) = "N1C1" # quick and dirty: C1 is ignored on faces, but need to calculate offset
+get_dofmap_pattern(FEType::Type{<:H1MINI}, ::Union{Type{FaceDofs},Type{BFaceDofs}}, EG::Type{<:AbstractElementGeometry}) = "N1"
 
 isdefined(FEType::Type{<:H1MINI}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:H1MINI}, ::Type{<:Quadrilateral2D}) = true

@@ -31,6 +31,7 @@ struct FESpace{Tv, Ti, FEType<:AbstractFiniteElement,AT<:AssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
     ndofs::Int                            # total number of dofs
+    coffset::Int                          # offset for component dofs
     xgrid::ExtendableGrid[Tv,Ti}          # link to xgrid 
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
 end
@@ -42,6 +43,7 @@ struct FESpace{Tv,Ti,FEType<:AbstractFiniteElement,AT<:AssemblyType}
     name::String                          # full name of finite element space (used in messages)
     broken::Bool                          # if true, broken dofmaps are generated
     ndofs::Int64                          # total number of dofs
+    coffset::Int                          # offset for component dofs
     xgrid::ExtendableGrid{Tv,Ti}          # link to xgrid 
     dofmaps::Dict{Type{<:AbstractGridComponent},Any} # backpack with dofmaps
 end
@@ -90,8 +92,8 @@ function FESpace{FEType,AT}(
     if name == ""
         name = broken ? "$FEType (broken)" : "$FEType"
     end
-    ndofs = count_ndofs(xgrid, FEType, broken)
-    FES = FESpace{Tv, Ti, FEType,AT}(name,broken,ndofs,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
+    ndofs, coffset = count_ndofs(xgrid, FEType, broken)
+    FES = FESpace{Tv, Ti, FEType,AT}(name,broken,ndofs,coffset,xgrid,Dict{Type{<:AbstractGridComponent},Any}())
 
     @logmsg DeepInfo "Generated FESpace $name ($AT, ndofs=$ndofs)"
 
@@ -182,74 +184,55 @@ value triggers type instability.
 """
 Base.getindex(FES::FESpace,DM::Type{<:DofMap})=get!(FES,DM)
 
-
 function count_ndofs(xgrid, FEType, broken)
     EG = xgrid[UniqueCellGeometries]
     xItemGeometries = xgrid[CellGeometries]
     ncells4EG = [(i, count(==(i), xItemGeometries)) for i in EG]
-    ndofs4EG::Array{Int,1} = zeros(Int, length(EG))
     ncomponents::Int = get_ncomponents(FEType)
-    dofs4item4component = zeros(Int,4)
-    dofs4item_single = zeros(Int,4)
-    maxdofs4item4component = zeros(Int,4)
-    maxdofs4item_single = zeros(Int,4)
-    quantifier::Int = 0
-    pattern_char::Char = ' '
-    highest_quantifierNCEF = zeros(Int,0)
-    totaldofs = 0
+    totaldofs::Int = 0
+    offset4component::Int = 0
+
     for j = 1 : length(EG)
         pattern = get_dofmap_pattern(FEType, CellDofs, EG[j])
-        for k = 1 : Int(length(pattern)/2)
-            pattern_char = pattern[2*k-1]
-            quantifier = parse(Int,pattern[2*k])
-            if pattern_char == 'N'
-                dofs4item4component[1] += quantifier
-            elseif pattern_char == 'F'
-                dofs4item4component[2] += quantifier
-            elseif pattern_char == 'E'
-                dofs4item4component[3] += quantifier
-            elseif pattern_char == 'I'
-                dofs4item4component[4] += quantifier
-            elseif pattern_char == 'n'
-                dofs4item_single[1] += quantifier
-            elseif pattern_char == 'f'
-                dofs4item_single[2] += quantifier
-            elseif pattern_char == 'e'
-                dofs4item_single[3] += quantifier
-            elseif pattern_char == 'i'
-                dofs4item_single[4] += quantifier
-            end
-        end
-        ndofs4EG[j] = num_nodes(EG[j]) * (ncomponents * dofs4item4component[1] + dofs4item_single[1])
-        ndofs4EG[j] += num_faces(EG[j]) * (ncomponents * dofs4item4component[2] + dofs4item_single[2])
-        ndofs4EG[j] += num_edges(EG[j]) * (ncomponents * dofs4item4component[3] + dofs4item_single[3])
-        ndofs4EG[j] += ncomponents * dofs4item4component[4] + dofs4item_single[4]
+        parsed_dofmap = ParsedDofMap(pattern, ncomponents, EG[j])
         if broken == true
-            totaldofs += ndofs4EG[j] * ncells4EG[j][2]
+            # if broken count all dofs here
+            totaldofs += ncells4EG[j][2] * get_ndofs(parsed_dofmap)
         else
-            # only count interior dofs on cell here
-            totaldofs +=  ncells4EG[j][2] * (ncomponents * dofs4item4component[4] + dofs4item_single[4])
-            for n = 1 : 4
-                maxdofs4item4component[n] = max(maxdofs4item4component[n], dofs4item4component[n])
-                maxdofs4item_single[n] = max(maxdofs4item_single[n], dofs4item_single[n])
+            # if not broken only count interior dofs on cell here
+            totaldofs += ncells4EG[j][2] * get_ndofs(parsed_dofmap, DofTypeInterior)
+        end
+        ## for final EG also count continuous dofs
+        ## todo : below it is assumed that number of dofs on nodes/edges/faces is the same for all EG
+        ##        (which usually makes sense for unbroken elements, but who knows...)
+        if j == length(EG) && !broken
+            # add continuous dofs here
+            totaldofs += size(xgrid[Coordinates],2) * get_ndofs(parsed_dofmap, DofTypeNode)
+            if get_ndofs(parsed_dofmap, DofTypeFace) > 0
+                totaldofs += num_sources(xgrid[FaceNodes]) * get_ndofs(parsed_dofmap, DofTypeFace)
             end
+            if get_ndofs(parsed_dofmap, DofTypeEdge) > 0
+                totaldofs += num_sources(xgrid[EdgeNodes]) * get_ndofs(parsed_dofmap, DofTypeEdge)
+            end
+
+            # compute also offset4component
+
+            offset4component += num_nodes(xgrid) * get_ndofs4c(parsed_dofmap, DofTypeNode)
+            if get_ndofs4c(parsed_dofmap, DofTypeFace) > 0
+                nfaces = num_sources(xgrid[FaceNodes])
+                offset4component += nfaces * get_ndofs4c(parsed_dofmap, DofTypeFace)
+            end
+            if get_ndofs4c(parsed_dofmap, DofTypeEdge) > 0
+                nedges = num_sources(xgrid[EdgeNodes])
+                offset4component += nedges * get_ndofs4c(parsed_dofmap, DofTypeEdge)
+            end
+            offset4component += num_cells(xgrid) * get_ndofs4c(parsed_dofmap, DofTypePCell)
+            nitems::Int = length(xItemGeometries)
+            offset4component += nitems * get_ndofs4c(parsed_dofmap, DofTypeInterior)
         end
-        fill!(dofs4item4component,0)
-        fill!(dofs4item_single,0)
     end
-    if broken == false
-        # add continuous dofs here
-        if maxdofs4item4component[1] + maxdofs4item_single[1] > 0
-            totaldofs += size(xgrid[Coordinates],2) * (ncomponents * maxdofs4item4component[1] + maxdofs4item_single[1])
-        end
-        if maxdofs4item4component[2] + maxdofs4item_single[2] > 0
-            totaldofs += num_sources(xgrid[FaceNodes]) * (ncomponents * maxdofs4item4component[2] + maxdofs4item_single[2])
-        end
-        if maxdofs4item4component[3] + maxdofs4item_single[3] > 0
-            totaldofs += num_sources(xgrid[EdgeNodes]) * (ncomponents * maxdofs4item4component[3] + maxdofs4item_single[3])
-        end
-    end
-    return totaldofs
+
+    return totaldofs, offset4component
 end
 
 
