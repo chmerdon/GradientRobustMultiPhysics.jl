@@ -471,10 +471,16 @@ function interpolate!(Target::FEVectorBlock,
      items = [])
 ````
 
-Interpolates the given finite element function into the finite element space assigned to the Target FEVectorBlock. 
-(Currently not the most efficient way as it is based on the PointEvaluation pattern and cell search.)
+Interpolates (operator-evaluations of) the given finite element function into the finite element space assigned to the Target FEVectorBlock. 
+(Currently not the most efficient way as it is based on the PointEvaluation pattern and cell search. If CellParents
+are available in the grid components of the Target grid, these parent cell information can be used to improve the
+search. To activate this put 'use_cellparents' = true). By some action with kernel (result,input) the operator evaluation (=input) can be
+further postprocessed (done by the called point evaluator).
+
+Note: discontinuous quantities at vertices of the target grid will be evaluted in the first found cell of the
+source grid. No averaging is performed.
 """
-function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBlock{T2,Tv,Ti}; operator = Identity, xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false) where {T1,T2,Tv,Ti}
+function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBlock{T2,Tv,Ti}; operator = Identity, postprocess::AbstractAction = NoAction(), xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false) where {T1,T2,Tv,Ti}
     # wrap point evaluation into function that is put into normal interpolate!
     xgrid = source_data.FES.xgrid
     xdim_source::Int = size(xgrid[Coordinates],1)
@@ -485,7 +491,10 @@ function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBloc
     FEType = eltype(source_data.FES)
     ncomponents::Int = get_ncomponents(FEType)
     resultdim::Int = Length4Operator(operator,xdim_source,ncomponents)
-    PE = PointEvaluator(source_data, operator)
+    if !(typeof(postprocess) <: NoAction)
+        resultdim = postprocess.argsizes[1]
+    end
+    PE = PointEvaluator(source_data, operator, postprocess)
     xref = zeros(Tv,xdim_source)
     x_source = zeros(Tv,xdim_source)
     cell::Int = 1
