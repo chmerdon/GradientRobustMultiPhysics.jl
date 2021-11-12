@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>208 : Flow + Transport 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../home/">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../home/">Home</a></li><li><a class="tocitem" href="../../">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusionSUPG2D/">203 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example204_PoissonLshapeAdaptive2D/">204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li class="is-active"><a class="tocitem" href>208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example214_TwoNonlinearCoupled2D/">214 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example231_StokesHdivP1RT/">231 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>208 : Flow + Transport 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>208 : Flow + Transport 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example208_FlowTransport2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Flow-Transport-2D"><a class="docs-heading-anchor" href="#:-Flow-Transport-2D">208 : Flow + Transport 2D</a><a id=":-Flow-Transport-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Flow-Transport-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example208_FlowTransport2D.jl">source code</a>)</p><p>This example solve the Stokes problem in a Omega-shaped pipe and then uses the velocity in a transport equation for a species with a certain inlet concentration. Altogether, we are looking for a velocity <span>$\mathbf{u}$</span>, a pressure <span>$\mathbf{p}$</span> and a species concentration <span>$\mathbf{c}$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \mu \Delta \mathbf{u} + \nabla p &amp; = 0\\
+\mathrm{div}(u) &amp; = 0\\
+- \kappa \Delta \mathbf{c} + \mathbf{u} \cdot \nabla \mathbf{c} &amp; = 0
+\end{aligned}\]</p><p>with some viscosity parameter  and diffusion parameter <span>$\kappa$</span>.</p><p>The diffusion coefficient for the species is chosen (almost) zero such that the isolines of the concentration should stay parallel from inlet to outlet. For the discretisation of the convection term in the transport equation two three possibilities can be chosen:</p><ol><li>Classical finite element discretisations <span>$\mathbf{u}_h \cdot \nabla \mathbf{c}_h$</span></li><li>Pressure-robust finite element discretisation <span>$\Pi_\text{reconst} \mathbf{u}_h \cdot \nabla \mathbf{c}_h$</span> with some divergence-free reconstruction operator <span>$\Pi_\text{reconst}$</span></li><li>Upwind finite volume discretisation for <span>$\kappa = 0$</span> based on normal fluxes along the faces (also divergence-free in finite volume sense)</li></ol><p>Observe that a pressure-robust Bernardi–Raugel discretisation preserves this much better than a classical Bernardi–Raugel method. For comparison also a Taylor–Hood method can be switched on which is comparable to the pressure-robust lowest-order method in this example.</p><p>Note, that the transport equation is very convection-dominated and no stabilisation in the finite element discretisations was used here (but instead a nonzero <span>$\kappa$</span>). The results are very sensitive to <span>$\kappa$</span> and may be different if a stabilisation is used (work in progress). Also note, that only the finite volume discretisation perfectly obeys the maximum principle for the concentration but the isolines do no stay parallel until the outlet is reached, possibly due to articifial diffusion.</p><pre><code class="language-julia hljs">module Example208_FlowTransport2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# boundary data
+function inlet_velocity!(result,x)
+    result[1] = 4*x[2]*(1-x[2]);
+    result[2] = 0;
+end
+function inlet_concentration!(result,x)
+    result[1] = 1-x[2];
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport = true, viscosity = 1)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load mesh and refine
+    xgrid = simplexgrid(&quot;assets/2d_grid_upipe.sg&quot;)
+    xgrid = uniform_refine(xgrid,nrefinements)
+
+    # choose one of these (inf-sup stable) finite element type pairs for the flow
+    #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
+    #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
+    FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
+    #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
+
+    #####################################################################################
+
+    # negotiate data functions to the package
+    u_inlet = DataFunction(inlet_velocity!, [2,2]; name = &quot;u (inlet)&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    c_inlet = DataFunction(inlet_concentration!, [1,2]; name = &quot;c (inlet)&quot;, dependencies = &quot;X&quot;, quadorder = 1)
+
+    # load Stokes problem prototype and assign boundary data
+    # (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false, no_pressure_constraint = true)
+    Problem.name = &quot;Stokes + Transport&quot;
+    add_boundarydata!(Problem, 1, [1,3], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 1, [4], BestapproxDirichletBoundary; data = u_inlet)
+
+    # add transport equation of species
+    add_unknown!(Problem; unknown_name = &quot;c&quot;, equation_name = &quot;transport equation&quot;)
+    if FVtransport == true
+        # finite volume upwind discretisation
+        FETypeTransport = H1P0{1}
+        add_operator!(Problem, [3,3], FVConvectionDiffusionOperator(1))
+    else
+        # finite element convection and diffusion (very small) operators
+        FETypeTransport = H1P1{1}
+        diffusion_FE = 1e-7 # diffusion coefficient for transport equation
+        add_operator!(Problem, [3,3], LaplaceOperator(diffusion_FE))
+        add_operator!(Problem, [3,3], ConvectionOperator(1, postprocess_operator, 2, 1))
+    end
+    # with boundary data (i.e. inlet concentration)
+    add_boundarydata!(Problem, 3, [4], InterpolateDirichletBoundary; data = c_inlet)
+    @show Problem
+
+    # generate FESpaces and a solution vector for all 3 unknowns
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true), FESpace{FETypeTransport}(xgrid)]
+    Solution = FEVector([&quot;v_h&quot;, &quot;p_h&quot;, &quot;c_h&quot;],FES)
+
+    # first solve the decoupled flow problem equations [1,2]
+    solve!(Solution, Problem; subiterations = [[1,2]], maxiterations = 5, target_residual = 1e-12)
+
+    # then solve the transport equation [3] by finite volumes or finite elements
+    if FVtransport == true
+        # pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], T_time = Int)
+        advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
+    else
+        # solve directly
+        solve!(Solution, Problem; subiterations = [[3]], maxiterations = 5, target_residual = 1e-12)
+    end
+
+    # print minimal and maximal concentration to check max principle (shoule be in [0,1])
+    println(&quot;\n[min(c),max(c)] = [$(minimum(Solution[3][:])),$(maximum(Solution[3][:]))]&quot;)
+
+    # plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,1), clear = true, resolution = (800,800))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 0, colorbarticks = 7)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.25, clear = false, title = &quot;u_h (abs + quiver)&quot;)
+    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[3]),1,:), levels = 11, title = &quot;c_h&quot;)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example208_FlowTransport2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = Stokes + Transport
+
+     id   | unknown name / equation name
+    [1]   | u / momentum equation 
+    [2]   | p / incompressibility constraint 
+    [3]   | c / transport equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,3]   | none
+    [2,1]   | none
+    [2,2]   | none
+    [2,3]   | none
+    [3,1]   | none
+    [3,2]   | none
+    [3,3]   | FVConvectionDiffusionOperator{Float64}
+
+  RHS block | PDEOperator(s)
+     [1]    | none
+     [2]    | none
+     [3]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [4]
+                         HomogeneousDirichletBoundary -&gt; [1, 3]
+                          
+   BoundaryOperator[2] : 
+   BoundaryOperator[3] : InterpolateDirichletBoundary -&gt; [4]
+                         
+
+Problem = 
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 8.405365e-14 | 8.405365e-14
+
+
+	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE                      
+	        |            |  (total)   |    (s)    |      u           p           c     
+	     1  | 1.0000e+04 | 1.9936e-16 | 1.944e+00 | 0.0000e+00  0.0000e+00  7.9759e+01 
+	     2  | 2.0000e+04 | 2.1197e-16 | 3.951e-02 | 0.0000e+00  0.0000e+00  4.3757e-01 
+	     3  | 3.0000e+04 | 2.2461e-16 | 1.784e-02 | 0.0000e+00  0.0000e+00  1.9895e-02 
+	     4  | 4.0000e+04 | 2.1007e-16 | 1.845e-02 | 0.0000e+00  0.0000e+00  1.0653e-03 
+	     5  | 5.0000e+04 | 2.2269e-16 | 1.597e-02 | 0.0000e+00  0.0000e+00  5.5956e-05 
+	     6  | 6.0000e+04 | 2.2262e-16 | 3.860e-02 | 0.0000e+00  0.0000e+00  2.9128e-06 
+	     7  | 7.0000e+04 | 2.1006e-16 | 1.645e-02 | 0.0000e+00  0.0000e+00  1.5116e-07 
+	     8  | 8.0000e+04 | 2.1008e-16 | 1.739e-02 | 0.0000e+00  0.0000e+00  7.8373e-09 
+	     9  | 9.0000e+04 | 2.1006e-16 | 1.721e-02 | 0.0000e+00  0.0000e+00  4.0622e-10 
+	    10  | 1.0000e+05 | 2.0857e-16 | 2.006e-02 | 0.0000e+00  0.0000e+00  2.1052e-11 
+	    11  | 1.1000e+05 | 2.0905e-16 | 1.774e-02 | 0.0000e+00  0.0000e+00  1.0929e-12 
+	    12  | 1.2000e+05 | 2.0922e-16 | 1.868e-02 | 0.0000e+00  0.0000e+00  5.4404e-14 
+
+[min(c),max(c)] = [0.020833333333327937,0.9895833333333334]</code></pre><p><img src="../../images/Example208_FlowTransport2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example207_StokesTransient2D/">« 207 : Stokes Transient 2D</a><a class="docs-footer-nextpage" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 12 November 2021 16:15">Friday 12 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
