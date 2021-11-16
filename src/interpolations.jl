@@ -486,7 +486,7 @@ further postprocessed (done by the called point evaluator).
 Note: discontinuous quantities at vertices of the target grid will be evaluted in the first found cell of the
 source grid. No averaging is performed.
 """
-function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBlock{T2,Tv,Ti}; operator = Identity, postprocess = NoAction(), xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false) where {T1,T2,Tv,Ti}
+function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBlock{T2,Tv,Ti}; operator = Identity, postprocess = NoAction(), xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false, eps = 1e-14) where {T1,T2,Tv,Ti}
     # wrap point evaluation into function that is put into normal interpolate!
     xgrid = source_data.FES.xgrid
     xdim_source::Int = size(xgrid[Coordinates],1)
@@ -524,11 +524,11 @@ function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBloc
             end
             if xtrafo !== nothing
                 xtrafo(x_source, x)
-                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
+                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell, eps = eps)
             else
-                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell)
+                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps)
             end
-            evaluate!(result,PE,xref,cell)
+                evaluate!(result,PE,xref,cell)
             return nothing
         end
         fe_function = ExtendedDataFunction(point_evaluation_parentgrid!, [resultdim, xdim_target]; dependencies = "XI", quadorder = quadorder)
@@ -536,12 +536,12 @@ function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBloc
         function point_evaluation_arbitrarygrids!(result, x)
             if xtrafo !== nothing
                 xtrafo(x_source, x)
-                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell)
+                cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell, eps = eps)
                 if cell == 0
                     cell = gFindBruteForce!(xref, CF, x_source)
                 end
             else
-                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell)
+                cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps)
                 if cell == 0
                     cell = gFindBruteForce!(xref, CF, x)
                 end

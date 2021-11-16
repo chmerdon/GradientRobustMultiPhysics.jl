@@ -126,7 +126,7 @@ function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_n
     NewLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
     for j=1:nunknowns, k = 1:nunknowns
         if j < nunknowns && k < nunknowns
-            NewLHS[j,k] = deepcopy(PDE.LHSOperators[j,k])
+            NewLHS[j,k] = copy(PDE.LHSOperators[j,k])
         else
             NewLHS[j,k] = []
         end
