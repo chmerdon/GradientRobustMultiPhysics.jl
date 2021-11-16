@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>204 : Poisson L-shape Adaptive Mesh Refinement · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../home/">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../home/">Home</a></li><li><a class="tocitem" href="../../">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusionSUPG2D/">203 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li class="is-active"><a class="tocitem" href>204 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example206_PressureRobustness2D/">206 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example208_FlowTransport2D/">208 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_NonlinearPoisson2D/">210 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example214_TwoNonlinearCoupled2D/">214 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example215_ObstacleProblem2D/">215 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example223_NaturalConvection2D/">223 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example230_StokesHdivDG2D/">230 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example231_StokesHdivP1RT/">231 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example240_TransientFlowAroundCylinder2D/">240 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>204 : Poisson L-shape Adaptive Mesh Refinement</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>204 : Poisson L-shape Adaptive Mesh Refinement</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example204_PoissonLshapeAdaptive2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Poisson-L-shape-Adaptive-Mesh-Refinement"><a class="docs-heading-anchor" href="#:-Poisson-L-shape-Adaptive-Mesh-Refinement">204 : Poisson L-shape Adaptive Mesh Refinement</a><a id=":-Poisson-L-shape-Adaptive-Mesh-Refinement-1"></a><a class="docs-heading-anchor-permalink" href="#:-Poisson-L-shape-Adaptive-Mesh-Refinement" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example204_PoissonLshapeAdaptive2D.jl">source code</a>)</p><p>This example computes the standard-residual error estimator for the <span>$H^1$</span> error <span>$e = u - u_h$</span> of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(u_h) := \sum_{T \in \mathcal{T}} \lvert T \rvert \| f + \Delta u_h \|^2_{L^2(T)}
++ \sum_{F \in \mathcal{F}} \lvert F \rvert \| [[\nabla u_h \cdot \mathbf{n}]] \|^2_{L^2(F)}\]</p><p>This example script showcases the evaluation of 2nd order derivatives like the Laplacian and adaptive mesh refinement.</p><pre><code class="language-julia hljs">module Example204_PoissonLshapeAdaptive2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# exact solution u for the Poisson problem
+function u!(result,x)
+    result[1] = atan(x[2],x[1])
+    if result[1] &lt; 0
+        result[1] += 2*pi
+    end
+    result[1] = sin(2*result[1]/3)
+    result[1] *= (x[1]^2 + x[2]^2)^(1/3)
+end
+# ... and its gradient
+function ∇u!(result,x)
+    result[1] = atan(x[2],x[1])
+    if result[1] &lt; 0
+        result[1] += 2*pi
+    end
+    # du/dy = du/dr * sin(phi) + (1/r) * du/dphi * cos(phi)
+    result[2] = sin(2*result[1]/3) * sin(result[1]) + cos(2*result[1]/3) * cos(result[1])
+    result[2] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3
+    # du/dx = du/dr * cos(phi) - (1/r) * du/dphi * sin(phi)
+    result[1] = sin(2*result[1]/3) * cos(result[1]) - cos(2*result[1]/3) * sin(result[1])
+    result[1] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = nothing)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # initial grid
+    xgrid = grid_lshape(Triangle2D)
+
+    # choose some finite element
+    if order == 1
+        FEType = H1P1{1}
+    elseif order == 2
+        FEType = H1P2{1,2}
+    elseif order == 3
+        FEType = H1P3{1,2}
+    else
+        @error &quot;order has to be 1,2 or 3&quot;
+    end
+
+    # negotiate data functions to the package
+    u = DataFunction(u!, [1,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 5)
+    ∇u = DataFunction(∇u!, [2,2]; name = &quot;∇u&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+
+    # setup Poisson problem
+    Problem = PoissonProblem()
+    add_boundarydata!(Problem, 1, [2,3,4,5,6,7], BestapproxDirichletBoundary; data = u)
+    add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
+
+    # setup exact error evaluations
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
+
+    # define error estimator
+    # kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)
+    xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
+    xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
+    xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
+    function L2jump_integrand(result, input, item)
+        result[1] = ((input[1]*xFaceNormals[1,item])^2 + (input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
+        return nothing
+    end
+    # kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
+    # note: f = 0 here, but integrand can also be made x-dpendent to allow for non-homogeneous rhs
+    function L2vol_integrand(result, input, item)
+        result[1] = input[1]^2 * xCellVolumes[item]
+        return nothing
+    end
+    # ... which generates an action...
+    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = &quot;kernel of η (jumps)&quot;, dependencies = &quot;I&quot;, quadorder = 2)
+    eta_vol_action = Action(L2vol_integrand, [1,1]; name = &quot;kernel of η (vol)&quot;, dependencies = &quot;I&quot;, quadorder = 1)
+    # ... which is used inside an ItemIntegrator
+    ηF = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = &quot;η_F&quot;)
+    ηT = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = &quot;η_T&quot;)
+
+    # refinement loop
+    NDofs = zeros(Int, nlevels)
+    Results = zeros(Float64, nlevels, 3)
+    Solution = nothing
+    for level = 1 : nlevels
+
+        # create a solution vector and solve the problem
+        println(&quot;------- LEVEL $level&quot;)
+        @time begin
+            FES = FESpace{FEType}(xgrid)
+            Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
+            solve!(Solution, Problem)
+            NDofs[level] = length(Solution[1])
+            println(&quot;\t ndof =  $(NDofs[level])&quot;)
+            print(&quot;@time  solver =&quot;)
+        end
+
+
+        # calculate local error estimator contributions
+        @time begin
+            xFaceVolumes = xgrid[FaceVolumes]
+            xFaceNormals = xgrid[FaceNormals]
+            xCellVolumes = xgrid[CellVolumes]
+            vol_error = zeros(Float64,1,num_sources(xgrid[CellNodes]))
+            jump_error = zeros(Float64,1,num_sources(xgrid[FaceNodes]))
+            evaluate!(vol_error,ηT,Solution[1])
+            evaluate!(jump_error,ηF,Solution[1])
+
+            # calculate total estimator
+            Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
+            print(&quot;@time  η eval =&quot;)
+        end
+
+        # calculate exact L2 error, H1 error
+        @time begin
+            Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+            Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
+            print(&quot;@time  e eval =&quot;)
+        end
+
+        if level == nlevels
+            break;
+        end
+
+        # mesh refinement
+        @time begin
+            if theta &gt;= 1 ## uniform mesh refinement
+                xgrid = uniform_refine(xgrid)
+            else ## adaptive mesh refinement
+                # compute refinement indicators
+                nfaces = num_sources(xgrid[FaceNodes])
+                refinement_indicators::Array{Float64,1} = view(jump_error,1,:)
+                xFaceCells = xgrid[FaceCells]
+                cell::Int = 0
+                for face = 1 : nfaces, k = 1 : 2
+                    cell = xFaceCells[k,face]
+                    if cell &gt; 0
+                        refinement_indicators[face] += vol_error[1,cell]
+                    end
+                end
+
+                # refine by red-green-blue refinement (incl. closuring)
+                facemarker = bulk_mark(xgrid, refinement_indicators, theta; indicator_AT = ON_FACES)
+                xgrid = RGB_refine(xgrid, facemarker)
+            end
+            print(&quot;@time  refine =&quot;)
+        end
+
+        println(&quot;\t    η =  $(Results[level,3])\n\t    e =  $(Results[level,2])&quot;)
+    end
+
+    # plot
+    p=GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1200,400))
+    scalarplot!(p[1,1], xgrid, nodevalues_view(Solution[1])[1], levels = 11, title = &quot;u_h&quot;)
+    gridplot!(p[1,2], xgrid; linewidth = 1)
+    gridplot!(p[1,3], xgrid; linewidth = 1, xlimits = [-0.0001,0.0001], ylimits = [-0.0001,0.0001])
+
+    # print/plot convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;η&quot;])
+    plot_convergencehistory(NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -&gt; X.^(-1/2), Plotter = Plotter, ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;η&quot;])
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example204_PoissonLshapeAdaptive2D.main()
+------- LEVEL 1
+	 ndof =  21
+@time  solver =  0.452464 seconds (747.03 k allocations: 44.276 MiB, 5.11% gc time, 99.17% compilation time)
+@time  η eval =  4.400068 seconds (6.74 M allocations: 397.474 MiB, 4.25% gc time, 99.85% compilation time)
+@time  e eval =  3.356397 seconds (1.92 M allocations: 123.279 MiB, 0.76% gc time, 99.91% compilation time)
+@time  refine =  0.150676 seconds (159.07 k allocations: 9.526 MiB, 99.78% compilation time)
+	    η =  1.1809216557030233
+	    e =  0.2076474651624387
+------- LEVEL 2
+	 ndof =  33
+@time  solver =  0.002483 seconds (2.35 k allocations: 236.281 KiB)
+@time  η eval =  0.001198 seconds (1.28 k allocations: 83.531 KiB)
+@time  e eval =  0.000955 seconds (1.18 k allocations: 93.438 KiB)
+@time  refine =  0.000075 seconds (52 allocations: 4.766 KiB)
+	    η =  0.7574690118747248
+	    e =  0.16086233264174035
+------- LEVEL 3
+	 ndof =  41
+@time  solver =  0.002214 seconds (2.40 k allocations: 260.430 KiB)
+@time  η eval =  0.001024 seconds (1.29 k allocations: 84.094 KiB)
+@time  e eval =  0.001081 seconds (1.18 k allocations: 93.562 KiB)
+@time  refine =  0.004884 seconds (97 allocations: 8.297 KiB, 97.56% compilation time)
+	    η =  0.5060512659008009
+	    e =  0.12710035674542716
+------- LEVEL 4
+	 ndof =  67
+@time  solver =  0.002112 seconds (2.61 k allocations: 310.859 KiB)
+@time  η eval =  0.001149 seconds (1.31 k allocations: 86.172 KiB)
+@time  e eval =  0.001559 seconds (1.18 k allocations: 93.938 KiB)
+@time  refine =  0.000082 seconds (65 allocations: 8.344 KiB)
+	    η =  0.3333391179306108
+	    e =  0.0820803030509537
+------- LEVEL 5
+	 ndof =  93
+@time  solver =  0.002855 seconds (2.83 k allocations: 394.570 KiB)
+@time  η eval =  0.001075 seconds (1.33 k allocations: 87.891 KiB)
+@time  e eval =  0.002094 seconds (1.18 k allocations: 94.312 KiB)
+@time  refine =  0.000087 seconds (66 allocations: 10.016 KiB)
+	    η =  0.23308314458993257
+	    e =  0.055004363135275625
+------- LEVEL 6
+	 ndof =  119
+@time  solver =  0.003366 seconds (3.03 k allocations: 505.469 KiB)
+@time  η eval =  0.001318 seconds (1.35 k allocations: 89.922 KiB)
+@time  e eval =  0.002386 seconds (1.18 k allocations: 94.688 KiB)
+@time  refine =  0.000225 seconds (75 allocations: 13.625 KiB)
+	    η =  0.1786953253460242
+	    e =  0.039456229943995544
+------- LEVEL 7
+	 ndof =  159
+@time  solver =  0.003699 seconds (3.50 k allocations: 610.062 KiB)
+@time  η eval =  0.001557 seconds (1.38 k allocations: 92.828 KiB)
+@time  e eval =  0.003013 seconds (1.18 k allocations: 95.375 KiB)
+@time  refine =  0.000150 seconds (80 allocations: 16.859 KiB)
+	    η =  0.13915850782044412
+	    e =  0.029372552786887583
+------- LEVEL 8
+	 ndof =  215
+@time  solver =  0.004399 seconds (4.05 k allocations: 767.852 KiB)
+@time  η eval =  0.001586 seconds (1.43 k allocations: 96.844 KiB)
+@time  e eval =  0.003907 seconds (1.18 k allocations: 96.250 KiB)
+@time  refine =  0.000113 seconds (87 allocations: 22.844 KiB)
+	    η =  0.109821452233475
+	    e =  0.022390159079847222
+------- LEVEL 9
+	 ndof =  287
+@time  solver =  0.005244 seconds (4.69 k allocations: 958.562 KiB)
+@time  η eval =  0.001935 seconds (1.48 k allocations: 102.234 KiB)
+@time  e eval =  0.005098 seconds (1.18 k allocations: 97.312 KiB)
+@time  refine =  0.000125 seconds (92 allocations: 29.281 KiB)
+	    η =  0.08174488804163997
+	    e =  0.01571686306614436
+------- LEVEL 10
+	 ndof =  377
+@time  solver =  0.006511 seconds (5.26 k allocations: 1.165 MiB)
+@time  η eval =  0.002166 seconds (1.55 k allocations: 108.500 KiB)
+@time  e eval =  0.007800 seconds (1.18 k allocations: 98.562 KiB)
+@time  refine =  0.000155 seconds (110 allocations: 33.438 KiB)
+	    η =  0.06164313323480438
+	    e =  0.01166092416956658
+------- LEVEL 11
+	 ndof =  527
+@time  solver =  0.007823 seconds (6.48 k allocations: 1.551 MiB)
+@time  η eval =  0.002580 seconds (1.67 k allocations: 119.359 KiB)
+@time  e eval =  0.009117 seconds (1.18 k allocations: 101.000 KiB)
+@time  refine =  0.000175 seconds (127 allocations: 54.531 KiB)
+	    η =  0.04513125476819613
+	    e =  0.00839438373037072
+------- LEVEL 12
+	 ndof =  729
+@time  solver =  0.010381 seconds (8.45 k allocations: 2.070 MiB)
+@time  η eval =  0.003026 seconds (1.93 k allocations: 135.156 KiB)
+@time  e eval =  0.012699 seconds (1.18 k allocations: 104.000 KiB)
+@time  refine =  0.000363 seconds (157 allocations: 61.188 KiB)
+	    η =  0.03308173869008528
+	    e =  0.006117474655358896
+------- LEVEL 13
+	 ndof =  1025
+@time  solver =  0.013608 seconds (11.24 k allocations: 2.775 MiB)
+@time  η eval =  0.003724 seconds (3.06 k allocations: 170.344 KiB)
+@time  e eval =  0.017783 seconds (1.18 k allocations: 108.500 KiB)
+@time  refine =  0.000295 seconds (197 allocations: 87.047 KiB)
+	    η =  0.024323647581147988
+	    e =  0.004508865557953349
+------- LEVEL 14
+	 ndof =  1403
+@time  solver =  0.016893 seconds (15.40 k allocations: 3.814 MiB)
+@time  η eval =  0.005107 seconds (5.27 k allocations: 227.094 KiB)
+@time  e eval =  0.023352 seconds (3.43 k allocations: 149.453 KiB)
+@time  refine =  0.000326 seconds (245 allocations: 117.266 KiB)
+	    η =  0.017721168129910637
+	    e =  0.0031946413430606353
+------- LEVEL 15
+	 ndof =  1951
+@time  solver =  0.025073 seconds (21.14 k allocations: 5.150 MiB)
+@time  η eval =  0.006970 seconds (8.66 k allocations: 312.750 KiB)
+@time  e eval =  0.033471 seconds (7.21 k allocations: 217.016 KiB)
+@time  refine =  0.000463 seconds (323 allocations: 167.438 KiB)
+	    η =  0.01286507905625899
+	    e =  0.002311089419858611
+------- LEVEL 16
+	 ndof =  2685
+@time  solver =  0.056257 seconds (28.91 k allocations: 6.414 MiB, 39.06% gc time)
+@time  η eval =  0.009242 seconds (13.23 k allocations: 427.625 KiB)
+@time  e eval =  0.046551 seconds (12.28 k allocations: 307.453 KiB)
+@time  refine =  0.000566 seconds (408 allocations: 223.328 KiB)
+	    η =  0.009428615043436072
+	    e =  0.0016865873325011785
+------- LEVEL 17
+	 ndof =  3647
+@time  solver =  0.043821 seconds (39.62 k allocations: 8.412 MiB)
+@time  η eval =  0.011977 seconds (19.19 k allocations: 577.219 KiB)
+@time  e eval =  0.061667 seconds (18.89 k allocations: 425.453 KiB)
+@time  refine =  0.000776 seconds (502 allocations: 318.078 KiB)
+	    η =  0.0069421508417187435
+	    e =  0.0012444240066276288
+------- LEVEL 18
+	 ndof =  4953
+@time  solver =  0.061973 seconds (53.29 k allocations: 11.182 MiB)
+@time  η eval =  0.015968 seconds (27.32 k allocations: 781.750 KiB)
+@time  e eval =  0.083134 seconds (27.93 k allocations: 586.828 KiB)
+@time  refine =  0.000983 seconds (665 allocations: 425.359 KiB)
+	    η =  0.005073360038187537
+	    e =  0.000897681251740881
+------- LEVEL 19
+	 ndof =  6781
+@time  solver =  0.082954 seconds (72.41 k allocations: 15.471 MiB)
+@time  η eval =  0.020973 seconds (38.70 k allocations: 1.043 MiB)
+@time  e eval =  0.112581 seconds (40.59 k allocations: 812.828 KiB)
+@time  refine =  0.001343 seconds (848 allocations: 615.906 KiB)
+	    η =  0.003722822140532354
+	    e =  0.0006539955724163516
+------- LEVEL 20
+	 ndof =  9271
+@time  solver =  0.123338 seconds (100.62 k allocations: 20.970 MiB, 10.24% gc time)
+@time  η eval =  0.029149 seconds (54.21 k allocations: 1.424 MiB)
+@time  e eval =  0.158611 seconds (57.89 k allocations: 1.096 MiB)
+
+    ndofs   |    || u - u_h ||     order  |  || ∇(u - u_h) ||    order  |          η           order  |
+============|=============================|=============================|=============================|
+        21  |     2.51263e-02      0.000  |     2.07647e-01      0.000  |     1.18092e+00      0.000  |
+        33  |     1.90247e-02      1.231  |     1.60862e-01      1.130  |     7.57469e-01      1.965  |
+        41  |     1.26917e-02      3.730  |     1.27100e-01      2.171  |     5.06051e-01      3.716  |
+        67  |     4.79055e-03      3.968  |     8.20803e-02      1.781  |     3.33339e-01      1.700  |
+        93  |     2.38377e-03      4.257  |     5.50044e-02      2.441  |     2.33083e-01      2.182  |
+       119  |     1.78155e-03      2.362  |     3.94562e-02      2.695  |     1.78695e-01      2.156  |
+       159  |     1.24278e-03      2.486  |     2.93726e-02      2.037  |     1.39159e-01      1.726  |
+       215  |     7.86008e-04      3.037  |     2.23902e-02      1.799  |     1.09821e-01      1.569  |
+       287  |     4.04477e-04      4.600  |     1.57169e-02      2.450  |     8.17449e-02      2.044  |
+       377  |     3.33412e-04      1.417  |     1.16609e-02      2.189  |     6.16431e-02      2.069  |
+       527  |     1.95675e-04      3.182  |     8.39438e-03      1.963  |     4.51313e-02      1.862  |
+       729  |     1.14131e-04      3.323  |     6.11747e-03      1.950  |     3.30817e-02      1.914  |
+      1025  |     8.23682e-05      1.914  |     4.50887e-03      1.791  |     2.43236e-02      1.805  |
+      1403  |     4.27727e-05      4.175  |     3.19464e-03      2.195  |     1.77212e-02      2.018  |
+      1951  |     2.80610e-05      2.557  |     2.31109e-03      1.964  |     1.28651e-02      1.942  |
+      2685  |     1.67382e-05      3.236  |     1.68659e-03      1.973  |     9.42862e-03      1.946  |
+      3647  |     1.15905e-05      2.400  |     1.24442e-03      1.986  |     6.94215e-03      1.999  |
+      4953  |     6.26521e-06      4.020  |     8.97681e-04      2.134  |     5.07336e-03      2.049  |
+      6781  |     3.91776e-06      2.989  |     6.53996e-04      2.016  |     3.72282e-03      1.971  |
+      9271  |     2.50250e-06      2.866  |     4.76773e-04      2.021  |     2.72507e-03      1.995  |</code></pre><p><img src="../../images/Example204_PoissonLshapeAdaptive2D_1.png" alt/> <img src="../../images/Example204_PoissonLshapeAdaptive2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusionSUPG2D/">« 203 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 16 November 2021 20:24">Tuesday 16 November 2021</span>. Using Julia version 1.6.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
