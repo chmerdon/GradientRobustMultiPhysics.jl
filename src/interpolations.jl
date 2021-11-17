@@ -35,7 +35,7 @@ end
 # point evaluation (at vertices of geometry)
 # for lowest order degrees of freedom
 # used e.g. for interpolation into P1, P2, P2B, MINI finite elements
-function point_evaluation!(Target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractDataFunction}; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractDataFunction}; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     nnodes = size(xCoordinates,2)
@@ -53,7 +53,7 @@ function point_evaluation!(Target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FETy
         end    
         eval_data!(result, exact_function , x, time)
         for k = 1 : ncomponents
-            Target[j+offset4component[k]] = result[k]
+            target[j+offset4component[k]] = result[k]
         end    
     end
 end
@@ -62,7 +62,7 @@ end
 # point evaluation (at vertices of geometry)
 # for lowest order degrees of freedom
 # used e.g. for interpolation into P1, P2, P2B, MINI finite elements
-function point_evaluation!(Target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractExtendedDataFunction}; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractExtendedDataFunction}; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     nnodes = size(xCoordinates,2)
@@ -83,12 +83,12 @@ function point_evaluation!(Target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FETy
         cell = xNodeCells[1,j]
         eval_data!(result, exact_function , x, time, nothing, cell, nothing)
         for k = 1 : ncomponents
-            Target[j+offset4component[k]] = result[k]
+            target[j+offset4component[k]] = result[k]
         end    
     end
 end
 
-function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{ON_CELLS}, exact_function::UserData{AbstractDataFunction}; items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+function point_evaluation_broken!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{ON_CELLS}, exact_function::UserData{AbstractDataFunction}; items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
     xdim = size(xCoordinates,1)
     xCellNodes = FES.xgrid[CellNodes]
@@ -111,7 +111,7 @@ function point_evaluation_broken!(Target::AbstractArray{T,1}, FES::FESpace{Tv, T
             end    
             eval_data!(result, exact_function , x, time)
             for k = 1 : ncomponents
-                Target[xCellDofs[1,cell]+n-1+(k-1)*nnodes_on_cell] = result[k]
+                target[xCellDofs[1,cell]+n-1+(k-1)*nnodes_on_cell] = result[k]
             end    
          end
     end
@@ -129,7 +129,7 @@ end
 #     return cellmoments[:,1]
 # end
 
-# function ensure_cell_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+# function ensure_cell_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, exact_function!; nodedofs::Bool = true, facedofs::Int = 0, edgedofs::Int = 0, items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
 #     # note: assumes that cell dof is always the last one and that there are no higher oder cell moments
 
@@ -177,17 +177,17 @@ end
 #         for c = 1 : ncomponents
 #             # subtract integral of lower order dofs
 #             for dof = 1 : offset - 1
-#                 cellintegrals[c,item] -= Target[xItemDofs[(c-1)*offset + dof,item]] * xItemVolumes[item] * cellmoments[dof]
+#                 cellintegrals[c,item] -= target[xItemDofs[(c-1)*offset + dof,item]] * xItemVolumes[item] * cellmoments[dof]
 #             end
 #             # set cell bubble such that cell mean is preserved
-#             Target[xItemDofs[c*offset,item]] = cellintegrals[c,item] / (cellmoments[offset] * xItemVolumes[item])
+#             target[xItemDofs[c*offset,item]] = cellintegrals[c,item] / (cellmoments[offset] * xItemVolumes[item])
 #         end
 #     end
 # end
 
 # # edge integral means
 # # used e.g. for interpolation into P2, P2B finite elements
-# function ensure_edge_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+# function ensure_edge_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 #     xItemVolumes::Array{Tv,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
 #     xItemNodes::Adjacency{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
 #     xItemDofs::DofMapTypes{Ti} = Dofmap4AssemblyType(FE, AT)
@@ -224,7 +224,7 @@ end
 #     end   
 #     for item in items
 #         for n = 1 : nmoments, c = 1 : ncomponents
-#             Target[xItemDofs[coffset*(c-1)+2+n,item]] = 0
+#             target[xItemDofs[coffset*(c-1)+2+n,item]] = 0
 #         end
 #     end
 #     for m = 1 : nmoments
@@ -234,11 +234,11 @@ end
 #             for c = 1 : ncomponents
 #                 # subtract edge mean value of P1 part
 #                 for dof = 1 : 2
-#                     edgemoments[c,item] -= Target[xItemDofs[(c-1)*coffset + dof,item]] * xItemVolumes[item] * mfactor[dof, m]
+#                     edgemoments[c,item] -= target[xItemDofs[(c-1)*coffset + dof,item]] * xItemVolumes[item] * mfactor[dof, m]
 #                 end
 #                 # set P2 edge bubble such that edge mean is preserved
 #                 for n = 1 : nmoments
-#                     Target[xItemDofs[coffset*(c-1)+2+n,item]] += invdfactor[n,m] * edgemoments[c,item] / xItemVolumes[item]
+#                     target[xItemDofs[coffset*(c-1)+2+n,item]] += invdfactor[n,m] * edgemoments[c,item] / xItemVolumes[item]
 #                 end
 #             end
 #         end
@@ -251,7 +251,7 @@ end
 #
 # used for interpolation operators of elements with interior degrees of freedom (after setting the exterior ones with other methods)
 # e.g. H1P2 ON_EDGES, H1MINI ON_CELLS, H1P2B ON_EDGES, ON_FACES, ON_CELLS
-function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; FEType_ref = "auto", order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; FEType_ref = "auto", order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
     xItemVolumes::Array{Tv,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemNodes::Adjacency{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
@@ -382,54 +382,54 @@ function ensure_moments!(Target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
 
         for m::Int = 1 : nmoments, exdof = 1 : interior_offset, c = 1 : ncomponents
             localdof = coffset*(c-1)+exdof
-            edgemoments[m,item] -= Target[xItemDofs[localdof,item]] * MOMxBASIS[doforder_ref[current_subset[localdof]],m] * xItemVolumes[item]
+            edgemoments[m,item] -= target[xItemDofs[localdof,item]] * MOMxBASIS[doforder_ref[current_subset[localdof]],m] * xItemVolumes[item]
         end
         for m::Int = 1 : nmoments
             localdof = idofs[m]
-            Target[xItemDofs[localdof,item]] = 0
+            target[xItemDofs[localdof,item]] = 0
             for n::Int = 1 : nmoments
-                Target[xItemDofs[localdof,item]] += invA[n,m] * edgemoments[n,item]
+                target[xItemDofs[localdof,item]] += invA[n,m] * edgemoments[n,item]
             end
-            Target[xItemDofs[localdof,item]] /= xItemVolumes[item]
+            target[xItemDofs[localdof,item]] /= xItemVolumes[item]
         end
     end
     return nothing
 end
 
 # remap boundary face interpolation to faces by using BFaceFaces (if there is no special function by the finite element defined)
-function interpolate!(Target::FEVectorBlock, FES::FESpace, ::Type{ON_BFACES}, source_data; items = items, time = time)
-    interpolate!(Target, FES, ON_FACES, source_data; items = FES.xgrid[BFaceFaces][items], time = time)
+function interpolate!(target::FEVectorBlock, FES::FESpace, ::Type{ON_BFACES}, source; items = items, time = time)
+    interpolate!(target, FES, ON_FACES, source; items = FES.xgrid[BFaceFaces][items], time = time)
 end
 
 """
 ````
-function interpolate!(Target::FEVectorBlock,
+function interpolate!(target::FEVectorBlock,
      AT::Type{<:AssemblyType},
-     source_data::UserData{AbstractDataFunction};
+     source::UserData{AbstractDataFunction};
      items = [],
      time = 0)
 ````
 
-Interpolates the given source_data into the finite elements space assigned to the Target FEVectorBlock with the specified AssemblyType
-(usualy ON_CELLS). The optional time argument is only used if the source_data depends on time.
+Interpolates the given source into the finite elements space assigned to the target FEVectorBlock with the specified AssemblyType
+(usualy ON_CELLS). The optional time argument is only used if the source depends on time.
 """
-function interpolate!(Target::FEVectorBlock{T,Tv,Ti},
+function interpolate!(target::FEVectorBlock{T,Tv,Ti},
      AT::Type{<:AssemblyType},
-     source_data::UserData{<:AbstractDataFunction};
+     source::UserData{<:AbstractDataFunction};
      items = [],
      time = 0) where {T,Tv,Ti}
 
-    if is_timedependent(source_data)
-        @logmsg MoreInfo "Interpolating $(source_data.name) >> $(Target.name) ($AT at time $time)"
+    if is_timedependent(source)
+        @logmsg MoreInfo "Interpolating $(source.name) >> $(target.name) ($AT at time $time)"
     else
-        @logmsg MoreInfo "Interpolating $(source_data.name) >> $(Target.name) ($AT)"
+        @logmsg MoreInfo "Interpolating $(source.name) >> $(target.name) ($AT)"
     end
-    FEType = eltype(Target.FES)
-    if Target.FES.broken == true
-        FESc = FESpace{FEType}(Target.FES.xgrid)
+    FEType = eltype(target.FES)
+    if target.FES.broken == true
+        FESc = FESpace{FEType}(target.FES.xgrid)
         Targetc = FEVector{T}("auxiliary data",FESc)
-        interpolate!(Targetc[1], FESc, AT, source_data; items = items, time = time)
-        xCellDofs = Target.FES[CellDofs]
+        interpolate!(Targetc[1], FESc, AT, source; items = items, time = time)
+        xCellDofs = target.FES[CellDofs]
         xCellDofsc = FESc[CellDofs]
         dof::Int = 0
         dofc::Int = 0
@@ -440,35 +440,35 @@ function interpolate!(Target::FEVectorBlock{T,Tv,Ti},
             for k = 1 : num_targets(xCellDofs,cell)
                 dof = xCellDofs[k,cell]
                 dofc = xCellDofsc[k,cell]
-                Target[dof] = Targetc.entries[dofc]
+                target[dof] = Targetc.entries[dofc]
             end
         end
     else
-        interpolate!(Target, Target.FES, AT, source_data; items = items, time = time)
+        interpolate!(target, target.FES, AT, source; items = items, time = time)
     end
 end
 
 """
 ````
-function interpolate!(Target::FEVectorBlock,
-     source_data::UserData{AbstractDataFunction};
+function interpolate!(target::FEVectorBlock,
+     source::UserData{AbstractDataFunction};
      items = [],
      time = 0)
 ````
 
-Interpolates the given source_data into the finite element space assigned to the Target FEVectorBlock. The optional time argument
-is only used if the source_data depends on time.
+Interpolates the given source into the finite element space assigned to the target FEVectorBlock. The optional time argument
+is only used if the source depends on time.
 """
-function interpolate!(Target::FEVectorBlock, source_data::UserData{<:AbstractDataFunction}; time = 0)
-    interpolate!(Target, ON_CELLS, source_data; time = time)
+function interpolate!(target::FEVectorBlock, source::UserData{<:AbstractDataFunction}; time = 0)
+    interpolate!(target, ON_CELLS, source; time = time)
 end
 
 
 """
 ````
 function interpolate!(
-    Target::FEVectorBlock{T1,Tv,Ti},
-    source_data::FEVectorBlock{T2,Tv,Ti};
+    target::FEVectorBlock{T1,Tv,Ti},
+    source::FEVectorBlock{T2,Tv,Ti};
     operator = Identity,
     postprocess = NoAction(),
     xtrafo = nothing,
@@ -477,35 +477,44 @@ function interpolate!(
     use_cellparents::Bool = false) where {T1,T2,Tv,Ti}
 ````
 
-Interpolates (operator-evaluations of) the given finite element function into the finite element space assigned to the Target FEVectorBlock. 
+Interpolates (operator-evaluations of) the given finite element function into the finite element space assigned to the target FEVectorBlock. 
 (Currently not the most efficient way as it is based on the PointEvaluation pattern and cell search. If CellParents
-are available in the grid components of the Target grid, these parent cell information can be used to improve the
+are available in the grid components of the target grid, these parent cell information can be used to improve the
 search. To activate this put 'use_cellparents' = true). By some action with kernel (result,input) the operator evaluation (=input) can be
 further postprocessed (done by the called point evaluator).
 
 Note: discontinuous quantities at vertices of the target grid will be evaluted in the first found cell of the
 source grid. No averaging is performed.
 """
-function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBlock{T2,Tv,Ti}; operator = Identity, postprocess = NoAction(), xtrafo = nothing, items = [], not_in_domain_value = 1e30, use_cellparents::Bool = false, eps = 1e-14) where {T1,T2,Tv,Ti}
+function interpolate!(
+    target::FEVectorBlock{T1,Tv,Ti},
+    source::FEVectorBlock{T2,Tv,Ti};
+    operator = Identity,
+    postprocess = NoAction(),
+    xtrafo = nothing, items = [],
+    not_in_domain_value = 1e30,
+    only_localsearch = false,
+    use_cellparents::Bool = false,
+    eps = 1e-14) where {T1,T2,Tv,Ti}
     # wrap point evaluation into function that is put into normal interpolate!
-    xgrid = source_data.FES.xgrid
+    xgrid = source.FES.xgrid
     xdim_source::Int = size(xgrid[Coordinates],1)
-    xdim_target::Int = size(Target.FES.xgrid[Coordinates],1)
+    xdim_target::Int = size(target.FES.xgrid[Coordinates],1)
     if xdim_source != xdim_target
         @assert xtrafo !== nothing "grids have different coordinate dimensions, need xtrafo!"
     end
-    FEType = eltype(source_data.FES)
+    FEType = eltype(source.FES)
     ncomponents::Int = get_ncomponents(FEType)
     resultdim::Int = Length4Operator(operator,xdim_source,ncomponents)
     if !(typeof(postprocess) <: NoAction)
         resultdim = postprocess.argsizes[1]
     end
-    PE = PointEvaluator(source_data, operator, postprocess)
+    PE = PointEvaluator(source, operator, postprocess)
     xref = zeros(Tv,xdim_source)
     x_source = zeros(Tv,xdim_source)
     cell::Int = 1
     lastnonzerocell::Int = 1
-    same_cells::Bool = xgrid == Target.FES.xgrid
+    same_cells::Bool = xgrid == target.FES.xgrid
     CF::CellFinder{Tv,Ti} = CellFinder(xgrid)
 
     EG = xgrid[GridComponentUniqueGeometries4AssemblyType(ON_CELLS)]
@@ -515,7 +524,7 @@ function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBloc
     end
 
     if same_cells || use_cellparents == true
-        xCellParents::Array{Ti,1} = Target.FES.xgrid[CellParents]
+        xCellParents::Array{Ti,1} = target.FES.xgrid[CellParents]
         function point_evaluation_parentgrid!(result, x, target_cell)
             if same_cells
                 lastnonzerocell = target_cell
@@ -537,12 +546,12 @@ function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBloc
             if xtrafo !== nothing
                 xtrafo(x_source, x)
                 cell = gFindLocal!(xref, CF, x_source; icellstart = lastnonzerocell, eps = eps)
-                if cell == 0
+                if cell == 0 && !only_localsearch
                     cell = gFindBruteForce!(xref, CF, x_source)
                 end
             else
                 cell = gFindLocal!(xref, CF, x; icellstart = lastnonzerocell, eps = eps)
-                if cell == 0
+                if cell == 0 && !only_localsearch
                     cell = gFindBruteForce!(xref, CF, x)
                 end
             end
@@ -556,7 +565,7 @@ function interpolate!(Target::FEVectorBlock{T1,Tv,Ti}, source_data::FEVectorBloc
         end
         fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", quadorder = quadorder)
     end
-    interpolate!(Target, ON_CELLS, fe_function; items = items)
+    interpolate!(target, ON_CELLS, fe_function; items = items)
 end
 
 
@@ -564,24 +573,24 @@ end
 """
 ````
 function nodevalues!(
-    Target::AbstractArray{<:Real,2},
-    Source::AbstractArray{T,1},
+    target::AbstractArray{<:Real,2},
+    source::AbstractArray{T,1},
     FE::FESpace{Tv,Ti,FEType,AT},
     operator::Type{<:AbstractFunctionOperator} = Identity;
     regions::Array{Int,1} = [0],
     abs::Bool = false,
     factor = 1,
-    target_offset::Int = 0,   # start to write into Target after offset
+    target_offset::Int = 0,   # start to write into target after offset
     zero_target::Bool = true, # target vector is zeroed
     continuous::Bool = false)
 ````
 
-Evaluates the finite element function with the coefficient vector Source (interpreted as a coefficient vector for the FESpace FE)
-and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into Target.
+Evaluates the finite element function with the coefficient vector source (interpreted as a coefficient vector for the FESpace FE)
+and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into target.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues!(Target::AbstractArray{T,2},
-    Source::AbstractArray{T,1},
+function nodevalues!(target::AbstractArray{T,2},
+    source::AbstractArray{T,1},
     FE::FESpace{Tv,Ti,FEType,AT},
     operator::Type{<:AbstractFunctionOperator} = Identity;
     abs::Bool = false,
@@ -617,7 +626,7 @@ function nodevalues!(Target::AbstractArray{T,2},
     end    
     cvals_resultdim::Int = size(basisevaler[1].cvals,1)
     target_resultdim::Int = abs ? 1 : cvals_resultdim
-    @assert size(Target,1) >= target_resultdim "too small target dimension"
+    @assert size(target,1) >= target_resultdim "too small target dimension"
 
     nitems::Int = num_sources(xItemDofs)
     nnodes::Int = num_sources(FE.xgrid[Coordinates])
@@ -635,7 +644,7 @@ function nodevalues!(Target::AbstractArray{T,2},
     weights::Array{T,1} = qf[1].w
 
     if zero_target
-        fill!(Target, 0)
+        fill!(target, 0)
     end
     for item = 1 : nitems
         for r = 1 : nregions
@@ -669,19 +678,19 @@ function nodevalues!(Target::AbstractArray{T,2},
                                 dof = xItemDofs[dof_i,item]
                                 eval_febe!(temp, basisevaler[iEG], dof_i, i)
                                 for k = 1 : cvals_resultdim
-                                    localT[k] += Source[source_offset + dof] * temp[k]
-                                    #Target[k+target_offset,node] += temp[k] * Source[source_offset + dof]
+                                    localT[k] += source[source_offset + dof] * temp[k]
+                                    #target[k+target_offset,node] += temp[k] * source[source_offset + dof]
                                 end
                             end
                         end
                         localT .*= factor
                         if abs
                             for k = 1 : cvals_resultdim
-                                Target[1+target_offset,node] += localT[k]^2
+                                target[1+target_offset,node] += localT[k]^2
                             end
                         else
                             for k = 1 : cvals_resultdim
-                                Target[k+target_offset,node] += localT[k]
+                                target[k+target_offset,node] += localT[k]
                             end
                         end
                     end
@@ -693,13 +702,13 @@ function nodevalues!(Target::AbstractArray{T,2},
 
     if continuous == false
         for node = 1 : nnodes, k = 1 : target_resultdim
-            Target[k+target_offset,node] /= nneighbours[node]
+            target[k+target_offset,node] /= nneighbours[node]
         end
     end
 
     if abs
         for node = 1 : nnodes
-            Target[1+target_offset,node] = sqrt(Target[1+target_offset,node])
+            target[1+target_offset,node] = sqrt(target[1+target_offset,node])
         end
     end
 
@@ -710,45 +719,45 @@ end
 """
 ````
 function nodevalues!(
-    Target::AbstractArray{<:Real,2},
-    Source::FEVectorBlock,
+    target::AbstractArray{<:Real,2},
+    source::FEVectorBlock,
     operator::Type{<:AbstractFunctionOperator} = Identity;
     regions::Array{Int,1} = [0],
     abs::Bool = false,
     factor = 1,
-    target_offset::Int = 0,   # start to write into Target after offset
+    target_offset::Int = 0,   # start to write into target after offset
     zero_target::Bool = true, # target vector is zeroed
     continuous::Bool = false)
 ````
 
-Evaluates the finite element function with the coefficient vector Source
-and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into Target.
+Evaluates the finite element function with the coefficient vector source
+and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into target.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues!(Target, Source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
-    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, abs = abs, factor = factor, zero_target = zero_target, target_offset = target_offset)
+function nodevalues!(target, source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
+    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, abs = abs, factor = factor, zero_target = zero_target, target_offset = target_offset)
 end
 
 
 """
 ````
 function nodevalues(
-    Source::FEVectorBlock,
+    source::FEVectorBlock,
     operator::Type{<:AbstractFunctionOperator} = Identity;
     regions::Array{Int,1} = [0],
     abs::Bool = false,
     factor = 1,
-    target_offset::Int = 0,   # start to write into Target after offset
+    target_offset::Int = 0,   # start to write into target after offset
     zero_target::Bool = true, # target vector is zeroed
     continuous::Bool = false)
 ````
 
-Evaluates the finite element function with the coefficient vector Source
+Evaluates the finite element function with the coefficient vector source
 and the specified FunctionOperator at all the nodes of the (specified regions of the)
 grid and returns an array with the values.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues(Source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
+function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
     if continuous == "auto"
         if FEType <: AbstractH1FiniteElement && operator == Identity && !Source.FES.broken
             continuous = true
@@ -759,35 +768,35 @@ function nodevalues(Source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:
     if abs
         nvals = 1
     else
-        xdim = size(Source.FES.xgrid[Coordinates],2)
-        ncomponents = get_ncomponents(eltype(Source.FES))
+        xdim = size(source.FES.xgrid[Coordinates],2)
+        ncomponents = get_ncomponents(eltype(source.FES))
         nvals = Length4Operator(operator, xdim, ncomponents)
     end
-    Target = zeros(T,nvals,num_nodes(Source.FES.xgrid))
-    nodevalues!(Target, Source.entries, Source.FES, operator; regions = regions, continuous = continuous, source_offset = Source.offset, factor = factor, abs = abs)
-    return Target
+    target = zeros(T,nvals,num_nodes(source.FES.xgrid))
+    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, factor = factor, abs = abs)
+    return target
 end
 
 """
 ````
 function nodevalues_view(
-    Source::FEVectorBlock,
+    source::FEVectorBlock,
     operator::Type{<:AbstractFunctionOperator} = Identity)
 ````
 
-Returns a vector of views of the nodal values of the Source block (currently works for unbroken H1-conforming elements) that directly accesses the coefficients.
+Returns a vector of views of the nodal values of the source block (currently works for unbroken H1-conforming elements) that directly accesses the coefficients.
 """
-function nodevalues_view(Source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity) where {T,Tv,Ti,APT,FEType}
+function nodevalues_view(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity) where {T,Tv,Ti,APT,FEType}
 
-    if (FEType <: AbstractH1FiniteElement) && (operator == Identity) && (Source.FES.broken == false)
+    if (FEType <: AbstractH1FiniteElement) && (operator == Identity) && (source.FES.broken == false)
         # give a direct view without computing anything
         ncomponents = get_ncomponents(FEType)
         array_of_views = []
-        offset::Int = Source.offset
-        coffset::Int = Source.FES.coffset
-        nnodes::Int = num_nodes(Source.FES.xgrid)
+        offset::Int = source.offset
+        coffset::Int = source.FES.coffset
+        nnodes::Int = num_nodes(source.FES.xgrid)
         for k = 1 : ncomponents
-            push!(array_of_views,view(Source.entries,offset+1:offset+nnodes))
+            push!(array_of_views,view(source.entries,offset+1:offset+nnodes))
             offset += coffset
         end
         return array_of_views
@@ -802,15 +811,15 @@ end
 
 """
 ````
-function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 1)
+function displace_mesh!(xgrid::ExtendableGrid, source::FEVectorBlock; magnify = 1)
 ````
-Moves all nodes of the grid by adding the displacement field in Source (expects a vector-valued finite element)
+Moves all nodes of the grid by adding the displacement field in source (expects a vector-valued finite element)
 times a magnify value.
 """
-function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 1)
+function displace_mesh!(xgrid::ExtendableGrid, source::FEVectorBlock; magnify = 1)
     nnodes = size(xgrid[Coordinates],2)
-    nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(Source.FES)),nnodes)
-    nodevalues!(nodevals, Source, Identity)
+    nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(source.FES)),nnodes)
+    nodevalues!(nodevals, source, Identity)
     xgrid[Coordinates] .+= magnify * nodevals
 
     # remove all keys from grid components that might have changed and need a reinstantiation
@@ -824,11 +833,11 @@ function displace_mesh!(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 
 end
 
 
-function displace_mesh(xgrid::ExtendableGrid, Source::FEVectorBlock; magnify = 1)
+function displace_mesh(xgrid::ExtendableGrid, source::FEVectorBlock; magnify = 1)
     xgrid_displaced = deepcopy(xgrid)
     nnodes = size(xgrid[Coordinates],2)
-    nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(Source.FES)),nnodes)
-    nodevalues!(nodevals, Source, Identity)
+    nodevals = zeros(eltype(xgrid[Coordinates]),get_ncomponents(Base.eltype(source.FES)),nnodes)
+    nodevalues!(nodevals, source, Identity)
     xgrid_displaced[Coordinates] .+= magnify * nodevals
     return xgrid_displaced
 end
