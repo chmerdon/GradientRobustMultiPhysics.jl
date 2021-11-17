@@ -759,7 +759,7 @@ Discontinuous (continuous = false) quantities are averaged.
 """
 function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
     if continuous == "auto"
-        if FEType <: AbstractH1FiniteElement && operator == Identity && !Source.FES.broken
+        if FEType <: AbstractH1FiniteElement && operator == Identity && !source.FES.broken
             continuous = true
         else
             continuous = false
