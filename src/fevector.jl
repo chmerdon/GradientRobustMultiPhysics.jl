@@ -150,8 +150,11 @@ $(TYPEDSIGNATURES)
 Adds FEVectorBlock b to FEVectorBlock a.
 """
 function addblock!(a::FEVectorBlock, b::FEVectorBlock; factor = 1)
-    for j = b.offset+1 : b.last_index
-        a.entries[a.offset+j] += b.entries[j] * factor
+    l::Int = length(b)
+    aoffset::Int = a.offset
+    boffset::Int = b.offset
+    for j = 1 : l
+        a.entries[aoffset+j] += b.entries[boffset+j] * factor
     end
     return nothing
 end
@@ -162,8 +165,9 @@ $(TYPEDSIGNATURES)
 Adds Array b to FEVectorBlock a.
 """
 function addblock!(a::FEVectorBlock, b::AbstractVector; factor = 1)
+    aoffset::Int = a.offset
     for j = 1 : length(b)
-        a.entries[a.offset+j] += b[j] * factor
+        a.entries[aoffset+j] += b[j] * factor
     end
     return nothing
 end

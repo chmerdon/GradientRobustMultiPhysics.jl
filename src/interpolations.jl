@@ -801,7 +801,7 @@ function nodevalues_view(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Ty
         end
         return array_of_views
     else
-        @error "nodevalues_view node evalable for FEType = $FEType and operator = $operator"
+        @error "nodevalues_view not available for FEType = $FEType and operator = $operator"
     end
 end
 
