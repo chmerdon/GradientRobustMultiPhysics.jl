@@ -493,6 +493,7 @@ function interpolate!(
     postprocess = NoAction(),
     xtrafo = nothing, items = [],
     not_in_domain_value = 1e30,
+    start_cell = 1,
     only_localsearch = false,
     use_cellparents::Bool = false,
     eps = 1e-14) where {T1,T2,Tv,Ti}
@@ -512,8 +513,8 @@ function interpolate!(
     PE = PointEvaluator(source, operator, postprocess)
     xref = zeros(Tv,xdim_source)
     x_source = zeros(Tv,xdim_source)
-    cell::Int = 1
-    lastnonzerocell::Int = 1
+    cell::Int = start_cell
+    lastnonzerocell::Int = start_cell
     same_cells::Bool = xgrid == target.FES.xgrid
     CF::CellFinder{Tv,Ti} = CellFinder(xgrid)
 
