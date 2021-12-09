@@ -525,7 +525,11 @@ function interpolate!(
     end
 
     if same_cells || use_cellparents == true
-        xCellParents::Array{Ti,1} = target.FES.xgrid[CellParents]
+        if same_cells
+            xCellParents = 1 : num_cells(target.FES.xgrid)
+        else
+            xCellParents::Array{Ti,1} = target.FES.xgrid[CellParents]
+        end
         function point_evaluation_parentgrid!(result, x, target_cell)
             if same_cells
                 lastnonzerocell = target_cell

@@ -112,8 +112,8 @@ function make_all(; add_examples_output::Bool = true)
         sitename="GradientRobustMultiPhysics.jl",
         authors="Christian Merdon",
         pages = [
-            "Home" => "home.md",
-            "Index" => "index.md",
+            "Home" => "index.md",
+            "Index" => "package_index.md",
             "Problem Description" => Any[
                     "pdedescription.md",
                     "pdeoperators.md",

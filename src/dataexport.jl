@@ -50,23 +50,38 @@ function writeVTK!(filename::String, Data::Array{<:FEVectorBlock,1}; xgrid = Dat
     nodedata = zeros(Float64, maxcomponents, nnodes)
     
     for d = 1 : nblocks
-        # get node values
-        ncomponents = Length4Operator(operators[d], xdim, get_ncomponents(eltype(Data[d].FES))) 
-        nodevalues!(nodedata, Data[d], Data[d].FES, operators[d])
         if length(names) >= d
             fieldname = names[d]
         else
-            fieldname = "$(operators[d])" * "(" * Data[d].name * ")"
+            fieldname = Data[d].name * ".$(operators[d])"
             fieldname = fieldname[1:min(caplength,length(fieldname))]
             fieldname = replace(String(fieldname), " " => "_")
             fieldname = "$(d)_$fieldname"
         end    
-        for c = 1 : ncomponents
-            vtkfile["$fieldname.$c", VTKPointData()] = view(nodedata,c,:)
-        end
-        # add data for absolute value of vector quantity
-        if vectorabs && ncomponents > 1
-            vtkfile["$fieldname.a", VTKPointData()] = sqrt.(sum(view(nodedata,1:ncomponents,:).^2, dims = 1))
+        ncomponents = Length4Operator(operators[d], xdim, get_ncomponents(eltype(Data[d].FES))) 
+        if eltype(Data[d].FES) <: H1P0
+            # directly assign as VTKCellData
+            for c = 1 : ncomponents
+                vtkfile["$fieldname.$c", VTKCellData()] = view(Data[d].entries,Data[d].offset+c:ncomponents:Data[d].last_index)
+            end
+            # add data for absolute value of vector quantity
+            if vectorabs && ncomponents > 1
+                absdata = zeros(Float64, ncells)
+                for c = 1 : ncomponents
+                    absdata += view(Data[d].entries,Data[d].offset+c:ncomponents:Data[d].last_index).^2
+                end
+                vtkfile["$fieldname.a", VTKCellData()] = sqrt.(absdata)
+            end
+        else    
+            # get node values
+            nodevalues!(nodedata, Data[d], Data[d].FES, operators[d])
+            for c = 1 : ncomponents
+                vtkfile["$fieldname.$c", VTKPointData()] = view(nodedata,c,:)
+            end
+            # add data for absolute value of vector quantity
+            if vectorabs && ncomponents > 1
+                vtkfile["$fieldname.a", VTKPointData()] = sqrt.(sum(view(nodedata,1:ncomponents,:).^2, dims = 1))
+            end
         end
     end
 
