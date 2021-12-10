@@ -31,25 +31,6 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
-## exact solution
-function exact_velocity!(ν)
-    function closure(result,x,t)
-        result[1] = exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
-        result[2] = exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
-    end
-end
-function exact_pressure!(ν)
-    function closure(result,x, t)
-        result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
-    end
-end
-function rhs!(ν)
-    function closure(result,x,t)
-        result[1] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
-        result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
-    end
-end
-
 ## everything is wrapped in a main function
 function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
 
@@ -60,9 +41,17 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
 
     ## negotiate data
-    u = DataFunction(exact_velocity!(ν), [2,2]; name = "u", dependencies = "XT", quadorder = 6)
-    p = DataFunction(exact_pressure!(ν), [1,2]; name = "p", dependencies = "XT", quadorder = 4)
-    f = DataFunction(rhs!(ν), [2,2]; name = "f", dependencies = "XT", quadorder = 4)
+    u = DataFunction((result, x, t) -> (
+            result[1] = exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
+            result[2] = exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
+        ), [2,2]; name = "u", dependencies = "XT", quadorder = 6)
+    p = DataFunction((result, x, t) -> (
+            result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
+        ), [1,2]; name = "p", dependencies = "XT", quadorder = 4)
+    f = DataFunction((result, x, t) -> (
+            result[1] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
+            result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
+        ), [2,2]; name = "f", dependencies = "XT", quadorder = 4)
 
     ## set finite element and reconstruction operator
     FEType = [H1BR{2}, H1P0{1}]; IdentityV = ReconstructionIdentity{HDIVBDM1{2}};

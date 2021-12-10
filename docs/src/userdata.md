@@ -39,6 +39,7 @@ There are also derivatives defined for DataFunctions that generate another DataF
 DataFunction
 ∇
 div
+curl
 ```
 
 

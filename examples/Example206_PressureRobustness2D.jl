@@ -35,8 +35,7 @@ using GridVisualize
 ## problem data
 function HydrostaticTestProblem()
     ## Stokes problem with f = grad(p)
-    ## u = 0
-    ## p = x^3+y^3 - 1//2
+    ## u = 0,  p = x^3+y^3 - 1//2
     function P1_pressure!(result,x)
         result[1] = x[1]^3 + x[2]^3 - 1//2
     end
@@ -48,7 +47,6 @@ function HydrostaticTestProblem()
     p = DataFunction(P1_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 3)
     ∇u = DataFunction([0,0,0,0]; name = "∇u")
     f = DataFunction(P1_rhs!, [2,2]; name = "f", dependencies = "X", quadorder = 2)
-
     return p,u,∇u,f,false
 end
 

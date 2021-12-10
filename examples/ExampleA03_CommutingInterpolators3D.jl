@@ -21,12 +21,6 @@ function exact_function!(result,x)
     result[2] = x[1]^3
     result[3] = 1 + x[3]^2
 end
-## and its Curl3D
-function exact_curl!(result,x)
-    result[1] = 0
-    result[2] = 1
-    result[3] = 3*x[1]^2 - 2*x[2]
-end
 
 ## everything is wrapped in a main function
 function main(;order::Int = 1, testmode = false)
@@ -36,7 +30,7 @@ function main(;order::Int = 1, testmode = false)
 
     ## negotiate exact_function! and exact_curl! to the package
     u = DataFunction(exact_function!, [3,3]; name = "u_exact", dependencies = "X", quadorder = 3)
-    u_curl = DataFunction(exact_curl!, [3,3]; name = "Curl(u_exact)", dependencies = "X", quadorder = 2)
+    u_curl = curl(u)
 
     ## choose commuting interpolators pair
     if order == 1

@@ -10,7 +10,7 @@ This example computes a velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of t
 \mathrm{div}(u) & = 0
 \end{aligned}
 ```
-with (possibly time-dependent) exterior force ``\mathbf{f}`` and some viscosity parameter ``\mu``.
+with (possibly time-dependent) exterior force ``\mathbf{f}`` and some ν parameter ``\mu``.
 
 In this example we solve an analytical toy problem with prescribed solution
 ```math
@@ -24,50 +24,33 @@ benefits of pressure-robustness in time-dependent linear Stokes problem in prese
 The problem is solved on series of finer and finer unstructured simplex meshes and compares the error of the discrete Stokes solution,
 an interpolation into the same space and the best-approximations into the same space. While a pressure-robust variant shows optimally
 converging errors close to the best-approximations, a non pressure-robust discretisations show suboptimal (or no) convergence!
-Compare e.g. Bernardi--Raugel and Bernardi--Raugel pressure-robust by (un)commenting the responsible lines in this example.
+Compare e.g. Bernardi--Raugel and Bernardi--Raugel pressure-robust by switching 'reconstruct'.
 =#
-
 
 module Example207_StokesTransient2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
 
-## problem data
-function exact_pressure!(result,x)
-    result[1] = sin(x[1]+x[2]) - 2*sin(1)+sin(2)
-end
-function exact_velocity!(result,x,t)
-    result[1] = (1+t)*cos(x[2]);
-    result[2] = (1+t)*sin(x[1]);
-end
-function exact_rhs!(viscosity)
-    function closure(result,x,t)
-        result[1] = viscosity*(1+t)*cos(x[2]) + cos(x[1]+x[2]) + cos(x[2])
-        result[2] = viscosity*(1+t)*sin(x[1]) + cos(x[1]+x[2]) + sin(x[1])
-    end
-end
-
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, T = 1e-2, viscosity = 1e-6, graddiv = 0)
-
-    ## set log level
+function main(; 
+    nlevels = 4,            # number of refinement levels
+    dt = 1e-3,              # time step
+    T = 1e-2,               # final time
+    ν = 1e-6,               # viscosity
+    reconstruct = true,     # use gradient-robust modification ?
+    graddiv = 0,            # factor for grad-div stabilisation
+    verbosity = 0           # higher number increases printed (debug) messages
+    )
+    
+    ## set log level 
     set_verbosity(verbosity)
 
     ## initial grid
     xgrid = grid_unitsquare(Triangle2D);
 
     ## choose one of these (inf-sup stable) finite element type pairs
-    reconstruct = false # do not change
-    broken_p = false # is pressure space broken ?
-    #FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
-    #FETypes = [H1P2B{2,2}, H1P1{1}]; broken_p = true # P2-bubble
-    #FETypes = [H1CR{2}, H1P0{1}]; broken_p = true # Crouzeix--Raviart
-    #FETypes = [H1CR{2}, H1P0{1}]; broken_p = true; reconstruct = true # Crouzeix-Raviart gradient-robust
-    #FETypes = [H1MINI{2,2}, H1P1{1}] # MINI element on triangles only
-    #FETypes = [H1MINI{2,2}, H1CR{1}] # MINI element on triangles/quads
-    #FETypes = [H1BR{2}, H1P0{1}]; broken_p = true # Bernardi--Raugel
-    FETypes = [H1BR{2}, H1P0{1}]; broken_p = true; reconstruct = true # Bernardi--Raugel gradient-robust
+    FETypes = [H1BR{2}, H1P0{1}]; # Bernardi--Raugel 
   
     #####################################################################################
 
@@ -78,15 +61,23 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     ## negotiate data functions to the package
     ## note that dependencies "XT" marks the function to be x- and t-dependent
     ## that causes the solver to automatically reassemble associated operators in each time step
-    u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "XT", quadorder = 5)
-    p = DataFunction(exact_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 5)
+    u = DataFunction((result, x, t) -> (
+            result[1] = (1+t)*cos(x[2]);
+            result[2] = (1+t)*sin(x[1]);
+        ), [2,2]; name = "u", dependencies = "XT", quadorder = 5)
+    p = DataFunction((result, x) -> (
+            result[1] = sin(x[1]+x[2]) - 2*sin(1)+sin(2)
+        ), [1,2]; name = "p", dependencies = "X", quadorder = 5)
+    f = DataFunction((result, x, t) -> (
+            result[1] = ν*(1+t)*cos(x[2]) + cos(x[1]+x[2]) + cos(x[2]);
+            result[2] = ν*(1+t)*sin(x[1]) + cos(x[1]+x[2]) + sin(x[1]);
+        ), [2,2]; name = "f", dependencies = "XT", quadorder = 5)
     ∇u = ∇(u)
-    user_function_rhs = DataFunction(exact_rhs!(viscosity), [2,2]; name = "f", dependencies = "XT", quadorder = 5)
 
     ## load Stokes problem prototype and assign data
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = viscosity, nonlinear = false)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = ν, nonlinear = false)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(testfunction_operator, [1], user_function_rhs))
+    add_rhsdata!(Problem, 1, RhsOperator(testfunction_operator, [1], f))
 
     ## add grad-div stabilisation
     if graddiv > 0
@@ -112,7 +103,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
         xgrid = uniform_refine(xgrid)
 
         ## generate FESpaces
-        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = broken_p)]
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
 
         ## generate solution fector
         Solution = FEVector(["u_h", "p_h"],FES)
@@ -124,7 +115,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
 
         ## generate time-dependent solver and chance rhs data
         TCS = TimeControlSolver(Problem, Solution, CrankNicolson; timedependent_equations = [1], skip_update = [-1], dt_operator = [testfunction_operator])
-        advance_until_time!(TCS, timestep, T)
+        advance_until_time!(TCS, dt, T)
 
         ## solve bestapproximation problems at final time for comparison
         BA_L2_p = FEVector("L2-Bestapproximation pressure",FES[2])

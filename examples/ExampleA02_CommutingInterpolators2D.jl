@@ -22,11 +22,6 @@ using ExtendableGrids
 function exact_function!(result,x)
     result[1] = x[1]^2-x[2]^4 + 1
 end
-## and its CurlScalar = (-dy,dx) 
-function exact_curl!(result,x)
-    result[1] = 4*x[2]^3
-    result[2] = 2*x[1]
-end
 
 ## everything is wrapped in a main function
 function main(;order::Int = 2, testmode = false)
@@ -36,7 +31,7 @@ function main(;order::Int = 2, testmode = false)
 
     ## negotiate exact_function! and exact_curl! to the package
     u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
-    u_curl = DataFunction(exact_curl!, [2,2]; name = "Curl(u_exact)", dependencies = "X", quadorder = 3)
+    u_curl = curl(u)
 
     ## choose commuting interpolators pair
     if order == 1
