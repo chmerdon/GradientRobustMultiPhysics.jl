@@ -33,9 +33,12 @@ and the expected interface of the function provided by the user.
 | "XT"               | function f!(result,x,t) ... end  (space and time-dependent data)       |
 
 DataFunctions can be used to define boundary data, right-hand side functions and can be interpolated by the finite element standard interpolations.
+There are also derivatives defined for DataFunctions that generate another DataFunction where the derivative is calculated via ForwardDiff.
 
 ```@docs
 DataFunction
+∇
+div
 ```
 
 

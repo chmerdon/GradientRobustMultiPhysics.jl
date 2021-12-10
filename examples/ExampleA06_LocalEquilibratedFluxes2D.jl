@@ -43,19 +43,6 @@ function exact_function!(result,x)
     result[1] = sin(2*result[1]/3)
     result[1] *= (x[1]^2 + x[2]^2)^(1/3)
 end
-## ... and its gradient
-function exact_function_gradient!(result,x)
-    result[1] = atan(x[2],x[1])
-    if result[1] < 0
-        result[1] += 2*pi
-    end
-    ## du/dy = du/dr * sin(phi) + (1/r) * du/dphi * cos(phi)
-    result[2] = sin(2*result[1]/3) * sin(result[1]) + cos(2*result[1]/3) * cos(result[1])
-    result[2] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3 
-    ## du/dx = du/dr * cos(phi) - (1/r) * du/dphi * sin(phi)
-    result[1] = sin(2*result[1]/3) * cos(result[1]) - cos(2*result[1]/3) * sin(result[1])
-    result[1] *= (x[1]^2 + x[2]^2)^(-1/6) * 2/3 
-end
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, order = 2, nlevels = 15, theta = 1//2, Plotter = nothing)
@@ -80,7 +67,7 @@ function main(; verbosity = 0, order = 2, nlevels = 15, theta = 1//2, Plotter = 
     
     ## negotiate data functions to the package
     u = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
-    ∇u = DataFunction(exact_function_gradient!, [2,2]; name = "∇u", dependencies = "X", quadorder = 4)
+    ∇u = ∇(u)
 
     ## setup Poisson problem
     Problem = PoissonProblem()

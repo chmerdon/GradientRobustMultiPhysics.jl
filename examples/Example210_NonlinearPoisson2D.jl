@@ -39,11 +39,6 @@ function exact_function!(result,x)
     result[1] = x[1]*x[2]
     return nothing
 end
-function exact_gradient!(result,x)
-    result[1] = x[2]
-    result[2] = x[1]
-    return nothing
-end
 function rhs!(q,p,κ)
     function closure(result,x)
         if q == 1
@@ -85,7 +80,7 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
 
     ## negotiate data functions to the package
     u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 2)
-    ∇u = DataFunction(exact_gradient!, [2,2]; name = "grad(u_exact)", dependencies = "X", quadorder = 1) 
+    ∇u = ∇(u)
     f = DataFunction(rhs!(q,p,κ), [1,2]; dependencies = "X", name = "f", quadorder = 4)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)

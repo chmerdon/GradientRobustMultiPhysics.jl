@@ -15,12 +15,11 @@ using ExtendableGrids
 using GridVisualize
 
 ## function to interpolate
-function data!(ν)
-    function closure(result,x)
-        result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
-        result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
-    end
+function exact_u(result,x)
+    result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
+    result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
 end
+const u = DataFunction(exact_u, [2,2]; name = "u", dependencies = "X", quadorder = 5)
 
 ## everything is wrapped in a main function
 function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
@@ -31,9 +30,6 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     ## generate two grids
     xgrid1 = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
     xgrid2 = uniform_refine(xgrid1,2; store_parents = true)
-
-    ## negotiate data
-    u = DataFunction(data!(ν), [2,2]; name = "u", dependencies = "X", quadorder = 6)
 
     ## set finite element types for the two grids
     FEType1 = H1P2{2,2}
@@ -54,8 +50,8 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
 
     ## plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1], xgrid1, view(nodevalues(FEFunction1[1]),1,:), levels = 11, title = "u_h (coarse grid)")
-    scalarplot!(p[1,2], xgrid2, view(nodevalues(FEFunction2[1]),1,:), levels = 11, title = "u_h (fine grid)")
+    scalarplot!(p[1,1], xgrid1, view(nodevalues(FEFunction1[1]),1,:), levels = 11, title = "u_h ($FEType1, coarse grid)")
+    scalarplot!(p[1,2], xgrid2, view(nodevalues(FEFunction2[1]),1,:), levels = 11, title = "u_h ($FEType2, fine grid)")
 end
 
 end

@@ -23,6 +23,7 @@ include("userdata.jl")
 export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
 export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval_data!
 export is_timedependent, is_regiondependent, is_itemdependent
+export ∇, div
 
 include("quadrature.jl")
 export QuadratureRule

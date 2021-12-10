@@ -24,29 +24,19 @@ function exact_function1D(polyorder)
     function polynomial(result,x::Array{<:Real,1})
         result[1] = x[1]^polyorder + 1
     end
-    function gradient(result,x::Array{<:Real,1})
-        result[1] = polyorder * x[1]^(polyorder-1)
-    end
     function hessian(result,x::Array{<:Real,1})
         result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
     end
     exact_integral = 1 // (polyorder+1) + 1
     exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", quadorder = polyorder)
-    exact_gradient = DataFunction(gradient, [1,1]; dependencies = "X", quadorder = polyorder - 1)
     exact_hessian = DataFunction(hessian, [1,1]; dependencies = "X", quadorder = polyorder - 2)
-    return exact_function, exact_integral, exact_gradient, exact_hessian
+    return exact_function, exact_integral, ∇(exact_function), exact_hessian
 end
 
 function exact_function2D(polyorder)
     function polynomial(result,x::Array{<:Real,1})
         result[1] = x[1]^polyorder + 2*x[2]^polyorder + 1
         result[2] = 3*x[1]^polyorder - x[2]^polyorder - 1
-    end
-    function gradient(result,x::Array{<:Real,1})
-        result[1] = polyorder * x[1]^(polyorder-1)
-        result[2] = 2 * polyorder * x[2]^(polyorder - 1)
-        result[3] = 3 * polyorder * x[1]^(polyorder-1)
-        result[4] = - polyorder * x[2]^(polyorder - 1)
     end
     function hessian(result,x::Array{<:Real,1})
         result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
@@ -60,9 +50,8 @@ function exact_function2D(polyorder)
     end
     exact_integral = [3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
     exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", quadorder = polyorder)
-    exact_gradient = DataFunction(gradient, [4,2]; dependencies = "X", quadorder = polyorder - 1)
     exact_hessian = DataFunction(hessian, [8,2]; dependencies = "X", quadorder = polyorder - 2)
-    return exact_function, exact_integral, exact_gradient, exact_hessian
+    return exact_function, exact_integral, ∇(exact_function), exact_hessian
 end
 
 function exact_function3D(polyorder)
@@ -70,16 +59,6 @@ function exact_function3D(polyorder)
         result[1] = 2*x[3]^polyorder - x[2]^polyorder - 1
         result[2] = x[1]^polyorder + 2*x[2]^polyorder + 1
         result[3] = 3*x[1]^polyorder - x[2]^polyorder - 1
-    end
-    function gradient(result,x::Array{<:Real,1})
-        result[1] = 0
-        result[2] = - polyorder * x[2]^(polyorder - 1)
-        result[3] = 2 * polyorder * x[3]^(polyorder - 1)
-        result[4] = polyorder * x[1]^(polyorder-1)
-        result[5] = 2 * polyorder * x[2]^(polyorder - 1)
-        result[7] = 3 * polyorder * x[1]^(polyorder-1)
-        result[8] = - polyorder * x[2]^(polyorder - 1)
-        result[9] = 0
     end
     function hessian(result,x::Array{<:Real,1})
         fill!(result,0)
@@ -92,9 +71,8 @@ function exact_function3D(polyorder)
     end
     exact_integral = [1 // (polyorder + 1) - 1, 3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
     exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", quadorder = polyorder)
-    exact_gradient = DataFunction(gradient, [9,3]; dependencies = "X", quadorder = polyorder - 1)
     exact_hessian = DataFunction(hessian, [27,3]; dependencies = "X", quadorder = polyorder - 2)
-    return exact_function, exact_integral, exact_gradient, exact_hessian
+    return exact_function, exact_integral, ∇(exact_function), exact_hessian
 end
 
 
@@ -544,12 +522,6 @@ function run_stokes_tests()
         function exact_pressure!(result,x::Array{<:Real,1})
             result[1] = x[1]^polyorder_pressure + x[2]^polyorder_pressure - 2 // (polyorder_pressure+1)
         end
-        function velo_gradient!(result,x::Array{<:Real,1})
-            result[1] = 0
-            result[2] = polyorder_velocity * x[2]^(polyorder_velocity-1)
-            result[3] = polyorder_velocity * x[1]^(polyorder_velocity-1)
-            result[4] = 0
-        end
         function rhs!(result,x::Array{<:Real,1}) # = Delta u + grad p
             result[1] = 0
             result[2] = 0
@@ -564,9 +536,8 @@ function run_stokes_tests()
         end
         exact_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "X", quadorder = polyorder_velocity)
         exact_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = "X", quadorder = polyorder_pressure)
-        exact_gradient = DataFunction(velo_gradient!, [4,2]; dependencies = "X", quadorder = polyorder_velocity - 1)
         rhs = DataFunction(rhs!, [2,2]; dependencies = "X", quadorder = max(0,polyorder_pressure - 1))
-        return exact_velocity, exact_pressure, exact_gradient, rhs
+        return exact_velocity, exact_pressure, ∇(exact_velocity), rhs
     end
 
     function exact_functions_stokes3D(polyorder_velocity,polyorder_pressure)
@@ -577,17 +548,6 @@ function run_stokes_tests()
         end
         function exact_pressure!(result,x::Array{<:Real,1})
             result[1] = x[1]^polyorder_pressure + x[2]^polyorder_pressure + x[3]^polyorder_pressure  - 3 // (polyorder_pressure+1)
-        end
-        function velo_gradient!(result,x::Array{<:Real,1})
-            result[1] = 0
-            result[2] = 0
-            result[3] = polyorder_velocity * x[3]^(polyorder_velocity-1)
-            result[4] = polyorder_velocity * x[1]^(polyorder_velocity-1)
-            result[5] = 0
-            result[6] = 0
-            result[7] = 0
-            result[8] = polyorder_velocity * x[2]^(polyorder_velocity-1)
-            result[9] = 0
         end
         function rhs!(result,x::Array{<:Real,1}) # = Delta u + grad p
             result[1] = 0
@@ -606,9 +566,8 @@ function run_stokes_tests()
         end
         exact_velocity = DataFunction(exact_velocity!, [3,3]; dependencies = "X", quadorder = polyorder_velocity)
         exact_pressure = DataFunction(exact_pressure!, [1,3]; dependencies = "X", quadorder = polyorder_pressure)
-        exact_gradient = DataFunction(velo_gradient!, [9,3]; dependencies = "X", quadorder = polyorder_velocity - 1)
         rhs = DataFunction(rhs!, [3,3]; dependencies = "X", quadorder = max(0,polyorder_pressure - 1))
-        return exact_velocity, exact_pressure, exact_gradient, rhs
+        return exact_velocity, exact_pressure, ∇(exact_velocity), rhs
     end
 
     # list of FETypes that should be tested

@@ -21,13 +21,8 @@ function exact_function!(result,x)
     result[2] = -x[1]^2 + x[2] + 1
     result[3] = x[1]*x[2]
 end
-## define its divergence
-function exact_divergence!(result,x)
-    result[1] = 3*x[1]*x[1] + 1
-end
 
 const u = DataFunction(exact_function!, [3,3]; name = "u", dependencies = "X", quadorder = 3)
-const div_u = DataFunction(exact_divergence!, [1,3]; name = "div(u)", dependencies = "X", quadorder = 2)
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing)
@@ -47,6 +42,7 @@ function main(; verbosity = 0, Plotter = nothing)
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
     ## add the right-hand side data for the constraint and inspect the defined problem
+    div_u = div(u)
     add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], div_u))
     @show Problem
 

@@ -235,6 +235,76 @@ function ExtendedDataFunction(f::Function, dimensions::Array{Int,1}; name = "use
     return UserData{AbstractExtendedDataFunction,typeof(f),typeof(nf),length(dimensions)}(name, dependencies, quadorder, dimensions, f, nf)
 end
 
+function ∇(UD::UserData{AbstractDataFunction}; quadorder = UD.quadorder - 1)
+    argsizes = UD.dimensions
+    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
+    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[2])
+    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
+    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+    if UD.dependencies == "X"
+        cfg = ForwardDiff.JacobianConfig(UD.user_function, result_temp, input_temp)
+        function data_gradient_x(result, x)
+            ForwardDiff.vector_mode_jacobian!(Dresult, UD.user_function, result_temp, x, cfg)
+            for j = 1 : argsizes[1], k = 1 : argsizes[2]
+                result[(j-1)*argsizes[2] + k] = jac[j,k]
+            end
+            return nothing
+        end
+        return DataFunction(data_gradient_x, [argsizes[1]*argsizes[2], argsizes[2]]; name = "∇($(UD.name))", dependencies = "X", quadorder = quadorder)
+    elseif UD.dependencies == "XT"
+        reduced_function_xt(t) = (result,x) -> UD.user_function(result,x,t)
+        cfg = ForwardDiff.JacobianConfig(reduced_function_xt(0.0), result_temp, input_temp)
+        function data_gradient_xt(result, x, t)
+            ForwardDiff.vector_mode_jacobian!(Dresult, reduced_function_xt(t), result_temp, x, cfg)
+            for j = 1 : argsizes[1], k = 1 : argsizes[2]
+                result[(j-1)*argsizes[2] + k] = jac[j,k]
+            end
+            return nothing
+        end
+        return DataFunction(data_gradient_xt, [argsizes[1]*argsizes[2], argsizes[2]]; name = "∇($(UD.name))", dependencies = "XT", quadorder = quadorder)
+    elseif UD.dependencies == "" || UD.dependencies == "T"
+        return DataFunction(zeros(Float64, argsizes[1]*argsizes[2]); name = "∇($(UD.name))")
+    else
+        @error "gradient of user function with these dependencies not implemented yet"
+    end
+end
+
+function div(UD::UserData{AbstractDataFunction}; quadorder = UD.quadorder - 1)
+    argsizes = UD.dimensions
+    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
+    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[2])
+    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
+    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+    if UD.dependencies == "X"
+        cfg = ForwardDiff.JacobianConfig(UD.user_function, result_temp, input_temp)
+        function data_gradient_x(result, x)
+            ForwardDiff.vector_mode_jacobian!(Dresult, UD.user_function, result_temp, x, cfg)
+            result[1] = 0
+            for j = 1 : argsizes[2]
+                result[1] += jac[j,j]
+            end
+            return nothing
+        end
+        return DataFunction(data_gradient_x, [1, argsizes[2]]; name = "∇($(UD.name))", dependencies = "X", quadorder = quadorder)
+    elseif UD.dependencies == "XT"
+        reduced_function_xt(t) = (result,x) -> UD.user_function(result,x,t)
+        cfg = ForwardDiff.JacobianConfig(reduced_function_xt(0.0), result_temp, input_temp)
+        function data_gradient_xt(result, x, t)
+            ForwardDiff.vector_mode_jacobian!(Dresult, reduced_function_xt(t), result_temp, x, cfg)
+            result[1] = 0
+            for j = 1 : argsizes[2]
+                result[1] += jac[j,j]
+            end
+            return nothing
+        end
+        return DataFunction(data_gradient_xt, [1, argsizes[2]]; name = "∇($(UD.name))", dependencies = "XT", quadorder = quadorder)
+    elseif UD.dependencies == "" || UD.dependencies == "T"
+        return DataFunction(zeros(Float64, 1); name = "∇($(UD.name))")
+    else
+        @error "gradient of user function with these dependencies not implemented yet"
+    end
+end
+
 @inline function eval_data!(result, UD::UserData{AbstractActionKernel}, input, X, T, R, I, L)
     UD.negotiated_function(result, input, X, T, R, I, L)
 end

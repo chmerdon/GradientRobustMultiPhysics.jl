@@ -24,16 +24,9 @@ function exact_function!(result,x)
     result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
     return nothing
 end
-function exact_gradient!(result,x)
-    result[1] = x[3] - x[2]
-    result[2] = - x[1] + 2*x[2]
-    result[3] = x[1]
-    return nothing
-end
 
 ## negotiate data functions to the package
 const u = DataFunction(exact_function!, [1,3]; name = "u", dependencies = "X", quadorder = 2)
-const ∇u = DataFunction(exact_gradient!, [3,3]; name = "∇(u)", dependencies = "X", quadorder = 1)
 const f = DataFunction([-2]; name = "f") # = -Δu = -2
 
 ## everything is wrapped in a main function
@@ -56,7 +49,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
 
     ## prepare error calculation
     L2Error = L2ErrorIntegrator(Float64, u)
-    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    H1Error = L2ErrorIntegrator(Float64, ∇(u), Gradient)
     Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
 
     ## loop over levels

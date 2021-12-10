@@ -41,12 +41,6 @@ function exact_velocity!(result,x,t)
     result[1] = (1+t)*cos(x[2]);
     result[2] = (1+t)*sin(x[1]);
 end
-function exact_velocity_gradient!(result,x,t)
-    result[1] = 0.0
-    result[2] = -(1+t)*sin(x[2]);
-    result[3] = (1+t)*cos(x[1]);
-    result[4] = 0.0;
-end
 function exact_rhs!(viscosity)
     function closure(result,x,t)
         result[1] = viscosity*(1+t)*cos(x[2]) + cos(x[1]+x[2]) + cos(x[2])
@@ -86,7 +80,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 4, timestep = 1e-3, 
     ## that causes the solver to automatically reassemble associated operators in each time step
     u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "XT", quadorder = 5)
     p = DataFunction(exact_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 5)
-    ∇u = DataFunction(exact_velocity_gradient!, [4,2]; name = "∇u", dependencies = "XT", quadorder = 4)
+    ∇u = ∇(u)
     user_function_rhs = DataFunction(exact_rhs!(viscosity), [2,2]; name = "f", dependencies = "XT", quadorder = 5)
 
     ## load Stokes problem prototype and assign data

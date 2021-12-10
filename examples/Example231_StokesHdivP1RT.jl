@@ -29,19 +29,13 @@ function get_flowdata(μ)
     u! = (result,x,t) -> (
         result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2));
         result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)))
-    ∇u! = (result,x,t) -> (
-        result[1] = π*cos(t)*(cos(π*x[1]-0.7)*sin(π*x[2]+0.2));
-        result[2] = π*cos(t)*(sin(π*x[1]-0.7)*cos(π*x[2]+0.2));
-        result[3] = -result[2];
-        result[4] = -result[1])
     f! = (result,x,t) -> (## f= -μΔu + ∇p
         result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2)) + cos(t)*cos(x[1])*cos(x[2]);
         result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)) - cos(t)*sin(x[1])*sin(x[2]);)
     u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", quadorder = 5)
     p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", quadorder = 4)
-    ∇u = DataFunction(∇u!, [4,2]; dependencies = "XT", name = "∇u", quadorder = 4)
     f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", quadorder = 5)
-    return u, p, ∇u, f
+    return u, p, ∇(u), f
 end
 
 ## everything is wrapped in a main function

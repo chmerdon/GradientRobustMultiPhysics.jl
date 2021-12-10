@@ -32,10 +32,6 @@ const α = DataFunction([0.1]; name = "α")
 function exact_solution!(result,x)
     result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
 end    
-function exact_solution_gradient!(result,x)
-    result[1] = x[2]*(2*x[1]-1)*(x[2]-1) + 1
-    result[2] = x[1]*(2*x[2]-1)*(x[1]-1)
-end    
 function exact_solution_rhs!(ν)
     eval_alpha = zeros(Float64,1)
     eval_beta = zeros(Float64,2)
@@ -136,7 +132,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 
 
     ## negotiate data functions to the package
     u = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "X", quadorder = 4)
-    ∇u = DataFunction(exact_solution_gradient!, [2,2]; name = "∇(u)", dependencies = "X", quadorder = 3)
+    ∇u = ∇(u)
     f = DataFunction(exact_solution_rhs!(ν), [1,2]; name = "f", dependencies = "X", quadorder = 5)
 
     ## set finite element type according to chosen order
