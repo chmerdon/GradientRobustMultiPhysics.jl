@@ -9,12 +9,6 @@ function exact_function!(result,x)
     result[2] = x[1]^3
     result[3] = 1 + x[3]^2
 end
-# and its Curl3D
-function exact_curl!(result,x)
-    result[1] = 0
-    result[2] = 1
-    result[3] = 3*x[1]^2 - 2*x[2]
-end
 
 # everything is wrapped in a main function
 function main(;order::Int = 1, testmode = false)
@@ -24,7 +18,7 @@ function main(;order::Int = 1, testmode = false)
 
     # negotiate exact_function! and exact_curl! to the package
     u = DataFunction(exact_function!, [3,3]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-    u_curl = DataFunction(exact_curl!, [3,3]; name = &quot;Curl(u_exact)&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+    u_curl = curl(u)
 
     # choose commuting interpolators pair
     if order == 1
@@ -78,4 +72,4 @@ function test()
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA03_CommutingInterpolators3D.main()
-error(Curl(I_HCURLN0{3}(psi) - I_HDIVRT0{3}(Curl(psi))) = 3.821945511051252e-17</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA02_CommutingInterpolators2D/">« A02 : Commuting Interpolators 2D</a><a class="docs-footer-nextpage" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 9 December 2021 13:11">Thursday 9 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+error(Curl(I_HCURLN0{3}(psi) - I_HDIVRT0{3}(Curl(psi))) = 3.821945511051252e-17</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA02_CommutingInterpolators2D/">« A02 : Commuting Interpolators 2D</a><a class="docs-footer-nextpage" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 10 December 2021 10:25">Friday 10 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

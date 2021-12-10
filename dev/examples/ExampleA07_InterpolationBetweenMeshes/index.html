@@ -6,12 +6,11 @@ using ExtendableGrids
 using GridVisualize
 
 # function to interpolate
-function data!(ν)
-    function closure(result,x)
-        result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
-        result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
-    end
+function exact_u(result,x)
+    result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
+    result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
 end
+const u = DataFunction(exact_u, [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 5)
 
 # everything is wrapped in a main function
 function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
@@ -22,9 +21,6 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     # generate two grids
     xgrid1 = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
     xgrid2 = uniform_refine(xgrid1,2; store_parents = true)
-
-    # negotiate data
-    u = DataFunction(data!(ν), [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 6)
 
     # set finite element types for the two grids
     FEType1 = H1P2{2,2}
@@ -45,10 +41,10 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
 
     # plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1], xgrid1, view(nodevalues(FEFunction1[1]),1,:), levels = 11, title = &quot;u_h (coarse grid)&quot;)
-    scalarplot!(p[1,2], xgrid2, view(nodevalues(FEFunction2[1]),1,:), levels = 11, title = &quot;u_h (fine grid)&quot;)
+    scalarplot!(p[1,1], xgrid1, view(nodevalues(FEFunction1[1]),1,:), levels = 11, title = &quot;u_h ($FEType1, coarse grid)&quot;)
+    scalarplot!(p[1,2], xgrid2, view(nodevalues(FEFunction2[1]),1,:), levels = 11, title = &quot;u_h ($FEType2, fine grid)&quot;)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA07_InterpolationBetweenMeshes.main()
-  1.062945 seconds (1.48 M allocations: 82.207 MiB, 2.64% gc time, 97.79% compilation time)
-  0.557724 seconds (591.93 k allocations: 26.527 MiB, 96.00% compilation time)</code></pre><p><img src="../../images/ExampleA07_InterpolationBetweenMeshes_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA06_LocalEquilibratedFluxes2D/">« A06 : Local Equilibrated Fluxes 2D</a><a class="docs-footer-nextpage" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 9 December 2021 13:11">Thursday 9 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  0.913071 seconds (1.48 M allocations: 82.381 MiB, 3.78% gc time, 97.81% compilation time)
+  0.500025 seconds (592.26 k allocations: 26.553 MiB, 6.56% gc time, 89.72% compilation time)</code></pre><p><img src="../../images/ExampleA07_InterpolationBetweenMeshes_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA06_LocalEquilibratedFluxes2D/">« A06 : Local Equilibrated Fluxes 2D</a><a class="docs-footer-nextpage" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 10 December 2021 10:25">Friday 10 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -11,13 +11,8 @@ function exact_function!(result,x)
     result[2] = -x[1]^2 + x[2] + 1
     result[3] = x[1]*x[2]
 end
-# define its divergence
-function exact_divergence!(result,x)
-    result[1] = 3*x[1]*x[1] + 1
-end
 
 const u = DataFunction(exact_function!, [3,3]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 3)
-const div_u = DataFunction(exact_divergence!, [1,3]; name = &quot;div(u)&quot;, dependencies = &quot;X&quot;, quadorder = 2)
 
 # everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing)
@@ -37,6 +32,7 @@ function main(; verbosity = 0, Plotter = nothing)
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
 
     # add the right-hand side data for the constraint and inspect the defined problem
+    div_u = div(u)
     add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], div_u))
     @show Problem
 
@@ -85,5 +81,5 @@ PDE-DESCRIPTION
    BoundaryOperator[2] : 
 
 Problem = 
-	L2error(Id) = 0.00017706474627459716
-	L2error(div) = 0.009878280436234923</code></pre><p><img src="../../images/Example302_BestapproximationHdiv3D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example301_Poisson3D/">« 301 : Poisson-Problem 3D</a><a class="docs-footer-nextpage" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 9 December 2021 13:11">Thursday 9 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	L2error(Id) = 0.00017706474627459632
+	L2error(div) = 0.009878280436234928</code></pre><p><img src="../../images/Example302_BestapproximationHdiv3D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example301_Poisson3D/">« 301 : Poisson-Problem 3D</a><a class="docs-footer-nextpage" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 10 December 2021 10:25">Friday 10 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

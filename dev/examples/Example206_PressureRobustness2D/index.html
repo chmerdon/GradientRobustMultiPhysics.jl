@@ -11,8 +11,7 @@ using GridVisualize
 # problem data
 function HydrostaticTestProblem()
     # Stokes problem with f = grad(p)
-    # u = 0
-    # p = x^3+y^3 - 1//2
+    # u = 0,  p = x^3+y^3 - 1//2
     function P1_pressure!(result,x)
         result[1] = x[1]^3 + x[2]^3 - 1//2
     end
@@ -24,7 +23,6 @@ function HydrostaticTestProblem()
     p = DataFunction(P1_pressure!, [1,2]; name = &quot;p&quot;, dependencies = &quot;X&quot;, quadorder = 3)
     ∇u = DataFunction([0,0,0,0]; name = &quot;∇u&quot;)
     f = DataFunction(P1_rhs!, [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 2)
-
     return p,u,∇u,f,false
 end
 
@@ -39,18 +37,11 @@ function PotentialFlowTestProblem()
         result[1] = 3*x[1]^2 - 3*x[2]^2;
         result[2] = -6*x[1]*x[2];
     end
-    function P2_velogradient!(result,x)
-        result[1] = 6*x[1]
-        result[2] = -6*x[2];
-        result[3] = -6*x[2];
-        result[4] = -6*x[1];
-    end
     u = DataFunction(P2_velo!, [2,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 2)
     p = DataFunction(P2_pressure!, [1,2]; name = &quot;p&quot;, dependencies = &quot;X&quot;, quadorder = 4)
-    ∇u = DataFunction(P2_velogradient!, [4,2]; name = &quot;∇u&quot;, dependencies = &quot;X&quot;, quadorder = 1)
     f = DataFunction([0,0]; name = &quot;f&quot;)
 
-    return p,u,∇u,f,true
+    return p,u,∇(u),f,true
 end
 
 
@@ -355,4 +346,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 ============|=============================|=============================|=============================|
         70  |     1.76102e+01      0.000  |     9.63537e+00      0.000  |     1.13867e+00      0.000  |
        250  |     1.46160e+01      0.293  |     1.95442e+00      2.507  |     5.66582e-01      1.097  |
-       946  |     8.87338e+00      0.750  |     3.87639e-01      2.431  |     2.81678e-01      1.050  |</code></pre><p><img src="../../images/Example206_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example205_PlanarLatticeFlow2D/">« 205 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 9 December 2021 13:11">Thursday 9 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+       946  |     8.87338e+00      0.750  |     3.87639e-01      2.431  |     2.81678e-01      1.050  |</code></pre><p><img src="../../images/Example206_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example205_PlanarLatticeFlow2D/">« 205 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example207_StokesTransient2D/">207 : Stokes Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 10 December 2021 10:25">Friday 10 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
