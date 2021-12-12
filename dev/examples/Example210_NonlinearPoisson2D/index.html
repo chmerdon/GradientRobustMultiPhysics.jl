@@ -4,7 +4,7 @@
 \end{aligned}\]</p><p>with some right-hand side <span>$f$</span> on a series of uniform refinements of the unit square <span>$\Omega$</span>. The quantity q(u) makes the problem nonlinear and we consider the two possibilites</p><p class="math-container">\[\begin{aligned}
     q_1(u) &amp;:= 1 + u^2\\
     q_2(u) &amp;:= (\kappa + \lvert \nabla u \rvert)^{p-2}
-\end{aligned}\]</p><p>where the second one is known is the p-Laplacian (plus some small regularisation <span>$\kappa \geq 0$</span> to make it solvable with the Newton solver).</p><p>This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.</p><p>Also the factorization in the linear solver can be changed to anything &lt;:ExtendableSparse.AbstractFactorization (but not every one will work in this example).</p><pre><code class="language-julia hljs">module Example210_NonlinearPoisson2D
+\end{aligned}\]</p><p>where the second one is known is the p-Laplacian (plus some small regularisation <span>$\kappa \geq 0$</span> to make it solvable with the Newton solver).</p><p>This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression (either via a function (q = 1) or a callable struct (q = 2)) and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.</p><p>Also the factorization in the linear solver can be changed to anything &lt;:ExtendableSparse.AbstractFactorization (but not every one will work in this example).</p><pre><code class="language-julia hljs">module Example210_NonlinearPoisson2D
 
 using GradientRobustMultiPhysics
 using ExtendableSparse
@@ -27,27 +27,36 @@ function rhs!(q,p,κ)
     end
     return closure
 end
+
+# for kernels withouts parameters, closures should work fine
 function diffusion_kernel1!(result, input)
     # input[1,2:3] = [u, grad(u)]
     result[1] = (1+input[1]^2)*input[2]
     result[2] = (1+input[1]^2)*input[3]
     return nothing
 end
-function diffusion_kernel2!(p,κ)
-    function closure(result, input)
-        # input[1:2] = [grad(u)]
-        # we use result[1] as temporary storage to compute (κ + |∇u|)^(p-2)
-        result[1] = (κ + input[1]^2 + input[2]^2)^((p-2)/2)
-        result[2] = result[1] * input[2]
-        result[1] = result[1] * input[1]
-        return nothing
-    end
-    return closure
+
+# alternatively callable structs are possible
+# (and currently suggested if kernel should depend on parameters)
+mutable struct diffusion_kernel2{T}
+    p::T
+    κ::T
 end
+
+(DK::diffusion_kernel2)(result,input) = (
+    result[1] = (DK.κ + input[1]^2 + input[2]^2)^((DK.p-2)/2);
+    result[2] = result[1] * input[2];
+    result[1] = result[1] * input[1];
+    return nothing
+)
+
+# needs to be initialized as const currently to avoid some internal allocations
+# (but parameters can be changed in main)
+const DK = diffusion_kernel2(0.0,1.0)
 
 # everything is wrapped in a main function
 # default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
+function main(; q::Int = 1, p::Float64 = 2.7, κ::Float64 = 0.0001, Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
 
     # set log level
     set_verbosity(verbosity)
@@ -64,7 +73,9 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
     if q == 1
         nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = &quot;(1+u^2) ∇u ⋅ ∇v&quot;, quadorder = 4, ADnewton = true)
     elseif q == 2
-        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, diffusion_kernel2!(p,κ), [2,2]; name = &quot;(κ+|∇u|^2) ∇u ⋅ ∇v&quot;, quadorder = 5, ADnewton = true)
+        DK.κ = κ
+        DK.p = p
+        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = &quot;(κ+|∇u|^2) ∇u ⋅ ∇v&quot;, quadorder = 4, ADnewton = true)
     else
         @error &quot;only q ∈ [1,2] !&quot;
     end
@@ -153,10 +164,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 1.276908e-16 | 1.879348e-01 | 1.04e-02/9.93e-05/1.78e-02
-	      2   | 2.415941e-16 | 2.427676e-03 | 5.83e-04/9.01e-05/7.76e-04
-	      3   | 2.586077e-16 | 3.580510e-07 | 4.34e-04/4.10e-05/5.02e-04
-	      4   | 6.032275e-16 | 8.010898e-15 | 4.18e-04/2.90e-05/4.66e-04
+	      1   | 1.276908e-16 | 1.879348e-01 | 9.54e-03/9.07e-05/1.61e-02
+	      2   | 2.415941e-16 | 2.427676e-03 | 5.23e-04/7.54e-05/6.85e-04
+	      3   | 2.586077e-16 | 3.580510e-07 | 4.21e-04/3.91e-05/4.81e-04
+	      4   | 6.032275e-16 | 8.010898e-15 | 3.86e-04/3.03e-05/4.34e-04
 
 Solution = 
 FEVector information
@@ -167,10 +178,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 5.090761e-16 | 1.552235e-01 | 1.63e-03/1.67e-04/1.88e-03
-	      2   | 1.702141e-15 | 1.898915e-03 | 1.59e-03/8.98e-05/1.71e-03
-	      3   | 6.473127e-16 | 4.461316e-07 | 1.57e-03/7.99e-05/1.68e-03
-	      4   | 9.026139e-16 | 2.496648e-14 | 1.57e-03/7.19e-05/1.67e-03
+	      1   | 5.090761e-16 | 1.552235e-01 | 1.50e-03/1.69e-04/1.74e-03
+	      2   | 1.702141e-15 | 1.898915e-03 | 1.46e-03/9.81e-05/1.59e-03
+	      3   | 6.473127e-16 | 4.461316e-07 | 1.44e-03/8.92e-05/1.56e-03
+	      4   | 9.026139e-16 | 2.496648e-14 | 1.44e-03/8.14e-05/1.55e-03
 
 Solution = 
 FEVector information
@@ -181,10 +192,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 1.617567e-15 | 9.834582e-02 | 6.22e-03/5.24e-04/6.83e-03
-	      2   | 2.248578e-15 | 1.307935e-03 | 6.15e-03/3.80e-04/6.59e-03
-	      3   | 1.948846e-15 | 4.214647e-07 | 6.18e-03/3.55e-04/6.59e-03
-	      4   | 2.403146e-15 | 3.064320e-14 | 6.16e-03/3.40e-04/6.56e-03
+	      1   | 1.617567e-15 | 9.834582e-02 | 5.71e-03/5.01e-04/6.28e-03
+	      2   | 2.248578e-15 | 1.307935e-03 | 5.69e-03/3.64e-04/6.12e-03
+	      3   | 1.948846e-15 | 4.214647e-07 | 5.68e-03/3.42e-04/6.07e-03
+	      4   | 2.403146e-15 | 3.064320e-14 | 5.69e-03/3.29e-04/6.06e-03
 
 Solution = 
 FEVector information
@@ -195,10 +206,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 2.551629e-15 | 5.522608e-02 | 2.44e-02/1.80e-03/2.63e-02
-	      2   | 3.584915e-15 | 8.487585e-04 | 2.45e-02/1.29e-03/2.58e-02
-	      3   | 4.145143e-15 | 2.555420e-07 | 2.43e-02/1.28e-03/2.57e-02
-	      4   | 4.778391e-15 | 2.270257e-14 | 2.44e-02/1.27e-03/2.57e-02
+	      1   | 2.551629e-15 | 5.522608e-02 | 2.26e-02/1.81e-03/2.45e-02
+	      2   | 3.584915e-15 | 8.487585e-04 | 2.27e-02/2.53e-02/4.82e-02
+	      3   | 4.145143e-15 | 2.555420e-07 | 2.27e-02/1.35e-03/2.42e-02
+	      4   | 4.778391e-15 | 2.270257e-14 | 2.26e-02/1.36e-03/2.41e-02
 
 Solution = 
 FEVector information
@@ -209,10 +220,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 4.859175e-15 | 2.924738e-02 | 9.75e-02/7.03e-03/1.05e-01
-	      2   | 9.143117e-15 | 4.905172e-04 | 9.76e-02/5.31e-03/1.03e-01
-	      3   | 8.902252e-15 | 1.346748e-07 | 9.75e-02/5.51e-03/1.03e-01
-	      4   | 9.472149e-15 | 1.996064e-14 | 9.74e-02/5.30e-03/1.03e-01
+	      1   | 4.859175e-15 | 2.924738e-02 | 9.01e-02/6.72e-03/9.71e-02
+	      2   | 9.143117e-15 | 4.905172e-04 | 9.06e-02/5.00e-03/9.58e-02
+	      3   | 8.902252e-15 | 1.346748e-07 | 9.03e-02/5.08e-03/9.56e-02
+	      4   | 9.472149e-15 | 1.996064e-14 | 9.10e-02/5.07e-03/9.63e-02
 
 Solution = 
 FEVector information
@@ -223,10 +234,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 9.805278e-15 | 1.504798e-02 | 3.90e-01/5.92e-02/4.50e-01
-	      2   | 1.837688e-14 | 2.640269e-04 | 3.90e-01/2.96e-02/4.21e-01
-	      3   | 1.891880e-14 | 6.824838e-08 | 3.90e-01/3.04e-02/4.21e-01
-	      4   | 1.912637e-14 | 3.361214e-14 | 3.90e-01/2.94e-02/4.20e-01
+	      1   | 9.805278e-15 | 1.504798e-02 | 3.59e-01/3.11e-02/3.91e-01
+	      2   | 1.837688e-14 | 2.640269e-04 | 3.60e-01/2.48e-02/3.85e-01
+	      3   | 1.891880e-14 | 6.824838e-08 | 3.59e-01/2.59e-02/3.86e-01
+	      4   | 1.912637e-14 | 3.361214e-14 | 3.59e-01/2.48e-02/3.84e-01
 
 
     ndofs   |    || u - u_h ||     order  |  || ∇(u - u_h) ||    order  |
@@ -236,4 +247,4 @@ FEVector information
        145  |     4.14699e-04      2.194  |     3.60851e-02      1.098  |
        545  |     1.03688e-04      2.094  |     1.80423e-02      1.047  |
       2113  |     2.59229e-05      2.046  |     9.02111e-03      1.023  |
-      8321  |     6.48078e-06      2.023  |     4.51055e-03      1.011  |</code></pre><p><img src="../../images/Example210_NonlinearPoisson2D_1.png" alt/> <img src="../../images/Example210_NonlinearPoisson2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 10 December 2021 10:25">Friday 10 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8321  |     6.48078e-06      2.023  |     4.51055e-03      1.011  |</code></pre><p><img src="../../images/Example210_NonlinearPoisson2D_1.png" alt/> <img src="../../images/Example210_NonlinearPoisson2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Sunday 12 December 2021 17:22">Sunday 12 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
