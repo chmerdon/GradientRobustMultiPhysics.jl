@@ -113,7 +113,7 @@ function Action{T <: Real}(
 Creates an Action directly from a kernel function (plus additional information to complement the action kernel) that then can be used in an assembly pattern. T specifies the number format
 that should match the number format of the used quadrature rules and grid coordinates in the mesh (default if omitted: T = Float64).
 """
-function Action{T}(kernel_function::Function, dimensions; name = "user action", dependencies = "", quadorder = 0) where {T}
+function Action{T}(kernel_function, dimensions; name = "user action", dependencies = "", quadorder = 0) where {T}
     kernel = ActionKernel(kernel_function, dimensions; name = name * " (kernel)", dependencies = dependencies, quadorder = quadorder)
     return Action{T}(kernel; name = name)
 end

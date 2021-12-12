@@ -20,6 +20,7 @@ The quantity q(u) makes the problem nonlinear and we consider the two possibilit
 where the second one is known is the p-Laplacian (plus some small regularisation $\kappa \geq 0$ to make it solvable with the Newton solver).
 
 This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression
+(either via a function (q = 1) or a callable struct (q = 2))
 and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.
 
 Also the factorization in the linear solver can be changed to anything <:ExtendableSparse.AbstractFactorization
@@ -50,27 +51,36 @@ function rhs!(q,p,κ)
     end
     return closure
 end
+
+## for kernels withouts parameters, closures should work fine
 function diffusion_kernel1!(result, input)
     ## input[1,2:3] = [u, grad(u)]
     result[1] = (1+input[1]^2)*input[2]
     result[2] = (1+input[1]^2)*input[3]
     return nothing
 end 
-function diffusion_kernel2!(p,κ)
-    function closure(result, input)
-        ## input[1:2] = [grad(u)]
-        ## we use result[1] as temporary storage to compute (κ + |∇u|)^(p-2)
-        result[1] = (κ + input[1]^2 + input[2]^2)^((p-2)/2)
-        result[2] = result[1] * input[2]
-        result[1] = result[1] * input[1]
-        return nothing
-    end
-    return closure
-end 
+
+## alternatively callable structs are possible
+## (and currently suggested if kernel should depend on parameters)
+mutable struct diffusion_kernel2{T}
+    p::T
+    κ::T
+end
+
+(DK::diffusion_kernel2)(result,input) = (
+    result[1] = (DK.κ + input[1]^2 + input[2]^2)^((DK.p-2)/2);
+    result[2] = result[1] * input[2];
+    result[1] = result[1] * input[1];
+    return nothing
+)
+
+## needs to be initialized as const currently to avoid some internal allocations
+## (but parameters can be changed in main)
+const DK = diffusion_kernel2(0.0,1.0)
 
 ## everything is wrapped in a main function
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
+function main(; q::Int = 1, p::Float64 = 2.7, κ::Float64 = 0.0001, Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
 
     ## set log level
     set_verbosity(verbosity)
@@ -87,7 +97,9 @@ function main(; q = 1, p = 2.7, κ = 0.0001, Plotter = nothing, verbosity = 0, n
     if q == 1
         nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 4, ADnewton = true) 
     elseif q == 2
-        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, diffusion_kernel2!(p,κ), [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 5, ADnewton = true)   
+        DK.κ = κ
+        DK.p = p
+        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 4, ADnewton = true)   
     else 
         @error "only q ∈ [1,2] !"
     end

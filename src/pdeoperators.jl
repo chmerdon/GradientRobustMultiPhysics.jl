@@ -611,7 +611,7 @@ function NonlinearForm(
     operator1::Array{DataType,1},
     coeff_from::Array{Int,1},
     operator2::Type{<:AbstractFunctionOperator},
-    action_kernel::Function,
+    action_kernel, # should be a function of input (result, input) or matching the specified dependencies
     argsizes::Array{Int,1};
     name::String = "nonlinear form",
     AT::Type{<:AssemblyType} = ON_CELLS,

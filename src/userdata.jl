@@ -4,7 +4,7 @@ abstract type AbstractExtendedDataFunction <: AbstractDataFunction end
 abstract type AbstractActionKernel <: AbstractUserDataType end
 abstract type AbstractNLActionKernel <: AbstractActionKernel end
 
-struct UserData{UST<: AbstractUserDataType,FType<:Function,NFType<:Function,ndim}
+struct UserData{UST<: AbstractUserDataType,FType,NFType,ndim}
     name::String                      # some name used in info messages etc.
     dependencies::String              # substring of "XTRIL" that masks the dependencies of the user function
     quadorder::Int                    # quadrature order that should be used to evaluate the function (is added to quadrature order of related actions)
@@ -35,7 +35,7 @@ The input vector usually provides the FunctionOperator evaluations of (a subset 
 The array dimensions specifies the expected length of result and input and quadorder determines the additional quadrature order to be used if this
 function (or its derived action) is involved in an assembly process.
 """
-function ActionKernel(f::Function, dimensions::Array{Int,1}; name = "user action kernel", dependencies::String = "", quadorder::Int = 0)
+function ActionKernel(f, dimensions::Array{Int,1}; name = "user action kernel", dependencies::String = "", quadorder::Int = 0)
 
     nf = (result, input,X,T,R,I,L) -> f(result, input) # no other dependencies
     if dependencies == "X"
