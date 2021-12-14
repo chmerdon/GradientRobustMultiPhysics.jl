@@ -17,7 +17,7 @@ function u!(result,x)
 end
 
 # everything is wrapped in a main function
-function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = nothing)
+function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter = nothing)
 
     # set log level
     set_verbosity(verbosity)
@@ -26,15 +26,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     xgrid = grid_lshape(Triangle2D)
 
     # choose some finite element
-    if order == 1
-        FEType = H1P1{1}
-    elseif order == 2
-        FEType = H1P2{1,2}
-    elseif order == 3
-        FEType = H1P3{1,2}
-    else
-        @error &quot;order has to be 1,2 or 3&quot;
-    end
+    FEType = H1Pk{1,2,order}
 
     # negotiate data functions to the package
     u = DataFunction(u!, [1,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 5)
@@ -55,7 +47,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     function L2jump_integrand(result, input, item)
-        result[1] = ((input[1]*xFaceNormals[1,item])^2 + (input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
+        result[1] = ((input[1]*xFaceNormals[1,item] + input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
         return nothing
     end
     # kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
@@ -65,17 +57,21 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
         return nothing
     end
     # ... which generates an action...
-    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = &quot;kernel of η (jumps)&quot;, dependencies = &quot;I&quot;, quadorder = 2)
-    eta_vol_action = Action(L2vol_integrand, [1,1]; name = &quot;kernel of η (vol)&quot;, dependencies = &quot;I&quot;, quadorder = 1)
+    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = &quot;kernel of η (jumps)&quot;, dependencies = &quot;I&quot;, quadorder = order-1)
+    eta_vol_action = Action(L2vol_integrand, [1,1]; name = &quot;kernel of η (vol)&quot;, dependencies = &quot;I&quot;, quadorder = order-1)
     # ... which is used inside an ItemIntegrator
     ηF = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = &quot;η_F&quot;)
     ηT = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = &quot;η_T&quot;)
 
-    # refinement loop
-    NDofs = zeros(Int, nlevels)
-    Results = zeros(Float64, nlevels, 3)
+    NDofs = zeros(Int, 0)
+    ResultsL2 = zeros(Float64, 0)
+    ResultsH1 = zeros(Float64, 0)
+    Resultsη = zeros(Float64, 0)
     Solution = nothing
-    for level = 1 : nlevels
+    ndofs = 0
+    level = 0
+    while ndofs &lt; maxdofs
+        level += 1
 
         # create a solution vector and solve the problem
         println(&quot;------- LEVEL $level&quot;)
@@ -83,11 +79,11 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             FES = FESpace{FEType}(xgrid)
             Solution = FEVector{Float64}(&quot;u_h&quot;,FES)
             solve!(Solution, Problem)
-            NDofs[level] = length(Solution[1])
-            println(&quot;\t ndof =  $(NDofs[level])&quot;)
+            ndofs = length(Solution[1])
+            push!(NDofs, ndofs)
+            println(&quot;\t ndof =  $ndofs&quot;)
             print(&quot;@time  solver =&quot;)
         end
-
 
         # calculate local error estimator contributions
         @time begin
@@ -100,18 +96,18 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             evaluate!(jump_error,ηF,Solution[1])
 
             # calculate total estimator
-            Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
+            push!(Resultsη, sqrt(sum(jump_error) + sum(vol_error)))
             print(&quot;@time  η eval =&quot;)
         end
 
         # calculate exact L2 error, H1 error
         @time begin
-            Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
-            Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
+            push!(ResultsL2, sqrt(evaluate(L2Error,Solution[1])))
+            push!(ResultsH1, sqrt(evaluate(H1Error,Solution[1])))
             print(&quot;@time  e eval =&quot;)
         end
 
-        if level == nlevels
+        if ndofs &gt;= maxdofs
             break;
         end
 
@@ -139,7 +135,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             print(&quot;@time  refine =&quot;)
         end
 
-        println(&quot;\t    η =  $(Results[level,3])\n\t    e =  $(Results[level,2])&quot;)
+        println(&quot;\t    η =  $(Resultsη[level])\n\t    e =  $(ResultsH1[level])&quot;)
     end
 
     # plot
@@ -149,188 +145,179 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     gridplot!(p[1,3], xgrid; linewidth = 1, xlimits = [-0.0001,0.0001], ylimits = [-0.0001,0.0001])
 
     # print/plot convergence history
-    print_convergencehistory(NDofs, Results; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;η&quot;])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -&gt; X.^(-1/2), Plotter = Plotter, ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;η&quot;])
+    print_convergencehistory(NDofs, [ResultsL2 ResultsH1 Resultsη]; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;η&quot;])
+    plot_convergencehistory(NDofs, [ResultsL2 ResultsH1 Resultsη]; add_h_powers = [order,order+1], X_to_h = X -&gt; X.^(-1/2), Plotter = Plotter, ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;η&quot;])
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example204_PoissonLshapeAdaptive2D.main()
 ------- LEVEL 1
 	 ndof =  21
-@time  solver =  0.540176 seconds (854.78 k allocations: 47.068 MiB, 6.86% gc time, 99.42% compilation time)
-@time  η eval =  4.755086 seconds (6.75 M allocations: 365.845 MiB, 4.25% gc time, 99.86% compilation time)
-@time  e eval =  4.412371 seconds (3.26 M allocations: 186.504 MiB, 1.99% gc time, 99.93% compilation time)
-@time  refine =  0.111734 seconds (87.38 k allocations: 4.923 MiB, 99.85% compilation time)
-	    η =  1.1809216557030233
-	    e =  0.20764746516243868
+@time  solver =  0.199752 seconds (523.51 k allocations: 28.629 MiB, 19.13% gc time, 98.91% compilation time)
+@time  η eval =  2.437735 seconds (2.44 M allocations: 140.868 MiB, 2.50% gc time, 99.76% compilation time)
+@time  e eval =  3.231591 seconds (3.26 M allocations: 186.708 MiB, 2.68% gc time, 99.90% compilation time)
+@time  refine =  0.085292 seconds (87.38 k allocations: 4.922 MiB, 99.78% compilation time)
+	    η =  1.2064583360169907
+	    e =  0.20764746516243865
 ------- LEVEL 2
-	 ndof =  33
-@time  solver =  0.002411 seconds (2.34 k allocations: 233.984 KiB)
-@time  η eval =  0.000946 seconds (1.28 k allocations: 74.297 KiB)
-@time  e eval =  0.000811 seconds (962 allocations: 77.219 KiB)
-@time  refine =  0.000098 seconds (43 allocations: 4.844 KiB)
-	    η =  0.7574690118747248
-	    e =  0.16086233264174027
-------- LEVEL 3
 	 ndof =  41
-@time  solver =  0.002230 seconds (2.39 k allocations: 254.773 KiB)
-@time  η eval =  0.000893 seconds (1.29 k allocations: 74.875 KiB)
-@time  e eval =  0.000928 seconds (962 allocations: 77.344 KiB)
-@time  refine =  0.006122 seconds (85 allocations: 7.172 KiB, 98.74% compilation time)
-	    η =  0.5060512659008009
-	    e =  0.12710035674542716
-------- LEVEL 4
+@time  solver =  0.002086 seconds (2.42 k allocations: 257.211 KiB)
+@time  η eval =  0.000817 seconds (1.45 k allocations: 86.984 KiB)
+@time  e eval =  0.000810 seconds (974 allocations: 78.484 KiB)
+@time  refine =  0.004291 seconds (85 allocations: 7.172 KiB, 97.54% compilation time)
+	    η =  0.699363303780635
+	    e =  0.12808914488126533
+------- LEVEL 3
 	 ndof =  67
-@time  solver =  0.002174 seconds (2.59 k allocations: 309.984 KiB)
-@time  η eval =  0.000974 seconds (1.31 k allocations: 76.750 KiB)
-@time  e eval =  0.001371 seconds (962 allocations: 77.719 KiB)
-@time  refine =  0.000061 seconds (49 allocations: 6.219 KiB)
-	    η =  0.3333391179306109
-	    e =  0.08208030305095367
-------- LEVEL 5
+@time  solver =  0.001985 seconds (2.63 k allocations: 312.422 KiB)
+@time  η eval =  0.000798 seconds (1.47 k allocations: 88.859 KiB)
+@time  e eval =  0.001155 seconds (974 allocations: 78.859 KiB)
+@time  refine =  0.000048 seconds (49 allocations: 6.219 KiB)
+	    η =  0.4521377020155059
+	    e =  0.08269561626760584
+------- LEVEL 4
 	 ndof =  93
-@time  solver =  0.002350 seconds (2.81 k allocations: 383.305 KiB)
-@time  η eval =  0.000993 seconds (1.33 k allocations: 78.656 KiB)
-@time  e eval =  0.001777 seconds (962 allocations: 78.094 KiB)
-@time  refine =  0.000072 seconds (52 allocations: 9.953 KiB)
-	    η =  0.2330831445899326
-	    e =  0.055004363135275604
-------- LEVEL 6
+@time  solver =  0.001882 seconds (2.84 k allocations: 426.633 KiB)
+@time  η eval =  0.000767 seconds (1.49 k allocations: 90.766 KiB)
+@time  e eval =  0.001470 seconds (974 allocations: 79.234 KiB)
+@time  refine =  0.000046 seconds (52 allocations: 9.953 KiB)
+	    η =  0.30443683244048675
+	    e =  0.05537088982183
+------- LEVEL 5
 	 ndof =  119
-@time  solver =  0.002661 seconds (3.02 k allocations: 486.359 KiB)
-@time  η eval =  0.000997 seconds (1.35 k allocations: 80.578 KiB)
-@time  e eval =  0.002184 seconds (962 allocations: 78.594 KiB)
-@time  refine =  0.000097 seconds (57 allocations: 13.594 KiB)
-	    η =  0.1786953253460242
-	    e =  0.03945622994399556
+@time  solver =  0.002024 seconds (3.05 k allocations: 488.539 KiB)
+@time  η eval =  0.000778 seconds (1.51 k allocations: 92.688 KiB)
+@time  e eval =  0.001849 seconds (974 allocations: 79.734 KiB)
+@time  refine =  0.000047 seconds (53 allocations: 13.391 KiB)
+	    η =  0.2203282351651376
+	    e =  0.03965969913361387
+------- LEVEL 6
+	 ndof =  145
+@time  solver =  0.002269 seconds (3.26 k allocations: 583.766 KiB)
+@time  η eval =  0.000926 seconds (1.53 k allocations: 94.547 KiB)
+@time  e eval =  0.002185 seconds (974 allocations: 80.047 KiB)
+@time  refine =  0.000053 seconds (60 allocations: 15.203 KiB)
+	    η =  0.1762744224302262
+	    e =  0.03132434391645208
 ------- LEVEL 7
-	 ndof =  159
-@time  solver =  0.003598 seconds (3.48 k allocations: 612.328 KiB)
-@time  η eval =  0.001098 seconds (1.39 k allocations: 83.547 KiB)
-@time  e eval =  0.002835 seconds (962 allocations: 79.094 KiB)
-@time  refine =  0.000068 seconds (62 allocations: 15.797 KiB)
-	    η =  0.13915850782044384
-	    e =  0.029372552786887572
+	 ndof =  192
+@time  solver =  0.002693 seconds (3.85 k allocations: 694.875 KiB)
+@time  η eval =  0.000989 seconds (1.57 k allocations: 97.781 KiB)
+@time  e eval =  0.002778 seconds (974 allocations: 80.672 KiB)
+@time  refine =  0.000064 seconds (64 allocations: 16.656 KiB)
+	    η =  0.14099823000025685
+	    e =  0.024700543922290402
 ------- LEVEL 8
-	 ndof =  215
-@time  solver =  0.003779 seconds (4.03 k allocations: 747.383 KiB)
-@time  η eval =  0.001311 seconds (1.43 k allocations: 87.625 KiB)
-@time  e eval =  0.003746 seconds (962 allocations: 79.844 KiB)
-@time  refine =  0.000082 seconds (66 allocations: 17.594 KiB)
-	    η =  0.10982145223347514
-	    e =  0.022390159079847226
+	 ndof =  257
+@time  solver =  0.003207 seconds (4.36 k allocations: 929.562 KiB)
+@time  η eval =  0.001160 seconds (1.62 k allocations: 102.828 KiB)
+@time  e eval =  0.003680 seconds (974 allocations: 81.734 KiB)
+@time  refine =  0.000069 seconds (65 allocations: 18.781 KiB)
+	    η =  0.11095486274991224
+	    e =  0.019413443504801113
 ------- LEVEL 9
-	 ndof =  287
-@time  solver =  0.004517 seconds (4.67 k allocations: 1023.438 KiB)
-@time  η eval =  0.001785 seconds (1.49 k allocations: 92.734 KiB)
-@time  e eval =  0.005129 seconds (962 allocations: 80.906 KiB)
-@time  refine =  0.000107 seconds (71 allocations: 22.844 KiB)
-	    η =  0.08174488804164001
-	    e =  0.015716863066144355
+	 ndof =  325
+@time  solver =  0.003833 seconds (4.98 k allocations: 1.084 MiB)
+@time  η eval =  0.001327 seconds (1.67 k allocations: 108.031 KiB)
+@time  e eval =  0.004618 seconds (976 allocations: 83.328 KiB)
+@time  refine =  0.000078 seconds (72 allocations: 32.422 KiB)
+	    η =  0.08461684077566957
+	    e =  0.014148054973920323
 ------- LEVEL 10
-	 ndof =  377
-@time  solver =  0.005384 seconds (5.23 k allocations: 1.239 MiB)
-@time  η eval =  0.001794 seconds (1.56 k allocations: 99.438 KiB)
-@time  e eval =  0.006515 seconds (962 allocations: 82.469 KiB)
-@time  refine =  0.000112 seconds (90 allocations: 41.891 KiB)
-	    η =  0.06164313323480456
-	    e =  0.011660924169566596
+	 ndof =  411
+@time  solver =  0.004633 seconds (5.52 k allocations: 1.331 MiB)
+@time  η eval =  0.001581 seconds (1.74 k allocations: 114.062 KiB)
+@time  e eval =  0.005871 seconds (974 allocations: 84.172 KiB)
+@time  refine =  0.000093 seconds (90 allocations: 42.797 KiB)
+	    η =  0.0645153841353086
+	    e =  0.010765787226538603
 ------- LEVEL 11
-	 ndof =  527
-@time  solver =  0.007256 seconds (6.44 k allocations: 1.688 MiB)
-@time  η eval =  0.002207 seconds (1.67 k allocations: 110.062 KiB)
-@time  e eval =  0.009114 seconds (962 allocations: 84.594 KiB)
-@time  refine =  0.000155 seconds (103 allocations: 46.719 KiB)
-	    η =  0.04513125476819608
-	    e =  0.008394383745614015
+	 ndof =  559
+@time  solver =  0.005854 seconds (6.96 k allocations: 1.788 MiB)
+@time  η eval =  0.001964 seconds (1.86 k allocations: 124.891 KiB)
+@time  e eval =  0.007900 seconds (974 allocations: 86.547 KiB)
+@time  refine =  0.000112 seconds (105 allocations: 48.391 KiB)
+	    η =  0.048488311479138596
+	    e =  0.008034967299250748
 ------- LEVEL 12
-	 ndof =  729
-@time  solver =  0.009364 seconds (8.44 k allocations: 2.248 MiB)
-@time  η eval =  0.002856 seconds (1.94 k allocations: 126.172 KiB)
-@time  e eval =  0.014210 seconds (962 allocations: 87.906 KiB)
-@time  refine =  0.000198 seconds (134 allocations: 54.141 KiB)
-	    η =  0.03308173869008518
-	    e =  0.006117474655465198
+	 ndof =  765
+@time  solver =  0.007656 seconds (8.96 k allocations: 2.360 MiB)
+@time  η eval =  0.002594 seconds (2.23 k allocations: 142.688 KiB)
+@time  e eval =  0.010808 seconds (974 allocations: 89.547 KiB)
+@time  refine =  0.000141 seconds (131 allocations: 55.109 KiB)
+	    η =  0.03531580676395031
+	    e =  0.005826860657684084
 ------- LEVEL 13
-	 ndof =  1025
-@time  solver =  0.012176 seconds (11.20 k allocations: 2.735 MiB)
-@time  η eval =  0.003966 seconds (3.06 k allocations: 161.359 KiB)
-@time  e eval =  0.017386 seconds (962 allocations: 92.406 KiB)
-@time  refine =  0.000207 seconds (172 allocations: 79.797 KiB)
-	    η =  0.024323647581148286
-	    e =  0.004508865558052972
+	 ndof =  1049
+@time  solver =  0.009971 seconds (11.68 k allocations: 3.138 MiB)
+@time  η eval =  0.003351 seconds (3.31 k allocations: 176.438 KiB)
+@time  e eval =  0.014852 seconds (974 allocations: 94.047 KiB)
+@time  refine =  0.000177 seconds (167 allocations: 80.203 KiB)
+	    η =  0.026161112362157516
+	    e =  0.0043057688215345355
 ------- LEVEL 14
-	 ndof =  1403
-@time  solver =  0.016238 seconds (15.36 k allocations: 3.954 MiB)
-@time  η eval =  0.004821 seconds (5.27 k allocations: 218.078 KiB)
-@time  e eval =  0.024237 seconds (2.57 k allocations: 123.312 KiB)
-@time  refine =  0.000301 seconds (220 allocations: 121.047 KiB)
-	    η =  0.01772116812991022
-	    e =  0.0031946413369639405
+	 ndof =  1407
+@time  solver =  0.013071 seconds (15.43 k allocations: 4.005 MiB)
+@time  η eval =  0.004365 seconds (5.45 k allocations: 230.875 KiB)
+@time  e eval =  0.020029 seconds (2.60 k allocations: 125.016 KiB)
+@time  refine =  0.000221 seconds (206 allocations: 120.438 KiB)
+	    η =  0.019132321226153257
+	    e =  0.0031282484960664767
 ------- LEVEL 15
-	 ndof =  1951
-@time  solver =  0.022217 seconds (21.08 k allocations: 5.575 MiB)
-@time  η eval =  0.006731 seconds (8.67 k allocations: 303.750 KiB)
-@time  e eval =  0.033657 seconds (5.27 k allocations: 174.000 KiB)
-@time  refine =  0.000427 seconds (296 allocations: 139.125 KiB)
-	    η =  0.012865079056258897
-	    e =  0.002311089419514613
+	 ndof =  1899
+@time  solver =  0.047292 seconds (20.68 k allocations: 5.493 MiB, 62.01% gc time)
+@time  η eval =  0.005785 seconds (8.50 k allocations: 307.609 KiB)
+@time  e eval =  0.027229 seconds (5.02 k allocations: 170.328 KiB)
+@time  refine =  0.000323 seconds (300 allocations: 137.625 KiB)
+	    η =  0.014214742705189161
+	    e =  0.0023170782126997426
 ------- LEVEL 16
-	 ndof =  2685
-@time  solver =  0.031400 seconds (28.91 k allocations: 6.666 MiB)
-@time  η eval =  0.008809 seconds (13.23 k allocations: 418.609 KiB)
-@time  e eval =  0.048213 seconds (8.89 k allocations: 241.812 KiB)
-@time  refine =  0.000565 seconds (381 allocations: 199.812 KiB)
-	    η =  0.009428615043435729
-	    e =  0.0016865873324354108
+	 ndof =  2632
+@time  solver =  0.024154 seconds (28.91 k allocations: 6.719 MiB)
+@time  η eval =  0.007924 seconds (13.04 k allocations: 422.406 KiB)
+@time  e eval =  0.037544 seconds (8.61 k allocations: 237.672 KiB)
+@time  refine =  0.000400 seconds (384 allocations: 198.312 KiB)
+	    η =  0.01030792778297421
+	    e =  0.0016816677513626004
 ------- LEVEL 17
-	 ndof =  3647
-@time  solver =  0.072808 seconds (39.63 k allocations: 9.123 MiB, 39.33% gc time)
-@time  η eval =  0.012239 seconds (19.19 k allocations: 568.047 KiB)
-@time  e eval =  0.063756 seconds (13.61 k allocations: 330.312 KiB)
-@time  refine =  0.000770 seconds (475 allocations: 294.469 KiB)
-	    η =  0.006942150841718373
-	    e =  0.001244424006619657
+	 ndof =  3586
+@time  solver =  0.031945 seconds (39.49 k allocations: 8.869 MiB)
+@time  η eval =  0.010633 seconds (18.95 k allocations: 570.250 KiB)
+@time  e eval =  0.051067 seconds (13.29 k allocations: 325.297 KiB)
+@time  refine =  0.000572 seconds (460 allocations: 292.000 KiB)
+	    η =  0.007627208670980272
+	    e =  0.0012432460364896715
 ------- LEVEL 18
-	 ndof =  4953
-@time  solver =  0.060542 seconds (53.20 k allocations: 11.944 MiB)
-@time  η eval =  0.015598 seconds (27.33 k allocations: 772.453 KiB)
-@time  e eval =  0.089807 seconds (20.08 k allocations: 451.188 KiB)
-@time  refine =  0.000916 seconds (638 allocations: 440.000 KiB)
-	    η =  0.005073360038187676
-	    e =  0.0008976812517459628
+	 ndof =  4834
+@time  solver =  0.043725 seconds (52.30 k allocations: 12.154 MiB)
+@time  η eval =  0.014116 seconds (26.73 k allocations: 765.844 KiB)
+@time  e eval =  0.069284 seconds (19.48 k allocations: 441.047 KiB)
+@time  refine =  0.000756 seconds (603 allocations: 435.297 KiB)
+	    η =  0.005664231339870271
+	    e =  0.0009217759234222521
 ------- LEVEL 19
-	 ndof =  6781
-@time  solver =  0.075948 seconds (72.71 k allocations: 17.360 MiB)
-@time  η eval =  0.020651 seconds (38.70 k allocations: 1.034 MiB)
-@time  e eval =  0.118441 seconds (29.12 k allocations: 620.688 KiB)
-@time  refine =  0.001394 seconds (819 allocations: 635.422 KiB)
-	    η =  0.003722822140531952
-	    e =  0.0006539955724240144
-------- LEVEL 20
-	 ndof =  9271
-@time  solver =  0.108283 seconds (100.47 k allocations: 23.638 MiB)
-@time  η eval =  0.045412 seconds (54.24 k allocations: 1.416 MiB, 36.08% gc time)
-@time  e eval =  0.165755 seconds (41.48 k allocations: 852.562 KiB)
+	 ndof =  6545
+@time  solver =  0.060726 seconds (70.40 k allocations: 16.868 MiB)
+@time  η eval =  0.018786 seconds (37.38 k allocations: 1.009 MiB)
+@time  e eval =  0.093645 seconds (27.95 k allocations: 599.641 KiB)
 
     ndofs   |    || u - u_h ||     order  |  || ∇(u - u_h) ||    order  |          η           order  |
 ============|=============================|=============================|=============================|
-        21  |     2.51263e-02      0.000  |     2.07647e-01      0.000  |     1.18092e+00      0.000  |
-        33  |     1.90247e-02      1.231  |     1.60862e-01      1.130  |     7.57469e-01      1.965  |
-        41  |     1.26917e-02      3.730  |     1.27100e-01      2.171  |     5.06051e-01      3.716  |
-        67  |     4.79055e-03      3.968  |     8.20803e-02      1.781  |     3.33339e-01      1.700  |
-        93  |     2.38377e-03      4.257  |     5.50044e-02      2.441  |     2.33083e-01      2.182  |
-       119  |     1.78155e-03      2.362  |     3.94562e-02      2.695  |     1.78695e-01      2.156  |
-       159  |     1.24278e-03      2.486  |     2.93726e-02      2.037  |     1.39159e-01      1.726  |
-       215  |     7.86008e-04      3.037  |     2.23902e-02      1.799  |     1.09821e-01      1.569  |
-       287  |     4.04477e-04      4.600  |     1.57169e-02      2.450  |     8.17449e-02      2.044  |
-       377  |     3.33412e-04      1.417  |     1.16609e-02      2.189  |     6.16431e-02      2.069  |
-       527  |     1.95675e-04      3.182  |     8.39438e-03      1.963  |     4.51313e-02      1.862  |
-       729  |     1.14131e-04      3.323  |     6.11747e-03      1.950  |     3.30817e-02      1.914  |
-      1025  |     8.23682e-05      1.914  |     4.50887e-03      1.791  |     2.43236e-02      1.805  |
-      1403  |     4.27727e-05      4.175  |     3.19464e-03      2.195  |     1.77212e-02      2.018  |
-      1951  |     2.80610e-05      2.557  |     2.31109e-03      1.964  |     1.28651e-02      1.942  |
-      2685  |     1.67382e-05      3.236  |     1.68659e-03      1.973  |     9.42862e-03      1.946  |
-      3647  |     1.15905e-05      2.400  |     1.24442e-03      1.986  |     6.94215e-03      1.999  |
-      4953  |     6.26521e-06      4.020  |     8.97681e-04      2.134  |     5.07336e-03      2.049  |
-      6781  |     3.91776e-06      2.989  |     6.53996e-04      2.016  |     3.72282e-03      1.971  |
-      9271  |     2.50250e-06      2.866  |     4.76773e-04      2.021  |     2.72507e-03      1.995  |</code></pre><p><img src="../../images/Example204_PoissonLshapeAdaptive2D_1.png" alt/> <img src="../../images/Example204_PoissonLshapeAdaptive2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusionSUPG2D/">« 203 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 14 December 2021 21:39">Tuesday 14 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+        21  |     2.51263e-02      0.000  |     2.07647e-01      0.000  |     1.20646e+00      0.000  |
+        41  |     1.08420e-02      2.512  |     1.28089e-01      1.444  |     6.99363e-01      1.630  |
+        67  |     4.34439e-03      3.724  |     8.26956e-02      1.782  |     4.52138e-01      1.776  |
+        93  |     2.29966e-03      3.880  |     5.53709e-02      2.447  |     3.04437e-01      2.412  |
+       119  |     1.77069e-03      2.121  |     3.96597e-02      2.707  |     2.20328e-01      2.623  |
+       145  |     1.64959e-03      0.717  |     3.13243e-02      2.388  |     1.76274e-01      2.258  |
+       192  |     1.10302e-03      2.867  |     2.47005e-02      1.692  |     1.40998e-01      1.591  |
+       257  |     7.23964e-04      2.888  |     1.94134e-02      1.652  |     1.10955e-01      1.644  |
+       325  |     3.55035e-04      6.071  |     1.41481e-02      2.696  |     8.46168e-02      2.309  |
+       411  |     2.83982e-04      1.902  |     1.07658e-02      2.327  |     6.45154e-02      2.311  |
+       559  |     1.86930e-04      2.719  |     8.03497e-03      1.903  |     4.84883e-02      1.857  |
+       765  |     1.04083e-04      3.733  |     5.82686e-03      2.048  |     3.53158e-02      2.021  |
+      1049  |     6.58770e-05      2.898  |     4.30577e-03      1.916  |     2.61611e-02      1.901  |
+      1407  |     4.34759e-05      2.831  |     3.12825e-03      2.176  |     1.91323e-02      2.131  |
+      1899  |     2.79736e-05      2.941  |     2.31708e-03      2.002  |     1.42147e-02      1.982  |
+      2632  |     1.69923e-05      3.054  |     1.68167e-03      1.964  |     1.03079e-02      1.969  |
+      3586  |     1.08652e-05      2.892  |     1.24325e-03      1.953  |     7.62721e-03      1.948  |
+      4834  |     6.55972e-06      3.379  |     9.21776e-04      2.004  |     5.66423e-03      1.993  |
+      6545  |     3.83987e-06      3.534  |     6.64311e-04      2.162  |     4.10535e-03      2.124  |</code></pre><p><img src="../../images/Example204_PoissonLshapeAdaptive2D_1.png" alt/> <img src="../../images/Example204_PoissonLshapeAdaptive2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusionSUPG2D/">« 203 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example205_PlanarLatticeFlow2D/">205 : Planar Lattice Flow 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 14 December 2021 22:52">Tuesday 14 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
