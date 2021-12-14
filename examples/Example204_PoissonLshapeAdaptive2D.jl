@@ -30,7 +30,7 @@ function u!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = nothing)
+function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -39,15 +39,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     xgrid = grid_lshape(Triangle2D)
 
     ## choose some finite element
-    if order == 1
-        FEType = H1P1{1}
-    elseif order == 2
-        FEType = H1P2{1,2}
-    elseif order == 3
-        FEType = H1P3{1,2}
-    else
-        @error "order has to be 1,2 or 3"
-    end
+    FEType = H1Pk{1,2,order}
     
     ## negotiate data functions to the package
     u = DataFunction(u!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
@@ -68,7 +60,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     function L2jump_integrand(result, input, item)
-        result[1] = ((input[1]*xFaceNormals[1,item])^2 + (input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
+        result[1] = ((input[1]*xFaceNormals[1,item] + input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
         return nothing
     end
     ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
@@ -78,17 +70,21 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
         return nothing
     end
     ## ... which generates an action...
-    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = "kernel of η (jumps)", dependencies = "I", quadorder = 2)
-    eta_vol_action = Action(L2vol_integrand, [1,1]; name = "kernel of η (vol)", dependencies = "I", quadorder = 1)
+    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = "kernel of η (jumps)", dependencies = "I", quadorder = order-1)
+    eta_vol_action = Action(L2vol_integrand, [1,1]; name = "kernel of η (vol)", dependencies = "I", quadorder = order-1)
     ## ... which is used inside an ItemIntegrator
     ηF = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = "η_F")
     ηT = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = "η_T")
           
-    ## refinement loop
-    NDofs = zeros(Int, nlevels)
-    Results = zeros(Float64, nlevels, 3)
+    NDofs = zeros(Int, 0)
+    ResultsL2 = zeros(Float64, 0)
+    ResultsH1 = zeros(Float64, 0)
+    Resultsη = zeros(Float64, 0)
     Solution = nothing
-    for level = 1 : nlevels
+    ndofs = 0
+    level = 0
+    while ndofs < maxdofs
+        level += 1
 
         ## create a solution vector and solve the problem
         println("------- LEVEL $level")
@@ -96,12 +92,12 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             FES = FESpace{FEType}(xgrid)
             Solution = FEVector{Float64}("u_h",FES)
             solve!(Solution, Problem)
-            NDofs[level] = length(Solution[1])
-            println("\t ndof =  $(NDofs[level])")
+            ndofs = length(Solution[1])
+            push!(NDofs, ndofs)
+            println("\t ndof =  $ndofs")
             print("@time  solver =")
         end 
-        
-
+    
         ## calculate local error estimator contributions
         @time begin
             xFaceVolumes = xgrid[FaceVolumes]
@@ -113,18 +109,18 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             evaluate!(jump_error,ηF,Solution[1])
 
             ## calculate total estimator
-            Results[level,3] = sqrt(sum(jump_error) + sum(vol_error))
+            push!(Resultsη, sqrt(sum(jump_error) + sum(vol_error)))
             print("@time  η eval =")
         end
 
         ## calculate exact L2 error, H1 error 
         @time begin
-            Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
-            Results[level,2] = sqrt(evaluate(H1Error,Solution[1]))
+            push!(ResultsL2, sqrt(evaluate(L2Error,Solution[1])))
+            push!(ResultsH1, sqrt(evaluate(H1Error,Solution[1])))
             print("@time  e eval =")
         end
 
-        if level == nlevels
+        if ndofs >= maxdofs
             break;
         end
 
@@ -152,7 +148,7 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
             print("@time  refine =")
         end
 
-        println("\t    η =  $(Results[level,3])\n\t    e =  $(Results[level,2])")
+        println("\t    η =  $(Resultsη[level])\n\t    e =  $(ResultsH1[level])")
     end
     
     ## plot
@@ -162,8 +158,8 @@ function main(; verbosity = 0, nlevels = 20, theta = 1//3, order = 2, Plotter = 
     gridplot!(p[1,3], xgrid; linewidth = 1, xlimits = [-0.0001,0.0001], ylimits = [-0.0001,0.0001])
 
     ## print/plot convergence history
-    print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
+    print_convergencehistory(NDofs, [ResultsL2 ResultsH1 Resultsη]; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
+    plot_convergencehistory(NDofs, [ResultsL2 ResultsH1 Resultsη]; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η"])
 end
 
 end
