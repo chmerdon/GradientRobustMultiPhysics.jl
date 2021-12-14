@@ -3,6 +3,7 @@
 abstract type DiscontinuityTreatment end
 abstract type Average <: DiscontinuityTreatment end # average the values on both sides of the face
 abstract type Jump <: DiscontinuityTreatment end # calculate the jump between both sides of the face
+abstract type Parent{k} <: DiscontinuityTreatment end # calculate value on k-th parental element (bfaces have only one, faces have two, edges have more)
 
 """
 $(TYPEDEF)
@@ -98,6 +99,7 @@ $(TYPEDEF)
 evaluates the Laplacian of some (possibly vector-valued) finite element function.
 """
 abstract type Laplacian <: AbstractFunctionOperator end # L_geom(v_h)
+abstract type LaplacianDisc{DT<:DiscontinuityTreatment} <: Laplacian end # L_geom(v_h)
 """
 $(TYPEDEF)
 
@@ -166,22 +168,40 @@ Jump(::Type{<:AbstractFunctionOperator}) = UndefInitializer
 function Average::Type{<:AbstractFunctionOperator})
 ````
 
-Transforms operator inito its average evaluation.
+Transforms operator into its average evaluation.
 """
 Average(::Type{<:AbstractFunctionOperator}) = UndefInitializer
 
+"""
+````
+function Average::Type{<:AbstractFunctionOperator})
+````
+
+Transforms operator into its evaluation on parent neighbour k.
+"""
+Parent{k}(::Type{<:AbstractFunctionOperator}) where {k} = UndefInitializer
+
 Jump(::Type{Identity}) = IdentityDisc{Jump}
 Average(::Type{Identity}) = IdentityDisc{Average}
+Parent{k}(::Type{Identity}) where {k} = IdentityDisc{Parent{k}}
 Jump(::Type{ReconstructionIdentity{FER}}) where {FER} = ReconstructionIdentityDisc{FER,Jump}
 Average(::Type{ReconstructionIdentity{FER}}) where {FER} = ReconstructionIdentityDisc{FER,Average}
+Parent{k}(::Type{ReconstructionIdentity{FER}}) where {FER, k} = ReconstructionIdentityDisc{FER,Parent{k}}
 Jump(::Type{NormalFlux}) = NormalFluxDisc{Jump}
 Average(::Type{NormalFlux}) = NormalFluxDisc{Average}
+Parent{k}(::Type{NormalFlux}) where {k} = NormalFluxDisc{Parent{k}}
 Jump(::Type{TangentFlux}) = TangentFluxDisc{Jump}
 Average(::Type{TangentFlux}) = TangentFluxDisc{Average}
+Parent{k}(::Type{TangentFlux}) where {k} = TangentFluxDisc{Parent{k}}
 Jump(::Type{Gradient}) = GradientDisc{Jump}
 Average(::Type{Gradient}) = GradientDisc{Average}
+Parent{k}(::Type{Gradient}) where {k} = GradientDisc{Parent{k}}
+Jump(::Type{Laplacian}) = LaplacianDisc{Jump}
+Average(::Type{Laplacian}) = LaplacianDisc{Average}
+Parent{k}(::Type{Laplacian}) where {k} = LaplacianDisc{Parent{k}}
 Jump(::Type{ReconstructionGradient{FER}}) where {FER} = ReconstructionGradientDisc{FER,Jump}
 Average(::Type{ReconstructionGradient{FER}}) where {FER} = ReconstructionGradientDisc{FER,Average}
+Parent{k}(::Type{ReconstructionGradient{FER}}) where {FER,k} = IReconstructionGradientDisc{FER,Parent{k}}
 
 NeededDerivative4Operator(::Type{<:Identity}) = 0
 NeededDerivative4Operator(::Type{<:IdentityComponent}) = 0
@@ -190,7 +210,7 @@ NeededDerivative4Operator(::Type{<:TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:Gradient}) = 1
 NeededDerivative4Operator(::Type{<:SymmetricGradient}) = 1
 NeededDerivative4Operator(::Type{TangentialGradient}) = 1
-NeededDerivative4Operator(::Type{Laplacian}) = 2
+NeededDerivative4Operator(::Type{<:Laplacian}) = 2
 NeededDerivative4Operator(::Type{Hessian}) = 2
 NeededDerivative4Operator(::Type{<:SymmetricHessian}) = 2
 NeededDerivative4Operator(::Type{CurlScalar}) = 1
@@ -216,7 +236,7 @@ DefaultName4Operator(::Type{TangentFluxDisc{Average}}) = "{{TangentialFlux}}"
 DefaultName4Operator(::Type{<:Gradient}) = "∇"
 DefaultName4Operator(::Type{<:SymmetricGradient}) = "ϵ"
 DefaultName4Operator(::Type{TangentialGradient}) = "TangentialGradient"
-DefaultName4Operator(::Type{Laplacian}) = "Δ"
+DefaultName4Operator(::Type{<:Laplacian}) = "Δ"
 DefaultName4Operator(::Type{Hessian}) = "H"
 DefaultName4Operator(::Type{<:SymmetricHessian}) = "symH"
 DefaultName4Operator(::Type{CurlScalar}) = "curl"
@@ -247,7 +267,7 @@ Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*Int(ceil(ncomponents/xdim))
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 Length4Operator(::Type{<:SymmetricHessian}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ncomponents
-Length4Operator(::Type{Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
+Length4Operator(::Type{<:Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
 
 QuadratureOrderShift4Operator(::Type{<:Identity}) = 0
 QuadratureOrderShift4Operator(::Type{<:IdentityComponent}) = 0
@@ -260,7 +280,7 @@ QuadratureOrderShift4Operator(::Type{Curl3D}) = -1
 QuadratureOrderShift4Operator(::Type{<:Divergence}) = -1
 QuadratureOrderShift4Operator(::Type{<:SymmetricGradient}) = -1
 QuadratureOrderShift4Operator(::Type{TangentialGradient}) = -1
-QuadratureOrderShift4Operator(::Type{Laplacian}) = -2
+QuadratureOrderShift4Operator(::Type{<:Laplacian}) = -2
 QuadratureOrderShift4Operator(::Type{Hessian}) = -2
 QuadratureOrderShift4Operator(::Type{<:SymmetricHessian}) = -2
 

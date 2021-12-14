@@ -55,21 +55,30 @@ function test_disc_LF(xgrid, discontinuity)
     FEFunction = FEVector{Float64}("velocity",FE)
     fill!(FEFunction[1],1)
 
-    action = NoAction()
-    TestForm = LinearForm(Float64,ON_IFACES, [FE], [IdentityDisc{discontinuity}], action)
-    b = zeros(Float64,FE.ndofs)
-    assemble!(b, TestForm)
-    error = 0
-    for j = 1 : FE.ndofs
-            error += b[j] * FEFunction[1][j]
-    end
-    if discontinuity == Average
-        for j = 1 : num_sources(xgrid[FaceNodes])
-            if xgrid[FaceCells][2,j] != 0
-                error -= xgrid[FaceVolumes][j]
+
+    if discontinuity == Parent
+        # test Parent{1} - Parent{2} version of jump
+        action = Action((result, input) -> (result[1] = input[1] - input[2]), [1,2]; quadorder = 1)
+        TestIntegrator = ItemIntegrator(Float64, ON_IFACES, [Parent{1}(Identity), Parent{2}(Identity)], action)
+        error = evaluate(TestIntegrator, [FEFunction[1], FEFunction[1]])
+    else
+        action = NoAction()
+        TestForm = LinearForm(Float64, ON_IFACES, [FE], [IdentityDisc{discontinuity}], action)
+        b = zeros(Float64,FE.ndofs)
+        assemble!(b, TestForm)
+        error = 0
+        for j = 1 : FE.ndofs
+                error += b[j] * FEFunction[1][j]
+        end
+        if discontinuity == Average
+            for j = 1 : num_sources(xgrid[FaceNodes])
+                if xgrid[FaceCells][2,j] != 0
+                    error -= xgrid[FaceVolumes][j]
+                end
             end
         end
     end
+
     return error
 end
 

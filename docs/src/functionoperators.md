@@ -35,23 +35,23 @@ FunctionOperators are building blocks for the weak form and define the operation
     can be build from the ones available (e.g. the deviator).
 
 
-## Jumps and Averages
+## Jumps and Averages and Parents
 
-If one of the operators above is evaluted ON_FACES for a finite element that is not continuous there, the code usually will crash or produce weird results. However, some operators can be transformed into a
-Jump- or Average operator and then either the jumps or the average of this operator along the face is assembled. The operator Jump(Identity) for example gives the jump of the
-identity evaluation on both sides of the face.
+If one of the operators above is evaluted ON_FACES for a finite element that is not continuous there, the code usually will crash or produce weird results. However, some operators can be transformed into a Jump- or Average operator and then either the jumps or the average of this operator along the face is assembled. The operator Jump(Identity) for example gives the jump of the identity evaluation on both sides of the face.
+Seperate values of a discontinuous quantity on each neighbour of the face can be obtained using the Parent{1} and Parent{2} evaluations.
 
 ```@docs
 Jump
 Average
+Parent
 ```
 
 !!! note
 
-    Currently this feature is only available for assembly on faces (2D and 3D) and certain function operators like Identity, Gradient, ReconstructionIdentity, ReconstructionGradient, NormalFlux, TangentFlux, but more
+    Currently this feature is only available for assembly on faces (2D and 3D) and certain function operators like Identity, Gradient, Laplacian, ReconstructionIdentity, ReconstructionGradient, NormalFlux, TangentFlux, but more
     are added as soon as they are needed (and possibly upon request).
 
-    Also note that if a Jump or Average operator has different behaviour depending on the Assembly Pattern it is used in. Usually, the input of the action used in the assembly pattern has the evaluation on one of the two neighbours at a time, but this should be okay in a linear context. Only in ItemIntegrators the whole jump comes in. In NonlinearForms jumps and averages should better not be used currently.
+    Also note that a Jump or Average operator has different behaviour depending on the Assembly Pattern it is used in. Usually, the input of the action used in the assembly pattern has the evaluation on one of the two neighbours at a time, which should be okay in a linear context. Only in ItemIntegrators the whole jump comes in the input (here the user can split the jump into left and right value via seperate Parent{1} and Parent{2} evaluations). In NonlinearForms jumps and averages should better not be used currently.
 
 
 ## Reconstruction Operators

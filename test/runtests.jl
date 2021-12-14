@@ -161,10 +161,12 @@ function run_face_orientation_and_discontinuities_tests()
             maxerror = test_qpmatchup(testgrid(EG))
             println("EG = $EG | left-right-error = $maxerror")
             @test abs(maxerror) < 1e-14
-            for disc in [Jump,Average]
+            for disc in [Jump,Average,Parent]
                 maxerror = test_disc_LF(testgrid(EG), disc)
                 println("EG = $EG | disc = $disc | AP = LinearForm | error = $maxerror")
                 @test abs(maxerror) < 1e-14
+            end
+            for disc in [Jump,Average]
                 maxerror = test_disc_BLF(testgrid(EG), disc)
                 println("EG = $EG | disc = $disc | AP = BilinearForm | error = $maxerror")
                 @test maximum(abs.(maxerror)) < 1e-13

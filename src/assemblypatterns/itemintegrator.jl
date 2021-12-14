@@ -243,7 +243,11 @@ function evaluate!(
     basisevaler::Array{FEBasisEvaluator,1} = Array{FEBasisEvaluator,1}(undef,nFE)
     for j = 1 : nFE
         basisevaler[j] = get_basisevaler(AM, j, 1)
-        offsets[j+1] = offsets[j] + size(basisevaler[j].cvals,1)
+        offsets[j+1] = offsets[j] + get_basisdim(AM, j)
+    end
+
+    if length(action_input[1]) != offsets[end]
+        @warn "operator input length $(length(action_input[1])) does not match calculated offsets ($(offsets[end]))"
     end
     basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)

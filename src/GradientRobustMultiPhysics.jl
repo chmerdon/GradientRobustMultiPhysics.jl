@@ -48,7 +48,7 @@ export NeededDerivatives4Operator, QuadratureOrderShift4Operator
 export Dofmap4AssemblyType, DofitemAT4Operator
 export DefaultDirichletBoundaryOperator4FE
 
-export DiscontinuityTreatment, Jump, Average
+export DiscontinuityTreatment, Jump, Average, Parent
 export OperatorPair, OperatorTriple
 
 
