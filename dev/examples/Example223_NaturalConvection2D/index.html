@@ -32,7 +32,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     Problem.name = &quot;natural convection problem&quot;
 
     # add convection term for velocity
-    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, auto_newton = !anderson))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, newton = !anderson))
 
     # add boundary data for velocity (unknown 1) and temperature (unknown 3)
     add_boundarydata!(Problem, 1, [1,2,3], HomogeneousDirichletBoundary)
@@ -46,12 +46,19 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     if anderson
         add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; name = &quot;(R(u)⋅∇(T)) V&quot;))
     else #if newton
-        function Tconvection_kernel(result,input)
+        function Tconvection_kernel(result, input)
             # input = [id(u),∇T]
             result[1] = input[1]*input[3] + input[2]*input[4]
             return nothing
         end
-        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = &quot;(R(u)⋅∇(T)) V&quot;, ADnewton = true, quadorder = 0)  )
+        function Tconvection_jacobian(jac, input)
+            jac[1,1] = input[3]
+            jac[1,3] = input[1]
+            jac[1,2] = input[4]
+            jac[1,4] = input[2]
+            return nothing
+        end
+        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = &quot;(R(u)⋅∇(T)) V&quot;, jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
     end
     add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = &quot;-Ra v⋅g T&quot;, store = true))
 
@@ -94,21 +101,21 @@ PDE-DESCRIPTION
 
   LHS block | PDEOperator(s)
     [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+            | ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
     [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [1,3]   | -Ra v⋅g T (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
     [2,3]   | none
-    [3,1]   | (R(u)⋅∇(T)) V [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [3,1]   | (R(u)⋅∇(T)) V [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
     [3,2]   | none
     [3,3]   | ∇(T)⋅∇(V) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | (R(u)⋅∇(T)) V [AD-Newton] [∂T] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+            | (R(u)⋅∇(T)) V [Newton] [∂T] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
-     [1]    | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [1]    | ((R(u) ⋅ ∇) u, R(v)) [Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
      [2]    | none
-     [3]    | (R(u)⋅∇(T)) V [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [3]    | (R(u)⋅∇(T)) V [Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
 
    BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 2, 3]
                           
@@ -156,21 +163,21 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 7.511895e-12 | 9.615916e+02 | 1.43e+00/2.64e-01/1.75e+00
-	      2   | 1.005001e-11 | 5.931504e+02 | 5.36e-01/2.01e-01/7.39e-01
-	      3   | 7.639259e-12 | 6.568060e+02 | 5.34e-01/1.71e-01/7.08e-01
-	      4   | 8.921239e-12 | 3.990824e+02 | 5.36e-01/1.81e-01/7.20e-01
-	      5   | 8.245271e-12 | 2.340174e+02 | 5.32e-01/1.69e-01/7.03e-01
-	      6   | 8.325302e-12 | 1.387982e+02 | 5.32e-01/1.68e-01/7.03e-01
-	      7   | 8.121587e-12 | 8.267079e+01 | 5.37e-01/1.57e-01/6.96e-01
+	      1   | 7.511895e-12 | 9.615916e+02 | 1.31e+00/1.87e-01/1.55e+00
+	      2   | 1.005001e-11 | 5.931504e+02 | 2.69e-01/1.85e-01/4.56e-01
+	      3   | 7.639259e-12 | 6.568060e+02 | 2.69e-01/1.61e-01/4.32e-01
+	      4   | 8.921239e-12 | 3.990824e+02 | 2.68e-01/1.65e-01/4.36e-01
+	      5   | 8.245271e-12 | 2.340174e+02 | 2.69e-01/1.62e-01/4.34e-01
+	      6   | 8.325302e-12 | 1.387982e+02 | 2.69e-01/1.67e-01/4.47e-01
+	      7   | 8.121587e-12 | 8.267079e+01 | 2.68e-01/1.68e-01/4.39e-01
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 6.858799e-12 | 2.205491e+01 | 5.30e-01/2.16e-01/7.49e-01
-	      2   | 6.762332e-12 | 1.839015e+00 | 5.31e-01/1.59e-01/6.93e-01
-	      3   | 6.855682e-12 | 9.514267e-03 | 5.30e-01/1.75e-01/7.08e-01
-	      4   | 6.898512e-12 | 3.288516e-07 | 5.30e-01/1.52e-01/6.84e-01
-	      5   | 6.782606e-12 | 7.308358e-12 | 5.31e-01/1.76e-01/7.10e-01
+	      1   | 6.858799e-12 | 2.205491e+01 | 2.68e-01/2.08e-01/4.78e-01
+	      2   | 6.762332e-12 | 1.839015e+00 | 2.69e-01/1.60e-01/4.31e-01
+	      3   | 6.855682e-12 | 9.514267e-03 | 2.68e-01/1.73e-01/4.44e-01
+	      4   | 6.898512e-12 | 3.288516e-07 | 2.69e-01/1.54e-01/4.25e-01
+	      5   | 6.782606e-12 | 7.308358e-12 | 2.68e-01/1.61e-01/4.31e-01
 
-	Nu = 13.97802371664831</code></pre><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 14 December 2021 22:52">Tuesday 14 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	Nu = 13.97802371664831</code></pre><p><img src="../../images/Example223_NaturalConvection2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example222_NavierStokesAnderson2D/">« 222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example224_FlowAroundCylinder2D/">224 : Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 3 January 2022 16:02">Monday 3 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

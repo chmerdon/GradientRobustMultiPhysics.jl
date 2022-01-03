@@ -35,6 +35,13 @@ function diffusion_kernel1!(result, input)
     result[2] = (1+input[1]^2)*input[3]
     return nothing
 end
+function jac_diffusion_kernel1!(jacobian, input)
+    jacobian[1,1] = 2*input[1]*input[2]
+    jacobian[1,2] = (1+input[1]^2)
+    jacobian[2,1] = 2*input[1]*input[3]
+    jacobian[2,3] = (1+input[1]^2)
+    return nothing
+end
 
 # alternatively callable structs are possible
 # (and currently suggested if kernel should depend on parameters)
@@ -56,7 +63,17 @@ const DK = diffusion_kernel2(0.0,1.0)
 
 # everything is wrapped in a main function
 # default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; q::Int = 1, p::Float64 = 2.7, κ::Float64 = 0.0001, Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
+function main(;
+    q::Int = 1,           # which nonlinear operator should be used?
+    p::Float64 = 2.7,     # coefficient for diffusion kernel 2
+    κ::Float64 = 0.0001,  # coefficient for diffusion kernel 2
+    nlevels = 6,          # number of levels in refinement loop
+    FEType = H1P1{1},     # FEType to be used (H1P2{1,2} should give exact solution)
+    autodiff = false,     # only for q = 1: use jacobians from automatic differentiation or the ones provided above? (q = 2 always uses autodiff)
+    Plotter = nothing,
+    verbosity = 0,
+    testmode = false,
+    factorization = ExtendableSparse.LUFactorization)
 
     # set log level
     set_verbosity(verbosity)
@@ -71,11 +88,11 @@ function main(; q::Int = 1, p::Float64 = 2.7, κ::Float64 = 0.0001, Plotter = no
 
     # prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = &quot;(1+u^2) ∇u ⋅ ∇v&quot;, quadorder = 4, ADnewton = true)
+        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = &quot;(1+u^2) ∇u ⋅ ∇v&quot;, quadorder = 4, jacobian = autodiff ? &quot;auto&quot; : jac_diffusion_kernel1!)
     elseif q == 2
         DK.κ = κ
         DK.p = p
-        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = &quot;(κ+|∇u|^2) ∇u ⋅ ∇v&quot;, quadorder = 4, ADnewton = true)
+        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = &quot;(κ+|∇u|^2) ∇u ⋅ ∇v&quot;, quadorder = 4, jacobian = &quot;auto&quot;)
     else
         @error &quot;only q ∈ [1,2] !&quot;
     end
@@ -132,7 +149,7 @@ end
 # test function that is called by test unit
 # tests if the above problem is solved exactly by P2-FEM
 function test()
-    return main(; FEType = H1P2{1,2}, q = 1, nlevels = 1, testmode = true)
+    return main(; FEType = H1P2{1,2}, q = 1, nlevels = 1, testmode = true, autodiff = true) + main(; FEType = H1P2{1,2}, q = 1, nlevels = 1, testmode = true, autodiff = false)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example210_NonlinearPoisson2D.main()
@@ -145,10 +162,10 @@ PDE-DESCRIPTION
     [1]   | u / nonlinear Poisson equation 
 
   LHS block | PDEOperator(s)
-    [1,1]   | (1+u^2) ∇u ⋅ ∇v [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,1]   | (1+u^2) ∇u ⋅ ∇v [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
-     [1]    | (1+u^2) ∇u ⋅ ∇v [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [1]    | (1+u^2) ∇u ⋅ ∇v [Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
             | (f, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
 
    BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
@@ -164,10 +181,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 1.276908e-16 | 1.879348e-01 | 9.67e-03/9.58e-05/1.62e-02
-	      2   | 2.415941e-16 | 2.427676e-03 | 5.58e-04/9.86e-05/7.54e-04
-	      3   | 2.586077e-16 | 3.580510e-07 | 4.11e-04/5.12e-05/4.86e-04
-	      4   | 6.032275e-16 | 8.010898e-15 | 3.93e-04/2.76e-05/4.36e-04
+	      1   | 1.276908e-16 | 1.879348e-01 | 1.02e-02/9.93e-05/1.74e-02
+	      2   | 2.415941e-16 | 2.427676e-03 | 4.08e-04/8.94e-05/5.74e-04
+	      3   | 2.586077e-16 | 3.580510e-07 | 2.53e-04/3.83e-05/3.10e-04
+	      4   | 6.032275e-16 | 8.010898e-15 | 2.43e-04/2.53e-05/2.87e-04
 
 Solution = 
 FEVector information
@@ -178,10 +195,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 5.090761e-16 | 1.552235e-01 | 1.55e-03/1.68e-04/1.79e-03
-	      2   | 1.702141e-15 | 1.898915e-03 | 1.50e-03/9.98e-05/1.63e-03
-	      3   | 6.473127e-16 | 4.461316e-07 | 1.48e-03/8.64e-05/1.59e-03
-	      4   | 9.026139e-16 | 2.496648e-14 | 1.49e-03/8.03e-05/1.59e-03
+	      1   | 5.090761e-16 | 1.552235e-01 | 9.82e-04/1.71e-04/1.21e-03
+	      2   | 1.702141e-15 | 1.898915e-03 | 9.04e-04/9.92e-05/1.03e-03
+	      3   | 6.473127e-16 | 4.461316e-07 | 9.04e-04/8.51e-05/1.01e-03
+	      4   | 9.026139e-16 | 2.496648e-14 | 8.89e-04/8.22e-05/9.94e-04
 
 Solution = 
 FEVector information
@@ -192,10 +209,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 1.617567e-15 | 9.834582e-02 | 5.87e-03/5.18e-04/6.47e-03
-	      2   | 2.248578e-15 | 1.307935e-03 | 5.83e-03/3.85e-04/6.28e-03
-	      3   | 1.948846e-15 | 4.214647e-07 | 5.83e-03/3.58e-04/6.24e-03
-	      4   | 2.403146e-15 | 3.064320e-14 | 5.89e-03/3.03e-02/3.62e-02
+	      1   | 1.617567e-15 | 9.834582e-02 | 3.58e-03/5.81e-04/4.24e-03
+	      2   | 2.248578e-15 | 1.307935e-03 | 3.54e-03/4.12e-04/4.00e-03
+	      3   | 1.948846e-15 | 4.214647e-07 | 3.55e-03/4.11e-04/4.01e-03
+	      4   | 2.403146e-15 | 3.064320e-14 | 3.53e-03/3.68e-04/3.94e-03
 
 Solution = 
 FEVector information
@@ -206,10 +223,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 2.551629e-15 | 5.522608e-02 | 2.34e-02/1.87e-03/2.54e-02
-	      2   | 3.584915e-15 | 8.487585e-04 | 2.34e-02/1.32e-03/2.48e-02
-	      3   | 4.145143e-15 | 2.555420e-07 | 2.33e-02/1.30e-03/2.47e-02
-	      4   | 4.778391e-15 | 2.270257e-14 | 2.34e-02/1.30e-03/2.48e-02
+	      1   | 2.551629e-15 | 5.522608e-02 | 1.40e-02/1.97e-03/1.62e-02
+	      2   | 3.584915e-15 | 8.487585e-04 | 1.40e-02/1.40e-03/1.55e-02
+	      3   | 4.145143e-15 | 2.555420e-07 | 1.40e-02/1.51e-03/1.56e-02
+	      4   | 4.778391e-15 | 2.270257e-14 | 1.39e-02/1.35e-03/1.53e-02
 
 Solution = 
 FEVector information
@@ -220,10 +237,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 4.859175e-15 | 2.924738e-02 | 9.39e-02/7.26e-03/1.01e-01
-	      2   | 9.143117e-15 | 4.905172e-04 | 9.34e-02/5.44e-03/9.90e-02
-	      3   | 8.902252e-15 | 1.346748e-07 | 9.36e-02/5.41e-03/9.92e-02
-	      4   | 9.472149e-15 | 1.996064e-14 | 9.34e-02/5.38e-03/9.90e-02
+	      1   | 4.859175e-15 | 2.924738e-02 | 5.49e-02/7.58e-03/6.28e-02
+	      2   | 9.143117e-15 | 4.905172e-04 | 5.50e-02/5.85e-03/6.11e-02
+	      3   | 8.902252e-15 | 1.346748e-07 | 5.56e-02/5.57e-03/6.14e-02
+	      4   | 9.472149e-15 | 1.996064e-14 | 6.12e-02/1.77e-02/7.92e-02
 
 Solution = 
 FEVector information
@@ -234,10 +251,10 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 9.805278e-15 | 1.504798e-02 | 3.72e-01/3.04e-02/4.03e-01
-	      2   | 1.837688e-14 | 2.640269e-04 | 3.71e-01/2.44e-02/3.96e-01
-	      3   | 1.891880e-14 | 6.824838e-08 | 3.72e-01/2.48e-02/3.98e-01
-	      4   | 1.912637e-14 | 3.361214e-14 | 3.72e-01/2.44e-02/4.14e-01
+	      1   | 9.805278e-15 | 1.504798e-02 | 2.21e-01/3.16e-02/2.53e-01
+	      2   | 1.837688e-14 | 2.640269e-04 | 2.21e-01/2.69e-02/2.49e-01
+	      3   | 1.891880e-14 | 6.824838e-08 | 2.18e-01/4.45e-02/2.63e-01
+	      4   | 1.912637e-14 | 3.361214e-14 | 2.19e-01/2.62e-02/2.46e-01
 
 
     ndofs   |    || u - u_h ||     order  |  || ∇(u - u_h) ||    order  |
@@ -247,4 +264,4 @@ FEVector information
        145  |     4.14699e-04      2.194  |     3.60851e-02      1.098  |
        545  |     1.03688e-04      2.094  |     1.80423e-02      1.047  |
       2113  |     2.59229e-05      2.046  |     9.02111e-03      1.023  |
-      8321  |     6.48078e-06      2.023  |     4.51055e-03      1.011  |</code></pre><p><img src="../../images/Example210_NonlinearPoisson2D_1.png" alt/> <img src="../../images/Example210_NonlinearPoisson2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 14 December 2021 22:52">Tuesday 14 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8321  |     6.48078e-06      2.023  |     4.51055e-03      1.011  |</code></pre><p><img src="../../images/Example210_NonlinearPoisson2D_1.png" alt/> <img src="../../images/Example210_NonlinearPoisson2D_2.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example209_FaceLagrangeMultiplier2D/">« 209 : Lagrange Multiplier on Faces</a><a class="docs-footer-nextpage" href="../Example211_NonlinearElasticityBimetal2D/">211 : Nonlinear Elasticity Bimetal 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 3 January 2022 16:02">Monday 3 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

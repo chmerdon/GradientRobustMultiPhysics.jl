@@ -21,6 +21,14 @@ function bnd_inlet!(result,x)
 end
 const inflow = DataFunction(bnd_inlet!, [2,2]; name = &quot;u_inflow&quot;, dependencies = &quot;X&quot;, quadorder = 2)
 
+function convection_kernel(result, input)
+    for j = 1 : 2
+        result[j] = 0
+        for k = 1 : 2
+            result[j] += input[k]*input[2+(j-1)*2+k]
+        end
+    end
+end
 
 # everything is wrapped in a main function
 function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
@@ -40,7 +48,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
     # add operators (Laplacian, Div-LagrangeMultierplier, Convection)
     add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
-    add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, auto_newton = true))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, newton = true))
 
     # add boundary data (bregion 2 is outflow, 4 is inflow, 5 is cylinder)
     add_boundarydata!(Problem, 1, [1,3,5], HomogeneousDirichletBoundary)
@@ -185,13 +193,13 @@ PDE-DESCRIPTION
 
   LHS block | PDEOperator(s)
     [1,1]   | 0.001 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+            | ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
     [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
     [2,2]   | none
 
   RHS block | PDEOperator(s)
-     [1]    | ((R(u) ⋅ ∇) u, R(v)) [AD-Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [1]    | ((R(u) ⋅ ∇) u, R(v)) [Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
      [2]    | none
 
    BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [4]
@@ -203,11 +211,11 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 2.499205e-17 | 1.899986e-03 | 9.41e-01/2.84e-01/1.24e+00
-	      2   | 2.670545e-17 | 5.392003e-04 | 9.41e-01/2.34e-01/1.18e+00
-	      3   | 2.674340e-17 | 2.926551e-05 | 9.48e-01/2.09e-01/1.16e+00
-	      4   | 2.674620e-17 | 1.060798e-07 | 9.40e-01/2.38e-01/1.18e+00
-	      5   | 2.635039e-17 | 1.119313e-12 | 9.48e-01/2.10e-01/1.16e+00
+	      1   | 2.499205e-17 | 1.899986e-03 | 4.14e-01/2.80e-01/7.05e-01
+	      2   | 2.670545e-17 | 5.392003e-04 | 4.14e-01/2.31e-01/6.49e-01
+	      3   | 2.674340e-17 | 2.926551e-05 | 4.15e-01/2.29e-01/6.47e-01
+	      4   | 2.674620e-17 | 1.060798e-07 | 4.14e-01/2.32e-01/6.50e-01
+	      5   | 2.635039e-17 | 1.119313e-12 | 4.14e-01/2.17e-01/6.34e-01
 
 [drag, lift] = [5.558270082490449, 0.01048856931621747]
-p difference = [0.11865484048663102]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 14 December 2021 22:52">Tuesday 14 December 2021</span>. Using Julia version 1.7.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+p difference = [0.11865484048663102]</code></pre><p><img src="../../images/Example224_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example223_NaturalConvection2D/">« 223 : Natural Convection 2D</a><a class="docs-footer-nextpage" href="../Example225_CompressibleStokes2D/">225 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 3 January 2022 16:02">Monday 3 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
