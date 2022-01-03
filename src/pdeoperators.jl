@@ -447,14 +447,14 @@ function ConvectionOperator(
     ansatzfunction_operator::Type{<:AbstractFunctionOperator} = Gradient,
     testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
     regions::Array{Int,1} = [0],
-    auto_newton::Bool = false,
+    newton::Bool = false,
     quadorder = 0)
 ````
 
 constructs a trilinearform for a convection term of the form c(a,u,v) = (beta_operator(a)*ansatzfunction_operator(u),testfunction_operator(v))
 where a_from is the id of some unknown of the PDEDescription; xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
 With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v),
-With auto_newton = true a Newton scheme for c(u,u,v) is automatically derived (and fixed_argument is ignored).
+With newton = true a Newton scheme for c(u,u,v) is automatically derived (and fixed_argument is ignored).
 
 """
 function ConvectionOperator(
@@ -469,28 +469,36 @@ function ConvectionOperator(
     ansatzfunction_operator::Type{<:AbstractFunctionOperator} = Gradient,
     testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
     regions::Array{Int,1} = [0],
-    auto_newton::Bool = false,
+    newton::Bool = false,
     transposed_assembly::Bool = true,
     quadorder = 0)
 
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = grad(u)
-    function convection_function_fe(result::Array{<:Real,1}, input::Array{<:Real,1})
+    function convection_function_fe(result, input)
         for j = 1 : ncomponents
             result[j] = 0
             for k = 1 : xdim
                 result[j] += input[k]*input[xdim+(j-1)*xdim+k]
             end
         end
+        return nothing
     end    
     argsizes = [ncomponents, xdim + ncomponents*xdim]
-    if auto_newton
+    if newton
+        function convection_jacobian(jac, input)
+            for j = 1 : ncomponents, k = 1 : xdim
+                jac[j,k] = input[xdim+(j-1)*xdim+k]
+                jac[j,xdim+(j-1)*xdim+k] = input[k]
+            end
+            return nothing
+        end    
         ## generates a nonlinear form with automatic Newton operators by AD
         if name == "auto"
             name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) u, $(testfunction_operator)(v))"
         end
-        return NonlinearForm([beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; name = name, ADnewton = true, quadorder = quadorder)     
+        return NonlinearForm([beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; name = name, jacobian = convection_jacobian, quadorder = quadorder)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
         action_kernel = ActionKernel(convection_function_fe,argsizes; dependencies = "", quadorder = quadorder)
@@ -572,8 +580,10 @@ function NonlinearForm(
     dim::Int;
     name::String = "nonlinear form",
     AT::Type{<:AssemblyType} = ON_CELLS,
-    ADnewton::Bool = false,
+    newton::Bool = true, # prepare operators for Newton algorithm
+    jacobian = "auto", # by automatic ForwarDiff, or should be a function of input (jacobian, input) with sizes matching the specified dependencies
     action_kernel_rhs = nothing,
+    dependencies = "",
     factor = 1,
     regions = [0])
 ````
@@ -582,25 +592,26 @@ generates an abstract nonlinearform operator G.
 The array coeff_from stores the ids of the unknowns that should be used to evaluate the operators. The array argsizes is a vector with two entries where the first one
 is the length of the expected result vector and the second one is the length of the input vector.
 
-If ADnewton == true, the specified action_kernel is automatically differentiated to assemble the Jacobian DG
-and setup a Newton iteration. The action_kernel has to be a function of the interface 
+If newton == true, the operators for a Newton iteration are generated. Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
+The local jacobians (= jacobians of the operator kernel) to build DG needed for this are computed by
+automatic differentation (ForwardDiff). The user can also specify a jacobian kernel function by hand (which may improve assembly times).
+
+For default dependencies the kernel functions for the operator and its jacobian have to satisfy the interface
 
     function name(result,input)
 
-where input is a vector of the operators of the solution and result is what then is multiplied with operator2 of the testfunction.
-Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
+where input is a vector of the operators of the solution and result is either what then is multiplied with operator2 of the testfunction (or the jacobian).
+For dependencies == "XT" the additional arguments x and t are needed in the interface.
 
 
-If ADnewton == false, the user is epected to prescribe a linearisation of the nonlinear operator. In this case the action_kernel has to satisfy the interface
+If newton == false, the user is epected to prescribe a linearisation of the nonlinear operator. In this case the action_kernel has to satisfy the interface
 
     function name(result, input_current, input_ansatz)
 
 where input_current is a vector of the operators of the solution and input_ansatz is a vecor with the operators evaluated at one of the basis functions.
 If necessary, also a right-hand side action in the same format can be prescribed in action_kernel_rhs. 
 
-Note 1: The AD feature matured a bit, but still is to be considered experimental.
-
-Note 2: The limitation that the nonlinearity only can depend on one unknown of the PDE was recently lifted, however the behavior how to assign this operator to the PDE
+Note : The limitation that the nonlinearity only can depend on one unknown of the PDE was recently lifted, however the behavior how to assign this operator to the PDE
 may be revised in future. Currently, the nonlinearity can indeed depend on arbitrary unknowns (i.e. coeff_from may contain more than one different unknown ids),
 which will lead to copies of the operator assigned also to off-diagonal blocks which are then related to partial derivatives with respect to the other unknowns
 (i.e. input_ansatz will only contain the operator evaluations that coresspond to the unknown of the subblock it is evaluated at, all other entries are zero).
@@ -615,7 +626,8 @@ function NonlinearForm(
     argsizes::Array{Int,1};
     name::String = "nonlinear form",
     AT::Type{<:AssemblyType} = ON_CELLS,
-    ADnewton::Bool = false,
+    newton::Bool = true, # prepare operators for Newton algorithm
+    jacobian = "auto", # by automatic ForwarDiff, or should be a function of input (jacobian, input) with sizes matching the specified dependencies
     action_kernel_rhs = nothing,
     dependencies = "",
     quadorder::Int = 0,
@@ -629,8 +641,12 @@ function NonlinearForm(
         push!(argsizes,argsizes[2])
     end
 
-    if ADnewton
-        name = name * " [AD-Newton]"
+    if newton
+        if jacobian == "auto"
+            name = name * " [AD-Newton]"
+        else
+            name = name * " [Newton]"
+        end
         # the action for the derivative matrix DG is calculated by automatic differentiation (AD)
         # from the given action_kernel of the operator G
 
@@ -646,8 +662,12 @@ function NonlinearForm(
             reduced_action_kernel_x(x) = (result,input) -> action_kernel(result,input,x)
             cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_x([1.0,1.0,1.0]), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel_x(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x)
-                ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_x(x), result, input_current, cfg)
-                jac = DiffResults.jacobian(Dresult)
+                if jacobian == "auto" # use autodiff
+                    ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_x(x), result, input_current, cfg)
+                    jac = DiffResults.jacobian(Dresult)
+                else # use provided jacobian
+                    jacobian(jac, input_current, x)
+                end
                 for j = 1 : argsizes[1]
                     result[j] = 0
                     for k = 1 : argsizes[2]
@@ -675,8 +695,12 @@ function NonlinearForm(
             reduced_action_kernel_t(t) = (result,input) -> action_kernel(result,input,t)
             cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_t(0.0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel_t(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, t)
-                ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_t(t), result, input_current, cfg)
-                jac = DiffResults.jacobian(Dresult)
+                if jacobian == "auto" # use autodiff
+                    ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_t(t), result, input_current, cfg)
+                    jac = DiffResults.jacobian(Dresult)
+                else # use provided jacobian
+                    jacobian(jac, input_current, t)
+                end
                 for j = 1 : argsizes[1]
                     result[j] = 0
                     for k = 1 : argsizes[2]
@@ -704,8 +728,12 @@ function NonlinearForm(
             reduced_action_kernel_xt(x,t) = (result,input) -> action_kernel(result,input,x,t)
             cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_xt([1.0,1.0,1.0],0.0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel_xt(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x, t)
-                ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_xt(x,t), result, input_current, cfg)
-                jac = DiffResults.jacobian(Dresult)
+                if jacobian == "auto" # use autodiff
+                    ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_xt(x,t), result, input_current, cfg)
+                    jac = DiffResults.jacobian(Dresult)
+                else # use provided jacobian
+                    jacobian(jac, input_current, x, t)
+                end
                 for j = 1 : argsizes[1]
                     result[j] = 0
                     for k = 1 : argsizes[2]
@@ -732,8 +760,12 @@ function NonlinearForm(
         elseif dependencies == ""
             cfg = ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
             function newton_kernel(result, input_current, input_ansatz)
-                Dresult = ForwardDiff.chunk_mode_jacobian!(Dresult, action_kernel, result, input_current, cfg)
-                jac = DiffResults.jacobian(Dresult)
+                if jacobian == "auto" # use autodiff
+                    Dresult = ForwardDiff.chunk_mode_jacobian!(Dresult, action_kernel, result, input_current, cfg)
+                    jac = DiffResults.jacobian(Dresult)
+                else # use provided jacobian
+                    jacobian(jac, input_current)
+                end
                 for j = 1 : argsizes[1]
                     result[j] = 0
                     for k = 1 : argsizes[2]
@@ -767,7 +799,7 @@ function NonlinearForm(
         nlform_action_kernel = NLActionKernel(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
 
         action = Action{Float64}( nlform_action_kernel)
-        if action_kernel_rhs != nothing
+        if action_kernel_rhs !== nothing
             action_rhs = Action{Float64}( action_kernel_rhs)
         else
             action_rhs = nothing
@@ -958,6 +990,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
     assemble!(O.storage, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
     flush!(O.storage)
+    return Pattern.last_allocations
 end
 
 function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::Int; factor = 1, time::Real = 0) where {T,Tv,Ti}
@@ -976,6 +1009,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     O.storage = zeros(T,FES[1].ndofs)
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
     assemble!(O.storage, Pattern; factor = factor, skip_preps = false)
+    return Pattern.last_allocations
 end
 
 

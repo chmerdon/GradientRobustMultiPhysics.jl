@@ -104,7 +104,7 @@ function assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
-    for item = 1 : nitems
+    loop_allocations = @allocated for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
@@ -174,6 +174,7 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+    AP.last_allocations = loop_allocations
     return nothing
 end
 

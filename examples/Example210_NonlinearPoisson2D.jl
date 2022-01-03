@@ -59,6 +59,13 @@ function diffusion_kernel1!(result, input)
     result[2] = (1+input[1]^2)*input[3]
     return nothing
 end 
+function jac_diffusion_kernel1!(jacobian, input)
+    jacobian[1,1] = 2*input[1]*input[2]
+    jacobian[1,2] = (1+input[1]^2)
+    jacobian[2,1] = 2*input[1]*input[3]
+    jacobian[2,3] = (1+input[1]^2)
+    return nothing
+end 
 
 ## alternatively callable structs are possible
 ## (and currently suggested if kernel should depend on parameters)
@@ -80,7 +87,17 @@ const DK = diffusion_kernel2(0.0,1.0)
 
 ## everything is wrapped in a main function
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
-function main(; q::Int = 1, p::Float64 = 2.7, κ::Float64 = 0.0001, Plotter = nothing, verbosity = 0, nlevels = 6, FEType = H1P1{1}, testmode = false, factorization = ExtendableSparse.LUFactorization)
+function main(; 
+    q::Int = 1,           # which nonlinear operator should be used?
+    p::Float64 = 2.7,     # coefficient for diffusion kernel 2
+    κ::Float64 = 0.0001,  # coefficient for diffusion kernel 2
+    nlevels = 6,          # number of levels in refinement loop  
+    FEType = H1P1{1},     # FEType to be used (H1P2{1,2} should give exact solution)
+    autodiff = false,     # only for q = 1: use jacobians from automatic differentiation or the ones provided above? (q = 2 always uses autodiff)
+    Plotter = nothing, 
+    verbosity = 0,
+    testmode = false,
+    factorization = ExtendableSparse.LUFactorization)
 
     ## set log level
     set_verbosity(verbosity)
@@ -95,11 +112,11 @@ function main(; q::Int = 1, p::Float64 = 2.7, κ::Float64 = 0.0001, Plotter = no
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 4, ADnewton = true) 
+        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 4, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!) 
     elseif q == 2
         DK.κ = κ
         DK.p = p
-        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 4, ADnewton = true)   
+        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 4, jacobian = "auto")   
     else 
         @error "only q ∈ [1,2] !"
     end
@@ -156,7 +173,7 @@ end
 ## test function that is called by test unit
 ## tests if the above problem is solved exactly by P2-FEM
 function test()
-    return main(; FEType = H1P2{1,2}, q = 1, nlevels = 1, testmode = true)
+    return main(; FEType = H1P2{1,2}, q = 1, nlevels = 1, testmode = true, autodiff = true) + main(; FEType = H1P2{1,2}, q = 1, nlevels = 1, testmode = true, autodiff = false)
 end
 
 end

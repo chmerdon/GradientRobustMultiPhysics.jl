@@ -118,7 +118,7 @@ function assemble!(
     # otherwise more than one MatrixBlock has to be assembled and we need more offset information
     # hence, this only can handle nonlinearities at the moment that depend on one unknown of the PDEsystem
 
-    for item = 1 : nitems
+    loop_allocations = @allocated for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
@@ -203,6 +203,8 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+    
+    AP.last_allocations = loop_allocations
 
     return nothing
 end
@@ -270,7 +272,7 @@ function assemble!(
     else
         @logmsg MoreInfo "Assembling $(AP.name) for current $((p->p.name).(FEB)) into vector ($AT)"
     end
-    @debug AP
+    @debug AP AM.qf[1]
 
     # loop over items
     offsets::Array{Int,1} = zeros(Int,nFE+1)
@@ -289,7 +291,7 @@ function assemble!(
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
 
-    for item = 1 : nitems
+    loop_allocations = @allocated for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
@@ -352,6 +354,8 @@ function assemble!(
     end # if in region    
     end # region for loop
     end # item for loop
+
+    AP.last_allocations = loop_allocations
 
     return nothing
 end

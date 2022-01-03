@@ -27,6 +27,8 @@ mutable struct SolverConfig{T, TvG, TiG}
     RHS_AssemblyPatterns::Array{Array{AssemblyPattern,1},1} # last used assembly pattern (and assembly pattern preps to avoid their recomputation)
     LHS_AssemblyTimes::Array{Array{Float64,1},2}
     RHS_AssemblyTimes::Array{Array{Float64,1},1}
+    LHS_LoopAllocations::Array{Array{Int,1},2}
+    RHS_LoopAllocations::Array{Array{Int,1},1}
     user_params::Union{Dict{Symbol,Any},Nothing} # dictionary with user parameters
 end
 
@@ -246,9 +248,12 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     RHS_APs = Array{Array{AssemblyPattern,1},1}(undef,size(PDE.RHSOperators,1))
     LHS_AssemblyTimes = Array{Array{Float64,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
     RHS_AssemblyTimes = Array{Array{Float64,1},1}(undef,size(PDE.RHSOperators,1))
+    LHS_LoopAllocations = Array{Array{Int,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
+    RHS_LoopAllocations = Array{Array{Int,1},1}(undef,size(PDE.RHSOperators,1))
     for j = 1 : size(PDE.LHSOperators,1), k = 1 : size(PDE.LHSOperators,2)
         LHS_APs[j,k] = Array{AssemblyPattern,1}(undef, length(PDE.LHSOperators[j,k]))
         LHS_AssemblyTimes[j,k] = zeros(Float64, length(PDE.LHSOperators[j,k]))
+        LHS_LoopAllocations[j,k] = zeros(Int, length(PDE.LHSOperators[j,k]))
         for o = 1 : length(PDE.LHSOperators[j,k])
             LHS_APs[j,k][o] = AssemblyPattern()
         end
@@ -256,6 +261,7 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     for j = 1 : size(PDE.RHSOperators,1)
         RHS_APs[j] = Array{AssemblyPattern,1}(undef, length(PDE.RHSOperators[j]))
         RHS_AssemblyTimes[j] = zeros(Float64, length(PDE.RHSOperators[j]))
+        RHS_LoopAllocations[j] = zeros(Int, length(PDE.RHSOperators[j]))
         for o = 1 : length(PDE.RHSOperators[j])
             RHS_APs[j][o] = AssemblyPattern()
         end
@@ -280,7 +286,7 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
         user_params[:check_nonlinear_residual] = nonlinear ? true : false
     end
 
-    return SolverConfig{T,TvG,TiG}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, user_params)
+    return SolverConfig{T,TvG,TiG}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, LHS_LoopAllocations, RHS_LoopAllocations, user_params)
 end
 
 function Base.show(io::IO, SC::SolverConfig)
@@ -332,7 +338,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
 
     subiterations = SC.user_params[:subiterations]
 
-    info_msg = "ACCUMULATED ASSEMBLY TIMES"
+    info_msg = "ACCUMULATED ASSEMBLY TIMES AND ALLOCATIONS"
     info_msg *= "\n\t=========================="
 
     for s = 1 : length(subiterations)
@@ -341,6 +347,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
             for k = 1 : size(SC.LHS_AssemblyTimes,2)
                 for o = 1 : size(SC.LHS_AssemblyTimes[eq,k],1)
                     info_msg *= "\n\tLHS[$eq,$k][$o] ($(PDE.LHSOperators[eq,k][o].name)) = $(SC.LHS_AssemblyTimes[eq,k][o])s"
+                    info_msg *= "\t ( $(SC.LHS_LoopAllocations[eq,k][o]) allocations)"
                 end
             end
         end
@@ -351,6 +358,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
             eq = subiterations[s][j]
             for o = 1 : size(SC.RHS_AssemblyTimes[eq],1)
                 info_msg *= "\n\tRHS[$eq][$o] ($(PDE.RHSOperators[eq][o].name)) = $(SC.RHS_AssemblyTimes[eq][o])s"
+                info_msg *= "\t ( $(SC.RHS_LoopAllocations[eq][o]) allocations)"
             end
         end
     end
@@ -409,7 +417,7 @@ function assemble!(
                         if has_storage(O)
                             op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(LHSOperators[equations[j],k][o],equations)
                             if (min_trigger <: op_trigger) 
-                                elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j], k; time = time)
+                                elapsedtime = @elapsed SC.LHS_LoopAllocations[equations[j],k][o] += update_storage!(O, CurrentSolution, equations[j], k; time = time)
                                 SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             end
                         end
@@ -424,7 +432,7 @@ function assemble!(
                     if has_storage(O)
                         op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(RHSOperators[equations[j]][o],equations)
                         if (min_trigger <: op_trigger) 
-                            elapsedtime = @elapsed update_storage!(O, CurrentSolution, equations[j] ; time = time)
+                            elapsedtime = @elapsed SC.RHS_LoopAllocations[equations[j]][o] += update_storage!(O, CurrentSolution, equations[j] ; time = time)
                             SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
                         end
                     end
@@ -446,6 +454,9 @@ function assemble!(
                     O = RHSOperators[equations[j]][o]
                     elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, O, CurrentSolution; time = time)
                     SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+                    if !has_storage(O)
+                        SC.RHS_LoopAllocations[equations[j]][o] += SC.RHS_AssemblyPatterns[equations[j]][o].last_allocations
+                    end
                 end
             end
         end
@@ -474,6 +485,9 @@ function assemble!(
                                 elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time)
                             end  
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+                            if !has_storage(O)
+                                SC.LHS_LoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
+                            end
                         end  
                     end
                 elseif !(k in equations) && !only_lhs # LHS operator is assembled into b if variable is not solved in equations
@@ -490,6 +504,9 @@ function assemble!(
                             @debug "Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(O.name)"
                             elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, O, CurrentSolution; factor = -1.0, time = time, fixed_component = k)
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+                            if !has_storage(O)
+                                SC.LHS_LoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
+                            end
                         end
                     end
                 end

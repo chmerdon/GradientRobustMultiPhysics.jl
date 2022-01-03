@@ -79,7 +79,7 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     ## velocity update equation
     add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
     add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity]; name = "(div(v),p)", store = true, factor = -1))
-    add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; auto_newton = true))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; newton = true))
 
     ## add penalty for discrete divergence
     add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; name = "ϵ (div_h(u),div_h(v))", store = true, factor = λ))

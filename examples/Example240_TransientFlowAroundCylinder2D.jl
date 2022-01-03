@@ -56,7 +56,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
 
     ## the convection operator is assembled to the right-hand side
     ## to keep the matrix constant in time (but we do subiterations in each timestep)
-    CO = ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, auto_newton = false)
+    CO = ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, newton = false)
     add_rhsdata!(Problem, 1, restrict_operator(CO; fixed_arguments = [1,2], fixed_arguments_ids = [1,1], factor = -1))
     
     ## add boundary data (bregion 2 is outflow, 4 is inflow, 5 is cylinder)

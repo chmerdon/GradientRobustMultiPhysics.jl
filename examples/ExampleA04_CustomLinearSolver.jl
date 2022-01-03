@@ -73,7 +73,7 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
         result[2] = (1+input[1]^2)*input[3]
         return nothing
     end 
-    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "((1+u^2)*grad(u))*grad(v)", quadorder = 2, ADnewton = true)   
+    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "((1+u^2)*grad(u))*grad(v)", quadorder = 2, newton = true)   
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")

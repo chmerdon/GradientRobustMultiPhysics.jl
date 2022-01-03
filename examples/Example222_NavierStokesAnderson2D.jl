@@ -39,7 +39,7 @@ function main(; verbosity = 0, Plotter = nothing, μ = 5e-4, anderson_iterations
     FETypes = [H1P2{2,2}, H1P1{1}] # Taylor--Hood
 
     ## load Navier-Stokes problem prototype and assign data
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = true, auto_newton = false, store = false)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = true, newton = false, store = false)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
     @show Problem
@@ -52,7 +52,7 @@ function main(; verbosity = 0, Plotter = nothing, μ = 5e-4, anderson_iterations
     solve!(Solution, Problem; anderson_iterations = anderson_iterations, anderson_metric = "l2", anderson_unknowns = [1], maxiterations = maxiterations, target_residual = switch_to_newton_tolerance, show_statistics = true)
 
     ## solve rest with Newton
-    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = true, auto_newton = true, store = true)
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = true, newton = true, store = true)
     add_boundarydata!(Problem, 1, [1,2,4], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 1, [3], BestapproxDirichletBoundary; data = DataFunction([1,0]))
     @show Problem

@@ -290,6 +290,7 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Asse
     action::ActionType
     apply_action_to::Array{Int,1}
     regions::Array{Ti,1}
+    last_allocations::Int
     AM::AssemblyManager{T,Tv,Ti} # hidden stuff needed for assembly
     AssemblyPattern() = new{APT_Undefined, Float64, ON_CELLS, Float64, Int32, NoAction}()
     AssemblyPattern{APT, T, AT}() where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType} = new{APT,T,AT,Float64,Int32,NoAction}()

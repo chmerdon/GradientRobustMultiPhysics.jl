@@ -54,7 +54,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     Problem.name = "natural convection problem"
 
     ## add convection term for velocity
-    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, auto_newton = !anderson))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, newton = !anderson))
 
     ## add boundary data for velocity (unknown 1) and temperature (unknown 3)
     add_boundarydata!(Problem, 1, [1,2,3], HomogeneousDirichletBoundary)
@@ -68,12 +68,19 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     if anderson
         add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; name = "(R(u)⋅∇(T)) V"))
     else #if newton
-        function Tconvection_kernel(result,input)
+        function Tconvection_kernel(result, input)
             ## input = [id(u),∇T]
             result[1] = input[1]*input[3] + input[2]*input[4]
             return nothing
         end
-        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", ADnewton = true, quadorder = 0)  )
+        function Tconvection_jacobian(jac, input)
+            jac[1,1] = input[3] 
+            jac[1,3] = input[1] 
+            jac[1,2] = input[4] 
+            jac[1,4] = input[2]
+            return nothing
+        end
+        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
     end
     add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = "-Ra v⋅g T", store = true))
 

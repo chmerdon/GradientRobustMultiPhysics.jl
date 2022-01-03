@@ -44,7 +44,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 2, ADnewton = true)  
+    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 2, newton = true)  
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")

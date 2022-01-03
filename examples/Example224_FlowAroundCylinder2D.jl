@@ -39,6 +39,14 @@ function bnd_inlet!(result,x)
 end
 const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "X", quadorder = 2)
 
+function convection_kernel(result, input)
+    for j = 1 : 2
+        result[j] = 0
+        for k = 1 : 2
+            result[j] += input[k]*input[2+(j-1)*2+k]
+        end
+    end
+end    
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
@@ -58,7 +66,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
     ## add operators (Laplacian, Div-LagrangeMultierplier, Convection)
     add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
-    add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, auto_newton = true))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, newton = true))
     
     ## add boundary data (bregion 2 is outflow, 4 is inflow, 5 is cylinder)
     add_boundarydata!(Problem, 1, [1,3,5], HomogeneousDirichletBoundary)

@@ -67,7 +67,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
         result[2] = (1+beta*input[1]^2)*input[3]
         return nothing
     end 
-    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "(1+ βu^2) ∇u ⋅ ∇v", quadorder = 2, ADnewton = true)  
+    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "(1+ βu^2) ∇u ⋅ ∇v", quadorder = 2, newton = true)  
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription(beta == 0 ? "linear Poisson problem" : "nonlinear Poisson problem")
