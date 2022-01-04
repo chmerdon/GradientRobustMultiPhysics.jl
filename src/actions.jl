@@ -122,6 +122,9 @@ function Action(kernel_function, dimensions; name = "user action", dependencies 
     return Action{Float64}(kernel; name = name)
 end
 
+is_timedependent(A::AbstractAction) = is_timedependent(A.kernel)
+is_timedependent(A::NoAction) = false
+
 
 # set_time! is called in the beginning of every operator assembly
 function set_time!(C::AbstractAction, time)

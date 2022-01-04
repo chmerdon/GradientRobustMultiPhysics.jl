@@ -532,7 +532,7 @@ function integrate!(
     resultdim = integrand.dimensions[1]
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
-    @assert dim == integrand.dimensions[2]
+    @assert dim == integrand.dimensions[2] || integrand.dimensions[2] == 0
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
     xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
     xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]

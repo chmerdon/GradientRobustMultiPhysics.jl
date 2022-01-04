@@ -39,15 +39,6 @@ function bnd_inlet!(result,x)
 end
 const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "X", quadorder = 2)
 
-function convection_kernel(result, input)
-    for j = 1 : 2
-        result[j] = 0
-        for k = 1 : 2
-            result[j] += input[k]*input[2+(j-1)*2+k]
-        end
-    end
-end    
-
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
 

@@ -282,7 +282,7 @@ each assembly pattern has one of the assembly pattern types (APT) that trigger d
 finite element spaces, operators and an assigned action. The assembly type (AT) determines if the assembly takes
 place on cells, faces or edges etc. (relatively to the assembly type of the first argument of the pattern)
 """
-mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv <: Real, Ti <: Integer, ActionType <: AbstractAction}
+mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv <: Real, Ti <: Integer, ActionType <: Union{AbstractAction, AbstractJacobianHandler}}
     name::String
     FES::Array{<:FESpace{Tv,Ti},1}
     operators::Array{DataType,1}

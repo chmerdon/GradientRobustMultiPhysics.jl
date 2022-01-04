@@ -304,7 +304,7 @@ function assemble!(
 
                 # update action on dofitem
                 if apply_action_to > 0
-                    update_action!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                    update_action!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, xItemRegions[item])
                     ndofs4dofitem_action = ndofs4dofitem[apply_action_to]
                 else
                     ndofs4dofitem_action = ndofs4dofitem[1]

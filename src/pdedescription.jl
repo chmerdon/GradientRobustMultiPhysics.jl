@@ -202,10 +202,10 @@ function add_operator!(PDE::PDEDescription,equation::Int,O::PDEOperator{T,APT}; 
             dependencies[j] = 0
         end
     end
-    if typeof(O.action_rhs) != NoAction
-        push!(PDE.RHSOperators[equation],O)
-        @logmsg DeepInfo "Added operator $(O.name) also to RHS block $equation of PDEDescription $(PDE.name)"
-    end
+   # if typeof(O.action_rhs) != NoAction
+   #     push!(PDE.RHSOperators[equation],O)
+   #     @logmsg DeepInfo "Added operator $(O.name) also to RHS block $equation of PDEDescription $(PDE.name)"
+   # end
 end
 
 function add_operator!(PDE::PDEDescription,position::Array{Int,1},O::SchurComplement; equation_name::String = "")

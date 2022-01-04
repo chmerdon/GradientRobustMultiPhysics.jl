@@ -441,11 +441,28 @@ function assemble!(
         end
     end
 
+
     # (re)assembly right-hand side
+    # todo : if NonlinearOperators are in the LHS we need to trigger reassembly of the right-hand side !!!!
     rhs_block_has_been_erased = zeros(Bool,nequations)
+    nonlinear_operator_present::Bool = false
     if !only_lhs || only_rhs
         for j = 1 : nequations
-            if (min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) && (length(RHSOperators[equations[j]]) > 0)
+            # check for nonlinear operators that require reassembly
+            nonlinear_operator_present = false
+            for k = 1 : size(LHSOperators,2)
+                if length(intersect(SC.LHS_dependencies[equations[j],k], if_depends_on)) > 0
+                    if (k in equations) && !only_rhs # LHS operator is assembled into A if variable is not solved in equations
+                        for o = 1 : length(LHSOperators[equations[j],k])
+                            O = LHSOperators[equations[j],k][o]
+                            if get_pattern(O) <: APT_NonlinearForm
+                                nonlinear_operator_present = true
+                            end
+                        end
+                    end
+                end
+            end
+            if (min_trigger <: SC.RHS_AssemblyTriggers[equations[j]]) && (length(RHSOperators[equations[j]]) > 0) || nonlinear_operator_present
                 @debug "Erasing rhs block [$j]"
                 fill!(b[j],0.0)
                 rhs_block_has_been_erased[j] = true
@@ -479,11 +496,21 @@ function assemble!(
                         @logmsg DeepInfo "Locking what to assemble in lhs block [$(equations[j]),$k]..."
                         for o = 1 : length(LHSOperators[equations[j],k])
                             O = LHSOperators[equations[j],k][o]
-                            if has_copy_block(O)
-                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time, At = A[subblock,j])
+                            if get_pattern(O) <: APT_NonlinearForm
+                                if rhs_block_has_been_erased[j] == false
+                                    blah[:] = 0
+                                    @debug "Erasing rhs block [$j]"
+                                    fill!(b[j],0)
+                                    rhs_block_has_been_erased[j] = true
+                                end
+                                elapsedtime = @elapsed full_assemble!(A[j,subblock], b[j], SC, equations[j],k,o, O, CurrentSolution; time = time)
                             else
-                                elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time)
-                            end  
+                                if has_copy_block(O)
+                                    elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time, At = A[subblock,j])
+                                else
+                                    elapsedtime = @elapsed assemble!(A[j,subblock], SC, equations[j],k,o, O, CurrentSolution; time = time)
+                                end  
+                            end
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             if !has_storage(O)
                                 SC.LHS_LoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
@@ -514,7 +541,7 @@ function assemble!(
         end
         subblock = 0
     end
-
+    
     return lhs_block_has_been_erased, rhs_block_has_been_erased
 end
 
@@ -1233,6 +1260,7 @@ mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule
     dt_is_nonlinear::Array{Bool,1}             # if true mass matrix is recomputed in each iteration
     dt_operator::Array{DataType,1}         # operators associated with the time derivative
     dt_actions::Array{<:AbstractAction,1}   # actions associated with the time derivative
+    dt_lump::Array{Bool,1}                  # should the mass matrix of the time derivative be lumped
     S::Array{FEMatrix{T,TiM,Tv,Ti},1}           # heap for system matrix for each equation package
     rhs::Array{FEVector{T,Tv,Ti},1}         # heap for system rhs for each equation package
     A::Array{FEMatrix{T,TiM,Tv,Ti},1}           # heap for spacial discretisation matrix for each equation package
@@ -1264,7 +1292,11 @@ function assemble_massmatrix4subiteration!(TCS::TimeControlSolver{T,Tt,Tv,Ti}, i
                 FE2 = A.FESY
                 operator1 = TCS.dt_operator[pos]
                 operator2 = TCS.dt_operator[pos]
-                BLF = SymmetricBilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
+                if TCS.dt_lump[pos]
+                    BLF = LumpedBilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
+                else
+                    BLF = BilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
+                end
                 time = @elapsed assemble!(A, BLF, skip_preps = false)
             end
         end
@@ -1307,6 +1339,7 @@ function TimeControlSolver(
     dt_operator = [],
     dt_action = [],
     dt_is_nonlinear = [],
+    dt_lump = [],
     T_time = Float64,
     kwargs...) where {T,Tv,Ti}
 
@@ -1411,6 +1444,9 @@ function TimeControlSolver(
                 if length(dt_operator) < pos
                     push!(dt_operator, Identity)
                 end
+                if length(dt_lump) < pos
+                    push!(dt_lump, false)
+                end
                 # set diagonal equations block and rhs block to nonlinear
                 if dt_is_nonlinear[pos] == true
                     SC.LHS_AssemblyTriggers[d,d] = AssemblyEachTimeStep
@@ -1442,7 +1478,7 @@ function TimeControlSolver(
 
     # generate TimeControlSolver
     statistics = zeros(Float64,length(InitialValues),4)
-    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,dt_is_nonlinear,dt_operator,dt_action,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{T,Int64},1}(undef,length(subiterations)), statistics)
+    TCS = TimeControlSolver{T,T_time,Int64,Tv,Ti,TIR}(PDE,SC,LS,start_time,0,0,AM,timedependent_equations,dt_is_nonlinear,dt_operator,dt_action,dt_lump,S,rhs,A,b,x,res,InitialValues, LastIterate, fixed_dofs, eqoffsets, Array{SuiteSparse.UMFPACK.UmfpackLU{T,Int64},1}(undef,length(subiterations)), statistics)
 
     # trigger initial assembly of all time derivative mass matrices
     for i = 1 : nsubiterations

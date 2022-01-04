@@ -511,3 +511,161 @@ function nodevalues(xgrid::ExtendableGrid{Tv,Ti}, UD::UserData; T = Float64, tim
     return nodevals
 end
 
+
+
+
+
+abstract type AbstractJacobianHandler end
+
+mutable struct UserJacobian{T,dx,dt,dr,ndim,OType,JType} <: AbstractJacobianHandler
+    operator::OType
+    jacobian::JType
+    argsizes::SVector{ndim,Int}
+    x::Vector{T}
+    region::Int
+    item::Int
+    time::T
+    bonus_quadorder::Int
+    jac::Array{T,2}
+    val::Array{T,1}
+end
+
+function UserJacobian(o, j, a; dependencies = "", quadorder = 0)
+    dx = false
+    dt = false
+    dr = false
+    if dependencies in ["X","XT","XR","XTR"]
+        dx = true
+    end
+    if dependencies in ["T","XT","TR","XTR"]
+        dt = true
+    end
+    if dependencies in ["R","XR","TR","XTR"]
+        dr =  true
+    end
+    return UserJacobian{Float64,dx,dt,dr,length(a),typeof(o),typeof(j)}(o,j,a,zeros(Float64,3),0,0,0.0,quadorder,zeros(Float64,a[1],a[2]),zeros(Float64,a[1]))
+end
+
+set_region!(J::UserJacobian, region) = (J.region = region)
+set_time!(J::UserJacobian, time) = (J.time = time)
+is_xdependent(J::UserJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dx
+is_timedependent(J::UserJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dt
+is_regiondependent(J::UserJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dr
+
+function eval_jacobian!(J::UserJacobian{T,false,false,false}, input_current) where {T}
+    J.jacobian(J.jac, input_current)
+    J.operator(J.val, input_current)
+    return nothing
+end
+function eval_jacobian!(J::UserJacobian{T,true,false,false}, input_current, x) where {T}
+    J.jacobian(J.jac, input_current, x)
+    J.operator(J.val, input_current, x)
+    return nothing
+end
+function eval_jacobian!(J::UserJacobian{T,true,false,true}, input_current, x) where {T}
+    J.jacobian(J.jac, input_current, x, C.region)
+    J.operator(J.val, input_current, x, C.region)
+    return nothing
+end
+function eval_jacobian!(J::UserJacobian{T,false,true,false}, input_current) where {T}
+    J.jacobian(J.jac, input_current, C.time)
+    J.operator(J.val, input_current, C.time)
+    return nothing
+end
+function eval_jacobian!(J::UserJacobian{T,false,true,true}, input_current) where {T}
+    J.jacobian(J.jac, input_current, C.time, C.region)
+    J.operator(J.val, input_current, C.time, C.region)
+    return nothing
+end
+function eval_jacobian!(J::UserJacobian{T,false,false,true}, input_current) where {T}
+    J.jacobian(J.jac, input_current, C.region)
+    J.operator(J.val, input_current, C.region)
+    return nothing
+end
+function eval_jacobian!(J::UserJacobian{T,true,true,true}, input_current, x) where {T}
+    J.jacobian(J.jac, input_current, x, C.time, C.region)
+    J.operator(J.val, input_current, x, C.time, C.region)
+    return nothing
+end
+
+
+mutable struct AutoJacobian{T,dx,dt,dr,ndim,OType,JType} <: AbstractJacobianHandler
+    operator::OType
+    jacobian::JType
+    argsizes::SVector{ndim,Int}
+    x::Vector{T}
+    region::Int
+    item::Int
+    time::T
+    bonus_quadorder::Int
+    Dresult
+    cfg
+    jac::Array{T,2}
+    val::Array{T,1}
+end
+
+function AutoJacobian(o, argsizes; dependencies = "", quadorder = 0)
+    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
+    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[3])
+    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
+    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
+    temp::Array{Float64,1} = DiffResults.value(Dresult)
+
+    dx = false
+    dt = false
+    dr = false
+    if dependencies in ["X","XT","XR","XTR"]
+        dx = true
+    end
+    if dependencies in ["T","XT","TR","XTR"]
+        dt = true
+    end
+    if dependencies in ["R","XR","TR","XTR"]
+        dr =  true
+    end
+
+    if dependencies == "X" # x-dependent
+        o_x(x) = (result,input) -> o(result,input,x)
+        cfg = ForwardDiff.JacobianConfig(o_x([1.0,1.0,1.0]), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
+        negotiated_o = o_x
+    elseif dependencies == "T" # time-dependent
+        o_t(t) = (result,input) -> o(result,input,t)
+        cfg = ForwardDiff.JacobianConfig(o_t(0.0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
+        negotiated_o = o_t
+    elseif dependencies == "R" # region-dependent
+        o_r(r) = (result,input) -> o(result,input,r)
+        cfg = ForwardDiff.JacobianConfig(o_r(0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
+        negotiated_o = o_r
+    else
+        negotiated_o = o
+        cfg = ForwardDiff.JacobianConfig(o, result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
+    end
+
+    return AutoJacobian{Float64,dx,dt,dr,length(argsizes),typeof(negotiated_o),typeof(NothingFunction)}(negotiated_o,NothingFunction,argsizes,zeros(Float64,3),0,0,0.0,quadorder,Dresult,cfg,jac,temp)
+end
+
+set_time!(J::AutoJacobian, time) = (J.time = time)
+set_region!(J::AutoJacobian, region) = (J.region = region)
+is_xdependent(J::AutoJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dx
+is_timedependent(J::AutoJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dt
+is_regiondependent(J::AutoJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dr
+
+function eval_jacobian!(J::AutoJacobian{T,false,false,false}, input_current) where {T}
+    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator, J.val, input_current, J.cfg)
+    return nothing
+end
+
+function eval_jacobian!(J::AutoJacobian{T,true,false,false}, input_current, x) where {T}
+    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(x), J.val, input_current, J.cfg)
+    return nothing
+end
+
+function eval_jacobian!(J::AutoJacobian{T,false,true,false}, input_current) where {T}
+    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(J.time), J.val, input_current, J.cfg)
+    return nothing
+end
+
+function eval_jacobian!(J::AutoJacobian{T,false,false,true}, input_current) where {T}
+    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(J.region), J.val, input_current, J.cfg)
+    return nothing
+end

@@ -1,12 +1,12 @@
 
 # type to steer when a PDE block is (re)assembled
 abstract type AbstractAssemblyTrigger end
-abstract type AssemblyAuto <: AbstractAssemblyTrigger end # triggers automatic decision when block is reassembled at solver configuration level
-abstract type AssemblyFinal <: AbstractAssemblyTrigger end   # is only assembled after solving
-abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)assembled
-    abstract type AssemblyEachTimeStep <: AssemblyAlways end     # is (re)assembled in each timestep
-        abstract type AssemblyInitial <: AssemblyEachTimeStep end    # is only assembled in initial assembly
-            abstract type AssemblyNever <: AssemblyInitial end   # is never assembled
+abstract type AssemblyAuto <: AbstractAssemblyTrigger end           # triggers automatic decision when block is reassembled at solver configuration level
+abstract type AssemblyFinal <: AbstractAssemblyTrigger end          # is only assembled after solving
+abstract type AssemblyAlways <: AbstractAssemblyTrigger end         # is always (re)assembled
+    abstract type AssemblyEachTimeStep <: AssemblyAlways end        # is (re)assembled in each timestep
+        abstract type AssemblyInitial <: AssemblyEachTimeStep end   # is only assembled in initial assembly
+            abstract type AssemblyNever <: AssemblyInitial end      # is never assembled
 
 
 
@@ -16,8 +16,8 @@ abstract type AssemblyAlways <: AbstractAssemblyTrigger end     # is always (re)
 #
 # to describe operators in the (weak form of the) PDE
 #
-# some intermediate layer that knows nothing of the FE discretisatons
-# but know about their connectivities to help devide fixpoint iterations
+# some intermediate layer that knows nothing of the FE discretisations
+# but know about their connectivities to help devise fixpoint iterations
 # and triggers certain AssemblyPatterns when called for assembly!
 #
 # USER-DEFINED ABSTRACTPDEOPERATORS
@@ -53,7 +53,6 @@ function check_dependency(O::AbstractPDEOperator, arg::Int)
 end
 
 
-
 """
 $(TYPEDEF)
 
@@ -62,9 +61,9 @@ common structures for all finite element operators that are assembled with Gradi
 mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} <: AbstractPDEOperator
     name::String
     operators4arguments::Array{DataType,1}
-    action::AbstractAction
-    action_rhs::AbstractAction
-    action_eval::AbstractAction
+    action::Union{AbstractAction, AbstractJacobianHandler}
+    action_rhs::Union{AbstractAction, AbstractJacobianHandler}
+    action_eval::Union{AbstractAction, AbstractJacobianHandler}
     apply_action_to::Array{Int,1}
     fixed_arguments::Array{Int,1}
     fixed_arguments_ids::Array{Int,1}
@@ -83,6 +82,8 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto)
     PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger)
 end 
+
+get_pattern(::PDEOperator{T,APT,AT}) where{T,APT,AT} = APT
 
 ## provisoric copy method for PDEoperators (needed during assignment of nonlinear operators, where each copy is related to partial derivatives of each related unknown)
 export copy
@@ -120,7 +121,7 @@ has_copy_block(O::PDEOperator) = O.transposed_copy
 has_storage(O::PDEOperator) = O.store_operator
 function check_PDEoperator(O::PDEOperator, involved_equations)
     nonlinear = length(O.fixed_arguments_ids) > 0
-    timedependent = typeof(O.action) <: NoAction ? false : is_timedependent(O.action.kernel)
+    timedependent = typeof(O.action) <: NoAction ? false : is_timedependent(O.action)
     if O.assembly_trigger <: AssemblyAuto
         assembly_trigger = AssemblyInitial
         if timedependent
@@ -565,10 +566,6 @@ function ConvectionRotationFormOperator(
     end
 end
 
-
-
-
-
 """
 ````
 function NonlinearForm(
@@ -644,154 +641,14 @@ function NonlinearForm(
     if newton
         if jacobian == "auto"
             name = name * " [AD-Newton]"
+            jac_handler = AutoJacobian(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
         else
             name = name * " [Newton]"
+            jac_handler = UserJacobian(action_kernel, jacobian, argsizes; dependencies = dependencies, quadorder = quadorder)
         end
-        # the action for the derivative matrix DG is calculated by automatic differentiation (AD)
-        # from the given action_kernel of the operator G
 
-        # for differentation other dependencies of the action_kernel are fixed
-        result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
-        input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[3])
-        #jac_temp::Matrix{Float64} = Matrix{Float64}(undef,argsizes[1],argsizes[3])
-        #Dresult = DiffResults.DiffResult(result_temp,jac_temp)
-        Dresult = DiffResults.JacobianResult(result_temp,input_temp)
-        jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-        temp::Array{Float64,1} = zeros(Float64, argsizes[1])
-        if dependencies == "X"
-            reduced_action_kernel_x(x) = (result,input) -> action_kernel(result,input,x)
-            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_x([1.0,1.0,1.0]), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
-            function newton_kernel_x(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x)
-                if jacobian == "auto" # use autodiff
-                    ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_x(x), result, input_current, cfg)
-                    jac = DiffResults.jacobian(Dresult)
-                else # use provided jacobian
-                    jacobian(jac, input_current, x)
-                end
-                for j = 1 : argsizes[1]
-                    result[j] = 0
-                    for k = 1 : argsizes[2]
-                        result[j] += jac[j,k] * input_ansatz[k]
-                    end
-                end
-                return nothing
-            end
+        O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, jac_handler, 1:(length(coeff_from)), 1, regions)
 
-            # the action for the RHS just evaluates DG and G at input_current
-            function rhs_kernel_x(result::Array{<:Real,1}, input_current::Array{<:Real,1}, x)
-                fill!(result,0)
-                newton_kernel_x(result, input_current, input_current, x)
-                reduced_action_kernel_x(x)(temp, input_current)
-                for j = 1 : argsizes[1]
-                    result[j] -= temp[j]
-                end
-                return nothing
-            end
-            newton_action_kernel = NLActionKernel(newton_kernel_x, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action = Action{Float64}( newton_action_kernel)
-            rhs_action_kernel = ActionKernel(rhs_kernel_x, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action_rhs = Action{Float64}( rhs_action_kernel)
-        elseif dependencies == "T"
-            reduced_action_kernel_t(t) = (result,input) -> action_kernel(result,input,t)
-            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_t(0.0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
-            function newton_kernel_t(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, t)
-                if jacobian == "auto" # use autodiff
-                    ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_t(t), result, input_current, cfg)
-                    jac = DiffResults.jacobian(Dresult)
-                else # use provided jacobian
-                    jacobian(jac, input_current, t)
-                end
-                for j = 1 : argsizes[1]
-                    result[j] = 0
-                    for k = 1 : argsizes[2]
-                        result[j] += jac[j,k] * input_ansatz[k]
-                    end
-                end
-                return nothing
-            end
-
-            # the action for the RHS just evaluates DG and G at input_current
-            function rhs_kernel_t(result::Array{<:Real,1}, input_current::Array{<:Real,1}, t)
-                fill!(result,0)
-                newton_kernel_t(result, input_current, input_current, t)
-                reduced_action_kernel_t(t)(temp, input_current)
-                for j = 1 : argsizes[1]
-                    result[j] -= temp[j]
-                end
-                return nothing
-            end
-            newton_action_kernel = NLActionKernel(newton_kernel_t, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action = Action{Float64}( newton_action_kernel)
-            rhs_action_kernel = ActionKernel(rhs_kernel_t, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action_rhs = Action{Float64}( rhs_action_kernel)
-        elseif dependencies == "XT"
-            reduced_action_kernel_xt(x,t) = (result,input) -> action_kernel(result,input,x,t)
-            cfg =ForwardDiff.JacobianConfig(reduced_action_kernel_xt([1.0,1.0,1.0],0.0), result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
-            function newton_kernel_xt(result::Array{<:Real,1}, input_current::Array{<:Real,1}, input_ansatz::Array{<:Real,1}, x, t)
-                if jacobian == "auto" # use autodiff
-                    ForwardDiff.vector_mode_jacobian!(Dresult, reduced_action_kernel_xt(x,t), result, input_current, cfg)
-                    jac = DiffResults.jacobian(Dresult)
-                else # use provided jacobian
-                    jacobian(jac, input_current, x, t)
-                end
-                for j = 1 : argsizes[1]
-                    result[j] = 0
-                    for k = 1 : argsizes[2]
-                        result[j] += jac[j,k] * input_ansatz[k]
-                    end
-                end
-                return nothing
-            end
-
-            # the action for the RHS just evaluates DG and G at input_current
-            function rhs_kernel_xt(result::Array{<:Real,1}, input_current::Array{<:Real,1}, x, t)
-                fill!(result,0)
-                newton_kernel_xt(result, input_current, input_current, x, t)
-                reduced_action_kernel_xt(x, t)(temp, input_current)
-                for j = 1 : argsizes[1]
-                    result[j] -= temp[j]
-                end
-                return nothing
-            end
-            newton_action_kernel = NLActionKernel(newton_kernel_xt, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action = Action{Float64}( newton_action_kernel)
-            rhs_action_kernel = ActionKernel(rhs_kernel_xt, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action_rhs = Action{Float64}( rhs_action_kernel)
-        elseif dependencies == ""
-            cfg = ForwardDiff.JacobianConfig(action_kernel, result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
-            function newton_kernel(result, input_current, input_ansatz)
-                if jacobian == "auto" # use autodiff
-                    Dresult = ForwardDiff.chunk_mode_jacobian!(Dresult, action_kernel, result, input_current, cfg)
-                    jac = DiffResults.jacobian(Dresult)
-                else # use provided jacobian
-                    jacobian(jac, input_current)
-                end
-                for j = 1 : argsizes[1]
-                    result[j] = 0
-                    for k = 1 : argsizes[2]
-                        result[j] += jac[j,k] * input_ansatz[k]
-                    end
-                end
-                return nothing
-            end
-
-            # the action for the RHS just evaluates DG and G at input_current
-            function rhs_kernel(result, input_current)
-                fill!(result,0)
-                newton_kernel(result, input_current, input_current)
-                action_kernel(temp, input_current)
-                for j = 1 : argsizes[1]
-                    result[j] -= temp[j]
-                end
-                return nothing
-            end
-            newton_action_kernel = NLActionKernel(newton_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action = Action{Float64}( newton_action_kernel)
-            rhs_action_kernel = ActionKernel(rhs_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
-            action_rhs = Action{Float64}( rhs_action_kernel)
-        else
-            @error "Currently nonlinear kernels may only depend on the additional argument(s) x or t"
-        end
     else
 
         # take action_kernel as nonlinear action_kernel
@@ -804,15 +661,15 @@ function NonlinearForm(
         else
             action_rhs = nothing
         end
+        O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, action, 1:(length(coeff_from)), 1, regions)
+        O.action_rhs = action_rhs === nothing ? NoAction() : action_rhs
     end
 
     append!(operator1, [operator2])
-    O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, action, 1:(length(coeff_from)), 1, regions)
     O.fixed_arguments = 1:length(coeff_from)
     O.fixed_arguments_ids = coeff_from
     O.newton_arguments = 1 : length(coeff_from) # if depended on different ids, operator is later splitted into several operators where newton_arguments refer only to subset
     O.factor = factor
-    O.action_rhs = action_rhs === nothing ? NoAction() : action_rhs
     O.transposed_assembly = true
 
     # eval action
@@ -1089,29 +946,6 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,
 end
 
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,TiM,TvG,TiG}, CurrentSolution::FEVector) where{T,TvM,TiM,TvG,TiG,APT<:APT_NonlinearForm,AT}
-    @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
-    for a = 1 : length(O.fixed_arguments)
-        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
-    end
-    push!(FES,A.FESX) # testfunction always refers to matrix row in this pattern !!!
-    AP = AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
-    AP.newton_args = O.newton_arguments
-    return AP
-end
-
-
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector) where{T,TvV,TvG,TiG,APT<:APT_NonlinearForm,AT}
-    @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
-    for a = 1 : length(O.fixed_arguments)
-        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
-    end
-    push!(FES,b.FES)
-    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
-end
-
 
 """
 $(TYPEDSIGNATURES)
@@ -1240,9 +1074,63 @@ end
 
 
 
-############################################
-### EVALUATION OF NONLINEAR PDEOPERATORS ###
-############################################
+#####################################################
+### ASSEMBLY/EVALUATION OF NONLINEAR PDEOPERATORS ###
+#####################################################
+
+
+function full_assemble_operator!(A::FEMatrixBlock, b::FEVectorBlock, O::PDEOperator, CurrentSolution::Union{Nothing,FEVector} = nothing; Pattern = nothing, skip_preps::Bool = false, time::Real = 0, At = nothing)
+    if Pattern === nothing
+        Pattern = create_assembly_pattern(O, A, CurrentSolution)
+    end
+    set_time!(O.action, time)
+    if length(O.fixed_arguments_ids) > 0
+        full_assemble!(A, b, Pattern, CurrentSolution[O.fixed_arguments_ids]; skip_preps = skip_preps, transposed_assembly = O.transposed_assembly, factor = O.factor)
+    else
+        #full_assemble!(A, b, Pattern; skip_preps = skip_preps, factor = O.factor)
+    end
+    flush!(A.entries)
+end
+
+function full_assemble!(A::FEMatrixBlock, b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; time::Real = 0, At = nothing)  
+    if O.store_operator == true
+        @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
+        addblock!(A,O.storage; factor = O.factor)
+        if At !== nothing
+            addblock!(At,O.storage; factor = O.factor, transpose = true)
+        end
+    else
+        ## find assembly pattern
+        skip_preps = true
+        if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+            SC.LHS_AssemblyPatterns[j,k][o] = create_assembly_pattern(O, A, CurrentSolution)
+            skip_preps = false
+        end
+        ## assemble
+        full_assemble_operator!(A, b, O, CurrentSolution; Pattern = SC.LHS_AssemblyPatterns[j,k][o], time = time, At = At, skip_preps = skip_preps)
+    end
+end
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,TiM,TvG,TiG}, CurrentSolution::FEVector) where{T,TvM,TiM,TvG,TiG,APT<:APT_NonlinearForm,AT}
+    @debug "Creating assembly pattern for PDEOperator $(O.name)"
+    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
+    for a = 1 : length(O.fixed_arguments)
+        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
+    end
+    push!(FES,A.FESX) # testfunction always refers to matrix row in this pattern !!!
+    AP = AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    AP.newton_args = O.newton_arguments
+    return AP
+end
+
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector) where{T,TvV,TvG,TiG,APT<:APT_NonlinearForm,AT}
+    @debug "Creating assembly pattern for PDEOperator $(O.name)"
+    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
+    for a = 1 : length(O.fixed_arguments)
+        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
+    end
+    push!(FES,b.FES)
+    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
+end
 
 function evaluate(O::PDEOperator{T,APT,AT}, CurrentSolution::FEVector{T,Tv,Ti}, TestFunctionBlock::FEVectorBlock{T,Tv,Ti}; factor = 1, time::Real = 0) where {T, Tv, Ti, APT, AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
