@@ -102,7 +102,7 @@ PDE-DESCRIPTION
     [2,2]   | (p,q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
-     [1]    | ((id(u) ⋅ ∇) u, id(v)) [Newton] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+     [1]    | none
      [2]    | (p,q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
 
    BoundaryOperator[1] : InterpolateDirichletBoundary -&gt; [1, 2, 3, 4]
@@ -136,7 +136,7 @@ SOLVER-CONFIGURATION
   AssemblyTriggers = 
          LHS_AT[1] :  A  T 
          LHS_AT[2] :  T  I 
-         RHS_AT[1] :  A 
+         RHS_AT[1] :  N 
          RHS_AT[2] :  A 
                      (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
 
@@ -146,10 +146,10 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
-	      1   | 1.880601e-11 | 1.145706e-01
-	      2   | 2.083136e-11 | 4.876621e-05
-	      3   | 2.059899e-11 | 2.634938e-08
-	      4   | 2.143310e-11 | 4.574376e-11
+	      1   | 2.085172e-11 | 1.145706e-01
+	      2   | 2.221224e-11 | 4.876621e-05
+	      3   | 2.098814e-11 | 2.634964e-08
+	      4   | 2.071533e-11 | 4.313298e-11
 
-|| u - u_h || = 0.0001582612282774508
-|| p - p_h || = 0.020919592761211817</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Monday 3 January 2022 16:02">Monday 3 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 0.00015826122829009652
+|| p - p_h || = 0.02091959276116499</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Tuesday 4 January 2022 22:33">Tuesday 4 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
