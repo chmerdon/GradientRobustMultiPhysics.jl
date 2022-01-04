@@ -83,6 +83,7 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger)
 end 
 
+get_pattern(::AbstractPDEOperator) = APT_Undefined
 get_pattern(::PDEOperator{T,APT,AT}) where{T,APT,AT} = APT
 
 ## provisoric copy method for PDEoperators (needed during assignment of nonlinear operators, where each copy is related to partial derivatives of each related unknown)
