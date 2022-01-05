@@ -539,7 +539,32 @@ function OperatorWithUserJacobian(o, j, argsizes; dependencies = "", quadorder =
     if sparse_jacobian
         result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
         input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[3])
-        sparsity_pattern = jacobian_sparsity(o,result_temp,input_temp)
+
+        if dependencies == "X" # x-dependent
+            o_x(x) = (result,input) -> o(result,input,x)
+            config_eval = o_x([1.0,1.0,1.0])
+        elseif dependencies == "T" # time-dependent
+            o_t(t) = (result,input) -> o(result,input,t)
+            config_eval = o_t(0.0)
+        elseif dependencies == "R" # region-dependent
+            o_r(r) = (result,input) -> o(result,input,r)
+            config_eval = o_r(0)
+        elseif dependencies == "XT" # xt-dependent
+            o_xt(x,t) = (result,input) -> o(result,input,x,t)
+            config_eval = o_xt([1.0,1.0,1.0],0.0)
+        elseif dependencies == "XR" # xr-dependent
+            o_xr(x,r) = (result,input) -> o(result,input,x,r)
+            config_eval = o_xr([1.0,1.0,1.0],0)
+        elseif dependencies == "TR" # tr-dependent
+            o_tr(t,r) = (result,input) -> o(result,input,t,r)
+            config_eval = o_tr(0.0,0)
+        elseif dependencies == "XTR" # xtr-dependent
+            o_xtr(x,t,r) = (result,input) -> o(result,input,x,t,r)
+            config_eval = o_xtr([1.0,1.0,1.0],0.0,0)
+        else
+            config_eval = o
+        end
+        sparsity_pattern = jacobian_sparsity(config_eval,result_temp,input_temp)
         jac = Float64.(sparse(sparsity_pattern))
     else
         jac = zeros(Float64,argsizes[1],argsizes[2])
@@ -649,7 +674,7 @@ function OperatorWithADJacobian(o, argsizes; dependencies = "", quadorder = 0, s
     Dresult = DiffResults.JacobianResult(result_temp,input_temp)
     temp::Array{Float64,1} = DiffResults.value(Dresult)
     if sparse_jacobian
-        sparsity_pattern = jacobian_sparsity(o,result_temp,input_temp)
+        sparsity_pattern = jacobian_sparsity(config_eval,result_temp,input_temp)
         jac = Float64.(sparse(sparsity_pattern))
         colors = matrix_colors(jac)
         cfg = ForwardColorJacCache(config_eval,input_temp,nothing;
@@ -687,7 +712,7 @@ function eval_jacobian!(J::OperatorWithADJacobian{T,true,false,false,false}, inp
 end
 function eval_jacobian!(J::OperatorWithADJacobian{T,true,false,false,true}, input_current, x) where {T}
     forwarddiff_color_jacobian!(J.jac, J.operator(x), input_current, J.cfg)
-    J.operator(J.val, input_current, x)
+    J.operator(x)(J.val, input_current)
     return nothing
 end
 
@@ -697,7 +722,7 @@ function eval_jacobian!(J::OperatorWithADJacobian{T,false,true,false,false}, inp
 end
 function eval_jacobian!(J::OperatorWithADJacobian{T,false,true,false,true}, input_current) where {T}
     forwarddiff_color_jacobian!(J.jac, J.operator(J.time), input_current, J.cfg)
-    J.operator(J.val, input_current, J.time)
+    J.operator(J.time)(J.val, input_current)
     return nothing
 end
 
@@ -707,7 +732,7 @@ function eval_jacobian!(J::OperatorWithADJacobian{T,false,false,true,false}, inp
 end
 function eval_jacobian!(J::OperatorWithADJacobian{T,false,false,true,true}, input_current) where {T}
     forwarddiff_color_jacobian!(J.jac, J.operator(J.region), input_current, J.cfg)
-    J.operator(J.val, input_current, J.region)
+    J.operator(J.region)(J.val, input_current)
     return nothing
 end
 
@@ -717,6 +742,6 @@ function eval_jacobian!(J::OperatorWithADJacobian{T,true,true,true,false}, input
 end
 function eval_jacobian!(J::OperatorWithADJacobian{T,true,true,true,true}, input_current, x) where {T}
     forwarddiff_color_jacobian!(J.jac, J.operator(x, J.time, J.region), input_current, J.cfg)
-    J.operator(J.val, input_current, x, J.time, J.region)
+    J.operator(x, J.time, J.region)(J.val, input_current)
     return nothing
 end
