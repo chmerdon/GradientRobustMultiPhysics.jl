@@ -45,7 +45,7 @@ function nonlinear_operator_kernel!(λ,μ,ΔT,α)
 end
 
 # everything is wrapped in a main function
-function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, verbosity = 0, Plotter = nothing)
+function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, store = false, verbosity = 0, Plotter = nothing)
 
     # set log level
     set_verbosity(verbosity)
@@ -59,8 +59,8 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     xgrid = uniform_refine(xgrid,nrefinements)
 
     # prepare nonlinear operator (one for each bimetal region)
-    nonlin_operator_1 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[1],μ[1],ΔT[1],α[1]), [4,4,7]; name = &quot;C(ϵ(u)-ϵT):∇v&quot;, regions = [1], quadorder = 3, newton = true)
-    nonlin_operator_2 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[2],μ[2],ΔT[2],α[2]), [4,4,7]; name = &quot;C(ϵ(u)-ϵT):∇v&quot;, regions = [2], quadorder = 3, newton = true)
+    nonlin_operator_1 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[1],μ[1],ΔT[1],α[1]), [4,4,7]; name = &quot;C(ϵ(u)-ϵT):∇v&quot;, regions = [1], quadorder = 3, newton = true, store = store)
+    nonlin_operator_2 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[2],μ[2],ΔT[2],α[2]), [4,4,7]; name = &quot;C(ϵ(u)-ϵT):∇v&quot;, regions = [2], quadorder = 3, newton = true, store = store)
 
     # generate problem description and assign nonlinear operators
     Problem = PDEDescription(&quot;nonlinear elasticity problem&quot;)
@@ -148,8 +148,8 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	      1   | 7.036933e-13 | 2.097176e+00 | 3.88e-02/1.45e-02/6.05e-02
-	      2   | 7.846215e-13 | 2.059942e-02 | 3.77e-02/1.06e-02/4.85e-02
-	      3   | 9.323718e-13 | 2.699072e-06 | 3.88e-02/1.11e-02/5.01e-02
-	      4   | 7.563533e-13 | 1.186298e-12 | 3.68e-02/9.71e-03/4.67e-02
-</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 5 January 2022 11:27">Wednesday 5 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	      1   | 7.137193e-13 | 2.097176e+00 | 2.81e-02/9.52e-03/4.37e-02
+	      2   | 8.767005e-13 | 2.059942e-02 | 2.80e-02/7.19e-03/3.54e-02
+	      3   | 9.198895e-13 | 2.699071e-06 | 2.82e-02/7.01e-03/3.54e-02
+	      4   | 7.723023e-13 | 1.226812e-12 | 2.79e-02/7.29e-03/3.54e-02
+</code></pre><p><img src="../../images/Example211_NonlinearElasticityBimetal2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example210_NonlinearPoisson2D/">« 210 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example212_NonlinearPoissonTransient2D/">212 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 5 January 2022 15:54">Wednesday 5 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
