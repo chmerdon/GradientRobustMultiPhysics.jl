@@ -61,9 +61,9 @@ common structures for all finite element operators that are assembled with Gradi
 mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} <: AbstractPDEOperator
     name::String
     operators4arguments::Array{DataType,1}
-    action::Union{AbstractAction, AbstractJacobianHandler}
-    action_rhs::Union{AbstractAction, AbstractJacobianHandler}
-    action_eval::Union{AbstractAction, AbstractJacobianHandler}
+    action::Union{AbstractAction, AbstractNonlinearFormHandler}
+    action_rhs::Union{AbstractAction, AbstractNonlinearFormHandler}
+    action_eval::Union{AbstractAction, AbstractNonlinearFormHandler}
     apply_action_to::Array{Int,1}
     fixed_arguments::Array{Int,1}
     fixed_arguments_ids::Array{Int,1}
@@ -590,7 +590,7 @@ generates an abstract nonlinearform operator G.
 The array coeff_from stores the ids of the unknowns that should be used to evaluate the operators. The array argsizes is a vector with two entries where the first one
 is the length of the expected result vector and the second one is the length of the input vector.
 
-If newton == true, the operators for a Newton iteration are generated. Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
+If newton == true (default), the operators for a Newton iteration are generated. Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
 The local jacobians (= jacobians of the operator kernel) to build DG needed for this are computed by
 automatic differentation (ForwardDiff). The user can also specify a jacobian kernel function by hand (which may improve assembly times).
 
@@ -601,13 +601,7 @@ For default dependencies the kernel functions for the operator and its jacobian 
 where input is a vector of the operators of the solution and result is either what then is multiplied with operator2 of the testfunction (or the jacobian).
 For dependencies == "XT" the additional arguments x and t are needed in the interface.
 
-
-If newton == false, the user is epected to prescribe a linearisation of the nonlinear operator. In this case the action_kernel has to satisfy the interface
-
-    function name(result, input_current, input_ansatz)
-
-where input_current is a vector of the operators of the solution and input_ansatz is a vecor with the operators evaluated at one of the basis functions.
-If necessary, also a right-hand side action in the same format can be prescribed in action_kernel_rhs. 
+Note : The code needs a revision for newton == false, so this is not supported currently.
 
 Note : The limitation that the nonlinearity only can depend on one unknown of the PDE was recently lifted, however the behavior how to assign this operator to the PDE
 may be revised in future. Currently, the nonlinearity can indeed depend on arbitrary unknowns (i.e. coeff_from may contain more than one different unknown ids),
@@ -625,6 +619,7 @@ function NonlinearForm(
     name::String = "nonlinear form",
     AT::Type{<:AssemblyType} = ON_CELLS,
     newton::Bool = true, # prepare operators for Newton algorithm
+    sparse_jacobian = true, # use sparsity detection and sparse matrixes for local jacobians
     jacobian = "auto", # by automatic ForwarDiff, or should be a function of input (jacobian, input) with sizes matching the specified dependencies
     action_kernel_rhs = nothing,
     dependencies = "",
@@ -632,8 +627,6 @@ function NonlinearForm(
     factor = 1,
     regions = [0])
 
-    ### Newton scheme for a nonlinear operator G(u) is
-    ## seek u_next such that : DG u_next = DG u - G(u)
 
     if length(argsizes) == 2
         push!(argsizes,argsizes[2])
@@ -642,16 +635,14 @@ function NonlinearForm(
     if newton
         if jacobian == "auto"
             name = name * " [AD-Newton]"
-            jac_handler = AutoJacobian(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
+            jac_handler = OperatorWithADJacobian(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder, sparse_jacobian = sparse_jacobian)
         else
             name = name * " [Newton]"
-            jac_handler = UserJacobian(action_kernel, jacobian, argsizes; dependencies = dependencies, quadorder = quadorder)
+            jac_handler = OperatorWithUserJacobian(action_kernel, jacobian, argsizes; dependencies = dependencies, quadorder = quadorder, sparse_jacobian = sparse_jacobian)
         end
 
         O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, jac_handler, 1:(length(coeff_from)), 1, regions)
-
     else
-
         # take action_kernel as nonlinear action_kernel
         # = user specifies linearisation of nonlinear operator
         nlform_action_kernel = NLActionKernel(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)

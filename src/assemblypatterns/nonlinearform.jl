@@ -158,7 +158,6 @@ function full_assemble!(
         # update action on dofitem (not needed yet)
         basisevaler2 = get_basisevaler(AM, nFE, 1)
         basisvals = basisevaler2.cvals
-       #update_action!(action, basisevaler, item, item, regions[r])
 
         for i in eachindex(weights)
 
@@ -184,12 +183,7 @@ function full_assemble!(
                 end
 
                 # multiply with jacobian
-                for j = 1 : action_resultdim
-                    action_result[j] = 0
-                    for k = 1 : offsets[end-1]
-                        action_result[j] += jac[j,k] * action_input2[k]
-                    end
-                end
+                mul!(action_result,jac,action_input2)
 
                 # multiply test function operator evaluation
                 for dof_j = 1 : get_ndofs(AM, nFE, 1)
@@ -203,17 +197,12 @@ function full_assemble!(
 
             if 1 in newton_args
                 for dof_j = 1 : get_ndofs(AM, nFE, 1)
-                    for j = 1 : action_resultdim
-                        action_result[j] = 0
-                        for k = 1 : offsets[end-1]
-                            action_result[j] += jac[j,k] * action_input[i][k]
-                        end
-                        action_result[j] -= value[j]
-                    end
+                    # multiply with jacobian
+                    mul!(action_result,jac,action_input[i])
 
                     temp = 0
                     for k = 1 : action_resultdim
-                        temp += action_result[k] * basisvals[k,dof_j,i]
+                        temp += (action_result[k] - value[k]) * basisvals[k,dof_j,i]
                     end
                     localb[dof_j] += temp * weights[i]
                 end

@@ -112,7 +112,7 @@ function main(;
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 4, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!) 
+        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 2, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!) 
     elseif q == 2
         DK.κ = κ
         DK.p = p
@@ -147,7 +147,7 @@ function main(;
 
         ## solve
         @show Solution
-        solve!(Solution, Problem; linsolver = factorization, show_statistics = true)
+        solve!(Solution, Problem; linsolver = factorization, maxiterations = 10, show_statistics = true)
 
         ## calculate L2 and H1 error and save data
         NDofs[level] = length(Solution.entries)

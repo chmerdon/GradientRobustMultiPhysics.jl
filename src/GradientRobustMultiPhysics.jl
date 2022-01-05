@@ -12,6 +12,8 @@ using DiffResults
 using WriteVTK
 using LinearAlgebra
 using ForwardDiff
+using SparsityDetection
+using SparseDiffTools
 using DocStringExtensions
 using Printf
 using Logging
