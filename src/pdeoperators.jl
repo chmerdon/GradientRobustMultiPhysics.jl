@@ -74,14 +74,15 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     transposed_copy::Bool
     store_operator::Bool
     assembly_trigger::Type{<:AbstractAssemblyTrigger}
+    storage_init::Bool
     storage_A::Union{Nothing,AbstractMatrix{T}}
     storage_b::Union{Nothing,AbstractVector{T}}
-    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger)
+    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger,false)
 end 
 
 get_pattern(::AbstractPDEOperator) = APT_Undefined
@@ -850,12 +851,24 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
     if APT <: APT_NonlinearForm
         Pattern.newton_args = O.newton_arguments
-        O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
-        O.storage_b = zeros(T,FES[1].ndofs)
+        if !O.storage_init
+            O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[end].ndofs)
+            O.storage_b = zeros(T,FES[1].ndofs)
+            O.storage_init = true
+        else
+            fill!(O.storage_A.cscmatrix.nzval,0)
+            fill!(O.storage_b,0)
+        end
+        
         full_assemble!(O.storage_A, O.storage_b, Pattern, CurrentSolution[O.fixed_arguments_ids]; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
         flush!(O.storage_A)
     else
-        O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
+        if !O.storage_init
+            O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
+            O.storage_init = true
+        else
+            fill!(O.storage_A.cscmatrix.nzval,0)
+        end
         assemble!(O.storage_A, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
         flush!(O.storage_A)
     end
@@ -875,7 +888,12 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     else
         @error "No storage functionality available for this operator!"
     end
-    O.storage_b = zeros(T,FES[1].ndofs)
+    if !O.storage_init
+        O.storage_b = zeros(T,FES[1].ndofs)
+        O.storage_init = true
+    else
+        fill!(O.storage_b,0)
+    end
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
     assemble!(O.storage_b, Pattern; factor = factor, skip_preps = false)
     return Pattern.last_allocations
@@ -1004,7 +1022,7 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
         addblock!(A,O.storage_A; factor = O.factor)
         if At !== nothing
-            addblock!(At,O.storage_A; factor = O.factor, transpose = true)
+            addblock!(At, O.storage_A; factor = O.factor, transpose = true)
         end
     else
         ## find assembly pattern

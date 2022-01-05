@@ -136,8 +136,6 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
         user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.MKLPardisoLU}
     elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
         user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]}
-    elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
-        user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]}
     end
     while length(user_params[:skip_update]) < length(user_params[:subiterations])
         push!(user_params[:skip_update], 1)
