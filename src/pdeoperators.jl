@@ -856,7 +856,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
             O.storage_b = zeros(T,FES[1].ndofs)
             O.storage_init = true
         else
-            if size(O.storage_A) < FES[1].ndofs || size(O.storage_A) < FES[2].ndofs
+            if size(O.storage_A,1) < FES[1].ndofs || size(O.storage_A,2) < FES[2].ndofs
                 O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[end].ndofs)
                 O.storage_b = zeros(T,FES[1].ndofs)
             else
@@ -872,7 +872,7 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
             O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
             O.storage_init = true
         else
-            if size(O.storage_A) < FES[1].ndofs || size(O.storage_A) < FES[2].ndofs
+            if size(O.storage_A,1) < FES[1].ndofs || size(O.storage_A,2) < FES[2].ndofs
                 O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
             else
                 fill!(O.storage_A.cscmatrix.nzval,0)
