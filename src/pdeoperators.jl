@@ -856,8 +856,13 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
             O.storage_b = zeros(T,FES[1].ndofs)
             O.storage_init = true
         else
-            fill!(O.storage_A.cscmatrix.nzval,0)
-            fill!(O.storage_b,0)
+            if size(O.storage_A) < FES[1].ndofs || size(O.storage_A) < FES[2].ndofs
+                O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[end].ndofs)
+                O.storage_b = zeros(T,FES[1].ndofs)
+            else
+                fill!(O.storage_A.cscmatrix.nzval,0)
+                fill!(O.storage_b,0)
+            end
         end
         
         full_assemble!(O.storage_A, O.storage_b, Pattern, CurrentSolution[O.fixed_arguments_ids]; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
@@ -867,7 +872,11 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
             O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
             O.storage_init = true
         else
-            fill!(O.storage_A.cscmatrix.nzval,0)
+            if size(O.storage_A) < FES[1].ndofs || size(O.storage_A) < FES[2].ndofs
+                O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
+            else
+                fill!(O.storage_A.cscmatrix.nzval,0)
+            end
         end
         assemble!(O.storage_A, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
         flush!(O.storage_A)
@@ -892,7 +901,11 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
         O.storage_b = zeros(T,FES[1].ndofs)
         O.storage_init = true
     else
-        fill!(O.storage_b,0)
+        if length(O.storage_b) < FES[1].ndofs
+            O.storage_b = zeros(T,FES[1].ndofs)
+        else
+            fill!(O.storage_b,0)
+        end
     end
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
     assemble!(O.storage_b, Pattern; factor = factor, skip_preps = false)
