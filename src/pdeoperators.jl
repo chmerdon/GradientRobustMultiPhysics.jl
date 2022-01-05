@@ -829,7 +829,7 @@ end
 
 
 function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::Int, k::Int; factor = 1, time::Real = 0) where {T,Tv,Ti}
-    @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in LHS block [$j,$k]"
+    @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in LHS block [$j,$k] (on thread $(Threads.threadid()))"
 
     set_time!(O.action, time)
     APT = typeof(O).parameters[2]
@@ -864,7 +864,7 @@ end
 
 function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::Int; factor = 1, time::Real = 0) where {T,Tv,Ti}
 
-    @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in RHS block [$j]"
+    @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in RHS block [$j] (on thread $(Threads.threadid()))"
 
     set_time!(O.action, time)
     APT = typeof(O).parameters[2]
@@ -1042,7 +1042,7 @@ end
 function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock_matmul!(b,O.storage_b,CurrentSolution[fixed_component]; factor = factor * O.factor)
+        addblock_matmul!(b,O.storage_A,CurrentSolution[fixed_component]; factor = factor * O.factor)
     else
         ## find assembly pattern
         skip_preps = true
