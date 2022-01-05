@@ -74,7 +74,8 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     transposed_copy::Bool
     store_operator::Bool
     assembly_trigger::Type{<:AbstractAssemblyTrigger}
-    storage::Union{AbstractVector{T},AbstractMatrix{T}}
+    storage_A::Union{Nothing,AbstractMatrix{T}}
+    storage_b::Union{Nothing,AbstractVector{T}}
     PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto)
     PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto)
     PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto)
@@ -627,6 +628,7 @@ function NonlinearForm(
     action_kernel_rhs = nothing,
     dependencies = "",
     quadorder::Int = 0,
+    store::Bool = false,
     factor = 1,
     regions = [0])
 
@@ -665,6 +667,7 @@ function NonlinearForm(
     O.fixed_arguments_ids = coeff_from
     O.newton_arguments = 1 : length(coeff_from) # if depended on different ids, operator is later splitted into several operators where newton_arguments refer only to subset
     O.factor = factor
+    O.store_operator = store
     O.transposed_assembly = true
 
     # eval action
@@ -835,13 +838,27 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
         FES = Array{FESpace{Tv,Ti},1}(undef, 2)
         FES[1] = CurrentSolution[j].FES
         FES[2] = CurrentSolution[k].FES
+    elseif APT <: APT_NonlinearForm
+        FES = Array{FESpace{Tv,Ti},1}(undef, length(O.fixed_arguments))
+        for a = 1 : length(O.fixed_arguments)
+            FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
+        end
+        push!(FES, CurrentSolution[j].FES) # testfunction always refers to matrix row in this pattern !!!
     else
         @error "No storage functionality available for this operator!"
     end
-    O.storage = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
-    assemble!(O.storage, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
-    flush!(O.storage)
+    if APT <: APT_NonlinearForm
+        Pattern.newton_args = O.newton_arguments
+        O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
+        O.storage_b = zeros(T,FES[1].ndofs)
+        full_assemble!(O.storage_A, O.storage_b, Pattern, CurrentSolution[O.fixed_arguments_ids]; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
+        flush!(O.storage_A)
+    else
+        O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
+        assemble!(O.storage_A, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
+        flush!(O.storage_A)
+    end
     return Pattern.last_allocations
 end
 
@@ -858,9 +875,9 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     else
         @error "No storage functionality available for this operator!"
     end
-    O.storage = zeros(T,FES[1].ndofs)
+    O.storage_b = zeros(T,FES[1].ndofs)
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
-    assemble!(O.storage, Pattern; factor = factor, skip_preps = false)
+    assemble!(O.storage_b, Pattern; factor = factor, skip_preps = false)
     return Pattern.last_allocations
 end
 
@@ -985,9 +1002,9 @@ end
 function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; time::Real = 0, At = nothing)  
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock!(A,O.storage; factor = O.factor)
+        addblock!(A,O.storage_A; factor = O.factor)
         if At !== nothing
-            addblock!(At,O.storage; factor = O.factor, transpose = true)
+            addblock!(At,O.storage_A; factor = O.factor, transpose = true)
         end
     else
         ## find assembly pattern
@@ -1005,7 +1022,7 @@ end
 function assemble!(b::FEVectorBlock, SC, j::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0)
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock!(b, O.storage; factor = factor * O.factor)
+        addblock!(b, O.storage_b; factor = factor * O.factor)
     else
         ## find assembly pattern
         skip_preps = true
@@ -1025,7 +1042,7 @@ end
 function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock_matmul!(b,O.storage,CurrentSolution[fixed_component]; factor = factor * O.factor)
+        addblock_matmul!(b,O.storage_b,CurrentSolution[fixed_component]; factor = factor * O.factor)
     else
         ## find assembly pattern
         skip_preps = true
@@ -1090,10 +1107,8 @@ end
 function full_assemble!(A::FEMatrixBlock, b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; time::Real = 0, At = nothing)  
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock!(A,O.storage; factor = O.factor)
-        if At !== nothing
-            addblock!(At,O.storage; factor = O.factor, transpose = true)
-        end
+        addblock!(A,O.storage_A; factor = O.factor)
+        addblock!(b,O.storage_b; factor = O.factor)
     else
         ## find assembly pattern
         skip_preps = true

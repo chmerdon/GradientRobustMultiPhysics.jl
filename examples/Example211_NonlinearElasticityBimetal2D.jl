@@ -62,7 +62,7 @@ function nonlinear_operator_kernel!(λ,μ,ΔT,α)
 end 
 
 ## everything is wrapped in a main function
-function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, verbosity = 0, Plotter = nothing)
+function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, store = false, verbosity = 0, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -76,8 +76,8 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     xgrid = uniform_refine(xgrid,nrefinements)
 
     ## prepare nonlinear operator (one for each bimetal region)
-    nonlin_operator_1 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[1],μ[1],ΔT[1],α[1]), [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [1], quadorder = 3, newton = true) 
-    nonlin_operator_2 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[2],μ[2],ΔT[2],α[2]), [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [2], quadorder = 3, newton = true) 
+    nonlin_operator_1 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[1],μ[1],ΔT[1],α[1]), [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [1], quadorder = 3, newton = true, store = store) 
+    nonlin_operator_2 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[2],μ[2],ΔT[2],α[2]), [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [2], quadorder = 3, newton = true, store = store) 
     
     ## generate problem description and assign nonlinear operators
     Problem = PDEDescription("nonlinear elasticity problem")

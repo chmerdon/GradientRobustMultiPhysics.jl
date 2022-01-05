@@ -346,8 +346,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
             eq = subiterations[s][j]
             for k = 1 : size(SC.LHS_AssemblyTimes,2)
                 for o = 1 : size(SC.LHS_AssemblyTimes[eq,k],1)
-                    info_msg *= "\n\tLHS[$eq,$k][$o] ($(PDE.LHSOperators[eq,k][o].name)) = $(SC.LHS_AssemblyTimes[eq,k][o])s"
-                    info_msg *= "\t ( $(SC.LHS_LoopAllocations[eq,k][o]) allocations)"
+                    info_msg *= "\n\tLHS[$eq,$k][$o] | $(SC.LHS_AssemblyTimes[eq,k][o])s | $(SC.LHS_LoopAllocations[eq,k][o]) allocations | $(PDE.LHSOperators[eq,k][o].name)"
                 end
             end
         end
@@ -357,8 +356,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
         for j = 1 : length(subiterations[s])
             eq = subiterations[s][j]
             for o = 1 : size(SC.RHS_AssemblyTimes[eq],1)
-                info_msg *= "\n\tRHS[$eq][$o] ($(PDE.RHSOperators[eq][o].name)) = $(SC.RHS_AssemblyTimes[eq][o])s"
-                info_msg *= "\t ( $(SC.RHS_LoopAllocations[eq][o]) allocations)"
+                info_msg *= "\n\tRHS[$eq,][$o] | $(SC.RHS_AssemblyTimes[eq][o])s | $(SC.RHS_LoopAllocations[eq][o]) allocations | $(PDE.RHSOperators[eq][o].name)"
             end
         end
     end
@@ -401,6 +399,8 @@ function assemble!(
     LHSOperators::Array{Array{AbstractPDEOperator,1},2} = PDE.LHSOperators
     RHSOperators::Array{Array{AbstractPDEOperator,1},1} = PDE.RHSOperators
 
+    stored_operators = []
+
     elapsedtime::Float64 = 0
     nequations::Int = length(equations)
     # force (re)assembly of stored bilinearforms and RhsOperators
@@ -417,8 +417,7 @@ function assemble!(
                         if has_storage(O)
                             op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(LHSOperators[equations[j],k][o],equations)
                             if (min_trigger <: op_trigger) 
-                                elapsedtime = @elapsed SC.LHS_LoopAllocations[equations[j],k][o] += update_storage!(O, CurrentSolution, equations[j], k; time = time)
-                                SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+                                push!(stored_operators, [O,j,k,o])
                             end
                         end
                     end
@@ -432,12 +431,26 @@ function assemble!(
                     if has_storage(O)
                         op_nonlinear, op_timedependent, op_trigger = check_PDEoperator(RHSOperators[equations[j]][o],equations)
                         if (min_trigger <: op_trigger) 
-                            elapsedtime = @elapsed SC.RHS_LoopAllocations[equations[j]][o] += update_storage!(O, CurrentSolution, equations[j] ; time = time)
-                            SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+                            push!(stored_operators, [O,j,-1,o])
                         end
                     end
                 end
             end
+        end
+    end
+
+    ## run storage updates in parallel threads
+    Threads.@threads for SO in stored_operators
+        O = SO[1]
+        j = SO[2]
+        k = SO[3]
+        o = SO[4]
+        if k > 0
+            elapsedtime = @elapsed SC.LHS_LoopAllocations[equations[j],k][o] += update_storage!(O, CurrentSolution, equations[j], k; time = time)
+            SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+        else
+            elapsedtime = @elapsed SC.RHS_LoopAllocations[equations[j]][o] += update_storage!(O, CurrentSolution, equations[j] ; time = time)
+            SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
         end
     end
 
