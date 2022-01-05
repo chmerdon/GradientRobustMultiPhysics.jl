@@ -83,13 +83,17 @@ function _update_solver_params!(user_params,kwargs)
     return nothing
 end
 
-
-struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization{Tv,Ti}} <: AbstractLinearSystem{Tv,Ti} 
+struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization} <: AbstractLinearSystem{Tv,Ti} 
     x::AbstractVector{Tv}
     A::ExtendableSparseMatrix{Tv,Ti}
     b::AbstractVector{Tv}
     factorization::FT
-    LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} = new{Tv,Ti,FT}(x,A,b,FT(A,nothing,0))
+end
+
+function LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} 
+    LS = LinearSystem{Tv,Ti,FT}(x,A,b,FT()) 
+    factorize!(LS.factorization,A)
+    return LS
 end
 
 function createlinsolver(ST::Type{<:AbstractLinearSystem},x::AbstractVector,A::ExtendableSparseMatrix,b::AbstractVector)
@@ -127,13 +131,13 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     end
     ## declare linear solver
     if user_params[:linsolver] == "UMFPACK"
-        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.LUFactorization{T,Int64}}
+        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.LUFactorization}
     elseif user_params[:linsolver] == "MKLPARDISO"
-        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.MKLPardisoLU{T,Int64}}
-    elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization{T,Int64}
+        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.MKLPardisoLU}
+    elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
         user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]}
     elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
-        user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]{T,Int64}}
+        user_params[:linsolver] = LinearSystem{T, Int64, user_params[:linsolver]}
     end
     while length(user_params[:skip_update]) < length(user_params[:subiterations])
         push!(user_params[:skip_update], 1)
@@ -401,7 +405,6 @@ function assemble!(
 
     stored_operators = []
 
-    elapsedtime::Float64 = 0
     nequations::Int = length(equations)
     # force (re)assembly of stored bilinearforms and RhsOperators
     if !only_rhs || only_lhs
@@ -457,6 +460,7 @@ function assemble!(
 
     # (re)assembly right-hand side
     # todo : if NonlinearOperators are in the LHS we need to trigger reassembly of the right-hand side !!!!
+    elapsedtime::Float64 = 0
     rhs_block_has_been_erased = zeros(Bool,nequations)
     nonlinear_operator_present::Bool = false
     if !only_lhs || only_rhs
@@ -542,7 +546,7 @@ function assemble!(
                         for o = 1 : length(LHSOperators[equations[j],k])
                             O = LHSOperators[equations[j],k][o]
                             @debug "Assembling lhs block[$j,$k] into rhs block[$j] ($k not in equations): $(O.name)"
-                            elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k,o, O, CurrentSolution; factor = -1.0, time = time, fixed_component = k)
+                            elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k, o, O, CurrentSolution; factor = -1.0, time = time, fixed_component = k)
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             if !has_storage(O)
                                 SC.LHS_LoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
