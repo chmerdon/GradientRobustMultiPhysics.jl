@@ -579,6 +579,7 @@ function NonlinearForm(
     name::String = "nonlinear form",
     AT::Type{<:AssemblyType} = ON_CELLS,
     newton::Bool = true, # prepare operators for Newton algorithm
+    sparse_jacobian = true, # use sparsity detection and sparse matrixes for local jacobians
     jacobian = "auto", # by automatic ForwarDiff, or should be a function of input (jacobian, input) with sizes matching the specified dependencies
     action_kernel_rhs = nothing,
     dependencies = "",
@@ -608,6 +609,8 @@ may be revised in future. Currently, the nonlinearity can indeed depend on arbit
 which will lead to copies of the operator assigned also to off-diagonal blocks which are then related to partial derivatives with respect to the other unknowns
 (i.e. input_ansatz will only contain the operator evaluations that coresspond to the unknown of the subblock it is evaluated at, all other entries are zero).
 The subblock assignment of the copies is done automatically by the add_operator! function.
+
+Note: Sparsity of the jacobians can be switched with sparse_jacobian (default is true).
 
 """
 function NonlinearForm(

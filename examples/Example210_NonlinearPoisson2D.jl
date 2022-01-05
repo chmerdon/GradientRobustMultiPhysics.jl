@@ -112,11 +112,11 @@ function main(;
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 2, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!) 
+        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 2, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!, sparse_jacobian = true) 
     elseif q == 2
         DK.κ = κ
         DK.p = p
-        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 4, jacobian = "auto")   
+        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 4, jacobian = "auto", sparse_jacobian = true)   
     else 
         @error "only q ∈ [1,2] !"
     end

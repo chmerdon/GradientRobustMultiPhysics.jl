@@ -104,7 +104,7 @@ function full_assemble!(
         basisevaler = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + size(basisevaler.cvals,1)
     end
-    action_input2::Array{T,1} = zeros(T,offsets[end-1])
+    action_input2::Array{T,1} = zeros(T, jac_handler.argsizes[3])
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     localb::Array{T,1} = zeros(T,get_maxndofs(AM,nFE))
     localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,newton_args[1]),get_maxndofs(AM,nFE))

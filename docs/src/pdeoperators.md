@@ -110,7 +110,7 @@ LagrangeMultiplier
 
 ## Nonlinear Operators
 
-Nonlinear Operators can be setup in two ways. The manual way requires the user to define an action with a nonlinear action kernel (see [Action Kernel](@ref)) that specifies the linearisation of the nonlinearity. There is also an automatic way where the user specifies only a function (where the input can be used nonlinearly) which is then automatically differentiated to generate the linearised action kernel, see below for details.
+Nonlinear Operators can be used to setup the required Newton terms for the fixpoint algorithms. If the user does not define the jacobian for the kernel function, automatic differentation is used to compute them (with optional sparsity detection), see below for details.
 
 ```@docs
 NonlinearForm
