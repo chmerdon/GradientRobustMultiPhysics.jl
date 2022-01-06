@@ -543,7 +543,7 @@ function integrate!(
     qf = Array{QuadratureRule,1}(undef,length(EG))
     local2global = Array{L2GTransformer,1}(undef,length(EG))
     for j = 1 : length(EG)
-        if force_quadrature_rule != nothing
+        if force_quadrature_rule !== nothing
             qf[j] = force_quadrature_rule;
         else
             qf[j] = QuadratureRule{T,EG[j]}(order);

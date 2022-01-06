@@ -27,8 +27,10 @@ mutable struct SolverConfig{T, TvG, TiG}
     RHS_AssemblyPatterns::Array{Array{AssemblyPattern,1},1} # last used assembly pattern (and assembly pattern preps to avoid their recomputation)
     LHS_AssemblyTimes::Array{Array{Float64,1},2}
     RHS_AssemblyTimes::Array{Array{Float64,1},1}
-    LHS_LoopAllocations::Array{Array{Int,1},2}
-    RHS_LoopAllocations::Array{Array{Int,1},1}
+    LHS_TotalLoopAllocations::Array{Array{Int,1},2}
+    RHS_TotalLoopAllocations::Array{Array{Int,1},1}
+    LHS_LastLoopAllocations::Array{Array{Int,1},2}
+    RHS_LastLoopAllocations::Array{Array{Int,1},1}
     user_params::Union{Dict{Symbol,Any},Nothing} # dictionary with user parameters
 end
 
@@ -250,12 +252,15 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     RHS_APs = Array{Array{AssemblyPattern,1},1}(undef,size(PDE.RHSOperators,1))
     LHS_AssemblyTimes = Array{Array{Float64,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
     RHS_AssemblyTimes = Array{Array{Float64,1},1}(undef,size(PDE.RHSOperators,1))
-    LHS_LoopAllocations = Array{Array{Int,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
-    RHS_LoopAllocations = Array{Array{Int,1},1}(undef,size(PDE.RHSOperators,1))
+    LHS_TotalLoopAllocations = Array{Array{Int,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
+    RHS_TotalLoopAllocations = Array{Array{Int,1},1}(undef,size(PDE.RHSOperators,1))
+    LHS_LastLoopAllocations = Array{Array{Int,1},2}(undef,size(PDE.LHSOperators,1),size(PDE.LHSOperators,2))
+    RHS_LastLoopAllocations = Array{Array{Int,1},1}(undef,size(PDE.RHSOperators,1))
     for j = 1 : size(PDE.LHSOperators,1), k = 1 : size(PDE.LHSOperators,2)
         LHS_APs[j,k] = Array{AssemblyPattern,1}(undef, length(PDE.LHSOperators[j,k]))
         LHS_AssemblyTimes[j,k] = zeros(Float64, length(PDE.LHSOperators[j,k]))
-        LHS_LoopAllocations[j,k] = zeros(Int, length(PDE.LHSOperators[j,k]))
+        LHS_LastLoopAllocations[j,k] = zeros(Int, length(PDE.LHSOperators[j,k]))
+        LHS_TotalLoopAllocations[j,k] = zeros(Int, length(PDE.LHSOperators[j,k]))
         for o = 1 : length(PDE.LHSOperators[j,k])
             LHS_APs[j,k][o] = AssemblyPattern()
         end
@@ -263,7 +268,8 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     for j = 1 : size(PDE.RHSOperators,1)
         RHS_APs[j] = Array{AssemblyPattern,1}(undef, length(PDE.RHSOperators[j]))
         RHS_AssemblyTimes[j] = zeros(Float64, length(PDE.RHSOperators[j]))
-        RHS_LoopAllocations[j] = zeros(Int, length(PDE.RHSOperators[j]))
+        RHS_LastLoopAllocations[j] = zeros(Int, length(PDE.RHSOperators[j]))
+        RHS_TotalLoopAllocations[j] = zeros(Int, length(PDE.RHSOperators[j]))
         for o = 1 : length(PDE.RHSOperators[j])
             RHS_APs[j][o] = AssemblyPattern()
         end
@@ -288,7 +294,7 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
         user_params[:check_nonlinear_residual] = nonlinear ? true : false
     end
 
-    return SolverConfig{T,TvG,TiG}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, LHS_LoopAllocations, RHS_LoopAllocations, user_params)
+    return SolverConfig{T,TvG,TiG}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, LHS_TotalLoopAllocations, RHS_TotalLoopAllocations, LHS_LastLoopAllocations, RHS_LastLoopAllocations, user_params)
 end
 
 function Base.show(io::IO, SC::SolverConfig)
@@ -348,7 +354,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
             eq = subiterations[s][j]
             for k = 1 : size(SC.LHS_AssemblyTimes,2)
                 for o = 1 : size(SC.LHS_AssemblyTimes[eq,k],1)
-                    info_msg *= "\n\tLHS[$eq,$k][$o] | $(SC.LHS_AssemblyTimes[eq,k][o])s | $(SC.LHS_LoopAllocations[eq,k][o]) allocations | $(PDE.LHSOperators[eq,k][o].name)"
+                    info_msg *= "\n\tLHS[$eq,$k][$o] | $(SC.LHS_AssemblyTimes[eq,k][o])s | $(SC.LHS_LastLoopAllocations[eq,k][o])/$(SC.LHS_TotalLoopAllocations[eq,k][o]) allocations | $(PDE.LHSOperators[eq,k][o].name)"
                 end
             end
         end
@@ -358,7 +364,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
         for j = 1 : length(subiterations[s])
             eq = subiterations[s][j]
             for o = 1 : size(SC.RHS_AssemblyTimes[eq],1)
-                info_msg *= "\n\tRHS[$eq,][$o] | $(SC.RHS_AssemblyTimes[eq][o])s | $(SC.RHS_LoopAllocations[eq][o]) allocations | $(PDE.RHSOperators[eq][o].name)"
+                info_msg *= "\n\tRHS[$eq,][$o] | $(SC.RHS_AssemblyTimes[eq][o])s | $(SC.RHS_LastLoopAllocations[eq][o])/$(SC.RHS_TotalLoopAllocations[eq][o]) allocations | $(PDE.RHSOperators[eq][o].name)"
             end
         end
     end
@@ -380,7 +386,7 @@ function assemble!(
     storage_trigger = "same as min_trigger",
     only_lhs::Bool = false,
     only_rhs::Bool = false) where {T}
-
+    
     @assert only_lhs * only_rhs == 0 "Cannot assemble with only_lhs and only_rhs both true"
 
     if length(equations) == 0
@@ -441,23 +447,24 @@ function assemble!(
     end
 
     ## run storage updates in parallel threads
-    Threads.@threads for SO in stored_operators
-        O = SO[1]
-        j = SO[2]
-        k = SO[3]
-        o = SO[4]
+    Threads.@threads for s = 1 : length(stored_operators)
+        O = stored_operators[s][1]
+        j = stored_operators[s][2]::Int
+        k = stored_operators[s][3]::Int
+        o = stored_operators[s][4]::Int
         if k > 0
-            elapsedtime = @elapsed SC.LHS_LoopAllocations[equations[j],k][o] += update_storage!(O, CurrentSolution, equations[j], k; time = time)
+            elapsedtime = @elapsed SC.LHS_LastLoopAllocations[equations[j],k][o] = update_storage!(O, SC, CurrentSolution, equations[j], k, o; time = time)
+            SC.LHS_TotalLoopAllocations[equations[j],k][o] += SC.LHS_LastLoopAllocations[equations[j],k][o]
             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
         else
-            elapsedtime = @elapsed SC.RHS_LoopAllocations[equations[j]][o] += update_storage!(O, CurrentSolution, equations[j] ; time = time)
+            elapsedtime = @elapsed SC.RHS_LastLoopAllocations[equations[j]][o] = update_storage!(O, SC, CurrentSolution, equations[j], o ; time = time)
+            SC.RHS_TotalLoopAllocations[equations[j]][o] += SC.RHS_LastLoopAllocations[equations[j]][o]
             SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
         end
     end
 
-
     # (re)assembly right-hand side
-    # todo : if NonlinearOperators are in the LHS we need to trigger reassembly of the right-hand side !!!!
+    # if NonlinearOperators are in the LHS we need to trigger reassembly of the right-hand side !!!!
     elapsedtime::Float64 = 0
     rhs_block_has_been_erased = zeros(Bool,nequations)
     nonlinear_operator_present::Bool = false
@@ -487,7 +494,8 @@ function assemble!(
                     elapsedtime = @elapsed assemble!(b[j], SC, equations[j], o, O, CurrentSolution; time = time)
                     SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
                     if !has_storage(O)
-                        SC.RHS_LoopAllocations[equations[j]][o] += SC.RHS_AssemblyPatterns[equations[j]][o].last_allocations
+                        SC.RHS_LastLoopAllocations[equations[j]][o] = SC.RHS_AssemblyPatterns[equations[j]][o].last_allocations
+                        SC.RHS_TotalLoopAllocations[equations[j]][o] += SC.RHS_AssemblyPatterns[equations[j]][o].last_allocations
                     end
                 end
             end
@@ -528,7 +536,8 @@ function assemble!(
                             end
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             if !has_storage(O)
-                                SC.LHS_LoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
+                                SC.LHS_LastLoopAllocations[equations[j],k][o] = SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
+                                SC.LHS_TotalLoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
                             end
                         end  
                     end
@@ -547,7 +556,8 @@ function assemble!(
                             elapsedtime = @elapsed assemble!(b[j], SC, equations[j],k, o, O, CurrentSolution; factor = -1.0, time = time, fixed_component = k)
                             SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
                             if !has_storage(O)
-                                SC.LHS_LoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
+                                SC.LHS_LastLoopAllocations[equations[j],k][o] = SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
+                                SC.LHS_TotalLoopAllocations[equations[j],k][o] += SC.LHS_AssemblyPatterns[equations[j],k][o].last_allocations
                             end
                         end
                     end
@@ -759,6 +769,8 @@ end
 # solve full system iteratively until fixpoint is reached
 function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T,Tv,Ti}; time::Real = 0) where {T,Tv,Ti}
 
+    time_total = @elapsed begin
+
     ## get relevant solver parameters
     fixed_penalty = SC.user_params[:fixed_penalty]
     damping = SC.user_params[:damping]
@@ -777,10 +789,12 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
     for j = 1 : length(Target.FEVectorBlocks)
         push!(FEs,Target.FEVectorBlocks[j].FES)
     end    
-    A = FEMatrix{T}("SystemMatrix", FEs)
-    b = FEVector{T}("SystemRhs", FEs)
-    set_nonzero_pattern!(A)
-    assembly_time = @elapsed assemble!(A,b,PDE,SC,Target; time = time, equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial)
+    assembly_time = @elapsed begin
+        A = FEMatrix{T}("SystemMatrix", FEs)
+        b = FEVector{T}("SystemRhs", FEs)
+       # set_nonzero_pattern!(A)
+        assemble!(A,b,PDE,SC,Target; time = time, equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial)
+    end
 
     # ASSEMBLE BOUNDARY DATA
     fixed_dofs = []
@@ -810,20 +824,25 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
     resnorm::T = 0.0
 
     ## INIT SOLVER
-    LS = createlinsolver(SC.user_params[:linsolver],Target.entries,A.entries,b.entries)
+    time_solver = @elapsed LS = createlinsolver(SC.user_params[:linsolver],Target.entries,A.entries,b.entries)
 
-    if SC.user_params[:show_statistics]
-        @info "initial assembly time = $(assembly_time)s"
     end
+
     if SC.user_params[:show_iteration_details]
         if SC.user_params[:show_statistics]
             @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
-            @printf("\n\t-----------------------------------------------------------------------\n")
+            @printf("\n\t-----------------------------------------------------------------------")
+            @printf("\n\t    init  |                             | %.2e/%.2e/%.2e\n",assembly_time,time_solver,time_total)
         else
             @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL")
             @printf("\n\t--------------------------------------\n")
         end
     end
+
+    overall_time = time_total
+    overall_solver_time = time_solver
+    overall_assembly_time = assembly_time
+
     for j = 1 : maxiterations
         time_total = @elapsed begin
 
@@ -889,6 +908,10 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         resnorm = (sqrt(sum(residual.^2, dims = 1)[1]))
 
         end #elapsed
+        
+        overall_time += time_total
+        overall_solver_time += time_solver
+        overall_assembly_time += time_reassembly
 
         if SC.user_params[:show_iteration_details]
             @printf("\t   %4d  ", j)
@@ -910,19 +933,20 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         end
     end
 
-    if SC.user_params[:show_iteration_details]
-        @printf("\n")
-    end
-
     # REALIZE GLOBAL GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
-    for j = 1 : length(PDE.GlobalConstraints)
+    overall_time += @elapsed for j = 1 : length(PDE.GlobalConstraints)
         realize_constraint!(Target,PDE.GlobalConstraints[j])
     end
 
-    if SC.user_params[:show_statistics]
-        @info "anderson acceleration took $(anderson_time)s"
+    if SC.user_params[:show_statistics] 
+        @printf("\t    total |                             | %.2e/%.2e/%.2e\n\n",overall_assembly_time,overall_solver_time,overall_time)
+        if anderson_iterations > 0
+            @info "anderson acceleration took $(anderson_time)s"
+        end
         show_statistics(PDE,SC)
+    elseif SC.user_params[:show_iteration_details]
+        @printf("\n")
     end
 
     return resnorm
@@ -933,6 +957,7 @@ end
 # by consecutively solving subiterations
 function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T,Tv,Ti}; time = 0) where {T,Tv,Ti}
 
+    time_total = @elapsed begin
     ## get relevant solver parameters
     subiterations = SC.user_params[:subiterations]
     fixed_penalty = SC.user_params[:fixed_penalty]
@@ -962,7 +987,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             A[i] = FEMatrix{T}("SystemMatrix subiteration $i", FEs[subiterations[i]])
             b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[subiterations[i]])
             x[i] = FEVector{T}("SystemRhs subiteration $i", FEs[subiterations[i]])
-            set_nonzero_pattern!(A[i])
+            #set_nonzero_pattern!(A[i])
             assemble!(A[i],b[i],PDE,SC,Target; time = time, equations = subiterations[i], min_trigger = AssemblyInitial)
             eqoffsets[i] = zeros(Int,length(subiterations[i]))
             for j= 1 : length(Target.FEVectorBlocks), eq = 1 : length(subiterations[i])
@@ -1014,23 +1039,30 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
 
 
     ## INIT SOLVERS
-    LS = Array{AbstractLinearSystem{T,Int64},1}(undef,nsubiterations)
-    for s = 1 : nsubiterations
-        LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
+    time_solver = @elapsed begin
+        LS = Array{AbstractLinearSystem{T,Int64},1}(undef,nsubiterations)
+        for s = 1 : nsubiterations
+            LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,A[s].entries,b[s].entries)
+        end
     end
 
-    if SC.user_params[:show_statistics]
-        @info "initial assembly time = $(assembly_time)s"
     end
+
     if SC.user_params[:show_iteration_details]
         if SC.user_params[:show_statistics]
             @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)")
-            @printf("\n\t-----------------------------------------------------------------------\n")
+            @printf("\n\t-----------------------------------------------------------------------")
+            @printf("\n\t    init  |                             | %.2e/%.2e/%.2e\n",assembly_time,time_solver,time_total)
         else
             @printf("\n\tITERATION |  LSRESIDUAL  |  NLRESIDUAL")
             @printf("\n\t--------------------------------------\n")
         end
     end
+
+    overall_time = time_total
+    overall_solver_time = time_solver
+    overall_assembly_time = assembly_time
+
     for iteration = 1 : maxiterations
 
         time_reassembly = 0
@@ -1141,6 +1173,10 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             resnorm[s] = (sqrt(sum(residual[s].entries.^2, dims = 1)[1]))
         end
 
+        overall_time += time_total
+        overall_solver_time += time_solver
+        overall_assembly_time += time_reassembly
+
         if SC.user_params[:show_iteration_details]
             @printf("\t   %4d  ", iteration)
             @printf(" | %e", sqrt(sum(linresnorm.^2)))
@@ -1152,9 +1188,6 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
         end
 
         if sqrt(sum(resnorm.^2)) < target_residual
-            if SC.user_params[:show_iteration_details]
-                @info "target residual reached after $iteration iterations"
-            end
             break
         end
 
@@ -1164,18 +1197,20 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
         end
     end
 
-    if SC.user_params[:show_iteration_details]
-        @printf("\n")
-    end
-
     # REALIZE GLOBALCONSTRAINTS 
     # (possibly changes some entries of Target)
-    for j = 1 : length(PDE.GlobalConstraints)
+    overall_time += @elapsed for j = 1 : length(PDE.GlobalConstraints)
         realize_constraint!(Target,PDE.GlobalConstraints[j])
     end
 
-    if SC.user_params[:show_statistics]
+    if SC.user_params[:show_statistics] 
+        @printf("\t    total |                             | %.2e/%.2e/%.2e\n\n",overall_assembly_time,overall_solver_time,overall_time)
+        if anderson_iterations > 0
+            @info "anderson acceleration took $(anderson_time)s"
+        end
         show_statistics(PDE,SC)
+    elseif SC.user_params[:show_iteration_details]
+        @printf("\n")
     end
 
     return sqrt(sum(resnorm.^2))
@@ -1229,21 +1264,16 @@ function solve!(
     end
 
     ## choose solver strategy
-    totaltime = @elapsed begin
-        if user_params[:subiterations] == [1:size(PDE.LHSOperators,1)] # full problem is solved
-            if SC.is_nonlinear == false
-                residual = solve_direct!(Target, PDE, SC; time = user_params[:time])
-            else
-                residual = solve_fixpoint_full!(Target, PDE, SC; time = user_params[:time])
-            end
-        else # only part(s) of the problem is solved
-            residual = solve_fixpoint_subiterations!(Target, PDE, SC; time = user_params[:time])
+    if user_params[:subiterations] == [1:size(PDE.LHSOperators,1)] # full problem is solved
+        if SC.is_nonlinear == false
+            residual = solve_direct!(Target, PDE, SC; time = user_params[:time])
+        else
+            residual = solve_fixpoint_full!(Target, PDE, SC; time = user_params[:time])
         end
+    else # only part(s) of the problem is solved
+        residual = solve_fixpoint_subiterations!(Target, PDE, SC; time = user_params[:time])
     end
 
-    if user_params[:show_statistics]
-        @info "totaltime = $(totaltime)s"
-    end
     ## report and check final residual
     if !user_params[:show_iteration_details]
         @info "overall residual = $residual"
@@ -1407,7 +1437,7 @@ function TimeControlSolver(
         b[i] = FEVector{T}("SystemRhs subiteration $i", FEs[subiterations[i]])
         x[i] = FEVector{T}("Solution subiteration $i", FEs[subiterations[i]])
         res[i] = FEVector{T}("Residual subiteration $i", FEs[subiterations[i]])
-        set_nonzero_pattern!(A[i])
+        #set_nonzero_pattern!(A[i])
         assemble!(A[i],b[i],PDE,SC,InitialValues; time = start_time, equations = subiterations[i], min_trigger = AssemblyInitial)
         eqoffsets[i] = zeros(Int,length(subiterations[i]))
         for j= 1 : length(FEs), eq = 1 : length(subiterations[i])
