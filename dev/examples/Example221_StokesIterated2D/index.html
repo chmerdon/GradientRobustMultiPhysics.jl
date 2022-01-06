@@ -55,7 +55,7 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     # velocity update equation
     add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
     add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity]; name = &quot;(div(v),p)&quot;, store = true, factor = -1))
-    add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; newton = true))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; newton = false))
 
     # add penalty for discrete divergence
     add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; name = &quot;ϵ (div_h(u),div_h(v))&quot;, store = true, factor = λ))
@@ -69,7 +69,7 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     # show and solve problem
     @show Problem
     Solution = FEVector([&quot;u_h&quot;,&quot;p_h&quot;],[FES[1],FES[2]])
-    solve!(Solution, Problem; subiterations = [[1],[2]], maxiterations = 20, show_solver_config = true)
+    solve!(Solution, Problem; subiterations = [[1],[2]], maxiterations = 20, show_solver_config = true, show_statistics = true)
 
     # calculate L2 error
     L2ErrorV = L2ErrorIntegrator(Float64, u, Identity)
@@ -84,7 +84,6 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
 end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example221_StokesIterated2D.main()
-Explored path: SparsityDetection.Path(Bool[], 1)
 
 PDE-DESCRIPTION
 ===============
@@ -96,7 +95,7 @@ PDE-DESCRIPTION
 
   LHS block | PDEOperator(s)
     [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
-            | ((id(u) ⋅ ∇) u, id(v)) [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+            | ((id(a) ⋅ ∇) u, id(v)) (APT = TrilinearForm, AT = ON_CELLS, regions = [0])
             | ϵ (div_h(u),div_h(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [1,2]   | (div(v),p) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | (q,div(u)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
@@ -122,7 +121,7 @@ SOLVER-CONFIGURATION
   show_iteration_details = true
   timedependent_equations = Any[]
   anderson_unknowns = [1]
-  show_statistics = false
+  show_statistics = true
   anderson_metric = l2
   skip_update = [1, 1]
   linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
@@ -145,12 +144,15 @@ SOLVER-CONFIGURATION
 
 
 
-	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
-	--------------------------------------
-	      1   | 2.085172e-11 | 1.145706e-01
-	      2   | 2.221224e-11 | 4.876621e-05
-	      3   | 2.098814e-11 | 2.634964e-08
-	      4   | 2.071533e-11 | 4.313298e-11
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	    init  |                             | 3.89e+00/1.45e-02/3.91e+00
+	      1   | 2.016697e-11 | 1.145706e-01 | 1.11e+00/1.68e-04/1.20e+00
+	      2   | 2.070303e-11 | 4.877746e-05 | 2.59e-02/1.72e-04/4.28e-02
+	      3   | 2.179850e-11 | 1.108012e-07 | 2.59e-02/1.50e-04/4.08e-02
+	      4   | 2.058188e-11 | 1.194426e-10 | 2.58e-02/1.44e-04/3.94e-02
+	      5   | 1.976546e-11 | 3.557114e-11 | 2.57e-02/1.43e-04/4.01e-02
+	    total |                             | 5.11e+00/1.53e-02/5.27e+00
 
-|| u - u_h || = 0.00015826122829009652
-|| p - p_h || = 0.02091959276116499</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 5 January 2022 22:31">Wednesday 5 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 0.00015826122831223601
+|| p - p_h || = 0.02091959276108457</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_ObstacleProblem2D/">« 215 : Obstacle Problem 2D</a><a class="docs-footer-nextpage" href="../Example222_NavierStokesAnderson2D/">222 : Navier-Stokes Lid-driven cavity + Anderson Acceleration »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Thursday 6 January 2022 22:19">Thursday 6 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
