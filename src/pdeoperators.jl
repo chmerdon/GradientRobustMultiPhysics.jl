@@ -75,8 +75,8 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     store_operator::Bool
     assembly_trigger::Type{<:AbstractAssemblyTrigger}
     storage_init::Bool
-    storage_A::Union{Nothing,AbstractMatrix{T}}
-    storage_b::Union{Nothing,AbstractVector{T}}
+    storage_A::Union{Nothing,AbstractMatrix{T},FEMatrix{T}}
+    storage_b::Union{Nothing,AbstractVector{T},FEVector{T}}
     PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto,false)
     PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
     PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
@@ -829,7 +829,7 @@ end
 
 
 
-function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::Int, k::Int; factor = 1, time::Real = 0) where {T,Tv,Ti}
+function update_storage!(O::PDEOperator, SC, CurrentSolution::FEVector{T,Tv,Ti}, j::Int, k::Int, o::Int; factor = 1, time::Real = 0) where {T,Tv,Ti}
     @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in LHS block [$j,$k] (on thread $(Threads.threadid()))"
 
     set_time!(O.action, time)
@@ -848,43 +848,60 @@ function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::
     else
         @error "No storage functionality available for this operator!"
     end
-    Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    skip_preps = true
     if APT <: APT_NonlinearForm
-        Pattern.newton_args = O.newton_arguments
-        if !O.storage_init
-            O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[end].ndofs)
-            O.storage_b = zeros(T,FES[1].ndofs)
-            O.storage_init = true
+        if !O.storage_init || typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+            SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+            SC.LHS_AssemblyPatterns[j,k][o].newton_args = O.newton_arguments
+            skip_preps = false
+            A = FEMatrix{T}("SystemMatrix", FES[1], FES[end])
+            b = FEVector{T}("SystemRhs", FES[1])
+            #set_nonzero_pattern!(A)
         else
-            if size(O.storage_A,1) < FES[1].ndofs || size(O.storage_A,2) < FES[2].ndofs
-                O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[end].ndofs)
-                O.storage_b = zeros(T,FES[1].ndofs)
+            A = O.storage_A
+            b = O.storage_b
+            if size(A[1,1],1) < FES[1].ndofs || size(A[1,1],2) < FES[end].ndofs
+                @info "re-init storage"
+                A = FEMatrix{T}("SystemMatrix", FES[1], FES[end])
+                SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+                SC.LHS_AssemblyPatterns[j,k][o].newton_args = O.newton_arguments
+                #set_nonzero_pattern!(A)
+                skip_preps = false
+                b = zeros(T,FES[1].ndofs)
             else
-                fill!(O.storage_A.cscmatrix.nzval,0)
-                fill!(O.storage_b,0)
+                fill!(A[1,1],0)
+                fill!(b.entries,0)
             end
         end
         
-        full_assemble!(O.storage_A, O.storage_b, Pattern, CurrentSolution[O.fixed_arguments_ids]; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
-        flush!(O.storage_A)
+        full_assemble!(A[1,1], b[1], SC.LHS_AssemblyPatterns[j,k][o], CurrentSolution[O.fixed_arguments_ids]; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = skip_preps)
+        flush!(A.entries)
+        O.storage_A = A
+        O.storage_b = b
     else
-        if !O.storage_init
-            O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
+        if !O.storage_init || typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
+            A = FEMatrix{T}("SystemMatrix", FES[1], FES[2])
+            SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
             O.storage_init = true
+            skip_preps = false
         else
-            if size(O.storage_A,1) < FES[1].ndofs || size(O.storage_A,2) < FES[2].ndofs
-                O.storage_A = ExtendableSparseMatrix{T,Int64}(FES[1].ndofs,FES[2].ndofs)
+            A = O.storage_A
+            if size(A[1,1],1) < FES[1].ndofs || size(A[1,1],2) < FES[2].ndofs
+                A = FEMatrix{T}("SystemMatrix", FES[1], FES[2])
+                SC.LHS_AssemblyPatterns[j,k][o] = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+                skip_preps = false
             else
-                fill!(O.storage_A.cscmatrix.nzval,0)
+                fill!(A[1,1],0)
             end
         end
-        assemble!(O.storage_A, Pattern; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = false)
-        flush!(O.storage_A)
+        assemble!(A[1,1], SC.LHS_AssemblyPatterns[j,k][o]; transposed_assembly = O.transposed_assembly, factor = factor, skip_preps = skip_preps)
+        flush!(A.entries)
+        O.storage_A = A
     end
-    return Pattern.last_allocations
+    return SC.LHS_AssemblyPatterns[j,k][o].last_allocations
 end
 
-function update_storage!(O::PDEOperator, CurrentSolution::FEVector{T,Tv,Ti}, j::Int; factor = 1, time::Real = 0) where {T,Tv,Ti}
+function update_storage!(O::PDEOperator, SC, CurrentSolution::FEVector{T,Tv,Ti}, j::Int, o::Int; factor = 1, time::Real = 0) where {T,Tv,Ti}
 
     @logmsg MoreInfo "Updating storage of PDEOperator $(O.name) in RHS block [$j] (on thread $(Threads.threadid()))"
 
@@ -1033,9 +1050,9 @@ end
 function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; time::Real = 0, At = nothing)  
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock!(A,O.storage_A; factor = O.factor)
+        addblock!(A,O.storage_A[1,1]; factor = O.factor)
         if At !== nothing
-            addblock!(At, O.storage_A; factor = O.factor, transpose = true)
+            addblock!(At, O.storage_A[1,1]; factor = O.factor, transpose = true)
         end
     else
         ## find assembly pattern
@@ -1073,7 +1090,7 @@ end
 function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; factor = 1, time::Real = 0, fixed_component = 0)
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock_matmul!(b,O.storage_A,CurrentSolution[fixed_component]; factor = factor * O.factor)
+        addblock_matmul!(b,O.storage_A[1,1],CurrentSolution[fixed_component]; factor = factor * O.factor)
     else
         ## find assembly pattern
         skip_preps = true
@@ -1138,8 +1155,8 @@ end
 function full_assemble!(A::FEMatrixBlock, b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator, CurrentSolution::FEVector; time::Real = 0, At = nothing)  
     if O.store_operator == true
         @logmsg DeepInfo "Adding PDEOperator $(O.name) from storage"
-        addblock!(A,O.storage_A; factor = O.factor)
-        addblock!(b,O.storage_b; factor = O.factor)
+        addblock!(A,O.storage_A[1,1]; factor = O.factor)
+        addblock!(b,O.storage_b[1]; factor = O.factor)
     else
         ## find assembly pattern
         skip_preps = true

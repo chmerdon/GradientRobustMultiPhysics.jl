@@ -30,7 +30,7 @@ using GridVisualize
 const f = DataFunction([-1])
 const χ! = (result,x) -> (result[1] = (cos(4*x[1]*π)*cos(4*x[2]*π) - 1)/20)
 function obstacle_penalty_kernel!(result, input, x)
-    χ!(result,x)
+    χ!(result, x) # eval obstacle
     result[1] = min(0, input[1] - result[1])
     return nothing
 end
@@ -41,13 +41,13 @@ function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 
     set_verbosity(verbosity)
 
     ## choose initial mesh
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), nrefinements)
 
     ## generate problem description
     Problem = PDEDescription("obstacle problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "obstacle problem")
     add_operator!(Problem, [1,1], LaplaceOperator(1.0; store = true))
-    add_operator!(Problem, [1,1], NonlinearForm([Identity], [1], Identity, obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = penalty, quadorder = 2, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm([Identity], [1], Identity, obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = penalty, quadorder = 0, newton = true) )
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f; store = true))
         
@@ -57,7 +57,7 @@ function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 
 
     ## solve
     @show Problem Solution
-    solve!(Solution, Problem; maxiterations = 20)
+    solve!(Solution, Problem; show_statistics = true, maxiterations = 20)
 
     ## plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))

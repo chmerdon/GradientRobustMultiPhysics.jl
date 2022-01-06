@@ -26,58 +26,65 @@ using SimplexGridFactory
 using Triangulate
 using GridVisualize
 
+## callable structs to reduce allocations
+mutable struct nonlinear_operator{T}
+    λ::T
+    μ::T
+    ϵT::T
+end
+const ops = [nonlinear_operator(0.0,0.0,0.0), nonlinear_operator(0.0,0.0,0.0)] # one for each region
+
 ## kernel for nonlinear operator
-function nonlinear_operator_kernel!(λ,μ,ΔT,α)
-
-    ## thermal misfit strain
-    ϵT::Float64 = ΔT*α
-
-    function closure(result, input)
+(op::nonlinear_operator)(result, input) = (
         ## input = grad(u) written as a vector
         ## compute linear part of strain, subtract thermal strain (all in Voigt notation)
-        result[1] = input[1] - ϵT
-        result[2] = input[4] - ϵT
-        result[3] = input[2] + input[3]
+        result[1] = input[1] - op.ϵT;
+        result[2] = input[4] - op.ϵT;
+        result[3] = input[2] + input[3];
 
         ## add nonlinear part of the strain 1/2 * (grad(u)'*grad(u))
-        result[1] += 1//2 * (input[1]^2 + input[3]^2)
-        result[2] += 1//2 * (input[2]^2 + input[4]^2)
-        result[3] += input[1]*input[2] + input[3]*input[4]
+        result[1] += 1//2 * (input[1]^2 + input[3]^2);
+        result[2] += 1//2 * (input[2]^2 + input[4]^2);
+        result[3] += input[1]*input[2] + input[3]*input[4];
 
         ## multiply with isotropic stress tensor
         ## (stored in input[5:7] using Voigt notation)
-        input[5] = λ*(result[1]+result[2]) + 2*μ*result[1]
-        input[6] = λ*(result[1]+result[2]) + 2*μ*result[2]
-        input[7] = 2*μ*result[3]
+        input[5] = op.λ*(result[1]+result[2]) + 2*op.μ*result[1];
+        input[6] = op.λ*(result[1]+result[2]) + 2*op.μ*result[2];
+        input[7] = 2*op.μ*result[3];
     
         ## write strain into result
-        result[1] = input[5]
-        result[2] = input[7]
-        result[3] = input[7]
-        result[4] = input[6]
-
+        result[1] = input[5];
+        result[2] = input[7];
+        result[3] = input[7];
+        result[4] = input[6];
         return nothing
-    end
-    return closure
-end 
+)
 
 ## everything is wrapped in a main function
-function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, store = false, verbosity = 0, Plotter = nothing)
+function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4e-5], scale = [20,500], nrefinements = 1, material_border = 0.5, store = Threads.nthreads() > 1, verbosity = 0, Plotter = nothing)
 
     ## set log level
-    set_verbosity(verbosity)
+   # set_verbosity(verbosity)
 
     ## compute Lame' coefficients μ and λ from ν and E
     μ = E ./ (2  .* (1 .+ ν.^(-1)))
     λ = E .* ν ./ ( (1 .- 2*ν) .* (1 .+ ν))
+
+    ## change coefficients of operators
+    for region = 1 : 2
+        ops[region].μ = μ[region]
+        ops[region].λ = λ[region]
+        ops[region].ϵT = ΔT[region] * α[region]
+    end
 
     ## generate bimetal mesh
     xgrid = bimetal_strip2D(; material_border = material_border, scale = scale)
     xgrid = uniform_refine(xgrid,nrefinements)
 
     ## prepare nonlinear operator (one for each bimetal region)
-    nonlin_operator_1 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[1],μ[1],ΔT[1],α[1]), [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [1], quadorder = 3, newton = true, store = store) 
-    nonlin_operator_2 = NonlinearForm([Gradient], [1], Gradient, nonlinear_operator_kernel!(λ[2],μ[2],ΔT[2],α[2]), [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [2], quadorder = 3, newton = true, store = store) 
+    nonlin_operator_1 = NonlinearForm([Gradient], [1], Gradient, ops[1], [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [1], quadorder = 3, newton = true, store = store, sparse_jacobian = true) 
+    nonlin_operator_2 = NonlinearForm([Gradient], [1], Gradient, ops[2], [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [2], quadorder = 3, newton = true, store = store, sparse_jacobian = true) 
     
     ## generate problem description and assign nonlinear operators
     Problem = PDEDescription("nonlinear elasticity problem")

@@ -71,7 +71,7 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
     ## create finite element spaces and solve
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
     Solution = FEVector(["u_h","p_h"],FES)
-    solve!(Solution, Problem)
+    solve!(Solution, Problem; show_statistics = true)
 
     ## calculate L2 errors for u and p
     L2errorV = L2ErrorIntegrator(Float64, u, Identity)
