@@ -26,8 +26,9 @@ p &= eos(\varrho) := c \varrho^\gamma
 \end{aligned}
 ```
 such that ``\mathbf{f} = 0`` and ``\mathbf{g}`` nonzero to match the prescribed solution.
-This example is designed to study the well-balanced property of a discretisation. Note that a gradient-robust discretisation (set reconstruct = true below)
-has a much smaller L2 velocity error (i.e. approximatse the well-balanced state much better). For larger c the problem gets more incompressible which reduces
+
+This example is designed to study the well-balanced property of a discretisation. The gradient-robust discretisation
+approximates the well-balanced state much better, i.e. has a much smaller L2 velocity error. For larger c the problem gets more incompressible which reduces
 the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density.
 See reference below for more details.
 
@@ -78,7 +79,7 @@ function rhs!(γ,c)
 end   
 
 ## everything is wrapped in a main function
-function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ = 1e-3, λ = -2/3*μ, Plotter = nothing, nlevels = 3)
+function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ = 1e-3, λ = -2/3*μ, Plotter = nothing, nlevels = 4)
 
     ## set log level
     set_verbosity(verbosity)
@@ -134,13 +135,15 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     print_convergencehistory(NDoFs, Results[5:6,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||ϱ-ϱ_h|| (BR)","||ϱ-ϱ_h|| (BR+)"], xlabel = "ndof") 
 
     ## plot everything
-    p = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
-    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1][1]; abs = true),1,:), levels = 0)
-    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1][1], Identity)), spacing = 0.1, clear = false, title = "u_h (BR) (abs + quiver)")
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,3), clear = true, resolution = (1500,1000))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1][1]; abs = true),1,:), levels = 0, title = "u_h (BR) (abs + quiver)")
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1][1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[1][2]),1,:), levels = 11, title = "p_h (BR)")
-    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[2][1]; abs = true),1,:), levels = 0)
-    vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution[2][1], Identity)), spacing = 0.1, clear = false, title = "u_h (BR+) (abs + quiver)")
+    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[2][1]; abs = true),1,:), levels = 0, title = "u_h (BR+) (abs + quiver)")
+    vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution[2][1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[2,2],xgrid,view(nodevalues(Solution[2][2]),1,:), levels = 11, title = "p_h (BR+)")
+    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR)", "|| ∇(u - u_h) || (BR)", "|| ϱ - ϱ_h || (BR)"], legend = :lb)
+    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR+)", "|| ∇(u - u_h) || (BR+)", "|| ϱ - ϱ_h || (BR+)"], legend = :lb)
 end
 
 function setup_and_solve!(Solution, xgrid; 

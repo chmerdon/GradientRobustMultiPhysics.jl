@@ -5,7 +5,7 @@ using ExtendableSparse
 using ExtendableGrids
 using GradientRobustMultiPhysics
 
-function make_all(which = []; Plotter2D = PyPlot, Plotter3D = GLMakie)
+function make_all(which = []; Plotter2D = PyPlot, Plotter3D = GLMakie, exclude = ["226","A05","231"])
 
     # generate images for all examples
     # (this is called only manually at the moment)
@@ -26,7 +26,7 @@ function make_all(which = []; Plotter2D = PyPlot, Plotter3D = GLMakie)
             else
                 Plotter = Plotter2D
             end
-            if number in which || which == []
+            if number in which || which == [] && !(number in exclude)
                 # generate default main run output file 
                 Plotter.close("all")
                 include(example_jl_dir * "/" * example_source)

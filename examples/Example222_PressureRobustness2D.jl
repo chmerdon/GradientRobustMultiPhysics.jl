@@ -147,13 +147,15 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_re
     print_convergencehistory(NDofs, Results[:,7:9]; X_to_h = X -> X.^(-1/2), ylabels = ["||∇(u-u_c)||", "||∇(u-u_r)||", "||∇(u-Su)||"])
 
     ## plot
-    p = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
+    p = GridVisualizer(; Plotter = Plotter, layout = (2,3), clear = true, resolution = (1500,1000))
     scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7)
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = "u_c (abs + quiver)")
     scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = "p_c")
     scalarplot!(p[2,1],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
     vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = "u_r (abs + quiver)")
     scalarplot!(p[2,2],xgrid,view(nodevalues(Solution2[2]),1,:), levels = 11, title = "p_r")
+    convergencehistory!(p[1,3], NDofs, Results[:,[1,7,4]]; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_c ||", "|| ∇(u - u_c) ||", "|| p - p_c ||"])
+    convergencehistory!(p[2,3], NDofs, Results[:,[2,8,5]]; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_r ||", "|| ∇(u - u_r) ||", "|| p - p_r ||"])
 
     ## return last L2 error of p-robust method for testing
     return Results[end,2]
@@ -161,7 +163,7 @@ end
 
 
 ## everything is wrapped in a main function
-function main(; problem = 2, verbosity = 0, nlevels = 3, viscosity = 1e-2, Plotter = nothing)
+function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -200,7 +202,7 @@ function test(; Plotter = nothing)
                   ]
     error = []
     for FETypes in testspaces
-        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false))
+        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1))
         println("FETypes = $FETypes   error = $(error[end])")
     end
 
@@ -210,7 +212,7 @@ function test(; Plotter = nothing)
                   ]
     error = []
     for FETypes in testspaces
-        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, print_results = false, Plotter = Plotter))
+        push!(error, solve(HydrostaticTestProblem, xgrid, FETypes, 1; nlevels = 1, Plotter = Plotter))
         println("FETypes = $FETypes   error = $(error[end])")
     end
     return maximum(error)

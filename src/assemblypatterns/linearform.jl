@@ -83,11 +83,8 @@ function assemble!(
     end
     @debug AP
 
-    all_items = 1 : nitems
-
     # loop over items
     basisevaler = get_basisevaler(AM, 1, 1)
-    basisxref::Array{Array{T,1},1} = basisevaler.xref
     weights::Array{T,1} = get_qweights(AM)
     localb::Array{T,2} = zeros(T,get_maxndofs(AM)[1],action_resultdim)
     ndofitems::Int = get_maxdofitems(AM)[1]
@@ -97,6 +94,7 @@ function assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
+    update_action!(action, basisevaler, 0, 0, 0) # call once to pre-allocate enough quadrature points (afer that loop should be alloc-free)
     loop_allocations = @allocated for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -117,7 +115,7 @@ function assemble!(
                 basisevaler = get_basisevaler(AM, 1, di)
 
                 # update action on dofitem
-                update_action!(action, basisevaler, AM.dofitems[1][di], item, regions[r])
+                update_action!(action, basisevaler, AM.dofitems[1][di], item, xItemRegions[item])
 
                 for i in eachindex(weights)
                     for dof_i = 1 : ndofs4dofitem

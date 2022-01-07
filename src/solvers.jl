@@ -573,6 +573,7 @@ end
 # for linear, stationary PDEs that can be solved in one step
 function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T,Tv,Ti}; time::Real = 0, show_details::Bool = false) where {T, Tv, Ti}
 
+    assembly_time = @elapsed begin
     FEs = Array{FESpace{Tv,Ti},1}([])
     for j=1 : length(Target.FEVectorBlocks)
         push!(FEs,Target.FEVectorBlocks[j].FES)
@@ -606,34 +607,36 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
         b.entries[fixed_dofs[j]] = fixed_penalty * Target.entries[fixed_dofs[j]]
         A[1][fixed_dofs[j],fixed_dofs[j]] = fixed_penalty
     end
+    end # @elapsed
 
     # SOLVE
-    LS = createlinsolver(SC.user_params[:linsolver], Target.entries, A.entries, b.entries)
-    flush!(A.entries)
-    update_factorization!(LS)
-    solve!(LS)
+    solver_time = @elapsed begin
+        LS = createlinsolver(SC.user_params[:linsolver], Target.entries, A.entries, b.entries)
+        flush!(A.entries)
+        update_factorization!(LS)
+        solve!(LS)
 
-   # @time Target.entries .= A.entries\b.entries
-
-    residuals::Array{T,1} = zeros(T, length(Target.FEVectorBlocks))
-    # CHECK RESIDUAL
-    residual::Array{T,1} = A.entries*Target.entries - b.entries
-    residual[fixed_dofs] .= 0
-    for j = 1 : length(Target.FEVectorBlocks)
-        for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
-            residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
+        residuals::Array{T,1} = zeros(T, length(Target.FEVectorBlocks))
+        # CHECK RESIDUAL
+        residual::Array{T,1} = A.entries*Target.entries - b.entries
+        residual[fixed_dofs] .= 0
+        for j = 1 : length(Target.FEVectorBlocks)
+            for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
+                residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
+            end
         end
-    end
-    resnorm::T = sum(residuals)
-    residuals = sqrt.(residuals)
+        resnorm::T = sum(residuals)
+        residuals = sqrt.(residuals)
 
-    # REALIZE GLOBAL GLOBALCONSTRAINTS 
-    # (possibly changes some entries of Target)
-    for j = 1 : length(PDE.GlobalConstraints)
-        realize_constraint!(Target,PDE.GlobalConstraints[j])
+        # REALIZE GLOBAL GLOBALCONSTRAINTS 
+        # (possibly changes some entries of Target)
+        for j = 1 : length(PDE.GlobalConstraints)
+            realize_constraint!(Target,PDE.GlobalConstraints[j])
+        end
     end
 
     if SC.user_params[:show_statistics]
+        @info "assembly/solver time = $(assembly_time)/$(solver_time) (s)"
         show_statistics(PDE,SC)
     end
 

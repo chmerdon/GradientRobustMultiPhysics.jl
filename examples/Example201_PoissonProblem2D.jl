@@ -23,13 +23,13 @@ using GridVisualize
 const f = DataFunction([1]; name = "f")
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, μ = 1, order = 2, Plotter = nothing)
+function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 5, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
 
     ## build/load any grid (here: a uniform-refined 2D unit square into triangles)
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D),4)
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), nrefinements)
 
     ## create empty PDE description
     Problem = PDEDescription("Poisson problem")
@@ -54,7 +54,7 @@ function main(; verbosity = 0, μ = 1, order = 2, Plotter = nothing)
     @show Problem Solution
 
     ## solve for chosen Solution vector
-    solve!(Solution, Problem)
+    solve!(Solution, Problem; show_statistics = true)
 
     ## plot solution (for e.g. Plotter = PyPlot)
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
