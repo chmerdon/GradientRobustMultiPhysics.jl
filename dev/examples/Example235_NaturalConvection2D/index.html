@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>235 : Natural Convection 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesHdivP1RT/">224 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li class="is-active"><a class="tocitem" href>235 : Natural Convection 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>235 : Natural Convection 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>235 : Natural Convection 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example235_NaturalConvection2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Natural-Convection-2D"><a class="docs-heading-anchor" href="#:-Natural-Convection-2D">235 : Natural Convection 2D</a><a id=":-Natural-Convection-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Natural-Convection-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example235_NaturalConvection2D.jl">source code</a>)</p><p>This example solves the natural convection (or Boussinesque) problem on a triangular domain <span>$\Omega = \mathrm{conv}\lbrace (0,0),(1,0),(0,1) \rbrace$</span>. Altogether, we are looking for a velocity <span>$\mathbf{u}$</span>, a pressure <span>$\mathbf{p}$</span> and a stemperature <span>$T$</span> such that</p><p class="math-container">\[\begin{aligned}
+- \Delta \mathbf{u} + (\mathbf{u} \cdot \nabla) \mathbf{u} + \nabla p &amp; = Ra \mathbf{e}_2 T\\
+\mathrm{div}(u) &amp; = 0\\
+- \Delta \mathbf{T} + \mathbf{u} \cdot \nabla \mathbf{T} &amp; = 0
+\end{aligned}\]</p><p>with some parameter <span>$Ra$</span>. The velocity has zero Dirichlet boundary conditions, while the temperature is zero along the y-axis, trigonometric along the x-axis and do-nothing at the diagonal boundary of the triangular domain.</p><p>Two possible solution strategies are implemented here. The first is Newton&#39;s method. For this both nonlinear operators are assigned as auto-differentiated operators. Note, that the nonlinearity in the tmeperature equation involves both unknowns u and T and hence leads to two assigned matrix blocks in the equation for T. However, a direct Newton solve only works smooth for small or moderate <span>$Ra$</span> (circa up to 1e5).</p><p>Therefore, for larger <span>$Ra$</span>, Anderson acceleration can be used which is triggered by setting anderson = true</p><p>Also, note that a divergence-free reconstruction operator is used for the velocity, which also helps with the convergence and accuracy of the lowest-order method for this test problem.</p><pre><code class="language-julia hljs">module Example235_NaturalConvection2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# boundary data for temperature on bottom
+T_bottom = DataFunction((T,x) -&gt; (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = &quot;X&quot;, quadorder = 4)
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 6, anderson = false)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load mesh and refine
+    xgrid = reference_domain(Triangle2D)
+    xgrid = uniform_refine(xgrid, nrefinements)
+
+    # types for discretisation by Bernardi--Raugel pressure-robust (BDM1 reconstruction) + P1-FEM for temperature
+    FETypes = [H1BR{2}, H1P0{1}, H1P1{1}];
+    RIdentity = ReconstructionIdentity{HDIVBDM1{2}}
+
+    # load Stokes prototype and add a unknown for the temperature
+    Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false, store = true)
+    add_unknown!(Problem; unknown_name = &quot;T&quot;, equation_name = &quot;temperature equation&quot;)
+    Problem.name = &quot;natural convection problem&quot;
+
+    # add convection term for velocity
+    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, newton = !anderson))
+
+    # add boundary data for velocity (unknown 1) and temperature (unknown 3)
+    add_boundarydata!(Problem, 1, [1,2,3], HomogeneousDirichletBoundary)
+    add_boundarydata!(Problem, 3, [1], BestapproxDirichletBoundary; data = T_bottom)
+    add_boundarydata!(Problem, 3, [3], HomogeneousDirichletBoundary)
+
+    # add Laplacian to temperature equation
+    add_operator!(Problem,[3,3], LaplaceOperator(1.0; store = true, name = &quot;∇(T)⋅∇(V)&quot;))
+
+    # add coupling terms for velocity and temperature (convection + gravity)
+    if anderson
+        add_operator!(Problem,[3,3], ConvectionOperator(1, RIdentity, 2, 1; name = &quot;(R(u)⋅∇(T)) V&quot;))
+    else #if newton
+        function Tconvection_kernel(result, input)
+            # input = [id(u),∇T]
+            result[1] = input[1]*input[3] + input[2]*input[4]
+            return nothing
+        end
+        function Tconvection_jacobian(jac, input)
+            jac[1,1] = input[3]
+            jac[1,3] = input[1]
+            jac[1,2] = input[4]
+            jac[1,4] = input[2]
+            return nothing
+        end
+        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = &quot;(R(u)⋅∇(T)) V&quot;, jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
+    end
+    add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = &quot;-Ra v⋅g T&quot;, store = true))
+
+    # show final problem description
+    @show Problem
+
+    # construct FESpaces and Solution veector
+    FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
+    Solution = FEVector([&quot;v_h&quot;, &quot;p_h&quot;, &quot;T_h&quot;],FES)
+
+    # solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
+    if anderson
+        solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = &quot;l2&quot;, anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true, show_statistics = true)
+    else
+        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e2, damping = 0.55, show_solver_config = true, show_statistics = true)
+        solve!(Solution, Problem; maxiterations = 100, target_residual = 1e-8, damping = 0, show_solver_config = false, show_statistics = true)
+    end
+
+    # compute Nusselt number along bottom boundary
+    NuIntegrator = ItemIntegrator(Float64,ON_BFACES,[Jump(Gradient)], fdot_action(Float64,DataFunction([0,-1.0])); regions = [1])
+    println(&quot;\tNu = $(evaluate(NuIntegrator,Solution[3]))&quot;)
+
+    # plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 0)
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = &quot;u_h (abs + quiver)&quot;)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[3]),1,:), levels = 11, title = &quot;T_h&quot;)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example235_NaturalConvection2D.main()
+Explored path: SparsityDetection.Path(Bool[], 1)
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+PDE-DESCRIPTION
+===============
+  system name = natural convection problem
+
+     id   | unknown name / equation name
+    [1]   | u / momentum equation 
+    [2]   | p / incompressibility constraint 
+    [3]   | T / temperature equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [1,3]   | -Ra v⋅g T (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+    [2,3]   | none
+    [3,1]   | (R(u)⋅∇(T)) V [Newton] [∂u] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [3,2]   | none
+    [3,3]   | ∇(T)⋅∇(V) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | (R(u)⋅∇(T)) V [Newton] [∂T] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | none
+     [2]    | none
+     [3]    | none
+
+   BoundaryOperator[1] : HomogeneousDirichletBoundary -&gt; [1, 2, 3]
+                          
+   BoundaryOperator[2] : 
+   BoundaryOperator[3] : BestapproxDirichletBoundary -&gt; [1]
+                         HomogeneousDirichletBoundary -&gt; [3]
+                          
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = false
+  anderson_iterations = 0
+  subiterations = UnitRange{Int64}[1:3]
+  show_iteration_details = true
+  timedependent_equations = Any[]
+  anderson_unknowns = [1]
+  show_statistics = true
+  anderson_metric = l2
+  skip_update = [1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
+  damping = 0.55
+  time = 0
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = true
+  fixed_penalty = 1.0e60
+  target_residual = 100.0
+  maxiterations = 100
+  AssemblyTriggers = 
+         LHS_AT[1] :  A  I  I 
+         LHS_AT[2] :  N  N  N 
+         LHS_AT[3] :  A  N  A 
+         RHS_AT[1] :  N 
+         RHS_AT[2] :  N 
+         RHS_AT[3] :  N 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2] [1, 3]; [2, 1] [2] [2, 3]; [3, 1] [3, 2] [3, 1]]
+
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	    init  |                             | 4.02e+00/2.02e-01/4.22e+00
+	      1   | 7.416533e-12 | 9.615916e+02 | 1.48e+00/2.44e-01/1.73e+00
+	      2   | 9.919920e-12 | 5.931504e+02 | 2.61e-01/2.57e-01/5.21e-01
+	      3   | 8.168619e-12 | 6.568060e+02 | 2.35e-01/2.44e-01/4.82e-01
+	      4   | 8.795411e-12 | 3.990824e+02 | 2.35e-01/2.29e-01/4.67e-01
+	      5   | 8.152300e-12 | 2.340174e+02 | 2.34e-01/2.18e-01/4.55e-01
+	      6   | 8.439618e-12 | 1.387982e+02 | 2.35e-01/2.21e-01/4.58e-01
+	      7   | 8.287146e-12 | 8.267079e+01 | 2.35e-01/2.24e-01/4.62e-01
+	    total |                             | 6.93e+00/1.84e+00/8.79e+00
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	    init  |                             | 4.26e-01/2.47e-01/6.74e-01
+	      1   | 7.099129e-12 | 2.205491e+01 | 2.35e-01/2.55e-01/4.93e-01
+	      2   | 7.010432e-12 | 1.839015e+00 | 2.37e-01/2.20e-01/4.60e-01
+	      3   | 6.770386e-12 | 9.514267e-03 | 2.35e-01/2.01e-01/4.39e-01
+	      4   | 7.135953e-12 | 3.288516e-07 | 2.35e-01/2.02e-01/4.39e-01
+	      5   | 6.901405e-12 | 7.395201e-12 | 2.36e-01/2.22e-01/4.60e-01
+	    total |                             | 1.60e+00/1.35e+00/2.97e+00
+
+	Nu = 13.97802371664829</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 7 January 2022 14:04">Friday 7 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
