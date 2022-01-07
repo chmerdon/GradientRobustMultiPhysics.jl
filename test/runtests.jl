@@ -765,16 +765,16 @@ function run_examples()
         @test eval(Meta.parse("ExampleA03_CommutingInterpolators3D.test()")) < 1e-15
 
         println("\n2D NONLINEAR POISSON")
-        include("../examples/Example210_NonlinearPoisson2D.jl")
-        @test eval(Meta.parse("Example210_NonlinearPoisson2D.test()")) < 1e-13
+        include("../examples/Example205_NonlinearPoisson2D.jl")
+        @test eval(Meta.parse("Example205_NonlinearPoisson2D.test()")) < 1e-13
 
         println("\n2D NONLINEAR TIME_DEPENDENT POISSON")
-        include("../examples/Example212_NonlinearPoissonTransient2D.jl")
-        @test eval(Meta.parse("Example212_NonlinearPoissonTransient2D.test()")) < 1e-12
+        include("../examples/Example206_NonlinearPoissonTransient2D.jl")
+        @test eval(Meta.parse("Example206_NonlinearPoissonTransient2D.test()")) < 1e-12
         
         println("\n2D PRESSURE_ROBUSTNESS")
-        include("../examples/Example206_PressureRobustness2D.jl")
-        @test eval(Meta.parse("Example206_PressureRobustness2D.test()")) < 1e-15
+        include("../examples/Example222_PressureRobustness2D.jl")
+        @test eval(Meta.parse("Example222_PressureRobustness2D.test()")) < 1e-15
     end
 end
 
