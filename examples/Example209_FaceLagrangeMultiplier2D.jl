@@ -67,10 +67,10 @@ function main(; Plotter = nothing, verbosity = 0)
 
     ## plot both solutions
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7)
-    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false, title = "u_1 (abs + quiver)")
-    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7)
-    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false, title = "u_2 (abs + quiver)")
+    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = "u_1 (abs + quiver)")
+    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.1, clear = false)
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution2[1]; abs = true),1,:), levels = 7, title = "u_2 (abs + quiver)")
+    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution2[1], Identity)), spacing = 0.1, clear = false)
 
 end
 end

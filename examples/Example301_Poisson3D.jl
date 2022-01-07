@@ -72,12 +72,12 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     end
 
     ## plot (Plotter = GLMakie should work)
-    p = GridVisualizer(; Plotter = Plotter, layout = (1,1), clear = true, resolution = (500,500))
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 5, title = "u_h")
+    convergencehistory!(p[1,2], NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/3),  ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/3), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/3), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
 end
 
 end

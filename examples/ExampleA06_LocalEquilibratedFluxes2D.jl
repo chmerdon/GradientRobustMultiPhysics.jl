@@ -45,7 +45,7 @@ function exact_function!(result,x)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, order = 2, nlevels = 15, theta = 1//2, Plotter = nothing)
+function main(; verbosity = 0, order = 2, nlevels = 16, theta = 1//2, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -143,14 +143,14 @@ function main(; verbosity = 0, order = 2, nlevels = 15, theta = 1//2, Plotter = 
     end
     
     ## plot
-    p=GridVisualizer(; Plotter=Plotter, layout=(1,3), clear=true, resolution=(1200,400))
+    p=GridVisualizer(; Plotter=Plotter, layout=(2,2), clear = true, resolution=(1000,1000))
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels=11, title = "u_h")
-    gridplot!(p[1,2], xgrid; linewidth = 1)
-    gridplot!(p[1,3], xgrid; linewidth = 1, xlimits = [-0.001,0.001], ylimits = [-0.001,0.001])
+    convergencehistory!(p[1,2], NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
+    gridplot!(p[2,1], xgrid; linewidth = 1)
+    gridplot!(p[2,2], xgrid; linewidth = 1, xlimits = [-0.001,0.001], ylimits = [-0.001,0.001])
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||", "η", "|| ∇u - σ_h ||"])
 end
 
 

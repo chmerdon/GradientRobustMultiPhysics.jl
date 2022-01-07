@@ -196,6 +196,6 @@ export writeVTK!, writeCSV!
 export print_table, print_convergencehistory
 
 include("plots.jl")
-export plot, plot_convergencehistory
+export convergencehistory!, plot_convergencehistory
 
 end #module

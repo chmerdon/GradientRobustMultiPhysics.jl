@@ -1,9 +1,10 @@
 #= 
 
-# 203 : Reaction-Convection-Diffusion-Problem 2D
+# 204 : Reaction-Convection-Diffusion-Problem SUPG 2D
 ([source code](SOURCE_URL))
 
-This example computes the solution of some convection-diffusion problem
+This example is almost similar to the last example (with the same number)
+and also computes the solution of some convection-diffusion problem
 ```math
 -\nu \Delta u + \mathbf{\beta} \cdot \nabla u + \alpha u = f \quad \text{in } \Omega
 ```
@@ -12,20 +13,20 @@ with some diffusion coefficient  ``\nu``, some vector-valued function  ``\mathbf
 We prescribe an analytic solution with ``\mathbf{\beta} := (1,0)`` and ``\alpha = 0.1`` and check the L2 and H1 error convergence of the method on a series of uniformly refined meshes.
 We also compare with the error of a simple nodal interpolation and plot the solution and the norm of its gradient.
 
-For small ``\nu``, the convection term dominates and pollutes the accuracy of the method. For demonstration some
-simple gradient jump (interior penalty) stabilisation is added to improve things.
+For small ``\nu``, the convection term dominates and pollutes the accuracy of the method. This time a SUPG
+stabilisation is added to improve things.
 
 =#
 
-module Example203_ReactionConvectionDiffusion2D
+module Example204_ReactionConvectionDiffusionSUPG2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
-## coefficient functions
+## coefficient functions 
 const β = DataFunction([1,0]; name = "β")
-const α = DataFunction([0.01]; name = "α")
+const α = DataFunction([0.1]; name = "α")
 
 ## problem data and expected exact solution
 function exact_solution!(result,x)
@@ -49,59 +50,106 @@ function exact_solution_rhs!(ν)
 end    
 
 ## custom bilinearform that can assemble the full PDE operator
+##             ν(∇u,∇v) + (αu + β⋅∇u, v)
 function ReactionConvectionDiffusionOperator(α, β, ν)
     eval_alpha = zeros(Float64,1)
     eval_beta = zeros(Float64,2)
     function action_kernel!(result, input,x)
-        ## input = [u,∇u] as a vector of length 3
+        ## input = [u_h,∇u_h] as a vector of length 3
         eval_data!(eval_beta, β, x, 0)
         eval_data!(eval_alpha, α, x, 0)
         result[1] = eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
         result[2] = ν * input[2]
         result[3] = ν * input[3]
-        ## result will be multiplied with [v,∇v]
+        ## result will be multiplied with [v_h,∇v_h]
         return nothing
     end
     action = Action(action_kernel!, [3,3]; dependencies = "X", quadorder = max(α.quadorder,β.quadorder))
     return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
 end
 
+## function that provides the SUPG left-hand side operator
+##       τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)
+function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
+    eval_alpha = zeros(Float64,1)
+    eval_beta = zeros(Float64,2)
+    function action_kernel!(result, input, x, item)
+        ## input = [u_h,∇u_h,Δu_h] as a vector of length 4
+        eval_data!(eval_beta, β, x, 0)
+        eval_data!(eval_alpha, α, x, 0)
+        ## compute residual -νΔu_h + (β⋅∇)u_h + αu_h
+        result[1] = - ν * input[4] + eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
+        ## multiply stabilisation factor
+        result[1] *= τ * xCellDiameters[item]^2
+        ## compute coefficients for ∇ eval of test function v_h
+        result[1] = result[1] * eval_beta[1]  # will be multiplied with ∇v_h[1]
+        result[2] = result[1] * eval_beta[2]  # will be multiplied with ∇v_h[2]
+        return nothing
+    end
+    action = Action(action_kernel!, [2,4]; dependencies = "XI", quadorder = max(α.quadorder,β.quadorder))
+    return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = "τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)", transposed_assembly = true)
+end
+
+## function that provides the SUPG right-hand side operator 
+##                  τ (h^2 f, β⋅∇v)
+function SUPGOperator_RHS(f, β, τ, xCellDiameters)
+    eval_f = zeros(Float64,1)
+    eval_beta = zeros(Float64,2)
+    function action_kernel!(result, input, x, item)
+        ## input = [v,∇v] as a vector of length 3
+        eval_data!(eval_beta, β, x, 0)
+        eval_data!(eval_f, f, x, 0)
+        ## compute f times (β⋅∇)v_h
+        result[1] = eval_f[1] * (input[1] * eval_beta[1] + input[2] * eval_beta[2])
+        ## multiply stabilisation factor
+        result[1] *= τ * xCellDiameters[item]^2
+        return nothing
+    end
+    action = Action(action_kernel!, [1,2]; dependencies = "XI", quadorder = max(f.quadorder,β.quadorder))
+    return RhsOperator(Gradient, action; name = "τ (h^2 f, β⋅∇v)")
+end
+
+## the SUPG stabilisation is weighted by powers of the cell diameter
+## so we need a function that computes them
+function getCellDiameters(xgrid)
+    xCellFaces = xgrid[CellFaces]
+    xFaceVolumes = xgrid[FaceVolumes]
+    xCellDiameters = zeros(Float64, num_sources(xCellFaces))
+    for cell = 1 : length(xCellDiameters)
+        xCellDiameters[cell] = maximum(xFaceVolumes[xCellFaces[:,cell]])
+    end
+    return xCellDiameters
+end
+
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels = 5)
+function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 5, order = 2)
 
     ## set log level
     set_verbosity(verbosity)
     
-    ## load a mesh of the unit square
-    ## with four boundary regions (1 = bottom, 2 = right, 3 = top, 4 = left)
-    xgrid = grid_unitsquare(Triangle2D); # initial grid
+    ## load initial mesh
+    xgrid = grid_unitsquare(Triangle2D)
 
     ## negotiate data functions to the package
     u = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "X", quadorder = 4)
-    ∇u = ∇(u) # AD gradient of user-function u by ForwardDiff
-    f = DataFunction(exact_solution_rhs!(ν), [1,2]; name = "f", dependencies = "X", quadorder = 3)
+    ∇u = ∇(u)
+    f = DataFunction(exact_solution_rhs!(ν), [1,2]; name = "f", dependencies = "X", quadorder = 5)
 
-    ## choose a finite element type, here we choose a second order H1-conforming one
-    FEType = H1P2{1,2}
+    ## set finite element type according to chosen order
+    FEType = H1Pk{1,2,order}
 
-    ## create PDE description
+    ## create PDE description and assign operator and data
     Problem = PDEDescription("reaction-convection-diffusion problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "reaction-convection-diffusion equation")
     add_operator!(Problem, [1,1], ReactionConvectionDiffusionOperator(α,β,ν))
     add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
 
-    ## add boundary data to unknown 1 (there is only one in this example)
-    add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = u)   # u_h =  u in bregions 1 and 3
-    add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = u)    # u_h = Iu in bregion 2
-    add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)              # u_h =  0 in bregion 4
-
-    ## add a gradient jump (interior penalty) stabilisation for dominant convection
+    ## add SUPG stabilisation and remember operator positions
     if τ > 0
-        ## first we define an item-dependent action kernel...
-        xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-        stab_action = Action((result,input,item) -> (result .= input .* xFaceVolumes[item]^2), [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
-        JumpStabilisation = BilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, factor = τ, name = "τ |F|^2 [∇(u)]⋅[∇(v)]")
-        add_operator!(Problem, [1,1], JumpStabilisation)
+        xCellDiameters = getCellDiameters(xgrid)
+        supg_id = add_operator!(Problem, [1,1], SUPGOperator_LHS(α,β,ν,τ,xCellDiameters))
+        supg_id2 = add_rhsdata!(Problem, 1, SUPGOperator_RHS(f,β,τ,xCellDiameters))
     end
 
     ## finally we have a look at the defined problem
@@ -117,7 +165,13 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     for level = 1 : nlevels
         ## uniform mesh refinement
         xgrid = uniform_refine(xgrid)
-        xFaceVolumes = xgrid[FaceVolumes] # update xFaceVolumes used in stabilisation definition
+        
+        ## update SUPG operator (with updated CellDiameters)
+        if τ > 0
+            xCellDiameters = getCellDiameters(xgrid)
+            replace_operator!(Problem, [1,1], supg_id, SUPGOperator_LHS(α,β,ν,τ,xCellDiameters))
+            replace_rhsdata!(Problem, 1, supg_id2, SUPGOperator_RHS(f,β,τ,xCellDiameters))
+        end
 
         ## generate FESpace and solution vector
         FES = FESpace{FEType}(xgrid)
@@ -148,5 +202,4 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     ## print convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| u - Iu ||", "|| ∇(u - u_h) ||", "|| ∇(u - Iu) ||"])
 end
-
 end

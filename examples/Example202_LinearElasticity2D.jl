@@ -59,7 +59,7 @@ function main(; verbosity = 0, E = 1000, ν = 0.4, Plotter = nothing)
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]; abs = true),1,:), levels = 7, title = "u_h")
     vectorplot!(p[1,1], xgrid, evaluate(PointEvaluator(Solution[1], Identity)), spacing = 5, clear = false, title = "u_h (abs + quiver)")
-    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], SymmetricGradient{1/√2}; abs = true),1,:), levels=11, title = "ϵ(u_h) (abs)")
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], SymmetricGradient{1/√2}; abs = true),1,:), levels = 7, title = "ϵ(u_h) (abs)")
 end
 
 end
