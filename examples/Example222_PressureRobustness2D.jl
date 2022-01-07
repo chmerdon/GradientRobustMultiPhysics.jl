@@ -69,7 +69,7 @@ function PotentialFlowTestProblem()
 end
 
 
-function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, print_results = true, verbosity = 1, target_residual = 1e-10, maxiterations = 20, Plotter = nothing)
+function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_residual = 1e-10, maxiterations = 20, Plotter = nothing)
 
     ## load problem data and set solver parameters
     ReconstructionOperator = FETypes[3]

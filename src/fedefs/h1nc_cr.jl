@@ -108,22 +108,3 @@ function get_basis(::Type{ON_CELLS}, ::Type{H1CR{ncomponents}}, ET::Type{<:Quadr
         end
     end
 end
-
-function get_reconstruction_coefficients!(xgrid::ExtendableGrid{Tv,Ti}, ::Type{ON_CELLS}, FE::Type{<:H1CR}, FER::Type{<:HDIVRT0}, EG::Type{<:AbstractElementGeometry}) where {Tv,Ti}
-    xFaceVolumes::Array{Tv,1} = xgrid[FaceVolumes]
-    xFaceNormals::Array{Tv,2} = xgrid[FaceNormals]
-    xCellFaces = xgrid[CellFaces]
-    ncomponents = get_ncomponents(FE)
-    nf::Int = num_faces(EG)
-    face::Int = 0
-    function closure(coefficients, cell::Int) 
-        # fill!(coefficients,0.0)
-        for f = 1 : nf
-            face = xCellFaces[f,cell]
-            for k = 1 : ncomponents
-                coefficients[nf*(k-1)+f,f] = xFaceVolumes[face] * xFaceNormals[k, face]
-            end
-        end
-        return nothing
-    end
-end
