@@ -94,7 +94,7 @@ function assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
-    update_action!(action, basisevaler, 0, 0, 0) # call once to pre-allocate enough quadrature points (afer that loop should be alloc-free)
+    update_action!(action, basisevaler, 1, 1, regions[1]) # call once to pre-allocate enough quadrature points (afer that loop should be alloc-free)
     loop_allocations = @allocated for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions

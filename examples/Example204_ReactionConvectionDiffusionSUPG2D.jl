@@ -3,7 +3,7 @@
 # 204 : Reaction-Convection-Diffusion-Problem SUPG 2D
 ([source code](SOURCE_URL))
 
-This example is almost similar to the last example (with the same number)
+This example is almost similar to the last example
 and also computes the solution of some convection-diffusion problem
 ```math
 -\nu \Delta u + \mathbf{\beta} \cdot \nabla u + \alpha u = f \quad \text{in } \Omega
