@@ -34,7 +34,6 @@ using GradientRobustMultiPhysics
 using ExtendableSparse
 using ExtendableGrids
 using GridVisualize
-using Pardiso
 
 ## problem data
 function exact_function!(result,x)
