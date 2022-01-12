@@ -70,13 +70,13 @@ and interactive [Pluto](https://github.com/fonsp/Pluto.jl) notebooks can be foun
 
 
 ### Installation
-via Julia package manager in Julia 1.5 or above:
+via Julia package manager in Julia 1.6 or above:
 
 ```@example
 # latest stable version
-(@v1.5) pkg> add GradientRobustMultiPhysics
+(@v1.6) pkg> add GradientRobustMultiPhysics
 # latest version
-(@v1.5) pkg> add GradientRobustMultiPhysics#master
+(@v1.6) pkg> add GradientRobustMultiPhysics#master
 ```
 
 

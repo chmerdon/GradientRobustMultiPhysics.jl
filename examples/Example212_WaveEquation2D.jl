@@ -5,7 +5,7 @@
 
 This example computes the transient solution of the wave equation
 ```math
-\frac{\partial u}{\partial t^2} = c \Delta u + f
+\frac{\partial^2 u}{\partial t^2} = c \Delta u + f
 ```
 with propagation speed ``c`` and source term ``f``.
 
