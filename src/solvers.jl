@@ -80,21 +80,23 @@ end
 #
 function _update_solver_params!(user_params,kwargs)
     for (k,v) in kwargs
-        user_params[Symbol(k)]=v
+        user_params[Symbol(k)] = v
     end
     return nothing
 end
 
-struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization} <: AbstractLinearSystem{Tv,Ti} 
+mutable struct LinearSystem{Tv,Ti,FT <: ExtendableSparse.AbstractFactorization} <: AbstractLinearSystem{Tv,Ti} 
     x::AbstractVector{Tv}
     A::ExtendableSparseMatrix{Tv,Ti}
     b::AbstractVector{Tv}
+    factorization_init::Bool
     factorization::FT
 end
 
 function LinearSystem{Tv,Ti,FT}(x,A,b) where {Tv,Ti,FT} 
-    LS = LinearSystem{Tv,Ti,FT}(x,A,b,FT()) 
-    factorize!(LS.factorization,A)
+    LS = LinearSystem{Tv,Ti,FT}(x,A,b,false,FT()) 
+   # factorize!(LS.factorization, LS.A)
+   # LS.factorization_init = true
     return LS
 end
 
@@ -107,8 +109,15 @@ function update_factorization!(LS::AbstractLinearSystem)
 end
 
 function update_factorization!(LS::LinearSystem)
-    @logmsg MoreInfo "Updating factorization = $(typeof(LS).parameters[3])..."
-    ExtendableSparse.update!(LS.factorization)
+    if LS.factorization_init == false
+        @logmsg MoreInfo "Initializing factorization = $(typeof(LS).parameters[3])..."
+        # init factorisation (wait until here, since A might have been changed between solver init and first update call)
+        factorize!(LS.factorization, LS.A)
+        LS.factorization_init = true
+    else
+        @logmsg MoreInfo "Updating factorization = $(typeof(LS).parameters[3])..."
+        ExtendableSparse.update!(LS.factorization)
+    end
 end
 
 function solve!(LS::LinearSystem) 
@@ -1308,7 +1317,7 @@ mutable struct TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR<:AbstractTimeIntegrationRule
     dt_is_nonlinear::Array{Bool,1}             # if true mass matrix is recomputed in each iteration
     dt_operator::Array{DataType,1}         # operators associated with the time derivative
     dt_actions::Array{<:AbstractAction,1}   # actions associated with the time derivative
-    dt_lump::Array{Bool,1}                  # should the mass matrix of the time derivative be lumped
+    dt_lump::Array{T,1}                  # if > 0, mass matrix of the time derivative is diagona-lumped with this factor
     S::Array{FEMatrix{T,TiM,Tv,Ti},1}           # heap for system matrix for each equation package
     rhs::Array{FEVector{T,Tv,Ti},1}         # heap for system rhs for each equation package
     A::Array{FEMatrix{T,TiM,Tv,Ti},1}           # heap for spacial discretisation matrix for each equation package
@@ -1340,12 +1349,16 @@ function assemble_massmatrix4subiteration!(TCS::TimeControlSolver{T,Tt,Tv,Ti}, i
                 FE2 = A.FESY
                 operator1 = TCS.dt_operator[pos]
                 operator2 = TCS.dt_operator[pos]
-                if TCS.dt_lump[pos]
-                    BLF = LumpedBilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
+                if TCS.dt_lump[pos] > 0
+                    BLF = LumpedBilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])  
+                    time = @elapsed begin
+                        assemble!(A, BLF, skip_preps = false)
+                        A.entries .*= TCS.dt_lump[pos]  
+                    end
                 else
-                    BLF = BilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])    
+                    BLF = BilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])   
+                    time = @elapsed assemble!(A, BLF, skip_preps = false) 
                 end
-                time = @elapsed assemble!(A, BLF, skip_preps = false)
             end
         end
     end
@@ -1493,7 +1506,7 @@ function TimeControlSolver(
                     push!(dt_operator, Identity)
                 end
                 if length(dt_lump) < pos
-                    push!(dt_lump, false)
+                    push!(dt_lump, 0)
                 end
                 # set diagonal equations block and rhs block to nonlinear
                 if dt_is_nonlinear[pos] == true
@@ -1519,6 +1532,9 @@ function TimeControlSolver(
     LS = Array{AbstractLinearSystem{T,Int64},1}(undef,nsubiterations)
     for s = 1 : nsubiterations
         LS[s] = createlinsolver(SC.user_params[:linsolver],x[s].entries,S[s].entries,rhs[s].entries)
+        if TIR == CrankNicolson
+            update_factorization!(LS[s]) # otherwise Crank-Nicolson test case fails (why???)
+        end
     end
 
     # storage for last iterate (to compute change properly)
@@ -1643,7 +1659,6 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                     factors[d] = 2
                 end
             end
-
             if update_matrix # update matrix S[s] and right-hand side rhs[s]
 
                 ## reset system matrix
@@ -1655,7 +1670,6 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep)
                 rhs[s].entries .+= b[s].entries
                 add!(S[s],A[s])
-                flush!(S[s].entries)
                 
                 ## update and add time derivative to system matrix and right-hand side
                 assemble_massmatrix4subiteration!(TCS, s; force = false)
@@ -1664,6 +1678,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                     addblock!(S[s][k,k],AM[s][k,k]; factor = 2.0/timestep)
                     addblock_matmul!(rhs[s][k],AM[s][k,k],LastIterate[d]; factor = 2.0/timestep)
                 end
+                flush!(S[s].entries)
             else # S[s] stays the same, only update rhs[s]
 
                 ## assembly of new right-hand side 
