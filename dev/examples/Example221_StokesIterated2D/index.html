@@ -127,6 +127,7 @@ SOLVER-CONFIGURATION
   linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
   damping = 0
   time = 0
+  parallel_storage = false
   show_solver_config = true
   anderson_damping = 1
   check_nonlinear_residual = true
@@ -146,13 +147,13 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 8.35e+00/4.05e-05/8.35e+00
-	      1   | 2.016697e-11 | 1.145706e-01 | 1.13e+00/2.21e-04/1.26e+00
-	      2   | 2.070303e-11 | 4.877746e-05 | 2.75e-02/1.78e-04/4.44e-02
-	      3   | 2.179850e-11 | 1.108012e-07 | 2.71e-02/1.57e-04/4.12e-02
-	      4   | 2.058188e-11 | 1.194426e-10 | 2.73e-02/1.77e-04/9.04e-02
-	      5   | 1.976546e-11 | 3.557114e-11 | 2.72e-02/1.89e-04/4.11e-02
-	    total |                             | 9.59e+00/9.62e-04/9.82e+00
+	    init  |                             | 9.11e+00/2.69e-05/9.11e+00
+	      1   | 2.016697e-11 | 1.145706e-01 | 1.48e+00/2.66e-04/1.62e+00
+	      2   | 2.070303e-11 | 4.877746e-05 | 3.30e-02/1.99e-04/7.84e-02
+	      3   | 2.179850e-11 | 1.108012e-07 | 3.33e-02/1.77e-04/5.21e-02
+	      4   | 2.058188e-11 | 1.194426e-10 | 3.33e-02/1.77e-04/5.22e-02
+	      5   | 1.976546e-11 | 3.557114e-11 | 3.31e-02/1.84e-04/5.24e-02
+	    total |                             | 1.07e+01/1.03e-03/1.10e+01
 
 || u - u_h || = 0.00015826122831223601
-|| p - p_h || = 0.02091959276108457</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example220_PlanarLatticeFlow2D/">« 220 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Wednesday 12 January 2022 12:03">Wednesday 12 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| p - p_h || = 0.02091959276108457</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example220_PlanarLatticeFlow2D/">« 220 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 14 January 2022 11:31">Friday 14 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
