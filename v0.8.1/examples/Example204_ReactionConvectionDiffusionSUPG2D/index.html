@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>204 : Reaction-Convection-Diffusion-Problem SUPG 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li class="is-active"><a class="tocitem" href>204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesHdivP1RT/">224 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example204_ReactionConvectionDiffusionSUPG2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Reaction-Convection-Diffusion-Problem-SUPG-2D"><a class="docs-heading-anchor" href="#:-Reaction-Convection-Diffusion-Problem-SUPG-2D">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a id=":-Reaction-Convection-Diffusion-Problem-SUPG-2D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Reaction-Convection-Diffusion-Problem-SUPG-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example204_ReactionConvectionDiffusionSUPG2D.jl">source code</a>)</p><p>This example is almost similar to the last example and also computes the solution of some convection-diffusion problem</p><p class="math-container">\[-\nu \Delta u + \mathbf{\beta} \cdot \nabla u + \alpha u = f \quad \text{in } \Omega\]</p><p>with some diffusion coefficient  <span>$\nu$</span>, some vector-valued function  <span>$\mathbf{\beta}$</span>, some scalar-valued function <span>$\alpha$</span> and inhomogeneous Dirichlet boundary data.</p><p>We prescribe an analytic solution with <span>$\mathbf{\beta} := (1,0)$</span> and <span>$\alpha = 0.1$</span> and check the L2 and H1 error convergence of the method on a series of uniformly refined meshes. We also compare with the error of a simple nodal interpolation and plot the solution and the norm of its gradient.</p><p>For small <span>$\nu$</span>, the convection term dominates and pollutes the accuracy of the method. This time a SUPG stabilisation is added to improve things.</p><pre><code class="language-julia hljs">module Example204_ReactionConvectionDiffusionSUPG2D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# coefficient functions
+const β = DataFunction([1,0]; name = &quot;β&quot;)
+const α = DataFunction([0.1]; name = &quot;α&quot;)
+
+# problem data and expected exact solution
+function exact_solution!(result,x)
+    result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
+end
+function exact_solution_rhs!(ν)
+    eval_alpha = zeros(Float64,1)
+    eval_beta = zeros(Float64,2)
+    function closure(result,x)
+        # diffusion part
+        result[1] = -ν*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
+        # convection part (beta * grad(u))
+        eval_data!(eval_beta, β, x, 0)
+        result[1] += eval_beta[1] * (x[2]*(2*x[1]-1)*(x[2]-1) + 1)
+        result[1] += eval_beta[2] * (x[1]*(2*x[2]-1)*(x[1]-1))
+        # reaction part (alpha*u)
+        eval_data!(eval_alpha, α, x, 0)
+        result[1] += eval_alpha[1] * (x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1])
+        return nothing
+    end
+end
+
+# custom bilinearform that can assemble the full PDE operator
+#             ν(∇u,∇v) + (αu + β⋅∇u, v)
+function ReactionConvectionDiffusionOperator(α, β, ν)
+    eval_alpha = zeros(Float64,1)
+    eval_beta = zeros(Float64,2)
+    function action_kernel!(result, input,x)
+        # input = [u_h,∇u_h] as a vector of length 3
+        eval_data!(eval_beta, β, x, 0)
+        eval_data!(eval_alpha, α, x, 0)
+        result[1] = eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
+        result[2] = ν * input[2]
+        result[3] = ν * input[3]
+        # result will be multiplied with [v_h,∇v_h]
+        return nothing
+    end
+    action = Action(action_kernel!, [3,3]; dependencies = &quot;X&quot;, quadorder = max(α.quadorder,β.quadorder))
+    return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = &quot;ν(∇u,∇v) + (αu + β⋅∇u, v)&quot;, transposed_assembly = true)
+end
+
+# function that provides the SUPG left-hand side operator
+#       τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)
+function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
+    eval_alpha = zeros(Float64,1)
+    eval_beta = zeros(Float64,2)
+    function action_kernel!(result, input, x, item)
+        # input = [u_h,∇u_h,Δu_h] as a vector of length 4
+        eval_data!(eval_beta, β, x, 0)
+        eval_data!(eval_alpha, α, x, 0)
+        # compute residual -νΔu_h + (β⋅∇)u_h + αu_h
+        result[1] = - ν * input[4] + eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
+        # multiply stabilisation factor
+        result[1] *= τ * xCellDiameters[item]^2
+        # compute coefficients for ∇ eval of test function v_h
+        result[1] = result[1] * eval_beta[1]  # will be multiplied with ∇v_h[1]
+        result[2] = result[1] * eval_beta[2]  # will be multiplied with ∇v_h[2]
+        return nothing
+    end
+    action = Action(action_kernel!, [2,4]; dependencies = &quot;XI&quot;, quadorder = max(α.quadorder,β.quadorder))
+    return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = &quot;τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)&quot;, transposed_assembly = true)
+end
+
+# function that provides the SUPG right-hand side operator
+#                  τ (h^2 f, β⋅∇v)
+function SUPGOperator_RHS(f, β, τ, xCellDiameters)
+    eval_f = zeros(Float64,1)
+    eval_beta = zeros(Float64,2)
+    function action_kernel!(result, input, x, item)
+        # input = [v,∇v] as a vector of length 3
+        eval_data!(eval_beta, β, x, 0)
+        eval_data!(eval_f, f, x, 0)
+        # compute f times (β⋅∇)v_h
+        result[1] = eval_f[1] * (input[1] * eval_beta[1] + input[2] * eval_beta[2])
+        # multiply stabilisation factor
+        result[1] *= τ * xCellDiameters[item]^2
+        return nothing
+    end
+    action = Action(action_kernel!, [1,2]; dependencies = &quot;XI&quot;, quadorder = max(f.quadorder,β.quadorder))
+    return RhsOperator(Gradient, action; name = &quot;τ (h^2 f, β⋅∇v)&quot;)
+end
+
+# the SUPG stabilisation is weighted by powers of the cell diameter
+# so we need a function that computes them
+function getCellDiameters(xgrid)
+    xCellFaces = xgrid[CellFaces]
+    xFaceVolumes = xgrid[FaceVolumes]
+    xCellDiameters = zeros(Float64, num_sources(xCellFaces))
+    for cell = 1 : length(xCellDiameters)
+        xCellDiameters[cell] = maximum(xFaceVolumes[xCellFaces[:,cell]])
+    end
+    return xCellDiameters
+end
+
+# everything is wrapped in a main function
+function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 5, order = 2)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # load initial mesh
+    xgrid = grid_unitsquare(Triangle2D)
+
+    # negotiate data functions to the package
+    u = DataFunction(exact_solution!, [1,2]; name = &quot;u&quot;, dependencies = &quot;X&quot;, quadorder = 4)
+    ∇u = ∇(u)
+    f = DataFunction(exact_solution_rhs!(ν), [1,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 5)
+
+    # set finite element type according to chosen order
+    FEType = H1Pk{1,2,order}
+
+    # create PDE description and assign operator and data
+    Problem = PDEDescription(&quot;reaction-convection-diffusion problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;reaction-convection-diffusion equation&quot;)
+    add_operator!(Problem, [1,1], ReactionConvectionDiffusionOperator(α,β,ν))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
+
+    # add SUPG stabilisation and remember operator positions
+    if τ &gt; 0
+        xCellDiameters = getCellDiameters(xgrid)
+        supg_id = add_operator!(Problem, [1,1], SUPGOperator_LHS(α,β,ν,τ,xCellDiameters))
+        supg_id2 = add_rhsdata!(Problem, 1, SUPGOperator_RHS(f,β,τ,xCellDiameters))
+    end
+
+    # finally we have a look at the defined problem
+    @show Problem
+
+    # define ItemIntegrators for L2/H1 error computation and some arrays to store the errors
+    L2Error = L2ErrorIntegrator(Float64, u, Identity)
+    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
+
+    # refinement loop over levels
+    Solution = nothing
+    for level = 1 : nlevels
+        # uniform mesh refinement
+        xgrid = uniform_refine(xgrid)
+
+        # update SUPG operator (with updated CellDiameters)
+        if τ &gt; 0
+            xCellDiameters = getCellDiameters(xgrid)
+            replace_operator!(Problem, [1,1], supg_id, SUPGOperator_LHS(α,β,ν,τ,xCellDiameters))
+            replace_rhsdata!(Problem, 1, supg_id2, SUPGOperator_RHS(f,β,τ,xCellDiameters))
+        end
+
+        # generate FESpace and solution vector
+        FES = FESpace{FEType}(xgrid)
+        Solution = FEVector(&quot;u_h&quot;,FES)
+
+        # solve PDE
+        solve!(Solution, Problem)
+
+        # interpolate (just for comparison)
+        Interpolation = FEVector(&quot;I(u)&quot;,FES)
+        interpolate!(Interpolation[1], u)
+
+        # compute L2 and H1 errors and save data
+        NDofs[level] = length(Solution.entries)
+        Results[level,1] = sqrt(evaluate(L2Error,Solution[1]))
+        Results[level,2] = sqrt(evaluate(L2Error,Interpolation[1]))
+        Results[level,3] = sqrt(evaluate(H1Error,Solution[1]))
+        Results[level,4] = sqrt(evaluate(H1Error,Interpolation[1]))
+    end
+
+    # plot
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,3), clear = true, resolution = (1500,500))
+    scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 7, title = &quot;u_h&quot;)
+    scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels = 0, colorbarticks = 9, title = &quot;∇u_h (abs + quiver)&quot;)
+    vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), vscale = 0.8, clear = false)
+    convergencehistory!(p[1,3], NDofs, Results; add_h_powers = [2,3], X_to_h = X -&gt; X.^(-1/2), legend = :lb, fontsize = 20, ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| u - Iu ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;|| ∇(u - Iu) ||&quot;])
+
+    # print convergence history
+    print_convergencehistory(NDofs, Results; X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h ||&quot;, &quot;|| u - Iu ||&quot;, &quot;|| ∇(u - u_h) ||&quot;, &quot;|| ∇(u - Iu) ||&quot;])
+end
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example204_ReactionConvectionDiffusionSUPG2D.main()
+
+PDE-DESCRIPTION
+===============
+  system name = reaction-convection-diffusion problem
+
+     id   | unknown name / equation name
+    [1]   | u / reaction-convection-diffusion equation 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | ν(∇u,∇v) + (αu + β⋅∇u, v) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+            | τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+
+  RHS block | PDEOperator(s)
+     [1]    | (f, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+            | τ (h^2 f, β⋅∇v) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+
+Problem = 
+
+    ndofs   |    || u - u_h ||     order  |    || u - Iu ||      order  |  || ∇(u - u_h) ||    order  |   || ∇(u - Iu) ||    order  |
+============|=============================|=============================|=============================|=============================|
+        41  |     8.43750e-04      0.000  |     7.66225e-04      0.000  |     1.55036e-02      0.000  |     1.45087e-02      0.000  |
+       145  |     9.63421e-05      3.436  |     9.34178e-05      3.332  |     3.63888e-03      2.295  |     3.57540e-03      2.218  |
+       545  |     1.40275e-05      2.911  |     1.16023e-05      3.151  |     1.21755e-03      1.654  |     8.90584e-04      2.100  |
+      2113  |     1.83460e-06      3.002  |     1.44793e-06      3.072  |     3.43256e-04      1.869  |     2.22441e-04      2.047  |
+      8321  |     2.00826e-07      3.228  |     1.80918e-07      3.035  |     6.65448e-05      2.394  |     5.55975e-05      2.023  |</code></pre><p><img src="../../images/Example204_ReactionConvectionDiffusionSUPG2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example203_ReactionConvectionDiffusion2D/">« 203 : Reaction-Convection-Diffusion-Problem 2D</a><a class="docs-footer-nextpage" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.10 on <span class="colophon-date" title="Friday 14 January 2022 12:22">Friday 14 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
