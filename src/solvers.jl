@@ -51,6 +51,7 @@ default_solver_kwargs()=Dict{Symbol,Tuple{Any,String,Bool,Bool}}(
     :anderson_damping => (1, "Damping factor in Anderson acceleration (1 = undamped)",true,false),
     :anderson_unknowns => ([1], "an array of unknown numbers that should be included in the Anderson acceleration",true,false),
     :fixed_penalty => (1e60, "penalty that is used for the values of fixed degrees of freedom (e.g. by Dirichlet boundary data or global constraints)",true,true),
+    :parallel_storage => (false, "assemble storaged operators in parallel for loop", true, true),
     :linsolver => ("UMFPACK", "String that encodes the linear solver, or type name of self-defined solver (see corressponding example), or type name of ExtendableSparse.AbstractFactorization",true,true),
     :show_solver_config => (false, "show the complete solver configuration before starting to solve",true,true),
     :show_iteration_details => (true, "show details (residuals etc.) of each iteration",true,true),
@@ -290,6 +291,10 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
                 if LHS_ATs[j,k] == AssemblyInitial
                     @debug "AssemblyTrigger of block [$j,$k] upgraded to AssemblyEachTimeStep due to subiteration configuration"
                     LHS_ATs[j,k] = AssemblyEachTimeStep
+                    if RHS_ATs[j] == AssemblyInitial
+                        @debug "AssemblyTrigger of rhs block [$j] upgraded to AssemblyEachTimeStep due to subiteration configuration"
+                        RHS_ATs[j] = AssemblyEachTimeStep
+                    end
                 end
             end
         end
@@ -456,19 +461,37 @@ function assemble!(
     end
 
     ## run storage updates in parallel threads
-    Threads.@threads for s = 1 : length(stored_operators)
-        O = stored_operators[s][1]
-        j = stored_operators[s][2]::Int
-        k = stored_operators[s][3]::Int
-        o = stored_operators[s][4]::Int
-        if k > 0
-            elapsedtime = @elapsed SC.LHS_LastLoopAllocations[equations[j],k][o] = update_storage!(O, SC, CurrentSolution, equations[j], k, o; time = time)
-            SC.LHS_TotalLoopAllocations[equations[j],k][o] += SC.LHS_LastLoopAllocations[equations[j],k][o]
-            SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
-        else
-            elapsedtime = @elapsed SC.RHS_LastLoopAllocations[equations[j]][o] = update_storage!(O, SC, CurrentSolution, equations[j], o ; time = time)
-            SC.RHS_TotalLoopAllocations[equations[j]][o] += SC.RHS_LastLoopAllocations[equations[j]][o]
-            SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+    if SC.user_params[:parallel_storage]
+        Threads.@threads for s = 1 : length(stored_operators)
+            O = stored_operators[s][1]
+            j = stored_operators[s][2]::Int
+            k = stored_operators[s][3]::Int
+            o = stored_operators[s][4]::Int
+            if k > 0
+                elapsedtime = @elapsed SC.LHS_LastLoopAllocations[equations[j],k][o] = update_storage!(O, SC, CurrentSolution, equations[j], k, o; time = time)
+                SC.LHS_TotalLoopAllocations[equations[j],k][o] += SC.LHS_LastLoopAllocations[equations[j],k][o]
+                SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+            else
+                elapsedtime = @elapsed SC.RHS_LastLoopAllocations[equations[j]][o] = update_storage!(O, SC, CurrentSolution, equations[j], o ; time = time)
+                SC.RHS_TotalLoopAllocations[equations[j]][o] += SC.RHS_LastLoopAllocations[equations[j]][o]
+                SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+            end
+        end
+    else
+        for s = 1 : length(stored_operators)
+            O = stored_operators[s][1]
+            j = stored_operators[s][2]::Int
+            k = stored_operators[s][3]::Int
+            o = stored_operators[s][4]::Int
+            if k > 0
+                elapsedtime = @elapsed SC.LHS_LastLoopAllocations[equations[j],k][o] = update_storage!(O, SC, CurrentSolution, equations[j], k, o; time = time)
+                SC.LHS_TotalLoopAllocations[equations[j],k][o] += SC.LHS_LastLoopAllocations[equations[j],k][o]
+                SC.LHS_AssemblyTimes[equations[j],k][o] += elapsedtime
+            else
+                elapsedtime = @elapsed SC.RHS_LastLoopAllocations[equations[j]][o] = update_storage!(O, SC, CurrentSolution, equations[j], o ; time = time)
+                SC.RHS_TotalLoopAllocations[equations[j]][o] += SC.RHS_LastLoopAllocations[equations[j]][o]
+                SC.RHS_AssemblyTimes[equations[j]][o] += elapsedtime
+            end
         end
     end
 

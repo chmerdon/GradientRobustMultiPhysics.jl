@@ -498,7 +498,9 @@ function nodevalues(xgrid::ExtendableGrid{Tv,Ti}, UD::UserData; T = Float64, tim
     xCoordinates::Array{Tv,2} = xgrid[Coordinates]
     nnodes::Int = size(xCoordinates,2)
 
-    @assert UD.dimensions[2] == size(xCoordinates,1) "UserData input dimension expected to match dimension of coordinates of grid"
+    if is_xdependent(UD)
+        @assert UD.dimensions[2] == size(xCoordinates,1) "UserData input dimension expected to match dimension of coordinates of grid"
+    end
 
     result = zeros(T,UD.dimensions[1])
     nodevals = zeros(T,UD.dimensions[1],nnodes)

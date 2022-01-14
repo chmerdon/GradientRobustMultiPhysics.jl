@@ -1,7 +1,7 @@
 name = "GradientRobustMultiPhysics"
 uuid = "0802c0ca-1768-4022-988c-6dd5f9588a11"
 authors = ["Christian Merdon <christian.merdon@wias-berlin.de>"]
-version = "0.8.0"
+version = "0.8.1"
 
 [deps]
 DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
@@ -27,7 +27,7 @@ DocStringExtensions = "^0.8"
 ExtendableGrids = "0.8.8"
 ExtendableSparse = "0.6"
 ForwardDiff = "^0.10"
-GridVisualize = "0.3.9"
+GridVisualize = "0.4.6"
 SparseDiffTools = "^1.19"
 SparsityDetection = "0.3.4"
 StaticArrays = "1"
