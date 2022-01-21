@@ -140,7 +140,7 @@ function setup_and_solve!(Solution, xgrid;
     if use_gravity
         # discrete gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
         g = DataFunction(gravity!(γ,c), [2,2]; name = &quot;g&quot;, dependencies = &quot;X&quot;, quadorder = 4)
-        add_operator!(Problem, [1,2], BilinearForm([VeloIdentity,Identity], fdot_action(Float64, g); factor = -1, name = &quot;(g ⋅ v) ϱ&quot;, store = true))
+        add_operator!(Problem, [1,2], BilinearForm([VeloIdentity,Identity], fdotv_action(g); factor = -1, name = &quot;(g ⋅ v) ϱ&quot;, store = true))
     else
         # exact gravity term for right-hand side
         f = DataFunction(rhs!(γ,c), [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, quadorder = 4)
@@ -171,32 +171,32 @@ function setup_and_solve!(Solution, xgrid;
     advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example240_CompressibleStokes2D.main()
-	mass_error = 0.8902625 - 0.8902625000000028 = 2.886579864025407e-15
-	mass_error = 0.8902625 - 0.8902625000000031 = 3.1086244689504383e-15
-	mass_error = 0.8902625 - 0.8902625000000007 = 7.771561172376096e-16
-	mass_error = 0.8902625 - 0.890262500000001 = 9.992007221626409e-16
-	mass_error = 0.8902625 - 0.890262499999994 = 5.995204332975845e-15
-	mass_error = 0.8902625 - 0.8902624999999931 = 6.8833827526759706e-15
-	mass_error = 0.8902625 - 0.8902624999999657 = 3.430589146091734e-14
+	mass_error = 0.8902625 - 0.8902625000000041 = 4.107825191113079e-15
+	mass_error = 0.8902625 - 0.8902625000000027 = 2.7755575615628914e-15
+	mass_error = 0.8902625 - 0.8902625000000006 = 6.661338147750939e-16
+	mass_error = 0.8902625 - 0.8902625000000002 = 2.220446049250313e-16
+	mass_error = 0.8902625 - 0.8902624999999936 = 6.328271240363392e-15
+	mass_error = 0.8902625 - 0.890262499999993 = 6.994405055138486e-15
+	mass_error = 0.8902625 - 0.8902624999999658 = 3.419486915845482e-14
 	mass_error = 0.8902625 - 0.8902624999999655 = 3.441691376337985e-14
 
     ndof    |   ||u-u_h|| (BR)     order  |   ||u-u_h|| (BR+)    order  |
 ============|=============================|=============================|
-       167  |     4.71437e-01      0.000  |     1.28783e-03      0.000  |
-       602  |     1.63767e-01      1.649  |     3.84703e-04      1.885  |
-      2282  |     4.54389e-02      1.924  |     9.32730e-05      2.127  |
-      8882  |     1.17877e-02      1.986  |     2.32064e-05      2.047  |
+       167  |     4.71586e-01      0.000  |     1.28746e-03      0.000  |
+       602  |     1.63770e-01      1.650  |     3.84764e-04      1.884  |
+      2282  |     4.54389e-02      1.924  |     9.32774e-05      2.127  |
+      8882  |     1.17877e-02      1.986  |     2.32067e-05      2.047  |
 
     ndof    |  ||∇(u-u_h)|| (BR)   order  | ||∇(u-u_h)|| (BR+)   order  |
 ============|=============================|=============================|
-       167  |     9.53773e+00      0.000  |     2.47878e-02      0.000  |
-       602  |     6.81732e+00      0.524  |     9.94591e-03      1.424  |
-      2282  |     3.77126e+00      0.889  |     2.46695e-03      2.092  |
-      8882  |     1.96058e+00      0.963  |     6.07352e-04      2.063  |
+       167  |     9.54242e+00      0.000  |     2.47363e-02      0.000  |
+       602  |     6.81770e+00      0.524  |     9.94492e-03      1.421  |
+      2282  |     3.77131e+00      0.889  |     2.46691e-03      2.092  |
+      8882  |     1.96059e+00      0.963  |     6.07350e-04      2.063  |
 
     ndof    |   ||ϱ-ϱ_h|| (BR)     order  |   ||ϱ-ϱ_h|| (BR+)    order  |
 ============|=============================|=============================|
        167  |     6.24901e-03      0.000  |     5.64017e-03      0.000  |
        602  |     2.94689e-03      1.172  |     2.82008e-03      1.081  |
       2282  |     1.44808e-03      1.066  |     1.41004e-03      1.040  |
-      8882  |     7.19785e-04      1.029  |     7.05021e-04      1.020  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 15:10">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8882  |     7.19785e-04      1.029  |     7.05021e-04      1.020  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 23:36">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

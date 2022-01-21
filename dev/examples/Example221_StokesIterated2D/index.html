@@ -61,10 +61,9 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; name = &quot;ϵ (div_h(u),div_h(v))&quot;, store = true, factor = λ))
 
     # pressure update equation
-    PressureMAMA = BilinearForm([Identity, Identity]; name = &quot;(p,q)&quot;, store = true)
-    add_operator!(Problem, [2,1], BilinearForm([Identity, Divergence]; name = &quot;(q,div(u))&quot;, store = true, factor = λ))
-    add_operator!(Problem, [2,2], PressureMAMA)
-    add_rhsdata!(Problem, 2, restrict_operator(PressureMAMA; fixed_arguments = [1], fixed_arguments_ids = [2]))
+    add_operator!(Problem, [2,2], BilinearForm([Identity, Identity]; name = &quot;(p,q)&quot;, store = true))
+    rhs_action = Action((result,input) -&gt; (result[1] = input[1] - λ*input[2]), [1, 3]; name = &quot;p_h - λdiv(u)&quot;)
+    add_rhsdata!(Problem, 2, LinearForm([Identity, Divergence], [2, 1], Identity, rhs_action))
 
     # show and solve problem
     @show Problem
@@ -98,12 +97,12 @@ PDE-DESCRIPTION
             | ((id(a) ⋅ ∇) u, id(v)) (APT = TrilinearForm, AT = ON_CELLS, regions = [0])
             | ϵ (div_h(u),div_h(v)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [1,2]   | (div(v),p) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
-    [2,1]   | (q,div(u)) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,1]   | none
     [2,2]   | (p,q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
 
   RHS block | PDEOperator(s)
      [1]    | none
-     [2]    | (p,q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | (p_h - λdiv(u), id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
 
    BoundaryOperator[1] : InterpolateDirichletBoundary -&gt; [1, 2, 3, 4]
                          
@@ -136,7 +135,7 @@ SOLVER-CONFIGURATION
   maxiterations = 20
   AssemblyTriggers = 
          LHS_AT[1] :  A  T 
-         LHS_AT[2] :  T  I 
+         LHS_AT[2] :  N  I 
          RHS_AT[1] :  N 
          RHS_AT[2] :  A 
                      (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
@@ -147,13 +146,13 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 9.25e+00/3.11e-05/9.25e+00
-	      1   | 2.016697e-11 | 1.145706e-01 | 1.53e+00/2.41e-04/1.67e+00
-	      2   | 2.070303e-11 | 4.877746e-05 | 3.39e-02/1.83e-04/5.32e-02
-	      3   | 2.179850e-11 | 1.108012e-07 | 3.34e-02/1.81e-04/5.03e-02
-	      4   | 2.058188e-11 | 1.194426e-10 | 3.37e-02/1.80e-04/5.18e-02
-	      5   | 1.976546e-11 | 3.557114e-11 | 3.34e-02/1.73e-04/7.02e-02
-	    total |                             | 1.09e+01/9.90e-04/1.11e+01
+	    init  |                             | 9.04e+00/2.91e-05/9.04e+00
+	      1   | 2.016697e-11 | 1.145706e-01 | 1.45e+00/2.30e-04/1.59e+00
+	      2   | 2.135999e-11 | 4.877746e-05 | 3.34e-02/1.76e-04/5.37e-02
+	      3   | 2.092422e-11 | 1.108026e-07 | 3.31e-02/1.67e-04/4.98e-02
+	      4   | 2.112839e-11 | 1.215573e-10 | 3.31e-02/1.68e-04/5.08e-02
+	      5   | 2.027201e-11 | 3.661290e-11 | 3.33e-02/1.71e-04/4.95e-02
+	    total |                             | 1.06e+01/9.40e-04/1.08e+01
 
-|| u - u_h || = 0.00015826122831223601
-|| p - p_h || = 0.02091959276108457</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example220_PlanarLatticeFlow2D/">« 220 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 15:10">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 0.0001582612282699012
+|| p - p_h || = 0.02091959276125727</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example220_PlanarLatticeFlow2D/">« 220 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 23:36">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
