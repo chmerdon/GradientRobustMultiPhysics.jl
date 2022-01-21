@@ -85,10 +85,9 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; name = "ϵ (div_h(u),div_h(v))", store = true, factor = λ))
 
     ## pressure update equation
-    PressureMAMA = BilinearForm([Identity, Identity]; name = "(p,q)", store = true)
-    add_operator!(Problem, [2,1], BilinearForm([Identity, Divergence]; name = "(q,div(u))", store = true, factor = λ))
-    add_operator!(Problem, [2,2], PressureMAMA)
-    add_rhsdata!(Problem, 2, restrict_operator(PressureMAMA; fixed_arguments = [1], fixed_arguments_ids = [2]))
+    add_operator!(Problem, [2,2], BilinearForm([Identity, Identity]; name = "(p,q)", store = true))
+    rhs_action = Action((result,input) -> (result[1] = input[1] - λ*input[2]), [1, 3]; name = "p_h - λdiv(u)")
+    add_rhsdata!(Problem, 2, LinearForm([Identity, Divergence], [2, 1], Identity, rhs_action))
 
     ## show and solve problem
     @show Problem

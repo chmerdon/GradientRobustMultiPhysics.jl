@@ -677,7 +677,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a linearform from an action (whose input dimension has to equal the result dimension of operator and the result dimension has to be 1), L(v) = (A(operator(v)),1)
+generates a linearform from an action (whose input is ignored and the result dimension has to match the length of the operator evaluation of v), L(v) = (A(),v)
     
 """
 function RhsOperator(
@@ -720,8 +720,41 @@ function RhsOperator(
         name = "($(f.name), $operator(v))"
     end
 
-    action = fdot_action(Float64,f)
-    O = PDEOperator{Float64, APT_LinearForm, AT}(name,[operator], action, [1], 1, regions, store, AssemblyAuto)
+    O = PDEOperator{Float64, APT_LinearForm, AT}(name,[operator], fdot_action(f), [1], 1, regions, store, AssemblyAuto)
+    O.factor = factor
+    return O
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+generates a linearform from an action (whose input are operator evaluations of the
+current state of the unknowns with the ids stated in coeff_from, the result dimension
+has to match the length of the operator evaluation of v),
+ 
+i.e. L(v) = (A(operators(unknowns[coeff_from])),operator(v))
+    
+"""
+function LinearForm(
+    operators_current::Array{DataType,1},                # operators to be evaluated for current solution
+    coeff_from::Array{Int,1},                            # coeffs for operators_current
+    operator_test::Type{<:AbstractFunctionOperator},     # operator to be evaluted for test function
+    action::AbstractAction;                              # action that explains how to calculate the result to be multiplied with operator_test
+    regions::Array{Int,1} = [0],
+    name = "auto",
+    AT::Type{<:AssemblyType} = ON_CELLS,
+    factor = 1,
+    store::Bool = false)
+
+    if name == "auto"
+        name = "($(action.name), $operator_test(v))"
+    end
+
+    push!(operators_current, operator_test)
+    O = PDEOperator{Float64, APT_LinearForm, AT}(name, operators_current, action, 1:(length(coeff_from)), 1, regions, store, AssemblyAuto)
+    O.fixed_arguments = 1:length(coeff_from)
+    O.fixed_arguments_ids = coeff_from
     O.factor = factor
     return O
 end
@@ -906,8 +939,11 @@ function update_storage!(O::PDEOperator, SC, CurrentSolution::FEVector{T,Tv,Ti},
     APT = typeof(O).parameters[2]
     AT = typeof(O).parameters[3]
     if APT <: APT_LinearForm
-        FES = Array{FESpace{Tv,Ti},1}(undef, 1)
-        FES[1] = CurrentSolution[j].FES
+        FES = Array{FESpace{Tv,Ti},1}(undef, length(O.fixed_arguments))
+        for a = 1 : length(O.fixed_arguments)
+            FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
+        end
+        push!(FES, CurrentSolution[j].FES) # testfunction always refers to matrix row in this pattern !!!
     else
         @error "No storage functionality available for this operator!"
     end
@@ -922,7 +958,7 @@ function update_storage!(O::PDEOperator, SC, CurrentSolution::FEVector{T,Tv,Ti},
         end
     end
     Pattern = AssemblyPattern{APT, T, AT}(O.name, FES, O.operators4arguments,O.action_rhs,O.apply_action_to,O.regions)
-    assemble!(O.storage_b, Pattern; factor = factor, skip_preps = false)
+    assemble!(O.storage_b, Pattern, CurrentSolution[O.fixed_arguments_ids]; factor = factor, skip_preps = false)
     return Pattern.last_allocations
 end
 
@@ -955,8 +991,11 @@ end
 
 function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_LinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{TvG,TiG},1}(undef, 1)
-    FES[1] = b.FES
+    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
+    for a = 1 : length(O.fixed_arguments)
+        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
+    end
+    push!(FES, b.FES) # testfunction always refers to matrix row in this pattern !!!
     return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 

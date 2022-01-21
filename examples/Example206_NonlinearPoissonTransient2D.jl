@@ -38,7 +38,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     ## set exact solution and data
     u = DataFunction((result,x,t) -> (result[1] = x[1]*x[2]*(1-t)^t_power), [1,2]; dependencies = "XT", quadorder = 2)
     ∇u = ∇(u)
-    f = DataFunction((result,x,t) -> (result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1])*(1-t)^(3*t_power) -t_power*x[1]*x[2]*(1-t)^(t_power-1)), [2,1]; name = "∇(u)", dependencies = "XT", quadorder = 4)
+    f = DataFunction((result,x,t) -> (result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1])*(1-t)^(3*t_power) -t_power*x[1]*x[2]*(1-t)^(t_power-1)), [1,2]; name = "∇(u)", dependencies = "XT", quadorder = 4)
 
     ## initial grid and final time
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1)

@@ -82,7 +82,8 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
         end
         add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
     end
-    add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = "-Ra v⋅g T", store = true))
+    vdotg_action = Action((result, input) -> (result[1] = -input[2]), [1 2]; name = "v⋅g")
+    add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], vdotg_action; factor = Ra, name = "-Ra v⋅g T", store = true))
 
     ## show final problem description
     @show Problem
@@ -100,7 +101,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     end
     
     ## compute Nusselt number along bottom boundary
-    NuIntegrator = ItemIntegrator(Float64,ON_BFACES,[Jump(Gradient)], fdot_action(Float64,DataFunction([0,-1.0])); regions = [1])
+    NuIntegrator = ItemIntegrator(Float64,ON_BFACES,[Jump(Gradient)], vdotg_action; regions = [1])
     println("\tNu = $(evaluate(NuIntegrator,Solution[3]))")
 
     ## plot

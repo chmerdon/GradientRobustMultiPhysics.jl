@@ -83,7 +83,8 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
         end
         add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
     end
-    add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], fdot_action(Float64,DataFunction([0,-1.0])); factor = Ra, name = "-Ra v⋅g T", store = true))
+    vdotg_action = Action((result, input) -> (result[1] = -input[2]), [1 2]; name = "v⋅g")
+    add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], vdotg_action; factor = Ra, name = "-Ra v⋅g T", store = true))
 
     ## show final problem description
     @show Problem
@@ -94,7 +95,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
 
     ## solve (fixedpoint iteration by solving consecutively equations [3] and [1,2] + Anderson acceleration)
     if anderson
-        solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 5, anderson_metric = "l2", anderson_unknowns = [1,3], anderson_damping = 0.95, show_solver_config = true, show_statistics = true)
+        solve!(Solution, Problem; subiterations = [[3],[1,2]], maxiterations = 100, target_residual = 1e-8, anderson_iterations = 20, anderson_metric = "l2", anderson_unknowns = [1], anderson_damping = 0.90, show_solver_config = true, show_statistics = true)
     else
         solve!(Solution, Problem; maxiterations = 100, target_residual = 1e2, damping = 0.55, show_solver_config = true, show_statistics = true)
         solve!(Solution, Problem; maxiterations = 100, target_residual = 1e-8, damping = 0, show_solver_config = false, show_statistics = true)

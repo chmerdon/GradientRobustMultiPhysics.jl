@@ -209,21 +209,14 @@ function boundarydata!(
 
         bonus_quadorder::Int = maximum(O.quadorder4bregion[BADirichletBoundaryRegions[:]])
         Dboperator = DefaultDirichletBoundaryOperator4FE(FEType)
-        b::Array{T,2} = zeros(T,FE.ndofs,1)
+        b::Array{T,1} = zeros(T,FE.ndofs)
         A = FEMatrix{T}("MassMatrixBnd", FE)
 
         if Dboperator == Identity
-            function bnd_rhs_function_h1()
-                temp::Array{T,1} = zeros(T,ncomponents)
-                function closure(result, input, x, item)
-                    eval_data!(temp, O.data4bregion[item[3]], x, time)
-                    result[1] = 0.0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end 
-                end   
+            function bnd_rhs_function_h1(result, input, x, item)
+                eval_data!(result, O.data4bregion[item[3]], x, time)
             end   
-            action = Action(bnd_rhs_function_h1(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
+            action = Action(bnd_rhs_function_h1, [ncomponents, 0]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
             RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], action; regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
             assemble!(b, RHS_bnd)
             L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
@@ -237,8 +230,7 @@ function boundarydata!(
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j] * xFaceNormals[j,xBFaceFaces[item[1]]]
-                    end 
-                    result[1] *= input[1] 
+                    end
                 end   
             end   
             action = Action(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
@@ -254,7 +246,6 @@ function boundarydata!(
                     eval_data!(temp, O.data4bregion[item[3]], x, time)
                     result[1] = -temp[1] * xFaceNormals[2,xBFaceFaces[item[1]]]
                     result[1] += temp[2] * xFaceNormals[1,xBFaceFaces[item[1]]]
-                    result[1] *= input[1] 
                 end   
             end   
             action = Action(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
@@ -276,7 +267,6 @@ function boundarydata!(
                     result[1] = temp[1] * xEdgeTangents[1,xBEdgeEdges[item[1]]]
                     result[1] += temp[2] * xEdgeTangents[2,xBEdgeEdges[item[1]]]
                     result[1] += temp[3] * xEdgeTangents[3,xBEdgeEdges[item[1]]]
-                    result[1] *= input[1]
                 end   
             end   
             action = Action(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)

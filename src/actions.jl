@@ -33,7 +33,7 @@ is_itemdependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,
 is_xrefdependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dl
 
 
-function Action(kernel::Function, argsizes; Tv = Float64, Ti = Int32, dependencies = "", bonus_quadorder = 0, name = "user action") where {T}
+function Action(kernel::Function, argsizes; Tv = Float64, Ti = Int32, dependencies = "", bonus_quadorder = 0, name = "user action")
     dx = occursin("X", dependencies)
     dt = occursin("T", dependencies)
     di = occursin("I", dependencies)
@@ -83,82 +83,36 @@ end
 function NoAction()
 ````
 
-Creates a NoAction that causes the assembly pattern to ignore the action assembly.
+Creates a NoAction that causes the assembly pattern to ignore the action-related assembly.
 """
 function NoAction(; name = "no action", quadorder = 0)
     return NoAction(name,quadorder)
 end
 
+"""
+````
+function fdot_action(data::UserData) -> Action
+````
 
-function fdot_action(T, data::UserData)
-    ncomponents = data.dimensions[1]
-    if typeof(data) <: UserData{AbstractExtendedDataFunction}
-        function rhs_function_ext() # result = F(v) = f*operator(v) = f*input
-            temp = zeros(T,ncomponents)
-            function closure(result,input,x, t, region, item, xref)
-                eval_data!(temp, data, x, t, region, item, xref)
-                result[1] = 0
-                for j = 1 : ncomponents
-                    result[1] += temp[j]*input[j] 
-                end
-                return nothing
-            end
-        end    
-        action = Action(rhs_function_ext(),[1, ncomponents]; dependencies = "XTRIL", bonus_quadorder = data.quadorder)
-    else
-        if data.dependencies == "XT"
-            function rhs_function_xt() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(T,ncomponents)
-                function closure(result,input,x, t)
-                    eval_data!(temp, data, x, t)
-                    result[1] = 0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                    return nothing
-                end
-            end    
-            action = Action(rhs_function_xt(),[1, ncomponents]; dependencies = "XT", bonus_quadorder = data.quadorder)
-        elseif data.dependencies == "X"
-            function rhs_function_x() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(T,ncomponents)
-                function closure(result,input,x)
-                    eval_data!(temp, data, x, nothing)
-                    result[1] = 0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                    return nothing
-                end
-            end    
-            action = Action(rhs_function_x(),[1, ncomponents]; dependencies = "X", bonus_quadorder = data.quadorder)
-        elseif data.dependencies == "T"
-            function rhs_function_t() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(T,ncomponents)
-                function closure(result,input,t)
-                    eval_data!(temp, data, nothing, t)
-                    result[1] = 0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                    return nothing
-                end
-            end    
-            action = Action(rhs_function_t(),[1, ncomponents]; dependencies = "T", bonus_quadorder = data.quadorder)
-        else
-            function rhs_function_c() # result = F(v) = f*operator(v) = f*input
-                temp = zeros(T,ncomponents)
-                function closure(result,input)
-                    eval_data!(temp, data, nothing, nothing)
-                    result[1] = 0
-                    for j = 1 : ncomponents
-                        result[1] += temp[j]*input[j] 
-                    end
-                    return nothing
-                end
-            end    
-            action = Action(rhs_function_c(),[1, ncomponents]; dependencies = "", bonus_quadorder = data.quadorder)
-        end
+Creates an action that just evaluates the DataFunction f.
+"""
+function fdot_action(data::UserData; Tv = Float64, Ti = Int32)
+    f_as_action(result, input, kwargs...) = data.user_function(result, kwargs...)
+    return Action(f_as_action, [data.dimensions[1], 0]; Tv = Tv, Ti = Ti, dependencies = data.dependencies, bonus_quadorder = data.quadorder)
+end
+
+"""
+````
+function fdotv_action(data::UserData) -> Action
+````
+
+Creates an action that evaluates the DataFunction f and performs a vector product with the input.
+"""
+function fdotv_action(data::UserData; Tv = Float64, Ti = Int32)
+    feval = zeros(Tv, data.dimensions[1])
+    function vdotg_kernel(result, input, kwargs...)
+        data.user_function(feval, kwargs...)
+        result[1] = dot(feval, input)
     end
-    return action
+    return Action(vdotg_kernel, [1 data.dimensions[2]]; dependencies = data.dependencies, name = "v⋅g")
 end

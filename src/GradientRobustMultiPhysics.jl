@@ -98,7 +98,7 @@ export FEBasisEvaluator, update_febe!, eval_febe!
 
 
 include("actions.jl")
-export AbstractAction, Action, MultiplyScalarAction, NoAction, fdot_action
+export AbstractAction, Action, MultiplyScalarAction, NoAction, fdot_action, fdotv_action
 export set_time!, update_action!, apply_action!
 export DefaultUserAction
 
