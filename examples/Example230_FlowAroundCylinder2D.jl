@@ -131,7 +131,7 @@ function get_draglift(Solution::FEVector, μ)
         result[1] *= -(2/(umean^2*L))
         return nothing
     end 
-    draglift_action = Action(draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", quadorder = 4)
+    draglift_action = Action(draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", bonus_quadorder = 4)
     DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     ## test for drag

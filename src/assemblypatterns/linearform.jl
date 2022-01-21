@@ -67,7 +67,7 @@ function assemble!(
     else
         action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
         action_resultdim::Int = action.argsizes[1]
-        action_result = zeros(T,action_resultdim) # heap for action output
+        action_result = action.val
     end
     if typeof(b) <: AbstractArray{T,1}
         @assert action_resultdim == 1
@@ -94,7 +94,6 @@ function assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
-    update_action!(action, basisevaler, 1, 1, regions[1]) # call once to pre-allocate enough quadrature points (afer that loop should be alloc-free)
     loop_allocations = @allocated for item = 1 : nitems
     for r = 1 : nregions
     # check if item region is in regions
@@ -115,13 +114,22 @@ function assemble!(
                 basisevaler = get_basisevaler(AM, 1, di)
 
                 # update action on dofitem
-                update_action!(action, basisevaler, AM.dofitems[1][di], item, xItemRegions[item])
+                if is_itemdependent(action)
+                    action.item[1] = item
+                    action.item[2] = AM.dofitems[1][di]
+                    action.item[3] = xItemRegions[item]
+                end
 
                 for i in eachindex(weights)
+                    if is_xdependent(action)
+                        update_trafo!(basisevaler.L2G, AM.dofitems[1][di])
+                        eval_trafo!(action.x, basisevaler.L2G, basisevaler.xref[i])
+                    end
                     for dof_i = 1 : ndofs4dofitem
                         # apply action
                         eval_febe!(action_input, basisevaler, dof_i, i)
-                        apply_action!(action_result, action_input, action, i, basisevaler.xref[i])
+                       # apply_action!(action_result, action_input, action, i, basisevaler.xref[i])
+                        eval_action!(action, action_input)
                         for j = 1 : action_resultdim
                             localb[dof_i,j] += action_result[j] * weights[i]
                         end

@@ -60,18 +60,18 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
     xFaceNormals::Array{Float64,2} = xgrid[FaceNormals]
     xCellVolumes::Array{Float64,1} = xgrid[CellVolumes]
     function L2jump_integrand(result, input, item)
-        result[1] = ((input[1]*xFaceNormals[1,item] + input[2]*xFaceNormals[2,item])^2) * xFaceVolumes[item]
+        result[1] = ((input[1]*xFaceNormals[1,item[1]] + input[2]*xFaceNormals[2,item[1]])^2) * xFaceVolumes[item[1]]
         return nothing
     end
     ## kernel for volume term : |T| * ||f + Laplace(u_h)||^2_L^2(T)
     ## note: f = 0 here, but integrand can also be made x-dpendent to allow for non-homogeneous rhs
     function L2vol_integrand(result, input, item)
-        result[1] = input[1]^2 * xCellVolumes[item]
+        result[1] = input[1]^2 * xCellVolumes[item[1]]
         return nothing
     end
     ## ... which generates an action...
-    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = "kernel of η (jumps)", dependencies = "I", quadorder = order-1)
-    eta_vol_action = Action(L2vol_integrand, [1,1]; name = "kernel of η (vol)", dependencies = "I", quadorder = order-1)
+    eta_jumps_action = Action(L2jump_integrand, [1,2]; name = "kernel of η (jumps)", dependencies = "I", bonus_quadorder = order-1)
+    eta_vol_action = Action(L2vol_integrand, [1,1]; name = "kernel of η (vol)", dependencies = "I", bonus_quadorder = order-1)
     ## ... which is used inside an ItemIntegrator
     ηF = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = "η_F")
     ηT = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = "η_T")

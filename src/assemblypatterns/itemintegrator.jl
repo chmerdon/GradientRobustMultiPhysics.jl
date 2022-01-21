@@ -84,8 +84,8 @@ function L2ErrorIntegrator(
     if name == "auto"
         name = "L2 error ($(compare_data.name))"
     end
-    action_kernel = ActionKernel(L2error_function, [1,ninputs*compare_data.dimensions[1]]; name = name, dependencies = "X", quadorder = quadorder)
-    return ItemIntegrator(T,AT, ops, Action{T}(action_kernel); regions = regions, name = name)
+    action = Action(L2error_function, [1,ninputs*compare_data.dimensions[1]]; Tv = T, name = name, dependencies = "X", bonus_quadorder = quadorder)
+    return ItemIntegrator(T,AT, ops, action; regions = regions, name = name)
 end
 
 """
@@ -130,8 +130,8 @@ function L2NormIntegrator(
             result[1] += temp[j]^2
         end    
     end    
-    action_kernel = ActionKernel(L2norm_function, [1,ninputs*ncomponents]; name = "L2 norm kernel", dependencies = "", quadorder = quadorder)
-    return ItemIntegrator(T,AT, ops, Action{T}(action_kernel); regions = regions, name = name)
+    action = Action(L2norm_function, [1,ninputs*ncomponents]; name = "L2 norm kernel", dependencies = "", bonus_quadorder = quadorder)
+    return ItemIntegrator(T,AT, ops, action; regions = regions, name = name)
 end
 
 """
@@ -163,11 +163,11 @@ function L2DifferenceIntegrator(
             result[1] += (input[j]-input[ncomponents+j])^2
         end    
     end    
-    action_kernel = ActionKernel(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", quadorder = quadorder)
+    action = Action(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", bonus_quadorder = quadorder)
     if typeof(operator) <: DataType
-        return ItemIntegrator(T,AT, [operator, operator], Action{T}(action_kernel); regions = regions, name = name)
+        return ItemIntegrator(T,AT, [operator, operator], action; regions = regions, name = name)
     else
-        return ItemIntegrator(T,AT, [operator[1], operator[2]], Action{T}(action_kernel); regions = regions, name = name)
+        return ItemIntegrator(T,AT, [operator[1], operator[2]], action; regions = regions, name = name)
     end
 end
 
@@ -221,14 +221,15 @@ function evaluate!(
         for j = 1 : maxnweights
             action_input[j] = zeros(T,action_resultdim) # heap for action input
         end
+        action_result = zeros(T,action_resultdim)
     else
         action_resultdim::Int = action.argsizes[1]
         action_input = Array{Array{T,1},1}(undef,maxnweights)
         for j = 1 : maxnweights
             action_input[j] = zeros(T,action.argsizes[2]) # heap for action input
         end
+        action_result = action.val
     end
-    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     if AP.regions != [0]
         @logmsg MoreInfo "Evaluating $(AP.name) for $((p->p.name).(FEB)) ($AT in regions = $(AP.regions))"
@@ -271,9 +272,6 @@ function evaluate!(
                 if AM.dofitems[FEid][di] != 0
                     # get correct basis evaluator for dofitem (was already updated by AM)
                     basisevaler[FEid] = get_basisevaler(AM, FEid, di)
-    
-                    # update action on dofitem
-                    update_action!(action, basisevaler[FEid], AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
@@ -296,11 +294,23 @@ function evaluate!(
             end  
         else
             # update action on item/dofitem (of first operator)
+            if is_itemdependent(action)
+                action.item[1] = item
+                action.item[2] = AM.dofitems[1][1]
+                action.item[3] = xItemRegions[item]
+            end
             basisxref = basisevaler[1].xref
-            update_action!(action, basisevaler[1], AM.dofitems[1][1], item, regions[r])
             # apply action to FEVector and accumulate
             for i in eachindex(weights)
-                apply_action!(action_result, action_input[i], action, i, basisxref[i])
+                if is_xdependent(action)
+                    update_trafo!(basisevaler[1].L2G, item)
+                    eval_trafo!(action.x, basisevaler[1].L2G, basisevaler[1].xref[i])
+                end
+                if is_xrefdependent(action)
+                    action.xref = basisevaler[1].xref[i]
+                end
+                #apply_action!(action_result, action_input[i], action, i, basisxref[i])
+                eval_action!(action, action_input[i])
                 for j = 1 : action_resultdim
                     b[j,item] += action_result[j] * weights[i] * xItemVolumes[item]
                 end

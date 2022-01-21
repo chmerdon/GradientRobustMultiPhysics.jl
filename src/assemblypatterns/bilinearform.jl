@@ -130,11 +130,12 @@ function assemble!(
     apply_action_to = AP.apply_action_to[1]
     if typeof(action) <: NoAction
         action_resultdim = size(get_basisevaler(AM, apply_action_to, 1).cvals,1)
+        action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
     else
         action_resultdim::Int = action.argsizes[1]
         action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
+        action_result = action.val
     end
-    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
 
     if AP.regions != [0]
         @logmsg MoreInfo "Assembling $(AP.name) ($AT in regions = $(AP.regions)) into matrix"
@@ -304,13 +305,24 @@ function assemble!(
 
                 # update action on dofitem
                 if apply_action_to > 0
-                    update_action!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, xItemRegions[item])
+                    if is_itemdependent(action)
+                        action.item[1] = item
+                        action.item[2] = dofitems[apply_action_to]
+                        action.item[3] = xItemRegions[item]
+                    end
                     ndofs4dofitem_action = ndofs4dofitem[apply_action_to]
                 else
                     ndofs4dofitem_action = ndofs4dofitem[1]
                 end
 
                 for i in eachindex(weights)
+                    if is_xdependent(action)
+                        update_trafo!(basisevaler[apply_action_to].L2G, dofitems[apply_action_to])
+                        eval_trafo!(action.x, basisevaler[apply_action_to].L2G, basisevaler[apply_action_to].xref[i])
+                    end
+                    if is_xrefdependent(action)
+                        action.xref = basisevaler[apply_action_to].xref[i]
+                    end
                     for dof_i = 1 : ndofs4dofitem_action
                         if typeof(action) <: NoAction
                             eval_febe!(action_result, basisevaler[1], dof_i, i)
@@ -318,7 +330,9 @@ function assemble!(
                         else
                             eval_febe!(action_input, basisevaler[apply_action_to], dof_i, i)
                             action_input .*= AM.coeff4dofitem[apply_action_to][di[apply_action_to]]
-                            apply_action!(action_result, action_input, action, i, basisxref[i])
+                            #apply_action!(action_result, action_input, action, i, basisxref[i])
+                            eval_action!(action, action_input)
+                            action_result = action.val
                         end
                         basismul!(localmatrix,dof_i,i,APT,is_locally_symmetric)
                     end 
@@ -401,7 +415,7 @@ function assemble!(
     else
         action_resultdim::Int = action.argsizes[1]
         action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
-        action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
+        action_result::Array{T,1} = action.val
     end
 
     @assert length(fixed_arguments) == 1 "Vector assembly of bilinear form requires exactly one fixed component"
@@ -465,7 +479,11 @@ function assemble!(
 
                 # update action on dofitem
                 if apply_action_to > 0
-                    update_action!(action, basisevaler[apply_action_to], dofitems[apply_action_to], item, regions[r])
+                    if is_itemdependent(action)
+                        action.item[1] = item
+                        action.item[2] = dofitems[apply_action_to]
+                        action.item[3] = xItemRegions[item]
+                    end
                 end
 
                 # update dofs
@@ -476,6 +494,13 @@ function assemble!(
                     fill!(fixedval, 0.0)
                     eval_febe!(fixedval, basisevaler[fixed_argument], fixed_coeffs, i)
                     fixedval .*= AM.coeff4dofitem[fixed_argument][di[fixed_argument]]
+                    if is_xdependent(action)
+                        update_trafo!(basisevaler[apply_action_to].L2G, dofitems[apply_action_to])
+                        eval_trafo!(action.x, basisevaler[apply_action_to].L2G, basisevaler[apply_action_to].xref[i])
+                    end
+                    if is_xrefdependent(action)
+                        action.xref = basisevaler[apply_action_to].xref[i]
+                    end
 
                     if apply_action_to == 0
                         # multiply free argument
@@ -489,7 +514,7 @@ function assemble!(
                         end 
                     elseif apply_action_to == fixed_argument
                         # apply action to fixed argument
-                        apply_action!(action_result, fixedval, action, i, basisxref[i])
+                        eval_action!(action, fixedval)
 
                         # multiply free argument
                         action_result .*= AM.coeff4dofitem[free_argument][di[free_argument]]
@@ -505,7 +530,7 @@ function assemble!(
                             # apply action to free argument
                             eval_febe!(action_input, basisevaler[free_argument], dof_i, i)
                             action_input .*= AM.coeff4dofitem[free_argument][di[free_argument]]
-                            apply_action!(action_result, action_input, action, i, basisxref[i])
+                            eval_action!(action, action_input)
             
                             # multiply fixed argument
                             temp = 0

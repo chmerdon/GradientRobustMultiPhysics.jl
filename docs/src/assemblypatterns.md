@@ -20,10 +20,9 @@ The following table lists all available assembly patterns, their constuctor name
 | APT_LinearForm      | LinearForm         |     no   |          no          |        yes           |
 | APT_BilinearForm    | BilinearForm       |     no   |         yes          |        yes (1)       |
 | APT_TrilinearForm   | TrilinearForm      |     no   |         yes (1)      |        yes (2)       |
-| APT_MultiLinearForm | MultilinearForm    |     no   |          no          |        yes (N-1)     |
 | APT_NonlinearForm   | NonlinearForm      |     no   |         yes (L)      |        yes (L)       |
 
-Number in brackets denotes the number of fixed arguments needed for this assembly, (L) means that a current solution is needed to evaluate (to evaluate the linearisation of the nonlinear form in this state).
+Number in brackets denotes the number of fixed arguments needed for this assembly, (L) means that a current solution is needed (to evaluate the linearisation of the nonlinear form in this state).
 Evaluations of the other AssemblyPatterns may be possible in a future update, but currently have to be performed by maintaining a duplicate of the pattern rewritten as an ItemIntegrator.
 
 
@@ -33,7 +32,7 @@ Below all assembly pattern types, constructor functions and evaluate/assembly fu
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["itemintegrator.jl","bilinearform.jl","trilinearform.jl","multilinearform.jl","nonlinearform.jl"]
+Pages = ["itemintegrator.jl","bilinearform.jl","trilinearform.jl","nonlinearform.jl"]
 Order   = [:type, :function]
 ```
 

@@ -74,7 +74,7 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
 
     ## generate a solution vector and solve
     Solution = FEVector("u_h",FES)
-    solve!(Solution, Problem)
+    solve!(Solution, Problem; show_statistics = true)
 
     ## compute L2 error
     L2error = L2ErrorIntegrator(Float64,u)

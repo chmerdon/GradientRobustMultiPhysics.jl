@@ -478,6 +478,10 @@ end
     return occursin("I", UD.dependencies)
 end
 
+@inline function is_parentdependent(UD::UserData)
+    return occursin("I", UD.dependencies)
+end
+
 @inline function is_regiondependent(UD::UserData)
     return occursin("R", UD.dependencies)
 end
@@ -521,23 +525,22 @@ end
 
 abstract type AbstractNonlinearFormHandler end
 
-mutable struct OperatorWithUserJacobian{T,dx,dt,dr,ndim,OType,JType} <: AbstractNonlinearFormHandler
+mutable struct OperatorWithUserJacobian{Tv,Ti,dx,dt,di,ndim,OType,JType} <: AbstractNonlinearFormHandler
     operator::OType
     jacobian::JType
     argsizes::SVector{ndim,Int}
-    x::Vector{T}
-    region::Int
-    item::Int
-    time::T
+    x::Vector{Tv}
+    item::Array{Ti,1} # item, parent, region
+    time::Tv
     bonus_quadorder::Int
-    jac::Array{T,2}
-    val::Array{T,1}
+    jac::Array{Tv,2}
+    val::Array{Tv,1}
 end
 
-function OperatorWithUserJacobian(o, j, argsizes; dependencies = "", quadorder = 0, sparse_jacobian::Bool = false)
-    dx = dependencies in ["X","XT","XR","XTR"]
-    dt = dependencies in ["T","XT","TR","XTR"]
-    dr = dependencies in ["R","XR","TR","XTR"]
+function OperatorWithUserJacobian(o, j, argsizes; Ti = Int32, dependencies = "", quadorder = 0, sparse_jacobian::Bool = false)
+    dx = dependencies in ["X","XT","XI","XTI"]
+    dt = dependencies in ["T","XT","TI","XTI"]
+    di = dependencies in ["I","XI","TI","XTI"]
     if sparse_jacobian
         result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
         input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[3])
@@ -548,19 +551,19 @@ function OperatorWithUserJacobian(o, j, argsizes; dependencies = "", quadorder =
         elseif dependencies == "T" # time-dependent
             o_t(t) = (result,input) -> o(result,input,t)
             config_eval = o_t(0.0)
-        elseif dependencies == "R" # region-dependent
+        elseif dependencies == "I" # region-dependent
             o_r(r) = (result,input) -> o(result,input,r)
             config_eval = o_r(0)
         elseif dependencies == "XT" # xt-dependent
             o_xt(x,t) = (result,input) -> o(result,input,x,t)
             config_eval = o_xt([1.0,1.0,1.0],0.0)
-        elseif dependencies == "XR" # xr-dependent
+        elseif dependencies == "XI" # xr-dependent
             o_xr(x,r) = (result,input) -> o(result,input,x,r)
             config_eval = o_xr([1.0,1.0,1.0],0)
-        elseif dependencies == "TR" # tr-dependent
+        elseif dependencies == "TI" # tr-dependent
             o_tr(t,r) = (result,input) -> o(result,input,t,r)
             config_eval = o_tr(0.0,0)
-        elseif dependencies == "XTR" # xtr-dependent
+        elseif dependencies == "XTI" # xtr-dependent
             o_xtr(x,t,r) = (result,input) -> o(result,input,x,t,r)
             config_eval = o_xtr([1.0,1.0,1.0],0.0,0)
         else
@@ -571,59 +574,57 @@ function OperatorWithUserJacobian(o, j, argsizes; dependencies = "", quadorder =
     else
         jac = zeros(Float64,argsizes[1],argsizes[2])
     end
-    return OperatorWithUserJacobian{Float64,dx,dt,dr,length(argsizes),typeof(o),typeof(j)}(o,j,argsizes,zeros(Float64,3),0,0,0.0,quadorder,jac,zeros(Float64,argsizes[1]))
+    return OperatorWithUserJacobian{Float64,Ti,dx,dt,di,length(argsizes),typeof(o),typeof(j)}(o,j,argsizes,zeros(Float64,3),zeros(Ti,3),0,quadorder,jac,zeros(Float64,argsizes[1]))
 end
 
-set_region!(J::OperatorWithUserJacobian, region) = (J.region = region)
 set_time!(J::OperatorWithUserJacobian, time) = (J.time = time)
-is_xdependent(J::OperatorWithUserJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dx
-is_timedependent(J::OperatorWithUserJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dt
-is_regiondependent(J::OperatorWithUserJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dr
+is_xdependent(J::OperatorWithUserJacobian{T,Ti,dx,dt,dr,ndim}) where {T,Ti,dx,dt,dr,ndim} = dx
+is_timedependent(J::OperatorWithUserJacobian{T,Ti,dx,dt,dr,ndim}) where {T,Ti,dx,dt,dr,ndim} = dt
+is_itemdependent(J::OperatorWithUserJacobian{T,Ti,dx,dt,dr,ndim}) where {T,Ti,dx,dt,dr,ndim} = dr
 
-function eval_jacobian!(J::OperatorWithUserJacobian{T,false,false,false}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithUserJacobian{T,Ti,false,false,false}, input_current) where {T,Ti}
     J.jacobian(J.jac, input_current)
     J.operator(J.val, input_current)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithUserJacobian{T,true,false,false}, input_current, x) where {T}
-    J.jacobian(J.jac, input_current, x)
-    J.operator(J.val, input_current, x)
+function eval_jacobian!(J::OperatorWithUserJacobian{T,Ti,true,false,false}, input_current) where {T,Ti}
+    J.jacobian(J.jac, input_current, J.x)
+    J.operator(J.val, input_current, J.x)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithUserJacobian{T,true,false,true}, input_current, x) where {T}
-    J.jacobian(J.jac, input_current, x, C.region)
-    J.operator(J.val, input_current, x, C.region)
+function eval_jacobian!(J::OperatorWithUserJacobian{T,Ti,true,false,true}, input_current) where {T,Ti}
+    J.jacobian(J.jac, input_current, J.x, C.region)
+    J.operator(J.val, input_current, J.x, C.region)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithUserJacobian{T,false,true,false}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithUserJacobian{T,Ti,false,true,false}, input_current) where {T,Ti}
     J.jacobian(J.jac, input_current, C.time)
     J.operator(J.val, input_current, C.time)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithUserJacobian{T,false,true,true}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithUserJacobian{T,Ti,false,true,true}, input_current) where {T,Ti}
     J.jacobian(J.jac, input_current, C.time, C.region)
     J.operator(J.val, input_current, C.time, C.region)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithUserJacobian{T,false,false,true}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithUserJacobian{T,Ti,false,false,true}, input_current) where {T,Ti}
     J.jacobian(J.jac, input_current, C.region)
     J.operator(J.val, input_current, C.region)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithUserJacobian{T,true,true,true}, input_current, x) where {T}
-    J.jacobian(J.jac, input_current, x, C.time, C.region)
-    J.operator(J.val, input_current, x, C.time, C.region)
+function eval_jacobian!(J::OperatorWithUserJacobian{T,Ti,true,true,true}, input_current) where {T,Ti}
+    J.jacobian(J.jac, input_current, J.x, C.time, C.region)
+    J.operator(J.val, input_current, J.x, C.time, C.region)
     return nothing
 end
 
 
-mutable struct OperatorWithADJacobian{T,dx,dt,dr,sparse,ndim,OType,JType,JacType} <: AbstractNonlinearFormHandler
+mutable struct OperatorWithADJacobian{T,Ti,dx,dt,di,sparse,ndim,OType,JType,JacType} <: AbstractNonlinearFormHandler
     operator::OType
     jacobian::JType
     argsizes::SVector{ndim,Int}
     x::Vector{T}
-    region::Int
-    item::Int
+    item::Array{Ti,1} # item, parent, region
     time::T
     bonus_quadorder::Int # modifies the number generated from operators and FEspaces of NonlinearForm
     Dresult::DiffResults.DiffResult
@@ -632,13 +633,13 @@ mutable struct OperatorWithADJacobian{T,dx,dt,dr,sparse,ndim,OType,JType,JacType
     val::Array{T,1}
 end
 
-function OperatorWithADJacobian(o, argsizes; dependencies = "", quadorder = 0, sparse_jacobian::Bool = false)
+function OperatorWithADJacobian(o, argsizes; Ti = Int32, dependencies = "", quadorder = 0, sparse_jacobian::Bool = false)
     result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
     input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[3])
 
-    dx = dependencies in ["X","XT","XR","XTR"]
-    dt = dependencies in ["T","XT","TR","XTR"]
-    dr = dependencies in ["R","XR","TR","XTR"]
+    dx = dependencies in ["X","XT","XI","XTI"]
+    dt = dependencies in ["T","XT","TI","XTI"]
+    di = dependencies in ["I","XI","TI","XTI"]
 
     if dependencies == "X" # x-dependent
         o_x(x) = (result,input) -> o(result,input,x)
@@ -648,7 +649,7 @@ function OperatorWithADJacobian(o, argsizes; dependencies = "", quadorder = 0, s
         o_t(t) = (result,input) -> o(result,input,t)
         config_eval = o_t(0.0)
         negotiated_o = o_t
-    elseif dependencies == "R" # region-dependent
+    elseif dependencies == "I" # region-dependent
         o_r(r) = (result,input) -> o(result,input,r)
         config_eval = o_r(0)
         negotiated_o = o_r
@@ -656,15 +657,15 @@ function OperatorWithADJacobian(o, argsizes; dependencies = "", quadorder = 0, s
         o_xt(x,t) = (result,input) -> o(result,input,x,t)
         config_eval = o_xt([1.0,1.0,1.0],0.0)
         negotiated_o = o_xt
-    elseif dependencies == "XR" # xr-dependent
+    elseif dependencies == "XI" # xr-dependent
         o_xr(x,r) = (result,input) -> o(result,input,x,r)
         config_eval = o_xr([1.0,1.0,1.0],0)
         negotiated_o = o_xr
-    elseif dependencies == "TR" # tr-dependent
+    elseif dependencies == "TI" # tr-dependent
         o_tr(t,r) = (result,input) -> o(result,input,t,r)
         config_eval = o_tr(0.0,0)
         negotiated_o = o_tr
-    elseif dependencies == "XTR" # xtr-dependent
+    elseif dependencies == "XTI" # xtr-dependent
         o_xtr(x,t,r) = (result,input) -> o(result,input,x,t,r)
         config_eval = o_xtr([1.0,1.0,1.0],0.0,0)
         negotiated_o = o_xtr
@@ -689,61 +690,61 @@ function OperatorWithADJacobian(o, argsizes; dependencies = "", quadorder = 0, s
         cfg = ForwardDiff.JacobianConfig(config_eval, result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
     end
 
-    return OperatorWithADJacobian{Float64,dx,dt,dr,sparse_jacobian,length(argsizes),typeof(negotiated_o),typeof(NothingFunction),typeof(jac)}(negotiated_o,NothingFunction,argsizes,zeros(Float64,3),0,0,0.0,quadorder,Dresult,cfg,jac,temp)
+    return OperatorWithADJacobian{Float64,Ti,dx,dt,di,sparse_jacobian,length(argsizes),typeof(negotiated_o),typeof(NothingFunction),typeof(jac)}(negotiated_o,NothingFunction,argsizes,zeros(Float64,3),zeros(Ti,3),0.0,quadorder,Dresult,cfg,jac,temp)
 end
 
 set_time!(J::OperatorWithADJacobian, time) = (J.time = time)
 set_region!(J::OperatorWithADJacobian, region) = (J.region = region)
-is_xdependent(J::OperatorWithADJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dx
-is_timedependent(J::OperatorWithADJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dt
-is_regiondependent(J::OperatorWithADJacobian{T,dx,dt,dr,ndim}) where {T,dx,dt,dr,ndim} = dr
+is_xdependent(J::OperatorWithADJacobian{T,Ti,dx,dt,dr,ndim}) where {T,Ti,dx,dt,dr,ndim} = dx
+is_timedependent(J::OperatorWithADJacobian{T,Ti,dx,dt,dr,ndim}) where {T,Ti,dx,dt,dr,ndim} = dt
+is_itemdependent(J::OperatorWithADJacobian{T,Ti,dx,dt,dr,ndim}) where {T,Ti,dx,dt,dr,ndim} = dr
 
-function eval_jacobian!(J::OperatorWithADJacobian{T,false,false,false,false}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,false,false,false,false}, input_current) where {T,Ti}
     J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator, J.val, input_current, J.cfg)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithADJacobian{T,false,false,false,true}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,false,false,false,true}, input_current) where {T,Ti}
     forwarddiff_color_jacobian!(J.jac, J.operator, input_current, J.cfg)
     J.operator(J.val, input_current)
     return nothing
 end
 
-function eval_jacobian!(J::OperatorWithADJacobian{T,true,false,false,false}, input_current, x) where {T}
-    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(x), J.val, input_current, J.cfg)
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,true,false,false,false}, input_current) where {T,Ti}
+    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(J.x), J.val, input_current, J.cfg)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithADJacobian{T,true,false,false,true}, input_current, x) where {T}
-    forwarddiff_color_jacobian!(J.jac, J.operator(x), input_current, J.cfg)
-    J.operator(x)(J.val, input_current)
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,true,false,false,true}, input_current) where {T,Ti}
+    forwarddiff_color_jacobian!(J.jac, J.operator(J.x), input_current, J.cfg)
+    J.operator(J.x)(J.val, input_current)
     return nothing
 end
 
-function eval_jacobian!(J::OperatorWithADJacobian{T,false,true,false,false}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,false,true,false,false}, input_current) where {T,Ti}
     J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(J.time), J.val, input_current, J.cfg)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithADJacobian{T,false,true,false,true}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,false,true,false,true}, input_current) where {T,Ti}
     forwarddiff_color_jacobian!(J.jac, J.operator(J.time), input_current, J.cfg)
     J.operator(J.time)(J.val, input_current)
     return nothing
 end
 
-function eval_jacobian!(J::OperatorWithADJacobian{T,false,false,true,false}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,false,false,true,false}, input_current) where {T,Ti}
     J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(J.region), J.val, input_current, J.cfg)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithADJacobian{T,false,false,true,true}, input_current) where {T}
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,false,false,true,true}, input_current) where {T,Ti}
     forwarddiff_color_jacobian!(J.jac, J.operator(J.region), input_current, J.cfg)
     J.operator(J.region)(J.val, input_current)
     return nothing
 end
 
-function eval_jacobian!(J::OperatorWithADJacobian{T,true,true,true,false}, input_current, x) where {T}
-    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(J.region), J.val, input_current, J.cfg)
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,true,true,true,false}, input_current) where {T,Ti}
+    J.Dresult = ForwardDiff.chunk_mode_jacobian!(J.Dresult, J.operator(J.x, J.region), J.val, input_current, J.cfg)
     return nothing
 end
-function eval_jacobian!(J::OperatorWithADJacobian{T,true,true,true,true}, input_current, x) where {T}
-    forwarddiff_color_jacobian!(J.jac, J.operator(x, J.time, J.region), input_current, J.cfg)
+function eval_jacobian!(J::OperatorWithADJacobian{T,Ti,true,true,true,true}, input_current) where {T,Ti}
+    forwarddiff_color_jacobian!(J.jac, J.operator(J.x, J.time, J.region), input_current, J.cfg)
     J.operator(x, J.time, J.region)(J.val, input_current)
     return nothing
 end

@@ -62,7 +62,7 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
         ## result will be multiplied with [v,∇v]
         return nothing
     end
-    action = Action(action_kernel!, [3,3]; dependencies = "X", quadorder = max(α.quadorder,β.quadorder))
+    action = Action(action_kernel!, [3,3]; dependencies = "X", bonus_quadorder = max(α.quadorder,β.quadorder))
     return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
 end
 
@@ -99,7 +99,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     if τ > 0
         ## first we define an item-dependent action kernel...
         xFaceVolumes::Array{Float64,1} = xgrid[FaceVolumes]
-        stab_action = Action((result,input,item) -> (result .= input .* xFaceVolumes[item]^2), [2,2]; name = "stabilisation action", dependencies = "I", quadorder = 0 )
+        stab_action = Action((result,input,item) -> (result .= input .* xFaceVolumes[item[1]]^2), [2,2]; name = "stabilisation action", dependencies = "I")
         JumpStabilisation = BilinearForm([Jump(Gradient), Jump(Gradient)], stab_action; AT = ON_IFACES, factor = τ, name = "τ |F|^2 [∇(u)]⋅[∇(v)]")
         add_operator!(Problem, [1,1], JumpStabilisation)
     end

@@ -287,8 +287,7 @@ function HookStiffnessOperator2D(μ, λ;
         result[3] = μ*input[3]
         return nothing
     end   
-    action_kernel = ActionKernel(tensor_apply_2d, [3,3]; dependencies = "", quadorder = 0)
-    action = Action{Float64}( action_kernel)
+    action = Action(tensor_apply_2d, [3,3]; dependencies = "", bonus_quadorder = 0)
     return PDEOperator{Float64, APT_BilinearForm, AT}(name,[ϵ, ϵ], action, [1], 1, regions, store, AssemblyInitial)
 end
 
@@ -330,8 +329,7 @@ function HookStiffnessOperator3D(μ, λ;
         result[6] = μ*input[6]
         return nothing
     end   
-    action_kernel = ActionKernel(tensor_apply_3d, [6,6]; dependencies = "", quadorder = 0)
-    action = Action{Float64}( action_kernel)
+    action = Action(tensor_apply_3d, [6,6]; dependencies = "", bonus_quadorder = 0)
     return PDEOperator{Float64, APT_BilinearForm, AT}(name,[ϵ, ϵ], action, [1], 1, regions, store, AssemblyInitial)
 end
 
@@ -505,8 +503,7 @@ function ConvectionOperator(
         return NonlinearForm([beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; name = name, jacobian = convection_jacobian, quadorder = quadorder)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
-        action_kernel = ActionKernel(convection_function_fe,argsizes; dependencies = "", quadorder = quadorder)
-        convection_action = Action{Float64}( action_kernel)
+        convection_action = Action(convection_function_fe,argsizes; dependencies = "", bonus_quadorder = quadorder)
         a_to = fixed_argument
         if name == "auto"
             if a_to == 1
@@ -672,7 +669,7 @@ function NonlinearForm(
     O.transposed_assembly = true
 
     # eval action
-    O.action_eval = Action{Float64}( action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
+    #O.action_eval = Action(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
     return O
 end
 
@@ -768,7 +765,7 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; dependencies = "XT", quadorder = β.quadorder)
+        action = Action(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; dependencies = "XT", bonus_quadorder = β.quadorder)
     elseif !is_timedependent(β) && !is_xdependent(β)
         function convection_function_func() # dot(convection!, input=Gradient)
             convection_vector = zeros(T,xdim)
@@ -784,7 +781,7 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func(), [ncomponents, ncomponents*xdim]; dependencies = "", quadorder = β.quadorder)
+        action = Action(convection_function_func(), [ncomponents, ncomponents*xdim]; dependencies = "", bonus_quadorder = β.quadorder)
     elseif !is_timedependent(β) && is_xdependent(β)
         function convection_function_func_x() # dot(convection!, input=Gradient)
             convection_vector = zeros(T,xdim)
@@ -800,7 +797,7 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func_x(), [ncomponents, ncomponents*xdim]; dependencies = "X", quadorder = β.quadorder)
+        action = Action(convection_function_func_x(), [ncomponents, ncomponents*xdim]; dependencies = "X", bonus_quadorder = β.quadorder)
     elseif is_timedependent(β) && !is_xdependent(β)
         function convection_function_func_t() # dot(convection!, input=Gradient)
             convection_vector = zeros(T,xdim)
@@ -816,13 +813,13 @@ function ConvectionOperator(
                 end
             end    
         end    
-        action_kernel = ActionKernel(convection_function_func_t(), [ncomponents, ncomponents*xdim]; dependencies = "T", quadorder = β.quadorder)
+        action = Action(convection_function_func_t(), [ncomponents, ncomponents*xdim]; dependencies = "T", bonus_quadorder = β.quadorder)
     end
     if name == "auto"
         name = "((β ⋅ $(ansatzfunction_operator)) u, $testfunction_operator(v))"
     end
 
-    O = PDEOperator{T, APT_BilinearForm, AT}(name, [ansatzfunction_operator, testfunction_operator], Action{T}(action_kernel), [1], 1, regions, store, AssemblyAuto)
+    O = PDEOperator{T, APT_BilinearForm, AT}(name, [ansatzfunction_operator, testfunction_operator], action, [1], 1, regions, store, AssemblyAuto)
     O.transposed_assembly = transposed_assembly
     return O
 end

@@ -1,6 +1,76 @@
 
 abstract type AbstractAction end
 
+is_xdependent(A::AbstractAction) = false
+is_itemdependent(A::AbstractAction) = false
+is_xrefdependent(A::AbstractAction) = false
+set_time!(A::AbstractAction, time) = ()
+eval_action!(A::AbstractAction, input) = ()
+
+struct ItemInformation{Ti}
+    item::Int
+    parent::Int
+    region::Int
+end
+
+mutable struct DefaultUserAction{T,Ti,dx,dt,di,dl,ndim,KernelType} <: AbstractAction
+    name::String
+    kernel::KernelType
+    argsizes::SVector{ndim,Int}
+    x::Vector{T}
+    xref::Vector{T}
+    item::Array{Ti,1}   # contains item number, parent item, region number
+    time::T
+    bonus_quadorder::Int
+    val::Array{T,1}
+end
+
+set_time!(A::DefaultUserAction{T,Ti,dx,true,di,dl,ndim}, time) where {T,Ti,dx,di,dl,ndim} = (A.time = time)
+
+is_xdependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dx
+is_timedependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dt
+is_itemdependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = di
+is_xrefdependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dl
+
+
+function Action(kernel::Function, argsizes; Tv = Float64, Ti = Int32, dependencies = "", bonus_quadorder = 0, name = "user action") where {T}
+    dx = occursin("X", dependencies)
+    dt = occursin("T", dependencies)
+    di = occursin("I", dependencies)
+    dl = occursin("L", dependencies)
+    return DefaultUserAction{Tv,Ti,dx,dt,di,dl,length(argsizes),typeof(kernel)}(
+        name, kernel, argsizes, zeros(Tv, 3), zeros(Tv, 3), zeros(Ti,3), 0, bonus_quadorder, zeros(Tv, argsizes[1]))
+end
+
+function eval_action!(A::DefaultUserAction{T,Ti,false,false,false,false}, input_current) where {T,Ti}
+    A.kernel(A.val, input_current)
+    return nothing
+end
+function eval_action!(A::DefaultUserAction{T,Ti,true,false,false,false}, input_current) where {T,Ti}
+    A.kernel(A.val, input_current, A.x)
+    return nothing
+end
+function eval_action!(A::DefaultUserAction{T,Ti,false,true,false,false}, input_current) where {T,Ti}
+    A.kernel(A.val, input_current, A.time)
+    return nothing
+end
+function eval_action!(A::DefaultUserAction{T,Ti,true,true,false,false}, input_current) where {T,Ti}
+    A.kernel(A.val, input_current, A.x, A.time)
+    return nothing
+end
+function eval_action!(A::DefaultUserAction{T,Ti,false,false,true,false}, input_current) where {T,Ti}
+    A.kernel(A.val, input_current, A.item)
+    return nothing
+end
+function eval_action!(A::DefaultUserAction{T,Ti,true,false,true,false}, input_current) where {T,Ti}
+    A.kernel(A.val, input_current, A.x, A.item)
+    return nothing
+end
+function eval_action!(A::DefaultUserAction{T,Ti,true,true,true,false}, input_current) where {T,Ti}
+    A.kernel(A.val, input_current, A.x, A.time, A.item)
+    return nothing
+end
+
 
 # dummy action that does nothing (but can be only used with certain assembly patterns)
 mutable struct NoAction <: AbstractAction
@@ -19,221 +89,6 @@ function NoAction(; name = "no action", quadorder = 0)
     return NoAction(name,quadorder)
 end
 
-## dummy array that is infinitely long and only has nothing entries
-#struct InfNothingArray
-#    val::Nothing
-#end
-#Base.getindex(::InfNothingArray,i) = nothing
-
-mutable struct Action{T <: Real,KernelType <: UserData{<:AbstractActionKernel}, nsizes} <: AbstractAction
-    kernel::KernelType
-    name::String
-    citem::Int
-    cregion::Int
-    bonus_quadorder::Int
-    argsizes::SVector{nsizes,Int}
-end
-
-# actions that do depend on t
-mutable struct TAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
-    kernel::KernelType
-    name::String
-    citem::Int
-    cregion::Int
-    ctime::T
-    bonus_quadorder::Int
-    argsizes::SVector{nsizes,Int}
-end
-
-# actions that do depend on x
-# and require additional managament of global evaluation points
-mutable struct XAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
-    kernel::KernelType
-    name::String
-    citem::Int
-    cregion::Int
-    bonus_quadorder::Int
-    argsizes::SVector{nsizes,Int}
-    x::Array{Array{T,1},1}
-end
-
-# actions that do depend on x and t
-# and require additional managament of global evaluation points
-mutable struct XTAction{T <: Real,KernelType <: UserData{<:AbstractActionKernel},nsizes} <: AbstractAction
-    kernel::KernelType
-    name::String
-    citem::Int
-    cregion::Int
-    ctime::T
-    bonus_quadorder::Int
-    argsizes::SVector{nsizes,Int}
-    x::Array{Array{T,1},1}
-end
-
-"""
-````
-function Action(
-    T::Type{<:Real},
-    kernel::UserData{<:AbstractActionKernel};
-    name::String = "user action")
-````
-
-Creates an Action from a given specified action kernel that then can be used in an assembly pattern. T specifies the number format
-that should match the number format of the used quadrature rules and grid coordinates in the mesh (usually T).
-"""
-function Action{T}(kernel::UserData{<:AbstractActionKernel}; name = "user action") where {T}
-    citem::Int = 0
-    cregion::Int = 0
-    ctime::T = 0
-    if is_xdependent(kernel)
-        if is_timedependent(kernel)
-            return XTAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, ctime, kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
-        else
-            return XAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, kernel.quadorder[1], kernel.dimensions, Array{Array{T,1},1}(undef,0))
-        end
-    else
-        if is_timedependent(kernel)
-            return TAction{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, ctime, kernel.quadorder[1], kernel.dimensions)
-        else
-            return Action{T,typeof(kernel),length(kernel.dimensions)}(kernel, name, citem, cregion, kernel.quadorder[1], kernel.dimensions)
-        end
-    end
-end
-
-"""
-````
-function Action{T <: Real}(
-    kernel_function::Function,
-    dimensions::Array{Int,1};
-    name = "user action",
-    dependencies = "",
-    quadorder = 0)
-````
-
-Creates an Action directly from a kernel function (plus additional information to complement the action kernel) that then can be used in an assembly pattern. T specifies the number format
-that should match the number format of the used quadrature rules and grid coordinates in the mesh (default if omitted: T = Float64).
-"""
-function Action{T}(kernel_function, dimensions; name = "user action", dependencies = "", quadorder = 0) where {T}
-    kernel = ActionKernel(kernel_function, dimensions; name = name * " (kernel)", dependencies = dependencies, quadorder = quadorder)
-    return Action{T}(kernel; name = name)
-end
-function Action(kernel_function, dimensions; name = "user action", dependencies = "", quadorder = 0)
-    kernel = ActionKernel(kernel_function, dimensions; name = name * " (kernel)", dependencies = dependencies, quadorder = quadorder)
-    return Action{Float64}(kernel; name = name)
-end
-
-is_timedependent(A::AbstractAction) = is_timedependent(A.kernel)
-is_timedependent(A::NoAction) = false
-
-
-# set_time! is called in the beginning of every operator assembly
-function set_time!(C::AbstractAction, time)
-    return nothing
-end
-
-function set_time!(C::Union{XTAction,TAction}, time)
-    if is_timedependent(C.kernel)
-        C.ctime = time
-    end
-    return nothing
-end
-
-
-function update_action!(C::NoAction, FEBE::FEBasisEvaluator, qitem, vitem, region)
-    return nothing
-end
-
-function update_action!(C::Action, FEBE::FEBasisEvaluator, qitem, vitem, region)
-    if is_regiondependent(C.kernel)
-        C.cregion = region
-    end
-    if is_itemdependent(C.kernel)
-        C.citem = vitem
-    end
-    return nothing
-end
-
-function update_action!(C::TAction, FEBE::FEBasisEvaluator, qitem::Int, vitem::Int, region::Int) 
-    if is_regiondependent(C.kernel)
-        C.cregion = region
-    end
-    if is_itemdependent(C.kernel)
-        C.citem = vitem
-    end
-    return nothing
-end
-
-function update_action!(C::Union{XAction{T}, XTAction{T}}, FEBE::FEBasisEvaluator, qitem, vitem, region) where {T}
-    if is_regiondependent(C.kernel)
-        C.cregion = region
-    end
-    if is_itemdependent(C.kernel)
-        C.citem = vitem
-    end
-    # compute global coordinates for function evaluation
-    if FEBE.L2G.citem[] != qitem 
-        update_trafo!(FEBE.L2G, qitem)
-    end
-    # we don't know at contruction time how many quadrature points are needed
-    # so we expand the array here if needed
-    while length(C.x) < length(FEBE.xref)
-        push!(C.x,zeros(T,size(FEBE.FE.xgrid[Coordinates],1)))
-    end  
-    for i = 1 : length(FEBE.xref)
-        eval_trafo!(C.x[i],FEBE.L2G,FEBE.xref[i])
-    end    
-    return nothing
-end
-
-function apply_action!(result, input, C::AbstractAction, i, xref) where {T}
-    return nothing
-end
-
-function apply_action!(result, input, C::Action{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input, nothing, nothing, C.cregion[], C.citem[], xref);
-    return nothing
-end
-
-const test_x = [0,0]
-
-function apply_action!(result, input, C::XAction{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input, C.x[i], nothing, C.cregion[], C.citem[], xref)
-    return nothing
-end
-
-function apply_action!(result, input, C::TAction{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input, nothing, C.ctime[], C.cregion[], C.citem[], xref);
-    return nothing
-end
-
-function apply_action!(result, input, C::XTAction{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input, C.x[i], C.ctime[], C.cregion[], C.citem[], xref);
-    return nothing
-end
-
-## apply! function for action in nonlinear assemblies
-
-function apply_action!(result, input_last, input_ansatz, C::Action{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input_last, input_ansatz, nothing, nothing, C.cregion[], C.citem[], xref);
-    return nothing
-end
-
-function apply_action!(result, input_last, input_ansatz, C::XAction{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input_last, input_ansatz, C.x[i], nothing, C.cregion[], C.citem[], xref);
-    return nothing
-end
-
-function apply_action!(result, input_last, input_ansatz, C::TAction{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input_last, input_ansatz, nothing, C.ctime[], C.cregion[], C.citem[], xref);
-    return nothing
-end
-
-function apply_action!(result, input_last, input_ansatz, C::XTAction{T}, i, xref) where {T}
-    eval_data!(result, C.kernel, input_last, input_ansatz, C.x[i], C.ctime[], C.cregion[], C.citem[], xref);
-    return nothing
-end
-
-
 
 function fdot_action(T, data::UserData)
     ncomponents = data.dimensions[1]
@@ -249,7 +104,7 @@ function fdot_action(T, data::UserData)
                 return nothing
             end
         end    
-        action_kernel = ActionKernel(rhs_function_ext(),[1, ncomponents]; dependencies = "XTRIL", quadorder = data.quadorder)
+        action = Action(rhs_function_ext(),[1, ncomponents]; dependencies = "XTRIL", bonus_quadorder = data.quadorder)
     else
         if data.dependencies == "XT"
             function rhs_function_xt() # result = F(v) = f*operator(v) = f*input
@@ -263,7 +118,7 @@ function fdot_action(T, data::UserData)
                     return nothing
                 end
             end    
-            action_kernel = ActionKernel(rhs_function_xt(),[1, ncomponents]; dependencies = "XT", quadorder = data.quadorder)
+            action = Action(rhs_function_xt(),[1, ncomponents]; dependencies = "XT", bonus_quadorder = data.quadorder)
         elseif data.dependencies == "X"
             function rhs_function_x() # result = F(v) = f*operator(v) = f*input
                 temp = zeros(T,ncomponents)
@@ -276,7 +131,7 @@ function fdot_action(T, data::UserData)
                     return nothing
                 end
             end    
-            action_kernel = ActionKernel(rhs_function_x(),[1, ncomponents]; dependencies = "X", quadorder = data.quadorder)
+            action = Action(rhs_function_x(),[1, ncomponents]; dependencies = "X", bonus_quadorder = data.quadorder)
         elseif data.dependencies == "T"
             function rhs_function_t() # result = F(v) = f*operator(v) = f*input
                 temp = zeros(T,ncomponents)
@@ -289,7 +144,7 @@ function fdot_action(T, data::UserData)
                     return nothing
                 end
             end    
-            action_kernel = ActionKernel(rhs_function_t(),[1, ncomponents]; dependencies = "T", quadorder = data.quadorder)
+            action = Action(rhs_function_t(),[1, ncomponents]; dependencies = "T", bonus_quadorder = data.quadorder)
         else
             function rhs_function_c() # result = F(v) = f*operator(v) = f*input
                 temp = zeros(T,ncomponents)
@@ -302,8 +157,8 @@ function fdot_action(T, data::UserData)
                     return nothing
                 end
             end    
-            action_kernel = ActionKernel(rhs_function_c(),[1, ncomponents]; dependencies = "", quadorder = data.quadorder)
+            action = Action(rhs_function_c(),[1, ncomponents]; dependencies = "", bonus_quadorder = data.quadorder)
         end
     end
-    return Action{T}(action_kernel)
+    return action
 end

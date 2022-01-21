@@ -81,7 +81,7 @@ function main(; verbosity = 0, order = 2, nlevels = 16, theta = 1//2, Plotter = 
         result[1] = (input[1] - input[4])^2 + (input[2] - input[5])^2 + input[3]^2
         return nothing
     end
-    estimator_action = Action(eqestimator_kernel, [1,5]; name = "estimator kernel", dependencies = "", quadorder = 3)
+    estimator_action = Action(eqestimator_kernel, [1,5]; name = "estimator kernel", dependencies = "", bonus_quadorder = 3)
     EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Divergence, Gradient],estimator_action)
 
     ## setup exact error evaluations

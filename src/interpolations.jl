@@ -64,7 +64,6 @@ end
 # used e.g. for interpolation into P1, P2, P2B, MINI finite elements
 function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractExtendedDataFunction}; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
-    xdim = size(xCoordinates,1)
     nnodes = size(xCoordinates,2)
     ncomponents = get_ncomponents(FEType)
     if items == []
@@ -73,15 +72,11 @@ function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FETy
     result = zeros(T,ncomponents)
     offset4component = 0:component_offset:ncomponents*component_offset
     # interpolate at nodes
-    x = zeros(T,xdim)
     xNodeCells = atranspose(FES.xgrid[CellNodes])
     cell::Int = 0
     for j in items
-        for k=1:xdim
-            x[k] = xCoordinates[k,j]
-        end    
         cell = xNodeCells[1,j]
-        eval_data!(result, exact_function , x, time, nothing, cell, nothing)
+        eval_data!(result, exact_function , view(xCoordinates,:,j), time, nothing, cell, nothing)
         for k = 1 : ncomponents
             target[j+offset4component[k]] = result[k]
         end    

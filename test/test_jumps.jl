@@ -58,7 +58,7 @@ function test_disc_LF(xgrid, discontinuity)
 
     if discontinuity == Parent
         # test Parent{1} - Parent{2} version of jump
-        action = Action((result, input) -> (result[1] = input[1] - input[2]), [1,2]; quadorder = 1)
+        action = Action((result, input) -> (result[1] = input[1] - input[2]), [1,2]; bonus_quadorder = 1)
         TestIntegrator = ItemIntegrator(Float64, ON_IFACES, [Parent{1}(Identity), Parent{2}(Identity)], action)
         error = evaluate(TestIntegrator, [FEFunction[1], FEFunction[1]])
     else
@@ -140,7 +140,7 @@ function test_disc_TLF(xgrid, discontinuity)
         result[1] = input[1] * input[2]
         return nothing
     end
-    action = Action{Float64}( ActionKernel(action_kernel, [1,2]; quadorder = 0))
+    action = Action(action_kernel, [1,2]; bonus_quadorder = 0)
     TestForm = TrilinearForm(Float64, ON_IFACES, Array{FESpace{Float64,Int32},1}([FE, FE, FE]), [IdentityDisc{discontinuity}, IdentityDisc{Average}, IdentityDisc{Average}], action)
 
     # average should equal length of interior skeleton

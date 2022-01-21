@@ -9,7 +9,7 @@ This example studies the level-set method of some level function ``\mathbf{\phi}
 \phi_t + \mathbf{u} \cdot \nabla \phi & = 0.
 \end{aligned}
 ```
-Here this is tested with the (conservative) initial level set function ``\phi(x) = 0.5*\tanh((\lvert x - (0.25,0.25) \rvert - 0.1)/(2ϵ) + 1)``
+Here this is tested with the (conservative) initial level set function ``\phi(x) = 0.5 \tanh((\lvert x - (0.25,0.25) \rvert - 0.1)/(2ϵ) + 1)``
 such that the level ``\phi \equiv 0.5`` forms a circle which is then convected by the velocity
 ``\mathbf{u} = (0.5,1)^T``. No reinitialisation step is performed.
 

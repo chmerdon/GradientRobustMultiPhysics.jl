@@ -116,7 +116,6 @@ function full_assemble!(
     regions::Array{Int,1} = AP.regions
     allitems::Bool = (regions == [0])
     nregions::Int = length(regions)
-    xi::Array{Tv,1} = zeros(Tv,3)
 
     # note: at the moment we expect that all FE[1:end-1] are the same !
     # otherwise more than one MatrixBlock has to be assembled and we need more offset information
@@ -130,7 +129,6 @@ function full_assemble!(
         # update assembly manager (also updates necessary basisevaler)
         update_assembly!(AM, item)
         weights = get_qweights(AM)
-        set_region!(jac_handler, regions[r])
 
         # fill action input with evaluation of current solution
         # assemble all but the last operators into action_input
@@ -159,17 +157,21 @@ function full_assemble!(
         basisevaler2 = get_basisevaler(AM, nFE, 1)
         basisvals = basisevaler2.cvals
 
+        if is_itemdependent(jac_handler)
+            jac_handler.item[1] = item
+            jac_handler.item[2] = AM.dofitems[newton_args[1]][1]
+            jac_handler.item[3] = xItemRegions[item]
+        end
+
         for i in eachindex(weights)
 
             # get local jacobian
             if is_xdependent(jac_handler)
                 basisevaler = get_basisevaler(AM, newton_args[1], 1)
                 update_trafo!(basisevaler.L2G, item)
-                eval_trafo!(xi,basisevaler.L2G, basisevaler.xref[i])
-                eval_jacobian!(jac_handler, action_input[i], xi)
-            else
-                eval_jacobian!(jac_handler, action_input[i])
+                eval_trafo!(jac_handler.x,basisevaler.L2G, basisevaler.xref[i])
             end
+            eval_jacobian!(jac_handler, action_input[i])
             jac = jac_handler.jac
             value = jac_handler.val
 
@@ -264,6 +266,11 @@ function full_assemble!(
 end
 
 
+
+
+##################################
+##### DEPRECATED STUFF BELOW #####
+##################################
 
 """
 ````

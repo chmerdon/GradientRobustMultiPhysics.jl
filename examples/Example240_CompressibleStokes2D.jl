@@ -185,7 +185,7 @@ function setup_and_solve!(Solution, xgrid;
     add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
 
     ## equation of state (by best-approximation, P0 mass matrix is diagonal)
-    eos_action = Action( equation_of_state!(c,γ),[1,1]; dependencies = "", quadorder = 1)
+    eos_action = Action( equation_of_state!(c,γ),[1,1]; dependencies = "", bonus_quadorder = 1)
     add_operator!(Problem, [3,2], BilinearForm([Identity,Identity],eos_action; name = "(p,eos(ϱ))", apply_action_to = [2])) # cannot be stored if eos is nonlinear!
     add_operator!(Problem, [3,3], BilinearForm([Identity,Identity]; name = "(p,q)", factor = -1, store = true))
 

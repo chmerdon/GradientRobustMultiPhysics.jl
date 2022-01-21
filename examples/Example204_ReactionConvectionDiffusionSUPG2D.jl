@@ -54,7 +54,7 @@ end
 function ReactionConvectionDiffusionOperator(α, β, ν)
     eval_alpha = zeros(Float64,1)
     eval_beta = zeros(Float64,2)
-    function action_kernel!(result, input,x)
+    function action_kernel!(result, input, x)
         ## input = [u_h,∇u_h] as a vector of length 3
         eval_data!(eval_beta, β, x, 0)
         eval_data!(eval_alpha, α, x, 0)
@@ -64,7 +64,7 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
         ## result will be multiplied with [v_h,∇v_h]
         return nothing
     end
-    action = Action(action_kernel!, [3,3]; dependencies = "X", quadorder = max(α.quadorder,β.quadorder))
+    action = Action(action_kernel!, [3,3]; dependencies = "X", bonus_quadorder = max(α.quadorder,β.quadorder))
     return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
 end
 
@@ -80,13 +80,13 @@ function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
         ## compute residual -νΔu_h + (β⋅∇)u_h + αu_h
         result[1] = - ν * input[4] + eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
         ## multiply stabilisation factor
-        result[1] *= τ * xCellDiameters[item]^2
+        result[1] *= τ * xCellDiameters[item[1]]^2
         ## compute coefficients for ∇ eval of test function v_h
         result[1] = result[1] * eval_beta[1]  # will be multiplied with ∇v_h[1]
         result[2] = result[1] * eval_beta[2]  # will be multiplied with ∇v_h[2]
         return nothing
     end
-    action = Action(action_kernel!, [2,4]; dependencies = "XI", quadorder = max(α.quadorder,β.quadorder))
+    action = Action(action_kernel!, [2,4]; dependencies = "XI", bonus_quadorder = max(α.quadorder,β.quadorder))
     return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = "τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)", transposed_assembly = true)
 end
 
@@ -102,10 +102,10 @@ function SUPGOperator_RHS(f, β, τ, xCellDiameters)
         ## compute f times (β⋅∇)v_h
         result[1] = eval_f[1] * (input[1] * eval_beta[1] + input[2] * eval_beta[2])
         ## multiply stabilisation factor
-        result[1] *= τ * xCellDiameters[item]^2
+        result[1] *= τ * xCellDiameters[item[1]]^2
         return nothing
     end
-    action = Action(action_kernel!, [1,2]; dependencies = "XI", quadorder = max(f.quadorder,β.quadorder))
+    action = Action(action_kernel!, [1,2]; dependencies = "XI", bonus_quadorder = max(f.quadorder,β.quadorder))
     return RhsOperator(Gradient, action; name = "τ (h^2 f, β⋅∇v)")
 end
 

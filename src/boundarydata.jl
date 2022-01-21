@@ -215,16 +215,16 @@ function boundarydata!(
         if Dboperator == Identity
             function bnd_rhs_function_h1()
                 temp::Array{T,1} = zeros(T,ncomponents)
-                function closure(result, input, x, region)
-                    eval_data!(temp, O.data4bregion[region], x, time)
+                function closure(result, input, x, item)
+                    eval_data!(temp, O.data4bregion[item[3]], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
                         result[1] += temp[j]*input[j] 
                     end 
                 end   
             end   
-            action_kernel = ActionKernel(bnd_rhs_function_h1(), [1, ncomponents]; dependencies = "XR", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], Action{T}( action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
+            action = Action(bnd_rhs_function_h1(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], action; regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
             assemble!(b, RHS_bnd)
             L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
             assemble!(A[1],L2ProductBnd)
@@ -232,17 +232,17 @@ function boundarydata!(
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hdiv()
                 temp = zeros(T,ncomponents)
-                function closure(result, input, x, region, bface)
-                    eval_data!(temp, O.data4bregion[region], x, time)
+                function closure(result, input, x, item)
+                    eval_data!(temp, O.data4bregion[item[3]], x, time)
                     result[1] = 0.0
                     for j = 1 : ncomponents
-                        result[1] += temp[j] * xFaceNormals[j,xBFaceFaces[bface]]
+                        result[1] += temp[j] * xFaceNormals[j,xBFaceFaces[item[1]]]
                     end 
                     result[1] *= input[1] 
                 end   
             end   
-            action_kernel = ActionKernel(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], Action{T}( action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data NormalFlux bestapprox")
+            action = Action(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], action; regions = BADirichletBoundaryRegions, name = "RHS bnd data NormalFlux bestapprox")
             assemble!(b, RHS_bnd)
             L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data NormalFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
@@ -250,15 +250,15 @@ function boundarydata!(
             xFaceNormals = FE.xgrid[FaceNormals]
             function bnd_rhs_function_hcurl2d()
                 temp = zeros(T,ncomponents)
-                function closure(result, input, x, region, bface)
-                    eval_data!(temp, O.data4bregion[region], x, time)
-                    result[1] = -temp[1] * xFaceNormals[2,xBFaceFaces[bface]]
-                    result[1] += temp[2] * xFaceNormals[1,xBFaceFaces[bface]]
+                function closure(result, input, x, item)
+                    eval_data!(temp, O.data4bregion[item[3]], x, time)
+                    result[1] = -temp[1] * xFaceNormals[2,xBFaceFaces[item[1]]]
+                    result[1] += temp[2] * xFaceNormals[1,xBFaceFaces[item[1]]]
                     result[1] *= input[1] 
                 end   
             end   
-            action_kernel = ActionKernel(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], Action{T}( action_kernel); regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
+            action = Action(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], action; regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
             assemble!(b, RHS_bnd)
             L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
@@ -271,16 +271,16 @@ function boundarydata!(
             function bnd_rhs_function_hcurl3d()
                 temp = zeros(T,ncomponents)
                 fixed_region::Int = 1
-                function closure(result, input, x, region, bedge)
+                function closure(result, input, x, item)
                     eval_data!(temp, O.data4bregion[fixed_region], x, time)
-                    result[1] = temp[1] * xEdgeTangents[1,xBEdgeEdges[bedge]]
-                    result[1] += temp[2] * xEdgeTangents[2,xBEdgeEdges[bedge]]
-                    result[1] += temp[3] * xEdgeTangents[3,xBEdgeEdges[bedge]]
+                    result[1] = temp[1] * xEdgeTangents[1,xBEdgeEdges[item[1]]]
+                    result[1] += temp[2] * xEdgeTangents[2,xBEdgeEdges[item[1]]]
+                    result[1] += temp[3] * xEdgeTangents[3,xBEdgeEdges[item[1]]]
                     result[1] *= input[1]
                 end   
             end   
-            action_kernel = ActionKernel(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XRI", quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BEDGES, [FE], [Dboperator], Action{T}( action_kernel); regions = [0], name = "RHS bnd data TangentFlux bestapprox")
+            action = Action(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
+            RHS_bnd = LinearForm(T, ON_BEDGES, [FE], [Dboperator], action; regions = [0], name = "RHS bnd data TangentFlux bestapprox")
             assemble!(b, RHS_bnd)
             L2ProductBnd = SymmetricBilinearForm(T, ON_BEDGES, [FE, FE], [Dboperator, Dboperator]; regions = [0], name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)

@@ -9,7 +9,6 @@ struct SegmentIntegrator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: Abstrac
     xItemDofs::DofMapTypes{Ti} # holds dof numbers
     action::ACT # additional action to postprocess operator evaluation
     action_input::Array{T,1}
-    action_result::Array{T,1}
     cvol::Base.RefValue{T}
     xrefSG::Array{Array{T,1},1} ## xref from qf
     qf::QuadratureRule{T,SG} ## quadrature formula for the segment geometry
@@ -36,14 +35,12 @@ function SegmentIntegrator{T}(EG,FEOP,SG,FES::FESpace{Tv,Ti,FEType,FEAT}, FEB::F
 
     if typeof(action) <: NoAction
         action_input = zeros(T,size(FEBE.cvals,1))
-        action_result = action_input
     else
         action_input = zeros(T,action.argsizes[2])
-        action_result = zeros(T,action.argsizes[1])
     end
     cvol::T = 0
 
-    return SegmentIntegrator{T,Tv,Ti,FEType,EG,FEOP,AT,SG,typeof(action)}(FEBE, FEB, DM, action, action_input, action_result, Ref(cvol), qf_SG.xref, qf_SG)
+    return SegmentIntegrator{T,Tv,Ti,FEType,EG,FEOP,AT,SG,typeof(action)}(FEBE, FEB, DM, action, action_input, Ref(cvol), qf_SG.xref, qf_SG)
 end
 
 function integrate!(
@@ -86,7 +83,11 @@ function integrate!(
     end
 
     # update_action
-    update_action!(action, FEBE, item, item, 0) # region is missing currently
+    if is_itemdependent(action)
+        action.item[1] = item
+        action.item[2] = item
+        action.item[3] = 0 # todo
+    end
 
     # do the integration
     qf = SI.qf
@@ -103,18 +104,25 @@ function integrate!(
 
         # apply_action
         if !(typeof(action) <: NoAction)
+
+            if is_xdependent(action)
+                update_trafo!(FEBE.L2G, item)
+                eval_trafo!(action.x, FEBE.L2G, xref)
+            end
+            if is_xrefdependent(action)
+                action.xref = xref
+            end
+
             # evaluate operator
             fill!(SI.action_input,0)
             for dof_i = 1 : size(basisvals,2), k = 1 : length(action_input)
                 action_input[k] += coeffs[xItemDofs[dof_i,item] + SI.FEB.offset] * basisvals[k,dof_i,i]
             end
 
-            apply_action!(action_result,action_input,action,i,xref[i])
+            eval_action!(action,action_input)
 
             # accumulate
-            for k = 1 : length(action_result)
-                result[k] += action_result[k] * weights[i]
-            end
+            result .= action.val * weights[i]
         else
             for dof_i = 1 : size(basisvals,2), k = 1 : length(action_input)
                 result[k] += coeffs[xItemDofs[dof_i,item] + SI.FEB.offset] * basisvals[k,dof_i,i] * weights[i]

@@ -12,7 +12,7 @@ This example computes the solution ``\mathbf{u}`` of the linear elasticity probl
 ```
 with exterior force ``\mathbf{f}``, Neumann boundary force ``\mathbf{g}``, and the stiffness tensor
 ```math
-\mathbb{C} \epsilon(\mathbf{u}) = 2 \mu \epsilon( \mathbf{u}) + \λ \mathrm{tr}(\epsilon( \mathbf{u}))
+\mathbb{C} \epsilon(\mathbf{u}) = 2 \mu \epsilon( \mathbf{u}) + \lambda \mathrm{tr}(\epsilon( \mathbf{u}))
 ```
 for isotropic media.
 

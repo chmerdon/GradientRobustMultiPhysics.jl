@@ -68,7 +68,7 @@ function main(; verbosity = 0, Plotter = nothing)
     @show Problem Solution
 
     ## solve for chosen Solution vector
-    solve!(Solution, Problem)
+    solve!(Solution, Problem; show_statistics = true)
 
     ## plot solution (for e.g. Plotter = PyPlot)
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))

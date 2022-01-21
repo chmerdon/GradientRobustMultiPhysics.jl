@@ -80,7 +80,7 @@ function assemble!(
     end
     action_resultdim::Int = action.argsizes[1]
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
-    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
+    action_result::Array{T,1} = action.val # heap for action output
 
     fixed_argument = fixed_arguments[1]
     if AP.regions != [0]
@@ -142,12 +142,17 @@ function assemble!(
 
                 # update action on dofitem
                 basisxref = basisevaler[2].xref
-                update_action!(action, basisevaler[2], dofitem[2], item, regions[r])
+                if is_itemdependent(action)
+                    action.item[1] = item
+                    action.item[2] = dofitem[2]
+                    action.item[3] = xItemRegions[item]
+                end
 
                 # update coeffs of fixed and dofs of free arguments
                 get_coeffs!(coeffs, fixedFE[1], AM, fixed_argument, di[fixed_argument])
                 get_dofs!(dofs2, AM, nonfixed_ids[1], di[nonfixed_ids[1]])
                 get_dofs!(dofs3, AM, nonfixed_ids[2], di[nonfixed_ids[2]])
+
 
                 if fixed_argument in [1,2]
                     basisvals_testfunction = basisevaler[nonfixed_ids[2]].cvals
@@ -156,11 +161,18 @@ function assemble!(
                         # evaluate fixed argument into action
                         fill!(action_input, 0)
                         eval_febe!(action_input, basisevaler[fixed_argument], coeffs, i, offsets[fixed_argument])
+                        if is_xdependent(action)
+                            update_trafo!(basisevaler[2].L2G, dofitem[2])
+                            eval_trafo!(action.x, basisevaler[2].L2G, basisevaler[2].xref[i])
+                        end
+                        if is_xrefdependent(action)
+                            action.xref = basisevaler[2].xref[i]
+                        end
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
                             eval_febe!(action_input, basisevaler[nonfixed_ids[1]], dof_i, i, offsets[nonfixed_ids[1]])
-                            apply_action!(action_result, action_input, action, i, basisxref[i])
+                            eval_action!(action, action_input)
             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                                 temp = 0
@@ -177,6 +189,13 @@ function assemble!(
                         # evaluate fixed argument into separate vector
                         fill!(evalfixedFE, 0)
                         eval_febe!(evalfixedFE, basisevaler[fixed_argument], coeffs, i, 0)
+                        if is_xdependent(action)
+                            update_trafo!(basisevaler[fixed_argument].L2G, item)
+                            eval_trafo!(action.x, basisevaler[fixed_argument].L2G, basisevaler[fixed_argument].xref[i])
+                        end
+                        if is_xrefdependent(action)
+                            action.xref = basisevaler[fixed_argument].xref[i]
+                        end
                         
                         for dof_i = 1 : ndofs4item[nonfixed_ids[1]]
                             # apply action to fixed argument and first non-fixed argument
@@ -184,7 +203,7 @@ function assemble!(
                             
                             for dof_j = 1 : ndofs4item[nonfixed_ids[2]]
                                 eval_febe!(action_input, basisevaler[nonfixed_ids[2]], dof_j, i, offsets[2])
-                                apply_action!(action_result, action_input, action, i, basisxref[i])
+                                eval_action!(action, action_input)
 
                                 temp = 0
                                 for k = 1 : action_resultdim
@@ -260,7 +279,7 @@ function assemble!(
     end
     action_resultdim::Int = action.argsizes[1]
     action_input::Array{T,1} = zeros(T,action.argsizes[2]) # heap for action input
-    action_result::Array{T,1} = zeros(T,action_resultdim) # heap for action output
+    action_result::Array{T,1} = action.val
 
     if AP.regions != [0]
         @logmsg MoreInfo "Assembling $(AP.name) for given $((p->p.name).([FE1,FE2])) into vector ($AT in regions = $(AP.regions)) into vector"
@@ -315,7 +334,11 @@ function assemble!(
                 basisxref = basisevaler[2].xref
 
                 # update action on dofitem
-                update_action!(action, basisevaler[2], dofitem[2], item, regions[r])
+                if is_itemdependent(action)
+                    action.item[1] = item
+                    action.item[2] = dofitem[2]
+                    action.item[3] = xItemRegions[item]
+                end
 
                 # update dofs of free arguments
                 get_coeffs!(coeffs1, FE1, AM, fixed_arguments[1], di[fixed_arguments[1]])
@@ -329,9 +352,16 @@ function assemble!(
                     fill!(action_input, 0)
                     eval_febe!(action_input, basisevaler[fixed_arguments[1]], coeffs1, i)
                     eval_febe!(action_input, basisevaler[fixed_arguments[2]], coeffs2, i, offsets[2])
+                    if is_xdependent(action)
+                        update_trafo!(basisevaler[fixed_arguments[1]].L2G, item)
+                        eval_trafo!(action.x, basisevaler[fixed_arguments[1]].L2G, basisevaler[fixed_arguments[1]].xref[i])
+                    end
+                    if is_xrefdependent(action)
+                        action.xref = basisevaler[fixed_arguments[1]].xref[i]
+                    end
         
                     # apply action to FE1 and FE2
-                    apply_action!(action_result, action_input, action, i, basisxref[i])
+                    eval_action!(action, action_input)
                    
                     # multiply third component
                     for dof_j = 1 : get_ndofs(AM, 3, di[3])

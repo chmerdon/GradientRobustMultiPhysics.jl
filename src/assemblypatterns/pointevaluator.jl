@@ -104,14 +104,28 @@ function evaluate!(
         # update_action
         action = PE.action
         action_input::Array{T,1} = PE.action_input
-        update_action!(action, FEBE, item, item, 0) # region is missing currently
+
+        if is_itemdependent(action)
+            action.item[1] = item
+            action.item[2] = item
+            action.item[3] = 0 # todo
+        end
+        # apply action to FEVector and accumulate
+        if is_xdependent(action)
+            update_trafo!(FEBE.L2G, item)
+            eval_trafo!(action.x, FEBE.L2G, xref)
+        end
+        if is_xrefdependent(action)
+            action.xref = xref
+        end
 
         # evaluate operator
         fill!(action_input,0)
         for dof_i = 1 : size(basisvals,2), k = 1 : length(action_input)
             action_input[k] += coeffs[xItemDofs[dof_i,item] + FEB.offset] * basisvals[k,dof_i,1]
         end
-        apply_action!(result,action_input,action,1,xref)
+        eval_action!(action, action_input)
+        result .= action.val
     else
         for dof_i = 1 : size(basisvals,2), k = 1 : length(result)
             result[k] += coeffs[xItemDofs[dof_i,item] + FEB.offset] * basisvals[k,dof_i,1]
