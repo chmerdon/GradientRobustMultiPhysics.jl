@@ -58,7 +58,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
             jac[1,4] = input[2]
             return nothing
         end
-        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = &quot;(R(u)⋅∇(T)) V&quot;, jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
+        add_operator!(Problem,3, NonlinearForm(Identity, [RIdentity,Gradient], [1,3], Tconvection_kernel, [1,4]; name = &quot;(R(u)⋅∇(T)) V&quot;, jacobian = Tconvection_jacobian, newton = true))
     end
     vdotg_action = Action((result, input) -&gt; (result[1] = -input[2]), [1 2]; name = &quot;v⋅g&quot;)
     add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], vdotg_action; factor = Ra, name = &quot;-Ra v⋅g T&quot;, store = true))
@@ -167,25 +167,25 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.55e+00/4.20e-06/4.55e+00
-	      1   | 7.416533e-12 | 9.615916e+02 | 1.81e+00/2.51e-01/2.06e+00
-	      2   | 9.919920e-12 | 5.931504e+02 | 2.85e-01/2.86e-01/5.73e-01
-	      3   | 8.168619e-12 | 6.568060e+02 | 2.83e-01/3.05e-01/5.90e-01
-	      4   | 8.795411e-12 | 3.990824e+02 | 2.81e-01/2.38e-01/5.22e-01
-	      5   | 8.152300e-12 | 2.340174e+02 | 2.83e-01/2.59e-01/5.44e-01
-	      6   | 8.439618e-12 | 1.387982e+02 | 2.82e-01/2.43e-01/5.28e-01
-	      7   | 8.287146e-12 | 8.267079e+01 | 2.81e-01/2.35e-01/5.18e-01
-	    total |                             | 8.05e+00/1.82e+00/9.89e+00
+	    init  |                             | 4.00e+00/5.60e-06/4.00e+00
+	      1   | 7.416533e-12 | 9.615916e+02 | 1.41e+00/2.59e-01/1.67e+00
+	      2   | 9.919920e-12 | 5.931504e+02 | 2.42e-01/2.43e-01/4.87e-01
+	      3   | 8.168619e-12 | 6.568060e+02 | 2.08e-01/2.35e-01/4.45e-01
+	      4   | 8.795411e-12 | 3.990824e+02 | 2.07e-01/2.10e-01/4.20e-01
+	      5   | 8.152300e-12 | 2.340174e+02 | 2.07e-01/2.27e-01/4.36e-01
+	      6   | 8.439618e-12 | 1.387982e+02 | 2.07e-01/2.07e-01/4.17e-01
+	      7   | 8.287146e-12 | 8.267079e+01 | 2.06e-01/2.13e-01/4.22e-01
+	    total |                             | 6.69e+00/1.60e+00/8.30e+00
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.95e-01/4.00e-06/4.95e-01
-	      1   | 7.099129e-12 | 2.205491e+01 | 2.77e-01/2.99e-01/5.79e-01
-	      2   | 7.010432e-12 | 1.839015e+00 | 2.81e-01/2.30e-01/5.13e-01
-	      3   | 6.770386e-12 | 9.514267e-03 | 2.80e-01/2.45e-01/5.27e-01
-	      4   | 7.135953e-12 | 3.288516e-07 | 2.80e-01/2.27e-01/5.09e-01
-	      5   | 6.901405e-12 | 7.395201e-12 | 2.79e-01/2.31e-01/5.13e-01
-	    total |                             | 1.89e+00/1.23e+00/3.14e+00
+	    init  |                             | 3.66e-01/4.10e-06/3.66e-01
+	      1   | 7.099129e-12 | 2.205491e+01 | 2.03e-01/2.66e-01/4.71e-01
+	      2   | 7.010432e-12 | 1.839015e+00 | 2.03e-01/1.94e-01/3.99e-01
+	      3   | 6.770386e-12 | 9.514267e-03 | 2.03e-01/1.94e-01/3.99e-01
+	      4   | 7.135953e-12 | 3.288516e-07 | 2.03e-01/2.09e-01/4.14e-01
+	      5   | 6.901405e-12 | 7.395201e-12 | 2.04e-01/1.96e-01/4.02e-01
+	    total |                             | 1.38e+00/1.06e+00/2.45e+00
 
-	Nu = 13.97802371664829</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 23:36">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	Nu = 13.97802371664829</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Sunday 23 January 2022 22:59">Sunday 23 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

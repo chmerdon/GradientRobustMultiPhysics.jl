@@ -45,10 +45,10 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;reaction-convection-diffusion equation&quot;)
 
     # add nonlinear operator
-    add_operator!(Problem, [1,1], NonlinearForm([OperatorPair{Identity, Gradient}], [1], OperatorPair{Identity, Gradient}, operator_kernel!, [2,2]; name = &quot;∇u ⋅ ∇v + (u ∇u + u) ⋅ v&quot;, quadorder = 4, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm(OperatorPair{Identity, Gradient}, [OperatorPair{Identity, Gradient}], [1], operator_kernel!, [2,2]; name = &quot;∇u ⋅ ∇v + (u ∇u + u) ⋅ v&quot;, bonus_quadorder = 4, newton = true) )
 
     # right-hand side data
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
 
     # Robin boundary data right
     add_operator!(Problem, [1,1], BilinearForm([Identity, Identity], Action(robin_kernel!, [1,1]); name = &quot;(g - u) ⋅ v&quot;, AT = ON_BFACES, regions = [1]) )
@@ -81,11 +81,11 @@ Explored path: SparsityDetection.Path(Bool[], 1)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.20e+01/3.80e-06/1.20e+01
-	      1   | 7.420453e-14 | 6.400322e-01 | 1.61e+00/1.27e-04/1.98e+00
-	      2   | 4.529748e-14 | 5.344356e-02 | 4.04e-04/9.50e-05/6.10e-04
-	      3   | 5.506533e-14 | 4.413179e-05 | 1.96e-04/5.23e-05/2.99e-04
-	      4   | 4.017811e-14 | 4.725667e-11 | 1.59e-04/3.40e-05/2.09e-04
-	    total |                             | 1.36e+01/3.12e-04/1.40e+01
+	    init  |                             | 9.55e+00/4.10e-06/9.57e+00
+	      1   | 7.420453e-14 | 6.400322e-01 | 1.19e+00/1.14e-04/1.45e+00
+	      2   | 4.529748e-14 | 5.344356e-02 | 3.47e-04/9.32e-05/5.56e-04
+	      3   | 5.506533e-14 | 4.413179e-05 | 1.35e-04/3.49e-05/1.89e-04
+	      4   | 4.017811e-14 | 4.725667e-11 | 1.20e-04/2.57e-05/1.58e-04
+	    total |                             | 1.07e+01/2.72e-04/1.10e+01
 
-L2error = 1.0271403975283884e-5</code></pre><p><img src="../../images/Example102_RobinBoundaryCondition1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example101_Bestapproximation1D/">« 101 : L2-Bestapproximation 1D</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 23:36">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+L2error = 1.0271403975283884e-5</code></pre><p><img src="../../images/Example102_RobinBoundaryCondition1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example101_Bestapproximation1D/">« 101 : L2-Bestapproximation 1D</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Sunday 23 January 2022 22:59">Sunday 23 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

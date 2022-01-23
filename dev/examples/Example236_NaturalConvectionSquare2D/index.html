@@ -59,7 +59,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
             jac[1,4] = input[2]
             return nothing
         end
-        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = &quot;(R(u)⋅∇(T)) V&quot;, jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
+        add_operator!(Problem,3, NonlinearForm(Identity, [RIdentity,Gradient], [1,3], Tconvection_kernel, [1,4]; name = &quot;(R(u)⋅∇(T)) V&quot;, jacobian = Tconvection_jacobian, newton = true))
     end
     vdotg_action = Action((result, input) -&gt; (result[1] = -input[2]), [1 2]; name = &quot;v⋅g&quot;)
     add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], vdotg_action; factor = Ra, name = &quot;-Ra v⋅g T&quot;, store = true))
@@ -163,24 +163,24 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 3.84e+00/4.80e-06/3.84e+00
-	      1   | 1.178005e-11 | 1.710197e+03 | 3.00e-01/3.14e-01/6.16e-01
-	      2   | 8.791455e-12 | 1.029414e+03 | 2.83e-01/2.76e-01/5.61e-01
-	      3   | 8.423852e-12 | 6.245192e+02 | 2.85e-01/2.50e-01/5.37e-01
-	      4   | 8.111620e-12 | 3.852044e+02 | 2.84e-01/2.33e-01/5.18e-01
-	      5   | 8.234635e-12 | 2.482485e+02 | 2.85e-01/2.29e-01/5.15e-01
-	      6   | 8.017012e-12 | 1.980286e+02 | 2.82e-01/2.47e-01/5.31e-01
-	      7   | 7.613980e-12 | 1.111594e+02 | 2.82e-01/2.31e-01/5.14e-01
-	      8   | 7.683898e-12 | 6.100656e+01 | 2.78e-01/2.24e-01/5.04e-01
-	    total |                             | 6.12e+00/2.00e+00/8.14e+00
+	    init  |                             | 3.41e+00/4.90e-06/3.41e+00
+	      1   | 1.178005e-11 | 1.710197e+03 | 2.17e-01/2.26e-01/4.45e-01
+	      2   | 8.791455e-12 | 1.029414e+03 | 2.05e-01/2.64e-01/4.72e-01
+	      3   | 8.423852e-12 | 6.245192e+02 | 2.06e-01/1.98e-01/4.06e-01
+	      4   | 8.111620e-12 | 3.852044e+02 | 2.06e-01/1.99e-01/4.07e-01
+	      5   | 8.234635e-12 | 2.482485e+02 | 2.06e-01/2.20e-01/4.28e-01
+	      6   | 8.017012e-12 | 1.980286e+02 | 2.06e-01/1.99e-01/4.07e-01
+	      7   | 7.613980e-12 | 1.111594e+02 | 2.06e-01/2.00e-01/4.08e-01
+	      8   | 7.683898e-12 | 6.100656e+01 | 2.06e-01/1.99e-01/4.07e-01
+	    total |                             | 5.07e+00/1.70e+00/6.79e+00
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 5.06e-01/3.60e-06/5.06e-01
-	      1   | 3.947678e-12 | 3.366297e+00 | 2.84e-01/2.96e-01/5.81e-01
-	      2   | 3.970969e-12 | 6.899417e-03 | 2.84e-01/2.33e-01/5.19e-01
-	      3   | 4.000557e-12 | 4.473131e-07 | 2.82e-01/2.27e-01/5.12e-01
-	      4   | 4.024171e-12 | 4.117353e-12 | 2.83e-01/2.37e-01/5.22e-01
-	    total |                             | 1.64e+00/9.93e-01/2.65e+00
-</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 23:36">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	    init  |                             | 3.85e-01/3.60e-06/3.85e-01
+	      1   | 3.947678e-12 | 3.366297e+00 | 2.06e-01/2.31e-01/4.39e-01
+	      2   | 3.970969e-12 | 6.899417e-03 | 2.06e-01/1.94e-01/4.02e-01
+	      3   | 4.000557e-12 | 4.473131e-07 | 2.06e-01/2.02e-01/4.10e-01
+	      4   | 4.024171e-12 | 4.117353e-12 | 2.06e-01/2.08e-01/4.16e-01
+	    total |                             | 1.21e+00/8.34e-01/2.05e+00
+</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Sunday 23 January 2022 22:59">Sunday 23 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

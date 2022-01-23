@@ -41,8 +41,8 @@ function main(; verbosity = 0, Plotter = nothing)
             return nothing
         end
     end
-    add_operator!(Problem,[1,1], NonlinearForm([OperatorPair{Identity,Gradient},Identity], [1,2], OperatorPair{Identity,Gradient}, operator_kernel(1), [3,4]; name = &quot;ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v)&quot;, dependencies = &quot;X&quot;, newton = true, quadorder = 0)  )
-    add_operator!(Problem,[2,2], NonlinearForm([OperatorPair{Identity,Gradient},Identity], [2,1], OperatorPair{Identity,Gradient}, operator_kernel(2), [3,4]; name = &quot;ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v)&quot;, dependencies = &quot;X&quot;, newton = true, quadorder = 0)  )
+    add_operator!(Problem,[1,1], NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [1,2], operator_kernel(1), [3,4]; name = &quot;ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v)&quot;, dependencies = &quot;X&quot;, newton = true))
+    add_operator!(Problem,[2,2], NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [2,1], operator_kernel(2), [3,4]; name = &quot;ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v)&quot;, dependencies = &quot;X&quot;, newton = true))
 
     # discretise (here: u1 with P3, u2 with P2)
     FETypes = [H1P3{1,2},H1P2{1,2}]
@@ -98,12 +98,12 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 8.44e+00/4.40e-06/8.45e+00
-	      1   | 4.328117e-15 | 9.824796e-02 | 1.70e+00/3.77e-02/1.75e+00
-	      2   | 2.614133e-15 | 1.810300e-02 | 3.01e-01/6.85e-02/3.71e-01
-	      3   | 2.013673e-15 | 1.549532e-03 | 3.53e-01/5.39e-02/4.08e-01
-	      4   | 1.990287e-15 | 1.656753e-05 | 3.05e-01/5.45e-02/3.60e-01
-	      5   | 1.977137e-15 | 1.966716e-09 | 3.01e-01/5.69e-02/3.59e-01
-	      6   | 1.987441e-15 | 3.518658e-15 | 3.01e-01/5.59e-02/3.58e-01
-	    total |                             | 1.17e+01/3.27e-01/1.21e+01
-</code></pre><p><img src="../../images/Example215_TwoNonlinearCoupled2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example212_WaveEquation2D/">« 212 : Wave Equation 2D</a><a class="docs-footer-nextpage" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 21 January 2022 23:36">Friday 21 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	    init  |                             | 6.58e+00/5.10e-06/6.59e+00
+	      1   | 4.328117e-15 | 9.824796e-02 | 1.34e+00/2.97e-02/1.38e+00
+	      2   | 2.614133e-15 | 1.810300e-02 | 2.38e-01/5.40e-02/2.93e-01
+	      3   | 2.013673e-15 | 1.549532e-03 | 2.39e-01/4.38e-02/2.84e-01
+	      4   | 1.990287e-15 | 1.656753e-05 | 2.39e-01/4.60e-02/2.86e-01
+	      5   | 1.977137e-15 | 1.966716e-09 | 2.42e-01/4.58e-02/2.89e-01
+	      6   | 1.987441e-15 | 3.518658e-15 | 2.80e-01/5.03e-02/3.32e-01
+	    total |                             | 9.17e+00/2.70e-01/9.46e+00
+</code></pre><p><img src="../../images/Example215_TwoNonlinearCoupled2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example212_WaveEquation2D/">« 212 : Wave Equation 2D</a><a class="docs-footer-nextpage" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Sunday 23 January 2022 22:59">Sunday 23 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
