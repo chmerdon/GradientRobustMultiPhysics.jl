@@ -13,19 +13,18 @@ GradientRobustMultiPhysics.PDEOperator
 The following table lists all available operators and available physics-motivated constructors for them (besides the abstract main constructor).
 Click on them or scroll down to find out more details.
 
-| Main constructors                   | Special constructors                     | Mathematically                                                                                                 |
-| :---------------------------------- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------- |
-| [`BilinearForm`](@ref)              |                                          | ``(\mathrm{A}(\mathrm{FO}_1(u)),\mathrm{FO}_2(v))`` or ``(\mathrm{FO}_1(u),\mathrm{A}(\mathrm{FO}_2(v)))``     |
-|                                     | [`LaplaceOperator`](@ref)                | ``(\kappa \nabla u,\nabla v)``                                                                                 |
-|                                     | [`ReactionOperator`](@ref)               | ``(\alpha u, v)``                                                                                              |
-|                                     | [`LagrangeMultiplier`](@ref)             | ``(\mathrm{FO}_1(u), v)`` (automatically assembles 2nd transposed block)                                       |
-|                                     | [`ConvectionOperator`](@ref)             | ``(\beta \cdot \nabla u, v)`` (beta is function)                                                               |
-|                                     | [`HookStiffnessOperator2D`](@ref)        | ``(\mathbb{C} \epsilon(u),\epsilon(v))`` (also 1D or 3D variants exist)                                        |
-| [`TrilinearForm`](@ref)             |                                          | ``(\mathrm{A}(\mathrm{FO}_1(a),\mathrm{FO}_2(u)),\mathrm{FO}_3(v))``                                           |
-|                                     | [`ConvectionOperator`](@ref)             | ``((a \cdot \nabla) u, v)`` (a is registered unknown)                                                          |
-|                                     | [`ConvectionRotationFormOperator`](@ref) | ``((a \times \nabla) u,v)`` (a is registered unknown, only 2D for now)                                         |
-| [`NonlinearForm`](@ref)             |                                          | ``(\mathrm{NA}(\mathrm{FO}_1(u),...,\mathrm{FO}_{N-1}(u)),\mathrm{FO}_N(v))``                                  |
-| [`RhsOperator`](@ref)               |                                          | ``(f \cdot \mathrm{FO}(v))`` or ``\mathrm{A}(\mathrm{FO}(v))``                                                 |
+| Main constructors                   | Special constructors                     | Mathematically                                                                                                   |
+| :---------------------------------- | :--------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| [`LinearForm`](@ref)                |                                          | ``(\mathrm{A}(...), \mathrm{FO}(v))``                                                                            |
+|                                     | [`RhsOperator`](@ref)                    | ``(f, \mathrm{FO}(v))``                                                                                          |
+| [`BilinearForm`](@ref)              |                                          | ``(\mathrm{A}(...,\mathrm{FO}_1(u)), \mathrm{FO}_2(v))`` or ``(\mathrm{FO}_1(u), \mathrm{A}(\mathrm{FO}_2(v)))`` |
+|                                     | [`LaplaceOperator`](@ref)                | ``(\kappa \nabla u, \nabla v)``                                                                                  |
+|                                     | [`ReactionOperator`](@ref)               | ``(\alpha u, v)``                                                                                                |
+|                                     | [`LagrangeMultiplier`](@ref)             | ``(\mathrm{FO}_1(u), v)`` (automatically assembles 2nd transposed block)                                         |
+|                                     | [`ConvectionOperator`](@ref)             | ``(\beta \cdot \nabla u, v)`` (beta is function or registered unknown)                                           |
+|                                     | [`HookStiffnessOperator2D`](@ref)        | ``(\mathbb{C} \epsilon(u), \epsilon(v))`` (also 1D or 3D variants exist)                                         |
+|                                     | [`ConvectionRotationFormOperator`](@ref) | ``((a \times \nabla) u, v)`` (a is registered unknown, only 2D for now)                                          |
+| [`NonlinearForm`](@ref)             |                                          |                                                                                                                  |
 
 Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Action](@ref) (see [`NonlinearForm`](@ref) for details).
 
@@ -55,14 +54,24 @@ Pages = ["assemblytypes.jl"]
 Order   = [:type, :function]
 ```
 
+## Custom Linear Operators
+
+It is possible to define custom linearforms and bilinearforms by specifying [Function Operators](@ref) an [Action](@ref)
+that determines how the operators are combined for the dot-product with the test function operator.
+
+```@docs
+LinearForm
+BilinearForm
+```
 
 ## Special Linear Operators
 
-Below you find the special constructors of available common linear, bilinear and trilinear forms.
+Below you find special constructors of available common linear and bilinear forms.
 
 ```@docs
 LaplaceOperator
 ReactionOperator
+LagrangeMultiplier
 ConvectionOperator
 ConvectionRotationFormOperator
 HookStiffnessOperator1D
@@ -71,18 +80,10 @@ HookStiffnessOperator3D
 RhsOperator
 ```
 
-## Custom Linear Operators
-
-It is possible to define custom bilineraforms and trilinearforms by specifiyng [Function Operators](@ref) and (in case of bilinearform optionally) an [Action](@ref).
-
-```@docs
-BilinearForm
-TrilinearForm
-```
 
 ### Examples
 
-Below some examples for operators are given:
+Below some examples for operators for custom forms are given:
 
 ```julia
 # Example 1 : div-div bilinearform with a factor λ (e.g. for divergence-penalisation)
@@ -99,18 +100,10 @@ operator = BilinearForm([Jump(Gradient), Jump(Gradient)], action; AT = ON_IFACES
 
 ```
 
-## Lagrange Multipliers
-
-There is a special bilinearform intended to use for the assembly of Lagrange multipliers that automatically copies itself to the transposed block of the PDEdescription.
-
-```@docs
-LagrangeMultiplier
-```
-
 
 ## Nonlinear Operators
 
-Nonlinear Operators can be used to setup the required Newton terms for the fixpoint algorithms. If the user does not define the jacobian for the kernel function, automatic differentation is used to compute them (with optional sparsity detection), see below for details.
+Nonlinear Operators can be used to auotmatically setup the required Newton terms for the fixpoint algorithms. If the user does not define the jacobian for the kernel function, automatic differentation is used to compute them (with optional sparsity detection), see below for details.
 
 ```@docs
 NonlinearForm

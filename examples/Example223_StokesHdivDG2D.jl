@@ -70,7 +70,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## load Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], f))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
 
     ## add boundary data (fixes normal components of along boundary)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)

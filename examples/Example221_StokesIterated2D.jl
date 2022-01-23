@@ -87,7 +87,7 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     ## pressure update equation
     add_operator!(Problem, [2,2], BilinearForm([Identity, Identity]; name = "(p,q)", store = true))
     rhs_action = Action((result,input) -> (result[1] = input[1] - λ*input[2]), [1, 3]; name = "p_h - λdiv(u)")
-    add_rhsdata!(Problem, 2, LinearForm([Identity, Divergence], [2, 1], Identity, rhs_action))
+    add_rhsdata!(Problem, 2, LinearForm(Identity, [Identity, Divergence], [2, 1], rhs_action))
 
     ## show and solve problem
     @show Problem

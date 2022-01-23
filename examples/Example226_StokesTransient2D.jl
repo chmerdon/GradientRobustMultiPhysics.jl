@@ -77,7 +77,7 @@ function main(;
     ## load Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = ν, nonlinear = false)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(testfunction_operator, [1], f))
+    add_rhsdata!(Problem, 1, RhsOperator(testfunction_operator, f))
 
     ## add grad-div stabilisation
     if graddiv > 0

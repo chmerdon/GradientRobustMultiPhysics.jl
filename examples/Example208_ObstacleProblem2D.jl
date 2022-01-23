@@ -47,9 +47,9 @@ function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 
     Problem = PDEDescription("obstacle problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "obstacle problem")
     add_operator!(Problem, [1,1], LaplaceOperator(1.0; store = true))
-    add_operator!(Problem, [1,1], NonlinearForm([Identity], [1], Identity, obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = penalty, quadorder = 0, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm(Identity, [Identity], [1], obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = penalty, newton = true) )
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f; store = true))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, f; store = true))
         
     ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)

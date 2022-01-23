@@ -80,7 +80,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
             jac[1,4] = input[2]
             return nothing
         end
-        add_operator!(Problem,3, NonlinearForm([RIdentity,Gradient], [1,3], Identity, Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", jacobian = Tconvection_jacobian, newton = true, quadorder = 0)  )
+        add_operator!(Problem,3, NonlinearForm(Identity, [RIdentity,Gradient], [1,3], Tconvection_kernel, [1,4]; name = "(R(u)⋅∇(T)) V", jacobian = Tconvection_jacobian, newton = true))
     end
     vdotg_action = Action((result, input) -> (result[1] = -input[2]), [1 2]; name = "v⋅g")
     add_operator!(Problem,[1,3], BilinearForm([RIdentity, Identity], vdotg_action; factor = Ra, name = "-Ra v⋅g T", store = true))

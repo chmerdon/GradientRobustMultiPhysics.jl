@@ -56,8 +56,8 @@ function main(; verbosity = 0, Plotter = nothing)
             return nothing
         end
     end
-    add_operator!(Problem,[1,1], NonlinearForm([OperatorPair{Identity,Gradient},Identity], [1,2], OperatorPair{Identity,Gradient}, operator_kernel(1), [3,4]; name = "ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v)", dependencies = "X", newton = true, quadorder = 0)  )
-    add_operator!(Problem,[2,2], NonlinearForm([OperatorPair{Identity,Gradient},Identity], [2,1], OperatorPair{Identity,Gradient}, operator_kernel(2), [3,4]; name = "ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v)", dependencies = "X", newton = true, quadorder = 0)  )
+    add_operator!(Problem,[1,1], NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [1,2], operator_kernel(1), [3,4]; name = "ν1 (∇u1,∇v) + α1 (u1 u2,v) - (f1,v)", dependencies = "X", newton = true))
+    add_operator!(Problem,[2,2], NonlinearForm(OperatorPair{Identity,Gradient}, [OperatorPair{Identity,Gradient},Identity], [2,1], operator_kernel(2), [3,4]; name = "ν2 (∇u2,∇v) + α2 (u1 u2,v) - (f2,v)", dependencies = "X", newton = true))
 
     ## discretise (here: u1 with P3, u2 with P2)
     FETypes = [H1P3{1,2},H1P2{1,2}]

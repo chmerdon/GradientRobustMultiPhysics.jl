@@ -48,7 +48,7 @@ function main(; verbosity = 0, order = 1, reflevel = 2, T = 0.65, timestep = 1//
     add_unknown!(Problem; unknown_name = "v", equation_name = "wave equation")
     add_operator!(Problem, [1,2], ReactionOperator(-1))
     add_operator!(Problem, [2,1], LaplaceOperator(c))
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
     add_boundarydata!(Problem, 1, [1], HomogeneousDirichletBoundary)
     add_boundarydata!(Problem, 2, [1], HomogeneousDirichletBoundary)
 

@@ -112,11 +112,11 @@ function main(;
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 2, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!, sparse_jacobian = true) 
+        nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", bonus_quadorder = 2, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!, sparse_jacobian = true) 
     elseif q == 2
         DK.κ = κ
         DK.p = p
-        nonlin_diffusion = NonlinearForm([Gradient], [1], Gradient, DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", quadorder = 4, jacobian = "auto", sparse_jacobian = true)   
+        nonlin_diffusion = NonlinearForm(Gradient, [Gradient], [1], DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", bonus_quadorder = 4, jacobian = "auto", sparse_jacobian = true)   
     else 
         @error "only q ∈ [1,2] !"
     end
@@ -126,7 +126,7 @@ function main(;
     add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f; store = true))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, f; store = true))
     @show Problem
 
     ## prepare error calculation

@@ -142,7 +142,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 
     Problem = PDEDescription("reaction-convection-diffusion problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "reaction-convection-diffusion equation")
     add_operator!(Problem, [1,1], ReactionConvectionDiffusionOperator(α,β,ν))
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
 
     ## add SUPG stabilisation and remember operator positions

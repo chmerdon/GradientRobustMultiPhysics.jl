@@ -307,7 +307,7 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     MOMxBASIS::Array{Float64,2} = zeros(Float64,0,0)
     if (bestapprox) # interior dofs are set by best-approximation
         FE_onref = FESpace{FEType_ref}(xgrid_ref)
-        MOMxBASIS_BLF = SymmetricBilinearForm(Float64,ON_CELLS,[FE_onref,FE_onref],[Identity,Identity])
+        MOMxBASIS_BLF = DiscreteSymmetricBilinearForm([Identity,Identity],[FE_onref,FE_onref])
         FEMMOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FE_onref,FE_onref)
         assemble!(FEMMOMxBASIS[1],MOMxBASIS_BLF)
         MOMxBASIS = FEMMOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]
@@ -324,7 +324,7 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
         ## calculate moments times basis functions
         FES_moments = FESpace{FEType_moments}(xgrid_ref)
         FE_onref = FESpace{FEType_ref}(xgrid_ref)
-        MOMxBASIS_BLF = BilinearForm(Float64,ON_CELLS,[FES_moments,FE_onref],[Identity,Identity])
+        MOMxBASIS_BLF = DiscreteBilinearForm([Identity,Identity],[FES_moments,FE_onref])
         FEMMOMxBASIS = FEMatrix{Float64}("FExMOMENTS matrix",FES_moments,FE_onref)
         assemble!(FEMMOMxBASIS[1],MOMxBASIS_BLF)
         MOMxBASIS = FEMMOMxBASIS.entries' ./ xgrid_ref[CellVolumes][1]

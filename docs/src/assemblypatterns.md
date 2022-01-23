@@ -14,13 +14,12 @@ GradientRobustMultiPhysics.AssemblyPattern{APT <: AssemblyPatternType, T <: Real
 The following table lists all available assembly patterns, their constuctor names and how they can be used for assembly or evaluations.
 
 
-| AssemblyPatternType | constructor        | evaluate | assembly into matrix | assembly into vector |
-| :------------------ | :----------------- | :------: | :------------------: | :------------------: |
-| APT_ItemIntegrator  | ItemIntegrator     |    yes   |          no          |         no           |
-| APT_LinearForm      | LinearForm         |     no   |          no          |        yes           |
-| APT_BilinearForm    | BilinearForm       |     no   |         yes          |        yes (1)       |
-| APT_TrilinearForm   | TrilinearForm      |     no   |         yes (1)      |        yes (2)       |
-| APT_NonlinearForm   | NonlinearForm      |     no   |         yes (L)      |        yes (L)       |
+| AssemblyPatternType | constructor        | evaluate | assembles into matrix | assembles into vector |
+| :------------------ | :----------------- | :------: | :-------------------: | :-------------------: |
+| APT_ItemIntegrator  | ItemIntegrator     |    yes   |           no          |          no           |
+| APT_LinearForm      | LinearForm         |     no   |           no          |         yes           |
+| APT_BilinearForm    | BilinearForm       |     no   |          yes          |          no           |
+| APT_NonlinearForm   | NonlinearForm      |     no   |          yes          |         yes           |
 
 Number in brackets denotes the number of fixed arguments needed for this assembly, (L) means that a current solution is needed (to evaluate the linearisation of the nonlinear form in this state).
 Evaluations of the other AssemblyPatterns may be possible in a future update, but currently have to be performed by maintaining a duplicate of the pattern rewritten as an ItemIntegrator.
@@ -32,7 +31,7 @@ Below all assembly pattern types, constructor functions and evaluate/assembly fu
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["itemintegrator.jl","bilinearform.jl","trilinearform.jl","nonlinearform.jl"]
+Pages = ["itemintegrator.jl","linearform.jl","bilinearform.jl","nonlinearform.jl"]
 Order   = [:type, :function]
 ```
 

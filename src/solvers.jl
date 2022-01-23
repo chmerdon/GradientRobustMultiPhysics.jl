@@ -712,10 +712,10 @@ function AndersonAccelerationManager(anderson_metric::String, Target::FEVector{T
     NormOperator = FEMatrix{T}("AA-Metric",FEs)
     for u in anderson_unknowns
         if anderson_metric == "L2"
-            AA_METRIC = SymmetricBilinearForm(Float64, ON_CELLS, [FEs[u], FEs[u]], [Identity, Identity], NoAction())
+            AA_METRIC = DiscreteSymmetricBilinearForm([Identity, Identity], [FEs[u], FEs[u]], NoAction())
             assemble!(NormOperator[u,u], AA_METRIC)
         elseif anderson_metric == "H1"
-                AA_METRIC = SymmetricBilinearForm(Float64, ON_CELLS, [FEs[u], FEs[u]], [Gradient,Gradient], NoAction())
+                AA_METRIC = DiscreteSymmetricBilinearForm([Gradient,Gradient], [FEs[u], FEs[u]], NoAction())
                 assemble!(NormOperator[u,u], AA_METRIC)
         elseif anderson_metric == "l2"
             for j = 1 : FEs[u].ndofs
@@ -1373,13 +1373,13 @@ function assemble_massmatrix4subiteration!(TCS::TimeControlSolver{T,Tt,Tv,Ti}, i
                 operator1 = TCS.dt_operator[pos]
                 operator2 = TCS.dt_operator[pos]
                 if TCS.dt_lump[pos] > 0
-                    BLF = LumpedBilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])  
+                    BLF = DiscreteLumpedBilinearForm([operator1, operator2], [FE1, FE2], TCS.dt_actions[pos]; T = T)
                     time = @elapsed begin
                         assemble!(A, BLF, skip_preps = false)
                         A.entries .*= TCS.dt_lump[pos]  
                     end
                 else
-                    BLF = BilinearForm(T, ON_CELLS, [FE1, FE2], [operator1, operator2], TCS.dt_actions[pos])   
+                    BLF = DiscreteBilinearForm([operator1, operator2], [FE1, FE2], TCS.dt_actions[pos]; T = T)   
                     time = @elapsed assemble!(A, BLF, skip_preps = false) 
                 end
             end

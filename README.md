@@ -32,7 +32,7 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 
 # build/load any grid (here: a uniform-refined 2D unit square into triangles)
-xgrid = uniform_refine(grid_unitsquare(Triangle2D),4)
+xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4)
 
 # create empty PDE description
 Problem = PDEDescription("Poisson problem")
@@ -47,7 +47,7 @@ add_operator!(Problem, [1,1], LaplaceOperator(1e-3))
 f = DataFunction([1]; name = "f")
 
 # add right-hand side data (here: f = [1] in region(s) [1])
-add_rhsdata!(Problem, 1, RhsOperator(Identity, [1], f))
+add_rhsdata!(Problem, 1, RhsOperator(Identity, f; regions = [1]))
 
 # add boundary data (here: zero data for boundary regions 1:4)
 add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)

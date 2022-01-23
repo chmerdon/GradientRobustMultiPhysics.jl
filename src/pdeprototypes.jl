@@ -142,7 +142,7 @@ function L2BestapproximationProblem(
     Problem = PDEDescription(name)
     add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
     add_operator!(Problem, [1,1], ReactionOperator(; AT = AT))
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], uexact; AT = AT))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, uexact; AT = AT))
     if length(bestapprox_boundary_regions) > 0
         if xdim == 1 # in 1D Dirichlet boundary can be interpolated
             add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact)
@@ -186,7 +186,7 @@ function H1BestapproximationProblem(
     Problem = PDEDescription(name)
     add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
     add_operator!(Problem, [1,1], LaplaceOperator())
-    add_rhsdata!(Problem, 1, RhsOperator(Gradient, [0], uexact_gradient))
+    add_rhsdata!(Problem, 1, RhsOperator(Gradient, uexact_gradient))
     if length(bestapprox_boundary_regions) > 0
         if xdim == 1 # in 1D Dirichlet boundary can be interpolated
             add_boundarydata!(Problem, 1, bestapprox_boundary_regions, InterpolateDirichletBoundary; data = uexact)

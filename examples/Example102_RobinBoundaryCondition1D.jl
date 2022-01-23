@@ -56,10 +56,10 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     add_unknown!(Problem; unknown_name = "u", equation_name = "reaction-convection-diffusion equation")
 
     ## add nonlinear operator
-    add_operator!(Problem, [1,1], NonlinearForm([OperatorPair{Identity, Gradient}], [1], OperatorPair{Identity, Gradient}, operator_kernel!, [2,2]; name = "∇u ⋅ ∇v + (u ∇u + u) ⋅ v", quadorder = 4, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm(OperatorPair{Identity, Gradient}, [OperatorPair{Identity, Gradient}], [1], operator_kernel!, [2,2]; name = "∇u ⋅ ∇v + (u ∇u + u) ⋅ v", bonus_quadorder = 4, newton = true) )
 
     ## right-hand side data
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
 
     ## Robin boundary data right
     add_operator!(Problem, [1,1], BilinearForm([Identity, Identity], Action(robin_kernel!, [1,1]); name = "(g - u) ⋅ v", AT = ON_BFACES, regions = [1]) )

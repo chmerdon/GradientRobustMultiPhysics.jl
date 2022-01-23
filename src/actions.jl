@@ -33,6 +33,23 @@ is_itemdependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,
 is_xrefdependent(A::DefaultUserAction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dl
 
 
+"""
+$(TYPEDSIGNATURES)
+
+generates an Action that can be used in the construction of PDEoperators and essentially consists of a kernel function
+specified by the user plus additional information on argument dimensions and additional dependencies:
+
+- kernel   : Function with interface (result, input, ...)
+- argsizes : expected lengths of [result, interface]
+
+Optional arguments:
+
+- dependencies    : substring of "XTIL" that specifies if the kernel also depends on space coordinates (X), time (T), item (I), local coordinates (L)
+- bonus_quadorder : is added to the quadrature order computed based on the used FESpaces during assembly
+- name            : name of this Action used in print messages
+- Tv              : expected NumberType for result/input
+- Ti              : expected NumberType for grid enumeration infos (e.g. item/region numbers when "I" dependecy is used)
+"""
 function Action(kernel::Function, argsizes; Tv = Float64, Ti = Int32, dependencies = "", bonus_quadorder = 0, name = "user action")
     dx = occursin("X", dependencies)
     dt = occursin("T", dependencies)

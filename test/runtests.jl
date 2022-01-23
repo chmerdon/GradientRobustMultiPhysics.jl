@@ -170,9 +170,6 @@ function run_face_orientation_and_discontinuities_tests()
                 maxerror = test_disc_BLF(testgrid(EG), disc)
                 println("EG = $EG | disc = $disc | AP = BilinearForm | error = $maxerror")
                 @test maximum(abs.(maxerror)) < 1e-13
-                maxerror = test_disc_TLF(testgrid(EG), disc)
-                println("EG = $EG | disc = $disc | AP = TrilinearForm | error = $maxerror")
-                @test maximum(abs.(maxerror)) < 1e-13
             end
         end
     end
@@ -609,7 +606,7 @@ function run_stokes_tests()
         # Define Stokes problem via PDETooles_PDEProtoTypes
         Problem = IncompressibleNavierStokesProblem(dim; nonlinear = false)
         add_boundarydata!(Problem, 1, [1,2,3,4,5,6,7,8], BestapproxDirichletBoundary; data = exact_velocity)
-        add_rhsdata!(Problem, 1, RhsOperator(RhsOp, [0], rhs))
+        add_rhsdata!(Problem, 1, RhsOperator(RhsOp, rhs))
 
         # choose FE and generate FESpace
         FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid; broken = broken_p)]
@@ -724,7 +721,7 @@ function run_timeintegration_tests()
         add_unknown!(Problem; unknown_name = "u", equation_name = "test equation")
         add_operator!(Problem, [1,1], BilinearForm([Identity,Identity]; name = "(u,v)", store = true))
         add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = u)
-        add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
+        add_rhsdata!(Problem, 1,  RhsOperator(Identity, f))
 
         ## discretise in space
         xgrid = testgrid(Edge1D)

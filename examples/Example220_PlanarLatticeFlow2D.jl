@@ -65,13 +65,13 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
     add_operator!(Problem, [1,1], ConvectionOperator(1, IdentityV, 2, 2; testfunction_operator = IdentityV, newton = true))
     add_constraint!(Problem, FixedIntegralMean(2,0))
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(IdentityV, [1], f))
+    add_rhsdata!(Problem, 1, RhsOperator(IdentityV, f))
     @show Problem
 
     ## create finite element spaces and solve
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
     Solution = FEVector(["u_h","p_h"],FES)
-    solve!(Solution, Problem; show_statistics = true)
+    solve!(Solution, Problem; show_statistics = true, show_solver_config = true)
 
     ## calculate L2 errors for u and p
     L2errorV = L2ErrorIntegrator(Float64, u, Identity)

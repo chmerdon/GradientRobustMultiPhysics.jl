@@ -146,29 +146,6 @@ end
 """
 $(TYPEDSIGNATURES)
 
-restricts a PDEOperator by fixing arguments with the arguments of the full PDEDescription that match the specified argument ids.
-"""
-function restrict_operator(O::PDEOperator; fixed_arguments = [], fixed_arguments_ids = [], factor = 1)
-    Or = deepcopy(O)
-    Or.store_operator = false
-    Or.factor *= factor
-    APT = typeof(O).parameters[2]
-    if APT <: APT_BilinearForm
-        Or.fixed_arguments = fixed_arguments
-        Or.fixed_arguments_ids = fixed_arguments_ids
-    elseif APT <: APT_TrilinearForm
-        Or.fixed_arguments = fixed_arguments
-        Or.fixed_arguments_ids = fixed_arguments_ids
-    else
-        @error "restriction of this operator is not possible"
-    end
-    return Or
-end
-
-
-"""
-$(TYPEDSIGNATURES)
-
 constructor for a bilinearform that describes a(u,v) = κ (∇u,∇v) where kappa is some constant (diffusion) coefficient.
 """
 function LaplaceOperator(κ = 1.0; name = "auto", AT::Type{<:AssemblyType} = ON_CELLS, ∇ = Gradient, regions::Array{Int,1} = [0], store::Bool = false)
@@ -336,31 +313,37 @@ end
 
 
 
-"""
-````
-function BilinearForm(
-    operators::Array{AbstractFunctionOperator,1},
-    action::AbstractAction = NoAction();
-    name = "auto",
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    APT::Type{<:APT_BilinearForm} = APT_BilinearForm,
-    apply_action_to = 1,
-    regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = false,
-    store::Bool = false)
-````
 
-abstract bilinearform constructor that assembles
-- b(u,v) = int_regions action(operator1(u)) * operator2(v) if apply_action_to = 1
-- b(u,v) = int_regions operator1(u) * action(operator2(v)) if apply_action_to = 2
 
-The optional arguments AT and regions specifies on which grid item the operator lives/assembles, while store toggles the separate storage for the operator
-(which is advisable if it is not alone i an otherweise nonlinear block of a PDEDescription). With the optional argument APT one can trigger different subpatterns
-like APT_SymmetricBilinearForm (assembles only a triangular block) or APT_LumpedBilinearForm (assembles only the diagonal).
+"""
+$(TYPEDSIGNATURES)
+
+generates a BilinearForm defined by the following arguments:
+
+- operators_linear  : operator for the two linear arguments (usually ansatz and test function)
+- operators_current : additional operators for other unknowns
+- coeff_from        : either PDE unknown ids or block ids for CurrentSolution given to assembly_operator! that should be used for operators_current
+- action            : tells how to further combine the operators_current evaluations (=input of action) to a result that is multiplied with the test function operator
+                      (if no action is specified, the full input vector is dot-producted with the test function operator evaluation)
+
+Optional arguments:
+
+- apply_action_to   : specifies which of the two linear arguments is part of the action input
+- regions           : specifies in which regions the operator should assemble, default [0] means all regions
+- name              : name for this BilinearForm that is used in print messages
+- AT                : specifies on which entities of the grid the BilinearForm is assembled (default: ON_CELLS)
+- APT               : specifies the subtype of the APT_BilinearForm AssemblyPattern used for assembly (e.g. for lumping (wip))
+- factor            : additional factor that is multiplied during assembly
+- transposed_assembly : transposes the resulting assembled matrix
+- store             : stores a matrix of the BilinearForm with the latest assembly result
+                      (e.g. when the operators sits in a system block that has to be reassembled in an iterative scheme)
+    
 """
 function BilinearForm(
-    operators::Array{DataType,1},
-    action::AbstractAction = NoAction();
+    operators_linear::Array{DataType,1},
+    operators_current::Array{DataType,1},
+    coeff_from::Array{Int,1},
+    action::AbstractAction;
     name = "auto",
     AT::Type{<:AssemblyType} = ON_CELLS,
     APT::Type{<:APT_BilinearForm} = APT_BilinearForm,
@@ -378,85 +361,34 @@ function BilinearForm(
         name = apply_action_to == 1 ? "A($(operators[1])(u)):$(operators[2])(v)" : "$(operators[1])(u):A($(operators[2])(v))"
     end
     
-    O = PDEOperator{Float64, APT, AT}(name,operators, action, apply_action_to, factor, regions, store, AssemblyAuto)
-    O.transposed_assembly = transposed_assembly
-    return O
-end
-
-
-"""
-````
-function TrilinearForm(
-    operators::Array{AbstractFunctionOperator,1},
-    a_from::Int,
-    a_to::Int,
-    action::AbstractAction;
-    name = "auto",
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = false)
-````
-
-abstract trilinearform constructor that assembles
-- c(a,u,v) = (action(operators[1](a),operators[2](u)), operators[3](v))
-
-where u and are the ansatz and test function coressponding to the PDE coordinates and a is an additional unknown of the PDE.
-The argument a can be moved to the other positions with a_to and gets it data from unknown a_from of the full PDEdescription.
-
-The optional arguments AT and regions specifies on which grid item the operator lives/assembles,
-
-Also note that this operator is always marked as nonlinear by the Solver configuration.
-"""
-function TrilinearForm(
-    operators::Array{DataType,1},
-    a_from::Int,
-    a_to::Int,
-    action::AbstractAction;
-    name = "auto",
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    factor = 1,
-    regions::Array{Int,1} = [0],
-    transposed_assembly::Bool = false)
-
-    if name == "auto"
-        if a_to == 1
-            name = "(A($(operators[1])(a),$(operators[2])(u)), $(operators[3])(v))"
-        elseif a_to == 2
-            name = "(A($(operators[1])(u),$(operators[2])(a)), $(operators[3])(v))"
-        elseif a_to == 3
-            name = "(A($(operators[1])(u),$(operators[2])(v)), $(operators[3])(a))"
-        end
-    end
-        
-    O = PDEOperator{Float64, APT_TrilinearForm, AT}(name,operators, action, [1,2], factor, regions)
-    O.fixed_arguments = [a_to]
-    O.fixed_arguments_ids = [a_from]
+    append!(operators_current, operators_linear)
+    O = PDEOperator{Float64, APT, AT}(name, operators_current, action, apply_action_to, factor, regions, store, AssemblyAuto)
+    O.fixed_arguments = 1:length(coeff_from)
+    O.fixed_arguments_ids = coeff_from
     O.transposed_assembly = transposed_assembly
     return O
 end
 
 """
-````
-function ConvectionOperator(
-    a_from::Int, 
-    beta_operator::Type{<:AbstractFunctionOperator},
-    xdim::Int,
-    ncomponents::Int;
-    name = "auto",
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    fixed_argument::Int = 1,
-    factor = 1,
-    ansatzfunction_operator::Type{<:AbstractFunctionOperator} = Gradient,
-    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
-    regions::Array{Int,1} = [0],
-    newton::Bool = false,
-    quadorder = 0)
-````
+$(TYPEDSIGNATURES)
 
-constructs a trilinearform for a convection term of the form c(a,u,v) = (beta_operator(a)*ansatzfunction_operator(u),testfunction_operator(v))
+same as other constructor but with operators_current = [] (no other implicit dependencies)
+"""
+function BilinearForm(
+    operators_linear::Array{DataType,1},
+    action::AbstractAction = NoAction();
+    kwargs...)
+
+    BilinearForm(operators_linear, Array{DataType,1}([]), Array{Int,1}([]), action; kwargs...)
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+constructs a convection term of the form c(a,u,v) = (beta_operator(a)*ansatzfunction_operator(u),testfunction_operator(v))
 where a_from is the id of some unknown of the PDEDescription; xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
-With fixed_argument = 2 a and u can switch their places, i.e.  c(u,a,v) = (beta_operator(u)*grad(a),v),
-With newton = true a Newton scheme for c(u,u,v) is automatically derived (and fixed_argument is ignored).
+With newton = true a Newton scheme for c(u,u,v) is automatically derived (and fixed_argument is ignored), otherwise a BilinearForm is created
+where fixed_argument = 2 determines which of the three arguments (a, u or v) is fixed, and the remaining two are ansatz and test function.
 
 """
 function ConvectionOperator(
@@ -473,7 +405,7 @@ function ConvectionOperator(
     regions::Array{Int,1} = [0],
     newton::Bool = false,
     transposed_assembly::Bool = true,
-    quadorder = 0)
+    bonus_quadorder = 0)
 
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
@@ -500,10 +432,10 @@ function ConvectionOperator(
         if name == "auto"
             name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) u, $(testfunction_operator)(v))"
         end
-        return NonlinearForm([beta_operator, ansatzfunction_operator], [a_from,a_from], testfunction_operator, convection_function_fe,argsizes; name = name, jacobian = convection_jacobian, quadorder = quadorder)     
+        return NonlinearForm(testfunction_operator, [beta_operator, ansatzfunction_operator], [a_from,a_from], convection_function_fe,argsizes; name = name, jacobian = convection_jacobian, bonus_quadorder = bonus_quadorder)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
-        convection_action = Action(convection_function_fe,argsizes; dependencies = "", bonus_quadorder = quadorder)
+        convection_action = Action(convection_function_fe,argsizes; dependencies = "", bonus_quadorder = bonus_quadorder)
         a_to = fixed_argument
         if name == "auto"
             if a_to == 1
@@ -515,7 +447,7 @@ function ConvectionOperator(
             end
         end
         
-        O = PDEOperator{Float64, APT_TrilinearForm, AT}(name,[beta_operator,ansatzfunction_operator,testfunction_operator], convection_action, [1,2], factor, regions)
+        O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[beta_operator,ansatzfunction_operator,testfunction_operator], convection_action, [1,2], factor, regions)
         O.fixed_arguments = [a_to]
         O.fixed_arguments_ids = [a_from]
         O.transposed_assembly = transposed_assembly
@@ -526,7 +458,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a trilinearform that describes a(u,v) = (beta x curl(u),v)
+constructor for a bilinearform that describes a(u,v) = (beta x curl(u),v)
 where beta is the id of some unknown vector field of the PDEDescription, u and v
 are also vector-fields and x is the cross product (so far this is only implemented in 2D)
     
@@ -556,66 +488,55 @@ function ConvectionRotationFormOperator(
         if name == "auto"
             name = "((β × ∇) u, v)"
         end
-        O = PDEOperator{Float64, APT_TrilinearForm, AT}(name,[beta_operator,ansatzfunction_operator,testfunction_operator], convection_action, [1,2], factor, regions)
+        O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[beta_operator,ansatzfunction_operator,testfunction_operator], convection_action, [1,2], factor, regions)
         O.fixed_arguments = [1]
         O.fixed_arguments_ids = [beta]
         O.transposed_assembly = true
         return O
     else
-        @error "The rotation form of the convection operator is currently only available in 2D (in 3D please implement it yourself using TrilinearForm and a user-defined action)"
+        @error "The rotation form of the convection operator is currently only available in 2D (in 3D please implement it yourself using BilinearForm and a user-defined action)"
     end
 end
 
 """
-````
-function NonlinearForm(
-    operator1::Array{DataType,1},
-    coeff_from::Array{Int,1},
-    operator2::Type{<:AbstractFunctionOperator},
-    action_kernel::Function,
-    argsizes::Array{Int,1},
-    dim::Int;
-    name::String = "nonlinear form",
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    newton::Bool = true, # prepare operators for Newton algorithm
-    sparse_jacobian = true, # use sparsity detection and sparse matrixes for local jacobians
-    jacobian = "auto", # by automatic ForwarDiff, or should be a function of input (jacobian, input) with sizes matching the specified dependencies
-    action_kernel_rhs = nothing,
-    dependencies = "",
-    factor = 1,
-    regions = [0])
-````
+$(TYPEDSIGNATURES)
 
-generates an abstract nonlinearform operator G. 
-The array coeff_from stores the ids of the unknowns that should be used to evaluate the operators. The array argsizes is a vector with two entries where the first one
-is the length of the expected result vector and the second one is the length of the input vector.
+generates a NonlinearForm defined by the following arguments:
 
-If newton == true (default), the operators for a Newton iteration are generated. Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
+- operator_test     : operator for the test function
+- operators_current : additional operators for other unknowns
+- coeff_from        : either PDE unknown ids or block ids for CurrentSolution given to assembly_operator! that should be used for operators_current
+- action_kernel     : function of interface (result, input, ...) that computes the nonlinear quantity that should be multiplied with the testfunction operator
+- argsizes          : dimensions of [result, input] of kernel function
+
+Optional arguments:
+
+- dependencies      : code String for additional dependencies of the kernel/jacobians (substring of "XTI")
+- jacobian          : default = "auto" triggers automatic computation of jacobians by ForwardDiff, otherwise user can specify a function of interface (jacobian, input, ...) with matching dimensions and dependencies
+- sparse_jacobian   : use sparsity detection and sparse matrixes for local jacobians ?
+- regions           : specifies in which regions the operator should assemble, default [0] means all regions
+- name              : name for this NonlinearForm that is used in print messages
+- AT                : specifies on which entities of the grid the NonlinearForm is assembled (default: ON_CELLS)
+- factor            : additional factor that is multiplied during assembly
+- store             : stores a matrix of the discretised NonlinearForm with the latest assembly result
+- bonus_quadorder   : increases the quadrature order in assembly accordingly (additional to usual quadorder based on used FESpaces)
+  
+
+Some details: Given some operator G(u), the Newton iteration reads DG u_next = DG u - G(u) which is added to the rest of the (linear) operators in the PDEDescription.
 The local jacobians (= jacobians of the operator kernel) to build DG needed for this are computed by
 automatic differentation (ForwardDiff). The user can also specify a jacobian kernel function by hand (which may improve assembly times).
 
-For default dependencies the kernel functions for the operator and its jacobian have to satisfy the interface
+For default dependencies both the kernel functions for the operator and its jacobian have to satisfy the interface
 
-    function name(result,input)
+    function name(result,input,...)
 
 where input is a vector of the operators of the solution and result is either what then is multiplied with operator2 of the testfunction (or the jacobian).
-For dependencies == "XT" the additional arguments x and t are needed in the interface.
-
-Note : The code needs a revision for newton == false, so this is not supported currently.
-
-Note : The limitation that the nonlinearity only can depend on one unknown of the PDE was recently lifted, however the behavior how to assign this operator to the PDE
-may be revised in future. Currently, the nonlinearity can indeed depend on arbitrary unknowns (i.e. coeff_from may contain more than one different unknown ids),
-which will lead to copies of the operator assigned also to off-diagonal blocks which are then related to partial derivatives with respect to the other unknowns
-(i.e. input_ansatz will only contain the operator evaluations that coresspond to the unknown of the subblock it is evaluated at, all other entries are zero).
-The subblock assignment of the copies is done automatically by the add_operator! function.
-
-Note: Sparsity of the jacobians can be switched with sparse_jacobian (default is true).
 
 """
 function NonlinearForm(
-    operator1::Array{DataType,1},
+    operator_test::Type{<:AbstractFunctionOperator},
+    operators_current::Array{DataType,1},
     coeff_from::Array{Int,1},
-    operator2::Type{<:AbstractFunctionOperator},
     action_kernel, # should be a function of input (result, input) or matching the specified dependencies
     argsizes::Array{Int,1};
     name::String = "nonlinear form",
@@ -623,53 +544,39 @@ function NonlinearForm(
     newton::Bool = true, # prepare operators for Newton algorithm
     sparse_jacobian = true, # use sparsity detection and sparse matrixes for local jacobians
     jacobian = "auto", # by automatic ForwarDiff, or should be a function of input (jacobian, input) with sizes matching the specified dependencies
-    action_kernel_rhs = nothing,
     dependencies = "",
-    quadorder::Int = 0,
+    bonus_quadorder::Int = 0,
     store::Bool = false,
     factor = 1,
     regions = [0])
 
 
     if length(argsizes) == 2
-        push!(argsizes,argsizes[2])
+        push!(argsizes, argsizes[2])
     end
+
+    operators = copy(operators_current)
+    append!(operators, [operator_test])
 
     if newton
         if jacobian == "auto"
             name = name * " [AD-Newton]"
-            jac_handler = OperatorWithADJacobian(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder, sparse_jacobian = sparse_jacobian)
+            jac_handler = OperatorWithADJacobian(action_kernel, argsizes; dependencies = dependencies, quadorder = bonus_quadorder, sparse_jacobian = sparse_jacobian)
         else
             name = name * " [Newton]"
-            jac_handler = OperatorWithUserJacobian(action_kernel, jacobian, argsizes; dependencies = dependencies, quadorder = quadorder, sparse_jacobian = sparse_jacobian)
+            jac_handler = OperatorWithUserJacobian(action_kernel, jacobian, argsizes; dependencies = dependencies, quadorder = bonus_quadorder, sparse_jacobian = sparse_jacobian)
         end
 
-        O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, jac_handler, 1:(length(coeff_from)), 1, regions)
+        O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operators, jac_handler, 1:(length(coeff_from)), 1, regions)
+        O.fixed_arguments = 1:length(coeff_from)
+        O.fixed_arguments_ids = coeff_from
+        O.newton_arguments = 1 : length(coeff_from) # if depended on different ids, operator is later splitted into several operators where newton_arguments refer only to subset
+        O.factor = factor
+        O.store_operator = store
+        O.transposed_assembly = true
     else
-        # take action_kernel as nonlinear action_kernel
-        # = user specifies linearisation of nonlinear operator
-        nlform_action_kernel = NLActionKernel(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
-
-        action = Action{Float64}( nlform_action_kernel)
-        if action_kernel_rhs !== nothing
-            action_rhs = Action{Float64}( action_kernel_rhs)
-        else
-            action_rhs = nothing
-        end
-        O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operator1, action, 1:(length(coeff_from)), 1, regions)
-        O.action_rhs = action_rhs === nothing ? NoAction() : action_rhs
+        @error "currently only newton = true is possible"
     end
-
-    append!(operator1, [operator2])
-    O.fixed_arguments = 1:length(coeff_from)
-    O.fixed_arguments_ids = coeff_from
-    O.newton_arguments = 1 : length(coeff_from) # if depended on different ids, operator is later splitted into several operators where newton_arguments refer only to subset
-    O.factor = factor
-    O.store_operator = store
-    O.transposed_assembly = true
-
-    # eval action
-    #O.action_eval = Action(action_kernel, argsizes; dependencies = dependencies, quadorder = quadorder)
     return O
 end
 
@@ -677,8 +584,9 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a linearform from an action (whose input is ignored and the result dimension has to match the length of the operator evaluation of v), L(v) = (A(),v)
-    
+generates a LinearForm L(v) = (f,operator(v))
+from a given action (that should have the same result dimensions as the testfunction operator).
+
 """
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
@@ -688,8 +596,6 @@ function RhsOperator(
     regions::Array{Int,1} = [0],
     factor = 1,
     store::Bool = false)
-
-    @assert action.argsizes[1] == 1 "Actions for right-hand sides must have result dimension 1!"
 
     if name == "auto"
         name = "(A($operator(v)), 1)"
@@ -703,44 +609,50 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a linearform from a given UserData{<:DataFunction} f (that should have the same result dimensions as the length of result of the operator applied to the testfunction),
-i.e. L(v) = (f,operator(v))
+generates a LinearForm L(v) = (f,operator(v))
+from a given UserData{<:DataFunction} f (that should have the same result dimensions as the testfunction operator).
     
 """
 function RhsOperator(
     operator::Type{<:AbstractFunctionOperator},
-    regions::Array{Int,1},
     f::UserData{<:AbstractDataFunction};
     name = "auto",
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    factor = 1,
-    store::Bool = false)
+    kwargs...)
 
     if name == "auto"
         name = "($(f.name), $operator(v))"
     end
 
-    O = PDEOperator{Float64, APT_LinearForm, AT}(name,[operator], fdot_action(f), [1], 1, regions, store, AssemblyAuto)
-    O.factor = factor
-    return O
+    return RhsOperator(operator, fdot_action(f); name = name, kwargs...)
 end
 
 
 """
 $(TYPEDSIGNATURES)
 
-generates a linearform from an action (whose input are operator evaluations of the
-current state of the unknowns with the ids stated in coeff_from, the result dimension
-has to match the length of the operator evaluation of v),
- 
-i.e. L(v) = (A(operators(unknowns[coeff_from])),operator(v))
+Creates a (PDE description level) LinearForm based on:
+
+- operator_test     : operator for the test function (assumes linearity for that part)
+- operators_current : additional operators for other unknowns
+- coeff_from        : either PDE unknown ids or block ids for CurrentSolution given to assembly_operator! that should be used for operators_current
+- action            : an Action with kernel of interface (result, input, kwargs) that takes input (= all but last operator evaluations) and computes result to be dot-producted with test function evaluation
+                      (if no action is specified, the full input vector is dot-producted with the test function operator evaluation)
+
+Optional arguments:
+
+- regions: specifies in which regions the operator should assemble, default [0] means all regions
+- name : name for this LinearForm that is used in print messages
+- AT : specifies on which entities of the grid the LinearForm is assembled (default: ON_CELLS)
+- factor : additional factor that is multiplied during assembly
+- store : stores a vector of the LinearForm with the latest assembly result
+  (e.g. when the operators sits in a system block that has to be reassembled in an iterative scheme)
     
 """
 function LinearForm(
-    operators_current::Array{DataType,1},                # operators to be evaluated for current solution
-    coeff_from::Array{Int,1},                            # coeffs for operators_current
-    operator_test::Type{<:AbstractFunctionOperator},     # operator to be evaluted for test function
-    action::AbstractAction;                              # action that explains how to calculate the result to be multiplied with operator_test
+    operator_test::Type{<:AbstractFunctionOperator},                   # operator to be evaluted for test function
+    operators_current::Array{DataType,1} = [],                         # operators to be evaluated for current solution (in order of expected action input)
+    coeff_from::Array{Int,1} = ones(Int, length(operators_current)),   # unknown ids for operators_current
+    action::AbstractAction = NoAction();                               # action that takes all input operators and computes some result that is multiplied with test function operator
     regions::Array{Int,1} = [0],
     name = "auto",
     AT::Type{<:AssemblyType} = ON_CELLS,
@@ -965,31 +877,30 @@ end
 
 function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,TiM,TvG,TiG}, CurrentSolution) where{T,TvM,TiM,TvG,TiG,APT<:APT_BilinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{TvG,TiG},1}(undef, 2)
-    FES[1] = O.transposed_assembly ? A.FESY : A.FESX
-    FES[2] = O.transposed_assembly ? A.FESX : A.FESY
+    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
+    for a = 1 : length(O.fixed_arguments)
+        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
+    end
+    push!(FES, O.transposed_assembly ? A.FESY : A.FESX)
+    push!(FES, O.transposed_assembly ? A.FESX : A.FESY)
     return AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_BilinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector; fixed = 0, fixed_id = 0) where{T,TvV,TvG,TiG,APT<:APT_BilinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
+    push!(O.fixed_arguments, length(O.fixed_arguments) + 1)
+    push!(O.fixed_arguments_ids, fixed_id)
     FES = Array{FESpace{TvG,TiG},1}(undef, 2)
-    if length(O.fixed_arguments) == 1
-        # assume it is a restricted bilinearform
-        non_fixed = O.fixed_arguments[1] == 1 ? 2 : 1
-        fixed_id = O.fixed_arguments_ids[1]
-        FES[non_fixed] = b.FES
-        FES[non_fixed == 1 ? 2 : 1] = CurrentSolution[fixed_id].FES
-    else
-        # assume it is a LHS bilinearform that is assembled to the RHS with a fixed argument
-        FES[non_fixed] = b.FES
-        FES[non_fixed == 1 ? 2 : 1] = CurrentSolution[fixed_id].FES
+    FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
+    for a = 1 : length(O.fixed_arguments)
+        FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
     end
-    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
+    push!(FES, CurrentSolution[fixed_id].FES)
+    return AssemblyPattern{APT_LinearForm, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_LinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution; fixed = 0, fixed_id = 0) where{T,TvV,TvG,TiG,APT<:APT_LinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
     FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
     for a = 1 : length(O.fixed_arguments)
@@ -999,54 +910,10 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,
     return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
-
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,TiM,TvG,TiG}, CurrentSolution::FEVector) where{T,TvM,TiM,TvG,TiG,APT<:APT_TrilinearForm,AT}
-    @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{TvG,TiG},1}(undef, 3)
-    FES[O.fixed_arguments[1]] = CurrentSolution[O.fixed_arguments_ids[1]].FES
-    if O.fixed_arguments == [1]
-        FES[2] = O.transposed_assembly ? A.FESY : A.FESX
-        FES[3] = O.transposed_assembly ? A.FESX : A.FESY
-    elseif O.fixed_arguments == [2]
-        FES[1] = O.transposed_assembly ? A.FESY : A.FESX
-        FES[3] = O.transposed_assembly ? A.FESX : A.FESY
-    elseif O.fixed_arguments == [3]
-        FES[1] = O.transposed_assembly ? A.FESY : A.FESX
-        FES[2] = O.transposed_assembly ? A.FESX : A.FESY
-    end
-    return AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
-end
-
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector; non_fixed::Int = 1, fixed_id = 1) where{T,TvV,TvG,TiG,APT<:APT_TrilinearForm,AT}
-    @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    FES = Array{FESpace{TvG,TiG},1}(undef, 3)
-    FES[O.fixed_arguments[1]] = CurrentSolution[O.fixed_arguments_ids[1]].FES
-    if length(O.fixed_arguments) == 2
-        # a restricted Trilineraform is assembled as a RHS operator
-        FES[O.fixed_arguments[2]] = CurrentSolution[O.fixed_arguments_ids[2]].FES
-        non_fixed = setdiff([1,2,3], O.fixed_arguments)[1]
-        FES[non_fixed] = b.FES
-    else # it is assumed that a LHS Trilinearform is assembled into RHS block
-        if O.fixed_arguments == [1]
-            FES[non_fixed == 1 ? 2 : 3] = O.transposed_assembly ? CurrentSolution[fixed_id].FES : b.FES
-            FES[non_fixed == 1 ? 3 : 2] = O.transposed_assembly ? b.FES : CurrentSolution[fixed_id].FES
-        elseif O.fixed_arguments == [2]
-            FES[non_fixed == 1 ? 1 : 3] = O.transposed_assembly ? CurrentSolution[fixed_id].FES : b.FES
-            FES[non_fixed == 1 ? 3 : 1] = O.transposed_assembly ? b.FES : CurrentSolution[fixed_id].FES
-        elseif O.fixed_arguments == [3]
-            FES[non_fixed == 1 ? 2 : 3] = O.transposed_assembly ? CurrentSolution[fixed_id].FES : b.FES
-            FES[non_fixed == 1 ? 3 : 2] = O.transposed_assembly ? b.FES : CurrentSolution[fixed_id].FES
-        end
-    end
-    return AssemblyPattern{APT, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
-end
-
-
-
 """
 $(TYPEDSIGNATURES)
 
-assembles the operator O into the given FEMatrixBlock A using FESpaces from A. An FEVector CurrentSolution is only needed if the operator involves fixed arguments, e.g. if O is a TrilinearForm.
+assembles the operator O into the given FEMatrixBlock A using FESpaces from A.
 """
 function assemble_operator!(A::FEMatrixBlock, O::PDEOperator, CurrentSolution::Union{Nothing,FEVector} = nothing; Pattern = nothing, skip_preps::Bool = false, time::Real = 0, At = nothing)
     if Pattern === nothing
@@ -1066,7 +933,7 @@ function assemble_operator!(A::FEMatrixBlock, O::PDEOperator, CurrentSolution::U
 end
 
 
-function assemble_operator!(b::FEVectorBlock, O::PDEOperator, CurrentSolution::Union{Nothing,FEVector} = nothing; Pattern = nothing, skip_preps::Bool = false, factor = 1, time::Real = 0)
+function assemble_operator!(b::FEVectorBlock, O::PDEOperator, CurrentSolution = nothing; Pattern = nothing, skip_preps::Bool = false, factor = 1, time::Real = 0)
     if Pattern === nothing
         Pattern = create_assembly_pattern(O, b, CurrentSolution)
     end
@@ -1131,7 +998,8 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
         ## find assembly pattern
         skip_preps = true
         if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
-            SC.LHS_AssemblyPatterns[j,k][o] = create_assembly_pattern(O, b, CurrentSolution; non_fixed = (j == fixed_component ? 2 : 1), fixed_id = fixed_component)
+            fixed = (j == fixed_component) * (O.apply_action_to == 1) ? 1 : 2
+            SC.LHS_AssemblyPatterns[j,k][o] = create_assembly_pattern(O, b, CurrentSolution; fixed = fixed, fixed_id = fixed_component)
             skip_preps = false
         end
 
@@ -1145,17 +1013,6 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
                 @error "Something went severely wrong..."
             end
             fixed_arguments_ids = [fixed_component]
-        elseif typeof(O).parameters[2] <: APT_TrilinearForm
-            fixed_arguments = O.fixed_arguments
-            fixed_arguments_ids = O.fixed_arguments_ids
-            if fixed_component == j
-                push!(fixed_arguments, 1)
-            elseif fixed_component == k
-                push!(fixed_arguments, 2)
-            else
-                @error "Something went severely wrong..."
-            end
-            push!(fixed_arguments_ids, fixed_component)
         end
 
         ## assemble

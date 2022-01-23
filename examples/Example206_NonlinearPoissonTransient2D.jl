@@ -44,14 +44,14 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
-    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", quadorder = 2, newton = true)  
+    nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", bonus_quadorder = 2, newton = true)  
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], f))
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, f))
 
     ## define error evaluators
     L2Error = L2ErrorIntegrator(Float64, u, Identity; time = T)

@@ -110,10 +110,9 @@ export AccumulatingVector
 include("assemblypatterns.jl")
 export AssemblyPatternType, AssemblyPreparations
 export ItemIntegrator, L2ErrorIntegrator, L2NormIntegrator, L2DifferenceIntegrator
-export LinearForm
-export BilinearForm, SymmetricBilinearForm, LumpedBilinearForm
+export DiscreteLinearForm
+export DiscreteBilinearForm, DiscreteSymmetricBilinearForm, DiscreteLumpedBilinearForm
 export APT_BilinearForm, APT_SymmetricBilinearForm, APT_LumpedBilinearForm
-export TrilinearForm
 export NonlinearForm
 export prepare_assembly!
 export assemble!, evaluate!, evaluate
@@ -135,15 +134,13 @@ export ReactionOperator
 export ConvectionOperator, ConvectionRotationFormOperator
 export LagrangeMultiplier
 
-export TrilinearForm
-export AbstractNonlinearForm, NonlinearForm
+export NonlinearForm
 
 export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
 export CustomMatrixOperator
 
-export RhsOperator
-export restrict_operator
+export RhsOperator, LinearForm
 export SchurComplement
 
 export assemble_operator!, eval_assemble!

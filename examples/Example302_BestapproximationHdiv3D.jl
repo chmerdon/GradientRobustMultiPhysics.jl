@@ -43,7 +43,7 @@ function main(; verbosity = 0, Plotter = nothing)
 
     ## add the right-hand side data for the constraint and inspect the defined problem
     div_u = div(u)
-    add_rhsdata!(Problem, 2, RhsOperator(Identity, [0], div_u))
+    add_rhsdata!(Problem, 2, RhsOperator(Identity, div_u))
     @show Problem
 
     ## choose some (inf-sup stable) finite element types

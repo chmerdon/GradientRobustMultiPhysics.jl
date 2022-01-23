@@ -85,8 +85,8 @@ function main(; ν = [0.3,0.3], E = [2.1,1.1], ΔT = [580,580], α = [1.3e-5,2.4
     xgrid = bimetal_strip2D(; scale = scale, n = 2*(nref+1))
 
     ## prepare nonlinear operator (one for each bimetal region)
-    nonlin_operator_1 = NonlinearForm([Gradient], [1], Gradient, ops[1], [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [1], quadorder = 3, newton = true, store = store, sparse_jacobian = true) 
-    nonlin_operator_2 = NonlinearForm([Gradient], [1], Gradient, ops[2], [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [2], quadorder = 3, newton = true, store = store, sparse_jacobian = true) 
+    nonlin_operator_1 = NonlinearForm(Gradient, [Gradient], [1], ops[1], [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [1], bonus_quadorder = 3, newton = true, store = store, sparse_jacobian = true) 
+    nonlin_operator_2 = NonlinearForm(Gradient, [Gradient], [1], ops[2], [4,4,7]; name = "C(ϵ(u)-ϵT):∇v", regions = [2], bonus_quadorder = 3, newton = true, store = store, sparse_jacobian = true) 
     
     ## generate problem description and assign nonlinear operators
     Problem = PDEDescription("nonlinear elasticity problem")

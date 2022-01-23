@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.17.3
 
 using Markdown
 using InteractiveUtils
@@ -7,8 +7,9 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
 end
@@ -89,7 +90,7 @@ begin
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence; store = true))
     
   	# add right-hand side operator
-    Rop = add_rhsdata!(Problem, 1, RhsOperator(Identity, [0], f))
+    Rop = add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
 	
 	@show "unhide me for details"
 end
@@ -427,7 +428,7 @@ uuid = "9c8b4983-aa76-5018-a973-4c85ecc9e179"
 version = "0.9.0"
 
 [[LinearAlgebra]]
-deps = ["Libdl"]
+deps = ["Libdl", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[LogExpFunctions]]
@@ -466,6 +467,10 @@ version = "0.3.5"
 
 [[NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
+
+[[OpenBLAS_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
+uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
 
 [[OpenSpecFun_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
@@ -521,7 +526,7 @@ deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[Random]]
-deps = ["Serialization"]
+deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[Reexport]]
@@ -636,6 +641,10 @@ version = "2.9.12+0"
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 
+[[libblastrampoline_jll]]
+deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
+uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
+
 [[nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
@@ -655,7 +664,7 @@ uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
 # ╟─5bb01852-d3f5-4512-b8b4-fb5442eaeb97
 # ╟─f74bd3d6-ee33-4f77-9f3b-a53be134041d
 # ╟─b5fbbd91-0484-4bd8-a34d-4bab2d0588d6
-# ╠═bf4a310d-b12f-4f55-a367-39b06b3ee228
+# ╟─bf4a310d-b12f-4f55-a367-39b06b3ee228
 # ╟─ac3cb451-b811-4a34-958c-b8266b6c4f17
 # ╟─df2b6a48-e82b-4894-961f-8cc251eb0a01
 # ╟─84cc43bb-33bf-472e-be76-1a570f772e82

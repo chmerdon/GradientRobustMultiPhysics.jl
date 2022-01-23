@@ -73,14 +73,14 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
         result[2] = (1+input[1]^2)*input[3]
         return nothing
     end 
-    nonlin_diffusion = NonlinearForm([Identity, Gradient], [1,1], Gradient, diffusion_kernel!, [2,3]; name = "((1+u^2)*grad(u))*grad(v)", quadorder = 2, newton = true)   
+    nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel!, [2,3]; name = "((1+u^2)*grad(u))*grad(v)", bonus_quadorder = 2, newton = true)   
 
     ## generate problem description and assign nonlinear operator and data
     Problem = PDEDescription("nonlinear Poisson problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, [0], u_rhs; store = true))
+    add_rhsdata!(Problem, 1,  RhsOperator(Identity, u_rhs; store = true))
 
     ## create finite element space and solution vector
     FES = FESpace{FEType}(xgrid)

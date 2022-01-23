@@ -217,9 +217,9 @@ function boundarydata!(
                 eval_data!(result, O.data4bregion[item[3]], x, time)
             end   
             action = Action(bnd_rhs_function_h1, [ncomponents, 0]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], action; regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
+            RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "RHS bnd data bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
+            L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == NormalFlux
             xFaceNormals = FE.xgrid[FaceNormals]
@@ -234,9 +234,9 @@ function boundarydata!(
                 end   
             end   
             action = Action(bnd_rhs_function_hdiv(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], action; regions = BADirichletBoundaryRegions, name = "RHS bnd data NormalFlux bestapprox")
+            RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "RHS bnd data NormalFlux bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data NormalFlux bestapprox")    
+            L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data NormalFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 2 # Hcurl on 2D domains
             xFaceNormals = FE.xgrid[FaceNormals]
@@ -249,9 +249,9 @@ function boundarydata!(
                 end   
             end   
             action = Action(bnd_rhs_function_hcurl2d(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BFACES, [FE], [Dboperator], action; regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
+            RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(T, ON_BFACES, [FE, FE], [Dboperator, Dboperator]; regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
+            L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         elseif Dboperator == TangentFlux && xdim == 3 # Hcurl on 3D domains, does not work properly yet
             @warn "Hcurl boundary data in 3D may not work properly yet"
@@ -270,9 +270,9 @@ function boundarydata!(
                 end   
             end   
             action = Action(bnd_rhs_function_hcurl3d(), [1, ncomponents]; dependencies = "XI", bonus_quadorder = bonus_quadorder)
-            RHS_bnd = LinearForm(T, ON_BEDGES, [FE], [Dboperator], action; regions = [0], name = "RHS bnd data TangentFlux bestapprox")
+            RHS_bnd = DiscreteLinearForm([Dboperator], [FE], action; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "RHS bnd data TangentFlux bestapprox")
             assemble!(b, RHS_bnd)
-            L2ProductBnd = SymmetricBilinearForm(T, ON_BEDGES, [FE, FE], [Dboperator, Dboperator]; regions = [0], name = "LHS bnd data TangentFlux bestapprox")    
+            L2ProductBnd = DiscreteSymmetricBilinearForm([Dboperator, Dboperator], [FE, FE]; T = T, AT = ON_BFACES, regions = BADirichletBoundaryRegions, name = "LHS bnd data TangentFlux bestapprox")    
             assemble!(A[1],L2ProductBnd)
         end    
 

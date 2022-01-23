@@ -45,7 +45,7 @@ function main(; verbosity = 0, E = 1000, ν = 0.4, Plotter = nothing)
 
     ## PDE description via prototype and add data
     Problem = LinearElasticityProblem(2; shear_modulus = μ, lambda = λ)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, [2], g; AT = ON_BFACES))
+    add_rhsdata!(Problem, 1, RhsOperator(Identity, g; regions = [2], AT = ON_BFACES))
     add_boundarydata!(Problem, 1, [4], HomogeneousDirichletBoundary)
 
     ## show and solve PDE

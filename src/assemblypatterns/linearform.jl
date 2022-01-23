@@ -11,19 +11,22 @@ function Base.show(io::IO, ::Type{APT_LinearForm})
 end
 
 """
-````
-function LinearForm(
-    T::Type{<:Real},
-    AT::Type{<:AssemblyType},
-    FE::Array{FESpace,1},
-    operators::Array{DataType,1}, 
-    action::AbstractAction; 
-    regions::Array{Int,1} = [0])
-````
+$(TYPEDSIGNATURES)
 
-Creates a LinearForm assembly pattern with the given FESpaces, operators and action etc.
+Creates a (discrete) LinearForm assembly pattern based on:
+
+- operators : operators that should be evaluated for the coressponding FESpace (last one refers to test function)
+- FES       : FESpaces for each operator (last one refers to test function)
+- action    : an Action with kernel of interface (result, input, kwargs) that takes input (= all but last operator evaluations) and computes result to be dot-producted with test function evaluation
+              (if no action is specified, the full input vector is dot-producted with the test function operator evaluation)
+
+Optional arguments:
+- regions   : specifies in which regions the operator should assemble, default [0] means all regions
+- name      : name for this LinearForm that is used in print messages
+- AT        : specifies on which entities of the grid the LinearForm is assembled (default: ON_CELLS)
+
 """
-function LinearForm(T::Type{<:Real}, AT::Type{<:AssemblyType}, FES::Array{<:FESpace{Tv,Ti},1}, operators, action = NoAction(); regions = [0], name = "LF") where {Tv,Ti}
+function DiscreteLinearForm(operators, FES::Array{<:FESpace{Tv,Ti},1}, action = NoAction(); T = Float64, AT = ON_CELLS, regions = [0], name = "LF") where {Tv,Ti}
     @assert length(operators) == 1
     @assert length(FES) == 1
     return AssemblyPattern{APT_LinearForm, T, AT}(name,FES,operators,action,[1],regions)
@@ -65,19 +68,29 @@ function assemble!(
     # prepare action
     action = AP.action
     if typeof(action) <: NoAction
-        action_resultdim = size(get_basisevaler(AM, 1, 1).cvals,1)
+        action_resultdim = size(get_basisevaler(AM, nFE, 1).cvals,1)
         action_result = ones(T,action_resultdim) # heap for action output
         action_input = action_result
     else
-        maxnweights = get_maxnqweights(AM)
         action_resultdim::Int = action.argsizes[1]
         action_result = action.val
-        if nFE > 1
-            action_input_FEB = Array{Array{T,1},1}(undef,maxnweights)
+    end
+    if nFE > 1
+        maxnweights = get_maxnqweights(AM)
+        action_input_FEB = Array{Array{T,1},1}(undef,maxnweights)
+        if typeof(action) <: NoAction
+            for j = 1 : maxnweights
+                action_input_FEB[j] = zeros(T,action_resultdim) # heap for action input
+            end
+        else
             for j = 1 : maxnweights
                 action_input_FEB[j] = zeros(T,action.argsizes[2]) # heap for action input
             end
-            action_input = action_input_FEB[1]
+        end
+        action_input = action_input_FEB[1]
+    else
+        if typeof(action) <: NoAction
+            action_input = zeros(T,action_resultdim)
         else
             action_input = zeros(T,action.argsizes[2])
         end
@@ -162,7 +175,7 @@ function assemble!(
                 # update action on dofitem
                 if is_itemdependent(action)
                     action.item[1] = item
-                    action.item[2] = AM.dofitems[1][di]
+                    action.item[2] = AM.dofitems[nFE][di]
                     action.item[3] = xItemRegions[item]
                 end
 
@@ -171,7 +184,7 @@ function assemble!(
                         action_input = action_input_FEB[i]
                     end
                     if is_xdependent(action)
-                        update_trafo!(basisevaler.L2G, AM.dofitems[1][di])
+                        update_trafo!(basisevaler.L2G, AM.dofitems[nFE][di])
                         eval_trafo!(action.x, basisevaler.L2G, basisevaler.xref[i])
                     end
                     # apply action
