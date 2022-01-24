@@ -57,7 +57,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
     ## add operators (Laplacian, Div-LagrangeMultierplier, Convection)
     add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
-    add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; testfunction_operator = VeloIdentity, newton = true))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, VeloIdentity, 2, 2; test_operator = VeloIdentity, newton = true))
     
     ## add boundary data (bregion 2 is outflow, 4 is inflow, 5 is cylinder)
     add_boundarydata!(Problem, 1, [1,3,5], HomogeneousDirichletBoundary)

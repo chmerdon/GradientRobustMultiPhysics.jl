@@ -56,7 +56,7 @@ function main(;
 
     ## set testfunction operator for certain testfunctions
     ## (pressure-robustness chooses a reconstruction that can exploit the L2-orthogonality onto gradients)
-    testfunction_operator = reconstruct ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
+    test_operator = reconstruct ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
 
     ## negotiate data functions to the package
     ## note that dependencies "XT" marks the function to be x- and t-dependent
@@ -77,7 +77,7 @@ function main(;
     ## load Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = ν, nonlinear = false)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, LinearForm(testfunction_operator, f))
+    add_rhsdata!(Problem, 1, LinearForm(test_operator, f))
 
     ## add grad-div stabilisation
     if graddiv > 0
@@ -114,7 +114,7 @@ function main(;
         Solution[1][:] = BA_L2_u[1][:]
 
         ## generate time-dependent solver and chance rhs data
-        TCS = TimeControlSolver(Problem, Solution, CrankNicolson; timedependent_equations = [1], skip_update = [-1], dt_operator = [testfunction_operator])
+        TCS = TimeControlSolver(Problem, Solution, CrankNicolson; timedependent_equations = [1], skip_update = [-1], dt_operator = [test_operator])
         advance_until_time!(TCS, dt, T)
 
         ## solve bestapproximation problems at final time for comparison

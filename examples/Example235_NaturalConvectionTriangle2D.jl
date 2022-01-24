@@ -54,7 +54,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     Problem.name = "natural convection problem"
 
     ## add convection term for velocity
-    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; testfunction_operator = RIdentity, newton = !anderson))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, RIdentity, 2, 2; test_operator = RIdentity, newton = !anderson))
 
     ## add boundary data for velocity (unknown 1) and temperature (unknown 3)
     add_boundarydata!(Problem, 1, [1,2,3], HomogeneousDirichletBoundary)

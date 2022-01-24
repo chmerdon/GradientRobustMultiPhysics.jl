@@ -89,7 +89,7 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_re
     ## assign convection term
     if nonlinear
         add_operator!(Problem,[1,1], ConvectionOperator(1, Identity, 2, 2))
-        add_operator!(Problem2,[1,1], ConvectionOperator(1, ReconstructionOperator, 2, 2; testfunction_operator = ReconstructionOperator))
+        add_operator!(Problem2,[1,1], ConvectionOperator(1, ReconstructionOperator, 2, 2; test_operator = ReconstructionOperator))
     end
 
     ## define bestapproximation problems

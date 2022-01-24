@@ -144,9 +144,17 @@ function assemble!(
  
     # loop over items
     offsets::Array{Int,1} = zeros(Int,nFE+1)
-    for j = 1 : nFE
+    for j = 1 : nFE-2
         offsets[j+1] = offsets[j] + get_basisdim(AM, j)
     end
+    if apply_action_to == 1
+        offsets[nFE] = offsets[nFE-1] + get_basisdim(AM, nFE-1)
+        offsets[nFE+1] = offsets[nFE] + get_basisdim(AM, nFE)
+    else
+        offsets[nFE] = offsets[nFE-1] + get_basisdim(AM, nFE) 
+        offsets[nFE+1] = offsets[nFE] + get_basisdim(AM, nFE-1)
+    end
+
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
     basisevaler::Array{FEBasisEvaluator{T,Tv,Ti},1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler[1].cvals

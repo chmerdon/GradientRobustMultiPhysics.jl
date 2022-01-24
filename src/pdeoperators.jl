@@ -358,7 +358,7 @@ function BilinearForm(
 
     # construct PDEoperator
     if name == "auto"
-        name = apply_action_to == 1 ? "A($(operators[1])(u)):$(operators[2])(v)" : "$(operators[1])(u):A($(operators[2])(v))"
+        name = apply_action_to == 1 ? "A(...,$(operators_linear[1])(u)):$(operators_linear[2])(v)" : "$(operators_linear[1])(u):A(...,$(operators_linear[2])(v))"
     end
     
     append!(operators_current, operators_linear)
@@ -385,7 +385,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructs a convection term of the form c(a,u,v) = (a_operator(a)*ansatzfunction_operator(u),testfunction_operator(v))
+constructs a convection term of the form c(a,u,v) = (a_operator(a)*ansatz_operator(u),test_operator(v))
 as a BilinearForm (or NonlinearForm, see newton argument)
 
 - a_from      : id of registered unknown to be used in the spot a
@@ -428,7 +428,8 @@ function ConvectionOperator(
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = grad(u)
-    if fixed_argument == 1 || newton # input = [a,u]
+    argsizes = [ncomponents, xdim + ncomponents*xdim]
+    if a_to == 1 || newton # input = [a,u]
         function convection_function_fe_1(result, input)
             for j = 1 : ncomponents
                 result[j] = 0
@@ -451,7 +452,6 @@ function ConvectionOperator(
         end    
         convection_action = Action(convection_function_fe_2,argsizes; dependencies = "", bonus_quadorder = bonus_quadorder)
     end
-    argsizes = [ncomponents, xdim + ncomponents*xdim]
     if newton
         function convection_jacobian(jac, input)
             for j = 1 : ncomponents, k = 1 : xdim
@@ -499,8 +499,8 @@ function ConvectionRotationFormOperator(
     name = "auto",
     AT::Type{<:AssemblyType} = ON_CELLS,
     factor = 1,
-    ansatzfunction_operator::Type{<:AbstractFunctionOperator} = Curl2D,
-    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    ansatz_operator::Type{<:AbstractFunctionOperator} = Curl2D,
+    test_operator::Type{<:AbstractFunctionOperator} = Identity,
     regions::Array{Int,1} = [0])
     if xdim == 2
         # action input consists of two inputs
@@ -517,7 +517,7 @@ function ConvectionRotationFormOperator(
         if name == "auto"
             name = "((β × ∇) u, v)"
         end
-        O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[beta_operator,ansatzfunction_operator,testfunction_operator], convection_action, [1,2], factor, regions)
+        O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[beta_operator,ansatz_operator,test_operator], convection_action, [1,2], factor, regions)
         O.fixed_arguments = [1]
         O.fixed_arguments_ids = [beta]
         O.transposed_assembly = true
@@ -737,8 +737,8 @@ function ConvectionOperator(
     name = "auto", 
     store::Bool = false,
     AT::Type{<:AssemblyType} = ON_CELLS,
-    ansatzfunction_operator::Type{<:AbstractFunctionOperator} = Gradient,
-    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    ansatz_operator::Type{<:AbstractFunctionOperator} = Gradient,
+    test_operator::Type{<:AbstractFunctionOperator} = Identity,
     transposed_assembly::Bool = true,
     regions::Array{Int,1} = [0])
 
@@ -810,10 +810,10 @@ function ConvectionOperator(
         action = Action(convection_function_func_t(), [ncomponents, ncomponents*xdim]; dependencies = "T", bonus_quadorder = β.quadorder)
     end
     if name == "auto"
-        name = "((β ⋅ $(ansatzfunction_operator)) u, $testfunction_operator(v))"
+        name = "((β ⋅ $(ansatz_operator)) u, $test_operator(v))"
     end
 
-    O = PDEOperator{T, APT_BilinearForm, AT}(name, [ansatzfunction_operator, testfunction_operator], action, [1], 1, regions, store, AssemblyAuto)
+    O = PDEOperator{T, APT_BilinearForm, AT}(name, [ansatz_operator, test_operator], action, [1], 1, regions, store, AssemblyAuto)
     O.transposed_assembly = transposed_assembly
     return O
 end
