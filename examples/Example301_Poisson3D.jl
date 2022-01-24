@@ -45,7 +45,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(1.0)
     add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
 
     ## prepare error calculation
     L2Error = L2ErrorIntegrator(Float64, u)

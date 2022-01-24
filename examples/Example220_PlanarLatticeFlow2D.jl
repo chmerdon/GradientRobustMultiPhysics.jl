@@ -65,7 +65,7 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
     add_operator!(Problem, [1,1], ConvectionOperator(1, IdentityV, 2, 2; testfunction_operator = IdentityV, newton = true))
     add_constraint!(Problem, FixedIntegralMean(2,0))
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(IdentityV, f))
+    add_rhsdata!(Problem, 1, LinearForm(IdentityV, f))
     @show Problem
 
     ## create finite element spaces and solve

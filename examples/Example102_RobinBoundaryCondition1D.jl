@@ -59,7 +59,7 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     add_operator!(Problem, [1,1], NonlinearForm(OperatorPair{Identity, Gradient}, [OperatorPair{Identity, Gradient}], [1], operator_kernel!, [2,2]; name = "∇u ⋅ ∇v + (u ∇u + u) ⋅ v", bonus_quadorder = 4, newton = true) )
 
     ## right-hand side data
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
 
     ## Robin boundary data right
     add_operator!(Problem, [1,1], BilinearForm([Identity, Identity], Action(robin_kernel!, [1,1]); name = "(g - u) ⋅ v", AT = ON_BFACES, regions = [1]) )

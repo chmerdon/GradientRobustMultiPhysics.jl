@@ -178,7 +178,7 @@ function setup_and_solve!(Solution, xgrid;
     else
         ## exact gravity term for right-hand side
         f = DataFunction(rhs!(γ,c), [2,2]; name = "f", dependencies = "X", quadorder = 4)
-        add_rhsdata!(Problem, 1,  RhsOperator(VeloIdentity, f; store = true))
+        add_rhsdata!(Problem, 1,  LinearForm(VeloIdentity, f; store = true))
     end
 
     ## continuity equation (by FV upwind on triangles)

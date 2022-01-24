@@ -90,7 +90,7 @@ begin
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence; store = true))
     
   	# add right-hand side operator
-    Rop = add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
+    Rop = add_rhsdata!(Problem, 1, LinearForm(Identity, f))
 	
 	@show "unhide me for details"
 end
@@ -139,7 +139,7 @@ begin
 	end
 	
 	## overwrite the right-hand side operator with the new operator
-	Problem.RHSOperators[1][Rop] = RhsOperator(VIdentity, [0], f)
+	Problem.RHSOperators[1][Rop] = LinearForm(VIdentity, [0], f)
 	
 	@show "Currently using the $reconstruct $method scheme (unhide me for details)"
 end

@@ -70,7 +70,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## load Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
 
     ## add boundary data (fixes normal components of along boundary)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
@@ -109,8 +109,8 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         result[1] = xFaceNormals[1,xBFaceFaces[item[1]]] * result[1]
         return nothing
     end
-    HdivBoundary1 = RhsOperator(Average(Identity), Action( hdiv_boundary_kernel, [2,0]; dependencies = "XTI", bonus_quadorder = u.quadorder); name = "- μ λ/h_F u_D v", factor = λ*μ, AT = ON_BFACES)
-    HdivBoundary2 = RhsOperator(Average(Gradient), Action( hdiv_boundary_kernel2, [4,0]; dependencies = "XTI", bonus_quadorder = u.quadorder); name = "- μ u_D grad(v)*n", factor = -μ, AT = ON_BFACES)
+    HdivBoundary1 = LinearForm(Average(Identity), Action( hdiv_boundary_kernel, [2,0]; dependencies = "XTI", bonus_quadorder = u.quadorder); name = "- μ λ/h_F u_D v", factor = λ*μ, AT = ON_BFACES)
+    HdivBoundary2 = LinearForm(Average(Gradient), Action( hdiv_boundary_kernel2, [4,0]; dependencies = "XTI", bonus_quadorder = u.quadorder); name = "- μ u_D grad(v)*n", factor = -μ, AT = ON_BFACES)
 
     ## assign DG operators to problem descriptions
     add_operator!(Problem, [1,1], HdivLaplace2)       

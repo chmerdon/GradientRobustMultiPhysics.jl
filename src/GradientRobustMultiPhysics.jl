@@ -134,13 +134,13 @@ export ReactionOperator
 export ConvectionOperator, ConvectionRotationFormOperator
 export LagrangeMultiplier
 
+export LinearForm
 export NonlinearForm
 
 export FVConvectionDiffusionOperator
 export DiagonalOperator, CopyOperator
 export CustomMatrixOperator
 
-export RhsOperator, LinearForm
 export SchurComplement
 
 export assemble_operator!, eval_assemble!

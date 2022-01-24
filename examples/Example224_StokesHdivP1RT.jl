@@ -73,8 +73,8 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     ## add boundary data and right-hand side
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
     add_boundarydata!(Problem, 2, [1,2,3,4], HomogeneousDirichletBoundary)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
-    add_rhsdata!(Problem, 2, RhsOperator(Identity, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+    add_rhsdata!(Problem, 2, LinearForm(Identity, f))
 
     ## show final problem description
     @show Problem

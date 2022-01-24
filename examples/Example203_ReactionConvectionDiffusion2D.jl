@@ -88,7 +88,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     Problem = PDEDescription("reaction-convection-diffusion problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "reaction-convection-diffusion equation")
     add_operator!(Problem, [1,1], ReactionConvectionDiffusionOperator(α,β,ν))
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
 
     ## add boundary data to unknown 1 (there is only one in this example)
     add_boundarydata!(Problem, 1, [1,3], BestapproxDirichletBoundary; data = u)   # u_h =  u in bregions 1 and 3

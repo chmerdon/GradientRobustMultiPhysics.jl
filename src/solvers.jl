@@ -424,7 +424,7 @@ function assemble!(
     stored_operators = []
 
     nequations::Int = length(equations)
-    # force (re)assembly of stored bilinearforms and RhsOperators
+    # force (re)assembly of stored bilinearforms and LinearForms
     if !only_rhs || only_lhs
         op_nonlinear::Bool = false
         op_timedependent::Bool = false

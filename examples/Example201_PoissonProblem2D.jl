@@ -41,7 +41,7 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 5, Plotter = no
     add_operator!(Problem, [1,1], LaplaceOperator(μ))
 
     ## add right-hand side data (here: f = [1] in region(s) [1])
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f; regions = [1]))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f; regions = [1]))
 
     ## add boundary data (here: zero data for boundary regions 1:4)
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)

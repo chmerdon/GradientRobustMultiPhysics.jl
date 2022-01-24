@@ -21,13 +21,12 @@ The following table lists all available assembly patterns, their constuctor name
 | APT_BilinearForm    | BilinearForm       |     no   |          yes          |          no           |
 | APT_NonlinearForm   | NonlinearForm      |     no   |          yes          |         yes           |
 
-Number in brackets denotes the number of fixed arguments needed for this assembly, (L) means that a current solution is needed (to evaluate the linearisation of the nonlinear form in this state).
 Evaluations of the other AssemblyPatterns may be possible in a future update, but currently have to be performed by maintaining a duplicate of the pattern rewritten as an ItemIntegrator.
 
 
 #### Constructor details
 
-Below all assembly pattern types, constructor functions and evaluate/assembly functions are detailed. (For more on the ItemIntegrator also see [Item Integrators](@ref).)
+Below all assembly pattern types, constructor functions and evaluate/assembly functions are detailed. (For more info on the ItemIntegrator also see [Item Integrators](@ref).)
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]

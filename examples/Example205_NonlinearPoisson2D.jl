@@ -126,7 +126,7 @@ function main(;
     add_unknown!(Problem; unknown_name = "u", equation_name = "nonlinear Poisson equation")
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f; store = true))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f; store = true))
     @show Problem
 
     ## prepare error calculation

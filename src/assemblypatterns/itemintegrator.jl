@@ -11,17 +11,20 @@ function Base.show(io::IO, ::Type{APT_ItemIntegrator})
 end
 
 """
-````
-function ItemIntegrator(
-    T::Type{<:Real},
-    AT::Type{<:AssemblyType},
-    operators::Array{DataType,1}, 
-    action::AbstractAction; 
-    name = "ItemIntegrator",
-    regions::Array{Int,1} = [0])
-````
+$(TYPEDSIGNATURES)
 
-Creates an ItemIntegrator assembly pattern with the given operators and action etc.
+Creates an ItemIntegrator assembly pattern based on:
+
+- T         : expected NumberType for evaluation output
+- AT        : specifies on which entities of the grid the ItemINtegrator is evaluated
+- operators : operators that should be evaluated for the coressponding FESpace (last one refers to test function)
+- action    : an Action with kernel of interface (result, input, kwargs) that takes input (= all but last operator evaluations) and computes result to be dot-producted with test function evaluation
+              (if no action is specified, the full input vector is dot-producted with the test function operator evaluation)
+
+Optional arguments:
+- regions   : specifies in which regions the operator should assemble, default [0] means all regions
+- name      : name for this LinearForm that is used in print messages
+
 """
 function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AssemblyType}, operators, action = NoAction(); regions = [0], name = "ItemIntegrator")
     return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,Array{FESpace{Float64,Int32},1}([]),operators,action,1:length(operators),regions)

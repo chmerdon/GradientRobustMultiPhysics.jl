@@ -168,7 +168,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (αu,v) or (u,αv) with some coefficient α that can be a number or an AbstractDataFunction.
+constructor for a bilinearform a(u,v) = (αu,v) or (u,αv) with some coefficient α that can be a number or an AbstractDataFunction.
 """
 function ReactionOperator(α = 1.0, ncomponents = 1; name = "auto", AT::Type{<:AssemblyType} = ON_CELLS, id = Identity, regions::Array{Int,1} = [0], store::Bool = false)
     if name == "auto"
@@ -225,7 +225,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (μ ∇u,∇v) where C is the 1D stiffness tensor for given μ.
+constructor for a bilinearform a(u,v) = (μ ∇u,∇v) where C is the 1D stiffness tensor for given μ.
     
 """
 function HookStiffnessOperator1D(μ; name = "(μ ∇u,∇v)", regions::Array{Int,1} = [0], ∇ = TangentialGradient, store::Bool = false)
@@ -235,7 +235,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (C ϵ(u), ϵ(v)) where C is the 2D stiffness tensor
+constructor for a bilinearform a(u,v) = (C ϵ(u), ϵ(v)) where C is the 2D stiffness tensor
 for isotropic media in Voigt notation, i.e.
 C ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
     
@@ -271,7 +271,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (C ϵ(u), ϵ(v)) where C is the 3D stiffness tensor
+constructor for a bilinearform a(u,v) = (C ϵ(u), ϵ(v)) where C is the 3D stiffness tensor
 for isotropic media in Voigt notation, i.e.
 C ϵ(u) = 2 μ ϵ(u) + λ tr(ϵ(u)) for Lame parameters μ and λ
 
@@ -385,40 +385,72 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructs a convection term of the form c(a,u,v) = (beta_operator(a)*ansatzfunction_operator(u),testfunction_operator(v))
-where a_from is the id of some unknown of the PDEDescription; xdim is the space dimension (= number of components of beta_operato(a)) and ncomponents is the number of components of u.
-With newton = true a Newton scheme for c(u,u,v) is automatically derived (and fixed_argument is ignored), otherwise a BilinearForm is created
-where fixed_argument = 2 determines which of the three arguments (a, u or v) is fixed, and the remaining two are ansatz and test function.
+constructs a convection term of the form c(a,u,v) = (a_operator(a)*ansatzfunction_operator(u),testfunction_operator(v))
+as a BilinearForm (or NonlinearForm, see newton argument)
+
+- a_from      : id of registered unknown to be used in the spot a
+- a_operator  : operator applied to a
+- xdim        : expected space dimension
+- ncomponents : expected numer of components of a
+
+optional arguments:
+
+- newton          : generates a NonlinearForm instead of a BilinearForm that triggers assembly of Newton terms for c(u,u,v)
+- a_to            : position of a argument, set a_to = 2 to trigger assembly of c(u,a,v)
+- ansatz_operator : operator used in the spot u (default: Gradient)
+- test_operator   : operator used in the spot v (default: Identity)
+- factor          : additional factor multiplied in assemblxy (default: 1)
+- regions         : specifies in which regions the operator should assemble, default [0] means all regions
+- name            : name for this operator that is used in print messages
+- AT              : specifies on which entities of the grid the operator is assembled (default: ON_CELLS)
+- store           : stores a matrix of the operator with the latest assembly result
 
 """
 function ConvectionOperator(
     a_from::Int, 
-    beta_operator::Type{<:AbstractFunctionOperator},
+    a_operator::Type{<:AbstractFunctionOperator},
     xdim::Int,
     ncomponents::Int;
     name = "auto",
     AT::Type{<:AssemblyType} = ON_CELLS,
-    fixed_argument::Int = 1,
+    a_to::Int = 1,
     factor = 1,
-    ansatzfunction_operator::Type{<:AbstractFunctionOperator} = Gradient,
-    testfunction_operator::Type{<:AbstractFunctionOperator} = Identity,
+    ansatz_operator::Type{<:AbstractFunctionOperator} = Gradient,
+    test_operator::Type{<:AbstractFunctionOperator} = Identity,
     regions::Array{Int,1} = [0],
     newton::Bool = false,
+    store::Bool = false,
     transposed_assembly::Bool = true,
     bonus_quadorder = 0)
+
+    @assert a_to in [1,2] "a must go to position 1 or 2"
 
     # action input consists of two inputs
     # input[1:xdim] = operator1(a)
     # input[xdim+1:end] = grad(u)
-    function convection_function_fe(result, input)
-        for j = 1 : ncomponents
-            result[j] = 0
-            for k = 1 : xdim
-                result[j] += input[k]*input[xdim+(j-1)*xdim+k]
+    if fixed_argument == 1 || newton # input = [a,u]
+        function convection_function_fe_1(result, input)
+            for j = 1 : ncomponents
+                result[j] = 0
+                for k = 1 : xdim
+                    result[j] += input[k]*input[xdim+(j-1)*xdim+k]
+                end
             end
-        end
-        return nothing
-    end    
+            return nothing
+        end    
+        convection_action = Action(convection_function_fe_1,argsizes; dependencies = "", bonus_quadorder = bonus_quadorder)
+    elseif fixed_argument == 2 # input = [u,a]
+        function convection_function_fe_2(result, input)
+            for j = 1 : ncomponents
+                result[j] = 0
+                for k = 1 : xdim
+                    result[j] += input[xdim*ncomponents+k]*input[(j-1)*xdim+k]
+                end
+            end
+            return nothing
+        end    
+        convection_action = Action(convection_function_fe_2,argsizes; dependencies = "", bonus_quadorder = bonus_quadorder)
+    end
     argsizes = [ncomponents, xdim + ncomponents*xdim]
     if newton
         function convection_jacobian(jac, input)
@@ -430,24 +462,21 @@ function ConvectionOperator(
         end    
         ## generates a nonlinear form with automatic Newton operators by AD
         if name == "auto"
-            name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) u, $(testfunction_operator)(v))"
+            name = "(($a_operator(u) ⋅ $ansatz_operator) u, $(test_operator)(v))"
         end
-        return NonlinearForm(testfunction_operator, [beta_operator, ansatzfunction_operator], [a_from,a_from], convection_function_fe,argsizes; name = name, jacobian = convection_jacobian, bonus_quadorder = bonus_quadorder)     
+        return NonlinearForm(test_operator, [a_operator, ansatz_operator], [a_from,a_from], convection_function_fe_1,argsizes; name = name, jacobian = convection_jacobian, bonus_quadorder = bonus_quadorder, store = store)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
-        convection_action = Action(convection_function_fe,argsizes; dependencies = "", bonus_quadorder = bonus_quadorder)
         a_to = fixed_argument
         if name == "auto"
             if a_to == 1
-                name = "(($beta_operator(a) ⋅ $ansatzfunction_operator) u, $(testfunction_operator)(v))"
+                name = "(($a_operator(a) ⋅ $ansatz_operator) u, $(test_operator)(v))"
             elseif a_to == 2
-                name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) a, $(testfunction_operator)(v))"
-            elseif a_to == 3
-                name = "(($beta_operator(u) ⋅ $ansatzfunction_operator) v, $(testfunction_operator)(a))"
+                name = "(($a_operator(u) ⋅ $ansatz_operator) a, $(test_operator)(v))"
             end
         end
         
-        O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[beta_operator,ansatzfunction_operator,testfunction_operator], convection_action, [1,2], factor, regions)
+        O = PDEOperator{Float64, APT_BilinearForm, AT}(name,[a_operator,ansatz_operator,test_operator], convection_action, [1,2], factor, regions, store, AssemblyAuto)
         O.fixed_arguments = [a_to]
         O.fixed_arguments_ids = [a_from]
         O.transposed_assembly = transposed_assembly
@@ -458,7 +487,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-constructor for a bilinearform that describes a(u,v) = (beta x curl(u),v)
+constructor for a bilinearform a(u,v) = (beta x curl(u),v)
 where beta is the id of some unknown vector field of the PDEDescription, u and v
 are also vector-fields and x is the cross product (so far this is only implemented in 2D)
     
@@ -584,11 +613,21 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a LinearForm L(v) = (f,operator(v))
-from a given action (that should have the same result dimensions as the testfunction operator).
+generates a LinearForm L(v) = (f,operator(v)) from an action
+
+- operator : operator applied to test function
+- action   : action that computes a result to be multiplied with test function operator
+
+Optional arguments:
+
+- regions           : specifies in which regions the operator should assemble, default [0] means all regions
+- name              : name for this LinearForm that is used in print messages
+- AT                : specifies on which entities of the grid the LinearForm is assembled (default: ON_CELLS)
+- factor            : additional factor that is multiplied during assembly
+- store             : stores a vector of the discretised LinearForm with the latest assembly result
 
 """
-function RhsOperator(
+function LinearForm(
     operator::Type{<:AbstractFunctionOperator},
     action::AbstractAction;
     name = "auto",
@@ -609,11 +648,21 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a LinearForm L(v) = (f,operator(v))
-from a given UserData{<:DataFunction} f (that should have the same result dimensions as the testfunction operator).
-    
+generates a LinearForm L(v) = (f,operator(v)) from a DataFunction
+
+- operator : operator applied to test function
+- action   : DataFunction, evaluation is multiplied with test function operator
+
+Optional arguments:
+
+- regions           : specifies in which regions the operator should assemble, default [0] means all regions
+- name              : name for this LinearForm that is used in print messages
+- AT                : specifies on which entities of the grid the LinearForm is assembled (default: ON_CELLS)
+- factor            : additional factor that is multiplied during assembly
+- store             : stores a vector of the discretised LinearForm with the latest assembly result
+
 """
-function RhsOperator(
+function LinearForm(
     operator::Type{<:AbstractFunctionOperator},
     f::UserData{<:AbstractDataFunction};
     name = "auto",
@@ -623,7 +672,7 @@ function RhsOperator(
         name = "($(f.name), $operator(v))"
     end
 
-    return RhsOperator(operator, fdot_action(f); name = name, kwargs...)
+    return LinearForm(operator, fdot_action(f); name = name, kwargs...)
 end
 
 

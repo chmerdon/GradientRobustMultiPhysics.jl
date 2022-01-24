@@ -83,8 +83,8 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_re
     Problem2.name = "Stokes problem (p-robust)"
 
     ## assign right-hand side
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f))
-    add_rhsdata!(Problem2, 1, RhsOperator(ReconstructionOperator, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+    add_rhsdata!(Problem2, 1, LinearForm(ReconstructionOperator, f))
 
     ## assign convection term
     if nonlinear
