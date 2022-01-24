@@ -22,8 +22,8 @@ include("logging.jl")
 
 
 include("userdata.jl")
-export AbstractDataFunction, AbstractActionKernel, AbstractExtendedDataFunction
-export UserData, ActionKernel, NLActionKernel, DataFunction, ExtendedDataFunction, eval_data!
+export AbstractDataFunction, AbstractExtendedDataFunction
+export UserData, DataFunction, ExtendedDataFunction, eval_data!
 export is_timedependent, is_regiondependent, is_itemdependent
 export ∇, div, curl, CurlScalar, Curl2D, Curl3D
 
