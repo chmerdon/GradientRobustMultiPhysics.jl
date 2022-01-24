@@ -56,7 +56,7 @@ function Action(kernel::Function, argsizes; Tv = Float64, Ti = Int32, dependenci
     di = occursin("I", dependencies)
     dl = occursin("L", dependencies)
     return DefaultUserAction{Tv,Ti,dx,dt,di,dl,length(argsizes),typeof(kernel)}(
-        name, kernel, argsizes, zeros(Tv, 3), zeros(Tv, 3), zeros(Ti,3), 0, bonus_quadorder, zeros(Tv, argsizes[1]))
+        name, kernel, argsizes, zeros(Tv, 3), zeros(Tv, 3), zeros(Ti,5), 0, bonus_quadorder, zeros(Tv, argsizes[1]))
 end
 
 function eval_action!(A::DefaultUserAction{T,Ti,false,false,false,false}, input_current) where {T,Ti}

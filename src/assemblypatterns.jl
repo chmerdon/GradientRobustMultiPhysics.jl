@@ -337,7 +337,7 @@ function DefaultBasisAssemblyType4Operator(operator::Type{<:AbstractFunctionOper
         else
             return ON_CELLS
         end
-    elseif patternAT <: Union{<:ON_EDGS,<:ON_BEDGES}
+    elseif patternAT <: Union{<:ON_EDGES,<:ON_BEDGES}
         if continuity <: AbstractH1FiniteElement
             if QuadratureOrderShift4Operator(operator) == 0
                 return patternAT
@@ -469,7 +469,6 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
             end
         end
 
-
         if dofitemAT[j] != AT
             #println("Operator $(operator[j]) for $(typeof(FE[j])) is evaluated in full discontinuous mode with ON_CELL basis")
             push!(discontinuous_operators,j)
@@ -478,7 +477,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
             #println("Operator $(operator[j]) for $(typeof(FE[j])) can be evaluated continuously, but is forced to full discontinuous mode by operator")
             push!(discontinuous_operators,j)
             dofitemAT[j] = ON_CELLS
-        elseif (dofitemAT[j] == AT) && FE[j].broken && AT != ON_CELLS && discontinuous
+        elseif (dofitemAT[j] == AT) && FE[j].broken && AT != ON_CELLS && (discontinuous || eltype(FE[j]) <: H1P0)
             #println("Operator $(operator[j]) for $(typeof(FE[j])) is evaluated in broken mode using the basis $(dofitemAT[j])")
             push!(broken_operators,j)
             #push!(discontinuous_operators,j)
@@ -490,6 +489,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
         end
         #println("AT = $AT, dofitemAT[j] = $(dofitemAT[j])")
     end    
+
 
     # if one of the operators is a face jump operator we also need the element geometries 
     # of the neighbouring cells

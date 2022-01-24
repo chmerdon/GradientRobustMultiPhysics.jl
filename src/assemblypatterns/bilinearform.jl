@@ -169,7 +169,7 @@ function assemble!(
     dofitems::Array{Int,1} = [0,0]
     is_symmetric::Bool = APT <: APT_SymmetricBilinearForm
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
-    indexmap = CartesianIndices(zeros(Int, maxdofitems[1],maxdofitems[2]))
+    indexmap = CartesianIndices(zeros(Int, maxdofitems[nFE-1],maxdofitems[nFE]))
     other_id::Int = apply_action_to == 2 ? 1 : 2
     other_FEid::Int = nFE - 2 + other_id
     action_linFEid::Int = nFE - 2 + apply_action_to
@@ -256,7 +256,7 @@ function assemble!(
         # di, dj == 2 is only performed if one of the operators jumps
         for di in indexmap
             dofitems[1] = AM.dofitems[nFE-1][di[1]]
-            dofitems[2] = AM.dofitems[nFE][di[2]]
+            dofitems[2] = AM.dofitems[nFE][di[2]] 
             if dofitems[1] > 0 && dofitems[2] > 0
 
                 # even if global matrix is symmeric, local matrix might be not in case of JumpOperators
@@ -272,12 +272,15 @@ function assemble!(
                 basisvals = basisevaler[other_id].cvals
                 basisxref = basisevaler[other_id].xref
 
+
                 # update action on dofitem
                 if apply_action_to > 0
                     if is_itemdependent(action)
                         action.item[1] = item
                         action.item[2] = dofitems[apply_action_to]
                         action.item[3] = xItemRegions[item]
+                        action.item[4] = di[apply_action_to]
+                        action.item[5] = di[other_id]
                     end
                     ndofs4dofitem_action = ndofs4dofitem[apply_action_to]
                 else

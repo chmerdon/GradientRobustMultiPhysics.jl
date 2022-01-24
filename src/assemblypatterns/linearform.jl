@@ -177,6 +177,7 @@ function assemble!(
                     action.item[1] = item
                     action.item[2] = AM.dofitems[nFE][di]
                     action.item[3] = xItemRegions[item]
+                    action.item[4] = di
                 end
 
                 for i in eachindex(weights)

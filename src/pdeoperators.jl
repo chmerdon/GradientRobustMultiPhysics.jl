@@ -467,7 +467,6 @@ function ConvectionOperator(
         return NonlinearForm(test_operator, [a_operator, ansatz_operator], [a_from,a_from], convection_function_fe_1,argsizes; name = name, jacobian = convection_jacobian, bonus_quadorder = bonus_quadorder, store = store)     
     else
         ## returns linearised convection operators as a trilinear form (Picard iteration)
-        a_to = fixed_argument
         if name == "auto"
             if a_to == 1
                 name = "(($a_operator(a) ⋅ $ansatz_operator) u, $(test_operator)(v))"

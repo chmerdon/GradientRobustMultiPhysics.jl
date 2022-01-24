@@ -16,7 +16,6 @@ Click on them or scroll down to find out more details.
 | Main constructors                   | Special constructors                     | Mathematically                                                                                                   |
 | :---------------------------------- | :--------------------------------------- | :--------------------------------------------------------------------------------------------------------------- |
 | [`LinearForm`](@ref)                |                                          | ``(\mathrm{A}(...), \mathrm{FO}(v))``                                                                            |
-|                                     | [`RhsOperator`](@ref)                    | ``(f, \mathrm{FO}(v))``                                                                                          |
 | [`BilinearForm`](@ref)              |                                          | ``(\mathrm{A}(...,\mathrm{FO}_1(u)), \mathrm{FO}_2(v))`` or ``(\mathrm{FO}_1(u), \mathrm{A}(\mathrm{FO}_2(v)))`` |
 |                                     | [`LaplaceOperator`](@ref)                | ``(\kappa \nabla u, \nabla v)``                                                                                  |
 |                                     | [`ReactionOperator`](@ref)               | ``(\alpha u, v)``                                                                                                |
