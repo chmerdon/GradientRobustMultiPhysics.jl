@@ -37,7 +37,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;nonlinear Poisson equation&quot;)
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1,  RhsOperator(Identity, f))
+    add_rhsdata!(Problem, 1,  LinearForm(Identity, f))
 
     # define error evaluators
     L2Error = L2ErrorIntegrator(Float64, u, Identity; time = T)
@@ -94,30 +94,30 @@ Explored path: SparsityDetection.Path(Bool[], 1)
 
 	  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |  RUNTIME  |   CHANGE        
 	        |            |  (total)   |    (total)     |    (s)    |      u     
-	     1  | 1.0000e-01 | 2.1965e-15 | 1.8325e-12 (3) | 7.313e+00 | 7.8835e-01 
-	     2  | 2.0000e-01 | 1.6369e-15 | 2.5783e-13 (3) | 1.738e-02 | 7.0536e-01 
-	     3  | 3.0000e-01 | 1.2441e-15 | 2.3719e-14 (3) | 1.702e-02 | 6.2238e-01 
-	     4  | 4.0000e-01 | 8.5349e-16 | 1.9492e-15 (3) | 1.670e-02 | 5.3940e-01 
-	     5  | 5.0000e-01 | 6.4037e-16 | 1.1206e-15 (3) | 1.744e-02 | 4.5641e-01 
+	     1  | 1.0000e-01 | 2.1965e-15 | 1.8325e-12 (3) | 7.130e+00 | 7.8835e-01 
+	     2  | 2.0000e-01 | 1.6369e-15 | 2.5783e-13 (3) | 1.636e-02 | 7.0536e-01 
+	     3  | 3.0000e-01 | 1.2441e-15 | 2.3719e-14 (3) | 1.570e-02 | 6.2238e-01 
+	     4  | 4.0000e-01 | 8.5349e-16 | 1.9492e-15 (3) | 1.687e-02 | 5.3940e-01 
+	     5  | 5.0000e-01 | 6.4037e-16 | 1.1206e-15 (3) | 1.599e-02 | 4.5641e-01 
 
 	  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |  RUNTIME  |   CHANGE        
 	        |            |  (total)   |    (total)     |    (s)    |      u     
-	     1  | 1.0000e-01 | 4.9169e-15 | 1.0264e-12 (3) | 6.378e-02 | 1.5025e+00 
-	     2  | 2.0000e-01 | 3.1016e-15 | 1.4585e-13 (3) | 6.168e-02 | 1.3444e+00 
-	     3  | 3.0000e-01 | 2.5802e-15 | 1.4860e-14 (3) | 6.146e-02 | 1.1862e+00 
-	     4  | 4.0000e-01 | 1.8036e-15 | 3.3042e-15 (3) | 6.146e-02 | 1.0281e+00 
-	     5  | 5.0000e-01 | 1.1711e-15 | 2.2070e-15 (3) | 6.102e-02 | 8.6989e-01 
+	     1  | 1.0000e-01 | 4.9169e-15 | 1.0264e-12 (3) | 5.728e-02 | 1.5025e+00 
+	     2  | 2.0000e-01 | 3.1016e-15 | 1.4585e-13 (3) | 1.166e-01 | 1.3444e+00 
+	     3  | 3.0000e-01 | 2.5802e-15 | 1.4860e-14 (3) | 5.815e-02 | 1.1862e+00 
+	     4  | 4.0000e-01 | 1.8036e-15 | 3.3042e-15 (3) | 5.748e-02 | 1.0281e+00 
+	     5  | 5.0000e-01 | 1.1711e-15 | 2.2070e-15 (3) | 5.673e-02 | 8.6989e-01 
 
 	  STEP  |    TIME    | LSRESIDUAL |   NLRESIDUAL   |  RUNTIME  |   CHANGE        
 	        |            |  (total)   |    (total)     |    (s)    |      u     
-	     1  | 1.0000e-01 | 9.9130e-15 | 5.4112e-13 (3) | 2.468e-01 | 2.9345e+00 
-	     2  | 2.0000e-01 | 6.5707e-15 | 7.9505e-14 (3) | 2.443e-01 | 2.6256e+00 
-	     3  | 3.0000e-01 | 5.1911e-15 | 1.2153e-14 (3) | 2.487e-01 | 2.3167e+00 
-	     4  | 4.0000e-01 | 3.5464e-15 | 7.1978e-15 (3) | 2.462e-01 | 2.0078e+00 
-	     5  | 5.0000e-01 | 2.3952e-15 | 4.5398e-15 (3) | 2.376e-01 | 1.6989e+00 
+	     1  | 1.0000e-01 | 9.9130e-15 | 5.4112e-13 (3) | 2.329e-01 | 2.9345e+00 
+	     2  | 2.0000e-01 | 6.5707e-15 | 7.9505e-14 (3) | 2.282e-01 | 2.6256e+00 
+	     3  | 3.0000e-01 | 5.1911e-15 | 1.2153e-14 (3) | 2.279e-01 | 2.3167e+00 
+	     4  | 4.0000e-01 | 3.5464e-15 | 7.1978e-15 (3) | 2.317e-01 | 2.0078e+00 
+	     5  | 5.0000e-01 | 2.3952e-15 | 4.5398e-15 (3) | 2.216e-01 | 1.6989e+00 
 
     ndofs   |    || u - u_h ||     order  |  || ∇(u - u_h) ||    order  |
 ============|=============================|=============================|
        145  |     2.65162e-14      0.000  |     5.27515e-13      0.000  |
        545  |     2.75954e-14      -0.060  |     5.33924e-13      -0.018  |
-      2113  |     2.77048e-14      -0.006  |     5.34468e-13      -0.002  |</code></pre><p><img src="../../images/Example206_NonlinearPoissonTransient2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example205_NonlinearPoisson2D/">« 205 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 07:44">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      2113  |     2.77048e-14      -0.006  |     5.34468e-13      -0.002  |</code></pre><p><img src="../../images/Example206_NonlinearPoissonTransient2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example205_NonlinearPoisson2D/">« 205 : Nonlinear Poisson Problem 2D</a><a class="docs-footer-nextpage" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -42,10 +42,10 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
     add_unknown!(Problem; equation_name = &quot;incompressibility constraint&quot;, unknown_name = &quot;pressure&quot;)
     add_operator!(Problem, [1,1], LaplaceOperator(ν; store = true))
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
-    add_operator!(Problem, [1,1], ConvectionOperator(1, IdentityV, 2, 2; testfunction_operator = IdentityV, newton = true))
+    add_operator!(Problem, [1,1], ConvectionOperator(1, IdentityV, 2, 2; test_operator = IdentityV, newton = true))
     add_constraint!(Problem, FixedIntegralMean(2,0))
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(IdentityV, f))
+    add_rhsdata!(Problem, 1, LinearForm(IdentityV, f))
     @show Problem
 
     # create finite element spaces and solve
@@ -130,12 +130,12 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 2.25e+01/5.70e-06/2.25e+01
-	      1   | 4.479628e-17 | 9.171721e-02 | 2.75e-01/2.49e-01/6.22e-01
-	      2   | 1.045713e-16 | 1.005659e-06 | 2.58e-01/2.32e-01/4.92e-01
-	      3   | 1.069070e-16 | 2.431843e-10 | 2.62e-01/1.63e-01/4.27e-01
-	      4   | 1.028739e-16 | 1.486492e-16 | 2.58e-01/1.90e-01/4.49e-01
-	    total |                             | 2.35e+01/8.34e-01/2.65e+01
+	    init  |                             | 2.20e+01/5.70e-06/2.20e+01
+	      1   | 4.479628e-17 | 9.171721e-02 | 2.60e-01/2.56e-01/6.18e-01
+	      2   | 1.045713e-16 | 1.005659e-06 | 2.60e-01/2.21e-01/4.83e-01
+	      3   | 1.069070e-16 | 2.431843e-10 | 2.39e-01/1.72e-01/4.13e-01
+	      4   | 1.028739e-16 | 1.486492e-16 | 2.79e-01/1.89e-01/4.70e-01
+	    total |                             | 2.30e+01/8.38e-01/2.60e+01
 
 || u - u_h || = 0.0021880901132240193
-|| p - p_h || = 0.01641994916604901</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 07:44">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| p - p_h || = 0.01641994916604901</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

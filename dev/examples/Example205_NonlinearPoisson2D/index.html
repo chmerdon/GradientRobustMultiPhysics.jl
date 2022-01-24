@@ -102,7 +102,7 @@ function main(;
     add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;nonlinear Poisson equation&quot;)
     add_operator!(Problem, [1,1], nonlin_diffusion)
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, RhsOperator(Identity, f; store = true))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f; store = true))
     @show Problem
 
     # prepare error calculation
@@ -181,12 +181,12 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.28e+01/5.10e-06/1.28e+01
-	      1   | 1.244445e-16 | 1.879348e-01 | 3.16e-04/9.90e-05/1.34e-02
-	      2   | 3.747685e-16 | 2.427676e-03 | 1.82e-04/9.86e-05/3.16e-04
-	      3   | 5.341709e-16 | 3.580510e-07 | 1.71e-04/4.81e-05/2.47e-04
-	      4   | 4.767303e-16 | 8.272257e-15 | 1.70e-04/3.92e-05/2.77e-04
-	    total |                             | 1.28e+01/2.90e-04/1.28e+01
+	    init  |                             | 1.22e+01/7.00e-06/1.23e+01
+	      1   | 1.244445e-16 | 1.879348e-01 | 3.61e-04/9.40e-05/1.39e-02
+	      2   | 3.747685e-16 | 2.427676e-03 | 2.21e-04/9.82e-05/3.61e-04
+	      3   | 5.341709e-16 | 3.580510e-07 | 1.90e-04/6.19e-05/2.83e-04
+	      4   | 4.767303e-16 | 8.272257e-15 | 1.73e-04/4.45e-05/2.44e-04
+	    total |                             | 1.22e+01/3.06e-04/1.23e+01
 
 Solution = 
 FEVector information
@@ -197,12 +197,12 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 2.93e-03/3.90e-06/2.95e-03
-	      1   | 4.017305e-16 | 1.552235e-01 | 6.25e-04/2.86e-04/7.00e-03
-	      2   | 1.920199e-15 | 1.898915e-03 | 5.14e-04/1.57e-04/7.18e-04
-	      3   | 8.315612e-16 | 4.461316e-07 | 6.26e-04/1.02e-04/7.81e-04
-	      4   | 9.284086e-16 | 2.408424e-14 | 4.73e-04/1.07e-04/6.20e-04
-	    total |                             | 5.17e-03/6.57e-04/1.21e-02
+	    init  |                             | 2.54e-03/3.30e-06/2.56e-03
+	      1   | 4.017305e-16 | 1.552235e-01 | 5.52e-04/2.12e-04/8.97e-03
+	      2   | 1.920199e-15 | 1.898915e-03 | 4.95e-04/1.75e-04/7.13e-04
+	      3   | 8.315612e-16 | 4.461316e-07 | 4.84e-04/1.23e-04/6.46e-04
+	      4   | 9.284086e-16 | 2.408424e-14 | 9.76e-04/1.01e-04/1.12e-03
+	    total |                             | 5.05e-03/6.13e-04/1.40e-02
 
 Solution = 
 FEVector information
@@ -213,12 +213,12 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.30e-03/2.10e-06/4.31e-03
-	      1   | 1.607908e-15 | 9.834582e-02 | 2.16e-03/5.68e-04/2.86e-03
-	      2   | 1.794854e-15 | 1.307935e-03 | 2.06e-03/6.63e-04/2.81e-03
-	      3   | 1.815491e-15 | 4.214647e-07 | 1.85e-03/4.36e-04/2.38e-03
-	      4   | 2.045416e-15 | 2.871798e-14 | 1.72e-03/4.94e-04/2.47e-03
-	    total |                             | 1.21e-02/2.16e-03/1.48e-02
+	    init  |                             | 4.27e-03/2.60e-06/4.29e-03
+	      1   | 1.607908e-15 | 9.834582e-02 | 2.44e-03/5.91e-04/3.16e-03
+	      2   | 1.794854e-15 | 1.307935e-03 | 1.84e-03/6.48e-04/2.59e-03
+	      3   | 1.815491e-15 | 4.214647e-07 | 2.17e-03/5.44e-04/2.82e-03
+	      4   | 2.045416e-15 | 2.871798e-14 | 1.78e-03/5.15e-04/2.38e-03
+	    total |                             | 1.25e-02/2.30e-03/1.52e-02
 
 Solution = 
 FEVector information
@@ -229,12 +229,12 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.30e-02/2.20e-06/1.31e-02
-	      1   | 2.272149e-15 | 5.522608e-02 | 7.25e-03/1.95e-03/9.35e-03
-	      2   | 4.449378e-15 | 8.487585e-04 | 7.32e-03/2.46e-03/9.93e-03
-	      3   | 4.963979e-15 | 2.555420e-07 | 7.16e-03/1.68e-03/8.99e-03
-	      4   | 4.331382e-15 | 2.326147e-14 | 7.72e-03/1.76e-03/9.62e-03
-	    total |                             | 4.25e-02/7.85e-03/5.10e-02
+	    init  |                             | 1.44e-02/4.10e-06/1.44e-02
+	      1   | 2.272149e-15 | 5.522608e-02 | 6.96e-03/2.00e-03/9.13e-03
+	      2   | 4.449378e-15 | 8.487585e-04 | 6.72e-03/3.95e-03/1.08e-02
+	      3   | 4.963979e-15 | 2.555420e-07 | 7.39e-03/1.70e-03/9.26e-03
+	      4   | 4.331382e-15 | 2.326147e-14 | 6.65e-03/1.73e-03/8.52e-03
+	    total |                             | 4.21e-02/9.39e-03/5.22e-02
 
 Solution = 
 FEVector information
@@ -245,12 +245,12 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.66e-02/3.00e-06/4.66e-02
-	      1   | 4.724107e-15 | 2.924738e-02 | 2.78e-02/8.30e-03/3.63e-02
-	      2   | 9.008246e-15 | 4.905172e-04 | 2.78e-02/9.32e-03/3.74e-02
-	      3   | 9.295622e-15 | 1.346748e-07 | 2.78e-02/7.40e-03/3.55e-02
-	      4   | 9.568861e-15 | 1.863040e-14 | 2.72e-02/7.70e-03/3.52e-02
-	    total |                             | 1.57e-01/3.27e-02/1.91e-01
+	    init  |                             | 4.65e-02/3.80e-06/4.66e-02
+	      1   | 4.724107e-15 | 2.924738e-02 | 2.72e-02/7.56e-03/3.51e-02
+	      2   | 9.008246e-15 | 4.905172e-04 | 2.64e-02/9.36e-03/3.61e-02
+	      3   | 9.295622e-15 | 1.346748e-07 | 3.14e-02/7.53e-03/3.92e-02
+	      4   | 9.568861e-15 | 1.863040e-14 | 3.15e-02/7.88e-03/3.97e-02
+	    total |                             | 1.63e-01/3.23e-02/1.97e-01
 
 Solution = 
 FEVector information
@@ -261,12 +261,12 @@ FEVector information
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.79e-01/4.50e-06/1.79e-01
-	      1   | 9.579017e-15 | 1.504798e-02 | 1.18e-01/3.55e-02/1.55e-01
-	      2   | 1.877168e-14 | 2.640269e-04 | 1.15e-01/4.55e-02/1.61e-01
-	      3   | 1.892999e-14 | 6.824838e-08 | 1.06e-01/3.68e-02/1.43e-01
-	      4   | 1.832628e-14 | 3.106455e-14 | 1.13e-01/3.81e-02/1.52e-01
-	    total |                             | 6.31e-01/1.56e-01/7.90e-01
+	    init  |                             | 1.74e-01/3.70e-06/1.74e-01
+	      1   | 9.579017e-15 | 1.504798e-02 | 1.08e-01/3.31e-02/1.42e-01
+	      2   | 1.877168e-14 | 2.640269e-04 | 1.10e-01/4.89e-02/1.60e-01
+	      3   | 1.892999e-14 | 6.824838e-08 | 1.06e-01/3.41e-02/1.41e-01
+	      4   | 1.832628e-14 | 3.106455e-14 | 1.09e-01/4.11e-02/1.51e-01
+	    total |                             | 6.07e-01/1.57e-01/7.68e-01
 
 
     ndofs   |    || u - u_h ||     order  |  || ∇(u - u_h) ||    order  |
@@ -276,4 +276,4 @@ FEVector information
        145  |     4.14699e-04      2.194  |     3.60851e-02      1.098  |
        545  |     1.03688e-04      2.094  |     1.80423e-02      1.047  |
       2113  |     2.59229e-05      2.046  |     9.02111e-03      1.023  |
-      8321  |     6.48078e-06      2.023  |     4.51055e-03      1.011  |</code></pre><p><img src="../../images/Example205_NonlinearPoisson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_ReactionConvectionDiffusionSUPG2D/">« 204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 07:44">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8321  |     6.48078e-06      2.023  |     4.51055e-03      1.011  |</code></pre><p><img src="../../images/Example205_NonlinearPoisson2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example204_ReactionConvectionDiffusionSUPG2D/">« 204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a><a class="docs-footer-nextpage" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
