@@ -176,9 +176,9 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds Array b to FEVectorBlock a.
+Scalar product between two FEVEctorBlocks
 """
-function dot(a::FEVectorBlock{T}, b::FEVectorBlock{T}) where {T}
+function LinearAlgebra.dot(a::FEVectorBlock{T}, b::FEVectorBlock{T}) where {T}
     aoffset::Int = a.offset
     boffset::Int = b.offset
     result::T = 0.0
