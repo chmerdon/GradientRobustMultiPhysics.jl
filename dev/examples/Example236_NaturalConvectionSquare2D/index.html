@@ -14,7 +14,7 @@ T_left = DataFunction([1])
 T_right = DataFunction([0])
 
 # everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 5, anderson = false)
+function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 5, reconstruct = true, anderson = false)
 
     # set log level
     set_verbosity(verbosity)
@@ -25,7 +25,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
 
     # types for discretisation by Bernardi--Raugel pressure-robust (BDM1 reconstruction) + P1-FEM for temperature
     FETypes = [H1BR{2}, H1P0{1}, H1P1{1}];
-    RIdentity = ReconstructionIdentity{HDIVBDM1{2}}
+    RIdentity = reconstruct ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
 
     # load Stokes prototype and add a unknown for the temperature
     Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false, store = true)
@@ -163,24 +163,24 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.77e+00/4.70e-06/4.77e+00
-	      1   | 1.169593e-11 | 1.710197e+03 | 2.83e-01/3.72e-01/6.57e-01
-	      2   | 8.776916e-12 | 1.029414e+03 | 2.84e-01/3.02e-01/5.88e-01
-	      3   | 8.514503e-12 | 6.245192e+02 | 2.86e-01/3.20e-01/6.08e-01
-	      4   | 8.425207e-12 | 3.852044e+02 | 2.74e-01/3.08e-01/5.84e-01
-	      5   | 8.097494e-12 | 2.482485e+02 | 2.92e-01/2.66e-01/5.61e-01
-	      6   | 7.815157e-12 | 1.980286e+02 | 2.68e-01/2.94e-01/5.64e-01
-	      7   | 7.561121e-12 | 1.111594e+02 | 2.86e-01/2.60e-01/5.49e-01
-	      8   | 7.424362e-12 | 6.100656e+01 | 2.71e-01/2.61e-01/5.34e-01
-	    total |                             | 7.02e+00/2.38e+00/9.42e+00
+	    init  |                             | 4.78e+00/4.50e-06/4.78e+00
+	      1   | 1.178005e-11 | 1.710197e+03 | 2.97e-01/3.15e-01/6.14e-01
+	      2   | 8.791455e-12 | 1.029414e+03 | 2.86e-01/3.25e-01/6.12e-01
+	      3   | 8.423852e-12 | 6.245192e+02 | 2.86e-01/2.44e-01/5.32e-01
+	      4   | 8.111620e-12 | 3.852044e+02 | 2.86e-01/2.68e-01/5.55e-01
+	      5   | 8.234635e-12 | 2.482485e+02 | 2.86e-01/2.46e-01/5.34e-01
+	      6   | 8.017012e-12 | 1.980286e+02 | 2.86e-01/2.58e-01/5.47e-01
+	      7   | 7.613980e-12 | 1.111594e+02 | 2.86e-01/2.55e-01/5.43e-01
+	      8   | 7.683898e-12 | 6.100656e+01 | 2.86e-01/2.58e-01/5.46e-01
+	    total |                             | 7.08e+00/2.17e+00/9.27e+00
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.98e-01/2.03e-05/4.98e-01
-	      1   | 3.943476e-12 | 3.366297e+00 | 2.71e-01/3.20e-01/5.94e-01
-	      2   | 3.945827e-12 | 6.899417e-03 | 2.72e-01/2.63e-01/5.38e-01
-	      3   | 4.019352e-12 | 4.473131e-07 | 2.88e-01/2.58e-01/5.48e-01
-	      4   | 3.969693e-12 | 4.094507e-12 | 2.72e-01/2.60e-01/5.35e-01
-	    total |                             | 1.60e+00/1.10e+00/2.71e+00
-</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	    init  |                             | 5.01e-01/3.20e-06/5.01e-01
+	      1   | 3.947678e-12 | 3.366297e+00 | 2.84e-01/3.52e-01/6.38e-01
+	      2   | 3.970969e-12 | 6.899417e-03 | 2.83e-01/2.43e-01/5.28e-01
+	      3   | 4.000557e-12 | 4.473131e-07 | 2.84e-01/5.44e-01/8.30e-01
+	      4   | 4.024171e-12 | 4.117353e-12 | 2.84e-01/2.46e-01/5.32e-01
+	    total |                             | 1.64e+00/1.38e+00/3.03e+00
+</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 28 January 2022 10:46">Friday 28 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

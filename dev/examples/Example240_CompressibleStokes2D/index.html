@@ -60,9 +60,9 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
 
     # prepare error calculation
-    VeloError = L2ErrorIntegrator(Float64, u, Identity; quadorder = 4)
-    VeloGradError = L2ErrorIntegrator(Float64, ∇u, Gradient; quadorder = 2)
-    DensityError = L2ErrorIntegrator(Float64, ϱ, Identity; quadorder = 2)
+    VeloError = L2ErrorIntegrator(u, Identity; quadorder = 4)
+    VeloGradError = L2ErrorIntegrator(∇u, Gradient; quadorder = 2)
+    DensityError = L2ErrorIntegrator(ϱ, Identity; quadorder = 2)
     Results = zeros(Float64,6,nlevels)
     NDoFs = zeros(Int,nlevels)
 
@@ -108,8 +108,8 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[2][1]; abs = true),1,:), levels = 0, title = &quot;u_h (BR+) (abs + quiver)&quot;)
     vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution[2][1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[2,2],xgrid,view(nodevalues(Solution[2][2]),1,:), levels = 11, title = &quot;p_h (BR+)&quot;)
-    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR)&quot;, &quot;|| ∇(u - u_h) || (BR)&quot;, &quot;|| ϱ - ϱ_h || (BR)&quot;], legend = :lb)
-    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR+)&quot;, &quot;|| ∇(u - u_h) || (BR+)&quot;, &quot;|| ϱ - ϱ_h || (BR+)&quot;], legend = :lb)
+    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR)&quot;, &quot;|| ∇(u - u_h) || (BR)&quot;, &quot;|| ϱ - ϱ_h || (BR)&quot;], legend = :lb, fontsize = 20)
+    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR+)&quot;, &quot;|| ∇(u - u_h) || (BR+)&quot;, &quot;|| ϱ - ϱ_h || (BR+)&quot;], legend = :lb, fontsize = 20)
 end
 
 function setup_and_solve!(Solution, xgrid;
@@ -171,14 +171,14 @@ function setup_and_solve!(Solution, xgrid;
     advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
 end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example240_CompressibleStokes2D.main()
-	mass_error = 0.8902625 - 0.890262500000004 = 3.9968028886505635e-15
-	mass_error = 0.8902625 - 0.8902625000000023 = 2.3314683517128287e-15
+	mass_error = 0.8902625 - 0.8902625000000041 = 4.107825191113079e-15
+	mass_error = 0.8902625 - 0.8902625000000027 = 2.7755575615628914e-15
 	mass_error = 0.8902625 - 0.8902625000000006 = 6.661338147750939e-16
-	mass_error = 0.8902625 - 0.8902625000000006 = 6.661338147750939e-16
-	mass_error = 0.8902625 - 0.8902624999999934 = 6.5503158452884236e-15
-	mass_error = 0.8902625 - 0.8902624999999929 = 7.105427357601002e-15
+	mass_error = 0.8902625 - 0.8902625000000002 = 2.220446049250313e-16
+	mass_error = 0.8902625 - 0.8902624999999936 = 6.328271240363392e-15
+	mass_error = 0.8902625 - 0.890262499999993 = 6.994405055138486e-15
 	mass_error = 0.8902625 - 0.8902624999999658 = 3.419486915845482e-14
-	mass_error = 0.8902625 - 0.8902624999999654 = 3.452793606584237e-14
+	mass_error = 0.8902625 - 0.8902624999999655 = 3.441691376337985e-14
 
     ndof    |   ||u-u_h|| (BR)     order  |   ||u-u_h|| (BR+)    order  |
 ============|=============================|=============================|
@@ -199,4 +199,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
        167  |     6.24901e-03      0.000  |     5.64017e-03      0.000  |
        602  |     2.94689e-03      1.172  |     2.82008e-03      1.081  |
       2282  |     1.44808e-03      1.066  |     1.41004e-03      1.040  |
-      8882  |     7.19785e-04      1.029  |     7.05021e-04      1.020  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      8882  |     7.19785e-04      1.029  |     7.05021e-04      1.020  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 28 January 2022 10:45">Friday 28 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

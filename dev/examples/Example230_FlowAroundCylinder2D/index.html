@@ -114,7 +114,7 @@ function get_draglift(Solution::FEVector, μ)
         return nothing
     end
     draglift_action = Action(draglift_kernel, [1,13]; name = &quot;drag/lift by testfunction&quot;, dependencies = &quot;&quot;, bonus_quadorder = 4)
-    DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
+    DLIntegrator = ItemIntegrator([Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     # test for drag
     TestFunction = FEVector(&quot;drag testfunction&quot;,Solution[1].FES)
@@ -203,13 +203,13 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.68e+01/5.30e-06/1.68e+01
-	      1   | 2.515084e-17 | 1.899986e-03 | 4.52e-01/3.95e-01/8.60e-01
-	      2   | 2.630112e-17 | 5.392003e-04 | 4.09e-01/3.59e-01/7.72e-01
-	      3   | 2.650753e-17 | 2.926551e-05 | 4.12e-01/2.76e-01/6.92e-01
-	      4   | 2.654304e-17 | 1.060798e-07 | 4.08e-01/2.88e-01/7.00e-01
-	      5   | 2.688527e-17 | 1.119313e-12 | 4.20e-01/2.70e-01/6.96e-01
-	    total |                             | 1.89e+01/1.59e+00/2.05e+01
+	    init  |                             | 1.63e+01/5.50e-06/1.63e+01
+	      1   | 2.479792e-17 | 1.899986e-03 | 4.72e-01/3.94e-01/8.79e-01
+	      2   | 2.648217e-17 | 5.392003e-04 | 4.53e-01/3.11e-01/7.68e-01
+	      3   | 2.671394e-17 | 2.926551e-05 | 4.52e-01/2.54e-01/7.10e-01
+	      4   | 2.679358e-17 | 1.060798e-07 | 4.53e-01/3.18e-01/7.74e-01
+	      5   | 2.738357e-17 | 1.119312e-12 | 4.52e-01/2.60e-01/7.16e-01
+	    total |                             | 1.85e+01/1.54e+00/2.01e+01
 
-[drag, lift] = [5.55827008249045, 0.010488569316219536]
-p difference = [0.118654840486631]</code></pre><p><img src="../../images/Example230_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example227_FlowTransport2D/">« 227 : Flow + Transport 2D</a><a class="docs-footer-nextpage" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+[drag, lift] = [5.55827008249045, 0.01048856931621904]
+p difference = [0.11865484048663107]</code></pre><p><img src="../../images/Example230_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example227_FlowTransport2D/">« 227 : Flow + Transport 2D</a><a class="docs-footer-nextpage" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 28 January 2022 10:45">Friday 28 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

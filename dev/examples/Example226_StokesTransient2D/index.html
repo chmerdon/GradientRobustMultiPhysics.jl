@@ -68,9 +68,9 @@ function main(;
     BAP_H1_u = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
 
     # define ItemIntegrators for L2/H1 error computation and arrays to store them
-    L2VelocityError = L2ErrorIntegrator(Float64, u, Identity; time = T)
-    L2PressureError = L2ErrorIntegrator(Float64, p, Identity)
-    H1VelocityError = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
+    L2VelocityError = L2ErrorIntegrator(u, Identity; time = T)
+    L2PressureError = L2ErrorIntegrator(p, Identity)
+    H1VelocityError = L2ErrorIntegrator(∇u, Gradient; time = T)
     Results = zeros(Float64, nlevels, 6)
     NDofs = zeros(Int, nlevels)
 
@@ -122,55 +122,55 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 1.6257e-13 | 4.184e+00 | 4.9651e-03  3.0773e+00 
-	     2  | 2.0000e-03 | 1.5257e-13 | 2.069e-02 | 3.6022e-03  2.3073e+00 
-	     3  | 3.0000e-03 | 1.2561e-13 | 1.001e-03 | 3.6022e-03  1.1211e-10 
-	     4  | 4.0000e-03 | 1.5701e-13 | 1.020e-03 | 3.6022e-03  1.1174e-10 
-	     5  | 5.0000e-03 | 1.4994e-13 | 1.002e-03 | 3.6022e-03  1.1203e-10 
-	     6  | 6.0000e-03 | 1.5937e-13 | 1.026e-03 | 3.6022e-03  1.1165e-10 
-	     7  | 7.0000e-03 | 1.4078e-13 | 1.068e-03 | 3.6022e-03  1.1213e-10 
-	     8  | 8.0000e-03 | 1.4015e-13 | 5.722e-03 | 3.6022e-03  1.1190e-10 
-	     9  | 9.0000e-03 | 1.4326e-13 | 1.090e-03 | 3.6022e-03  1.1218e-10 
-	    10  | 1.0000e-02 | 1.2001e-13 | 9.616e-04 | 3.6022e-03  1.1169e-10 
+	     1  | 1.0000e-03 | 1.5802e-13 | 3.975e+00 | 4.9651e-03  3.0773e+00 
+	     2  | 2.0000e-03 | 1.3960e-13 | 2.217e-02 | 3.6022e-03  2.3073e+00 
+	     3  | 3.0000e-03 | 1.5983e-13 | 9.457e-04 | 3.6022e-03  1.1212e-10 
+	     4  | 4.0000e-03 | 1.2742e-13 | 8.355e-04 | 3.6022e-03  1.1166e-10 
+	     5  | 5.0000e-03 | 1.1468e-13 | 8.371e-04 | 3.6022e-03  1.1204e-10 
+	     6  | 6.0000e-03 | 1.1270e-13 | 8.330e-04 | 3.6022e-03  1.1172e-10 
+	     7  | 7.0000e-03 | 1.4738e-13 | 8.227e-04 | 3.6022e-03  1.1217e-10 
+	     8  | 8.0000e-03 | 1.3092e-13 | 8.115e-04 | 3.6022e-03  1.1184e-10 
+	     9  | 9.0000e-03 | 1.4327e-13 | 8.125e-04 | 3.6022e-03  1.1219e-10 
+	    10  | 1.0000e-02 | 1.7628e-13 | 8.119e-04 | 3.6022e-03  1.1167e-10 
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 7.3524e-14 | 5.744e-03 | 5.6703e-03  2.8195e+00 
-	     2  | 2.0000e-03 | 8.3665e-14 | 2.065e-03 | 6.4012e-03  1.1598e+00 
-	     3  | 3.0000e-03 | 7.4028e-14 | 1.914e-03 | 6.4012e-03  1.4694e-10 
-	     4  | 4.0000e-03 | 7.1293e-14 | 1.858e-03 | 6.4012e-03  1.4498e-10 
-	     5  | 5.0000e-03 | 6.9784e-14 | 1.938e-03 | 6.4012e-03  1.4622e-10 
-	     6  | 6.0000e-03 | 8.6794e-14 | 2.077e-03 | 6.4012e-03  1.4582e-10 
-	     7  | 7.0000e-03 | 8.9562e-14 | 1.861e-03 | 6.4012e-03  1.4581e-10 
-	     8  | 8.0000e-03 | 7.9220e-14 | 1.873e-03 | 6.4012e-03  1.4603e-10 
-	     9  | 9.0000e-03 | 8.4448e-14 | 1.904e-03 | 6.4012e-03  1.4613e-10 
-	    10  | 1.0000e-02 | 8.1425e-14 | 1.895e-03 | 6.4012e-03  1.4540e-10 
+	     1  | 1.0000e-03 | 8.1882e-14 | 5.743e-03 | 5.6703e-03  2.8195e+00 
+	     2  | 2.0000e-03 | 8.4871e-14 | 1.839e-03 | 6.4012e-03  1.1598e+00 
+	     3  | 3.0000e-03 | 6.8600e-14 | 1.692e-03 | 6.4012e-03  1.4694e-10 
+	     4  | 4.0000e-03 | 9.1571e-14 | 1.728e-03 | 6.4012e-03  1.4507e-10 
+	     5  | 5.0000e-03 | 7.7620e-14 | 1.668e-03 | 6.4012e-03  1.4605e-10 
+	     6  | 6.0000e-03 | 8.5619e-14 | 1.696e-03 | 6.4012e-03  1.4575e-10 
+	     7  | 7.0000e-03 | 8.6174e-14 | 1.655e-03 | 6.4012e-03  1.4593e-10 
+	     8  | 8.0000e-03 | 8.7061e-14 | 1.649e-03 | 6.4012e-03  1.4594e-10 
+	     9  | 9.0000e-03 | 9.0481e-14 | 1.714e-03 | 6.4012e-03  1.4631e-10 
+	    10  | 1.0000e-02 | 7.7570e-14 | 1.658e-03 | 6.4012e-03  1.4530e-10 
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 3.9686e-14 | 2.064e-02 | 1.1430e-02  4.0417e+00 
-	     2  | 2.0000e-03 | 4.0242e-14 | 4.940e-03 | 1.2040e-02  5.7953e-01 
-	     3  | 3.0000e-03 | 4.2212e-14 | 5.010e-03 | 1.2040e-02  9.5504e-11 
-	     4  | 4.0000e-03 | 4.3249e-14 | 6.314e-03 | 1.2040e-02  9.4527e-11 
-	     5  | 5.0000e-03 | 4.1485e-14 | 4.968e-03 | 1.2040e-02  9.5548e-11 
-	     6  | 6.0000e-03 | 4.1431e-14 | 6.843e-03 | 1.2040e-02  9.4587e-11 
-	     7  | 7.0000e-03 | 4.1196e-14 | 5.083e-03 | 1.2040e-02  9.5611e-11 
-	     8  | 8.0000e-03 | 4.1426e-14 | 4.583e-03 | 1.2040e-02  9.4699e-11 
-	     9  | 9.0000e-03 | 4.4462e-14 | 1.212e-02 | 1.2040e-02  9.5691e-11 
-	    10  | 1.0000e-02 | 4.1637e-14 | 6.233e-03 | 1.2040e-02  9.4811e-11 
+	     1  | 1.0000e-03 | 4.4892e-14 | 1.899e-02 | 1.1430e-02  4.0417e+00 
+	     2  | 2.0000e-03 | 4.1343e-14 | 4.765e-03 | 1.2040e-02  5.7953e-01 
+	     3  | 3.0000e-03 | 4.3315e-14 | 4.653e-03 | 1.2040e-02  9.5329e-11 
+	     4  | 4.0000e-03 | 4.3742e-14 | 4.601e-03 | 1.2040e-02  9.4621e-11 
+	     5  | 5.0000e-03 | 4.2299e-14 | 4.606e-03 | 1.2040e-02  9.5542e-11 
+	     6  | 6.0000e-03 | 4.0043e-14 | 4.548e-03 | 1.2040e-02  9.4613e-11 
+	     7  | 7.0000e-03 | 4.5489e-14 | 4.554e-03 | 1.2040e-02  9.5591e-11 
+	     8  | 8.0000e-03 | 4.3063e-14 | 4.555e-03 | 1.2040e-02  9.4693e-11 
+	     9  | 9.0000e-03 | 4.2210e-14 | 4.545e-03 | 1.2040e-02  9.5663e-11 
+	    10  | 1.0000e-02 | 4.3775e-14 | 4.525e-03 | 1.2040e-02  9.4797e-11 
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 2.2110e-14 | 7.732e-02 | 2.2994e-02  7.3187e+00 
-	     2  | 2.0000e-03 | 2.2640e-14 | 1.590e-02 | 2.3341e-02  2.8899e-01 
-	     3  | 3.0000e-03 | 2.1343e-14 | 1.514e-02 | 2.3341e-02  6.5744e-09 
-	     4  | 4.0000e-03 | 2.2266e-14 | 1.712e-02 | 2.3341e-02  6.5550e-09 
-	     5  | 5.0000e-03 | 2.2521e-14 | 1.666e-02 | 2.3341e-02  6.5246e-09 
-	     6  | 6.0000e-03 | 2.2231e-14 | 1.639e-02 | 2.3341e-02  6.5040e-09 
-	     7  | 7.0000e-03 | 2.2004e-14 | 1.702e-02 | 2.3341e-02  6.4748e-09 
-	     8  | 8.0000e-03 | 2.2385e-14 | 1.690e-02 | 2.3341e-02  6.4547e-09 
-	     9  | 9.0000e-03 | 2.2061e-14 | 1.662e-02 | 2.3341e-02  6.4238e-09 
-	    10  | 1.0000e-02 | 2.2209e-14 | 1.671e-02 | 2.3341e-02  6.4072e-09 
+	     1  | 1.0000e-03 | 2.1582e-14 | 7.631e-02 | 2.2994e-02  7.3187e+00 
+	     2  | 2.0000e-03 | 2.2197e-14 | 1.668e-02 | 2.3341e-02  2.8899e-01 
+	     3  | 3.0000e-03 | 2.1819e-14 | 1.752e-02 | 2.3341e-02  6.5746e-09 
+	     4  | 4.0000e-03 | 2.1906e-14 | 1.741e-02 | 2.3341e-02  6.5546e-09 
+	     5  | 5.0000e-03 | 2.1554e-14 | 1.664e-02 | 2.3341e-02  6.5245e-09 
+	     6  | 6.0000e-03 | 2.1666e-14 | 1.673e-02 | 2.3341e-02  6.5042e-09 
+	     7  | 7.0000e-03 | 2.1962e-14 | 1.684e-02 | 2.3341e-02  6.4750e-09 
+	     8  | 8.0000e-03 | 2.1811e-14 | 1.673e-02 | 2.3341e-02  6.4540e-09 
+	     9  | 9.0000e-03 | 2.2353e-14 | 1.675e-02 | 2.3341e-02  6.4244e-09 
+	    10  | 1.0000e-02 | 2.2771e-14 | 1.655e-02 | 2.3341e-02  6.4069e-09 
 
     ndofs   |      ||u-u_h||       order  |      ||u-Πu||        order  |
 ============|=============================|=============================|
@@ -191,4 +191,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
         70  |     5.12836e-02      0.000  |     4.81476e-02      0.000  |
        250  |     2.59216e-02      1.072  |     2.38875e-02      1.101  |
        946  |     1.30868e-02      1.027  |     1.18665e-02      1.051  |
-      3682  |     6.52912e-03      1.023  |     5.90884e-03      1.026  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example225_NavierStokesAnderson2D/">« 225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      3682  |     6.52912e-03      1.023  |     5.90884e-03      1.026  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example225_NavierStokesAnderson2D/">« 225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 28 January 2022 10:46">Friday 28 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

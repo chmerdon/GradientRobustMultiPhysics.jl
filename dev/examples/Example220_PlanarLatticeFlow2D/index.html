@@ -12,7 +12,7 @@ using ExtendableGrids
 using GridVisualize
 
 # everything is wrapped in a main function
-function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
+function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
 
     # set log level
     set_verbosity(verbosity)
@@ -33,37 +33,45 @@ function main(; ν = 1e-3, nrefinements = 5, verbosity = 0, Plotter = nothing)
             result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
         ), [2,2]; name = &quot;f&quot;, dependencies = &quot;XT&quot;, quadorder = 4)
 
-    # set finite element and reconstruction operator
-    FEType = [H1BR{2}, H1P0{1}]; IdentityV = ReconstructionIdentity{HDIVBDM1{2}};
+    # set finite elements (Bernardi--Raugel)
+    FEType = [H1BR{2}, H1P0{1}]
 
-    # setup a bestapproximation problem via a predefined prototype
-    Problem = PDEDescription(&quot;planar lattice flow problem&quot;)
-    add_unknown!(Problem; equation_name = &quot;momentum equation&quot;, unknown_name = &quot;velocity&quot;)
-    add_unknown!(Problem; equation_name = &quot;incompressibility constraint&quot;, unknown_name = &quot;pressure&quot;)
-    add_operator!(Problem, [1,1], LaplaceOperator(ν; store = true))
-    add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
-    add_operator!(Problem, [1,1], ConvectionOperator(1, IdentityV, 2, 2; test_operator = IdentityV, newton = true))
-    add_constraint!(Problem, FixedIntegralMean(2,0))
-    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, LinearForm(IdentityV, f))
-    @show Problem
+    # prepare comparison plot
+    vis = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
 
-    # create finite element spaces and solve
-    FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
-    Solution = FEVector([&quot;u_h&quot;,&quot;p_h&quot;],FES)
-    solve!(Solution, Problem; show_statistics = true, show_solver_config = true)
+    for probust in [false,true]
 
-    # calculate L2 errors for u and p
-    L2errorV = L2ErrorIntegrator(Float64, u, Identity)
-    L2errorP = L2ErrorIntegrator(Float64, p, Identity)
-    println(&quot;|| u - u_h || = $(sqrt(evaluate(L2errorV,Solution[1])))&quot;)
-    println(&quot;|| p - p_h || = $(sqrt(evaluate(L2errorP,Solution[2])))&quot;)
+        # set identity operator
+        IdentityV = probust ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
 
-    # plot
-    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
-    scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 5)
-    vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false, title = &quot;u_h (abs + quiver)&quot;)
-    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 11, title = &quot;p_h&quot;)
+        # setup a bestapproximation problem via a predefined prototype
+        Problem = PDEDescription(&quot;planar lattice flow problem&quot;)
+        add_unknown!(Problem; equation_name = &quot;momentum equation&quot;, unknown_name = &quot;velocity&quot;)
+        add_unknown!(Problem; equation_name = &quot;incompressibility constraint&quot;, unknown_name = &quot;pressure&quot;)
+        add_operator!(Problem, [1,1], LaplaceOperator(ν; store = true))
+        add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
+        add_operator!(Problem, [1,1], ConvectionOperator(1, IdentityV, 2, 2; test_operator = IdentityV, newton = true))
+        add_constraint!(Problem, FixedIntegralMean(2,0))
+        add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
+        add_rhsdata!(Problem, 1, LinearForm(IdentityV, f))
+        @show Problem
+
+        # create finite element spaces and solve
+        FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid)]
+        Solution = FEVector([&quot;u_h $(probust ? &quot;(probust)&quot; : &quot;classical&quot;)&quot;,&quot;p_h $(probust ? &quot;(probust)&quot; : &quot;classical&quot;)&quot;],FES)
+        solve!(Solution, Problem; show_statistics = true, show_solver_config = true)
+
+        # calculate L2 errors for u and p
+        L2errorV = L2ErrorIntegrator(u, Identity)
+        L2errorP = L2ErrorIntegrator(p, Identity)
+        println(&quot;|| u - u_h || = $(sqrt(evaluate(L2errorV,Solution[1])))&quot;)
+        println(&quot;|| p - p_h || = $(sqrt(evaluate(L2errorP,Solution[2])))&quot;)
+
+        # plot
+        scalarplot!(vis[1+probust,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 5)
+        vectorplot!(vis[1+probust,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false, title = &quot;u_h (abs + quiver)&quot;)
+        scalarplot!(vis[1+probust,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 7, title = &quot;p_h&quot;)
+    end
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example220_PlanarLatticeFlow2D.main()
@@ -78,7 +86,82 @@ PDE-DESCRIPTION
     [2]   | pressure / incompressibility constraint 
 
   LHS block | PDEOperator(s)
-    [1,1]   | 0.001 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+    [1,1]   | 0.0002 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
+            | ((id(u) ⋅ ∇) u, id(v)) [Newton] [∂velocity] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
+    [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
+    [2,1]   | none
+    [2,2]   | none
+
+  RHS block | PDEOperator(s)
+     [1]    | (f, id(v)) (APT = LinearForm, AT = ON_CELLS, regions = [0])
+     [2]    | none
+
+   BoundaryOperator[1] : BestapproxDirichletBoundary -&gt; [1, 2, 3, 4]
+                         
+   BoundaryOperator[2] : 
+
+  GlobalConstraints[1] : Mean[2] != 0 
+Problem = 
+SC = 
+SOLVER-CONFIGURATION
+======================
+  overall nonlinear = true
+  overall timedependent = true
+  anderson_iterations = 0
+  subiterations = UnitRange{Int64}[1:2]
+  show_iteration_details = true
+  timedependent_equations = Any[]
+  anderson_unknowns = [1]
+  show_statistics = true
+  anderson_metric = l2
+  skip_update = [1]
+  linsolver = GradientRobustMultiPhysics.LinearSystem{Float64, Int64, LUFactorization}
+  damping = 0
+  time = 0
+  parallel_storage = false
+  show_solver_config = true
+  anderson_damping = 1
+  check_nonlinear_residual = true
+  fixed_penalty = 1.0e60
+  target_residual = 1.0e-10
+  maxiterations = 10
+  AssemblyTriggers = 
+         LHS_AT[1] :  A  I 
+         LHS_AT[2] :  N  N 
+         RHS_AT[1] :  T 
+         RHS_AT[2] :  N 
+                     (I = Once, T = EachTimeStep/SubIteration, A = Always, N = Never)
+
+  LHS_dependencies = [[1] [1, 2]; [2, 1] [2]]
+
+
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	    init  |                             | 1.85e+01/4.40e-06/1.86e+01
+	      1   | 4.150779e-17 | 8.045259e-02 | 2.31e-01/2.07e-01/5.73e-01
+	      2   | 8.870094e-17 | 1.024548e-02 | 2.26e-01/2.07e-01/4.35e-01
+	      3   | 8.145381e-17 | 4.138344e-03 | 2.28e-01/1.72e-01/4.01e-01
+	      4   | 8.054635e-17 | 7.867024e-04 | 2.26e-01/1.53e-01/3.80e-01
+	      5   | 8.079994e-17 | 1.935933e-05 | 2.26e-01/2.39e-01/4.67e-01
+	      6   | 7.942345e-17 | 6.645766e-08 | 2.26e-01/1.63e-01/3.91e-01
+	      7   | 8.018567e-17 | 3.700339e-13 | 2.26e-01/4.60e-01/6.87e-01
+	    total |                             | 2.01e+01/1.60e+00/2.36e+01
+
+|| u - u_h || = 0.3104459896952418
+|| p - p_h || = 0.19225996887573973
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+PDE-DESCRIPTION
+===============
+  system name = planar lattice flow problem
+
+     id   | unknown name / equation name
+    [1]   | velocity / momentum equation 
+    [2]   | pressure / incompressibility constraint 
+
+  LHS block | PDEOperator(s)
+    [1,1]   | 0.0002 (∇u,∇v) (APT = SymmetricBilinearForm, AT = ON_CELLS, regions = [0])
             | ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂velocity] (APT = NonlinearForm, AT = ON_CELLS, regions = [0])
     [1,2]   | (div(v),q) (APT = BilinearForm, AT = ON_CELLS, regions = [0])
     [2,1]   | none
@@ -130,12 +213,12 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 2.20e+01/5.70e-06/2.20e+01
-	      1   | 4.479628e-17 | 9.171721e-02 | 2.60e-01/2.56e-01/6.18e-01
-	      2   | 1.045713e-16 | 1.005659e-06 | 2.60e-01/2.21e-01/4.83e-01
-	      3   | 1.069070e-16 | 2.431843e-10 | 2.39e-01/1.72e-01/4.13e-01
-	      4   | 1.028739e-16 | 1.486492e-16 | 2.79e-01/1.89e-01/4.70e-01
-	    total |                             | 2.30e+01/8.38e-01/2.60e+01
+	    init  |                             | 1.16e+00/3.50e-06/1.16e+00
+	      1   | 4.123258e-17 | 9.171721e-02 | 2.58e-01/2.25e-01/4.85e-01
+	      2   | 1.051395e-16 | 1.199596e-05 | 2.52e-01/1.98e-01/4.52e-01
+	      3   | 1.035943e-16 | 6.220656e-08 | 2.51e-01/1.69e-01/4.22e-01
+	      4   | 1.038384e-16 | 2.059111e-14 | 2.52e-01/1.76e-01/4.30e-01
+	    total |                             | 2.17e+00/7.68e-01/2.95e+00
 
-|| u - u_h || = 0.0021880901132240193
-|| p - p_h || = 0.01641994916604901</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 24 January 2022 23:03">Monday 24 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 0.006284334068124712
+|| p - p_h || = 0.01672006383926804</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 28 January 2022 10:46">Friday 28 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
