@@ -90,9 +90,9 @@ function main(;
     BAP_H1_u = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation and arrays to store them
-    L2VelocityError = L2ErrorIntegrator(Float64, u, Identity; time = T)
-    L2PressureError = L2ErrorIntegrator(Float64, p, Identity)
-    H1VelocityError = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T) 
+    L2VelocityError = L2ErrorIntegrator(u, Identity; time = T)
+    L2PressureError = L2ErrorIntegrator(p, Identity)
+    H1VelocityError = L2ErrorIntegrator(∇u, Gradient; time = T) 
     Results = zeros(Float64, nlevels, 6)
     NDofs = zeros(Int, nlevels)
     

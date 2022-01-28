@@ -132,7 +132,7 @@ function get_draglift(Solution::FEVector, μ)
         return nothing
     end 
     draglift_action = Action(draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", bonus_quadorder = 4)
-    DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
+    DLIntegrator = ItemIntegrator([Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     ## test for drag
     TestFunction = FEVector("drag testfunction",Solution[1].FES)

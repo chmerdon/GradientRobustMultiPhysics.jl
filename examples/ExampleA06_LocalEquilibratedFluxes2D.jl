@@ -82,12 +82,12 @@ function main(; verbosity = 0, order = 2, nlevels = 16, theta = 1//2, Plotter = 
         return nothing
     end
     estimator_action = Action(eqestimator_kernel, [1,5]; name = "estimator kernel", dependencies = "", bonus_quadorder = 3)
-    EQIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Divergence, Gradient],estimator_action)
+    EQIntegrator = ItemIntegrator([Identity, Divergence, Gradient],estimator_action)
 
     ## setup exact error evaluations
-    L2Error = L2ErrorIntegrator(Float64, u, Identity)
-    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
-    L2ErrorDual = L2ErrorIntegrator(Float64, ∇u, Identity)
+    L2Error = L2ErrorIntegrator(u, Identity)
+    H1Error = L2ErrorIntegrator(∇u, Gradient)
+    L2ErrorDual = L2ErrorIntegrator(∇u, Identity)
 
     ## refinement loop (only uniform for now)
     NDofs = zeros(Int, nlevels)

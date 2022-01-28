@@ -156,8 +156,8 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 
     @show Problem
 
     ## define ItemIntegrators for L2/H1 error computation and some arrays to store the errors
-    L2Error = L2ErrorIntegrator(Float64, u, Identity)
-    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error = L2ErrorIntegrator(u, Identity)
+    H1Error = L2ErrorIntegrator(∇u, Gradient)
     Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
 
     ## refinement loop over levels

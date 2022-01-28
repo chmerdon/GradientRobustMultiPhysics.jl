@@ -130,8 +130,8 @@ function main(;
     @show Problem
 
     ## prepare error calculation
-    L2Error = L2ErrorIntegrator(Float64, u, Identity)
-    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error = L2ErrorIntegrator(u, Identity)
+    H1Error = L2ErrorIntegrator(∇u, Gradient)
     NDofs = zeros(Int,nlevels)
     Results = zeros(Float64,nlevels,2)
 

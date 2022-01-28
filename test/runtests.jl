@@ -245,9 +245,9 @@ function run_basic_fe_tests()
         interpolate!(Solution[1], exact_function)
 
         # check errors
-        L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity; AT = AT)
-        H1ErrorEvaluator = L2ErrorIntegrator(Float64, exact_gradient, Gradient; AT = AT)
-        H2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_hessian, Hessian; AT = AT)
+        L2ErrorEvaluator = L2ErrorIntegrator(exact_function, Identity; AT = AT)
+        H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient, Gradient; AT = AT)
+        H2ErrorEvaluator = L2ErrorIntegrator(exact_hessian, Hessian; AT = AT)
         error = zeros(Float64,3)
         error[1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
         if FEType <: AbstractH1FiniteElement
@@ -361,7 +361,7 @@ function run_basic_fe_tests()
         # Define Bestapproximation problem via PDETooles_PDEProtoTypes
         AT = ON_CELLS
         Problem = L2BestapproximationProblem(exact_function; bestapprox_boundary_regions = [], AT = AT)
-        L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity; AT = AT)
+        L2ErrorEvaluator = L2ErrorIntegrator(exact_function, Identity; AT = AT)
 
         # choose FE and generate FESpace
         FES = FESpace{FEType}(xgrid; broken = broken)
@@ -458,7 +458,7 @@ function run_basic_fe_tests()
 
         # Define Bestapproximation problem via PDETooles_PDEProtoTypes
         Problem = H1BestapproximationProblem(exact_function_gradient, exact_function; bestapprox_boundary_regions = [1,2])
-        L2ErrorEvaluator = L2ErrorIntegrator(Float64, exact_function, Identity)
+        L2ErrorEvaluator = L2ErrorIntegrator(exact_function, Identity)
 
         # choose FE and generate FESpace
         FES = FESpace{FEType}(xgrid)
@@ -616,8 +616,8 @@ function run_stokes_tests()
         solve!(Solution, Problem)
 
         # check error
-        L2ErrorEvaluatorV = L2ErrorIntegrator(Float64, exact_velocity, RhsOp)
-        L2ErrorEvaluatorP = L2ErrorIntegrator(Float64, exact_pressure, Identity)
+        L2ErrorEvaluatorV = L2ErrorIntegrator(exact_velocity, RhsOp)
+        L2ErrorEvaluatorP = L2ErrorIntegrator(exact_pressure, Identity)
         errorV = sqrt(evaluate(L2ErrorEvaluatorV,Solution[1]))
         errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
         if RhsOp == Identity
@@ -738,7 +738,7 @@ function run_timeintegration_tests()
         advance_until_time!(sys, 1e-1, 1.0)
 
         ## compute error
-        L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity, time = 1)
+        L2ErrorEvaluator = L2ErrorIntegrator(u, Identity, time = 1)
         error = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
         println("$(pair[1]) | order = $(pair[2]) | error = $error")
         @test error < tolerance

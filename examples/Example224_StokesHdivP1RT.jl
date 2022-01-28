@@ -80,10 +80,10 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     @show Problem
 
     ## prepare error calculation
-    L2VelocityError = L2ErrorIntegrator(Float64, u, [Identity, Identity]; time = T)
-    L2PressureError = L2ErrorIntegrator(Float64, p, Identity; time = T)
-    H1VelocityError = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
-    L2VeloDivEvaluator = L2NormIntegrator(Float64,1 , [Divergence, Divergence])
+    L2VelocityError = L2ErrorIntegrator(u, [Identity, Identity]; time = T)
+    L2PressureError = L2ErrorIntegrator(p, Identity; time = T)
+    H1VelocityError = L2ErrorIntegrator(∇u, Gradient; time = T)
+    L2VeloDivEvaluator = L2NormIntegrator(1 , [Divergence, Divergence])
     Results = zeros(Float64,nlevels,4); NDofs = zeros(Int,nlevels)
 
     ## loop over levels

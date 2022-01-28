@@ -92,7 +92,7 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
     drag::Float64 = 0
     lift::Float64 = 0
     draglift_action = Action{Float64}( draglift_kernel, [1,13]; name = "drag/lift by testfunction", dependencies = "", bonus_quadorder = 0)
-    DLIntegrator = ItemIntegrator(Float64,ON_CELLS,[Identity, Gradient, Identity, Identity, Gradient], draglift_action)
+    DLIntegrator = ItemIntegrator([Identity, Gradient, Identity, Identity, Gradient], draglift_action)
 
     ## prepare drag/lift calculation
     TestFunctionD = FEVector{Float64}("drag testfunction",Solution[1].FES)

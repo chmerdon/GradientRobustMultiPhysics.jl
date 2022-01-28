@@ -159,7 +159,7 @@ abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
 function Jump(::Type{<:AbstractFunctionOperator})
 ````
 
-Transforms operator inito its jump evaluation.
+Transforms operator into its jump evaluation.
 """
 Jump(::Type{<:AbstractFunctionOperator}) = UndefInitializer
 

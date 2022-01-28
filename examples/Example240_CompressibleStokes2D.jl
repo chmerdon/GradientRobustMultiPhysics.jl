@@ -94,9 +94,9 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
 
     ## prepare error calculation
-    VeloError = L2ErrorIntegrator(Float64, u, Identity; quadorder = 4)
-    VeloGradError = L2ErrorIntegrator(Float64, ∇u, Gradient; quadorder = 2)
-    DensityError = L2ErrorIntegrator(Float64, ϱ, Identity; quadorder = 2)
+    VeloError = L2ErrorIntegrator(u, Identity; quadorder = 4)
+    VeloGradError = L2ErrorIntegrator(∇u, Gradient; quadorder = 2)
+    DensityError = L2ErrorIntegrator(ϱ, Identity; quadorder = 2)
     Results = zeros(Float64,6,nlevels)
     NDoFs = zeros(Int,nlevels)
 
@@ -142,8 +142,8 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[2][1]; abs = true),1,:), levels = 0, title = "u_h (BR+) (abs + quiver)")
     vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution[2][1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[2,2],xgrid,view(nodevalues(Solution[2][2]),1,:), levels = 11, title = "p_h (BR+)")
-    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR)", "|| ∇(u - u_h) || (BR)", "|| ϱ - ϱ_h || (BR)"], legend = :lb)
-    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR+)", "|| ∇(u - u_h) || (BR+)", "|| ϱ - ϱ_h || (BR+)"], legend = :lb)
+    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR)", "|| ∇(u - u_h) || (BR)", "|| ϱ - ϱ_h || (BR)"], legend = :lb, fontsize = 20)
+    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR+)", "|| ∇(u - u_h) || (BR+)", "|| ϱ - ϱ_h || (BR+)"], legend = :lb, fontsize = 20)
 end
 
 function setup_and_solve!(Solution, xgrid; 

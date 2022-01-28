@@ -95,8 +95,8 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     solve!(Solution, Problem; subiterations = [[1],[2]], maxiterations = 20, show_solver_config = true, show_statistics = true)
 
     ## calculate L2 error
-    L2ErrorV = L2ErrorIntegrator(Float64, u, Identity)
-    L2ErrorP = L2ErrorIntegrator(Float64, p, Identity)
+    L2ErrorV = L2ErrorIntegrator(u, Identity)
+    L2ErrorP = L2ErrorIntegrator(p, Identity)
     println("|| u - u_h || = $(sqrt(evaluate(L2ErrorV,Solution[1])))")
     println("|| p - p_h || = $(sqrt(evaluate(L2ErrorP,Solution[2])))")
 

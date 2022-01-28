@@ -10,7 +10,7 @@ They can be separated roughly into two categories: linear operators and nonlinea
 GradientRobustMultiPhysics.PDEOperator
 ```
 
-The following table lists all available operators and available physics-motivated constructors for them (besides the abstract main constructor).
+The following table lists all available operators and available physics-motivated constructors for them.
 Click on them or scroll down to find out more details.
 
 | Main constructors                   | Special constructors                     | Mathematically                                                                                                   |
@@ -25,7 +25,7 @@ Click on them or scroll down to find out more details.
 |                                     | [`ConvectionRotationFormOperator`](@ref) | ``((a \times \nabla) u, v)`` (a is registered unknown, only 2D for now)                                          |
 | [`NonlinearForm`](@ref)             |                                          |                                                                                                                  |
 
-Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (that only expects the operator value of the finite element function as an input) and ``\mathrm{NA}`` stands for a (nonlinear) [Action](@ref) (see [`NonlinearForm`](@ref) for details).
+Legend: ``\mathrm{FO}``  are placeholders for [Function Operators](@ref), and ``\mathrm{A}`` stands for a (linear) [Action](@ref) (its role is explained in the main constructors).
 
 
 ## Assembly Type
@@ -76,7 +76,6 @@ ConvectionRotationFormOperator
 HookStiffnessOperator1D
 HookStiffnessOperator2D
 HookStiffnessOperator3D
-RhsOperator
 ```
 
 

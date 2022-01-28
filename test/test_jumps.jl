@@ -58,7 +58,7 @@ function test_disc_LF(xgrid, discontinuity)
     if discontinuity == Parent
         # test Parent{1} - Parent{2} version of jump
         action = Action((result, input) -> (result[1] = input[1] - input[2]), [1,2]; bonus_quadorder = 1)
-        TestIntegrator = ItemIntegrator(Float64, ON_IFACES, [Parent{1}(Identity), Parent{2}(Identity)], action)
+        TestIntegrator = ItemIntegrator([Parent{1}(Identity), Parent{2}(Identity)], action; AT = ON_IFACES)
         error = evaluate(TestIntegrator, [FEFunction[1], FEFunction[1]])
     else
         action = NoAction()

@@ -77,8 +77,8 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     add_rhsdata!(Problem, 1,  LinearForm(Identity, u_rhs))
 
     ## define error evaluators
-    L2Error = L2ErrorIntegrator(Float64, u, Identity; time = T)
-    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
+    L2Error = L2ErrorIntegrator(u, Identity; time = T)
+    H1Error = L2ErrorIntegrator(∇u, Gradient; time = T)
     Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
     
     ## loop over levels

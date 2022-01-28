@@ -48,8 +48,8 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     add_rhsdata!(Problem, 1, LinearForm(Identity, f))
 
     ## prepare error calculation
-    L2Error = L2ErrorIntegrator(Float64, u)
-    H1Error = L2ErrorIntegrator(Float64, ∇(u), Gradient)
+    L2Error = L2ErrorIntegrator(u)
+    H1Error = L2ErrorIntegrator(∇(u), Gradient)
     Results = zeros(Float64, nlevels, 2); NDofs = zeros(Int, nlevels)
 
     ## loop over levels

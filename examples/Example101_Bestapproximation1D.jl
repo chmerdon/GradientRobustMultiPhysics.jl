@@ -33,7 +33,7 @@ function main(; Plotter = nothing, verbosity = 0, order = 3, h = 0.5, h_fine = 1
     ## setup a bestapproximation problem via a predefined prototype
     ## and an L2ErrorEvaluator that can be used later to compute the L2 error
     Problem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [1,2])
-    L2ErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity)
+    L2ErrorEvaluator = L2ErrorIntegrator(u, Identity)
 
     ## choose finite element type of desired order and generate a FESpace for the grid
     FEType = H1Pk{1,1,order}

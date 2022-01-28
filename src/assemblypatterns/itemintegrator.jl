@@ -15,42 +15,32 @@ $(TYPEDSIGNATURES)
 
 Creates an ItemIntegrator assembly pattern based on:
 
-- T         : expected NumberType for evaluation output
-- AT        : specifies on which entities of the grid the ItemINtegrator is evaluated
 - operators : operators that should be evaluated for the coressponding FESpace (last one refers to test function)
 - action    : an Action with kernel of interface (result, input, kwargs) that takes input (= all but last operator evaluations) and computes result to be dot-producted with test function evaluation
               (if no action is specified, the full input vector is dot-producted with the test function operator evaluation)
 
 Optional arguments:
+- T         : expected NumberType for evaluation output
+- AT        : specifies on which entities of the grid the ItemINtegrator is evaluated
 - regions   : specifies in which regions the operator should assemble, default [0] means all regions
 - name      : name for this LinearForm that is used in print messages
 
 """
-function ItemIntegrator(T::Type{<:Real}, AT::Type{<:AssemblyType}, operators, action = NoAction(); regions = [0], name = "ItemIntegrator")
+function ItemIntegrator(operators, action = NoAction(); T = Float64, AT = ON_CELLS, regions = [0], name = "ItemIntegrator")
     return AssemblyPattern{APT_ItemIntegrator, T, AT}(name,Array{FESpace{Float64,Int32},1}([]),operators,action,1:length(operators),regions)
 end
 
 """
-````
-function L2ErrorIntegrator(
-    T::Type{<:Real},
-    compare_data::UserData{AbstractDataFunction}, # can be omitted if zero
-    operator::Type{<:AbstractFunctionOperator};
-    quadorder = "auto",
-    name = "auto",
-    factor = 1,
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    time = 0)
-````
+$(TYPEDSIGNATURES)
 
 Creates an ItemIntegrator that compares discrete FEVectorBlock operator-evaluations against the given compare_data and returns the L2-error
 || compare_data(x) - factor*discrete(x) ||.
 If quadorder is left on "auto" two times the quadorder of the data is used in the evaluation.
 """
 function L2ErrorIntegrator(
-    T::Type{<:Real},
     compare_data::UserData{AbstractDataFunction},
     operator = Identity;
+    T = Float64,
     quadorder = "auto",
     name = "auto",
     AT::Type{<:AssemblyType} = ON_CELLS,
@@ -88,27 +78,18 @@ function L2ErrorIntegrator(
         name = "L2 error ($(compare_data.name))"
     end
     action = Action(L2error_function, [1,ninputs*compare_data.dimensions[1]]; Tv = T, name = name, dependencies = "X", bonus_quadorder = quadorder)
-    return ItemIntegrator(T,AT, ops, action; regions = regions, name = name)
+    return ItemIntegrator(ops, action; T = T, AT = AT, regions = regions, name = name)
 end
 
 """
-````
-L2NormIntegrator(
-    T::Type{<:Real},
-    ncomponents::Int,
-    operator::Type{<:AbstractFunctionOperator};
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    name = "L2 norm",
-    quadorder = 2,
-    regions = [0])
-````
+$(TYPEDSIGNATURES)
 
 Creates an ItemIntegrator that computes the L2 norm of an operator evaluation where ncomponents is the expected length of the operator evaluation.
 """
 function L2NormIntegrator(
-    T::Type{<:Real},
     ncomponents::Int,
     operator;
+    T = Float64,
     AT::Type{<:AssemblyType} = ON_CELLS,
     name = "L2 norm",
     quadorder = 2,
@@ -134,29 +115,20 @@ function L2NormIntegrator(
         end    
     end    
     action = Action(L2norm_function, [1,ninputs*ncomponents]; name = "L2 norm kernel", dependencies = "", bonus_quadorder = quadorder)
-    return ItemIntegrator(T,AT, ops, action; regions = regions, name = name)
+    return ItemIntegrator(ops, action; T = T, AT = AT, regions = regions, name = name)
 end
 
 """
-````
-function L2DifferenceIntegrator(
-    T::Type{<:Real},
-    ncomponents::Int,
-    operator::Union{Type{<:AbstractFunctionOperator},Array{DataType,1}};
-    AT::Type{<:AssemblyType} = ON_CELLS,
-    name = "L2 difference",
-    quadorder = 2,
-    regions = [0])
-````
+$(TYPEDSIGNATURES)
 
 Creates an ItemIntegrator that computes the L2 norm difference between two arguments evalauted with the same operator (or with different operators if operator is an array) where ncomponents is the expected length of each operator evaluation.
 Note that all arguments in an evaluation call need to be defined on the same grid !
 """
 function L2DifferenceIntegrator(
-    T::Type{<:Real},
     ncomponents::Int,
     operator;
     AT::Type{<:AssemblyType} = ON_CELLS,
+    T = Float64,
     name = "L2 difference",
     quadorder = 2,
     regions = [0])
@@ -168,9 +140,9 @@ function L2DifferenceIntegrator(
     end    
     action = Action(L2difference_function, [1,2*ncomponents]; name = "L2 difference kernel", dependencies = "", bonus_quadorder = quadorder)
     if typeof(operator) <: DataType
-        return ItemIntegrator(T,AT, [operator, operator], action; regions = regions, name = name)
+        return ItemIntegrator([operator, operator], action; T = T, AT = AT, regions = regions, name = name)
     else
-        return ItemIntegrator(T,AT, [operator[1], operator[2]], action; regions = regions, name = name)
+        return ItemIntegrator([operator[1], operator[2]], action; T = T, AT = AT, regions = regions, name = name)
     end
 end
 

@@ -64,9 +64,9 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     u,p,∇u,f = get_flowdata(μ)
 
     ## prepare error calculation
-    L2VelocityErrorEvaluator = L2ErrorIntegrator(Float64, u, Identity; time = T)
-    L2PressureErrorEvaluator = L2ErrorIntegrator(Float64, p, Identity; time = T)
-    H1VelocityErrorEvaluator = L2ErrorIntegrator(Float64, ∇u, Gradient; time = T)
+    L2VelocityErrorEvaluator = L2ErrorIntegrator(u, Identity; time = T)
+    L2PressureErrorEvaluator = L2ErrorIntegrator(p, Identity; time = T)
+    H1VelocityErrorEvaluator = L2ErrorIntegrator(∇u, Gradient; time = T)
 
     ## load Stokes problem prototype and assign data
     Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false)

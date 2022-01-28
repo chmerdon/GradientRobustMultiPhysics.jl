@@ -10,7 +10,7 @@ function Base.show(io::IO, ::Type{APT_NonlinearForm})
     print(io, "NonlinearForm")
 end
 
-function NonlinearForm(
+function DiscreteNonlinearForm(
     T::Type{<:Real},
     AT::Type{<:AssemblyType},
     FES::Array{FESpace,1}, 
@@ -98,6 +98,7 @@ function full_assemble!(
     localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,newton_args[1]),get_maxndofs(AM,nFE))
     coeffs = zeros(T,maximum(maxdofs))
     weights::Array{T,1} = get_qweights(AM)
+    ndofitems::Int = get_maxdofitems(AM)[nFE]
     itemfactor::T = 0
     arow::Int = 0
     acol::Int = 0
@@ -125,11 +126,9 @@ function full_assemble!(
                 if AM.dofitems[FEid][di] != 0
                     # get correct basis evaluator for dofitem (was already updated by AM)
                     basisevaler = get_basisevaler(AM, FEid, di)
-    
-                    # update action on dofitem
-                    # update_action!(action, basisevaler, AM.dofitems[FEid][di], item, regions[r])
 
                     # get coefficients of FE number FEid on current dofitem
+                    FEB[FEid][AM.xItemDofs[FEid][1 + AM.dofoffset4dofitem[FEid][di], AM.dofitems[FEid][di]]]
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
                     coeffs .*= AM.coeff4dofitem[FEid][di]
 
@@ -141,89 +140,96 @@ function full_assemble!(
             end
         end
 
-        # update action on dofitem (not needed yet)
-        basisevaler2 = get_basisevaler(AM, nFE, 1)
-        basisvals = basisevaler2.cvals
+        for di = 1: ndofitems
+            dofitem = AM.dofitems[nFE][di]
+            if dofitem > 0
+                # update action on dofitem (not needed yet)
+                basisevaler2 = get_basisevaler(AM, nFE, di)
+                basisvals = basisevaler2.cvals
+        
+                if is_itemdependent(jac_handler)
+                    jac_handler.item[1] = item
+                    jac_handler.item[2] = dofitem
+                    jac_handler.item[3] = xItemRegions[item]
+                    jac_handler.item[4] = di
+                end
+        
+                for i in eachindex(weights)
 
-        if is_itemdependent(jac_handler)
-            jac_handler.item[1] = item
-            jac_handler.item[2] = AM.dofitems[newton_args[1]][1]
-            jac_handler.item[3] = xItemRegions[item]
+                    # get local jacobian
+                    if is_xdependent(jac_handler)
+                        update_trafo!(basisevaler2.L2G, item)
+                        eval_trafo!(jac_handler.x,basisevaler.L2G, basisevaler2.xref[i])
+                    end
+                    eval_jacobian!(jac_handler, action_input[i])
+                    jac = jac_handler.jac
+                    value = jac_handler.val
+
+                    for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
+
+                        # evaluate operators of ansatz function (but only of those operators in the current block)
+                        # (only of the newton arguments that are associated to the current matrix block)
+                        for newarg in newton_args
+                            basisevaler = get_basisevaler(AM, newarg, 1)
+                            eval_febe!(action_input2, basisevaler, dof_i, i, offsets[newarg])
+                        end
+
+                        # multiply with jacobian
+                        mul!(action_result,jac,action_input2)
+
+                        # multiply test function operator evaluation
+                        for dof_j = 1 : get_ndofs(AM, nFE, 1)
+                            temp = 0
+                            for k = 1 : action_resultdim
+                                temp += action_result[k] * basisvals[k,dof_j,i]
+                            end
+                            localmatrix[dof_i,dof_j] += temp * weights[i]
+                        end
+                    end 
+
+                    if 1 in newton_args
+                        for dof_j = 1 : get_ndofs(AM, nFE, 1)
+                            # multiply with jacobian
+                            mul!(action_result,jac,action_input[i])
+
+                            temp = 0
+                            for k = 1 : action_resultdim
+                                temp += (action_result[k] - value[k]) * basisvals[k,dof_j,i]
+                            end
+                            localb[dof_j] += temp * weights[i]
+                        end
+                    end
+                end
+
+                itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[nFE][1]
+
+                # copy localmatrix into global matrix
+                for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
+                    arow = get_dof(AM, newton_args[1], 1, dof_i) + offsetY # offsetY refers to the newton argument offset
+                    for dof_j = 1 : get_ndofs(AM, nFE, di)
+                        acol = get_dof(AM, nFE, di, dof_j) + offsetX # offsetX refers to the test function offset
+                        if transposed_assembly == true
+                            _addnz(A,acol,arow,localmatrix[dof_i,dof_j],itemfactor)
+                        else 
+                            _addnz(A,arow,acol,localmatrix[dof_i,dof_j],itemfactor)  
+                        end
+                    end
+                end
+                fill!(localmatrix,0.0)
+
+                if 1 in newton_args
+                    localb .*= itemfactor
+                    # copy localb into global rhs
+                    for dof_i = 1 : get_ndofs(AM, nFE, 1)
+                        b[get_dof(AM, nFE, 1, dof_i) + offsetX] += localb[dof_i]      
+                    end
+                    fill!(localb,0.0)
+                end
+            end
         end
 
         for i in eachindex(weights)
-
-            # get local jacobian
-            if is_xdependent(jac_handler)
-                basisevaler = get_basisevaler(AM, newton_args[1], 1)
-                update_trafo!(basisevaler.L2G, item)
-                eval_trafo!(jac_handler.x,basisevaler.L2G, basisevaler.xref[i])
-            end
-            eval_jacobian!(jac_handler, action_input[i])
-            jac = jac_handler.jac
-            value = jac_handler.val
-
-            for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
-
-                # evaluate operators of ansatz function (but only of those operators in the current block)
-                # (only of the newton arguments that are associated to the current matrix block)
-                for newarg in newton_args
-                    basisevaler = get_basisevaler(AM, newarg, 1)
-                    eval_febe!(action_input2, basisevaler, dof_i, i, offsets[newarg])
-                end
-
-                # multiply with jacobian
-                mul!(action_result,jac,action_input2)
-
-                # multiply test function operator evaluation
-                for dof_j = 1 : get_ndofs(AM, nFE, 1)
-                    temp = 0
-                    for k = 1 : action_resultdim
-                        temp += action_result[k] * basisvals[k,dof_j,i]
-                    end
-                    localmatrix[dof_i,dof_j] += temp * weights[i]
-                end
-            end 
-
-            if 1 in newton_args
-                for dof_j = 1 : get_ndofs(AM, nFE, 1)
-                    # multiply with jacobian
-                    mul!(action_result,jac,action_input[i])
-
-                    temp = 0
-                    for k = 1 : action_resultdim
-                        temp += (action_result[k] - value[k]) * basisvals[k,dof_j,i]
-                    end
-                    localb[dof_j] += temp * weights[i]
-                end
-            end
-
             fill!(action_input[i],0)
-        end
-
-        itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[nFE][1]
-
-        # copy localmatrix into global matrix
-        for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
-            arow = get_dof(AM, newton_args[1], 1, dof_i) + offsetY # offsetY refers to the newton argument offset
-            for dof_j = 1 : get_ndofs(AM, nFE, 1)
-                acol = get_dof(AM, nFE, 1, dof_j) + offsetX # offsetX refers to the test function offset
-                if transposed_assembly == true
-                    _addnz(A,acol,arow,localmatrix[dof_i,dof_j],itemfactor)
-                else 
-                    _addnz(A,arow,acol,localmatrix[dof_i,dof_j],itemfactor)  
-                end
-            end
-        end
-        fill!(localmatrix,0.0)
-
-        if 1 in newton_args
-            localb .*= itemfactor
-            # copy localb into global rhs
-            for dof_i = 1 : get_ndofs(AM, nFE, 1)
-                b[get_dof(AM, nFE, 1, dof_i) + offsetX] += localb[dof_i]      
-            end
-            fill!(localb,0.0)
         end
 
         break; # region for loop

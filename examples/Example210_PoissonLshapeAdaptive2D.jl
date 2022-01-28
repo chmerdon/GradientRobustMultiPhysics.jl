@@ -51,8 +51,8 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
     add_boundarydata!(Problem, 1, [1,8], HomogeneousDirichletBoundary)
 
     ## setup exact error evaluations
-    L2Error = L2ErrorIntegrator(Float64, u, Identity)
-    H1Error = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error = L2ErrorIntegrator(u, Identity)
+    H1Error = L2ErrorIntegrator(∇u, Gradient)
 
     ## define error estimator
     ## kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)
@@ -73,8 +73,8 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
     eta_jumps_action = Action(L2jump_integrand, [1,2]; name = "kernel of η (jumps)", dependencies = "I", bonus_quadorder = order-1)
     eta_vol_action = Action(L2vol_integrand, [1,1]; name = "kernel of η (vol)", dependencies = "I", bonus_quadorder = order-1)
     ## ... which is used inside an ItemIntegrator
-    ηF = ItemIntegrator(Float64,ON_IFACES,[Jump(Gradient)],eta_jumps_action; name = "η_F")
-    ηT = ItemIntegrator(Float64,ON_CELLS,[Laplacian],eta_vol_action; name = "η_T")
+    ηF = ItemIntegrator([Jump(Gradient)],eta_jumps_action; AT = ON_IFACES, name = "η_F")
+    ηT = ItemIntegrator([Laplacian],eta_vol_action; name = "η_T")
           
     NDofs = zeros(Int, 0)
     ResultsL2 = zeros(Float64, 0)

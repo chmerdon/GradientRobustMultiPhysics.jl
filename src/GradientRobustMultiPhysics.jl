@@ -111,9 +111,9 @@ include("assemblypatterns.jl")
 export AssemblyPatternType, AssemblyPreparations
 export ItemIntegrator, L2ErrorIntegrator, L2NormIntegrator, L2DifferenceIntegrator
 export DiscreteLinearForm
-export DiscreteBilinearForm, DiscreteSymmetricBilinearForm, DiscreteLumpedBilinearForm
 export APT_BilinearForm, APT_SymmetricBilinearForm, APT_LumpedBilinearForm
-export NonlinearForm
+export DiscreteBilinearForm, DiscreteSymmetricBilinearForm, DiscreteLumpedBilinearForm
+export DiscreteNonlinearForm
 export prepare_assembly!
 export assemble!, evaluate!, evaluate
 export AssemblyManager, update_assembly!

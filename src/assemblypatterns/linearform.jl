@@ -121,7 +121,7 @@ function assemble!(
     maxdofs::Array{Int,1} = get_maxndofs(AM)
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     coeffs::Array{T,1} = zeros(T,sum(maxdofs[1:end]))
-    ndofitems::Int = get_maxdofitems(AM)[1]
+    ndofitems::Int = get_maxdofitems(AM)[nFE]
     bdof::Int = 0
     temp::T = 0 # some temporary variable
     ndofs4dofitem::Int = 0

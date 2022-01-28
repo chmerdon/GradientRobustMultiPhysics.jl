@@ -61,8 +61,8 @@ function main(; verbosity = 0, Plotter = nothing)
     scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Divergence),1,:), levels = 5, title = "div(u_h)")
 
     ## calculate L2 error and L2 divergence error
-    L2Error = L2ErrorIntegrator(Float64, u, Identity)
-    L2DivergenceError = L2ErrorIntegrator(Float64, div_u, Divergence)
+    L2Error = L2ErrorIntegrator(u, Identity)
+    L2DivergenceError = L2ErrorIntegrator(div_u, Divergence)
     println("\tL2error(Id) = $(sqrt(evaluate(L2Error,Solution[1])))")
     println("\tL2error(div) = $(sqrt(evaluate(L2DivergenceError,Solution[1])))")
 end

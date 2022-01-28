@@ -90,8 +90,8 @@ function main(; Plotter = nothing, verbosity = 0, nrefinements = 5, FEType = H1P
     solve!(Solution, Problem; linsolver = MySolver{Float64,Int64}, skip_update = [skip_update])
 
     ## calculate error
-    L2Error = L2ErrorIntegrator(Float64, u, Identity)
-    H1Error = L2ErrorIntegrator(Float64, u_gradient, Gradient)
+    L2Error = L2ErrorIntegrator(u, Identity)
+    H1Error = L2ErrorIntegrator(u_gradient, Gradient)
     println("\tL2error = $(sqrt(evaluate(L2Error,Solution[1])))")
     println("\tH1error = $(sqrt(evaluate(H1Error,Solution[1])))")
 

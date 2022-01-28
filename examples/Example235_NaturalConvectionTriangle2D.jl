@@ -101,7 +101,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     end
     
     ## compute Nusselt number along bottom boundary
-    NuIntegrator = ItemIntegrator(Float64,ON_BFACES,[Jump(Gradient)], vdotg_action; regions = [1])
+    NuIntegrator = ItemIntegrator([Jump(Gradient)], vdotg_action; AT = ON_BFACES, regions = [1])
     println("\tNu = $(evaluate(NuIntegrator,Solution[3]))")
 
     ## plot

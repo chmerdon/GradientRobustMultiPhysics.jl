@@ -6,7 +6,7 @@
 This demonstrates the assignment of a mixed Robin boundary condition for a nonlinear 1D convection-diffusion-reaction PDE on the unit interval, i.e.
 ```math
 \begin{aligned}
--\partial u / \partial x^2 + u \partial u / \partial x + u & = f && \text{in } \Omega\\
+-\partial^2 u / \partial x^2 + u \partial u / \partial x + u & = f && \text{in } \Omega\\
 u + \partial u / \partial_x & = g && \text{at } \Gamma_1 = \{ 0 \}\\
 u & = u_D && \text{at } \Gamma_2 = \{ 1 \}
 \end{aligned}
@@ -77,7 +77,7 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
     solve!(Solution, Problem; show_statistics = true)
 
     ## compute L2 error
-    L2error = L2ErrorIntegrator(Float64,u)
+    L2error = L2ErrorIntegrator(u)
     println("L2error = $(sqrt(evaluate(L2error,Solution[1])))")
     
     ## plot discrete and exact solution (on finer grid)

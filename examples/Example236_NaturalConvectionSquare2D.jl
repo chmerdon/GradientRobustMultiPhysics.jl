@@ -36,7 +36,7 @@ T_left = DataFunction([1])
 T_right = DataFunction([0])
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 5, anderson = false)
+function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 5, reconstruct = true, anderson = false)
 
     ## set log level
     set_verbosity(verbosity)
@@ -47,7 +47,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
 
     ## types for discretisation by Bernardi--Raugel pressure-robust (BDM1 reconstruction) + P1-FEM for temperature
     FETypes = [H1BR{2}, H1P0{1}, H1P1{1}]; 
-    RIdentity = ReconstructionIdentity{HDIVBDM1{2}}
+    RIdentity = reconstruct ? ReconstructionIdentity{HDIVBDM1{2}} : Identity
 
     ## load Stokes prototype and add a unknown for the temperature
     Problem = IncompressibleNavierStokesProblem(2; viscosity = μ, nonlinear = false, store = true)

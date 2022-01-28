@@ -98,9 +98,9 @@ function solve(Problem, xgrid, FETypes, viscosity = 1e-2; nlevels = 4, target_re
     BAP_H1_u = H1BestapproximationProblem(∇u, u; bestapprox_boundary_regions = [1,2,3,4])
 
     ## define ItemIntegrators for L2/H1 error computation
-    L2Error_u = L2ErrorIntegrator(Float64, u, Identity)
-    L2Error_p = L2ErrorIntegrator(Float64, p, Identity)
-    H1Error_u = L2ErrorIntegrator(Float64, ∇u, Gradient)
+    L2Error_u = L2ErrorIntegrator(u, Identity)
+    L2Error_p = L2ErrorIntegrator(p, Identity)
+    H1Error_u = L2ErrorIntegrator(∇u, Gradient)
     Results = zeros(Float64, nlevels, 9)
     NDofs = zeros(Int, nlevels)
     

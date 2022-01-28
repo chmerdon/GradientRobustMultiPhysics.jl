@@ -323,12 +323,12 @@ generates a BilinearForm defined by the following arguments:
 - operators_linear  : operator for the two linear arguments (usually ansatz and test function)
 - operators_current : additional operators for other unknowns
 - coeff_from        : either PDE unknown ids or block ids for CurrentSolution given to assembly_operator! that should be used for operators_current
-- action            : tells how to further combine the operators_current evaluations (=input of action) to a result that is multiplied with the test function operator
+- action            : tells how to further combine the operators_current+operator_ansatz evaluations (=input of action) to a result that is multiplied with the test function operator
                       (if no action is specified, the full input vector is dot-producted with the test function operator evaluation)
 
 Optional arguments:
 
-- apply_action_to   : specifies which of the two linear arguments is part of the action input
+- apply_action_to   : specifies which of the two linear arguments is part of the action input ([1] = ansatz, [2] = test)
 - regions           : specifies in which regions the operator should assemble, default [0] means all regions
 - name              : name for this BilinearForm that is used in print messages
 - AT                : specifies on which entities of the grid the BilinearForm is assembled (default: ON_CELLS)
@@ -337,6 +337,13 @@ Optional arguments:
 - transposed_assembly : transposes the resulting assembled matrix
 - store             : stores a matrix of the BilinearForm with the latest assembly result
                       (e.g. when the operators sits in a system block that has to be reassembled in an iterative scheme)
+
+Details on the action:
+The action is an Action consisting of a kernel function with interface (result, input, ...) and additional argument information. During assembly
+input will be filled with the operator evaluations of the other unknowns (i.e. operator_current, if specified) and appended to that the operator
+evaluation of one of the two linear argument (decided by apply_action_to). The result computed by the kernel function
+is multiplied (dot product) with the operator evaluation of the other linear argument.
+If no action is given, the assembly tries to multiply the operator evaluations (that would have been given as input) directly.
     
 """
 function BilinearForm(
@@ -625,6 +632,10 @@ Optional arguments:
 - factor            : additional factor that is multiplied during assembly
 - store             : stores a vector of the discretised LinearForm with the latest assembly result
 
+Details on the action:
+The action is an Action consisting of a kernel function with interface (result, input, ...) and additional argument information. During assembly
+input is ignored (only in this constructor for LinearForms). The result computed by the kernel function
+is multiplied (dot product) with the operator evaluation of the test function.
 """
 function LinearForm(
     operator::Type{<:AbstractFunctionOperator},
@@ -695,6 +706,11 @@ Optional arguments:
 - store : stores a vector of the LinearForm with the latest assembly result
   (e.g. when the operators sits in a system block that has to be reassembled in an iterative scheme)
     
+Details on the action:
+The action is an Action consisting of a kernel function with interface (result, input, ...) and additional argument information. During assembly
+input will be filled with the operator evaluations of the other unknowns (i.e. operators_current). The result computed by the kernel function
+is multiplied (dot product) with the operator evaluation of the test function (i.e. operator_test).
+If no action is given, the assembly tries to multiply the operator evaluations (that would have been given as input) directly.
 """
 function LinearForm(
     operator_test::Type{<:AbstractFunctionOperator},                   # operator to be evaluted for test function
@@ -1336,7 +1352,7 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int,  O::FVConvectio
     fill!(O.fluxes,0)
     if typeof(SC.LHS_AssemblyPatterns[j,k][o]).parameters[1] <: APT_Undefined
         @debug "Creating assembly pattern for FV convection fluxes $(O.name)"
-        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator(T, ON_FACES, [NormalFlux]; name = "u ⋅ n")
+        SC.LHS_AssemblyPatterns[j,k][o] = ItemIntegrator([NormalFlux]; name = "u ⋅ n", T = T, AT = ON_FACES)
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],CurrentSolution[c], skip_preps = false)
     else
         evaluate!(O.fluxes,SC.LHS_AssemblyPatterns[j,k][o],CurrentSolution[c], skip_preps = true)

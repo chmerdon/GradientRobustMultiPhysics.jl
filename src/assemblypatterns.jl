@@ -65,7 +65,7 @@ function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_continuous}
     end
 end
 
-# parent eval operators on faces that are avluated using the cell basis
+# parent eval operators on faces that are evaluated using the cell basis
 function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_discontinuous{Parent{pk},AT,basisAT}}, item::Int) where {pk, AT <: ON_FACES, basisAT <: ON_CELLS}
     AM.dofitems[op][1] = AM.xDofItems4Item[op][pk,item]
     if AM.dofitems[op][1] != 0
@@ -222,6 +222,29 @@ function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_broken{Disc
         end
     else
         AM.dofoffset4dofitem[op][2] = AM.ndofs4EG[op][1] 
+    end
+end
+
+# broken space Parent operator on faces
+function update_dii4op!(AM::AssemblyManager, op::Int, ::Type{DIIType_broken{Parent{pk},AT,basisAT}}, item::Int) where {pk, AT <: ON_FACES, basisAT <: ON_FACES}
+    if AM.xDofItems4Item[op][2,item] == 0 && pk == 2
+        AM.dofitems[op][1] = 0
+    else
+        AM.coeff4dofitem[op][1] = 1
+        AM.dofitems[op][1] = item
+        if length(AM.EG) > 1
+            # find EG index for geometry
+            for j=1:length(AM.EG)
+                if AM.xItemGeometries[item] == AM.EG[j]
+                    AM.EG4dofitem[op][1] = j
+                    AM.EG4dofitem[op][2] = j
+                    AM.dofoffset4dofitem[op][1] = (pk == 1) ? 0 : AM.ndofs4EG[op][j] 
+                    break
+                end
+            end
+        else
+            AM.dofoffset4dofitem[op][1] = (pk == 1) ? 0 : AM.ndofs4EG[op][1] 
+        end
     end
 end
 
