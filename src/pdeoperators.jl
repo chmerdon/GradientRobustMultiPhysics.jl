@@ -61,6 +61,7 @@ common structures for all finite element operators that are assembled with Gradi
 mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} <: AbstractPDEOperator
     name::String
     operators4arguments::Array{DataType,1}
+    active_recast::Bool
     action::Union{AbstractAction, AbstractNonlinearFormHandler}
     action_rhs::Union{AbstractAction, AbstractNonlinearFormHandler}
     action_eval::Union{AbstractAction, AbstractNonlinearFormHandler}
@@ -77,12 +78,12 @@ mutable struct PDEOperator{T <: Real, APT <: AssemblyPatternType, AT <: Assembly
     storage_init::Bool
     storage_A::Union{Nothing,AbstractMatrix{T},FEMatrix{T}}
     storage_b::Union{Nothing,AbstractVector{T},FEVector{T}}
-    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto,false)
-    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger,false)
+    PDEOperator{T,APT,AT}(name,ops) where {T <: Real, APT <: AssemblyPatternType, AT <: AssemblyType} = new{T,APT,AT}(name,ops,false,NoAction(),NoAction(),NoAction(),[1],[],[],[],1,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,NoAction(),NoAction(),NoAction(),[1],[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,[0],false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,regions,false,false,false,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,AssemblyAuto,false)
+    PDEOperator{T,APT,AT}(name,ops,action,apply_to,factor,regions,store,assembly_trigger) where {T,APT,AT} = new{T,APT,AT}(name,ops,false,action,action,action,apply_to,[],[],[],factor,regions,false,false,store,assembly_trigger,false)
 end 
 
 get_pattern(::AbstractPDEOperator) = APT_Undefined
@@ -95,6 +96,7 @@ function Base.copy(O::PDEOperator{T,APT,AT}) where{T,APT,AT}
     cO.action = O.action # deepcopy would lead to errors !!!
     cO.action_rhs = O.action_rhs # deepcopy would lead to errors !!!
     cO.action_eval = O.action_eval # deepcopy would lead to errors !!! 
+    cO.active_recast = O.active_recast
     cO.apply_action_to = copy(O.apply_action_to)
     cO.fixed_arguments = copy(O.fixed_arguments)
     cO.fixed_arguments_ids = copy(O.fixed_arguments_ids)
@@ -939,8 +941,18 @@ function update_storage!(O::PDEOperator, SC, CurrentSolution::FEVector{T,Tv,Ti},
 end
 
 
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,TiM,TvG,TiG}, CurrentSolution) where{T,TvM,TiM,TvG,TiG,APT<:APT_BilinearForm,AT}
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,TiM,TvG,TiG}, CurrentSolution; fixed = 0) where{T,TvM,TiM,TvG,TiG,APT<:APT_BilinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
+    if length(O.operators4arguments) - 1 == length(O.fixed_arguments_ids)
+        @warn "PDEOperator was recasted into LinearForm pattern before, trying to cope with it..."
+        O.fixed_arguments = O.fixed_arguments[1:end-1]
+        O.fixed_arguments_ids = O.fixed_arguments_ids[1:end-1]
+        if O.active_recast
+            # reswitch last two operators
+            nops = length(O.operators4arguments)
+            O.operators4arguments[[nops,nops-1]] = O.operators4arguments[[nops-1,nops]]
+        end
+    end
     FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
     for a = 1 : length(O.fixed_arguments)
         FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
@@ -950,17 +962,35 @@ function create_assembly_pattern(O::PDEOperator{T,APT,AT}, A::FEMatrixBlock{TvM,
     return AssemblyPattern{APT, TvM, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
-
-function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution::FEVector; fixed = 0, fixed_id = 0) where{T,TvV,TvG,TiG,APT<:APT_BilinearForm,AT}
+# recasting of BilinearForm into LinearForm if assembled into a vector
+function create_assembly_pattern(O::PDEOperator{T,APT,AT}, b::FEVectorBlock{TvV,TvG,TiG}, CurrentSolution; fixed = 0, fixed_id = 0) where {T,TvV,TvG,TiG,APT<:APT_BilinearForm,AT}
     @debug "Creating assembly pattern for PDEOperator $(O.name)"
-    push!(O.fixed_arguments, length(O.fixed_arguments) + 1)
-    push!(O.fixed_arguments_ids, fixed_id)
+    @assert fixed in [1,2] && fixed_id > 0 "need to fix one linear argument in the bilinearform to assemble into vector (specify fixed = 1 or 2 and fixed_id)!"
+    if length(O.operators4arguments) - 1 == length(O.fixed_arguments_ids)
+        @warn "PDEOperator was recasted into LinearForm pattern before, trying to cope with it..."
+        if O.active_recast
+            # reswitch last two operators
+            nops = length(O.operators4arguments)
+            O.operators4arguments[[nops,nops-1]] = O.operators4arguments[[nops-1,nops]]
+        end
+        O.fixed_arguments[end] = length(O.fixed_arguments) + 1
+        O.fixed_arguments_ids[end] = fixed_id
+    else
+        push!(O.fixed_arguments, length(O.fixed_arguments) + 1)
+        push!(O.fixed_arguments_ids, fixed_id)
+    end
     FES = Array{FESpace{TvG,TiG},1}(undef, 2)
     FES = Array{FESpace{TvG,TiG},1}(undef, length(O.fixed_arguments))
     for a = 1 : length(O.fixed_arguments)
         FES[a] = CurrentSolution[O.fixed_arguments_ids[a]].FES
     end
-    push!(FES, CurrentSolution[fixed_id].FES)
+    push!(FES, b.FES)
+    if (fixed == 2 && O.apply_action_to == [1]) || (fixed == 1 && O.apply_action_to == [2])
+        # switch last two operators
+        nops = length(O.operators4arguments)
+        O.operators4arguments[[nops,nops-1]] = O.operators4arguments[[nops-1,nops]]
+        O.active_recast = true # remember that operators have been switched
+    end
     return AssemblyPattern{APT_LinearForm, TvV, AT}(O.name, FES, O.operators4arguments,O.action,O.apply_action_to,O.regions)
 end
 
@@ -997,9 +1027,9 @@ function assemble_operator!(A::FEMatrixBlock, O::PDEOperator, CurrentSolution::U
 end
 
 
-function assemble_operator!(b::FEVectorBlock, O::PDEOperator, CurrentSolution = nothing; Pattern = nothing, skip_preps::Bool = false, factor = 1, time::Real = 0)
+function assemble_operator!(b::FEVectorBlock, O::PDEOperator, CurrentSolution = nothing; Pattern = nothing, skip_preps::Bool = false, factor = 1, time::Real = 0, fixed = 0, fixed_id = 0)
     if Pattern === nothing
-        Pattern = create_assembly_pattern(O, b, CurrentSolution)
+        Pattern = create_assembly_pattern(O, b, CurrentSolution; fixed = fixed, fixed_id = fixed_id)
     end
     set_time!(O.action, time)
     if length(O.fixed_arguments_ids) > 0
@@ -1067,22 +1097,10 @@ function assemble!(b::FEVectorBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
             skip_preps = false
         end
 
-        ## find fixed arguments by j,k positioning (additional to fixed arguments of operator)
-        if typeof(O).parameters[2] <: APT_BilinearForm
-            if fixed_component == j
-                fixed_arguments = [1]
-            elseif fixed_component == k
-                fixed_arguments = [2]
-            else
-                @error "Something went severely wrong..."
-            end
-            fixed_arguments_ids = [fixed_component]
-        end
-
         ## assemble
         set_time!(O.action, time)
-        if length(fixed_arguments_ids) > 0
-            assemble!(b, SC.LHS_AssemblyPatterns[j,k][o],CurrentSolution[fixed_arguments_ids]; skip_preps = skip_preps, factor = O.factor*factor, fixed_arguments = fixed_arguments)
+        if length(O.fixed_arguments_ids) > 0
+            assemble!(b, SC.LHS_AssemblyPatterns[j,k][o],CurrentSolution[O.fixed_arguments_ids]; skip_preps = skip_preps, factor = O.factor*factor, fixed_arguments = O.fixed_arguments)
         else
             assemble!(b, SC.LHS_AssemblyPatterns[j,k][o]; skip_preps = skip_preps, factor = O.factor*factor)
         end

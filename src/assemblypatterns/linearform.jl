@@ -67,13 +67,15 @@ function assemble!(
 
     # prepare action
     action = AP.action
-    if typeof(action) <: NoAction
+    hasaction::Bool = !(typeof(action) <: NoAction)
+    if !hasaction
         action_resultdim = size(get_basisevaler(AM, nFE, 1).cvals,1)
         action_result = ones(T,action_resultdim) # heap for action output
         action_input = action_result
     else
         action_resultdim::Int = action.argsizes[1]
         action_result = action.val
+        action_input = zeros(T,action.argsizes[2])
     end
     if nFE > 1
         maxnweights = get_maxnqweights(AM)
@@ -88,12 +90,6 @@ function assemble!(
             end
         end
         action_input = action_input_FEB[1]
-    else
-        if typeof(action) <: NoAction
-            action_input = zeros(T,action_resultdim)
-        else
-            action_input = zeros(T,action.argsizes[2])
-        end
     end
     if typeof(b) <: AbstractArray{T,1}
         onedimensional = true
@@ -117,7 +113,7 @@ function assemble!(
     end
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler.cvals
     weights::Array{T,1} = get_qweights(AM)
-    localb::Array{T,1} = zeros(T,get_maxndofs(AM)[1])
+    localb::Array{T,1} = zeros(T,get_maxndofs(AM)[nFE])
     maxdofs::Array{Int,1} = get_maxndofs(AM)
     maxdofitems::Array{Int,1} = get_maxdofitems(AM)
     coeffs::Array{T,1} = zeros(T,sum(maxdofs[1:end]))
@@ -184,21 +180,33 @@ function assemble!(
                     if nFE > 1
                         action_input = action_input_FEB[i]
                     end
-                    if is_xdependent(action)
-                        update_trafo!(basisevaler.L2G, AM.dofitems[nFE][di])
-                        eval_trafo!(action.x, basisevaler.L2G, basisevaler.xref[i])
-                    end
-                    # apply action
-                    eval_action!(action, action_input)
-
-                    # multiply with test function
-                    for dof_i = 1 : ndofs4dofitem
-                        temp = 0
-                        for k = 1 : action_resultdim
-                            temp += action_result[k] * basisvals[k,dof_i,i]
+                    if !hasaction
+                        # multiply with test function
+                        for dof_i = 1 : ndofs4dofitem
+                            temp = 0
+                            for k = 1 : action_resultdim
+                                temp += action_input[k] * basisvals[k,dof_i,i]
+                            end
+                            localb[dof_i] += temp * weights[i]
+                        end 
+                    else
+    
+                        # apply action
+                        if is_xdependent(action)
+                            update_trafo!(basisevaler.L2G, AM.dofitems[nFE][di])
+                            eval_trafo!(action.x, basisevaler.L2G, basisevaler.xref[i])
                         end
-                        localb[dof_i] += temp * weights[i]
-                    end 
+                        eval_action!(action, action_input)
+    
+                        # multiply with test function
+                        for dof_i = 1 : ndofs4dofitem
+                            temp = 0
+                            for k = 1 : action_resultdim
+                                temp += action_result[k] * basisvals[k,dof_i,i]
+                            end
+                            localb[dof_i] += temp * weights[i]
+                        end 
+                    end
                 end 
 
                 ## copy into global vector

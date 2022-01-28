@@ -300,7 +300,7 @@ function assemble!(
                     end
                     for dof_i = 1 : ndofs4dofitem_action
                         if typeof(action) <: NoAction
-                            eval_febe!(action_result, basisevaler[1], dof_i, i) # in this case no fixed components are used
+                            eval_febe!(action_result, basisevaler[apply_action_to], dof_i, i) # in this case no fixed components are used
                             action_result .*= AM.coeff4dofitem[action_linFEid][di[apply_action_to]]
                         else
                             eval_febe!(action_input, basisevaler[apply_action_to], dof_i, i, offsets[nFE-1])

@@ -171,3 +171,19 @@ function addblock!(a::FEVectorBlock, b::AbstractVector; factor = 1)
     end
     return nothing
 end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds Array b to FEVectorBlock a.
+"""
+function dot(a::FEVectorBlock{T}, b::FEVectorBlock{T}) where {T}
+    aoffset::Int = a.offset
+    boffset::Int = b.offset
+    result::T = 0.0
+    for j = 1 : length(b)
+       result += a.entries[aoffset+j] * b.entries[boffset+j]
+    end
+    return result
+end

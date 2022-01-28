@@ -1,6 +1,74 @@
 
 using ExtendableSparse
 
+function test_recastBLFintoLF()
+    ## define grid = a single non-refenrece triangle
+    xgrid = grid_triangle([-1.0 0.0; 1.0 0.0; 0.0 1.0]')
+
+    ## define P2-Courant finite element space
+    FETypes = [H1P2{2,2}, H1P1{1}]
+    FES = [FESpace{FETypes[1]}(xgrid),FESpace{FETypes[2]}(xgrid; broken = true)]
+    
+    ## test recasting of Bilinearform into LinearForm
+    BLF = BilinearForm([Divergence, Identity]; name = "(div(v),p)")
+    LF1 = LinearForm(Divergence, [Identity], [2]; name = "(div(v),p)")    # LinearForm for argument 1
+    LF2 = LinearForm(Identity, [Divergence], [1]; name = "(p,div(v))")    # LinearForm for argument 2
+    
+    ## assemble BLF into matrix
+    B = FEMatrix{Float64}("B",FES[1], FES[2])
+    assemble_operator!(B[1,1], BLF)
+
+    ## generate test vector with some constant functions
+    Test = FEVector("test",FES)
+    interpolate!(Test[1], DataFunction((result,x) -> (result[1] = x[1]; result[2] = x[2]), [2, 2]; dependencies = "X", quadorder = 1)) # div(u) = 2
+    interpolate!(Test[2], DataFunction([0.75]))
+
+    ## assemble LF1 and LF2 into vectors
+    b1 = FEVector("b (LF1)",FES[1])
+    b2 = FEVector("b (LF2)",FES[2])
+    assemble_operator!(b1[1], LF1, Test)
+    assemble_operator!(b2[1], LF2, Test)
+
+    ## check if results are as expected (div(u)*p) = 2*0.75 = 1.5
+    error_B = (lrmatmul(Test[1], B.entries, Test[2]) - 1.5)^2
+    error_b1 = (dot(b1[1],Test[1]) - 1.5)^2
+    error_b2 = (dot(b2[1],Test[2]) - 1.5)^2
+
+    ## subtract matrix-vector product (should be the same)
+    addblock_matmul!(b1[1], B[1,1], Test[2]; factor = -1)
+    addblock_matmul!(b2[1], B[1,1], Test[1]; transposed = true, factor = -1)
+
+    ## check if results are zero
+    error_b1 += sum(b1.entries.^2)
+    error_b2 += sum(b2.entries.^2)
+    println("  eval test BLF        | error = $(error_B)")
+    println("  eval test LF1        | error = $(error_b1)")
+    println("  eval test LF2        | error = $(error_b2)")
+
+
+    ## assemble BLF into matrix_colors
+    fill!(b1.entries,0)
+    fill!(b2.entries,0)
+    assemble_operator!(b2[1], BLF, Test; fixed = 1, fixed_id = 1)
+    assemble_operator!(b1[1], BLF, Test; fixed = 2, fixed_id = 2)
+    #fill!(b2.entries,0) # once again to check if operator recast is properly reset
+    #assemble_operator!(b2[1], BLF, Test; fixed = 1, fixed_id = 1)
+    addblock_matmul!(b1[1], B[1,1], Test[2]; factor = -1)
+    addblock_matmul!(b2[1], B[1,1], Test[1]; transposed = true, factor = -1)
+
+    ## once again assemble full BLF to check if recast was removed successfully
+    fill!(B[1,1],0)
+    assemble_operator!(B[1,1], BLF)
+    error_B = (lrmatmul(Test[1], B.entries, Test[2]) - 1.5)^2
+
+    ## check if results are zero
+    error_b1 += sum(b1.entries.^2)
+    error_b2 += sum(b2.entries.^2)
+    println("recast test BLF >> LF1 | error = $(error_b1)")
+    println("recast test BLF >> LF2 | error = $(error_b2)")
+
+    return maximum([error_B,error_b1, error_b2])
+end
 
 function test_2nd_derivs()
     ## define test function and expected operator evals

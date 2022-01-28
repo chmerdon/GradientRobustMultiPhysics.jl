@@ -142,6 +142,8 @@ function run_operator_tests()
         println("============================")
         error = test_2nd_derivs()
         @test error < 1e-14
+        error = test_recastBLFintoLF()
+        @test error < 1e-14
     end
 end
 

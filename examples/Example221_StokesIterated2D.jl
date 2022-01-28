@@ -78,14 +78,14 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
 
     ## velocity update equation
     add_operator!(Problem, [1,1], LaplaceOperator(μ; store = true))
-    add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity]; name = "(div(v),p)", store = true, factor = -1))
+    add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity]; name = "(div(v),p)", store = false, factor = -1))
     add_operator!(Problem, [1,1], ConvectionOperator(1, Identity, 2, 2; newton = false))
 
     ## add penalty for discrete divergence
     add_operator!(Problem, [1,1], BilinearForm([PenaltyDivergence, PenaltyDivergence]; name = "ϵ (div_h(u),div_h(v))", store = true, factor = λ))
 
     ## pressure update equation
-    add_operator!(Problem, [2,2], BilinearForm([Identity, Identity]; name = "(p,q)", store = true))
+    add_operator!(Problem, [2,2], BilinearForm([Identity, Identity]; name = "(p,q)", store = false))
     rhs_action = Action((result,input) -> (result[1] = input[1] - λ*input[2]), [1, 3]; name = "p_h - λdiv(u)")
     add_rhsdata!(Problem, 2, LinearForm(Identity, [Identity, Divergence], [2, 1], rhs_action))
 

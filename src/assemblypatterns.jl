@@ -320,6 +320,7 @@ mutable struct AssemblyPattern{APT <: AssemblyPatternType, T <: Real, AT <: Asse
     AssemblyPattern{APT, T, AT}(name,FES::Array{<:FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}(name,FES,operators,[],action,apply_to,regions)
     AssemblyPattern{APT, T, AT}(FES::Array{<:FESpace{Tv,Ti},1},operators,action,apply_to,regions) where {APT <: AssemblyPatternType, T <: Real, AT <: AssemblyType, Tv, Ti}  = new{APT,T,AT,Tv,Ti,typeof(action)}("$APT", FES,operators,[],action,apply_to,regions)
 end 
+get_pattern(::AssemblyPattern{APT}) where {APT} = APT
 
 function Base.show(io::IO, AP::AssemblyPattern)
     println(io,"\n\tpattern name = $(AP.name)")
