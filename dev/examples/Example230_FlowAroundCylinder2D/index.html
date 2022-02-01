@@ -19,7 +19,7 @@ function bnd_inlet!(result,x)
     result[1] = 4*umax*x[2]*(H-x[2])/(H*H);
     result[2] = 0.0;
 end
-const inflow = DataFunction(bnd_inlet!, [2,2]; name = &quot;u_inflow&quot;, dependencies = &quot;X&quot;, quadorder = 2)
+const inflow = DataFunction(bnd_inlet!, [2,2]; name = &quot;u_inflow&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 2)
 
 # everything is wrapped in a main function
 function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
@@ -119,12 +119,12 @@ function get_draglift(Solution::FEVector, μ)
     # test for drag
     TestFunction = FEVector(&quot;drag testfunction&quot;,Solution[1].FES)
     xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
-    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = &quot;drag test&quot;, dependencies = &quot;X&quot;, quadorder = 0)
+    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = &quot;drag test&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaceFaces)
     drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     # test for lift
-    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = &quot;lift test&quot;, dependencies = &quot;X&quot;, quadorder = 0)
+    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = &quot;lift test&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaceFaces)
     lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
@@ -203,13 +203,13 @@ Problem =
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.72e+01/4.50e-06/1.72e+01
-	      1   | 2.479792e-17 | 1.899986e-03 | 4.90e-01/3.56e-01/8.58e-01
-	      2   | 2.648217e-17 | 5.392003e-04 | 4.67e-01/3.13e-01/7.83e-01
-	      3   | 2.671394e-17 | 2.926551e-05 | 4.71e-01/2.43e-01/7.17e-01
-	      4   | 2.679358e-17 | 1.060798e-07 | 4.69e-01/2.67e-01/7.40e-01
-	      5   | 2.738357e-17 | 1.119312e-12 | 4.69e-01/2.46e-01/7.19e-01
-	    total |                             | 1.95e+01/1.42e+00/2.10e+01
+	    init  |                             | 1.69e+01/4.40e-06/1.69e+01
+	      1   | 2.479792e-17 | 1.899986e-03 | 4.76e-01/3.48e-01/8.35e-01
+	      2   | 2.648217e-17 | 5.392003e-04 | 4.53e-01/3.03e-01/7.60e-01
+	      3   | 2.671394e-17 | 2.926551e-05 | 4.46e-01/2.35e-01/6.85e-01
+	      4   | 2.679358e-17 | 1.060798e-07 | 4.50e-01/2.53e-01/7.07e-01
+	      5   | 2.738357e-17 | 1.119312e-12 | 4.46e-01/2.36e-01/6.86e-01
+	    total |                             | 1.91e+01/1.38e+00/2.06e+01
 
 [drag, lift] = [5.55827008249045, 0.01048856931621904]
-p difference = [0.11865484048663107]</code></pre><p><img src="../../images/Example230_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example227_FlowTransport2D/">« 227 : Flow + Transport 2D</a><a class="docs-footer-nextpage" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Friday 28 January 2022 16:55">Friday 28 January 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+p difference = [0.11865484048663107]</code></pre><p><img src="../../images/Example230_FlowAroundCylinder2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example227_FlowTransport2D/">« 227 : Flow + Transport 2D</a><a class="docs-footer-nextpage" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Tuesday 1 February 2022 01:04">Tuesday 1 February 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
