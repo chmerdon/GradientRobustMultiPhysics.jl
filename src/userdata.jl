@@ -244,7 +244,7 @@ end
 
 
 
-mutable struct DefaultUserData{T,Ti,dx,dt,di,dl,ndim,KernelType} <: AbstractUserDataType
+mutable struct DataFunction{T,Ti,dx,dt,di,dl,ndim,KernelType} <: AbstractUserDataType
     name::String                    # some name used in info messages etc.
     kernel::KernelType              # kernel function
     argsizes::SVector{ndim,Int}     # argument sizes
@@ -256,20 +256,20 @@ mutable struct DefaultUserData{T,Ti,dx,dt,di,dl,ndim,KernelType} <: AbstractUser
     val::Array{T,1}                 # result vector
 end
 
-set_time!(A::DefaultUserData, time) = (A.time = time)
+set_time!(A::DataFunction, time) = (A.time = time)
 
-is_xdependent(::DefaultUserData{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dx
-is_timedependent(::DefaultUserData{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dt
-is_itemdependent(::DefaultUserData{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = di
-is_xrefdependent(::DefaultUserData{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dl
-function dependencies(A::DefaultUserData; enforce = "")
+is_xdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dx
+is_timedependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dt
+is_itemdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = di
+is_xrefdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dl
+function dependencies(A::DataFunction; enforce = "")
     dependencies = occursin("X", enforce) ? "X" : is_xdependent(A) ? "X" : ""
     dependencies *= occursin("T", enforce) ? "T" : is_timedependent(A) ? "T" : ""
     dependencies *= occursin("I", enforce) ? "I" : is_itemdependent(A) ? "I" : ""
     dependencies *= occursin("L", enforce) ? "L" : is_xrefdependent(A) ? "L" : ""
     return dependencies
 end
-function couple!(A::DefaultUserData,B::DefaultUserData)
+function couple!(A::DataFunction,B::DataFunction)
     A.xref = B.xref
     A.x = B.x
     A.item = B.item
@@ -280,7 +280,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-generates a UserData that can be used in the construction of PDEoperators, interpolations etc. and essentially consists of a kernel function
+generates a DataFunction that can be used in the construction of PDEoperators, interpolations etc. and essentially consists of a kernel function
 specified by the user plus additional information on argument dimensions and additional dependencies:
 
 - kernel   : Function with interface (result, ...)
@@ -299,7 +299,7 @@ function DataFunction(kernel::Function, argsizes; Tv = Float64, Ti = Int32, depe
     dt = occursin("T", dependencies)
     di = occursin("I", dependencies)
     dl = occursin("L", dependencies)
-    return DefaultUserData{Tv,Ti,dx,dt,di,dl,length(argsizes),typeof(kernel)}(
+    return DataFunction{Tv,Ti,dx,dt,di,dl,length(argsizes),typeof(kernel)}(
         name, kernel, argsizes, zeros(Tv, 3), zeros(Tv, 3), zeros(Ti,5), 0, bonus_quadorder, zeros(Tv, argsizes[1]))
 end
 
@@ -322,55 +322,55 @@ function DataFunction(c::Array{<:Real,1}; name = "auto", bonus_quadorder::Int = 
     return DataFunction(f_from_c, dimensions; name = name, dependencies = "", bonus_quadorder = bonus_quadorder)
 end
 
-function eval_data!(A::DefaultUserData{T,Ti,false,false,false,false}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,false,false,false,false}) where {T,Ti}
     A.kernel(A.val)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,false,false,false}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,false,false,false}) where {T,Ti}
     A.kernel(A.val, A.x)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,true,false,false}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,true,false,false}) where {T,Ti}
     A.kernel(A.val, A.x, A.time)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,true,false,false}, x, t) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,true,false,false}, x, t) where {T,Ti}
     A.kernel(A.val, x, t)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,false,false,false}, x) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,false,false,false}, x) where {T,Ti}
     A.kernel(A.val, x)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,false,true,false,false}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,false,true,false,false}) where {T,Ti}
     A.kernel(A.val, A.time)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,false,false,false,true}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,false,false,false,true}) where {T,Ti}
     A.kernel(A.val, A.xref)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,false,false,true}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,false,false,true}) where {T,Ti}
     A.kernel(A.val, A.x, A.xref)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,false,true,false}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,false,true,false}) where {T,Ti}
     A.kernel(A.val, A.x, A.item)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,true,true,false}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,true,true,false}) where {T,Ti}
     A.kernel(A.val, A.x, A.time, A.item)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,true,false,true}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,true,false,true}) where {T,Ti}
     A.kernel(A.val, A.x, A.time, A.xref)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,false,true,true}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,false,true,true}) where {T,Ti}
     A.kernel(A.val, A.x, A.item, A.xref)
     return nothing
 end
-function eval_data!(A::DefaultUserData{T,Ti,true,true,true,true}) where {T,Ti}
+function eval_data!(A::DataFunction{T,Ti,true,true,true,true}) where {T,Ti}
     A.kernel(A.val, A.x, A.time, A.item, A.xref)
     return nothing
 end
