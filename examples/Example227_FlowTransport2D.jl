@@ -63,8 +63,8 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     #####################################################################################
 
     ## negotiate data functions to the package
-    u_inlet = DataFunction(inlet_velocity!, [2,2]; name = "u (inlet)", dependencies = "X", quadorder = 2)
-    c_inlet = DataFunction(inlet_concentration!, [1,2]; name = "c (inlet)", dependencies = "X", quadorder = 1)
+    u_inlet = DataFunction(inlet_velocity!, [2,2]; name = "u (inlet)", dependencies = "X", bonus_quadorder = 2)
+    c_inlet = DataFunction(inlet_concentration!, [1,2]; name = "c (inlet)", dependencies = "X", bonus_quadorder = 1)
 
     ## load Stokes problem prototype and assign boundary data
     ## (inlet profile in bregion 2, zero Dirichlet at walls 1 and nothing at outlet region 2)

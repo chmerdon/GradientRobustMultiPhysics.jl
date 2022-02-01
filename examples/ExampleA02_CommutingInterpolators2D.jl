@@ -30,7 +30,7 @@ function main(;order::Int = 2, testmode = false)
     xgrid = uniform_refine(reference_domain(Triangle2D),2)
 
     ## negotiate exact_function! and exact_curl! to the package
-    u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 4)
+    u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", bonus_quadorder = 4)
     u_curl = curl(u)
 
     ## choose commuting interpolators pair
@@ -54,8 +54,8 @@ function main(;order::Int = 2, testmode = false)
     error = FEVector("ErrorVector",FEStest)
 
     ## Define (yet undiscrete) linear forms that represents testing each side of the identity with the testspace functions
-    LF1 = LinearForm(Identity, [Identity]) # identity of test function is multiplied with identity of other argument
-    LF2 = LinearForm(Identity, [CurlScalar]) # identity of test function is multiplied with CurlScalar of other argument
+    LF1 = LinearForm(Identity, [Identity], [1]) # identity of test function is multiplied with identity of other argument
+    LF2 = LinearForm(Identity, [CurlScalar], [1]) # identity of test function is multiplied with CurlScalar of other argument
 
     ## Assemble linear forms into the same vector with opposite signs
     ## note: first argument fixes the test function FESpace and third arguments are used for the additional operators of the linearform

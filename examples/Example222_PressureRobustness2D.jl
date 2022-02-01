@@ -44,9 +44,9 @@ function HydrostaticTestProblem()
         result[2] = 3*x[2]^2
     end
     u = DataFunction([0,0]; name = "u")
-    p = DataFunction(P1_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 3)
+    p = DataFunction(P1_pressure!, [1,2]; name = "p", dependencies = "X", bonus_quadorder = 3)
     ∇u = DataFunction([0,0,0,0]; name = "∇u")
-    f = DataFunction(P1_rhs!, [2,2]; name = "f", dependencies = "X", quadorder = 2)
+    f = DataFunction(P1_rhs!, [2,2]; name = "f", dependencies = "X", bonus_quadorder = 2)
     return p,u,∇u,f,false
 end
 
@@ -61,8 +61,8 @@ function PotentialFlowTestProblem()
         result[1] = 3*x[1]^2 - 3*x[2]^2;
         result[2] = -6*x[1]*x[2];
     end
-    u = DataFunction(P2_velo!, [2,2]; name = "u", dependencies = "X", quadorder = 2)
-    p = DataFunction(P2_pressure!, [1,2]; name = "p", dependencies = "X", quadorder = 4)
+    u = DataFunction(P2_velo!, [2,2]; name = "u", dependencies = "X", bonus_quadorder = 2)
+    p = DataFunction(P2_pressure!, [1,2]; name = "p", dependencies = "X", bonus_quadorder = 4)
     f = DataFunction([0,0]; name = "f")
 
     return p,u,∇(u),f,true

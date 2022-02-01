@@ -522,21 +522,30 @@ function integrate!(
     integral4items::AbstractArray{T},
     grid::ExtendableGrid,
     AT::Type{<:AssemblyType},
-    integrand::UserData{<:Union{AbstractDataFunction,AbstractExtendedDataFunction}};
-    index_offset::Int = 0,
+    integrand::AbstractUserDataType;
+    index_offsets = 0,
     time = 0,
     items = [],
     force_quadrature_rule = nothing) where {T}
+
+    if index_offsets == 0
+        index_offsets = zeros(Int, integrand.argsizes[1])
+    end
     
-    order = integrand.quadorder
-    resultdim = integrand.dimensions[1]
+    order = integrand.bonus_quadorder
+    resultdim = integrand.argsizes[1]
     xCoords = grid[Coordinates]
     dim = size(xCoords,1)
-    @assert dim == integrand.dimensions[2] || integrand.dimensions[2] == 0
+    @assert dim == integrand.argsizes[2] || integrand.argsizes[2] == 0
     xItemNodes = grid[GridComponentNodes4AssemblyType(AT)]
-    xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
-    xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
     nitems = num_sources(xItemNodes)
+    xItemVolumes = grid[GridComponentVolumes4AssemblyType(AT)]
+    if AT == ON_EDGES
+        xItemRegions = 1:nitems # currently no edge regions are handled, so take something cheap here
+    else
+        xItemRegions = grid[GridComponentRegions4AssemblyType(AT)]
+    end
+    xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
     
     # find proper quadrature rules
     EG = grid[GridComponentUniqueGeometries4AssemblyType(AT)]
@@ -550,30 +559,46 @@ function integrate!(
         end
         local2global[j] = L2GTransformer(EG[j],grid,AT)
     end    
+    xrefdim::Int = length(qf[1].xref[1])
 
     # loop over items
     if items == []
         items = 1 : nitems
     end
-    x::Array{T,1} = zeros(T, dim)
-    result::Array{T,1} = zeros(T, resultdim)
     itemET = xItemGeometries[1]
     iEG = 1
+
+    set_time!(integrand, time)
     if typeof(integral4items) <: AbstractArray{T,1}
         for it = 1 : length(items)
             item = items[it]
-            integral4items[item+index_offset] = 0
+            for j = 1 : integrand.argsizes[1]
+                integral4items[item+index_offsets[j]] = 0
+            end
 
             # find index for CellType
             itemET = xItemGeometries[item]
             iEG = findfirst(isequal(itemET), EG)
 
             update_trafo!(local2global[iEG],item)
+            
+            if is_itemdependent(integrand)
+                integrand.item[1] = item
+                integrand.item[2] = item
+                integrand.item[3] = xItemRegions[item]
+            end
 
             for i in eachindex(qf[iEG].w)
-                eval_trafo!(x, local2global[iEG], qf[iEG].xref[i])
-                eval_data!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
-                integral4items[item+index_offset] += result[1] * qf[iEG].w[i] * xItemVolumes[item];
+                if is_xdependent(integrand)
+                    eval_trafo!(integrand.x, local2global[iEG], qf[iEG].xref[i])
+                end
+                for j = 1 : xrefdim
+                    integrand.xref[j] = qf[iEG].xref[i][j]
+                end
+                eval_data!(integrand)
+                for j = 1 : integrand.argsizes[1]
+                    integral4items[item+index_offsets[j]] += integrand.val[j] * qf[iEG].w[i] * xItemVolumes[item];
+                end
             end  
         end
     else # <: AbstractArray{T,2}
@@ -587,11 +612,24 @@ function integrate!(
 
             update_trafo!(local2global[iEG],item)
 
+            if is_itemdependent(integrand)
+                integrand.citem[1] = item
+                integrand.citem[2] = item
+                integrand.citem[3] = xItemRegions[item]
+            end
+
             for i in eachindex(qf[iEG].w)
-                eval_trafo!(x, local2global[iEG], qf[iEG].xref[i])
-                eval_data!(result, integrand, x, time, 0, item, qf[iEG].xref[i])
+                if is_xdependent(integrand)
+                    eval_trafo!(integrand.x, local2global[iEG], qf[iEG].xref[i])
+                end
+                if is_xrefdependent(integrand)
+                    for j = 1 : xrefdim
+                        integrand.xref[j] = qf[iEG].xref[i][j]
+                    end
+                end
+                eval_data!(integrand)
                 for j = 1 : resultdim
-                    integral4items[j,item] += result[j] * qf[iEG].w[i] * xItemVolumes[item];
+                    integral4items[j,item] += integrand.val[j] * qf[iEG].w[i] * xItemVolumes[item];
                 end
             end  
         end
@@ -606,7 +644,7 @@ Integration that returns total integral.
 function integrate(
     grid::ExtendableGrid,
     AT::Type{<:AssemblyType},
-    integrand!::UserData{<:AbstractDataFunction},
+    integrand!::AbstractUserDataType,
     resultdim::Int;
     T = Float64,
     items = [],

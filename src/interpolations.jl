@@ -32,60 +32,46 @@ function slice(VTA::Array{<:Signed,2}, items = [], only_unique::Bool = true)
     return subitems
 end
 
-# point evaluation (at vertices of geometry)
-# for lowest order degrees of freedom
-# used e.g. for interpolation into P1, P2, P2B, MINI finite elements
-function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractDataFunction}; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
-    xCoordinates = FES.xgrid[Coordinates]
-    xdim = size(xCoordinates,1)
-    nnodes = size(xCoordinates,2)
-    ncomponents = get_ncomponents(FEType)
-    if items == []
-        items = 1 : nnodes
-    end
-    result = zeros(T,ncomponents)
-    offset4component = 0:component_offset:ncomponents*component_offset
-    # interpolate at nodes
-    x = zeros(T,xdim)
-    for j in items
-        for k=1:xdim
-            x[k] = xCoordinates[k,j]
-        end    
-        eval_data!(result, exact_function , x, time)
-        for k = 1 : ncomponents
-            target[j+offset4component[k]] = result[k]
-        end    
-    end
-end
-
 
 # point evaluation (at vertices of geometry)
 # for lowest order degrees of freedom
 # used e.g. for interpolation into P1, P2, P2B, MINI finite elements
-function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::UserData{AbstractExtendedDataFunction}; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{AT_NODES}, exact_function::AbstractUserDataType; items = [], component_offset::Int = 0, time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
     nnodes = size(xCoordinates,2)
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : nnodes
     end
-    result = zeros(T,ncomponents)
     offset4component = 0:component_offset:ncomponents*component_offset
     # interpolate at nodes
     xNodeCells = atranspose(FES.xgrid[CellNodes])
+    xCellRegions = FES.xgrid[CellRegions]
     cell::Int = 0
+    set_time!(exact_function, time)
+    if is_xdependent(exact_function) && length(exact_function.x) != size(xCoordinates,1)
+        exact_function.x = zeros(T,size(xCoordinates,1))
+    end
     for j in items
         cell = xNodeCells[1,j]
-        eval_data!(result, exact_function , view(xCoordinates,:,j), time, nothing, cell, nothing)
+        if is_itemdependent(exact_function)
+            exact_function.item[1] = cell
+            exact_function.item[2] = cell
+            exact_function.item[3] = xCellRegions[cell]
+        end
+        if is_xdependent(exact_function)
+            exact_function.x .= view(xCoordinates,:,j)
+        end
+
+        eval_data!(exact_function)
         for k = 1 : ncomponents
-            target[j+offset4component[k]] = result[k]
+            target[j+offset4component[k]] = exact_function.val[k]
         end    
     end
 end
 
-function point_evaluation_broken!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{ON_CELLS}, exact_function::UserData{AbstractDataFunction}; items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+function point_evaluation_broken!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FEType, APT}, ::Type{ON_CELLS}, exact_function::AbstractUserDataType; items = [], time = 0) where {T,Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
     xCoordinates = FES.xgrid[Coordinates]
-    xdim = size(xCoordinates,1)
     xCellNodes = FES.xgrid[CellNodes]
     xCellDofs = FES[CellDofs]
 
@@ -93,20 +79,24 @@ function point_evaluation_broken!(target::AbstractArray{T,1}, FES::FESpace{Tv, T
     if items == []
         items = 1 : num_sources(xCellNodes)
     end
-    result = zeros(T,ncomponents)
     nnodes_on_cell::Int = 0
     # interpolate at nodes
-    x = zeros(T,xdim)
     for cell in items
         nnodes_on_cell = num_targets(xCellNodes, cell)
+        if is_itemdependent(exact_function)
+            exact_function.item[1] = cell
+            exact_function.item[2] = cell
+            exact_function.item[3] = xCellRegions[cell]
+        end
         for n = 1 : nnodes_on_cell
             j = xCellNodes[n,cell]
-            for k=1:xdim
-                x[k] = xCoordinates[k,j]
-            end    
-            eval_data!(result, exact_function , x, time)
+            if is_xdependent(exact_function)
+                exact_function.x .= view(xCoordinates,:,j)
+            end
+    
+            eval_data!(exact_function)
             for k = 1 : ncomponents
-                target[xCellDofs[1,cell]+n-1+(k-1)*nnodes_on_cell] = result[k]
+                target[xCellDofs[1,cell]+n-1+(k-1)*nnodes_on_cell] = exact_function.val[k]
             end    
          end
     end
@@ -223,7 +213,7 @@ end
 #         end
 #     end
 #     for m = 1 : nmoments
-#         edata_function = ExtendedDataFunction(edgemoments_eval(m), [ncomponents, edim]; dependencies = "XL", quadorder = exact_function.quadorder+1)
+#         edata_function = ExtendedDataFunction(edgemoments_eval(m), [ncomponents, edim]; dependencies = "XL", bonus_quadorder = exact_function.quadorder+1)
 #         integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
 #         for item in items
 #             for c = 1 : ncomponents
@@ -246,7 +236,7 @@ end
 #
 # used for interpolation operators of elements with interior degrees of freedom (after setting the exterior ones with other methods)
 # e.g. H1P2 ON_EDGES, H1MINI ON_CELLS, H1P2B ON_EDGES, ON_FACES, ON_CELLS
-function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::UserData{AbstractDataFunction}; FEType_ref = "auto", order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
+function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType, APT}, AT::Type{<:AssemblyType}, exact_function::AbstractUserDataType; FEType_ref = "auto", order = 0, items = [], time = time) where {T, Tv, Ti, FEType <: AbstractH1FiniteElement, APT}
 
     xItemVolumes::Array{Tv,1} = FE.xgrid[GridComponentVolumes4AssemblyType(AT)]
     xItemNodes::Adjacency{Ti} = FE.xgrid[GridComponentNodes4AssemblyType(AT)]
@@ -343,21 +333,20 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     doforder_ref::Array{Int,1} = FE_onref[CellDofs][:,1]
     invA::Array{Float64,2} = inv(MOMxINTERIOR)
 
-    ## evaluator for moments of exact function
-    f_eval = zeros(Float64,ncomponents)
-    function f_times_moments(result, x, xref)
+    ## evaluator for moments of exact_function
+    function f_times_moments(result, kwargs...)
         fill!(moments_eval,0)
-        eval_data!(f_eval, exact_function, x, time)
+        eval_data!(exact_function)
         fill!(result,0)
         if (bestapprox)
-            moments_basis!(moments_eval,xref)
+            moments_basis!(moments_eval, exact_function.xref)
             for m = 1 : nmoments, k = 1 : ncomponents
-                result[m] += f_eval[k]*moments_eval[idofs[m],k]
+                result[m] += exact_function.val[k] * moments_eval[idofs[m],k]
             end
         else
-            moments_basis!(moments_eval,xref)
+            moments_basis!(moments_eval, exact_function.xref)
             for m = 1 : nmoments, k = 1 : ncomponents
-                result[m] += f_eval[k]*moments_eval[m,k]
+                result[m] += exact_function.val[k] * moments_eval[m,k]
             end
         end
         return nothing
@@ -366,8 +355,10 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     # integrate moments of exact_function over edges
     edgemoments::Array{T,2} = zeros(T,nmoments,nitems)
     xdim = size(FE.xgrid[Coordinates],1)
-    edata_function = ExtendedDataFunction(f_times_moments, [nmoments, xdim]; dependencies = "XL", quadorder = exact_function.quadorder + (bestapprox ? order_FE : order))
-    integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items)
+    edata_function = DataFunction(f_times_moments, [nmoments, xdim]; dependencies = dependencies(exact_function; enforce = "L"), bonus_quadorder = exact_function.bonus_quadorder + (bestapprox ? order_FE : order))
+    couple!(exact_function, edata_function)
+    set_time!(exact_function, time)
+    integrate!(edgemoments, FE.xgrid, AT, edata_function; items = items, time = time)
 
     localdof::Int = 0
     for item::Int in items
@@ -408,11 +399,12 @@ function interpolate!(target::FEVectorBlock,
 Interpolates the given source into the finite elements space assigned to the target FEVectorBlock with the specified AssemblyType
 (usualy ON_CELLS). The optional time argument is only used if the source depends on time.
 """
-function interpolate!(target::FEVectorBlock{T,Tv,Ti},
-     AT::Type{<:AssemblyType},
-     source::UserData{<:AbstractDataFunction};
-     items = [],
-     time = 0) where {T,Tv,Ti}
+function interpolate!(
+    target::FEVectorBlock{T,Tv,Ti},
+    AT::Type{<:AssemblyType},
+    source::AbstractUserDataType;
+    items = [],
+    time = 0) where {T,Tv,Ti}
 
     if is_timedependent(source)
         @logmsg MoreInfo "Interpolating $(source.name) >> $(target.name) ($AT at time $time)"
@@ -454,7 +446,7 @@ function interpolate!(target::FEVectorBlock,
 Interpolates the given source into the finite element space assigned to the target FEVectorBlock. The optional time argument
 is only used if the source depends on time.
 """
-function interpolate!(target::FEVectorBlock, source::UserData{<:AbstractDataFunction}; time = 0)
+function interpolate!(target::FEVectorBlock, source::AbstractUserDataType; time = 0)
     interpolate!(target, ON_CELLS, source; time = time)
 end
 
@@ -529,7 +521,7 @@ function interpolate!(
             if same_cells
                 lastnonzerocell = target_cell
             elseif use_cellparents
-                lastnonzerocell = xCellParents[target_cell]
+                lastnonzerocell = xCellParents[target_cell[1]]
             end
             if xtrafo !== nothing
                 xtrafo(x_source, x)
@@ -540,7 +532,7 @@ function interpolate!(
                 evaluate!(result,PE,xref,cell)
             return nothing
         end
-        fe_function = ExtendedDataFunction(point_evaluation_parentgrid!, [resultdim, xdim_target]; dependencies = "XI", quadorder = quadorder)
+        fe_function = DataFunction(point_evaluation_parentgrid!, [resultdim, xdim_target]; dependencies = "XI", bonus_quadorder = quadorder)
     else
         function point_evaluation_arbitrarygrids!(result, x)
             if xtrafo !== nothing
@@ -563,7 +555,7 @@ function interpolate!(
             end
             return nothing
         end
-        fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", quadorder = quadorder)
+        fe_function = DataFunction(point_evaluation_arbitrarygrids!, [resultdim, xdim_target]; dependencies = "X", bonus_quadorder = quadorder)
     end
     interpolate!(target, ON_CELLS, fe_function; items = items)
 end

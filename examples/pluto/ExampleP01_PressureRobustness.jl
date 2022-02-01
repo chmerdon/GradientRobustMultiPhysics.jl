@@ -73,8 +73,8 @@ begin
 	## data
 	f! = (result,x) -> (result[1] = cos(x[1])*cos(x[2]); result[2] = -sin(x[1])*sin(x[2]))
 	u! = (result,x) -> (result[1] = 1+x[2]; result[2] = -x[1]-1)
-	u = DataFunction(u!, [2,2]; name = "u", dependencies = "X", quadorder = 1)
-	f = DataFunction(f!, [2,2]; name = "f", dependencies = "X", quadorder = 5)
+	u = DataFunction(u!, [2,2]; name = "u", dependencies = "X", bonus_quadorder = 1)
+	f = DataFunction(f!, [2,2]; name = "f", dependencies = "X", bonus_quadorder = 5)
 	
 	## problem description
     Problem = PDEDescription("Stokes problem")

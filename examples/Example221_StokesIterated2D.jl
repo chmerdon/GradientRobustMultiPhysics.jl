@@ -55,7 +55,7 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     set_verbosity(verbosity)
 
     ## initial grid
-    xgrid = uniform_refine(grid_unitsquare(Triangle2D),4)
+    xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4)
 
     ## Bernardi--Raugel element
     FETypes = [H1BR{2}, H1P0{1}]; PenaltyDivergence = ReconstructionDivergence{HDIVRT0{2}}
@@ -64,8 +64,8 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
 
     ## negotiate data functions to the package
-    u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "X", quadorder = 2)
-    p = DataFunction(exact_pressure!(μ), [1,2]; name = "p", dependencies = "X", quadorder = 1)
+    u = DataFunction(exact_velocity!, [2,2]; name = "u", dependencies = "X", bonus_quadorder = 2)
+    p = DataFunction(exact_pressure!(μ), [1,2]; name = "p", dependencies = "X", bonus_quadorder = 1)
 
     ## generate Stokes problem
     Problem = PDEDescription("NSE (iterated penalty)")

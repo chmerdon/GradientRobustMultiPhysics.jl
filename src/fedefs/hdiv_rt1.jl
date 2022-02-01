@@ -39,64 +39,34 @@ isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Tetrahedron3D}) = true
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{2}}, ::Type{<:Triangle2D}) = 6
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{3}}, ::Type{<:Tetrahedron3D}) = 9
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
     end
 
-   # integrate normal flux of exact_function over edges
-   xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
-   nfaces = num_sources(xFaceNormals)
-   function normalflux_eval()
-       temp = zeros(T,ncomponents)
-       function closure(result, x, face)
-            eval_data!(temp, exact_function!, x, time)
-            result[1] = 0
-            for j = 1 : ncomponents
-               result[1] += temp[j] * xFaceNormals[j,face]
-            end 
-       end   
-   end   
-   edata_function = ExtendedDataFunction(normalflux_eval(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
-   integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items)
-   
-   # integrate first moment of normal flux of exact_function over edges
-   function normalflux2_eval()
-       temp = zeros(T,ncomponents)
-       function closure(result, x, face, xref)
-            eval_data!(temp, exact_function!, x, time)
-            result[1] = 0.0
-            for j = 1 : ncomponents
-               result[1] += temp[j] * xFaceNormals[j,face]
-            end
-            result[1] *= (xref[1] - 1//ncomponents)
-       end   
-   end   
-   edata_function2 = ExtendedDataFunction(normalflux2_eval(), [1, ncomponents]; dependencies = "XIL", quadorder = exact_function!.quadorder + 1)
-   integrate!(Target, FE.xgrid, ON_FACES, edata_function2; items = items, index_offset = nfaces)
-
-    if ncomponents == 3
-        function normalflux3_eval()
-            temp = zeros(T,ncomponents)
-            function closure(result, x, face, xref)
-                eval_data!(temp, exact_function!, x, time)
-                result[1] = 0.0
-                for j = 1 : ncomponents
-                    result[1] += temp[j] * xFaceNormals[j,face]
-                end
-                result[1] *= (xref[2] - 1//ncomponents)
-            end   
-        end   
-        edata_function3 = ExtendedDataFunction(normalflux3_eval(), [1, ncomponents]; dependencies = "XIL", quadorder = exact_function!.quadorder + 1)
-        integrate!(Target, FE.xgrid, ON_FACES, edata_function3; items = items, time = time, index_offset = 2*nfaces)
-    end
+    # integrate normal flux of exact_function over edges
+    xFaceNormals = FE.xgrid[FaceNormals]
+    nfaces = num_sources(xFaceNormals)
+    function normalflux_eval(result, kwargs...)
+        eval_data!(data) 
+        result[1] = dot(data.val, view(xFaceNormals,:,data.item[1]))
+        result[2] = result[1] * (data.xref[1] - 1//ncomponents) 
+        if ncomponents == 3
+            result[3] = result[1] * (data.xref[2] - 1//ncomponents)
+        end
+        return nothing
+    end   
+    edata_function = DataFunction(normalflux_eval, [ncomponents, ncomponents]; dependencies = dependencies(data; enforce = "IL"), bonus_quadorder = data.bonus_quadorder+1)
+    couple!(data, edata_function)
+    set_time!(data, time)
+    integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time, index_offsets = [0, nfaces, 2*nfaces])
 end
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
-    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems)
+    interpolate!(Target, FE, ON_FACES, data; items = subitems)
 
     # set values of interior RT1 functions by integrating over cell
     # they are chosen such that integral mean of exact function is preserved on each cell
@@ -105,7 +75,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     xCellVolumes::Array{Tv,1} = FE.xgrid[CellVolumes]
     xCellDofs::DofMapTypes{Ti} = FE[CellDofs]
     means = zeros(T,ncomponents,ncells)
-    integrate!(means, FE.xgrid, ON_CELLS, exact_function!)
+    integrate!(means, FE.xgrid, ON_CELLS, data)
     EG = (ncomponents == 2) ? Triangle2D : Tetrahedron3D
     qf = QuadratureRule{T,EG}(2)
     FEB = FEBasisEvaluator{T,EG,Identity,ON_CELLS}(FE, qf)
@@ -128,7 +98,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
                 end
             end
         end
-        # compute mss matrix of interior dofs
+        # compute mass matrix of interior dofs
         fill!(IMM,0)
         for dof = 1:ncomponents
             for i = 1 : length(qf.w)

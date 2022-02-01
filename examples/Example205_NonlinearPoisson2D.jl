@@ -106,9 +106,9 @@ function main(;
     xgrid = grid_unitsquare(Triangle2D)
 
     ## negotiate data functions to the package
-    u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", quadorder = 2)
+    u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", bonus_quadorder = 2)
     ∇u = ∇(u)
-    f = DataFunction(rhs!(q,p,κ), [1,2]; dependencies = "X", name = "f", quadorder = 4)
+    f = DataFunction(rhs!(q,p,κ), [1,2]; dependencies = "X", name = "f", bonus_quadorder = 4)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1

@@ -23,8 +23,8 @@ include("logging.jl")
 
 include("userdata.jl")
 export AbstractDataFunction, AbstractExtendedDataFunction
-export UserData, DataFunction, ExtendedDataFunction, eval_data!
-export is_timedependent, is_regiondependent, is_itemdependent
+export UserData, DataFunction, DefaultUserData, eval_data!
+export set_time!, is_timedependent, is_itemdependent, is_xrefdependent, is_xdependent
 export ∇, div, curl, CurlScalar, Curl2D, Curl3D
 
 include("quadrature.jl")
@@ -66,7 +66,7 @@ export AbstractH1FiniteElementWithCoefficients
 export H1BR, H1P1TEB
 
 export AbstractHdivFiniteElement
-export HDIVRT0, HDIVBDM1, HDIVRT1, HDIVBDM2
+export HDIVRT0, HDIVBDM1, HDIVRT1, HDIVRT1INT, HDIVBDM2
 
 export AbstractHcurlFiniteElement
 export HCURLN0
@@ -99,7 +99,7 @@ export FEBasisEvaluator, update_febe!, eval_febe!
 
 
 include("actions.jl")
-export AbstractAction, Action, MultiplyScalarAction, NoAction, fdot_action, fdotv_action
+export AbstractAction, Action, MultiplyScalarAction, NoAction, fdot_action, fdotv_action, fdotn_action
 export set_time!, update_action!, apply_action!
 export DefaultUserAction
 

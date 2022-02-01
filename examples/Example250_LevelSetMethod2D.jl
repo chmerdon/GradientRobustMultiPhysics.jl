@@ -24,7 +24,7 @@ using GridVisualize
 
 const convection = DataFunction([0.5,1])
 const ϵ = 0.05
-const ϕ_0 = DataFunction((result,x) -> (result[1] = 1/2 * (tanh((sqrt((x[1]-0.25)^2 + (x[2]-0.25)^2) - 0.1)/(2*ϵ))+1)), [1, 2]; dependencies = "X", quadorder = 3)
+const ϕ_0 = DataFunction((result,x) -> (result[1] = 1/2 * (tanh((sqrt((x[1]-0.25)^2 + (x[2]-0.25)^2) - 0.1)/(2*ϵ))+1)), [1, 2]; dependencies = "X", bonus_quadorder = 3)
 const ϕ_bnd = DataFunction([1])
 
 ## everything is wrapped in a main function

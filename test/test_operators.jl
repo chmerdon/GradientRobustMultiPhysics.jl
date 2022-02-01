@@ -20,7 +20,7 @@ function test_recastBLFintoLF()
 
     ## generate test vector with some constant functions
     Test = FEVector("test",FES)
-    interpolate!(Test[1], DataFunction((result,x) -> (result[1] = x[1]; result[2] = x[2]), [2, 2]; dependencies = "X", quadorder = 1)) # div(u) = 2
+    interpolate!(Test[1], DataFunction((result,x) -> (result[1] = x[1]; result[2] = x[2]), [2, 2]; dependencies = "X", bonus_quadorder = 1)) # div(u) = 2
     interpolate!(Test[2], DataFunction([0.75]))
 
     ## assemble LF1 and LF2 into vectors
@@ -72,7 +72,7 @@ end
 
 function test_2nd_derivs()
     ## define test function and expected operator evals
-    testf = DataFunction((result,x) -> (result[1] = x[1]^2; result[2] = 3*x[2]^2 + x[1]*x[2]),[2,2]; dependencies = "X", quadorder = 2)
+    testf = DataFunction((result,x) -> (result[1] = x[1]^2; result[2] = 3*x[2]^2 + x[1]*x[2]),[2,2]; dependencies = "X", bonus_quadorder = 2)
     expected_L = [2,6] # expected Laplacian
     expected_H = [2,0,0,0,0,1,1,6] # expected Hessian
     expected_symH = [2,0,0,0,6,1] # expected symmetric Hessian

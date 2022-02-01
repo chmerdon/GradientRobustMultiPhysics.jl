@@ -21,7 +21,7 @@ function exact_function!(result,x::Array{<:Real,1})
     result[2] = x[2] + 1
     return nothing
 end
-const u = DataFunction(exact_function!, [2,2]; name = "u", dependencies = "X", quadorder = 3)
+const u = DataFunction(exact_function!, [2,2]; name = "u", dependencies = "X", bonus_quadorder = 3)
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0)

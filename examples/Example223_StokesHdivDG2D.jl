@@ -39,9 +39,9 @@ function get_flowdata(μ)
     f! = (result,x,t) -> (## f= -μΔu + ∇p
         result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2)) + cos(t)*cos(x[1])*cos(x[2]);
         result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)) - cos(t)*sin(x[1])*sin(x[2]);)
-    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", quadorder = 5)
-    p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", quadorder = 4)
-    f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", quadorder = 5)
+    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", bonus_quadorder = 5)
+    p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", bonus_quadorder = 4)
+    f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", bonus_quadorder = 5)
     return u, p, ∇(u), f
 end
 
@@ -97,20 +97,20 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     ## note: we use average operators here to force evaluation of all basis functions and not only of the face basis functions
     ## (which in case of Hdiv would be only the ones with nonzero normal fluxes)
     function hdiv_boundary_kernel(result, input, x, t, item)
-        eval_data!(result, u, x, t)
-        result ./= xFaceVolumes[xBFaceFaces[item[1]]]
+        eval_data!(u, x, t)
+        result .= u.val / xFaceVolumes[xBFaceFaces[item[1]]]
         return nothing
     end
     function hdiv_boundary_kernel2(result, input, x, t, item)
-        eval_data!(result, u, x, t)
-        result[3] = xFaceNormals[1,xBFaceFaces[item[1]]] * result[2]
-        result[4] = xFaceNormals[2,xBFaceFaces[item[1]]] * result[2]
-        result[2] = xFaceNormals[2,xBFaceFaces[item[1]]] * result[1]
-        result[1] = xFaceNormals[1,xBFaceFaces[item[1]]] * result[1]
+        eval_data!(u, x, t)
+        result[3] = xFaceNormals[1,xBFaceFaces[item[1]]] * u.val[2]
+        result[4] = xFaceNormals[2,xBFaceFaces[item[1]]] * u.val[2]
+        result[2] = xFaceNormals[2,xBFaceFaces[item[1]]] * u.val[1]
+        result[1] = xFaceNormals[1,xBFaceFaces[item[1]]] * u.val[1]
         return nothing
     end
-    HdivBoundary1 = LinearForm(Average(Identity), Action( hdiv_boundary_kernel, [2,0]; dependencies = "XTI", bonus_quadorder = u.quadorder); name = "- μ λ/h_F u_D v", factor = λ*μ, AT = ON_BFACES)
-    HdivBoundary2 = LinearForm(Average(Gradient), Action( hdiv_boundary_kernel2, [4,0]; dependencies = "XTI", bonus_quadorder = u.quadorder); name = "- μ u_D grad(v)*n", factor = -μ, AT = ON_BFACES)
+    HdivBoundary1 = LinearForm(Average(Identity), Action( hdiv_boundary_kernel, [2,0]; dependencies = "XTI", bonus_quadorder = u.bonus_quadorder); name = "- μ λ/h_F u_D v", factor = λ*μ, AT = ON_BFACES)
+    HdivBoundary2 = LinearForm(Average(Gradient), Action( hdiv_boundary_kernel2, [4,0]; dependencies = "XTI", bonus_quadorder = u.bonus_quadorder); name = "- μ u_D grad(v)*n", factor = -μ, AT = ON_BFACES)
 
     ## assign DG operators to problem descriptions
     add_operator!(Problem, [1,1], HdivLaplace2)       

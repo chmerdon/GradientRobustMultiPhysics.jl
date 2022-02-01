@@ -32,42 +32,38 @@ function exact_solution!(result,x)
     result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
 end    
 function exact_solution_rhs!(ν)
-    eval_alpha = zeros(Float64,1)
-    eval_beta = zeros(Float64,2)
     function closure(result,x)
         ## diffusion part
         result[1] = -ν*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
         ## convection part (beta * grad(u))
-        eval_data!(eval_beta, β, x, 0)
-        result[1] += eval_beta[1] * (x[2]*(2*x[1]-1)*(x[2]-1) + 1)
-        result[1] += eval_beta[2] * (x[1]*(2*x[2]-1)*(x[1]-1))
+        eval_data!(β)
+        result[1] += β.val[1] * (x[2]*(2*x[1]-1)*(x[2]-1) + 1)
+        result[1] += β.val[2] * (x[1]*(2*x[2]-1)*(x[1]-1))
         ## reaction part (alpha*u)
-        eval_data!(eval_alpha, α, x, 0)
-        result[1] += eval_alpha[1] * (x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1])
+        eval_data!(α)
+        result[1] += α.val[1] * (x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1])
         return nothing
     end
 end    
 
 ## custom bilinearform that can assemble the full PDE operator
 function ReactionConvectionDiffusionOperator(α, β, ν)
-    eval_alpha = zeros(Float64,1)
-    eval_beta = zeros(Float64,2)
-    function action_kernel!(result, input,x)
+    function action_kernel!(result, input)
         ## input = [u,∇u] as a vector of length 3
-        eval_data!(eval_beta, β, x, 0)
-        eval_data!(eval_alpha, α, x, 0)
-        result[1] = eval_alpha[1] * input[1] + eval_beta[1] * input[2] + eval_beta[2] * input[3]
+        eval_data!(β)
+        eval_data!(α)
+        result[1] = α.val[1] * input[1] + β.val[1] * input[2] + β.val[2] * input[3]
         result[2] = ν * input[2]
         result[3] = ν * input[3]
         ## result will be multiplied with [v,∇v]
         return nothing
     end
-    action = Action(action_kernel!, [3,3]; dependencies = "X", bonus_quadorder = max(α.quadorder,β.quadorder))
+    action = Action(action_kernel!, [3,3]; bonus_quadorder = max(α.bonus_quadorder,β.bonus_quadorder))
     return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
 end
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels = 5)
+function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 1e-2, nlevels = 5, order = 2)
 
     ## set log level
     set_verbosity(verbosity)
@@ -77,12 +73,12 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     xgrid = grid_unitsquare(Triangle2D); # initial grid
 
     ## negotiate data functions to the package
-    u = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "X", quadorder = 4)
+    u = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "X", bonus_quadorder = 4)
     ∇u = ∇(u) # AD gradient of user-function u by ForwardDiff
-    f = DataFunction(exact_solution_rhs!(ν), [1,2]; name = "f", dependencies = "X", quadorder = 3)
+    f = DataFunction(exact_solution_rhs!(ν), [1,2]; name = "f", dependencies = "X", bonus_quadorder = 3)
 
     ## choose a finite element type, here we choose a second order H1-conforming one
-    FEType = H1P2{1,2}
+    FEType = H1Pk{1,2,order}
 
     ## create PDE description
     Problem = PDEDescription("reaction-convection-diffusion problem")
@@ -143,7 +139,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 2e-2, nlevels 
     scalarplot!(p[1,1], xgrid, view(nodevalues(Solution[1]),1,:), levels = 7, title = "u_h")
     scalarplot!(p[1,2], xgrid, view(nodevalues(Solution[1], Gradient; abs = true),1,:), levels = 0, colorbarticks = 9, title = "∇u_h (abs + quiver)")
     vectorplot!(p[1,2], xgrid, evaluate(PointEvaluator(Solution[1], Gradient)), vscale = 0.8, clear = false)
-    convergencehistory!(p[1,3], NDofs, Results; add_h_powers = [2,3], X_to_h = X -> X.^(-1/2), legend = :lb, fontsize = 20, ylabels = ["|| u - u_h ||", "|| u - Iu ||", "|| ∇(u - u_h) ||", "|| ∇(u - Iu) ||"])
+    convergencehistory!(p[1,3], NDofs, Results; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), legend = :lb, fontsize = 20, ylabels = ["|| u - u_h ||", "|| u - Iu ||", "|| ∇(u - u_h) ||", "|| ∇(u - Iu) ||"])
     
     ## print convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| u - Iu ||", "|| ∇(u - u_h) ||", "|| ∇(u - Iu) ||"])

@@ -32,20 +32,26 @@ function get_flowdata(μ)
     f! = (result,x,t) -> (## f= -μΔu + ∇p
         result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2)) + cos(t)*cos(x[1])*cos(x[2]);
         result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)) - cos(t)*sin(x[1])*sin(x[2]);)
-    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", quadorder = 5)
-    p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", quadorder = 4)
-    f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", quadorder = 5)
+    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", bonus_quadorder = 5)
+    p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", bonus_quadorder = 4)
+    f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", bonus_quadorder = 5)
     return u, p, ∇(u), f
 end
 
 ## everything is wrapped in a main function
-function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1, α = 2.0)
+function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, order = 1, verbosity = 0, T = 1, α = 2.0)
 
     ## set log level
     set_verbosity(verbosity)
 
     ## FEType
-    FETypes = [H1P1{2}, HDIVRT0{2}, H1P0{1}]
+    if order == 1
+        FETypes = [H1P1{2}, HDIVRT0{2}, H1P0{1}]
+    elseif order == 2
+        FETypes = [H1P2{2,2}, HDIVRT1INT{2}, H1P1{1}]
+    else
+        @error "order must be 1 or 2"
+    end
     
     ## initial grid
     xgrid = grid_unitsquare(Triangle2D)
@@ -55,8 +61,8 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## define problem
     Problem = PDEDescription("Stokes problem")
-    add_unknown!(Problem; equation_name = "momentum equation (P1 part)", unknown_name = "u_P1")
-    add_unknown!(Problem; equation_name = "momentum equation (RT0 part)", unknown_name = "u_RT")
+    add_unknown!(Problem; equation_name = "momentum equation (Pk part)", unknown_name = "u_P1")
+    add_unknown!(Problem; equation_name = "momentum equation (RTk part)", unknown_name = "u_RT")
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p")
 
     ## add Laplacian for both velocity blocks
@@ -72,7 +78,9 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
 
     ## add boundary data and right-hand side
     add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_boundarydata!(Problem, 2, [1,2,3,4], HomogeneousDirichletBoundary)
+    if order == 1
+        add_boundarydata!(Problem, 2, [1,2,3,4], HomogeneousDirichletBoundary)
+    end
     add_rhsdata!(Problem, 1, LinearForm(Identity, f))
     add_rhsdata!(Problem, 2, LinearForm(Identity, f))
 
@@ -93,7 +101,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
         xgrid = uniform_refine(xgrid)
 
         ## generate FES spaces and solution vector
-        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid; broken = true)]
         Solution = FEVector(["u_P1", "u_RT", "p_h"],FES)
 
         ## solve
@@ -111,10 +119,12 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     p = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
     scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3, colorbarticks = 9, title = "u_P1 (abs + quiver)")
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false)
-    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]; abs = true),1,:), levels = 3, colorbarticks = 9, title = "u_RT (abs + quiver)")
-    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution[2], Identity)), spacing = 0.05, clear = false)
+    if order == 1 # otherwise nodal values are zero
+        scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]; abs = true),1,:), levels = 3, colorbarticks = 9, title = "u_RT (abs + quiver)")
+        vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution[2], Identity)), spacing = 0.05, clear = false)
+    end
     scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[3]),1,:), levels = 7, title = "p_h")
-    convergencehistory!(p[2,2], NDofs, Results[:,1:3]; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_P1) ||"])
+    convergencehistory!(p[2,2], NDofs, Results[:,1:3]; add_h_powers = [order,order+1], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_P1) ||"])
     
     ## print convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_P1) ||", "|| div(u_h) ||"])

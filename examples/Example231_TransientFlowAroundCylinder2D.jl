@@ -33,7 +33,7 @@ function bnd_inlet!(result,x,t)
     result[1] = 6*x[2]*(H-x[2])/(H*H) * max(sin(pi*t/8),0)
     result[2] = 0.0
 end
-const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "XT", quadorder = 2)
+const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "XT", bonus_quadorder = 2)
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1,6//1,8//1], timestep = [2//100,1//100,5//1000,2//1000,5//1000], TIR = CrankNicolson, plot_step = 1e-2)
@@ -98,8 +98,8 @@ function main(; Plotter = nothing, μ = 1e-3, maxvol = 6e-3, T = [1//1,2//1,3//1
     TestFunctionD = FEVector{Float64}("drag testfunction",Solution[1].FES)
     TestFunctionL = FEVector{Float64}("lift testfunction",Solution[1].FES)
     xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
-    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
-    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
+    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", bonus_quadorder = 0)
+    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", bonus_quadorder = 0)
     interpolate!(TestFunctionD[1], ON_FACES, dragtest; items = xBFaceFaces)
     interpolate!(TestFunctionL[1], ON_FACES, lifttest; items = xBFaceFaces)
     

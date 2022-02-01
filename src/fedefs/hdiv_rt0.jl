@@ -34,32 +34,27 @@ isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Tetrahedron3D}) = true
 isdefined(FEType::Type{<:HDIVRT0}, ::Type{<:Hexahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time=  0) where {T,Tv,Ti,FEType <: HDIVRT0,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time=  0) where {T,Tv,Ti,FEType <: HDIVRT0,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
     end
 
     # compute exact face means
-    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
-    function normalflux_eval()
-        temp = zeros(T,ncomponents)
-        function closure(result, x, face)
-            eval_data!(temp, exact_function!, x, time) 
-            result[1] = 0.0
-            for j = 1 : ncomponents
-                result[1] += temp[j] * xFaceNormals[j,face]
-            end 
-        end   
+    xFaceNormals = FE.xgrid[FaceNormals]
+    function normalflux_eval(result, kwargs...)
+        eval_data!(data) 
+        result[1] = dot(data.val, view(xFaceNormals,:,data.item[1]))
     end   
-    edata_function = ExtendedDataFunction(normalflux_eval(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
+    edata_function = DataFunction(normalflux_eval, [1, ncomponents]; dependencies = dependencies(data; enforce = "I"), bonus_quadorder = data.bonus_quadorder)
+    couple!(data, edata_function)
     integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HDIVRT0,APT}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {Tv,Ti,FEType <: HDIVRT0,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
-    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
+    interpolate!(Target, FE, ON_FACES, data; items = subitems, time = time)
 end
 
 # only normalfluxes on faces

@@ -37,7 +37,7 @@ isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 3
         if items == []
@@ -45,21 +45,18 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
         end
         ncomponents = get_ncomponents(eltype(FE))
         xEdgeTangents = FE.xgrid[EdgeTangents]
-        function tangentflux_eval3d()
-            temp = zeros(T,ncomponents)
-            function closure(result, x, edge)
-                eval_data!(temp, exact_function!, x, time) 
-                result[1] = temp[1] * xEdgeTangents[1,edge]
-                result[1] += temp[2] * xEdgeTangents[2,edge]
-                result[1] += temp[3] * xEdgeTangents[3,edge]
-            end   
+        function tangentflux_eval3d(result, kwargs...)
+            eval_data!(data) 
+            result[1] = dot(data.val, view(xEdgeTangents,:,data.item[1]))
         end   
-        edata_function = ExtendedDataFunction(tangentflux_eval3d(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
+        edata_function = DataFunction(tangentflux_eval3d, [1, ncomponents]; dependencies = "XI", bonus_quadorder = data.bonus_quadorder)
+        couple!(data, edata_function)
+        set_time!(data, time)
         integrate!(Target, FE.xgrid, ON_EDGES, edata_function; items = items, time = time)
     end
 end
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 2
         if items == []
@@ -67,33 +64,32 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
         end
         ncomponents = get_ncomponents(eltype(FE))
         xFaceNormals = FE.xgrid[FaceNormals]
-        function tangentflux_eval2d()
-            temp = zeros(T,ncomponents)
-            function closure(result, x, face)
-                eval_data!(temp, exact_function!, x, time) 
-                result[1] = - temp[1] * xFaceNormals[2,face] # rotated normal = tangent
-                result[1] += temp[2] * xFaceNormals[1,face]
-            end   
+        function tangentflux_eval2d(result, kwargs...)
+            eval_data!(data) 
+            result[1] = - data.val[1] * xFaceNormals[2,data.item[1]] # rotated normal = tangent
+            result[1] += data.val[2] * xFaceNormals[1,data.item[1]]
         end   
-        edata_function = ExtendedDataFunction(tangentflux_eval2d(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
+        edata_function = DataFunction(tangentflux_eval2d, [1, ncomponents]; dependencies = dependencies(data; enforce = "I"), bonus_quadorder = data.bonus_quadorder)
+        couple!(data, edata_function)
+        set_time!(data, time)
         integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time)
     elseif edim == 3
         # delegate face edges to edge interpolation
         subitems = slice(FE.xgrid[FaceEdges], items)
-        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, time = time)
+        interpolate!(Target, FE, ON_EDGES, data; items = subitems, time = time)
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
+function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 2
         # delegate cell faces to face interpolation
         subitems = slice(FE.xgrid[CellFaces], items)
-        interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
+        interpolate!(Target, FE, ON_FACES, data; items = subitems, time = time)
     elseif edim == 3
         # delegate cell edges to edge interpolation
         subitems = slice(FE.xgrid[CellEdges], items)
-        interpolate!(Target, FE, ON_EDGES, exact_function!; items = subitems, time = time)
+        interpolate!(Target, FE, ON_EDGES, data; items = subitems, time = time)
     end
 end
 

@@ -28,8 +28,8 @@ function exact_function1D(polyorder)
         result[1] = polyorder * (polyorder - 1) * x[1]^(polyorder-2)
     end
     exact_integral = 1 // (polyorder+1) + 1
-    exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", quadorder = polyorder)
-    exact_hessian = DataFunction(hessian, [1,1]; dependencies = "X", quadorder = polyorder - 2)
+    exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", bonus_quadorder = polyorder)
+    exact_hessian = DataFunction(hessian, [1,1]; dependencies = "X", bonus_quadorder = polyorder - 2)
     return exact_function, exact_integral, ∇(exact_function), exact_hessian
 end
 
@@ -49,8 +49,8 @@ function exact_function2D(polyorder)
         result[8] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
     end
     exact_integral = [3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
-    exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", quadorder = polyorder)
-    exact_hessian = DataFunction(hessian, [8,2]; dependencies = "X", quadorder = polyorder - 2)
+    exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", bonus_quadorder = polyorder)
+    exact_hessian = DataFunction(hessian, [8,2]; dependencies = "X", bonus_quadorder = polyorder - 2)
     return exact_function, exact_integral, ∇(exact_function), exact_hessian
 end
 
@@ -70,8 +70,8 @@ function exact_function3D(polyorder)
         result[23] = - polyorder * (polyorder - 1) * x[2]^(polyorder-2)
     end
     exact_integral = [1 // (polyorder + 1) - 1, 3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
-    exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", quadorder = polyorder)
-    exact_hessian = DataFunction(hessian, [27,3]; dependencies = "X", quadorder = polyorder - 2)
+    exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", bonus_quadorder = polyorder)
+    exact_hessian = DataFunction(hessian, [27,3]; dependencies = "X", bonus_quadorder = polyorder - 2)
     return exact_function, exact_integral, ∇(exact_function), exact_hessian
 end
 
@@ -535,9 +535,9 @@ function run_stokes_tests()
                 result[2] += polyorder_pressure * x[2]^(polyorder_pressure-1)
             end
         end
-        exact_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "X", quadorder = polyorder_velocity)
-        exact_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = "X", quadorder = polyorder_pressure)
-        rhs = DataFunction(rhs!, [2,2]; dependencies = "X", quadorder = max(0,polyorder_pressure - 1))
+        exact_velocity = DataFunction(exact_velocity!, [2,2]; dependencies = "X", bonus_quadorder = polyorder_velocity)
+        exact_pressure = DataFunction(exact_pressure!, [1,2]; dependencies = "X", bonus_quadorder = polyorder_pressure)
+        rhs = DataFunction(rhs!, [2,2]; dependencies = "X", bonus_quadorder = max(0,polyorder_pressure - 1))
         return exact_velocity, exact_pressure, ∇(exact_velocity), rhs
     end
 
@@ -565,9 +565,9 @@ function run_stokes_tests()
                 result[3] += polyorder_pressure * x[3]^(polyorder_pressure-1)
             end
         end
-        exact_velocity = DataFunction(exact_velocity!, [3,3]; dependencies = "X", quadorder = polyorder_velocity)
-        exact_pressure = DataFunction(exact_pressure!, [1,3]; dependencies = "X", quadorder = polyorder_pressure)
-        rhs = DataFunction(rhs!, [3,3]; dependencies = "X", quadorder = max(0,polyorder_pressure - 1))
+        exact_velocity = DataFunction(exact_velocity!, [3,3]; dependencies = "X", bonus_quadorder = polyorder_velocity)
+        exact_pressure = DataFunction(exact_pressure!, [1,3]; dependencies = "X", bonus_quadorder = polyorder_pressure)
+        rhs = DataFunction(rhs!, [3,3]; dependencies = "X", bonus_quadorder = max(0,polyorder_pressure - 1))
         return exact_velocity, exact_pressure, ∇(exact_velocity), rhs
     end
 
@@ -715,8 +715,8 @@ function run_timeintegration_tests()
     for pair in [[BackwardEuler,1],[CrankNicolson,2]]
 
         ## define data
-        u = DataFunction((result,x,t) -> (result[1] = x[1]^2*t^pair[2]), [1,1]; dependencies = "XT", quadorder = 2)    
-        f = DataFunction((result,x,t) -> (result[1] = pair[2]*x[1]^2*t^(pair[2]-1) + x[1]^2*t^pair[2]), [1,1]; dependencies = "XT", quadorder = 2)    
+        u = DataFunction((result,x,t) -> (result[1] = x[1]^2*t^pair[2]), [1,1]; dependencies = "XT", bonus_quadorder = 2)    
+        f = DataFunction((result,x,t) -> (result[1] = pair[2]*x[1]^2*t^(pair[2]-1) + x[1]^2*t^pair[2]), [1,1]; dependencies = "XT", bonus_quadorder = 2)    
 
         ## setup problem
         Problem = PDEDescription("time-dependent test problem for $(pair[1]) time integration rule")

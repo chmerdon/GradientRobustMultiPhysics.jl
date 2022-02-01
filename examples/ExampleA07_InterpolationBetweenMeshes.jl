@@ -19,7 +19,7 @@ function exact_u(result,x)
     result[1] = sin(4*pi*x[1])*sin(4*pi*x[2]);
     result[2] = cos(4*pi*x[1])*cos(4*pi*x[2]);
 end
-const u = DataFunction(exact_u, [2,2]; name = "u", dependencies = "X", quadorder = 5)
+const u = DataFunction(exact_u, [2,2]; name = "u", dependencies = "X", bonus_quadorder = 5)
 
 ## everything is wrapped in a main function
 function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)

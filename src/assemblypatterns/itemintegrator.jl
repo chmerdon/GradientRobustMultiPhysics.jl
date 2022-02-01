@@ -38,7 +38,7 @@ Creates an ItemIntegrator that compares discrete FEVectorBlock operator-evaluati
 If quadorder is left on "auto" two times the quadorder of the data is used in the evaluation.
 """
 function L2ErrorIntegrator(
-    compare_data::UserData{AbstractDataFunction},
+    compare_data::AbstractUserDataType,
     operator = Identity;
     T = Float64,
     quadorder = "auto",
@@ -56,28 +56,35 @@ function L2ErrorIntegrator(
         ninputs = length(operator)
     end
 
-    ncomponents::Int = compare_data.dimensions[1]
-    temp::Array{T,1} = zeros(T,ncomponents)
+    ncomponents::Int = compare_data.argsizes[1]
+    set_time!(compare_data, time)
     
     function L2error_function(result,input,x)
-        fill!(temp,0)
-        eval_data!(temp,compare_data,x,time)
+        if is_itemdependent(compare_data)
+            compare_data.citem[1] = cell
+            compare_data.citem[2] = cell
+            compare_data.citem[3] = xCellRegions[cell]
+        end
+        if is_xdependent(compare_data)
+            compare_data.x = x
+        end
+        eval_data!(compare_data)
         result[1] = 0
         for j=1:ncomponents
             for i = 1 : ninputs
-                temp[j] -= input[(i-1)*ncomponents+j]*factor
+                compare_data.val[j] -= input[(i-1)*ncomponents+j]*factor
             end
-            result[1] += temp[j].^2
+            result[1] += compare_data.val[j].^2
         end    
         return nothing
     end    
     if quadorder == "auto"
-        quadorder = 2 * compare_data.quadorder
+        quadorder = 2 * compare_data.bonus_quadorder
     end
     if name == "auto"
         name = "L2 error ($(compare_data.name))"
     end
-    action = Action(L2error_function, [1,ninputs*compare_data.dimensions[1]]; Tv = T, name = name, dependencies = "X", bonus_quadorder = quadorder)
+    action = Action(L2error_function, [1,ninputs*compare_data.argsizes[1]]; Tv = T, name = name, dependencies = "X", bonus_quadorder = quadorder)
     return ItemIntegrator(ops, action; T = T, AT = AT, regions = regions, name = name)
 end
 

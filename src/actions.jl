@@ -102,8 +102,8 @@ function NoAction()
 
 Creates a NoAction that causes the assembly pattern to ignore the action-related assembly.
 """
-function NoAction(; name = "no action", quadorder = 0)
-    return NoAction(name,quadorder)
+function NoAction(; name = "no action", bonus_quadorder = 0)
+    return NoAction(name, bonus_quadorder)
 end
 
 """
@@ -113,23 +113,118 @@ function fdot_action(data::UserData) -> Action
 
 Creates an action that just evaluates the DataFunction f.
 """
-function fdot_action(data::UserData; Tv = Float64, Ti = Int32)
-    f_as_action(result, input, kwargs...) = data.user_function(result, kwargs...)
-    return Action(f_as_action, [data.dimensions[1], 0]; Tv = Tv, Ti = Ti, dependencies = data.dependencies, bonus_quadorder = data.quadorder)
+function fdot_action(data::AbstractUserDataType; Tv = Float64, Ti = Int32)
+    f_as_action(result, input, kwargs...) = data.kernel(result, kwargs...)
+    dependencies = is_xdependent(data) ? "X" : ""
+    dependencies *= is_timedependent(data) ? "T" : ""
+    dependencies *= is_itemdependent(data) ? "I" : ""
+    dependencies *= is_xrefdependent(data) ? "L" : ""
+    action = Action(f_as_action, [data.argsizes[1], 0]; Tv = Tv, Ti = Ti, dependencies = dependencies, bonus_quadorder = data.bonus_quadorder)
+    set_time!(action, data.time)
+    return action
 end
 
 """
 ````
-function fdotv_action(data::UserData) -> Action
+function fdotv_action(data::AbstractUserDataType) -> Action
 ````
 
 Creates an action that evaluates the DataFunction f and performs a vector product with the input.
 """
-function fdotv_action(data::UserData; Tv = Float64, Ti = Int32)
-    feval = zeros(Tv, data.dimensions[1])
+function fdotv_action(data::AbstractUserDataType; Tv = Float64, Ti = Int32)
+    feval = zeros(Tv, data.argsizes[1])
     function vdotg_kernel(result, input, kwargs...)
-        data.user_function(feval, kwargs...)
+        data.kernel(feval, kwargs...)
         result[1] = dot(feval, input)
     end
-    return Action(vdotg_kernel, [1 data.dimensions[2]]; dependencies = data.dependencies, name = "v⋅g")
+    action = Action(vdotg_kernel, [1 data.argsizes[2]]; Tv = Tv, Ti = Ti, dependencies = dependencies(data), name = "v⋅g")
+    set_time!(action, data.time)
+    return action
+end
+
+
+"""
+````
+function fdotv_action(data::AbstractUserDataType) -> Action
+````
+
+Creates an action that evaluates the DataFunction f times the normal vector.
+"""
+function fdotn_action(data::AbstractUserDataType, xgrid; Tv = Float64, Ti = Int32, bfaces = false)
+    xFaceNormals = xgrid[FaceNormals]
+    xBFaceFaces = xgrid[BFaceFaces]
+    function vdotg_kernel(result, input, kwargs...)
+        eval_data!(data)
+        if bfaces
+            result[1] = dot(data.val, view(xFaceNormals,:,xBFaceFaces[data.item[1]]))
+        else
+            result[1] = dot(data.val, view(xFaceNormals,:,data.item[1]))
+        end
+        return nothing
+    end
+    action = Action(vdotg_kernel, [1 0]; Tv = Tv, Ti = Ti, dependencies = dependencies(data; enforce = "I"), bonus_quadorder = data.bonus_quadorder, name = "$(data.name)⋅n")
+    data.x = action.x
+    data.xref = action.xref
+    data.item = action.item
+    return action
+end
+
+
+"""
+````
+function fdotv_action(data::AbstractUserDataType) -> Action
+````
+
+Creates an action that evaluates the DataFunction f times the tangential vector on 2D faces.
+"""
+function fdott2d_action(data::AbstractUserDataType, xgrid; Tv = Float64, Ti = Int32, bfaces = false)
+    xFaceNormals = xgrid[FaceNormals]
+    xBFaceFaces = xgrid[BFaceFaces]
+    function vdott_kernel(result, input, kwargs...)
+        eval_data!(data)
+        if bfaces
+            result[1] = -data.val[1] * xFaceNormals[2,xBFaceFaces[item[1]]]
+            result[1] += data.val[2] * xFaceNormals[1,xBFaceFaces[item[1]]]
+        else
+            result[1] = -data.val[1] * xFaceNormals[2,item[1]]
+            result[1] += data.val[2] * xFaceNormals[1,item[1]]
+        end
+        return nothing
+    end
+    action = Action(vdott_kernel, [1 0]; Tv = Tv, Ti = Ti, dependencies = dependencies(data; enforce = "I"), bonus_quadorder = data.bonus_quadorder, name = "$(data.name)⋅n")
+    data.x = action.x
+    data.xref = action.xref
+    data.item = action.item
+    return action
+end
+
+
+"""
+````
+function fdotv_action(data::AbstractUserDataType) -> Action
+````
+
+Creates an action that evaluates the DataFunction f times the tangential vector on 3D edges.
+"""
+function fdott3d_action(data::AbstractUserDataType, xgrid; Tv = Float64, Ti = Int32, bedges = false)
+    xEdgeTangents = FE.xgrid[EdgeTangents]
+    xBEdgeEdges = FE.xgrid[BEdgeEdges]
+    function vdott_kernel(result, input, kwargs...)
+        eval_data!(data)
+        if bedges
+            result[1] = temp[1] * xEdgeTangents[1,xBEdgeEdges[item[1]]]
+            result[1] += temp[2] * xEdgeTangents[2,xBEdgeEdges[item[1]]]
+            result[1] += temp[3] * xEdgeTangents[3,xBEdgeEdges[item[1]]]
+        else
+            result[1] = temp[1] * xEdgeTangents[1,item[1]]
+            result[1] += temp[2] * xEdgeTangents[2,item[1]]
+            result[1] += temp[3] * xEdgeTangents[3,item[1]]
+        end
+        return nothing
+    end
+    action = Action(vdott_kernel, [1 0]; Tv = Tv, Ti = Ti, dependencies = dependencies(data; enforce = "I"), bonus_quadorder = data.bonus_quadorder, name = "$(data.name)⋅n")
+    data.x = action.x
+    data.xref = action.xref
+    data.item = action.item
+    return action
 end

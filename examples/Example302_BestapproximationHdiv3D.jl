@@ -22,16 +22,16 @@ function exact_function!(result,x)
     result[3] = x[1]*x[2]
 end
 
-const u = DataFunction(exact_function!, [3,3]; name = "u", dependencies = "X", quadorder = 3)
+const u = DataFunction(exact_function!, [3,3]; name = "u", dependencies = "X", bonus_quadorder = 3)
 
 ## everything is wrapped in a main function
-function main(; verbosity = 0, Plotter = nothing)
+function main(; verbosity = 0, nrefinements = 4, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
 
     ## generate a unit square mesh and refine
-    xgrid = uniform_refine(reference_domain(Tetrahedron3D),4)
+    xgrid = uniform_refine(reference_domain(Tetrahedron3D), nrefinements)
 
     ## setup a bestapproximation problem via a predefined prototype
     Problem = L2BestapproximationProblem(u; bestapprox_boundary_regions = [])
@@ -40,7 +40,6 @@ function main(; verbosity = 0, Plotter = nothing)
     ## here 1 is the number of components (it is scalarvalued) and 3 is the space dimension
     add_unknown!(Problem; unknown_name = "p", equation_name = "divergence constraint")
     add_operator!(Problem, [1,2], LagrangeMultiplier(Divergence))
-
     ## add the right-hand side data for the constraint and inspect the defined problem
     div_u = div(u)
     add_rhsdata!(Problem, 2, LinearForm(Identity, div_u))

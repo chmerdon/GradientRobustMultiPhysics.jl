@@ -56,9 +56,9 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1);
 
     ## negotiate data functions to the package
-    u = DataFunction(exact_solution!, [1,1]; name = "u", dependencies = "XT", quadorder = 5)
-    ∇u = DataFunction(exact_gradient!, [2,1]; name = "∇u", dependencies = "XT", quadorder = 4)
-    u_rhs = DataFunction(rhs!(beta), [1,1]; name = "f", dependencies = "XT", quadorder = 5)
+    u = DataFunction(exact_solution!, [1,1]; name = "u", dependencies = "XT", bonus_quadorder = 5)
+    ∇u = DataFunction(exact_gradient!, [2,1]; name = "∇u", dependencies = "XT", bonus_quadorder = 4)
+    u_rhs = DataFunction(rhs!(beta), [1,1]; name = "f", dependencies = "XT", bonus_quadorder = 5)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     function diffusion_kernel!(result, input)

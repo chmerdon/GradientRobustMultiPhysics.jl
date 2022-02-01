@@ -29,62 +29,32 @@ isdefined(FEType::Type{<:HDIVBDM2}, ::Type{<:Triangle2D}) = true
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVBDM2{2}}, ::Type{<:Triangle2D}) = 9
 
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM2,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM2,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
     end
 
     # integrate normal flux of exact_function over edges
-    xFaceNormals::Array{Tv,2} = FE.xgrid[FaceNormals]
+    xFaceNormals = FE.xgrid[FaceNormals]
     nfaces = num_sources(xFaceNormals)
-    function normalflux_eval()
-        temp = zeros(T,ncomponents)
-        function closure(result, x, face)
-            eval_data!(temp, exact_function!, x, time)
-            result[1] = 0.0
-            for j = 1 : ncomponents
-                result[1] += temp[j] * xFaceNormals[j,face]
-            end 
-        end   
+    function normalflux_eval(result, kwargs...)
+        eval_data!(data) 
+        result[1] = dot(data.val, view(xFaceNormals,:,data.item[1]))
+        result[2] = result[1] * (data.xref[1] - 1//ncomponents) 
+        result[3] = result[1] * (data.xref[1]^2 - data.xref[1] + 1//6)
+        return nothing
     end   
-    edata_function = ExtendedDataFunction(normalflux_eval(), [1, ncomponents]; dependencies = "XI", quadorder = exact_function!.quadorder)
-    integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time)
-   
-    # integrate normal flux with linear weight (x[1] - 1//2) of exact_function over edges
-    function normalflux2_eval()
-        temp = zeros(T,ncomponents)
-        function closure(result, x, face, xref)
-            eval_data!(temp, exact_function!, x, time)
-            result[1] = 0.0
-            for j = 1 : ncomponents
-                result[1] += temp[j] * xFaceNormals[j,face]
-            end
-            result[1] *= (xref[1] - 1//ncomponents)
-        end   
-    end   
-    edata_function2 = ExtendedDataFunction(normalflux2_eval(), [1, ncomponents]; dependencies = "XIL", quadorder = exact_function!.quadorder + 1)
-    integrate!(Target, FE.xgrid, ON_FACES, edata_function2; items = items, time = time, index_offset = nfaces)
-
-    function normalflux3_eval()
-       temp = zeros(T,ncomponents)
-       function closure(result, x, face, xref)
-           eval_data!(temp, exact_function!, x, time)
-           result[1] = 0.0
-           for j = 1 : ncomponents
-               result[1] += temp[j] * xFaceNormals[j,face]
-           end
-           result[1] *= (xref[1]^2 - xref[1] + 1//6)
-       end   
-    end   
-    edata_function3 = ExtendedDataFunction(normalflux3_eval(), [1, ncomponents]; dependencies = "XIL", quadorder = exact_function!.quadorder + 2)
-    integrate!(Target, FE.xgrid, ON_FACES, edata_function3; items = items, time = time, index_offset = 2*nfaces)
+    edata_function = DataFunction(normalflux_eval, [3, ncomponents]; dependencies = dependencies(data; enforce = "IL"), bonus_quadorder = data.bonus_quadorder + 2)
+    couple!(data, edata_function)
+    set_time!(data, time)
+    integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time, index_offsets = [0, nfaces, 2*nfaces])
 end
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM2,APT}
+function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVBDM2,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
-    interpolate!(Target, FE, ON_FACES, exact_function!; items = subitems, time = time)
+    interpolate!(Target, FE, ON_FACES, data; items = subitems, time = time)
 
     # set values of interior BDM2 functions as piecewise best-approximation
     ncomponents = get_ncomponents(FEType)
@@ -95,7 +65,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     ncells = num_sources(FE.xgrid[CellNodes])
     xCellVolumes::Array{Tv,1} = FE.xgrid[CellVolumes]
     xCellDofs::DofMapTypes{Ti} = FE[CellDofs]
-    qf = QuadratureRule{T,EG}(max(4,2+exact_function!.quadorder))
+    qf = QuadratureRule{T,EG}(max(4,2+data.bonus_quadorder))
     FEB = FEBasisEvaluator{T,EG,Identity,ON_CELLS}(FE, qf)
 
     # evaluation of gradient of P1 functions
@@ -120,8 +90,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     IMM = zeros(T,nidofs,nidofs)
     lb = zeros(T,nidofs)
     temp::T = 0
-    feval = zeros(T,ncomponents)
-    x = zeros(T,ncomponents)
+    set_time!(data, time)
     for cell in items
         # update basis
         update_febe!(FEB,cell)
@@ -134,15 +103,15 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
         # quadrature loop
         for i = 1 : length(qf.w)
             # right-hand side : f times grad(P1),curl(bubble)
-            eval_trafo!(x,FEB.L2G,FEB.xref[i])
-            eval_data!(feval, exact_function!, x, time)
-            feval .*= xCellVolumes[cell] * qf.w[i]
+            eval_trafo!(data.x,FEB.L2G,FEB.xref[i])
+            eval_data!(data)
+            data.val .*= xCellVolumes[cell] * qf.w[i]
             for dof = 1:nidofs
                 for k = 1 : ncomponents
                     if dof < 3
-                        lb[dof] += feval[k] * basisvalsP1[k,dof,i]
+                        lb[dof] += data.val[k] * basisvalsP1[k,dof,i]
                     elseif dof == 3
-                        lb[dof] += feval[k] * basisvalsB[k,1,i]
+                        lb[dof] += data.val[k] * basisvalsB[k,1,i]
                     end
                 end
 

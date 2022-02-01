@@ -88,7 +88,7 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     xgrid = simplexgrid("assets/2d_mountainrange.sg")
     u = DataFunction([0,0]; name = "u")
     ∇u = DataFunction([0,0,0,0]; name = "∇u")
-    ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = "ϱ", dependencies = "X", quadorder = 2)
+    ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = "ϱ", dependencies = "X", bonus_quadorder = 2)
 
     ## compute mass of exact density on grid (bit smaller than M due to mountains)
     Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
@@ -173,11 +173,11 @@ function setup_and_solve!(Solution, xgrid;
 
     if use_gravity
         ## discrete gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
-        g = DataFunction(gravity!(γ,c), [2,2]; name = "g", dependencies = "X", quadorder = 4)
+        g = DataFunction(gravity!(γ,c), [2,2]; name = "g", dependencies = "X", bonus_quadorder = 4)
         add_operator!(Problem, [1,2], BilinearForm([VeloIdentity,Identity], fdotv_action(g); factor = -1, name = "(g ⋅ v) ϱ", store = true))
     else
         ## exact gravity term for right-hand side
-        f = DataFunction(rhs!(γ,c), [2,2]; name = "f", dependencies = "X", quadorder = 4)
+        f = DataFunction(rhs!(γ,c), [2,2]; name = "f", dependencies = "X", bonus_quadorder = 4)
         add_rhsdata!(Problem, 1,  LinearForm(VeloIdentity, f; store = true))
     end
 

@@ -66,7 +66,7 @@ function main(; verbosity = 0, order = 2, nlevels = 16, theta = 1//2, Plotter = 
     end
     
     ## negotiate data functions to the package
-    u = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
+    u = DataFunction(exact_function!, [1,2]; name = "u", dependencies = "X", bonus_quadorder = 5)
     ∇u = ∇(u)
 
     ## setup Poisson problem

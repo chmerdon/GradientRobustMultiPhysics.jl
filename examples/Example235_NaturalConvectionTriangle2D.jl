@@ -32,7 +32,7 @@ using ExtendableGrids
 using GridVisualize
 
 ## boundary data for temperature on bottom
-T_bottom = DataFunction((T,x) -> (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = "X", quadorder = 4)
+T_bottom = DataFunction((T,x) -> (T[1] = 2*(1-cos(2*pi*x[1]))), [1,2]; dependencies = "X", bonus_quadorder = 4)
 
 ## everything is wrapped in a main function
 function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements = 6, anderson = false)

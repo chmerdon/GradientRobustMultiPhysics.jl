@@ -42,7 +42,7 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
     FEType = H1Pk{1,2,order}
     
     ## negotiate data functions to the package
-    u = DataFunction(u!, [1,2]; name = "u", dependencies = "X", quadorder = 5)
+    u = DataFunction(u!, [1,2]; name = "u", dependencies = "X", bonus_quadorder = 5)
     ∇u = ∇(u)
 
     ## setup Poisson problem

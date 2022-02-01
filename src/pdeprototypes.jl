@@ -118,7 +118,7 @@ end
 """
 ````
 function L2BestapproximationProblem(
-    uexact::UserData{AbstractDataFunction};
+    uexact::AbstractUserDataType;
     bonus_quadorder::Int = 0,
     bestapprox_boundary_regions = [])
 ````
@@ -126,7 +126,7 @@ function L2BestapproximationProblem(
 Creates an PDEDescription for an L2-Bestapproximation problem for the given exact function. Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
 """
 function L2BestapproximationProblem(
-    uexact::UserData{AbstractDataFunction};
+    uexact::AbstractUserDataType;
     name = "L2-Bestapproximation problem",
     unknown_name = "auto",
     equation_name = "L2-bestapproximation equation",
@@ -136,8 +136,8 @@ function L2BestapproximationProblem(
     if unknown_name == "auto"
         unknown_name = uexact.name
     end
-    ncomponents = uexact.dimensions[1]
-    xdim = uexact.dimensions[2]
+    ncomponents = uexact.argsizes[1]
+    xdim = uexact.argsizes[2]
     # generate empty PDEDescription for one unknown
     Problem = PDEDescription(name)
     add_unknown!(Problem; unknown_name = unknown_name, equation_name = equation_name)
@@ -158,8 +158,8 @@ end
 """
 ````
 function H1BestapproximationProblem(
-    exact_function_gradient::UserData{AbstractDataFunction},
-    exact_function_boundary::UserData{AbstractDataFunction};
+    exact_function_gradient::AbstractUserDataType,
+    exact_function_boundary::AbstractUserDataType;
     bonus_quadorder::Int = 0,
     bonus_quadorder_boundary::Int = 0,
     bestapprox_boundary_regions = [])
@@ -168,15 +168,15 @@ function H1BestapproximationProblem(
 Creates an PDEDescription for an H1-Bestapproximation problem for the given exact function (only used on the boundary) and its exact gradient (used in the right-hand side). Since this prototype already includes boundary and right-hand side data also a bonus quadrature order can be specified to steer the accuracy.
 """
 function H1BestapproximationProblem(
-    uexact_gradient::UserData{AbstractDataFunction},
-    uexact::UserData{AbstractDataFunction};
+    uexact_gradient::AbstractUserDataType,
+    uexact::AbstractUserDataType;
     name = "H1-Bestapproximation problem",
     unknown_name = "auto",
     equation_name = "H1-bestapproximation equation",
     bestapprox_boundary_regions = [])
 
-    ncomponents = uexact.dimensions[1]
-    xdim = Int(uexact_gradient.dimensions[1] / ncomponents)
+    ncomponents = uexact.argsizes[1]
+    xdim = Int(uexact_gradient.argsizes[1] / ncomponents)
 
     if unknown_name == "auto"
         unknown_name = uexact.name

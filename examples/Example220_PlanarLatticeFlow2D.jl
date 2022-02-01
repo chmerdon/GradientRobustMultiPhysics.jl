@@ -44,14 +44,14 @@ function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
     u = DataFunction((result, x, t) -> (
             result[1] = exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
             result[2] = exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
-        ), [2,2]; name = "u", dependencies = "XT", quadorder = 6)
+        ), [2,2]; name = "u", dependencies = "XT", bonus_quadorder = 6)
     p = DataFunction((result, x, t) -> (
             result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
-        ), [1,2]; name = "p", dependencies = "XT", quadorder = 4)
+        ), [1,2]; name = "p", dependencies = "XT", bonus_quadorder = 4)
     f = DataFunction((result, x, t) -> (
             result[1] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
             result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
-        ), [2,2]; name = "f", dependencies = "XT", quadorder = 4)
+        ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 4)
 
     ## set finite elements (Bernardi--Raugel)
     FEType = [H1BR{2}, H1P0{1}]
@@ -88,9 +88,9 @@ function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
         println("|| p - p_h || = $(sqrt(evaluate(L2errorP,Solution[2])))")
        
         ## plot
-        scalarplot!(vis[1+probust,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 5)
-        vectorplot!(vis[1+probust,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false, title = "u_h (abs + quiver)")
-        scalarplot!(vis[1+probust,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 7, title = "p_h")
+        scalarplot!(vis[1+probust,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 5, title = "$(Solution[1].name) (abs + quiver)")
+        vectorplot!(vis[1+probust,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false)
+        scalarplot!(vis[1+probust,2],xgrid,view(nodevalues(Solution[2]),1,:), levels = 7, title = "$(Solution[2].name)")
     end
 end
 

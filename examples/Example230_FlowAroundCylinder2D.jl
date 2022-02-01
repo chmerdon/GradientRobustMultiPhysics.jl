@@ -37,7 +37,7 @@ function bnd_inlet!(result,x)
     result[1] = 4*umax*x[2]*(H-x[2])/(H*H);
     result[2] = 0.0;
 end
-const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "X", quadorder = 2)
+const inflow = DataFunction(bnd_inlet!, [2,2]; name = "u_inflow", dependencies = "X", bonus_quadorder = 2)
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, μ = 1e-3, maxvol = 1e-3)
@@ -137,12 +137,12 @@ function get_draglift(Solution::FEVector, μ)
     ## test for drag
     TestFunction = FEVector("drag testfunction",Solution[1].FES)
     xBFaceFaces = Solution[1].FES.xgrid[BFaceFaces]
-    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", quadorder = 0)
+    dragtest = DataFunction(circle_bnd_testfunction(1), [2,2]; name = "drag test", dependencies = "X", bonus_quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, dragtest; items = xBFaceFaces)
     drag = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 
     ## test for lift
-    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", quadorder = 0)
+    lifttest = DataFunction(circle_bnd_testfunction(2), [2,2]; name = "lift test", dependencies = "X", bonus_quadorder = 0)
     interpolate!(TestFunction[1], ON_FACES, lifttest; items = xBFaceFaces)
     lift = evaluate(DLIntegrator,[Solution[1],Solution[1],Solution[2],TestFunction[1],TestFunction[1]])
 

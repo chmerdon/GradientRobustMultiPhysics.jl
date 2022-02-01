@@ -26,7 +26,7 @@ function exact_function!(result,x)
 end
 
 ## negotiate data functions to the package
-const u = DataFunction(exact_function!, [1,3]; name = "u", dependencies = "X", quadorder = 2)
+const u = DataFunction(exact_function!, [1,3]; name = "u", dependencies = "X", bonus_quadorder = 2)
 const f = DataFunction([-2]; name = "f") # = -Δu = -2
 
 ## everything is wrapped in a main function

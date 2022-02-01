@@ -18,7 +18,7 @@ using GridVisualize
 function exact_function!(result,x)
     result[1] = (x[1]-1//2)*(x[1]-9//10)*(x[1]-1//3)*(x[1]-1//10)*(x[1]-0.6)
 end
-const u = DataFunction(exact_function!, [1,1]; name = "u", dependencies = "X", quadorder = 5)
+const u = DataFunction(exact_function!, [1,1]; name = "u", dependencies = "X", bonus_quadorder = 5)
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, order = 3, h = 0.5, h_fine = 1e-3)

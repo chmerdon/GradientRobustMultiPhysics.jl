@@ -28,7 +28,7 @@ using GridVisualize
 using SimplexGridFactory
 using Triangulate
 
-const u0 = DataFunction((result,x) -> (result[1] = 1 - x[1]^2 - x[2]^2), [1,2]; dependencies = "X", quadorder = 2)
+const u0 = DataFunction((result,x) -> (result[1] = 1 - x[1]^2 - x[2]^2), [1,2]; dependencies = "X", bonus_quadorder = 2)
 const v0 = DataFunction([0.0])
 const f = DataFunction([0.0])
 const c = 1

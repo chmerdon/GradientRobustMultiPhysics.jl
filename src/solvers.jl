@@ -1280,7 +1280,7 @@ function solve!(
 
     ## logging stuff
     if SC.is_timedependent
-        moreinfo_string = "----- Solving $(PDE.name) (at fixed time $time) -----"
+        moreinfo_string = "----- Solving $(PDE.name) (at fixed time $(user_params[:time])) -----"
     else
         moreinfo_string = "----- Solving $(PDE.name) -----"
     end

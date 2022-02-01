@@ -179,27 +179,27 @@ function ReactionOperator(α = 1.0, ncomponents = 1; name = "auto", AT::Type{<:A
             if α != 1.0
                 name = "$α " * name
             end
-        elseif typeof(α) <: UserData{AbstractDataFunction}
+        elseif typeof(α) <: AbstractUserDataType
             name = "(αu,v)"
         end
     end
     if typeof(α) <: Real
         return PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[id,id], NoAction(), [1], α, regions, store, AssemblyInitial)
-    elseif typeof(α) <: UserData{AbstractDataFunction}
-        xdim = α.dimensions[1]
-        function reaction_function_func_xt()
-            eval_coeff = zeros(Float64,ncomponents)
-            function closure(result, input, x, t)
-                # evaluate beta
-                eval_data!(eval_coeff,α,x,t)
-                # compute alpha*u
-                for j = 1 : ncomponents
-                    result[j] = eval_coeff[j] * input[j]
-                end
-            end    
+    elseif typeof(α) <: AbstractUserDataType
+        xdim = α.argsizes[1]
+        function reaction_kernel(result, input)
+            # evaluate alpha
+            eval_data!(α)
+            # compute alpha*u
+            for j = 1 : ncomponents
+                result[j] = α.val[j] * input[j]
+            end
         end    
-        action_kernel = ActionKernel(reaction_function_func_xt(), [ncomponents, xdim]; dependencies = "XT", quadorder = α.quadorder)
-        return PDEOperator{Float64, APT_BilinearForm, AT}(name, [id, id], Action{Float64}( action_kernel), [1], 1, regions, store, AssemblyAuto)
+        action = Action(reaction_kernel, [ncomponents, xdim]; dependencies = "XT", bonus_quadorder = α.bonus_quadorder)
+        α.xref = action.xref
+        α.x = action.x
+        α.item = action.item
+        return PDEOperator{Float64, APT_BilinearForm, AT}(name, [id, id], action, [1], 1, regions, store, AssemblyAuto)
     else
         @error "No standard reaction operator definition for this type of α available, please define your own action and PDEOperator with it."
     end
@@ -520,7 +520,7 @@ function ConvectionRotationFormOperator(
                 result[2] = - input[1] * input[3]
             end    
         end    
-        action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", quadorder = 0)
+        action_kernel = ActionKernel(rotationform_2d(),[2, 3]; dependencies = "", bonus_quadorder = 0)
         convection_action = Action{Float64}( action_kernel)
         if name == "auto"
             name = "((β × ∇) u, v)"
@@ -598,10 +598,10 @@ function NonlinearForm(
     if newton
         if jacobian == "auto"
             name = name * " [AD-Newton]"
-            jac_handler = OperatorWithADJacobian(action_kernel, argsizes; dependencies = dependencies, quadorder = bonus_quadorder, sparse_jacobian = sparse_jacobian)
+            jac_handler = OperatorWithADJacobian(action_kernel, argsizes; dependencies = dependencies, bonus_quadorder = bonus_quadorder, sparse_jacobian = sparse_jacobian)
         else
             name = name * " [Newton]"
-            jac_handler = OperatorWithUserJacobian(action_kernel, jacobian, argsizes; dependencies = dependencies, quadorder = bonus_quadorder, sparse_jacobian = sparse_jacobian)
+            jac_handler = OperatorWithUserJacobian(action_kernel, jacobian, argsizes; dependencies = dependencies, bonus_quadorder = bonus_quadorder, sparse_jacobian = sparse_jacobian)
         end
 
         O = PDEOperator{Float64, APT_NonlinearForm, AT}(name, operators, jac_handler, 1:(length(coeff_from)), 1, regions)
@@ -676,7 +676,7 @@ Optional arguments:
 """
 function LinearForm(
     operator::Type{<:AbstractFunctionOperator},
-    f::UserData{<:AbstractDataFunction};
+    f::AbstractUserDataType;
     name = "auto",
     kwargs...)
 
@@ -749,7 +749,7 @@ The operators for u and v can be changed (if this leads to something reasonable)
     
 """
 function ConvectionOperator(
-    β::UserData{AbstractDataFunction},
+    β::AbstractUserDataType,
     ncomponents::Int; 
     name = "auto", 
     store::Bool = false,
@@ -760,72 +760,21 @@ function ConvectionOperator(
     regions::Array{Int,1} = [0])
 
     T = Float64
-    xdim = β.dimensions[1]
-    if is_timedependent(β) && is_xdependent(β)
-        function convection_function_func_xt() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
-            function closure(result, input, x, time)
-                # evaluate β
-                eval_data!(convection_vector,β,x,time)
-                # compute (β ⋅ ∇) u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
-            end    
-        end    
-        action = Action(convection_function_func_xt(), [ncomponents, ncomponents*xdim]; dependencies = "XT", bonus_quadorder = β.quadorder)
-    elseif !is_timedependent(β) && !is_xdependent(β)
-        function convection_function_func() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
-            function closure(result, input)
-                # evaluate β
-                eval_data!(convection_vector,β, nothing, nothing)
-                # compute (β ⋅ ∇) u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
-            end    
-        end    
-        action = Action(convection_function_func(), [ncomponents, ncomponents*xdim]; dependencies = "", bonus_quadorder = β.quadorder)
-    elseif !is_timedependent(β) && is_xdependent(β)
-        function convection_function_func_x() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
-            function closure(result, input, x)
-                # evaluate β
-                eval_data!(convection_vector,β,x,nothing)
-                # compute (β ⋅ ∇) u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
-            end    
-        end    
-        action = Action(convection_function_func_x(), [ncomponents, ncomponents*xdim]; dependencies = "X", bonus_quadorder = β.quadorder)
-    elseif is_timedependent(β) && !is_xdependent(β)
-        function convection_function_func_t() # dot(convection!, input=Gradient)
-            convection_vector = zeros(T,xdim)
-            function closure(result, input, t)
-                # evaluate β
-                eval_data!(convection_vector,β,nothing,t)
-                # compute (β ⋅ ∇) u
-                for j = 1 : ncomponents
-                    result[j] = 0.0
-                    for k = 1 : xdim
-                        result[j] += convection_vector[k]*input[(j-1)*xdim+k]
-                    end
-                end
-            end    
-        end    
-        action = Action(convection_function_func_t(), [ncomponents, ncomponents*xdim]; dependencies = "T", bonus_quadorder = β.quadorder)
-    end
+    xdim = β.argsizes[1]
+
+    function convection_kernel(result, input, kwargs...)
+        # evaluate β
+        eval_data!(β, kwargs...)
+        # compute (β ⋅ ∇) u
+        for j = 1 : ncomponents
+            result[j] = 0.0
+            for k = 1 : xdim
+                result[j] += β.val[k]*input[(j-1)*xdim+k]
+            end
+        end
+    end    
+    action = Action(convection_kernel, [ncomponents, ncomponents*xdim]; dependencies = dependencies(β), bonus_quadorder = β.bonus_quadorder)
+    
     if name == "auto"
         name = "((β ⋅ $(ansatz_operator)) u, $test_operator(v))"
     end
@@ -1059,6 +1008,7 @@ function assemble!(A::FEMatrixBlock, SC, j::Int, k::Int, o::Int, O::PDEOperator,
             skip_preps = false
         end
         ## assemble
+        set_time!(O.action, time)
         assemble_operator!(A, O, CurrentSolution; Pattern = SC.LHS_AssemblyPatterns[j,k][o], time = time, At = At, skip_preps = skip_preps)
     end
 end
@@ -1140,6 +1090,7 @@ function full_assemble!(A::FEMatrixBlock, b::FEVectorBlock, SC, j::Int, k::Int, 
             skip_preps = false
         end
         ## assemble
+        set_time!(O.action, time)
         full_assemble_operator!(A, b, O, CurrentSolution; Pattern = SC.LHS_AssemblyPatterns[j,k][o], time = time, At = At, skip_preps = skip_preps)
     end
 end
