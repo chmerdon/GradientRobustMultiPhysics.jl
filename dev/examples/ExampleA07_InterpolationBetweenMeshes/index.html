@@ -20,11 +20,13 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
 
     # generate two grids
     xgrid1 = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
-    xgrid2 = uniform_refine(xgrid1,2; store_parents = true)
+    xgrid2 = uniform_refine(xgrid1, 2; store_parents = true)
+
+    @show xgrid1 xgrid2
 
     # set finite element types for the two grids
     FEType1 = H1P2{2,2}
-    FEType2 = H1P1{2}
+    FEType2 = H1P2{2,2}
 
     # generate coressponding finite element spaces and FEVectors
     FES1 = FESpace{FEType1}(xgrid1)
@@ -35,7 +37,7 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     # interpolate function onto first grid
     interpolate!(FEFunction1[1], u)
 
-    # interpolate onto other grids
+    # interpolate onto other grid
     @time interpolate!(FEFunction2[1], FEFunction1[1])
     @time interpolate!(FEFunction2[1], FEFunction1[1], use_cellparents = true)
 
@@ -46,5 +48,13 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA07_InterpolationBetweenMeshes.main()
-  0.850253 seconds (1.98 M allocations: 108.381 MiB, 4.90% gc time, 97.62% compilation time)
-  0.446397 seconds (818.55 k allocations: 37.901 MiB, 8.84% gc time, 86.94% compilation time)</code></pre><p><img src="../../images/ExampleA07_InterpolationBetweenMeshes_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA06_LocalEquilibratedFluxes2D/">« A06 : Local Equilibrated Fluxes 2D</a><a class="docs-footer-nextpage" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Tuesday 1 February 2022 07:43">Tuesday 1 February 2022</span>. Using Julia version 1.7.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+xgrid1 = ExtendableGrid{Float64, Int32};
+dim: 2 nodes: 545 cells: 1024 bfaces: 64
+
+
+xgrid2 = ExtendableGrid{Float64, Int32};
+dim: 2 nodes: 8321 cells: 16384 bfaces: 256
+
+
+  1.998630 seconds (6.71 M allocations: 245.975 MiB, 5.94% gc time, 81.66% compilation time)
+  1.426821 seconds (5.18 M allocations: 155.377 MiB, 2.55% gc time, 81.37% compilation time)</code></pre><p><img src="../../images/ExampleA07_InterpolationBetweenMeshes_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA06_LocalEquilibratedFluxes2D/">« A06 : Local Equilibrated Fluxes 2D</a><a class="docs-footer-nextpage" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Monday 21 February 2022 14:23">Monday 21 February 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
