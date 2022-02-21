@@ -21,7 +21,7 @@ function convergencehistory!(target, X, Y; add_h_powers = [], X_to_h = X -> X, c
     end
 end
 
-function plot_convergencehistory(X, Y; Plotter = nothing, resolution = (800,600), add_h_powers = [], X_to_h = X -> X, colors = [:blue, :green, :red, :magenta, :lightblue], title = "convergence history", legend = :best, ylabel = "", ylabels = [], xlabel = "ndofs", clear = true, fontsize = 14)
+function plot_convergencehistory(X, Y; Plotter = nothing, resolution = (800,600), add_h_powers = [], X_to_h = X -> X, colors = [:blue, :green, :red, :magenta, :lightblue], title = title, legend = :best, ylabel = "", ylabels = [], xlabel = "ndofs", clear = true, fontsize = 14)
     p=GridVisualizer(; Plotter = Plotter, layout = (1,1), clear = true, resolution = resolution)
     plot_convergencehistory!(p[1,1], X, Y; add_h_powers = add_h_powers, X_to_h = X_to_h, colors = colors, title = title, legend = legend, ylabel = ylabel, ylabels = ylabels, xlabel = xlabel, clear = clear, fontsize = fontsize)
 end

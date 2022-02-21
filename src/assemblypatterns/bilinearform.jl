@@ -159,7 +159,7 @@ function assemble!(
     basisevaler::Array{FEBasisEvaluator{T,Tv,Ti},1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler[1].cvals
     basisxref::Array{Array{T,1},1} = basisevaler[1].xref
-    localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,1),get_maxndofs(AM,2))
+    localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,nFE-1),get_maxndofs(AM,nFE))
     temp::T = 0 # some temporary variable
     ndofs4dofitem::Array{Int,1} = [0,0]
     acol::Int = 0
@@ -271,7 +271,7 @@ function assemble!(
                 basisevaler[2] = get_basisevaler(AM, nFE, di[2])::FEBasisEvaluator
                 basisvals = basisevaler[other_id].cvals
                 basisxref = basisevaler[other_id].xref
-
+                
 
                 # update action on dofitem
                 if apply_action_to > 0

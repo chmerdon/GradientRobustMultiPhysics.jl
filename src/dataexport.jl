@@ -154,31 +154,56 @@ function writeCSV!(filename::String, Data::Array{<:FEVectorBlock,1}; operators =
 end
 
 
-function print_convergencehistory(X, Y; X_to_h = X -> X, ylabels = [], xlabel = "ndofs")
+function print_convergencehistory(X, Y; X_to_h = X -> X, ylabels = [], xlabel = "ndofs", latex_mode = false, seperator = latex_mode ? "&" : "|", order_seperator = latex_mode ? "&" : "")
     xlabel = center_string(xlabel,12)
-    @printf("\n%s|",xlabel)
+    if latex_mode
+        tabular_argument = "c"
+        for j = 1 : size(Y,2)
+            tabular_argument *= "|cc"
+        end
+        @printf("\\begin{tabular}{%s}",tabular_argument)
+    end
+    @printf("\n%s%s",xlabel,seperator)
     for j = 1 : size(Y,2)
         if length(ylabels) < j
             push!(ylabels, "DATA $j")
         end
-        @printf("%s  order  |", center_string(ylabels[j],20))
+        if j == size(Y,2)
+            @printf("%s %s order %s", center_string(ylabels[j],18), order_seperator, latex_mode ? "" : seperator)
+        else
+            @printf("%s %s order %s", center_string(ylabels[j],18), order_seperator, seperator)
+        end
     end
     @printf("\n")
-    @printf("============|")
-    for j = 1 : size(Y,2)
-        @printf("=============================|")
+    if latex_mode
+        @printf("\\\\\\hline")
+    else
+        @printf("============|")
+        for j = 1 : size(Y,2)
+            @printf("==========================|")
+        end
     end
     @printf("\n")
     order = 0
     for j=1:length(X)
-        @printf("   %7d  |",X[j]);
+        @printf("   %7d  %s",X[j],seperator);
         for k = 1 : size(Y,2)
             if j > 1
                 order = -log(Y[j-1,k]/Y[j,k]) / (log(X_to_h(X[j])/X_to_h(X[j-1])))
             end
-            @printf("     %.5e      %.3f  |",Y[j,k], order)
+            if k == size(Y,2)
+                @printf("     %.3e  %s    %.2f  %s",Y[j,k], order_seperator, order, latex_mode ? "" : seperator)
+            else
+                @printf("     %.3e  %s    %.2f  %s",Y[j,k], order_seperator, order, seperator)
+            end
+        end
+        if latex_mode
+            @printf("\\\\")
         end
         @printf("\n")
+    end
+    if latex_mode
+        @printf("\\end{tabular}")
     end
 end
 

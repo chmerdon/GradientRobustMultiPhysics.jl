@@ -58,6 +58,7 @@ function point_evaluation!(target::AbstractArray{T,1}, FES::FESpace{Tv, Ti, FETy
             exact_function.item[1] = cell
             exact_function.item[2] = cell
             exact_function.item[3] = xCellRegions[cell]
+            exact_function.item[4] = cell
         end
         if is_xdependent(exact_function)
             exact_function.x .= view(xCoordinates,:,j)
@@ -519,9 +520,9 @@ function interpolate!(
         end
         function point_evaluation_parentgrid!(result, x, target_cell)
             if same_cells
-                lastnonzerocell = target_cell
+                lastnonzerocell = target_cell[4]
             elseif use_cellparents
-                lastnonzerocell = xCellParents[target_cell[1]]
+                lastnonzerocell = xCellParents[target_cell[4]]
             end
             if xtrafo !== nothing
                 xtrafo(x_source, x)

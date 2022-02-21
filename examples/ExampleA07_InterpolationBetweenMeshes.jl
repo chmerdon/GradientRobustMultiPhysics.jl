@@ -29,11 +29,13 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
 
     ## generate two grids
     xgrid1 = uniform_refine(grid_unitsquare(Triangle2D),nrefinements)
-    xgrid2 = uniform_refine(xgrid1,2; store_parents = true)
+    xgrid2 = uniform_refine(xgrid1, 2; store_parents = true)
+
+    @show xgrid1 xgrid2
 
     ## set finite element types for the two grids
     FEType1 = H1P2{2,2}
-    FEType2 = H1P1{2}
+    FEType2 = H1P2{2,2}
 
     ## generate coressponding finite element spaces and FEVectors
     FES1 = FESpace{FEType1}(xgrid1)
@@ -44,7 +46,7 @@ function main(; ν = 1e-3, nrefinements = 4, verbosity = 0, Plotter = nothing)
     ## interpolate function onto first grid
     interpolate!(FEFunction1[1], u)
 
-    ## interpolate onto other grids
+    ## interpolate onto other grid
     @time interpolate!(FEFunction2[1], FEFunction1[1])
     @time interpolate!(FEFunction2[1], FEFunction1[1], use_cellparents = true)
 

@@ -6,7 +6,7 @@
 This example computes the solution ``u`` of the nonlinear obstacle problem that seeks the minimiser of the energy functional
 ```math
 \begin{aligned}
-    E(u) = \int_\Omega \lvert \nabla u \rvert^2 dx - \int_\Omega f u dx
+    E(u) = \frac{1}{2} \int_\Omega \lvert \nabla u \rvert^2 dx - \int_\Omega f u dx
 \end{aligned}
 ```
 with some right-hand side ``f`` within the set of admissible functions that lie above an obstacle  ``\chi``
@@ -16,7 +16,11 @@ with some right-hand side ``f`` within the set of admissible functions that lie 
 \end{aligned}
 ```
 
-The obstacle constraint is realised via a penalty term that is automatically differentiated for a Newton scheme.
+The obstacle constraint is realised via a penalty term
+\begin{aligned}
+    \frac{1}{\epsilon} \| min(0, u - \chi) \|^2_{L^2}
+\end{aligned}
+that is added to the energy above and is automatically differentiated for a Newton scheme.
 
 =#
 
@@ -35,7 +39,7 @@ function obstacle_penalty_kernel!(result, input, x)
     return nothing
 end
 
-function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 6, FEType = H1P1{1})
+function main(; Plotter = nothing, verbosity = 0, ϵ = 1e-4, nrefinements = 6, FEType = H1P1{1})
 
     ## set log level
     set_verbosity(verbosity)
@@ -47,7 +51,7 @@ function main(; Plotter = nothing, verbosity = 0, penalty = 1e4, nrefinements = 
     Problem = PDEDescription("obstacle problem")
     add_unknown!(Problem; unknown_name = "u", equation_name = "obstacle problem")
     add_operator!(Problem, [1,1], LaplaceOperator(1.0; store = true))
-    add_operator!(Problem, [1,1], NonlinearForm(Identity, [Identity], [1], obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = penalty, newton = true) )
+    add_operator!(Problem, [1,1], NonlinearForm(Identity, [Identity], [1], obstacle_penalty_kernel!, [1,1]; name = "eps^{-1} ||(u-χ)_||", dependencies = "X", factor = 1/ϵ, newton = true) )
     add_boundarydata!(Problem, 1, [1,2,3,4], HomogeneousDirichletBoundary)
     add_rhsdata!(Problem, 1, LinearForm(Identity, f; store = true))
         

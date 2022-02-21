@@ -546,6 +546,19 @@ function integrate!(
         xItemRegions = grid[GridComponentRegions4AssemblyType(AT)]
     end
     xItemGeometries = grid[GridComponentGeometries4AssemblyType(AT)]
+    if AT in [ON_FACES, ON_BFACES, ON_IFACES]
+        xCellParents = view(grid[FaceCells],1,:)
+    elseif AT in [ON_EDGES, ON_BEDGES]
+        xEdgeCells = grid[EdgeCells]
+        xCellParents = zeros(Int,nitems)
+        for edge = 1 : nitems
+            xCellParents[edge] = xEdgeCells[1, edge]
+        end
+        # not working, but would be better
+        # xCellParents = view(grid[EdgeCells],1,:)
+    else
+        xCellParents = 1:nitems
+    end
     
     # find proper quadrature rules
     EG = grid[GridComponentUniqueGeometries4AssemblyType(AT)]
@@ -586,6 +599,7 @@ function integrate!(
                 integrand.item[1] = item
                 integrand.item[2] = item
                 integrand.item[3] = xItemRegions[item]
+                integrand.item[4] = xCellParents[item]
             end
 
             for i in eachindex(qf[iEG].w)
@@ -613,9 +627,10 @@ function integrate!(
             update_trafo!(local2global[iEG],item)
 
             if is_itemdependent(integrand)
-                integrand.citem[1] = item
-                integrand.citem[2] = item
-                integrand.citem[3] = xItemRegions[item]
+                integrand.item[1] = item
+                integrand.item[2] = item
+                integrand.item[3] = xItemRegions[item]
+                integrand.item[4] = xCellParents[item]
             end
 
             for i in eachindex(qf[iEG].w)
