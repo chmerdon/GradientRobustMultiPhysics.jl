@@ -1966,7 +1966,7 @@ function advance_until_time!(TCS::TimeControlSolver{T,Tt}, timestep::Tt, finalti
     show_details = TCS.SC.user_params[:show_iteration_details]
     show_statistics = TCS.SC.user_params[:show_statistics]
     check_nonlinear_residual = TCS.SC.user_params[:check_nonlinear_residual]
-    @info "Advancing in time from $(TCS.ctime) until $finaltime"
+    @info "Advancing in time from $(Float64(TCS.ctime)) until $(Float64(finaltime))"
     steptime::Float64 = 0
     if show_details
         if maxiterations > 1 || check_nonlinear_residual
@@ -2039,19 +2039,19 @@ If solver == nothing the solver Rosenbrock23(autodiff = false) will be chosen. F
 Also note that this is a highly experimental feature and will not work for general TimeControlSolvers configuration (e.g. in the case of several subiterations or, it seems,
 saddle point problems). Also have a look at corressponding the example in the advanced examples section.
 """
-function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver{T,Tt}, timestep::Tt, finaltime; solver = nothing, abstol = 1e-1, reltol = 1e-1, dtmin = 0, adaptive::Bool = true) where {T,Tt}
+function advance_until_time!(DiffEQ::Module, sys::TimeControlSolver{T,Tt}, timestep, finaltime; solver = nothing, abstol = 1e-1, reltol = 1e-1, dtmin = 0, adaptive::Bool = true) where {T,Tt}
     if solver === nothing 
         solver = DiffEQ.Rosenbrock23(autodiff = false)
     end
 
-    @info "Advancing in time from $(sys.ctime) until $finaltime using $DiffEQ with solver = $solver"
+    @info "Advancing in time from $(Float64(sys.ctime)) until $(Float64(finaltime)) using $DiffEQ with solver = $solver"
 
     ## generate ODE problem
     f = DiffEQ.ODEFunction(eval_rhs!, jac=eval_jacobian!, jac_prototype=jac_prototype(sys), mass_matrix=mass_matrix(sys))
-    prob = DiffEQ.ODEProblem(f,sys.X.entries, (sys.ctime,finaltime),sys)
+    prob = DiffEQ.ODEProblem(f,sys.X.entries, (Float64(sys.ctime),Float64(finaltime)),sys)
 
     ## solve ODE problem
-    sol = DiffEQ.solve(prob,solver, abstol=abstol, reltol=reltol, dt = timestep, dtmin = dtmin, initializealg=DiffEQ.NoInit(), adaptive = adaptive)
+    sol = DiffEQ.solve(prob,solver, abstol=abstol, reltol=reltol, dt = Float64(timestep), dtmin = Float64(dtmin), initializealg=DiffEQ.NoInit(), adaptive = adaptive)
 
     ## pickup solution at final time
     sys.X.entries .= view(sol,:,size(sol,2))

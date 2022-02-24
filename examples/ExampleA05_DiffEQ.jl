@@ -28,12 +28,6 @@ function exact_solution!(result,x, t)
     result[1] = x[1]*x[2]*(1-t)
     return nothing
 end
-function exact_gradient!(result,x, t)
-    result[1] = x[2]
-    result[2] = x[1]
-    result .*= 1-t
-    return nothing
-end
 function rhs!(beta)
     function closure(result,x,t)
         result[1] = -2*beta*(x[1]^3*x[2] + x[2]^3*x[1]) # = -div(beta*u^2*grad(u))
@@ -46,8 +40,13 @@ end
 ## everything is wrapped in a main function
 ## the last four parametes steer the solver from DifferentialEquations.jl
 ## for beta = 0, abstol and reltol can be choosen much larger
-function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P1{1}, beta = 1,
-    use_diffeq::Bool = true, solver = Rosenbrock23(autodiff = false), adaptive_timestep = true,  abstol = 1e-3, reltol = 1e-3, testmode = false)
+function main(; verbosity = 0, nlevels = 3, timestep = 1e-1, T = 0.5, FEType = H1P1{1}, beta = 1,
+    use_diffeq::Bool = true,
+    solver = ImplicitEuler(autodiff = false),# Rosenbrock23(autodiff = false),
+    adaptive_timestep = true,
+    abstol = 1e-3,
+    reltol = 1e-3,
+    testmode = false)
 
     ## set log level
     set_verbosity(verbosity)
@@ -56,8 +55,8 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1);
 
     ## negotiate data functions to the package
-    u = DataFunction(exact_solution!, [1,1]; name = "u", dependencies = "XT", bonus_quadorder = 5)
-    ∇u = DataFunction(exact_gradient!, [2,1]; name = "∇u", dependencies = "XT", bonus_quadorder = 4)
+    u = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "XT", bonus_quadorder = 5)
+    ∇u = ∇(u)
     u_rhs = DataFunction(rhs!(beta), [1,1]; name = "f", dependencies = "XT", bonus_quadorder = 5)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
@@ -113,7 +112,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
     ## print/plot convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
-    plot_convergencehistory(NDofs, Results; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), Plotter = Plotter, ylabels = ["|| u - u_h ||", "|| ∇(u - u_h) ||"])
+   
 end
 
 function test()

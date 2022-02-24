@@ -37,8 +37,8 @@ mutable struct AssemblyManager{T <: Real, Tv <: Real, Ti <: Integer}
     coeff4dofitem::Array{Array{T,1},1}                                  # coefficients for operators (needed for jump/average operators)
     dofoffset4dofitem::Array{Array{Int,1},1}                            # offesets (needed for broken FESpaces)
     orientation4dofitem::Array{Array{Int,1},1}                          # local orientation of EG in dEG = coordinate 4 in basisevaler
-    EG::Array{Type{<:AbstractElementGeometry},1}                        # unique item geometries that may appear 
-    dEG::Array{Type{<:AbstractElementGeometry},1}                       # unique dofitem geometries that may appear (for each operator)
+    EG::Vector{ElementGeometries}                                       # unique item geometries that may appear 
+    dEG::Vector{ElementGeometries}                                      # unique dofitem geometries that may appear (for each operator)
     xItemGeometries::GridEGTypes                                        # item geometries over which is assembled
     xDofItemGeometries::Array{GridEGTypes,1}                       # dofitem geometries over which basis is evaluated (for each operator)
     xDofItems4Item::Array{Union{Nothing,Adjacency{Ti}},1}       # dofitems <> items adjacency relationship (for each operator)

@@ -186,19 +186,15 @@ function ReactionOperator(α = 1.0, ncomponents = 1; name = "auto", AT::Type{<:A
     if typeof(α) <: Real
         return PDEOperator{Float64, APT_SymmetricBilinearForm, AT}(name,[id,id], NoAction(), [1], α, regions, store, AssemblyInitial)
     elseif typeof(α) <: AbstractUserDataType
-        xdim = α.argsizes[1]
-        function reaction_kernel(result, input)
+        function reaction_kernel(result, input, kwargs...)
             # evaluate alpha
-            eval_data!(α)
+            eval_data!(α, kwargs...)
             # compute alpha*u
             for j = 1 : ncomponents
                 result[j] = α.val[j] * input[j]
             end
         end    
-        action = Action(reaction_kernel, [ncomponents, xdim]; dependencies = "XT", bonus_quadorder = α.bonus_quadorder)
-        α.xref = action.xref
-        α.x = action.x
-        α.item = action.item
+        action = Action(reaction_kernel, [ncomponents, ncomponents]; dependencies = dependencies(α), bonus_quadorder = α.bonus_quadorder)
         return PDEOperator{Float64, APT_BilinearForm, AT}(name, [id, id], action, [1], 1, regions, store, AssemblyAuto)
     else
         @error "No standard reaction operator definition for this type of α available, please define your own action and PDEOperator with it."

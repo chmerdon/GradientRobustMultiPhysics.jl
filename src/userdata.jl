@@ -313,7 +313,9 @@ Directly generates a DataFunction from a given array c, i.e. a DataFunction that
 function DataFunction(c::Array{<:Real,1}; name = "auto", bonus_quadorder::Int = 0)
     dimensions = [length(c),0]
     function f_from_c(result)
-        result .= c
+        for j = 1 : length(c)
+            result[j] = c[j]
+        end
     end
     if name == "auto"
         name = "Constant($c)"
