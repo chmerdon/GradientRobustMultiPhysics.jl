@@ -75,7 +75,7 @@ function make_all(; add_examples_output::Bool = true)
                             preprocess=preprocess)
 
             filename = example_md_dir * "/" * base * ".md"
-            if (add_examples_output) && !(number in ["A05","231"]) # exclude these examples for now
+            if (add_examples_output) && !(number in ["A05","231","260"]) # exclude these examples for now (because they take long or require extra packages)
                 # generate default main run output file 
                 include(example_jl_dir * "/" * example_source)
                 open(filename, "a") do io
