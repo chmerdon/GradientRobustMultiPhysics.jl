@@ -1876,13 +1876,13 @@ end
 
 """
 ````
-advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing)
+advance_until_stationarity!(TCS::TimeControlSolver, timestep; stationarity_threshold = 1e-11, maxtimesteps = 100, do_after_each_timestep = nothing)
 ````
 
 Advances a TimeControlSolver in time with the given (initial) timestep until stationarity is detected (change of variables below threshold) or a maximal number of time steps is exceeded.
 The function do_after_timestep is called after each timestep and can be used to print/save data (and maybe timestep control in future).
 """
-function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt; stationarity_threshold = 1e-11, maxTimeSteps = 100, do_after_each_timestep = nothing) where {T,Tt}
+function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt; stationarity_threshold = 1e-11, maxtimesteps = 100, do_after_each_timestep = nothing) where {T,Tt}
     statistics = TCS.statistics
     maxiterations = TCS.SC.user_params[:maxiterations]
     show_details = TCS.SC.user_params[:show_iteration_details]
@@ -1913,7 +1913,7 @@ function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt;
             @printf(" %s ",center_string(TCS.PDE.unknown_names[j],10))
         end
     end
-    totaltime = @elapsed for iteration = 1 : maxTimeSteps
+    totaltime = @elapsed for iteration = 1 : maxtimesteps
         steptime = @elapsed advance!(TCS, timestep)
         if show_details
             @printf("\n")
@@ -1935,8 +1935,8 @@ function advance_until_stationarity!(TCS::TimeControlSolver{T,Tt}, timestep::Tt;
             @info "stationarity detected after $iteration timesteps"
             break;
         end
-        if iteration == maxTimeSteps 
-            @warn "maxTimeSteps reached"
+        if iteration == maxtimesteps 
+            @warn "maxtimesteps = $maxtimesteps reached"
         end
     end
     

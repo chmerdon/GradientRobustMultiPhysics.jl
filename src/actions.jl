@@ -137,7 +137,26 @@ function fdotv_action(data::AbstractUserDataType; Tv = Float64, Ti = Int32)
         data.kernel(feval, kwargs...)
         result[1] = dot(feval, input)
     end
-    action = Action(vdotg_kernel, [1 data.argsizes[2]]; Tv = Tv, Ti = Ti, dependencies = dependencies(data), name = "v⋅g")
+    action = Action(vdotg_kernel, [1 data.argsizes[1]]; Tv = Tv, Ti = Ti, dependencies = dependencies(data), name = "$(data.name)⋅v")
+    set_time!(action, data.time)
+    return action
+end
+
+
+"""
+````
+function feval_action(data::AbstractUserDataType) -> Action
+````
+
+Creates an action that evaluates the DataFunction f in the input.
+"""
+function feval_action(data::AbstractUserDataType; Tv = Float64, Ti = Int32)
+    feval = zeros(Tv, data.argsizes[1])
+    function feval_kernel(result, input, kwargs...)
+        data.kernel(feval, input, kwargs...)
+        result .= feval
+    end
+    action = Action(feval_kernel, data.argsizes; Tv = Tv, Ti = Ti, dependencies = dependencies(data), name = "$(data.name)⋅v")
     set_time!(action, data.time)
     return action
 end

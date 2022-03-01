@@ -271,85 +271,85 @@ $(TYPEDSIGNATURES)
 Custom `show` function for `PDEDescription` that prints the PDE systems and all assigned operators
 """
 function Base.show(io::IO, PDE::PDEDescription)
-    println("\nPDE-DESCRIPTION")
-    println("===============")
-    println("  system name = $(PDE.name)\n")
+    println(io, "\nPDE-DESCRIPTION")
+    println(io, "===============")
+    println(io, "  system name = $(PDE.name)\n")
 
-    println("     id   | unknown name / equation name")
+    println(io, "     id   | unknown name / equation name")
     for j=1:length(PDE.unknown_names)
-        print("    [$j]   | $(PDE.unknown_names[j]) / $(PDE.equation_names[j]) \n")
+        print(io, "    [$j]   | $(PDE.unknown_names[j]) / $(PDE.equation_names[j]) \n")
     end
 
 
-    println("\n  LHS block | PDEOperator(s)")
+    println(io, "\n  LHS block | PDEOperator(s)")
     for j=1:size(PDE.LHSOperators,1), k=1:size(PDE.LHSOperators,2)
         if length(PDE.LHSOperators[j,k]) > 0
-            print("    [$j,$k]   | ")
+            print(io, "    [$j,$k]   | ")
             for o = 1 : length(PDE.LHSOperators[j,k])
                 if typeof(PDE.LHSOperators[j,k][o]) <: PDEOperator
-                    print("$(PDE.LHSOperators[j,k][o].name) (APT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[2]), AT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[3]), regions = $(PDE.LHSOperators[j,k][o].regions))")
+                    print(io, "$(PDE.LHSOperators[j,k][o].name) (APT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[2]), AT = $(typeof(PDE.LHSOperators[j,k][o]).parameters[3]), regions = $(PDE.LHSOperators[j,k][o].regions))")
                 else
-                    print("$(typeof(PDE.LHSOperators[j,k][o]))")
+                    print(io, "$(typeof(PDE.LHSOperators[j,k][o]))")
                 end
                 if o == length(PDE.LHSOperators[j,k])
-                    println("")
+                    println(io, "")
                 else
-                    print("\n            | ")
+                    print(io, "\n            | ")
                 end
             end
         else    
-            println("    [$j,$k]   | none")
+            println(io, "    [$j,$k]   | none")
         end
     end
 
-    println("\n  RHS block | PDEOperator(s)")
+    println(io, "\n  RHS block | PDEOperator(s)")
     for j=1:size(PDE.RHSOperators,1)
         if length(PDE.RHSOperators[j]) > 0
-            print("     [$j]    | ")
+            print(io, "     [$j]    | ")
             for o = 1 : length(PDE.RHSOperators[j])
 
                 if typeof(PDE.RHSOperators[j][o]) <: PDEOperator
-                    print("$(PDE.RHSOperators[j][o].name) (APT = $(typeof(PDE.RHSOperators[j][o]).parameters[2]), AT = $(typeof(PDE.RHSOperators[j][o]).parameters[3]), regions = $(PDE.RHSOperators[j][o].regions))")
+                    print(io, "$(PDE.RHSOperators[j][o].name) (APT = $(typeof(PDE.RHSOperators[j][o]).parameters[2]), AT = $(typeof(PDE.RHSOperators[j][o]).parameters[3]), regions = $(PDE.RHSOperators[j][o].regions))")
                 else
-                    print("$(typeof(PDE.RHSOperators[j][o]))")
+                    print(io, "$(typeof(PDE.RHSOperators[j][o]))")
                 end
                 if o == length(PDE.RHSOperators[j])
-                    println("")
+                    println(io, "")
                 else
-                    print("\n            | ")
+                    print(io, "\n            | ")
                 end
             end
         else    
-            println("     [$j]    | none")
+            println(io, "     [$j]    | none")
         end
     end
 
-    println("")
+    println(io, "")
     for j=1:length(PDE.BoundaryOperators)
-        print("   BoundaryOperator[$j] : ")
+        print(io, "   BoundaryOperator[$j] : ")
         try
             if length(PDE.BoundaryOperators[j].regions4boundarytype[BestapproxDirichletBoundary]) > 0
-                print("BestapproxDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[BestapproxDirichletBoundary])\n                         ")
+                print(io, "BestapproxDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[BestapproxDirichletBoundary])\n                         ")
             end
         catch
         end
         try
             if length(PDE.BoundaryOperators[j].regions4boundarytype[InterpolateDirichletBoundary]) > 0
-                print("InterpolateDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[InterpolateDirichletBoundary])\n                         ")
+                print(io, "InterpolateDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[InterpolateDirichletBoundary])\n                         ")
             end
         catch
         end
         try
             if length(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary]) > 0
-                print("HomogeneousDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary])\n                          ")
+                print(io, "HomogeneousDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary])\n                          ")
             end
         catch
         end
-        println("")
+        println(io, "")
     end
 
-    println("")
+    println(io, "")
     for j=1:length(PDE.GlobalConstraints)
-        println("  GlobalConstraints[$j] : $(PDE.GlobalConstraints[j].name) ")
+        println(io, "  GlobalConstraints[$j] : $(PDE.GlobalConstraints[j].name) ")
     end
 end

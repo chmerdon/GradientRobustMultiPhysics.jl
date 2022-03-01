@@ -151,7 +151,7 @@ function setup_and_solve!(Solution, xgrid;
     use_gravity = true,
     reconstruct = true,
     timestep = μ / (M*c),
-    maxTimeSteps = 500,
+    maxtimesteps = 500,
     stationarity_threshold = c*1e-14/μ)
 
     ## generate empty PDEDescription for three unknowns (u, ϱ. p)
@@ -202,6 +202,6 @@ function setup_and_solve!(Solution, xgrid;
                                         maxiterations = 1,
                                         check_nonlinear_residual = false,
                                         show_iteration_details = false)
-    advance_until_stationarity!(TCS, timestep; maxTimeSteps = maxTimeSteps, stationarity_threshold = stationarity_threshold)
+    advance_until_stationarity!(TCS, timestep; maxtimesteps = maxtimesteps, stationarity_threshold = stationarity_threshold)
 end
 end

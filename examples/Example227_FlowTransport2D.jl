@@ -101,7 +101,7 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     if FVtransport == true
         ## pseudo-timestepping until stationarity detected, the matrix stays the same in each iteration
         TCS = TimeControlSolver(Problem, Solution, BackwardEuler; subiterations = [[3]], skip_update = [-1], timedependent_equations = [3], T_time = Int)
-        advance_until_stationarity!(TCS, 10000; maxTimeSteps = 100, stationarity_threshold = 1e-12)
+        advance_until_stationarity!(TCS, 10000; maxtimesteps = 100, stationarity_threshold = 1e-12)
     else
         ## solve directly
         solve!(Solution, Problem; subiterations = [[3]], maxiterations = 5, target_residual = 1e-12)
