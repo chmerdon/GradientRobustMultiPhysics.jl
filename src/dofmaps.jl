@@ -57,6 +57,12 @@ EffAT4AssemblyType(::Type{ON_FACES},::Type{<:ON_FACES}) = ON_CELLS
 EffAT4AssemblyType(::Type{ON_FACES},::Type{<:ON_EDGES}) = ON_FACES
 EffAT4AssemblyType(::Type{ON_FACES},::Type{<:ON_BEDGES}) = ON_BFACES
 
+EffAT4AssemblyType(::Type{ON_BFACES},::Type{ON_CELLS}) = nothing
+EffAT4AssemblyType(::Type{ON_BFACES},::Type{ON_BFACES}) = ON_CELLS
+EffAT4AssemblyType(::Type{ON_BFACES},::Type{<:ON_FACES}) = nothing
+EffAT4AssemblyType(::Type{ON_BFACES},::Type{<:ON_EDGES}) = nothing
+EffAT4AssemblyType(::Type{ON_BFACES},::Type{<:ON_BEDGES}) = nothing
+
 EffAT4AssemblyType(::Type{ON_EDGES},::Type{ON_CELLS}) = nothing
 EffAT4AssemblyType(::Type{ON_EDGES},::Type{<:ON_FACES}) = nothing
 EffAT4AssemblyType(::Type{ON_EDGES},::Type{<:ON_EDGES}) = ON_CELLS

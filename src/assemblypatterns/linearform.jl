@@ -51,7 +51,7 @@ function assemble!(
     skip_preps::Bool = false,
     factor = 1,
     fixed_arguments = nothing, # ignored
-    offset = 0) where {APT <: APT_LinearForm, T <: Real, Tv <: Real, Ti <: Int, AT <: AssemblyType}
+    offset = 0) where {APT <: APT_LinearForm, T <: Real, AT <: AssemblyType}
 
     # prepare assembly
     FE = AP.FES
@@ -61,8 +61,9 @@ function assemble!(
         prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::GridRegionTypes{Int32} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    FEAT = EffAT4AssemblyType(assemblytype(FE[1]),AT)
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(FEAT)]
+    xItemRegions::GridRegionTypes = FE[1].xgrid[GridComponentRegions4AssemblyType(FEAT)]
     nitems = length(xItemVolumes)
 
     # prepare action

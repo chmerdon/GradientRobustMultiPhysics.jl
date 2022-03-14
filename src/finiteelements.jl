@@ -82,10 +82,22 @@ function FESpace{FEType,AT}(
 
     if AT == ON_FACES
         xgrid = get_facegrid(xgrid)
+        xgrid[BFaceNodes] = zeros(Ti,2,0)
+        xgrid[BFaceRegions] = zeros(Ti,0)
+        xgrid[BFaceGeometries] = VectorOfConstants{ElementGeometries,Int}(Edge1D,0)
+        xgrid[BFaceVolumes] = zeros(Tv,0)
     elseif AT == ON_BFACES
-        xgrid = get_bfacegrid(grid)
+        xgrid = subgrid(xgrid, unique(xgrid[BFaceRegions]); boundary = true, project = false)
+        xgrid[BFaceNodes] = zeros(Ti,2,0)
+        xgrid[BFaceRegions] = zeros(Ti,0)
+        xgrid[BFaceGeometries] = VectorOfConstants{ElementGeometries,Int}(Edge1D,0)
+        xgrid[BFaceVolumes] = zeros(Tv,0)
     elseif AT == ON_EDGES
-        xgrid = get_edgegrid(grid)
+        xgrid = get_edgegrid(xgrid)
+        xgrid[BFaceNodes] = zeros(Ti,2,0)
+        xgrid[BFaceRegions] = zeros(Ti,0)
+        xgrid[BFaceGeometries] = VectorOfConstants{ElementGeometries,Int}(Edge1D,0)
+        xgrid[BFaceVolumes] = zeros(Tv,0)
     end
     
     # first generate some empty FESpace

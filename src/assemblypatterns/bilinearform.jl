@@ -108,8 +108,9 @@ function assemble!(
         prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    FEAT = EffAT4AssemblyType(assemblytype(FE[1]),AT)
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(FEAT)]
+    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(FEAT)]
     nitems = length(xItemVolumes)
 
     # prepare action
@@ -222,6 +223,7 @@ function assemble!(
     nregions::Int = length(regions)
     loop_allocations = @allocated for item = 1 : nitems
     for r = 1 : nregions
+
     # check if item region is in regions
     if allitems || xItemRegions[item] == regions[r]
         # update assembly manager (also updates necessary basisevaler)
@@ -336,8 +338,8 @@ function assemble!(
                         end
                     end    
                     for dof_i = 1 : ndofs4dofitem[1]
-                        arow = get_dof(AM, nFE, di[1], dof_i) + offsetX
-                        acol = get_dof(AM, nFE-1, di[2], dof_i) + offsetY
+                        arow = get_dof(AM, nFE-1, di[1], dof_i) + offsetX
+                        acol = get_dof(AM, nFE, di[2], dof_i) + offsetY
                         _addnz(A,arow,acol,localmatrix[dof_i,dof_i] * itemfactor,1)
                     end    
                 else

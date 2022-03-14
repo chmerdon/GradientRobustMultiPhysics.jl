@@ -187,8 +187,9 @@ function evaluate!(
         prepare_assembly!(AP, FE)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{Tv,1} = FEB[1].FES.xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::GridRegionTypes{Ti} = FEB[1].FES.xgrid[GridComponentRegions4AssemblyType(AT)]
+    FEAT = EffAT4AssemblyType(assemblytype(FEB[1].FES),AT)
+    xItemVolumes::Array{T,1} = FEB[1].FES.xgrid[GridComponentVolumes4AssemblyType(FEAT)]
+    xItemRegions::GridRegionTypes{Ti} = FEB[1].FES.xgrid[GridComponentRegions4AssemblyType(FEAT)]
     nitems::Int = length(xItemVolumes)
 
     # prepare action

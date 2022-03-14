@@ -59,8 +59,9 @@ function full_assemble!(
         prepare_assembly!(AP)
     end
     AM::AssemblyManager{T} = AP.AM
-    xItemVolumes::Array{Tv,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(AT)]
-    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(AT)]
+    FEAT = EffAT4AssemblyType(assemblytype(FE[1]),AT)
+    xItemVolumes::Array{T,1} = FE[1].xgrid[GridComponentVolumes4AssemblyType(FEAT)]
+    xItemRegions::GridRegionTypes{Ti} = FE[1].xgrid[GridComponentRegions4AssemblyType(FEAT)]
     nitems = length(xItemVolumes)
 
     # prepare action
