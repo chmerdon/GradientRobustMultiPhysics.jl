@@ -83,7 +83,7 @@ export nodevalues!
 export nodevalues_view
 
 export FEVectorBlock, FEVector
-export dot
+export dot, norm
 export FEMatrixBlock, FEMatrix, _addnz
 export fill!, addblock!, addblock_matmul!, lrmatmul, add!
 

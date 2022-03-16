@@ -624,11 +624,11 @@ function run_stokes_tests()
         errorP = sqrt(evaluate(L2ErrorEvaluatorP,Solution[2]))
         if RhsOp == Identity
             # classical case
-            println("EG = $(xgrid[UniqueCellGeometries]) | FETypes = $(FETypes) | orders (V/P) = $orders | errorV = $errorV | errorP = $errorP")
+            println("EG = $(xgrid[UniqueCellGeometries][1]) | FETypes = $(FETypes) | orders (V/P) = $orders | errorV = $errorV | errorP = $errorP")
             @test max(errorV,errorP) < tolerance
         else
             # p-robust case, only velocity error can be expected to be zero, as pressure is not in ansatz space
-            println("EG = $(xgrid[UniqueCellGeometries]) | FETypes = $(FETypes) | R = $RhsOp | orders (V/P) = $orders | errorV = $errorV ")
+            println("EG = $(xgrid[UniqueCellGeometries][1]) | FETypes = $(FETypes) | R = $RhsOp | orders (V/P) = $orders | errorV = $errorV ")
             @test errorV < tolerance
         end
     end

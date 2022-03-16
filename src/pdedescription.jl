@@ -132,7 +132,8 @@ function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_n
         end
     end
     PDE.LHSOperators = NewLHS
-    @logmsg DeepInfo "Added unknown $unknown_name to PDEDescription $(PDE.name)"
+    @logmsg DeepInfo "Added unknown $unknown_name with id $(length(PDE.unknown_names)) to PDEDescription $(PDE.name)"
+    return length(PDE.unknown_names)
 end
 
 """

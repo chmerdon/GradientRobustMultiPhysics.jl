@@ -187,7 +187,7 @@ function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAPT}, xref:
     coefficients = zeros(T,0,0)
     coeff_handler = NothingFunction
     if FEType <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement, AbstractHcurlFiniteElement}
-        coefficients = zeros(T,ncomponents,ndofs4item)
+        coefficients = ones(T,ncomponents,ndofs4item)
         coeff_handler = get_coefficients(FEAT, FE, EG)
     end    
 
@@ -317,7 +317,7 @@ function FEBasisEvaluator{T,EG,FEOP,AT}(FE::FESpace{TvG,TiG,FEType,FEAPT}, xref:
 
     # set coefficient handlers needed for basis evaluation (for both FEType and FETypereconst)
     if FETypeReconst <: Union{AbstractH1FiniteElementWithCoefficients, AbstractHdivFiniteElement}
-        coefficients = zeros(T,ncomponents,ndofs4item2)
+        coefficients = ones(T,ncomponents,ndofs4item2)
         coeff_handler = get_coefficients(AT, FE2, EG)
     else
         coefficients = zeros(T,0,0)

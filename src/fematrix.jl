@@ -291,6 +291,14 @@ function addblock!(A::FEMatrixBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}; facto
     return nothing
 end
 
+function apply_penalties!(A::ExtendableSparseMatrix, fixed_dofs, penalty)
+    for dof in fixed_dofs
+        A[dof,dof] = penalty
+    end
+    flush!(A)
+    return nothing
+end
+
 """
 $(TYPEDSIGNATURES)
 

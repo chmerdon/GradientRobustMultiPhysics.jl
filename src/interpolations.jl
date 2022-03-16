@@ -385,7 +385,12 @@ end
 
 # remap boundary face interpolation to faces by using BFaceFaces (if there is no special function by the finite element defined)
 function interpolate!(target::FEVectorBlock, FES::FESpace, ::Type{ON_BFACES}, source; items = items, time = time)
-    interpolate!(target, FES, ON_FACES, source; items = FES.xgrid[BFaceFaces][items], time = time)
+    if length(items) == 0
+        items = FES.xgrid[BFaceFaces]
+    else
+        items = FES.xgrid[BFaceFaces][items]
+    end
+    interpolate!(target, FES, ON_FACES, source; items = items, time = time)
 end
 
 """

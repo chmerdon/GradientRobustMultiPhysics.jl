@@ -618,8 +618,8 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
 
     # ASSEMBLE BOUNDARY DATA
     fixed_dofs = []
-    for j= 1 : length(Target.FEVectorBlocks)
-        new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time)
+    for j = 1 : length(Target.FEVectorBlocks)
+        new_fixed_dofs = boundarydata!(Target[j], PDE.BoundaryOperators[j]; time = time)
         new_fixed_dofs .+= Target[j].offset
         append!(fixed_dofs, new_fixed_dofs)
     end    
@@ -627,18 +627,16 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     # PREPARE GLOBALCONSTRAINTS
     flush!(A.entries)
     for j = 1 : length(PDE.GlobalConstraints)
-        additional_fixed_dofs = apply_constraint!(A,b,PDE.GlobalConstraints[j],Target)
+        additional_fixed_dofs = apply_constraint!(A, b, PDE.GlobalConstraints[j], Target)
         append!(fixed_dofs,additional_fixed_dofs)
     end
 
     # PENALIZE FIXED DOFS
     # (from boundary conditions and constraints)
     fixed_dofs::Array{Ti,1} = Base.unique(fixed_dofs)
-    fixed_penalty::T = SC.user_params[:fixed_penalty]
-    for j = 1 : length(fixed_dofs)
-        b.entries[fixed_dofs[j]] = fixed_penalty * Target.entries[fixed_dofs[j]]
-        A[1][fixed_dofs[j],fixed_dofs[j]] = fixed_penalty
-    end
+    fixed_penalty = SC.user_params[:fixed_penalty]
+    @views b.entries[fixed_dofs] .= fixed_penalty * Target.entries[fixed_dofs]
+    apply_penalties!(A.entries, fixed_dofs, fixed_penalty)
     end # @elapsed
 
     # SOLVE
@@ -648,22 +646,18 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
         update_factorization!(LS)
         solve!(LS)
 
-        residuals::Array{T,1} = zeros(T, length(Target.FEVectorBlocks))
         # CHECK RESIDUAL
-        residual::Array{T,1} = A.entries*Target.entries - b.entries
-        residual[fixed_dofs] .= 0
-        for j = 1 : length(Target.FEVectorBlocks)
-            for k = 1 : Target.FEVectorBlocks[j].FES.ndofs
-                residuals[j] += residual[k + Target.FEVectorBlocks[j].offset].^2
-            end
-        end
-        resnorm::T = sum(residuals)
-        residuals = sqrt.(residuals)
+        residual = deepcopy(b)
+        fill!(residual.entries, 0)
+        mul!(residual.entries, A.entries, Target.entries)
+        residual.entries .-= b.entries
+        residual.entries[fixed_dofs] .= 0
+        residuals = norm(residual)
 
         # REALIZE GLOBAL GLOBALCONSTRAINTS 
         # (possibly changes some entries of Target)
         for j = 1 : length(PDE.GlobalConstraints)
-            realize_constraint!(Target,PDE.GlobalConstraints[j])
+            realize_constraint!(Target, PDE.GlobalConstraints[j])
         end
     end
 
@@ -673,9 +667,9 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     end
 
     if SC.user_params[:show_iteration_details]
-        @info "overall residual = $(sqrt(resnorm))"
+        @info "overall residual = $(norm(residuals))"
     end
-    return sqrt(resnorm)
+    return norm(residuals)
 end
 
 mutable struct AndersonAccelerationManager{T,Tv,Ti}
@@ -854,7 +848,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         LastIterate = deepcopy(Target)
     end
 
-    residual = zeros(T,length(b.entries))
+    residual = deepcopy(b)
     linresnorm::T = 0.0
     resnorm::T = 0.0
 
@@ -891,10 +885,8 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         # PENALIZE FIXED DOFS
         # (from boundary conditions and constraints)
         fixed_dofs = Base.unique(fixed_dofs)
-        for j = 1 : length(fixed_dofs)
-            b.entries[fixed_dofs[j]] = fixed_penalty * Target.entries[fixed_dofs[j]]
-            A[1][fixed_dofs[j],fixed_dofs[j]] = fixed_penalty
-        end
+        @views b.entries[fixed_dofs] .= fixed_penalty * Target.entries[fixed_dofs]
+        apply_penalties!(A.entries, fixed_dofs, fixed_penalty)
 
         # SOLVE
         time_solver = @elapsed begin
@@ -907,9 +899,11 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
 
         # CHECK LINEAR RESIDUAL
         if SC.user_params[:show_iteration_details]
-            residual = A.entries*Target.entries - b.entries
-            residual[fixed_dofs] .= 0
-            linresnorm = (sqrt(sum(residual.^2, dims = 1)[1]))
+            fill!(residual.entries,0)
+            mul!(residual.entries, A.entries, Target.entries)
+            residual.entries .-= b.entries
+            residual.entries[fixed_dofs] .= 0
+            linresnorm = norm(norm(residual))
         end
 
         # POSTPROCESS : ANDERSON ITERATE
@@ -925,22 +919,21 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         end    
         if damping_val > 0
             @logmsg MoreInfo "Damping with value $damping_val"
-            for j = 1 : length(Target.entries)
-                Target.entries[j] = damping_val * LastIterate.entries[j] + (1-damping_val) * Target.entries[j]
-            end
+            Target.entries .-= damping_val * LastIterate.entries + (1-damping_val) * Target.entries
         end
         if damping_val > 0 || typeof(damping) <: Function
             LastIterate.entries .= Target.entries
         end
 
-
         # REASSEMBLE NONLINEAR PARTS
-        time_reassembly = @elapsed assemble!(A,b,PDE,SC,Target; time = time, equations = 1:size(PDE.RHSOperators,1), min_trigger = AssemblyAlways)
+        time_reassembly = @elapsed assemble!(A, b, PDE, SC, Target; time = time, equations = 1:size(PDE.RHSOperators,1), min_trigger = AssemblyAlways)
 
         # CHECK NONLINEAR RESIDUAL
-        residual = A.entries*Target.entries - b.entries
-        residual[fixed_dofs] .= 0
-        resnorm = (sqrt(sum(residual.^2, dims = 1)[1]))
+        fill!(residual.entries,0)
+        mul!(residual.entries, A.entries, Target.entries)
+        residual.entries .-= b.entries
+        residual.entries[fixed_dofs] .= 0
+        resnorm = norm(norm(residual))
 
         end #elapsed
         
@@ -953,7 +946,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
             @printf(" | %e", linresnorm)
             @printf(" | %e", resnorm)
             if SC.user_params[:show_statistics]
-                @printf(" | %.2e/%.2e/%.2e",time_reassembly,time_solver, time_total)
+                @printf(" | %.2e/%.2e/%.2e", time_reassembly, time_solver, time_total)
             end
             @printf("\n")
         end
@@ -1014,7 +1007,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
             push!(FEs,Target.FEVectorBlocks[j].FES)
         end    
         nsubiterations = length(subiterations)
-        eqoffsets = Array{Array{Int,1},1}(undef,nsubiterations)
+        eqoffsets::Array{Array{Int,1},1} = Array{Array{Int,1},1}(undef,nsubiterations)
         A = Array{FEMatrix{T},1}(undef,nsubiterations)
         b = Array{FEVector{T},1}(undef,nsubiterations)
         x = Array{FEVector{T},1}(undef,nsubiterations)
@@ -1041,8 +1034,8 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
         end
 
         # ASSEMBLE BOUNDARY DATA
-        fixed_dofs = []
-        eqdof = 0
+        fixed_dofs::Array{Int,1} = []
+        eqdof::Int = 0
         for j = 1 : length(Target.FEVectorBlocks)
             new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
@@ -1139,24 +1132,27 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
 
             # CHECK LINEAR RESIDUAL
             if SC.user_params[:show_iteration_details]
-                residual[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
+                fill!(residual[s].entries,0)
+                mul!(residual[s].entries, A[s].entries, x[s].entries)
+                residual[s].entries .-= b[s].entries
+
                 for j = 1 : length(fixed_dofs)
                     for eq = 1 : length(subiterations[s])
                         # check if fixed_dof is necessary for subiteration
                         if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[subiterations[s][eq]].ndofs
-                            eqdof = fixed_dofs[j] - eqoffsets[s][eq]
+                            eqdof = fixed_dofs[j] - eqoffsets[s][eq]::Int
                             residual[s][eq][eqdof] = 0
                         end
                     end
                 end
-                linresnorm[s] = (sqrt(sum(residual[s].entries.^2, dims = 1)[1]))
+                linresnorm[s] = norm(norm(residual[s]))
             end
 
             # WRITE INTO Target
             for j = 1 : length(subiterations[s])
-                for k = 1 : length(Target[subiterations[s][j]])
-                    Target[subiterations[s][j]][k] = x[s][j][k]
-                end
+                si = subiterations[s][j]
+                fill!(Target[si],0)
+                addblock!(Target[si], x[s][j])
             end
 
             if s == nsubiterations
@@ -1196,7 +1192,10 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
 
         # CHECK NONLINEAR RESIDUAL
         for s = 1 : nsubiterations
-            residual[s].entries[:] = A[s].entries*x[s].entries - b[s].entries
+            fill!(residual[s].entries,0)
+            mul!(residual[s].entries, A[s].entries, x[s].entries)
+            residual[s].entries .-= b[s].entries
+            
             for j = 1 : length(fixed_dofs)
                 for eq = 1 : length(subiterations[s])
                     if fixed_dofs[j] > eqoffsets[s][eq] && fixed_dofs[j] <= eqoffsets[s][eq]+FEs[subiterations[s][eq]].ndofs
@@ -1205,7 +1204,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
                     end
                 end
             end
-            resnorm[s] = (sqrt(sum(residual[s].entries.^2, dims = 1)[1]))
+            resnorm[s] = norm(norm(residual[s]))
         end
 
         overall_time += time_total
@@ -1510,8 +1509,8 @@ function TimeControlSolver(
 
         # COPY INITIAL VALUES TO SUB-PROBLEM SOLUTIONS
         for j = 1 : length(x[s].entries), k = 1 : length(subiterations[s])
-            d = subiterations[s][k]
-            x[s][k][:] = InitialValues[d][:]
+            fill!(x[s][k],0)
+            addblock!(x[s][k], InitialValues[subiterations[s][k]])
         end
 
         # prepare and configure mass matrices
@@ -1753,7 +1752,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
             end
 
             ## CHECK LINEAR RESIDUAL
-            mul!(res[s].entries,S[s].entries,x[s].entries)
+            mul!(res[s].entries, S[s].entries, x[s].entries)
             res[s].entries .-= rhs[s].entries
             for dof in fixed_dofs
                 for eq = 1 : nsubitblocks
