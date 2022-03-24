@@ -20,7 +20,7 @@ finite element module for Julia focussing on gradient-robust finite element meth
 - time-dependent problems can be integrated in time by internal backward Euler or Crank-Nicolson implementation or via the external module [DifferentialEquations.jl](https://github.com/SciML/DifferentialEquations.jl) (experimental)
 - reconstruction operators for gradient-robust Stokes discretisations (BR->RT0/BDM1 or CR->RT0 in 2D/3D, and P2B->RT1/BDM2 in 2D, more to come)
 - plotting via functionality of [GridVisualize.jl](https://github.com/j-fu/GridVisualize.jl)
-- export into csv files or vtk files (via [WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl))
+- export into csv files (or vtk files via [WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl) interface of [ExtendableGrids.jl](https://github.com/j-fu/ExtendableGrids.jl))
 
 
 ### Quick Example
@@ -88,5 +88,4 @@ via Julia package manager in Julia 1.6 or above:
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
 [DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
-[WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl)\
 [StaticArrays.jl](https://github.com/JuliaArrays/StaticArrays.jl)

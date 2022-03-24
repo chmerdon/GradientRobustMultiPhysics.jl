@@ -129,7 +129,6 @@ function full_assemble!(
                     basisevaler = get_basisevaler(AM, FEid, di)
 
                     # get coefficients of FE number FEid on current dofitem
-                    FEB[FEid][AM.xItemDofs[FEid][1 + AM.dofoffset4dofitem[FEid][di], AM.dofitems[FEid][di]]]
                     get_coeffs!(coeffs, FEB[FEid], AM, FEid, di)
                     coeffs .*= AM.coeff4dofitem[FEid][di]
 

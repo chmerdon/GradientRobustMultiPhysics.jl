@@ -34,7 +34,6 @@ via Julia package manager in Julia 1.6 or above:
 [DocStringExtensions.jl](https://github.com/JuliaDocs/DocStringExtensions.jl)\
 [ForwardDiff.jl](https://github.com/JuliaDiff/ForwardDiff.jl)\
 [DiffResults.jl](https://github.com/JuliaDiff/DiffResults.jl)\
-[WriteVTK.jl](https://github.com/jipolanco/WriteVTK.jl)\
 
 
 

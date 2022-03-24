@@ -512,7 +512,7 @@ function OperatorWithADJacobian(o, argsizes; name = "", Ti = Int32, dependencies
         negotiated_o = o_t
     elseif dependencies == "I" # region-dependent
         o_r(r) = (result,input) -> o(result,input,r)
-        config_eval = o_r(zeros(Ti,5))
+        config_eval = o_r(ones(Ti,5))
         negotiated_o = o_r
     elseif dependencies == "XT" # xt-dependent
         o_xt(x,t) = (result,input) -> o(result,input,x,t)
@@ -520,15 +520,15 @@ function OperatorWithADJacobian(o, argsizes; name = "", Ti = Int32, dependencies
         negotiated_o = o_xt
     elseif dependencies == "XI" # xr-dependent
         o_xr(x,r) = (result,input) -> o(result,input,x,r)
-        config_eval = o_xr([1.0,1.0,1.0],zeros(Ti,5))
+        config_eval = o_xr([1.0,1.0,1.0],ones(Ti,5))
         negotiated_o = o_xr
     elseif dependencies == "TI" # tr-dependent
         o_tr(t,r) = (result,input) -> o(result,input,t,r)
-        config_eval = o_tr(0.0,zeros(Ti,5))
+        config_eval = o_tr(0.0,ones(Ti,5))
         negotiated_o = o_tr
     elseif dependencies == "XTI" # xtr-dependent
         o_xtr(x,t,r) = (result,input) -> o(result,input,x,t,r)
-        config_eval = o_xtr([1.0,1.0,1.0],0.0,zeros(Ti,5))
+        config_eval = o_xtr([1.0,1.0,1.0],0.0,ones(Ti,5))
         negotiated_o = o_xtr
     else
         negotiated_o = o
@@ -551,7 +551,7 @@ function OperatorWithADJacobian(o, argsizes; name = "", Ti = Int32, dependencies
         cfg = ForwardDiff.JacobianConfig(config_eval, result_temp, input_temp, ForwardDiff.Chunk{argsizes[3]}())
     end
 
-    return OperatorWithADJacobian{Float64,Ti,dx,dt,di,sparse_jacobian,length(argsizes),typeof(negotiated_o),typeof(NothingFunction),typeof(jac)}(name,negotiated_o,NothingFunction,argsizes,zeros(Float64,3),zeros(Ti,5),0.0,bonus_quadorder,Dresult,cfg,jac,temp)
+    return OperatorWithADJacobian{Float64,Ti,dx,dt,di,sparse_jacobian,length(argsizes),typeof(negotiated_o),typeof(NothingFunction),typeof(jac)}(name,negotiated_o,NothingFunction,argsizes,zeros(Float64,3),ones(Ti,5),0.0,bonus_quadorder,Dresult,cfg,jac,temp)
 end
 
 set_time!(J::OperatorWithADJacobian, time) = (J.time = time)

@@ -360,15 +360,16 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
 
     subiterations = SC.user_params[:subiterations]
 
-    info_msg = "ACCUMULATED ASSEMBLY TIMES AND ALLOCATIONS"
-    info_msg *= "\n\t=========================="
+    info_msg = "=================================== STATISTICS ==================================="
+    info_msg *= "\n\top position \t| runtime (s) \t| last alloc \t| total alloc \t| op name"
+    info_msg *= "\n\t----------------------------------------------------------------------------------"
 
     for s = 1 : length(subiterations)
         for j = 1 : length(subiterations[s])
             eq = subiterations[s][j]
             for k = 1 : size(SC.LHS_AssemblyTimes,2)
                 for o = 1 : size(SC.LHS_AssemblyTimes[eq,k],1)
-                    info_msg *= "\n\tLHS[$eq,$k][$o] | $(SC.LHS_AssemblyTimes[eq,k][o])s | $(SC.LHS_LastLoopAllocations[eq,k][o])/$(SC.LHS_TotalLoopAllocations[eq,k][o]) allocations | $(PDE.LHSOperators[eq,k][o].name)"
+                    info_msg *= "\n\tLHS[$eq,$k][$o] \t| $(@sprintf("%.4e", SC.LHS_AssemblyTimes[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_LastLoopAllocations[eq,k][o])) \t| $(@sprintf("%.4e", SC.LHS_TotalLoopAllocations[eq,k][o])) \t| $(PDE.LHSOperators[eq,k][o].name)"
                 end
             end
         end
@@ -378,7 +379,7 @@ function show_statistics(PDE::PDEDescription, SC::SolverConfig)
         for j = 1 : length(subiterations[s])
             eq = subiterations[s][j]
             for o = 1 : size(SC.RHS_AssemblyTimes[eq],1)
-                info_msg *= "\n\tRHS[$eq,][$o] | $(SC.RHS_AssemblyTimes[eq][o])s | $(SC.RHS_LastLoopAllocations[eq][o])/$(SC.RHS_TotalLoopAllocations[eq][o]) allocations | $(PDE.RHSOperators[eq][o].name)"
+                info_msg *= "\n\tRHS[$eq,][$o] \t| $(@sprintf("%.4e", SC.RHS_AssemblyTimes[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_LastLoopAllocations[eq][o])) \t| $(@sprintf("%.4e", SC.RHS_TotalLoopAllocations[eq][o])) \t| $(PDE.RHSOperators[eq][o].name)"
             end
         end
     end
@@ -1279,9 +1280,9 @@ function solve!(
 
     ## logging stuff
     if SC.is_timedependent
-        moreinfo_string = "----- Solving $(PDE.name) (at fixed time $(user_params[:time])) -----"
+        moreinfo_string = "========== Solving $(PDE.name) (at fixed time $(user_params[:time])) =========="
     else
-        moreinfo_string = "----- Solving $(PDE.name) -----"
+        moreinfo_string = "========== Solving $(PDE.name) =========="
     end
     nsolvedofs = 0
     subiterations = user_params[:subiterations]

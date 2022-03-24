@@ -9,7 +9,6 @@ using SuiteSparse
 using SparseArrays
 using StaticArrays
 using DiffResults
-using WriteVTK
 using LinearAlgebra
 using ForwardDiff
 using SparsityDetection
