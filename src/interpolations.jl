@@ -262,7 +262,6 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     ## get basis for moments
     ## here we assume that the FEType looks like a H1Pk element on EG (which is true for all H1Pk elements)
     if order == 0
-        ## the order of that element is order+1
         FEType_moments = H1P0{ncomponents}
     elseif order == 1
         FEType_moments = H1P1{ncomponents}
@@ -277,7 +276,7 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
             FEType_ref = FEType
         else
             if edim == 2 && order == 0
-                FEType_ref = H1P2{ncomponents,edim}
+                FEType_ref = H1P3{ncomponents,edim} # order + 3
             elseif edim == 1
                 FEType_ref = H1Pk{ncomponents,edim,order+2}
             else

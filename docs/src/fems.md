@@ -63,7 +63,7 @@ The following table lists all curently implemented finite elements and on which 
 | [`H1P1`](@ref) | ✓ (N1, 6) | ✓ (N1, 8) | ✓ (N1, 12) | ✓ (N1, 24) |
 | [`H1P2`](@ref) | ✓ (N1F1, 12) | ✓ (N1F1, 16) | ✓ (N1E1, 30) |   |
 | [`H1P2B`](@ref) | ✓ (N1F1I1, 14) |   |   |   |
-| [`H1P3`](@ref) | ✓ (N1F2I1, 20) |   |   |   |
+| [`H1P3`](@ref) | ✓ (N1F2I1, 20) |   | ✓ (N1E2F1, 60)  |   |
 | [`H1Pk`](@ref) | ✓ (order-dep) |   |   |   |
 | AbstractHcurlFiniteElement |   |   |   |   |
 | [`HCURLN0`](@ref) | ✓ (f1, 3) | ✓ (f1, 4) | ✓ (e1, 6) |   |
