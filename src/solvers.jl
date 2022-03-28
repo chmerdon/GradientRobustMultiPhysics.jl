@@ -620,7 +620,7 @@ function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::Solve
     # ASSEMBLE BOUNDARY DATA
     fixed_dofs = []
     for j = 1 : length(Target.FEVectorBlocks)
-        new_fixed_dofs = boundarydata!(Target[j], PDE.BoundaryOperators[j]; time = time)
+        new_fixed_dofs = boundarydata!(Target[j], PDE.BoundaryOperators[j], Target; time = time)
         new_fixed_dofs .+= Target[j].offset
         append!(fixed_dofs, new_fixed_dofs)
     end    
@@ -829,7 +829,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
     # ASSEMBLE BOUNDARY DATA
     fixed_dofs = []
     assembly_time += @elapsed for j= 1 : length(Target.FEVectorBlocks)
-        new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time) .+ Target[j].offset
+        new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j], Target; time = time) .+ Target[j].offset
         append!(fixed_dofs, new_fixed_dofs)
     end    
 
@@ -1038,7 +1038,7 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
         fixed_dofs::Array{Int,1} = []
         eqdof::Int = 0
         for j = 1 : length(Target.FEVectorBlocks)
-            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j]; time = time) .+ Target[j].offset
+            new_fixed_dofs = boundarydata!(Target[j],PDE.BoundaryOperators[j], Target; time = time) .+ Target[j].offset
             append!(fixed_dofs, new_fixed_dofs)
         end    
     end
@@ -1492,7 +1492,7 @@ function TimeControlSolver(
     # but fixed_dofs will remain throughout
     fixed_dofs::Array{Ti,1} = zeros(Ti,0)
     for j = 1 : length(InitialValues.FEVectorBlocks)
-        new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j]) .+ InitialValues[j].offset
+        new_fixed_dofs = boundarydata!(InitialValues[j],PDE.BoundaryOperators[j], InitialValues) .+ InitialValues[j].offset
         append!(fixed_dofs, new_fixed_dofs)
     end    
 
@@ -1723,7 +1723,7 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
         for k = 1 : nsubitblocks
             d = subiterations[s][k]
             if any(PDE.BoundaryOperators[d].timedependent) == true
-                boundarydata!(x[s][k],PDE.BoundaryOperators[d]; time = TCS.ctime, skip_enumerations = true)
+                boundarydata!(x[s][k],PDE.BoundaryOperators[d],x[s]; time = TCS.ctime, skip_enumerations = true)
             end
         end    
 

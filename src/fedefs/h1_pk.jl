@@ -23,7 +23,9 @@ get_ndofs(::Type{<:AssemblyType}, FEType::Type{H1Pk{n,e,order}}, EG::Type{<:Abst
 get_ndofs(::Type{<:AssemblyType}, FEType::Type{H1Pk{n,e,order}}, EG::Type{<:AbstractElementGeometry1D}) where {n,e,order} = (1 + order)*n
 get_ndofs(::Type{<:AssemblyType}, FEType::Type{H1Pk{n,e,order}}, EG::Type{<:Triangle2D}) where {n,e,order} = Int(n*(2 + order)*(1 + order)/2)
 
-get_polynomialorder(::Type{H1Pk{n,e,order}}, ::Type{<:AbstractElementGeometry}) where {n,e,order} = order
+get_polynomialorder(::Type{H1Pk{n,e,order}}, ::Type{<:AbstractElementGeometry1D}) where {n,e,order} = order
+get_polynomialorder(::Type{H1Pk{n,e,order}}, ::Type{<:AbstractElementGeometry2D}) where {n,e,order} = order
+get_polynomialorder(::Type{H1Pk{n,e,order}}, ::Type{<:AbstractElementGeometry3D}) where {n,e,order} = order
 
 get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Type{<:CellDofs}, EG::Type{<:Triangle2D}) where {n,e,order} = (order == 1) ? "N1" : ((order == 2) ? "N1F$(order-1)" : "N1F$(order-1)I$(Int((order-2)*(order-1)/2))")
 get_dofmap_pattern(::Type{H1Pk{n,e,order}}, ::Type{<:CellDofs}, EG::Type{<:AbstractElementGeometry1D}) where {n,e,order} = (order == 1) ? "N1" : "N1I$(order-1)"
@@ -245,15 +247,15 @@ function get_basis(::Type{<:AssemblyType}, FEType::Type{H1Pk{ncomponents,edim,or
         end
         # interior basis functions
         if order == 3
-            refbasis[3*order+1,1] = refbasis[end]*xref[1]*xref[2]*60
+            refbasis[3*order+1,1] = refbasis[end]*xref[1]*xref[2]*27
         elseif order == 4
-            refbasis[3*order+1,1] = refbasis[end]*xref[1]*xref[2]*(refbasis[end]-1//4)*1008
-            refbasis[3*order+2,1] = refbasis[end]*xref[1]*xref[2]*(xref[1]-1//4)*1008
-            refbasis[3*order+3,1] = refbasis[end]*xref[1]*xref[2]*(xref[2]-1//4)*1008
+            refbasis[3*order+1,1] = refbasis[end]*xref[1]*xref[2]*(refbasis[end]-1//4)*108
+            refbasis[3*order+2,1] = refbasis[end]*xref[1]*xref[2]*(xref[1]-1//4)*108
+            refbasis[3*order+3,1] = refbasis[end]*xref[1]*xref[2]*(xref[2]-1//4)*108
         elseif order > 4
             interior_basis(view(refbasis,3*order+1:ncomponents*ndofs,:),xref)
             for k = 3*order+1:ndofs
-                refbasis[k,1] *= (1-xref[1]-xref[2])*xref[1]*xref[2]
+                refbasis[k,1] *= (1-xref[1]-xref[2])*xref[1]*xref[2]*27
             end
         end
 

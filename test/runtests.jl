@@ -18,7 +18,7 @@ function testgrid(::Type{Triangle2D},::Type{Parallelogram2D})
     return uniform_refine(grid_unitsquare_mixedgeometries(),1)
 end
 
-tolerance = 5e-12
+tolerance = 6e-12
 
 function exact_function1D(polyorder)
     function polynomial(result,x::Array{<:Real,1})

@@ -22,6 +22,8 @@ module Example224_StokesHdivP1RT
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
+using SimplexGridFactory
+using Triangulate
 
 ## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(ν, nonlinear)
@@ -53,10 +55,6 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
     ## FEType
     FETypes = [H1P1{2}, HDIVRT0{2}, H1P0{1}]
     
-    ## initial grid
-    xgrid = split_grid_into(grid_unitsquare(Parallelogram2D), Triangle2D)
-    xgrid = uniform_refine(xgrid,0)
-    
     ## get exact flow data (see above)
     u,p,∇u,f = get_flowdata(μ, false)
 
@@ -79,8 +77,8 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
     add_constraint!(Problem, FixedIntegralMean(3,0))
 
     ## add boundary data and right-hand side
-    add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_boundarydata!(Problem, 2, [1,2,3,4], HomogeneousDirichletBoundary)
+    P1data = add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
+    add_boundarydata!(Problem, 2, [1,2,3,4], CorrectDirichletBoundary{1}; data = u) # <- RT part corrects (piecewise normal flux integrals of) P1 part
     add_rhsdata!(Problem, 1, LinearForm(Identity, f))
     add_rhsdata!(Problem, 2, LinearForm(Identity, f))
 
@@ -97,9 +95,16 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
 
     ## loop over levels
     Solution = nothing
+    xgrid = nothing
     for level = 1 : nlevels
-        ## refine grid and update grid component references
-        xgrid = uniform_refine(xgrid)
+        ## generate unstructured grid
+        xgrid = simplexgrid(Triangulate;
+                    points=[0 0 ; 0 1 ; 1 1 ; 1 0]',
+                    bfaces=[1 2 ; 2 3 ; 3 4 ; 4 1 ]',
+                    bfaceregions=[1, 2, 3, 4],
+                    regionpoints=[0.5 0.5;]',
+                    regionnumbers=[1],
+                    regionvolumes=[4.0^(-level-1)/2])
 
         ## generate FES spaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid; broken = true)]

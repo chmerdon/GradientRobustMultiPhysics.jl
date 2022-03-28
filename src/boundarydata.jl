@@ -16,6 +16,12 @@ abstract type InterpolateDirichletBoundary <: DirichletBoundary end
 """
 $(TYPEDEF)
 
+Corrects boundary data of specified id, such that piecewise integral means of the sum of both unknowns are preserved
+"""
+abstract type CorrectDirichletBoundary{id} <: DirichletBoundary end
+"""
+$(TYPEDEF)
+
 homogeneous Dirichlet data
 """
 abstract type HomogeneousDirichletBoundary <: DirichletBoundary end
@@ -80,7 +86,8 @@ end
 # then all DirichletBestapprox boundaries are handled (previous data is fixed)
 function boundarydata!(
     Target::FEVectorBlock{T,Tv,Ti},
-    O::BoundaryOperator;
+    O::BoundaryOperator,
+    OtherData;
     time = 0,
     fixed_penalty = 1e60,
     skip_enumerations = false) where {T,Tv,Ti}
@@ -309,8 +316,54 @@ function boundarydata!(
 
             Target[fixed_dofs] = (A.entries\b[:,1])[fixed_dofs]
         end
+    end
 
+    # INTERPOLATION DIRICHLET BOUNDARY
+    for id = 1 : length(OtherData)
+        CorrectDirichletBoundaryRegions = get(O.regions4boundarytype,CorrectDirichletBoundary{id},[])
+        if length(CorrectDirichletBoundaryRegions) > 0
+            ## generate a copy of the TargetData and interpolate the OtherData[id]
+            TargetCopy = deepcopy(Target)
+            interpolate!(TargetCopy, OtherData[id])
 
+            # find Dirichlet dofs
+            for r = 1 : length(CorrectDirichletBoundaryRegions)
+                bregion = CorrectDirichletBoundaryRegions[r]
+                data_exact = O.data4bregion[bregion]
+                if skip_enumerations == false
+                    while length(O.ifaces4bregion) < r
+                        push!(O.ifaces4bregion,[])
+                        push!(O.ibfaces4bregion,[])
+                    end
+                    O.ifaces4bregion[r] = []
+                    O.ibfaces4bregion[r] = []
+                    ifaces = O.ifaces4bregion[r]
+                    ibfaces = O.ibfaces4bregion[r]
+                    bregiondofs = []
+                    for bface = 1 : nbfaces
+                        if xBFaceRegions[bface] == CorrectDirichletBoundaryRegions[r]
+                            append!(ifaces,xBFaceFaces[bface])
+                            append!(ibfaces,bface)
+                            append!(bregiondofs,xBFaceDofs[:,bface])
+                        end
+                    end    
+                    bregiondofs = Base.unique(bregiondofs)
+                    append!(fixed_dofs,bregiondofs)
+                end
+                bregion::Int = CorrectDirichletBoundaryRegions[r]
+                ifaces::Array{Int,1} = O.ifaces4bregion[r]
+                ibfaces::Array{Int,1} = O.ibfaces4bregion[r]
+                if length(ifaces) > 0
+                    interpolate!(Target, ON_BFACES, data_exact; items = ibfaces, time = time)
+                    ## subtract interpolation of OtherData
+                    for dof in bregiondofs
+                        Target[dof] -= TargetCopy[dof]
+                    end
+                end
+            end   
+    
+            @debug "Corr-DBnd = $CorrectDirichletBoundaryRegions"# (ndofs = $(length(fixed_dofs)))"
+        end
     end
     
     if skip_enumerations

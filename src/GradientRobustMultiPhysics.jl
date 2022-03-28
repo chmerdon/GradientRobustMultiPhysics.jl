@@ -148,7 +148,7 @@ export assemble_operator!, eval_assemble!
 
 include("boundarydata.jl")
 export BoundaryOperator
-export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary
+export AbstractBoundaryType, HomogeneousDirichletBoundary, InterpolateDirichletBoundary, BestapproxDirichletBoundary, CorrectDirichletBoundary
 export boundarydata!
 
 

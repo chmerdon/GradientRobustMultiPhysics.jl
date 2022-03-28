@@ -122,7 +122,7 @@ function add_unknown!(PDE::PDEDescription; equation_name::String = "", unknown_n
     push!(PDE.unknown_names,unknown_name)
     push!(PDE.algebraic_constraint,algebraic_constraint)
     push!(PDE.RHSOperators,[])
-    push!(PDE.BoundaryOperators,BoundaryOperator())
+    push!(PDE.BoundaryOperators, BoundaryOperator())
     NewLHS = Array{Array{AbstractPDEOperator,1},2}(undef,nunknowns,nunknowns)
     for j=1:nunknowns, k = 1:nunknowns
         if j < nunknowns && k < nunknowns
@@ -252,6 +252,7 @@ Note: If the data function is time-dependent (see User Data documentation) it is
 function add_boundarydata!(PDE::PDEDescription,position::Int, regions, btype::Type{<:AbstractBoundaryType}; data = Nothing)
     Base.append!(PDE.BoundaryOperators[position],regions, btype; data = data)
     @logmsg DeepInfo "Added boundary_data for unknown $(PDE.unknown_names[position]) in region(s) $regions to PDEDescription $(PDE.name)"
+    return PDE.BoundaryOperators[position]
 end
 
 
@@ -343,6 +344,12 @@ function Base.show(io::IO, PDE::PDEDescription)
         try
             if length(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary]) > 0
                 print(io, "HomogeneousDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[HomogeneousDirichletBoundary])\n                          ")
+            end
+        catch
+        end
+        try
+            if length(PDE.BoundaryOperators[j].regions4boundarytype[CorrectDirichletBoundary]) > 0
+                print(io, "CorrectDirichletBoundary -> $(PDE.BoundaryOperators[j].regions4boundarytype[CorrectDirichletBoundary])\n                         ")
             end
         catch
         end
