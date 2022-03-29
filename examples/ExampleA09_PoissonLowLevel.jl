@@ -9,13 +9,13 @@ This example computes the solution ``u`` of the Poisson problem
 -\Delta u & = f \quad \text{in } \Omega
 \end{aligned}
 ```
-with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a given grid.
+with some right-hand side ``f = 1`` on the unit square domain ``\Omega`` on a given grid.
 
 Here, the whole problem is assembled with low level structures
 
 =#
 
-module ExampleA09_PoissonProblemLowLevel2D
+module ExampleA09_PoissonLowLevel
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -31,19 +31,15 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 3, Plotter = no
     ## build/load any grid (here: a uniform-refined 2D unit square into triangles)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), nrefinements)
 
-    ## create empty PDE description
-    Problem = PDEDescription("Poisson problem")
-
-    ## init FE space
+    ## choose FE type
     FEType = H1Pk{1,2,order}
-    FES = FESpace{FEType}(xgrid)
 
-    ## init matrix and right-hand side vector
+    ## ASSEMBLY
+
+    ## init FEspace, matrix and right-hand side vector
+    FES = FESpace{FEType}(xgrid)
     A = FEMatrix{Float64}("A", FES, FES)
     b = FEVector("b", FES)
-    Solution = FEVector("u_h",FES)
-
-    ## PREPARE ASSEMBLY LOOP
 
     ## quadrature formula
     qf = QuadratureRule{Float64,Triangle2D}(2*(get_polynomialorder(FEType, Triangle2D)-1))
@@ -77,7 +73,7 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 3, Plotter = no
                 dof_k = CellDofs[k, cell]
                 temp = 0
                 for qp = 1 : nweights
-                    temp += weights[qp] * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp))
+                    temp += weights[qp] * μ * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp))
                 end
                 rawupdateindex!(A.entries, +, temp, dof_j, dof_k)
                 if k > j
@@ -106,6 +102,7 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 3, Plotter = no
 
     ## solve
     ExtendableSparse.flush!(A.entries)
+    Solution = FEVector("u_h", FES)
     Solution.entries .= A.entries \ b.entries
     
     ## plot solution (for e.g. Plotter = PyPlot)
