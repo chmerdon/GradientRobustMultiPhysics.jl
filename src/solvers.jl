@@ -920,7 +920,7 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
         end    
         if damping_val > 0
             @logmsg MoreInfo "Damping with value $damping_val"
-            Target.entries .-= damping_val * LastIterate.entries + (1-damping_val) * Target.entries
+            Target.entries .= damping_val * LastIterate.entries + (1-damping_val) * Target.entries
         end
         if damping_val > 0 || typeof(damping) <: Function
             LastIterate.entries .= Target.entries
