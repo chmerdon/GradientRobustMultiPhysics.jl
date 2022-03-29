@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>102 : Robin-Boundary Conditions 1D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Basis Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li class="is-active"><a class="tocitem" href>102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesHdivP1RT/">224 : Stokes <span>$(P1 \oplus RT0) \times P0$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li><a class="tocitem" href="../ExampleA06_LocalEquilibratedFluxes2D/">A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>102 : Robin-Boundary Conditions 1D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>102 : Robin-Boundary Conditions 1D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/Example102_RobinBoundaryCondition1D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id=":-Robin-Boundary-Conditions-1D"><a class="docs-heading-anchor" href="#:-Robin-Boundary-Conditions-1D">102 : Robin-Boundary Conditions 1D</a><a id=":-Robin-Boundary-Conditions-1D-1"></a><a class="docs-heading-anchor-permalink" href="#:-Robin-Boundary-Conditions-1D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/Example102_RobinBoundaryCondition1D.jl">source code</a>)</p><p>This demonstrates the assignment of a mixed Robin boundary condition for a nonlinear 1D convection-diffusion-reaction PDE on the unit interval, i.e.</p><p class="math-container">\[\begin{aligned}
+-\partial^2 u / \partial x^2 + u \partial u / \partial x + u &amp; = f &amp;&amp; \text{in } \Omega\\
+u + \partial u / \partial_x &amp; = g &amp;&amp; \text{at } \Gamma_1 = \{ 0 \}\\
+u &amp; = u_D &amp;&amp; \text{at } \Gamma_2 = \{ 1 \}
+\end{aligned}\]</p><p>tested with data <span>$f(x) = e^{2x}$</span>, <span>$g = 2$</span> and <span>$u_D = e$</span> such that <span>$u(x) = e^x$</span> is the exact solution.</p><pre><code class="language-julia hljs">module Example102_RobinBoundaryCondition1D
+
+using GradientRobustMultiPhysics
+using ExtendableGrids
+using GridVisualize
+
+# data and exact solution
+const f = DataFunction((result,x) -&gt; (result[1] = exp(2*x[1]);), [1,1]; name = &quot;f&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 4)
+const u = DataFunction((result,x) -&gt; (result[1] = exp(x[1]);), [1,1]; name = &quot;u&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 4)
+const g = DataFunction([2]; name = &quot;g&quot;)
+const uD = DataFunction([exp(1)]; name = &quot;u_D&quot;)
+
+# kernel for the (nonlinear) reaction-convection-diffusion oeprator
+function operator_kernel!(result, input)
+    # input = [u,∇u] as a vector of length 2
+    result[1] = input[1] * input[2] + input[1] # convection + reaction (will be multiplied with v)
+    result[2] = input[2]                       # diffusion (will be multiplied with ∇v)
+    return nothing
+end
+
+# kernel for Robin boundary condition
+function robin_kernel!(result, input)
+    # input = [u]
+    eval_data!(g)
+    result[1] = g.val[1] - input[1] # = g - u (will be multiplied with v)
+    return nothing
+end
+
+# everything is wrapped in a main function
+function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
+
+    # set log level
+    set_verbosity(verbosity)
+
+    # generate coarse and fine mesh
+    xgrid = simplexgrid(0:h:1)
+
+    # setup a problem description with one unknown
+    Problem = PDEDescription(&quot;reaction-convection-diffusion problem&quot;)
+    add_unknown!(Problem; unknown_name = &quot;u&quot;, equation_name = &quot;reaction-convection-diffusion equation&quot;)
+
+    # add nonlinear operator
+    add_operator!(Problem, [1,1], NonlinearForm(OperatorPair{Identity, Gradient}, [OperatorPair{Identity, Gradient}], [1], operator_kernel!, [2,2]; name = &quot;∇u ⋅ ∇v + (u ∇u + u) ⋅ v&quot;, bonus_quadorder = 4, newton = true) )
+
+    # right-hand side data
+    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+
+    # Robin boundary data right
+    add_operator!(Problem, [1,1], BilinearForm([Identity, Identity], Action(robin_kernel!, [1,1]); name = &quot;(g - u) ⋅ v&quot;, AT = ON_BFACES, regions = [1]) )
+
+    # Dirichlet boundary data left
+    add_boundarydata!(Problem, 1, [2], InterpolateDirichletBoundary; data = uD)
+
+    # choose some finite element type and generate a FESpace for the grid
+    # (here it is a one-dimensional H1-conforming P2 element H1P2{1,1})
+    FEType = H1P2{1,1}
+    FES = FESpace{FEType}(xgrid)
+
+    # generate a solution vector and solve
+    Solution = FEVector(&quot;u_h&quot;,FES)
+    solve!(Solution, Problem; show_statistics = true)
+
+    # compute L2 error
+    L2error = L2ErrorIntegrator(u)
+    println(&quot;L2error = $(sqrt(evaluate(L2error,Solution[1])))&quot;)
+
+    # plot discrete and exact solution (on finer grid)
+    p=GridVisualizer(Plotter = Plotter, layout = (1,1))
+    scalarplot!(p[1,1], xgrid, nodevalues_view(Solution[1])[1], color=(0,0.7,0), label = &quot;u_h&quot;, markershape = :x, markersize = 10, markevery = 1)
+    xgrid_fine = simplexgrid(0:h_fine:1)
+    scalarplot!(p[1,1], xgrid_fine, view(nodevalues(xgrid_fine,u),1,:), clear = false, color = (1,0,0), label = &quot;u&quot;, legend = :rb, markershape = :none)
+end
+
+end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example102_RobinBoundaryCondition1D.main()
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
+	-----------------------------------------------------------------------
+	    init  |                             | 1.30e+01/3.32e-05/1.30e+01
+	      1   | 7.420453e-14 | 6.400322e-01 | 1.44e+00/1.31e-04/1.83e+00
+	      2   | 4.529748e-14 | 5.344356e-02 | 4.48e-04/1.11e-04/6.37e-04
+	      3   | 5.506533e-14 | 4.413179e-05 | 1.76e-04/4.46e-05/2.43e-04
+	      4   | 4.017811e-14 | 4.725667e-11 | 1.45e-04/3.12e-05/1.86e-04
+	    total |                             | 1.44e+01/3.51e-04/1.48e+01
+
+L2error = 1.0271403975283884e-5</code></pre><p><img src="../../images/Example102_RobinBoundaryCondition1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example101_Bestapproximation1D/">« 101 : L2-Bestapproximation 1D</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Tuesday 29 March 2022 14:35">Tuesday 29 March 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
