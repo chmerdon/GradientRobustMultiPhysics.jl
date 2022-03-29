@@ -22,8 +22,10 @@ using ExtendableGrids
 using ExtendableSparse
 using GridVisualize
 
+const f = x -> 1
+
 ## everything is wrapped in a main function
-function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 3, Plotter = nothing)
+function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
 
     ## set log level
     set_verbosity(verbosity)
@@ -32,7 +34,7 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 3, Plotter = no
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), nrefinements)
 
     ## choose FE type
-    FEType = H1Pk{1,2,order}
+    FEType = H1P2{1,2}
 
     ## ASSEMBLY
 
@@ -55,15 +57,39 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 3, Plotter = no
     FEBasis_id::FEBasisEvaluator{Float64} = FEBasisEvaluator{Float64,Triangle2D,Identity,ON_CELLS}(FES, qf)
     FEBasis_∇::FEBasisEvaluator{Float64} = FEBasisEvaluator{Float64,Triangle2D,Gradient,ON_CELLS}(FES, qf)
     ∇vals::Array{Float64,3} = FEBasis_∇.cvals
+    ∇refvals::Array{Float64,3} = FEBasis_∇.refbasisderivvals
     idvals::Array{Float64,3} = FEBasis_id.cvals
+    L2G::L2GTransformer{Float64, Int32, Triangle2D} = FEBasis_∇.L2G
+    L2GAinv::Matrix{Float64} = zeros(Float64,3,3)
+
+    ## allocation-free alternative to avoid calling update_febe!, see lines 86--92
+    function update_∇(cell)
+        fill!(∇vals, 0)
+        for qp = 1 : nweights
+            for dof_i = 1 : ndofs4cell
+                for k = 1 : 2
+                    for j = 1 : 2
+                        ∇vals[k,dof_i,qp] += L2GAinv[k,j] * ∇refvals[dof_i,j,qp]
+                    end    
+                end    
+            end    
+        end 
+    end
 
     ## ASSEMBLY LOOP
     ncells::Int = num_cells(xgrid)
+    x::Vector{Float64} = zeros(Float64, 2)
     @time for cell = 1 : ncells
 
         ## update FE basis evaluators
-        update_febe!(FEBasis_id, cell) # 1 alloc if ncells > 512
-        update_febe!(FEBasis_∇, cell) # 1 alloc if ncells > 512
+        #update_febe!(FEBasis_id, cell) # standard Lagrange element needs no id update
+        if (true) # allocation-free 
+            update_trafo!(L2G, cell)
+            mapderiv!(L2GAinv, L2G, nothing)
+            update_∇(cell)
+        else # 1 dispatch alloc, if ncells > 512
+            update_febe!(FEBasis_∇, cell) 
+        end
 
         for j = 1 : ndofs4cell
             dof_j = CellDofs[j, cell]
@@ -81,9 +107,13 @@ function main(; verbosity = 0, μ = 1, order = 2, nrefinements = 3, Plotter = no
                 end
             end
 
-            ## (f, v_j) where f = 1
             for qp = 1 : nweights
-                b.entries[dof_j] = weights[qp] * idvals[1, j, qp]
+                ## get globalx for quadrature point
+                update_trafo!(L2G, cell)
+                eval_trafo!(x, L2G, FEBasis_∇.xref[qp])
+
+                ## (f, v_j)
+                b.entries[dof_j] = weights[qp] * idvals[1, j, qp] * f(x)
             end
         end
     end
