@@ -65,6 +65,7 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
     # ASSEMBLY LOOP
     ncells::Int = num_cells(xgrid)
     x::Vector{Float64} = zeros(Float64, 2)
+    cellvolumes = xgrid[CellVolumes]
     @time for cell = 1 : ncells
 
         # update FE basis evaluators
@@ -85,7 +86,7 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
                 dof_k = CellDofs[k, cell]
                 temp = 0
                 for qp = 1 : nweights
-                    temp += weights[qp] * μ * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp))
+                    temp += weights[qp] * μ * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp)) * cellvolumes[cell]
                 end
                 rawupdateindex!(A.entries, +, temp, dof_j, dof_k)
                 if k &gt; j
@@ -94,12 +95,12 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
             end
 
             for qp = 1 : nweights
-                # get globalx for quadrature point
+                # get global x for quadrature point
                 update_trafo!(L2G, cell)
                 eval_trafo!(x, L2G, FEBasis_∇.xref[qp])
 
                 # (f, v_j)
-                b.entries[dof_j] = weights[qp] * idvals[1, j, qp] * f(x)
+                b.entries[dof_j] += weights[qp] * idvals[1, j, qp] * f(x) * cellvolumes[cell]
             end
         end
     end
@@ -129,4 +130,4 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA09_PoissonLowLevel.main()
-  0.001095 seconds (13 allocations: 342.250 KiB)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA08_BasisPlotter/">« A08 : Basis-Plotter</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Tuesday 29 March 2022 14:01">Tuesday 29 March 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+  0.000946 seconds (13 allocations: 342.250 KiB)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA08_BasisPlotter/">« A08 : Basis-Plotter</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Monday 4 April 2022 13:25">Monday 4 April 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
