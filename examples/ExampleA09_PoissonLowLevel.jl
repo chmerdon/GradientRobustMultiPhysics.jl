@@ -79,6 +79,7 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
     ## ASSEMBLY LOOP
     ncells::Int = num_cells(xgrid)
     x::Vector{Float64} = zeros(Float64, 2)
+    cellvolumes = xgrid[CellVolumes]
     @time for cell = 1 : ncells
 
         ## update FE basis evaluators
@@ -99,7 +100,7 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
                 dof_k = CellDofs[k, cell]
                 temp = 0
                 for qp = 1 : nweights
-                    temp += weights[qp] * μ * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp))
+                    temp += weights[qp] * μ * dot(view(∇vals,:,j,qp), view(∇vals,:,k,qp)) * cellvolumes[cell]
                 end
                 rawupdateindex!(A.entries, +, temp, dof_j, dof_k)
                 if k > j
@@ -108,12 +109,12 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
             end
 
             for qp = 1 : nweights
-                ## get globalx for quadrature point
+                ## get global x for quadrature point
                 update_trafo!(L2G, cell)
                 eval_trafo!(x, L2G, FEBasis_∇.xref[qp])
 
                 ## (f, v_j)
-                b.entries[dof_j] = weights[qp] * idvals[1, j, qp] * f(x)
+                b.entries[dof_j] += weights[qp] * idvals[1, j, qp] * f(x) * cellvolumes[cell]
             end
         end
     end

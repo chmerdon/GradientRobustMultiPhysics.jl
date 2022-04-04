@@ -593,6 +593,7 @@ function nodevalues!(target::AbstractArray{T,2},
     abs::Bool = false,
     factor = 1,
     regions::Array{Int,1} = [0],
+    nodes = [0], 
     target_offset::Int = 0,
     source_offset::Int = 0,
     zero_target::Bool = true,
@@ -626,8 +627,6 @@ function nodevalues!(target::AbstractArray{T,2},
     @assert size(target,1) >= target_resultdim "too small target dimension"
 
     nitems::Int = num_sources(xItemDofs)
-    nnodes::Int = num_sources(FE.xgrid[Coordinates])
-    nneighbours = zeros(Int,nnodes)
     basisvals::Array{T,3} = basisevaler[1].cvals # pointer to operator results
     item::Int = 0
     itemET = EG[1]
@@ -635,7 +634,6 @@ function nodevalues!(target::AbstractArray{T,2},
     iEG::Int = 1
     node::Int = 0
     dof::Ti = 0
-    flag4node::Array{Bool,1} = zeros(Bool,nnodes)
     temp::Array{T,1} = zeros(T,cvals_resultdim)
     localT::Array{T,1} = zeros(T,cvals_resultdim)
     weights::Array{T,1} = qf[1].w
@@ -643,10 +641,81 @@ function nodevalues!(target::AbstractArray{T,2},
     if zero_target
         fill!(target, 0)
     end
-    for item = 1 : nitems
-        for r = 1 : nregions
-        # check if item region is in regions
-            if xItemRegions[item] == regions[r]
+
+    if nodes == [0] # all nodes ==> regions a evaluation
+        nnodes = num_sources(FE.xgrid[Coordinates])
+        nneighbours = zeros(Int,nnodes)
+        flag4node::Array{Bool,1} = zeros(Bool,nnodes)
+        for item = 1 : nitems
+            for r = 1 : nregions
+            # check if item region is in regions
+                if xItemRegions[item] == regions[r]
+
+                    # find index for CellType
+                    if length(EG) > 1
+                        itemET = xItemGeometries[item]
+                        for j=1:length(EG)
+                            if itemET == EG[j]
+                                iEG = j
+                                break;
+                            end
+                        end
+                        weights = qf[iEG].w
+                    end
+
+                    # update FEbasisevaler
+                    update_febe!(basisevaler[iEG],item)
+                    basisvals = basisevaler[iEG].cvals
+
+                    for i in eachindex(weights) # vertices
+                        node = xItemNodes[i,item]
+                        fill!(localT,0)
+                        if continuous == false || flag4node[node] == false
+                            nneighbours[node] += 1
+                            flag4node[node] = true
+                            for dof_i = 1 : ndofs4EG[iEG]
+                                dof = xItemDofs[dof_i,item]
+                                eval_febe!(temp, basisevaler[iEG], dof_i, i)
+                                for k = 1 : cvals_resultdim
+                                    localT[k] += source[source_offset + dof] * temp[k]
+                                    #target[k+target_offset,node] += temp[k] * source[source_offset + dof]
+                                end
+                            end
+                            localT .*= factor
+                            if abs
+                                for k = 1 : cvals_resultdim
+                                    target[1+target_offset,node] += localT[k]^2
+                                end
+                            else
+                                for k = 1 : cvals_resultdim
+                                    target[k+target_offset,node] += localT[k]
+                                end
+                            end
+                        end
+                    end  
+                    break; # region for loop
+                end # if in region    
+            end # region for loop
+        end # item for loop
+    else
+        nnodes = length(nodes)
+        xNodeCells = atranspose(xItemNodes)
+        nneighbours = zeros(Int,nnodes)
+        i::Int = 0
+        for n = 1 : nnodes
+            node = nodes[n]
+
+            # get number of neighbours
+            nneighbours[n] = continuous ? 1 : num_targets(xNodeCells, node)
+
+            for b = 1 : nneighbours[n]
+                item = xNodeCells[b,node]
+
+                ## find local node index
+                i = 1
+                while xItemNodes[i,item] != node
+                    i += 1
+                end
 
                 # find index for CellType
                 if length(EG) > 1
@@ -664,48 +733,37 @@ function nodevalues!(target::AbstractArray{T,2},
                 update_febe!(basisevaler[iEG],item)
                 basisvals = basisevaler[iEG].cvals
 
-                for i in eachindex(weights) # vertices
-                    node = xItemNodes[i,item]
-                    fill!(localT,0)
-                    if continuous == false || flag4node[node] == false
-                        nneighbours[node] += 1
-                        flag4node[node] = true
-                        begin
-                            for dof_i = 1 : ndofs4EG[iEG]
-                                dof = xItemDofs[dof_i,item]
-                                eval_febe!(temp, basisevaler[iEG], dof_i, i)
-                                for k = 1 : cvals_resultdim
-                                    localT[k] += source[source_offset + dof] * temp[k]
-                                    #target[k+target_offset,node] += temp[k] * source[source_offset + dof]
-                                end
-                            end
-                        end
-                        localT .*= factor
-                        if abs
-                            for k = 1 : cvals_resultdim
-                                target[1+target_offset,node] += localT[k]^2
-                            end
-                        else
-                            for k = 1 : cvals_resultdim
-                                target[k+target_offset,node] += localT[k]
-                            end
-                        end
+                fill!(localT,0)
+                for dof_i = 1 : ndofs4EG[iEG]
+                    dof = xItemDofs[dof_i,item]
+                    eval_febe!(temp, basisevaler[iEG], dof_i, i)
+                    for k = 1 : cvals_resultdim
+                        localT[k] += source[source_offset + dof] * temp[k]
                     end
-                end  
-                break; # region for loop
-            end # if in region    
-        end # region for loop
-    end # item for loop
+                end
+                localT .*= factor
+                if abs
+                    for k = 1 : cvals_resultdim
+                        target[1+target_offset,n] += localT[k]^2
+                    end
+                else
+                    for k = 1 : cvals_resultdim
+                        target[k+target_offset,n] += localT[k]
+                    end
+                end
+            end
+        end
+    end
 
     if continuous == false
-        for node = 1 : nnodes, k = 1 : target_resultdim
-            target[k+target_offset,node] /= nneighbours[node]
+        for n = 1 : nnodes, k = 1 : target_resultdim
+            target[k+target_offset,n] /= nneighbours[n]
         end
     end
 
     if abs
-        for node = 1 : nnodes
-            target[1+target_offset,node] = sqrt(target[1+target_offset,node])
+        for n = 1 : nnodes
+            target[1+target_offset,n] = sqrt(target[1+target_offset,n])
         end
     end
 
@@ -731,8 +789,8 @@ Evaluates the finite element function with the coefficient vector source
 and the specified FunctionOperator at all the nodes of the (specified regions of the) grid and writes the values into target.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues!(target, source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
-    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, abs = abs, factor = factor, zero_target = zero_target, target_offset = target_offset)
+function nodevalues!(target, source::FEVectorBlock, operator::Type{<:AbstractFunctionOperator} = Identity; regions::Array{Int,1} = [0], abs::Bool = false, nodes = [0], factor = 1, continuous::Bool = false, target_offset::Int = 0, zero_target::Bool = true)
+    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, abs = abs, nodes = nodes, factor = factor, zero_target = zero_target, target_offset = target_offset)
 end
 
 
@@ -754,7 +812,7 @@ and the specified FunctionOperator at all the nodes of the (specified regions of
 grid and returns an array with the values.
 Discontinuous (continuous = false) quantities are averaged.
 """
-function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
+function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; abs::Bool = false, nodes = [0], regions::Array{Int,1} = [0], factor = 1, continuous = "auto") where {T,Tv,Ti,APT,FEType}
     if continuous == "auto"
         if FEType <: AbstractH1FiniteElement && operator == Identity && !source.FES.broken
             continuous = true
@@ -769,8 +827,12 @@ function nodevalues(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:
         ncomponents = get_ncomponents(eltype(source.FES))
         nvals = Length4Operator(operator, xdim, ncomponents)
     end
-    target = zeros(T,nvals,num_nodes(source.FES.xgrid))
-    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, factor = factor, abs = abs)
+    if nodes == [0]
+        target = zeros(T,nvals,num_nodes(source.FES.xgrid))
+    else
+        target = zeros(T,nvals,length(nodes))
+    end
+    nodevalues!(target, source.entries, source.FES, operator; regions = regions, continuous = continuous, source_offset = source.offset, nodes = nodes, factor = factor, abs = abs)
     return target
 end
 
@@ -783,7 +845,7 @@ function nodevalues_view(
 
 Returns a vector of views of the nodal values of the source block (currently works for unbroken H1-conforming elements) that directly accesses the coefficients.
 """
-function nodevalues_view(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity) where {T,Tv,Ti,APT,FEType}
+function nodevalues_view(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Type{<:AbstractFunctionOperator} = Identity; nodes = [0]) where {T,Tv,Ti,APT,FEType}
 
     if (FEType <: AbstractH1FiniteElement) && (operator == Identity) && (source.FES.broken == false)
         # give a direct view without computing anything
@@ -791,9 +853,11 @@ function nodevalues_view(source::FEVectorBlock{T,Tv,Ti,FEType,APT}, operator::Ty
         array_of_views = []
         offset::Int = source.offset
         coffset::Int = source.FES.coffset
-        nnodes::Int = num_nodes(source.FES.xgrid)
+        if nodes == [0]
+            nodes = 1 : num_nodes(source.FES.xgrid)
+        end
         for k = 1 : ncomponents
-            push!(array_of_views,view(source.entries,offset+1:offset+nnodes))
+            push!(array_of_views,view(source.entries,offset .+ nodes))
             offset += coffset
         end
         return array_of_views
