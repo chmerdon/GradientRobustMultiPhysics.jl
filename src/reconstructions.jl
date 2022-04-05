@@ -189,16 +189,16 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid{Tv, Ti}, ::Type{Recon
     # evaluation of FE1 and FE2 basis
     FES1 = FESpace{FE1,ON_CELLS}(xgrid)
     FES2 = FESpace{FE2,ON_CELLS}(xgrid)
-    FEB1 = FEBasisEvaluator{Tv,EG[1],Identity,ON_CELLS}(FES1, qf)
-    FEB2 = FEBasisEvaluator{Tv,EG[1],Identity,ON_CELLS}(FES2, qf)
+    FEB1 = FEEvaluator(FES1, Identity, qf; T = Tv)
+    FEB2 = FEEvaluator(FES2, Identity, qf; T = Tv)
     # evaluation of gradient of P1 functions
     FE3 = H1P1{1}
     FES3 = FESpace{FE3,ON_CELLS}(xgrid)
-    FEB3 = FEBasisEvaluator{Tv,EG[1],Gradient,ON_CELLS}(FES3, qf)
+    FEB3 = FEEvaluator(FES3, Gradient, qf; T = Tv)
     # evaluation of curl of bubble functions
     FE4 = H1BUBBLE{1}
     FES4 = FESpace{FE4,ON_CELLS}(xgrid)
-    FEB4 = FEBasisEvaluator{Tv,EG[1],CurlScalar,ON_CELLS}(FES4, qf)
+    FEB4 = FEEvaluator(FES4, CurlScalar, qf; T = Tv)
 
     basisvals1::Array{Tv,3} = FEB1.cvals
     basisvals2::Array{Tv,3} = FEB2.cvals
@@ -244,10 +244,10 @@ function ExtendableGrids.instantiate(xgrid::ExtendableGrid{Tv, Ti}, ::Type{Recon
         end
 
         # update basis
-        update_febe!(FEB1,cell)
-        update_febe!(FEB2,cell)
-        update_febe!(FEB3,cell)
-        update_febe!(FEB4,cell)
+        update_basis!(FEB1,cell)
+        update_basis!(FEB2,cell)
+        update_basis!(FEB3,cell)
+        update_basis!(FEB4,cell)
 
         # compute local mass matrices
         fill!(IMM,0)

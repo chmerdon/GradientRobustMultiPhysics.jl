@@ -220,11 +220,11 @@ function get_local_equilibration_estimator(xgrid::ExtendableGrid{Tv,Ti}, Solutio
         blocal = zeros(Tv,maxdofs)
 
         ## init FEBasiEvaluators
-        FEBasis_gradphi = FEBasisEvaluator{Tv,Triangle2D,Gradient,ON_CELLS}(POUFES, POUqf)
-        FEBasis_xref = FEBasisEvaluator{Tv,Triangle2D,Identity,ON_CELLS}(POUFES, qf)
-        FEBasis_graduh = FEBasisEvaluator{Tv,Triangle2D,Gradient,ON_CELLS}(Solution[1].FES, qf)
-        FEBasis_div = FEBasisEvaluator{Tv,Triangle2D,Divergence,ON_CELLS}(FESDual, qf)
-        FEBasis_id = FEBasisEvaluator{Tv,Triangle2D,Identity,ON_CELLS}(FESDual, qf)
+        FEE_∇φ = FEEvaluator(POUFES, Gradient, POUqf)
+        FEE_xref = FEEvaluator(POUFES, Identity, qf)
+        FEE_∇u = FEEvaluator(Solution[1].FES, Gradient, qf)
+        FEE_div = FEEvaluator(FESDual, Divergence, qf)
+        FEE_id = FEEvaluator(FESDual, Identity, qf)
 
         ## init system
         A = ExtendableSparseMatrix{Tv,Int64}(FESDual.ndofs,FESDual.ndofs)
@@ -261,8 +261,9 @@ function get_local_equilibration_estimator(xgrid::ExtendableGrid{Tv,Ti}, Solutio
                 while xCellNodes[localnode,cell] != node
                     localnode += 1
                 end
-                update_febe!(FEBasis_gradphi,cell)
-                eval_febe!(gradphi, FEBasis_gradphi, localnode, 1)
+                FEE_∇φ.citem[] = cell
+                update_basis!(FEE_∇φ)
+                eval_febe!(gradphi, FEE_∇φ, localnode, 1)
 
                 ## read coefficients for discrete flux
                 for j=1:maxdofs_uh
@@ -270,10 +271,12 @@ function get_local_equilibration_estimator(xgrid::ExtendableGrid{Tv,Ti}, Solutio
                 end
 
                 ## update other FE evaluators
-                
-                update_febe!(FEBasis_graduh,cell)
-                update_febe!(FEBasis_div,cell)
-                update_febe!(FEBasis_id,cell)
+                FEE_∇u.citem[] = cell
+                FEE_div.citem[] = cell
+                FEE_id.citem[] = cell
+                update_basis!(FEE_∇u)
+                update_basis!(FEE_div)
+                update_basis!(FEE_id)
 
                 ## assembly on this cell
                 for i in eachindex(weights)
@@ -281,28 +284,28 @@ function get_local_equilibration_estimator(xgrid::ExtendableGrid{Tv,Ti}, Solutio
 
                     ## evaluate grad(u_h) and nodal basis function at quadrature point
                     fill!(graduh,0)
-                    eval_febe!(graduh, FEBasis_graduh, coeffs_uh, i)
-                    eval_febe!(eval_phi, FEBasis_xref, localnode, i)
+                    eval_febe!(graduh, FEE_∇u, coeffs_uh, i)
+                    eval_febe!(eval_phi, FEE_xref, localnode, i)
 
                     ## compute residual -f*phi_z + grad(u_h) * grad(phi_z) at quadrature point i ( f = 0 in this example !!! )
                     temp2 = div_penalty * sqrt(xCellVolumes[cell]) * weight
                     temp = temp2*( graduh[1] * gradphi[1] + graduh[2] * gradphi[2] )
                     for dof_i = 1 : maxdofs
-                        eval_febe!(eval_i, FEBasis_id, dof_i, i)
+                        eval_febe!(eval_i, FEE_id, dof_i, i)
                         eval_i .*= weight
                         ## right-hand side for best-approximation (grad(u_h)*phi)
                         blocal[dof_i] += (graduh[1]*eval_i[1] + graduh[2]*eval_i[2]) * eval_phi[1]
                         ## mass matrix Hdiv 
                         for dof_j = dof_i : maxdofs
-                            eval_febe!(eval_j, FEBasis_id, dof_j, i)
+                            eval_febe!(eval_j, FEE_id, dof_j, i)
                             Alocal[dof_i,dof_j] += (eval_i[1]*eval_j[1] + eval_i[2]*eval_j[2])
                         end
                         ## div-div matrix Hdiv * penalty (quick and dirty to avoid Lagrange multiplier)
-                        eval_febe!(eval_i, FEBasis_div, dof_i, i)
+                        eval_febe!(eval_i, FEE_div, dof_i, i)
                         blocal[dof_i] += temp * eval_i[1]
                         temp3 = temp2 * eval_i[1]
                         for dof_j = dof_i : maxdofs
-                            eval_febe!(eval_j, FEBasis_div, dof_j, i)
+                            eval_febe!(eval_j, FEE_div, dof_j, i)
                             Alocal[dof_i,dof_j] += temp3*eval_j[1]
                         end
                     end

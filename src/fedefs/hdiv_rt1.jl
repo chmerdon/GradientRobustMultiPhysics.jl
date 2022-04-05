@@ -78,7 +78,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     integrate!(means, FE.xgrid, ON_CELLS, data)
     EG = (ncomponents == 2) ? Triangle2D : Tetrahedron3D
     qf = QuadratureRule{T,EG}(2)
-    FEB = FEBasisEvaluator{T,EG,Identity,ON_CELLS}(FE, qf)
+    FEB = FEEvaluator(FE, Identity, qf; T = T)
     if items == []
         items = 1 : ncells
     end
@@ -88,7 +88,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     interiordofs = zeros(Int,ncomponents)
     interior_offset::Int = (ncomponents == 2) ? 6 : 12
     for cell in items
-        update_febe!(FEB,cell)
+        update_basis!(FEB,cell)
         # compute mean value of facial RT1 dofs
         for dof = 1 : interior_offset
             for i = 1 : length(qf.w)

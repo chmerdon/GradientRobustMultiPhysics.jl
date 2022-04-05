@@ -242,6 +242,7 @@ function run_basic_fe_tests()
         # choose FE and generate FESpace
         FES = FESpace{FEType}(xgrid; broken = broken)
         AT = ON_CELLS
+        print("FEType = $FEType $(broken ? "broken" : "") $AT | ndofs = $(FES.ndofs) | order = $order")
 
         # interpolate
         Solution = FEVector{Float64}("Interpolation",FES)
@@ -257,7 +258,7 @@ function run_basic_fe_tests()
             error[2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
             error[3] = sqrt(evaluate(H2ErrorEvaluator,Solution[1]))
         end
-        println("FEType = $FEType $(broken ? "broken" : "") $AT | ndofs = $(FES.ndofs) | order = $order | error = $error")
+        println(" | error = $error")
         @test sum(error) < tolerance
     end
 

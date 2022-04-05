@@ -157,7 +157,7 @@ function assemble!(
     end
 
     weights::Array{T,1} = get_qweights(AM) # somehow this saves A LOT allocations
-    basisevaler::Array{FEBasisEvaluator{T,Tv,Ti},1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
+    basisevaler::Array{FEEvaluator{T,Tv,Ti},1} = [get_basisevaler(AM, 1, 1), get_basisevaler(AM, 2, 1)]
     basisvals::Union{SharedCValView{T},Array{T,3}} = basisevaler[1].cvals
     basisxref::Array{Array{T,1},1} = basisevaler[1].xref
     localmatrix::Array{T,2} = zeros(T,get_maxndofs(AM,nFE-1),get_maxndofs(AM,nFE))
@@ -269,8 +269,8 @@ function assemble!(
                 ndofs4dofitem[2] = get_ndofs(AM, nFE, di[2])
 
                 # update FEbasisevaler
-                basisevaler[1] = get_basisevaler(AM, nFE-1, di[1])::FEBasisEvaluator
-                basisevaler[2] = get_basisevaler(AM, nFE, di[2])::FEBasisEvaluator
+                basisevaler[1] = get_basisevaler(AM, nFE-1, di[1])::FEEvaluator
+                basisevaler[2] = get_basisevaler(AM, nFE, di[2])::FEEvaluator
                 basisvals = basisevaler[other_id].cvals
                 basisxref = basisevaler[other_id].xref
                 

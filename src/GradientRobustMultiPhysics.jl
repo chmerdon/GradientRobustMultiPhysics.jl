@@ -93,8 +93,9 @@ export displace_mesh,displace_mesh!
 include("reconstructions.jl")
 export ReconstructionHandler, get_rcoefficients!
 
-include("febasisevaluator.jl")
-export FEBasisEvaluator, update_febe!, eval_febe!
+
+include("feevaluator.jl")
+export FEEvaluator, update_basis!, eval_febe!
 
 
 include("actions.jl")

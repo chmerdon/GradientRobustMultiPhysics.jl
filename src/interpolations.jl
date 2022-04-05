@@ -616,10 +616,10 @@ function nodevalues!(target::AbstractArray{T,2},
     EG = FE.xgrid[UniqueCellGeometries]
     ndofs4EG::Array{Int,1} = Array{Int,1}(undef,length(EG))
     qf = Array{QuadratureRule,1}(undef,length(EG))
-    basisevaler::Array{FEBasisEvaluator{T,Tv,Ti},1} = Array{FEBasisEvaluator{T,Tv,Ti},1}(undef,length(EG))
+    basisevaler::Array{FEEvaluator{T,Tv,Ti},1} = Array{FEEvaluator{T,Tv,Ti},1}(undef,length(EG))
     for j = 1 : length(EG)
         qf[j] = VertexRule(EG[j])
-        basisevaler[j] = FEBasisEvaluator{T,EG[j],operator,ON_CELLS}(FE, qf[j])
+        basisevaler[j] = FEEvaluator(FE, operator, qf[j]; T = T)
         ndofs4EG[j] = size(basisevaler[j].cvals,2)
     end    
     cvals_resultdim::Int = size(basisevaler[1].cvals,1)
@@ -664,7 +664,7 @@ function nodevalues!(target::AbstractArray{T,2},
                     end
 
                     # update FEbasisevaler
-                    update_febe!(basisevaler[iEG],item)
+                    update_basis!(basisevaler[iEG],item)
                     basisvals = basisevaler[iEG].cvals
 
                     for i in eachindex(weights) # vertices
@@ -730,7 +730,7 @@ function nodevalues!(target::AbstractArray{T,2},
                 end
 
                 # update FEbasisevaler
-                update_febe!(basisevaler[iEG],item)
+                update_basis!(basisevaler[iEG],item)
                 basisvals = basisevaler[iEG].cvals
 
                 fill!(localT,0)

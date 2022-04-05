@@ -4,7 +4,7 @@
 
 
 struct SegmentIntegrator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: AbstractFiniteElement, EG <: AbstractElementGeometry, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, SG <: AbstractElementGeometry, ACT <: AbstractAction}
-    FEBE::FEBasisEvaluator{T,Tv,Ti,FEType,EG,FEOP,AT} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
+    FEBE::FEEvaluator{T,Tv,Ti} ## evaluates the FE basis on the segment (needs recomputation of quadrature points on entering cell)
     FEB::FEVectorBlock{T,Tv,Ti} # holds coefficients
     xItemDofs::DofMapTypes{Ti} # holds dof numbers
     action::ACT # additional action to postprocess operator evaluation
@@ -26,9 +26,9 @@ function SegmentIntegrator{T}(EG,FEOP,SG,FES::FESpace{Tv,Ti,FEType,FEAT}, FEB::F
         for i = 1 : length(qf_SG.xref)
             xref[i] = zeros(T,dim_element(EG))
         end
-        FEBE = FEBasisEvaluator{T,EG,FEOP,AT}(FES, xref; mutable = true)
+        FEBE = FEEvaluator(FES, FEOP, xref; T = T, AT = AT)
     else
-        FEBE = FEBasisEvaluator{T,EG,FEOP,AT}(FES, qf_SG; mutable = true)
+        FEBE = FEEvaluator(FES, FEOP, qf_SG; T = T, AT = AT)
     end
     DM = Dofmap4AssemblyType(FEB.FES, AT)
 
@@ -71,7 +71,7 @@ function integrate!(
     relocate_xref!(FEBE, xref)
     
     # update operator eveluation on item
-    update_febe!(FEBE, item)
+    update_basis!(FEBE, item)
 
     # compute volume
     action = SI.action

@@ -1,9 +1,9 @@
 
-# FE Basis Evaluators
+# FE Evaluators
 
 
 ```@autodocs
 Modules = [GradientRobustMultiPhysics]
-Pages = ["febasisevaluator.jl"]
+Pages = ["feevaluator.jl"]
 Order   = [:type, :function]
 ```

@@ -89,16 +89,16 @@ function test_2nd_derivs()
     qf = QuadratureRule{Float64,Triangle2D}(0)
 
     ## define FE basis Evaluator for Hessian
-    FEBE_L = FEBasisEvaluator{Float64,Triangle2D,Laplacian,ON_CELLS}(FES, qf)
-    FEBE_H = FEBasisEvaluator{Float64,Triangle2D,Hessian,ON_CELLS}(FES, qf)
-    FEBE_symH = FEBasisEvaluator{Float64,Triangle2D,SymmetricHessian{1},ON_CELLS}(FES, qf)
-    FEBE_symH2 = FEBasisEvaluator{Float64,Triangle2D,SymmetricHessian{sqrt(2)},ON_CELLS}(FES, qf)
+    FEBE_L = FEEvaluator(FES, Laplacian, qf)
+    FEBE_H = FEEvaluator(FES, Hessian, qf)
+    FEBE_symH = FEEvaluator(FES, SymmetricHessian{1}, qf)
+    FEBE_symH2 = FEEvaluator(FES, SymmetricHessian{sqrt(2)}, qf)
 
     ## update on cell 1
-    update_febe!(FEBE_L,1)
-    update_febe!(FEBE_H,1)
-    update_febe!(FEBE_symH,1)
-    update_febe!(FEBE_symH2,1)
+    update_basis!(FEBE_L,1)
+    update_basis!(FEBE_H,1)
+    update_basis!(FEBE_symH,1)
+    update_basis!(FEBE_symH2,1)
 
     ## interpolate quadratic testfunction
     Iu = FEVector{Float64}("Iu",FES)

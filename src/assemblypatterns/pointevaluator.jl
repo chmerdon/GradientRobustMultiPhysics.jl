@@ -9,7 +9,7 @@ $(TYPEDEF)
 structure that allows to evaluate a FEVectorBlock at arbitrary points
 """
 struct PointEvaluator{T <: Real, Tv <: Real, Ti <: Integer, FEType <: AbstractFiniteElement, FEOP <: AbstractFunctionOperator, AT <: AssemblyType, ACT <: AbstractAction}
-    FEBE::Array{FEBasisEvaluator{T,Tv,Ti,FEType},1} ## evaluates the FE basis on the possible element geometries
+    FEBE::Array{FEEvaluator{T,Tv,Ti},1} ## evaluates the FE basis on the possible element geometries
     FEB::FEVectorBlock{T,Tv,Ti} # holds coefficients
     EG::Array{DataType,1} # Element geometries
     xItemGeometries::GridEGTypes
@@ -31,13 +31,13 @@ function PointEvaluator(FEB::FEVectorBlock{T,Tv,Ti}, FEOP,action::AbstractAction
     xgrid = FEB.FES.xgrid
     EG = xgrid[GridComponentUniqueGeometries4AssemblyType(AT)]
     xItemGeometries = xgrid[GridComponentGeometries4AssemblyType(AT)]
-    qf = QuadratureRule{T, EG[1]}(0) # dummy quadrature
 
     FEType = eltype(FEB.FES)
-    FEBE = Array{FEBasisEvaluator{T,Tv,Ti,FEType},1}(undef,length(EG))
+    FEBE = Array{FEEvaluator{T,Tv,Ti},1}(undef,length(EG))
     
     for j = 1 : length(EG)
-        FEBE[j] = FEBasisEvaluator{T,EG[j],FEOP,AT}(FEB.FES, qf)
+        qf = QuadratureRule{T, EG[j]}(0) # dummy quadrature
+        FEBE[j] = FEEvaluator(FEB.FES, FEOP, qf; T = T, AT = AT)
     end
     
     DM = Dofmap4AssemblyType(FEB.FES, AT)
@@ -92,7 +92,7 @@ function evaluate!(
     relocate_xref!(FEBE, xref)
     
     # update operator eveluation on item
-    update_febe!(FEBE, item)
+    update_basis!(FEBE, item)
 
     # evaluate
     coeffs::Array{T,1} = FEB.entries

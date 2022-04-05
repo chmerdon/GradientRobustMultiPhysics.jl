@@ -37,7 +37,7 @@ reconstruction identity operator: evaluates a reconstructed version of the finit
 FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
 """
 abstract type AbstractFiniteElement end
-abstract type ReconstructionIdentity{FEreconst<:AbstractFiniteElement} <: Identity end # 1*R(v_h)
+abstract type ReconstructionIdentity{FEreconst<:AbstractFiniteElement} <: AbstractFunctionOperator end # 1*R(v_h)
 abstract type ReconstructionIdentityDisc{FEreconst<:AbstractFiniteElement, DT<:DiscontinuityTreatment} <: ReconstructionIdentity{FEreconst} end # 1*R(v_h)
 """
 $(TYPEDEF)
@@ -55,7 +55,7 @@ reconstruction normal flux: evaluates the normal flux of a reconstructed version
 
 FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
 """
-abstract type ReconstructionNormalFlux{FEreconst<:AbstractFiniteElement} <: NormalFlux end # R(v_h) * n_F
+abstract type ReconstructionNormalFlux{FEreconst<:AbstractFiniteElement} <: AbstractFunctionOperator end # R(v_h) * n_F
 
 """
 $(TYPEDEF)
@@ -78,7 +78,7 @@ reconstruction gradient operator: evaluates the gradient of a reconstructed vers
 
 FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
 """
-abstract type ReconstructionGradient{FEreconst<:AbstractFiniteElement} <: Gradient end # 1*R(v_h)
+abstract type ReconstructionGradient{FEreconst<:AbstractFiniteElement} <: AbstractFunctionOperator end # 1*R(v_h)
 abstract type ReconstructionGradientDisc{FEreconst<:AbstractFiniteElement, DT<:DiscontinuityTreatment} <: ReconstructionGradient{FEreconst} end # 1*R(v_h)
 """
 $(TYPEDEF)
@@ -147,7 +147,7 @@ evaluates the divergence of the reconstructed finite element function.
 
 FEreconst specifies the reconstruction space and reconstruction algorithm if it is defined for the finite element that it is applied to.
 """
-abstract type ReconstructionDivergence{FEreconst<:AbstractFiniteElement} <: Divergence end # 1*R(v_h)
+abstract type ReconstructionDivergence{FEreconst<:AbstractFiniteElement} <: AbstractFunctionOperator end # 1*R(v_h)
 
 abstract type Trace <: AbstractFunctionOperator end # tr(v_h)
 abstract type Deviator <: AbstractFunctionOperator end # dev(v_h)
@@ -204,10 +204,13 @@ Average(::Type{ReconstructionGradient{FER}}) where {FER} = ReconstructionGradien
 Parent{k}(::Type{ReconstructionGradient{FER}}) where {FER,k} = IReconstructionGradientDisc{FER,Parent{k}}
 
 NeededDerivative4Operator(::Type{<:Identity}) = 0
+NeededDerivative4Operator(::Type{<:ReconstructionIdentity}) = 0
 NeededDerivative4Operator(::Type{<:IdentityComponent}) = 0
+NeededDerivative4Operator(::Type{<:ReconstructionNormalFlux}) = 0
 NeededDerivative4Operator(::Type{<:NormalFlux}) = 0
 NeededDerivative4Operator(::Type{<:TangentFlux}) = 0
 NeededDerivative4Operator(::Type{<:Gradient}) = 1
+NeededDerivative4Operator(::Type{<:ReconstructionGradient}) = 1
 NeededDerivative4Operator(::Type{<:SymmetricGradient}) = 1
 NeededDerivative4Operator(::Type{TangentialGradient}) = 1
 NeededDerivative4Operator(::Type{<:Laplacian}) = 2
@@ -217,6 +220,7 @@ NeededDerivative4Operator(::Type{CurlScalar}) = 1
 NeededDerivative4Operator(::Type{Curl2D}) = 1
 NeededDerivative4Operator(::Type{Curl3D}) = 1
 NeededDerivative4Operator(::Type{<:Divergence}) = 1
+NeededDerivative4Operator(::Type{<:ReconstructionDivergence}) = 1
 NeededDerivative4Operator(::Type{Trace}) = 0
 NeededDerivative4Operator(::Type{Deviator}) = 0
 
@@ -254,35 +258,40 @@ end
 
 # length for operator result
 Length4Operator(::Type{<:Identity}, xdim::Int, ncomponents::Int) = ncomponents
+Length4Operator(::Type{<:ReconstructionIdentity}, xdim::Int, ncomponents::Int) = ncomponents
 Length4Operator(::Type{<:IdentityComponent}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:NormalFlux}, xdim::Int, ncomponents::Int) = 1
+Length4Operator(::Type{<:ReconstructionNormalFlux}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:TangentFlux}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:Divergence}, xdim::Int, ncomponents::Int) = Int(ceil(ncomponents/xdim))
+Length4Operator(::Type{<:ReconstructionDivergence}, xdim::Int, ncomponents::Int) = Int(ceil(ncomponents/xdim))
 Length4Operator(::Type{Trace}, xdim::Int, ncomponents::Int) = ceil(sqrt(ncomponents))
 Length4Operator(::Type{CurlScalar}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? xdim*ncomponents : Int(ceil(xdim*(ncomponents/xdim))))
 Length4Operator(::Type{Curl2D}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{Curl3D}, xdim::Int, ncomponents::Int) = 3
 Length4Operator(::Type{<:Gradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
+Length4Operator(::Type{<:ReconstructionGradient}, xdim::Int, ncomponents::Int) = xdim*ncomponents
 Length4Operator(::Type{TangentialGradient}, xdim::Int, ncomponents::Int) = 1
 Length4Operator(::Type{<:SymmetricGradient}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*Int(ceil(ncomponents/xdim))
 Length4Operator(::Type{Hessian}, xdim::Int, ncomponents::Int) = xdim*xdim*ncomponents
 Length4Operator(::Type{<:SymmetricHessian}, xdim::Int, ncomponents::Int) = ((xdim == 2) ? 3 : 6)*ncomponents
 Length4Operator(::Type{<:Laplacian}, xdim::Int, ncomponents::Int) = ncomponents
 
-QuadratureOrderShift4Operator(::Type{<:Identity}) = 0
-QuadratureOrderShift4Operator(::Type{<:IdentityComponent}) = 0
-QuadratureOrderShift4Operator(::Type{<:NormalFlux}) = 0
-QuadratureOrderShift4Operator(::Type{<:TangentFlux}) = 0
-QuadratureOrderShift4Operator(::Type{<:Gradient}) = -1
-QuadratureOrderShift4Operator(::Type{CurlScalar}) = -1
-QuadratureOrderShift4Operator(::Type{Curl2D}) = -1
-QuadratureOrderShift4Operator(::Type{Curl3D}) = -1
-QuadratureOrderShift4Operator(::Type{<:Divergence}) = -1
-QuadratureOrderShift4Operator(::Type{<:SymmetricGradient}) = -1
-QuadratureOrderShift4Operator(::Type{TangentialGradient}) = -1
-QuadratureOrderShift4Operator(::Type{<:Laplacian}) = -2
-QuadratureOrderShift4Operator(::Type{Hessian}) = -2
-QuadratureOrderShift4Operator(::Type{<:SymmetricHessian}) = -2
+# QuadratureOrderShift4Operator(::Type{<:Identity}) = 0
+# QuadratureOrderShift4Operator(::Type{<:IdentityComponent}) = 0
+# QuadratureOrderShift4Operator(::Type{<:NormalFlux}) = 0
+# QuadratureOrderShift4Operator(::Type{<:TangentFlux}) = 0
+# QuadratureOrderShift4Operator(::Type{<:Gradient}) = -1
+# QuadratureOrderShift4Operator(::Type{CurlScalar}) = -1
+# QuadratureOrderShift4Operator(::Type{Curl2D}) = -1
+# QuadratureOrderShift4Operator(::Type{Curl3D}) = -1
+# QuadratureOrderShift4Operator(::Type{<:Divergence}) = -1
+# QuadratureOrderShift4Operator(::Type{<:SymmetricGradient}) = -1
+# QuadratureOrderShift4Operator(::Type{TangentialGradient}) = -1
+# QuadratureOrderShift4Operator(::Type{<:Laplacian}) = -2
+# QuadratureOrderShift4Operator(::Type{Hessian}) = -2
+# QuadratureOrderShift4Operator(::Type{<:SymmetricHessian}) = -2
+QuadratureOrderShift4Operator(operator) = -NeededDerivative4Operator(operator)
 
 
 # some infrastructure to allow operator pairs (and possibly triplets etc. by recursive application)

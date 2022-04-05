@@ -54,43 +54,22 @@ function main(; verbosity = 0, μ = 1, nrefinements = 3, Plotter = nothing)
     dof_j::Int, dof_k::Int = 0, 0
 
     ## FE basis evaluator
-    FEBasis_id::FEBasisEvaluator{Float64} = FEBasisEvaluator{Float64,Triangle2D,Identity,ON_CELLS}(FES, qf)
-    FEBasis_∇::FEBasisEvaluator{Float64} = FEBasisEvaluator{Float64,Triangle2D,Gradient,ON_CELLS}(FES, qf)
-    ∇vals::Array{Float64,3} = FEBasis_∇.cvals
-    ∇refvals::Array{Float64,3} = FEBasis_∇.refbasisderivvals
+    FEBasis_id::FEEvaluator{Float64} = FEEvaluator(FES, Identity, qf)
+    FEBasis_∇::FEEvaluator{Float64} = FEEvaluator(FES, Gradient, qf)
     idvals::Array{Float64,3} = FEBasis_id.cvals
+    ∇vals::Array{Float64,3} = FEBasis_∇.cvals
     L2G::L2GTransformer{Float64, Int32, Triangle2D} = FEBasis_∇.L2G
-    L2GAinv::Matrix{Float64} = zeros(Float64,3,3)
-
-    ## allocation-free alternative to avoid calling update_febe!, see lines 86--92
-    function update_∇(cell)
-        fill!(∇vals, 0)
-        for qp = 1 : nweights
-            for dof_i = 1 : ndofs4cell
-                for k = 1 : 2
-                    for j = 1 : 2
-                        ∇vals[k,dof_i,qp] += L2GAinv[k,j] * ∇refvals[dof_i,j,qp]
-                    end    
-                end    
-            end    
-        end 
-    end
+    L2GAinv::Matrix{Float64} = zeros(Float64,2,2)
 
     ## ASSEMBLY LOOP
     ncells::Int = num_cells(xgrid)
     x::Vector{Float64} = zeros(Float64, 2)
     cellvolumes = xgrid[CellVolumes]
-    @time for cell = 1 : ncells
+    @time for cell::Int = 1 : ncells
 
         ## update FE basis evaluators
-        #update_febe!(FEBasis_id, cell) # standard Lagrange element needs no id update
-        if (true) # allocation-free 
-            update_trafo!(L2G, cell)
-            mapderiv!(L2GAinv, L2G, nothing)
-            update_∇(cell)
-        else # 1 dispatch alloc, if ncells > 512
-            update_febe!(FEBasis_∇, cell) 
-        end
+        FEBasis_∇.citem[] = cell
+        update_basis!(FEBasis_∇) 
 
         for j = 1 : ndofs4cell
             dof_j = CellDofs[j, cell]

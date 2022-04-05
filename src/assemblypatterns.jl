@@ -27,7 +27,7 @@ mutable struct AssemblyManager{T <: Real, Tv <: Real, Ti <: Integer}
     ndofs4EG::Array{Array{Int,1},1}             # ndofs for each finite element on each EG
     nop::Int                                    # number of operators
     qf::Array{QuadratureRule{T},1}                 # quadrature rules
-    basisevaler::Array{AbstractFEBasisEvaluator{T, Tv, Ti},4}      # finite element basis evaluators
+    basisevaler::Array{FEEvaluator{T, Tv, Ti},4}      # finite element basis evaluators
     dii4op_types::Array{DataType,1}
     basisAT::Array{Type{<:AssemblyType},1}                      
     citem::Int                                          # current item
@@ -264,7 +264,11 @@ function update_assembly!(AM::AssemblyManager, item)
             # update needed basisevaler
             for di = 1 : length(AM.dofitems[j])
                 if AM.dofitems[j][di] != 0
-                    update_febe!(AM.basisevaler[AM.EG4dofitem[j][di],j,AM.itempos4dofitem[j][di],AM.orientation4dofitem[j][di]], AM.dofitems[j][di])
+                    evaler = AM.basisevaler[AM.EG4dofitem[j][di],j,AM.itempos4dofitem[j][di],AM.orientation4dofitem[j][di]]
+                    if evaler.citem[] != AM.dofitems[j][di]
+                        evaler.citem[] = AM.dofitems[j][di]
+                        update_basis!(evaler)
+                    end
                 end
             end
         end
@@ -525,7 +529,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
     end
 
     # find proper quadrature QuadratureRules
-    # and construct matching FEBasisEvaluators
+    # and construct matching FEEvaluators
     # dimension 1 = id of element geometry (combination of integration domains/dofitem domains)
     # dimension 2 = id finite element
     # dimension 3 = position if integration domain in superset dofitem (if jumping operator)
@@ -548,7 +552,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
             maxorientations = max(maxorientations, length(xrefFACE2xrefOFACE(EG[j])))
         end
     end
-    basisevaler = Array{FEBasisEvaluator,4}(undef, length(EG) + length(EGdofitem), length(FE), (length(discontinuous_operators) > 0) ? maxfaces : 1, (length(discontinuous_operators) > 0) ? maxorientations : 1)
+    basisevaler = Array{FEEvaluator,4}(undef, length(EG) + length(EGdofitem), length(FE), (length(discontinuous_operators) > 0) ? maxfaces : 1, (length(discontinuous_operators) > 0) ? maxorientations : 1)
 
     ## first position: basis evaluator of operators on assembly geometry (but only used in continuous or broken mode)
     same_FE::Int = 0
@@ -575,12 +579,12 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
                 if same_FE > 0
                     basisevaler[j,k,1,1] = basisevaler[j,same_FE,1,1]
                 else    
-                    basisevaler[j,k,1,1] = FEBasisEvaluator{T,EG[j],operator[k],AT}(FE[k], qf[j])
+                    basisevaler[j,k,1,1] = FEEvaluator(FE[k], operator[k], qf[j]; T = T, AT = AT)
                 end    
                 ndofs4EG[k][j] = size(basisevaler[j,k,1,1].cvals,2)
             else
                 # todo: will not be evaluated, but do something reasonable here
-                basisevaler[j,k,1,1] = FEBasisEvaluator{T,EG[j],Identity,AT}(FE[k], qf[j])
+                basisevaler[j,k,1,1] = FEEvaluator(FE[k], operator[k], qf[j]; T = T, AT = AT)
                 ndofs4EG[k][j] = 0
             end
          #   end
@@ -623,7 +627,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
                         qf[EGoffset + j].xref[i] = SVector{xrefdim,T}(xrefFACE2CELL[f](xrefFACE2OFACE[orientation](qf4face.xref[i])))
                         #println("face $f orientation $orientation : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
-                    basisevaler[EGoffset + j,k,f,orientation] = FEBasisEvaluator{T,EGdofitem[j],operator[k],dofitemAT[k]}(FE[k], qf[EGoffset + j])
+                    basisevaler[EGoffset + j,k,f,orientation] = FEEvaluator(FE[k], operator[k], qf[EGoffset + j]; T = T, AT = dofitemAT[k])
                 end
                 ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j,k,1,1].cvals,2)
             end

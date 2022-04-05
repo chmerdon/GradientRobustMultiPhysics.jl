@@ -224,7 +224,7 @@ function evaluate!(
     # loop over items
     offsets::Array{Int,1} = zeros(Int,nFE+1)
     maxdofs::Array{Int,1} = get_maxndofs(AM)
-    basisevaler::Array{FEBasisEvaluator,1} = Array{FEBasisEvaluator,1}(undef,nFE)
+    basisevaler::Array{FEEvaluator,1} = Array{FEEvaluator,1}(undef,nFE)
     for j = 1 : nFE
         basisevaler[j] = get_basisevaler(AM, j, 1)
         offsets[j+1] = offsets[j] + get_basisdim(AM, j)

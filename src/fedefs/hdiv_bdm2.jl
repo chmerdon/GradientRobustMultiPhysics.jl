@@ -66,16 +66,16 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     xCellVolumes::Array{Tv,1} = FE.xgrid[CellVolumes]
     xCellDofs::DofMapTypes{Ti} = FE[CellDofs]
     qf = QuadratureRule{T,EG}(max(4,2+data.bonus_quadorder))
-    FEB = FEBasisEvaluator{T,EG,Identity,ON_CELLS}(FE, qf)
+    FEB = FEEvaluator(FE, Identity, qf; T = T)
 
     # evaluation of gradient of P1 functions
     FE3 = H1P1{1}
     FES3 = FESpace{FE3,ON_CELLS}(FE.xgrid)
-    FEBP1 = FEBasisEvaluator{T,EG,Gradient,ON_CELLS}(FES3, qf)
+    FEBP1 = FEEvaluator(FES3, Gradient, qf; T = T)
     # evaluation of curl of bubble functions
     FE4 = H1BUBBLE{1}
     FES4 = FESpace{FE4,ON_CELLS}(FE.xgrid)
-    FEBB = FEBasisEvaluator{T,EG,CurlScalar,ON_CELLS}(FES4, qf)
+    FEBB = FEEvaluator(FES4, CurlScalar, qf; T = T)
 
 
     if items == []
@@ -93,9 +93,9 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     set_time!(data, time)
     for cell in items
         # update basis
-        update_febe!(FEB,cell)
-        update_febe!(FEBP1,cell)
-        update_febe!(FEBB,cell)
+        update_basis!(FEB,cell)
+        update_basis!(FEBP1,cell)
+        update_basis!(FEBB,cell)
         fill!(IMM,0)
         fill!(IMM_face,0)
         fill!(lb,0)

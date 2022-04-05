@@ -278,7 +278,7 @@ end
 
 ## recipe taken from:
 ## "A SET OF SYMMETRIC QUADRATURE RULESON TRIANGLES AND TETRAHEDRA"
-## Zhang/Cui/Lia
+## Zhang/Cui/Liu
 ## Journal of Computational Mathematics, Vol.27, No.1, 2009,89–96
 function get_symmetric_rule(::Type{Triangle2D}, order::Int)
 
