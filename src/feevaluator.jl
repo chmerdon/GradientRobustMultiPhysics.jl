@@ -1,7 +1,7 @@
 
 abstract type FEEvaluator{T <: Real, TvG <: Real, TiG <: Integer} end
 
-mutable struct SingleFEEvaluator{T <: Real, TvG <: Real, TiG <: Integer, operator, FEType, EG, FType_basis <: Function, FType_coeffs <: Function, FType_subset <: Function, FType_jac <: Function} <: FEEvaluator{T, TvG, TiG}
+struct SingleFEEvaluator{T <: Real, TvG <: Real, TiG <: Integer, operator, FEType, EG, FType_basis <: Function, FType_coeffs <: Function, FType_subset <: Function, FType_jac <: Function} <: FEEvaluator{T, TvG, TiG}
     citem::Base.RefValue{Int}                   # current item
     FE::FESpace{TvG,TiG,FEType}                 # link to full FE (e.g. for coefficients)
     FE2::Union{Nothing, FESpace{TvG,TiG}}       # link to other FE (if needed, e.g. for reconstruction)
@@ -293,7 +293,7 @@ function _prepare_derivatives(refbasisderivvals, refbasis, xref, derivorder, ndo
 end
 
 ## relocates evaluation points (needs mutable FEB) used by segment integrator/point evaluator
-function relocate_xref!(FEB::SingleFEEvaluator{<:Real,<:Real,<:Integer,FEType,operator}, new_xref) where {FEType, operator}
+function relocate_xref!(FEB::SingleFEEvaluator{<:Real,<:Real,<:Integer,operator,FEType}, new_xref) where {FEType, operator}
     for j = 1 : length(FEB.xref[1])
         FEB.xref[1][j] = new_xref[j]
     end

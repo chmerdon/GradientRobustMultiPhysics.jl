@@ -36,8 +36,7 @@ function PointEvaluator(FEB::FEVectorBlock{T,Tv,Ti}, FEOP,action::AbstractAction
     FEBE = Array{FEEvaluator{T,Tv,Ti},1}(undef,length(EG))
     
     for j = 1 : length(EG)
-        qf = QuadratureRule{T, EG[j]}(0) # dummy quadrature
-        FEBE[j] = FEEvaluator(FEB.FES, FEOP, qf; T = T, AT = AT)
+        FEBE[j] = FEEvaluator(FEB.FES, FEOP, QuadratureRule{T, EG[j]}(0); T = T, AT = AT)
     end
     
     DM = Dofmap4AssemblyType(FEB.FES, AT)
@@ -92,7 +91,8 @@ function evaluate!(
     relocate_xref!(FEBE, xref)
     
     # update operator eveluation on item
-    update_basis!(FEBE, item)
+    FEBE.citem[] = item
+    update_basis!(FEBE)
 
     # evaluate
     coeffs::Array{T,1} = FEB.entries

@@ -1,5 +1,16 @@
 
-using ExtendableSparse
+function run_operator_tests()
+    @testset "Operators" begin
+        println("\n")
+        println("============================")
+        println("Testing Operator Evaluations")
+        println("============================")
+        error = test_2nd_derivs()
+        @test error < 1e-14
+        error = test_recastBLFintoLF()
+        @test error < 1e-14
+    end
+end
 
 function test_recastBLFintoLF()
     ## define grid = a single non-refenrece triangle
