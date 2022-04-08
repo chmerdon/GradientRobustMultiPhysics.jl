@@ -20,7 +20,7 @@ struct SingleFEEvaluator{T <: Real, TvG <: Real, TiG <: Integer, operator, FETyp
     offsets2::Array{Int,1}                      # offsets for dof entries of each gradient (on ref)
     cvals::Array{T,3}                           # current operator vals on item
     coefficients::Array{T,2}                    # coefficients for finite element
-    coefficients2::AbstractArray{T,2}           # additional coefficients for reconstruction
+    coefficients2::Array{T,2}                   # additional coefficients for reconstruction
     coefficients3::AbstractArray{T,2}           # coefficients for operator (e.g. TangentialGradient)
     coeffs_handler::FType_coeffs                # function to call to get coefficients for finite element
     subset_handler::FType_subset                # function to call to get linear independent subset of basis on cell
