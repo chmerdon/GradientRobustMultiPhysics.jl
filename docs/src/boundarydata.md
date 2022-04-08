@@ -21,8 +21,8 @@ add_boundarydata!
 
 ## Other Boundary Data
 
-NeumannBoundary can be implemented as a RhsOperator with AT = ON_BFACES and specified boundary regions
+NeumannBoundary can be implemented via a RhsOperator with AT = ON_BFACES and specified boundary regions
 
-PeriodicBoundary can be implemented as a CombineDofs <: AbstractGlobalConstraint
+PeriodicBoundary can be implemented via CombineDofs (see ExampleA10)
 
 SymmetryBoundary can be implemented by penalisation as an BilinearForm on AT = ON_BFACES and specified boundary regions with operator NormalFlux and some penalty factor.

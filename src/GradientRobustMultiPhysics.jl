@@ -157,6 +157,7 @@ include("globalconstraints.jl")
 export AbstractGlobalConstraint
 export FixedIntegralMean
 export CombineDofs
+export FixedDofs
 export apply_constraint!
 
 

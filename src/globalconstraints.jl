@@ -48,12 +48,13 @@ $(TYPEDEF)
 
 combines specified degrees of freedom of two unknown (can be the same), which allows to glue together different unknowns in different regions or periodic boundary conditions
 """
-struct CombineDofs <: AbstractGlobalConstraint
+struct CombineDofs{T} <: AbstractGlobalConstraint
     name::String
     componentX::Int                  # component nr for dofsX
     componentY::Int                  # component nr for dofsY
     dofsX::Array{Int,1}     # dofsX that should be the same as dofsY in Y component
     dofsY::Array{Int,1}
+    factors::AbstractArray{T,1}
     when_assemble::Type{<:AbstractAssemblyTrigger}
 end 
 
@@ -65,9 +66,9 @@ function CombineDofs(idX::Int,idY::Int,dofsX::Array{Int,1},dofsY::Array{Int,1})
 constructs a CombineDofs constraint that (if assigned to a PDEDescription) ensures that the dofsX of the unknown with id idX matches the dofsY of the unknown with id idY.
 
 """
-function CombineDofs(componentX::Int,componentY::Int,dofsX::Array{Int,1},dofsY::Array{Int,1})
+function CombineDofs(componentX::Int,componentY::Int,dofsX::Array{Int,1},dofsY::Array{Int,1},factors = ones(Int,length(dofsX)))
     @assert length(dofsX) == length(dofsY)
-    return CombineDofs("CombineDofs[$componentX,$componentY] (ndofs = $(length(dofsX)))",componentX,componentY,dofsX,dofsY, AssemblyAlways)
+    return CombineDofs{eltype(factors)}("CombineDofs[$componentX,$componentY] (ndofs = $(length(dofsX)))",componentX,componentY,dofsX,dofsY,factors, AssemblyAlways)
 end
 
 function apply_constraint!(
@@ -93,56 +94,64 @@ end
 
 
 function apply_constraint!(
-    A::FEMatrix,
+    A::FEMatrix{Tv,Ti},
     b::FEVector,
-    Constraint::CombineDofs,
+    Constraint::CombineDofs{T},
     Target::FEVector;
-    current_equations = "all")
+    current_equations = "all") where {T,Tv,Ti}
 
     fixed_dofs = []
 
     c = Constraint.componentX
     c2 = Constraint.componentY
+    dofsX = Constraint.dofsX
+    dofsY = Constraint.dofsY
+    factors::Array{T} = Constraint.factors
     @logmsg DeepInfo "Combining dofs of component $c and $c2..."
     
-    # add subblock [dofsY,dofsY] of block [c2,c2] to subblock [dofsX,dofsX] of block [c,c]
-    # and penalize dofsY dofs
-    rows = rowvals(A.entries.cscmatrix)
-    targetrow = 0
-    sourcerow = 0
-    targetcolumn = 0
-    sourcecolumn = 0
-    for dof = 1 :length(Constraint.dofsX)
-
-        targetrow = A[c,c].offsetX + Constraint.dofsX[dof]
-        sourcerow = A[c2,c2].offsetX + Constraint.dofsY[dof]
-        #println("copying sourcerow=$sourcerow to targetrow=$targetrow")
-        for dof = 1 : length(Constraint.dofsX)
-            sourcecolumn = Constraint.dofsY[dof] + A[c2,c2].offsetY
-            for r in nzrange(A.entries.cscmatrix, sourcecolumn)
-                if sourcerow == rows[r]
-                    targetcolumn = Constraint.dofsX[dof] + A[c,c].offsetY
-                    A.entries[targetrow, targetcolumn] += 0.5*A.entries.cscmatrix.nzval[r] 
-                end
-            end
-        end
-        targetcolumn = A[c,c].offsetY + Constraint.dofsX[dof]
-        sourcecolumn = A[c2,c2].offsetY + Constraint.dofsY[dof]
-        #println("copying sourcecolumn=$sourcecolumn to targetcolumn=$targetcolumn")
-        for dof = 1 : length(Constraint.dofsX)
-            sourcerow = Constraint.dofsY[dof] + A[c2,c2].offsetX
-            for r in nzrange(A.entries.cscmatrix, sourcecolumn)
-                if sourcerow == rows[r]
-                    targetrow = Constraint.dofsX[dof] + A[c,c].offsetX
-                    A.entries[targetrow,targetcolumn] += 0.5*A.entries.cscmatrix.nzval[r] 
-                end
+    AE::ExtendableSparseMatrix{Tv,Ti} = A.entries
+    AM::SparseMatrixCSC{Tv,Ti} = A.entries.cscmatrix
+    Avals::Array{Tv,1} = AM.nzval
+    rows::Array{Ti,1} = rowvals(AM)
+    targetrow::Int = 0
+    sourcerow::Int = 0
+    targetcol::Int = 0
+    sourcecol::Int = 0
+    diffY = A[c,c].offsetY - A[c2,c2].offsetY
+    val::Float64 = 0
+    for gdof = 1 : length(Constraint.dofsX)
+        # copy source row (for dofY) to target row (for dofX)
+        targetrow = dofsX[gdof] + A[c,c].offsetX
+        sourcerow = A[c2,c2].offsetX + dofsY[gdof]
+        for col = 1 : size(A[c2,c2],2)
+            sourcecol = col + A[c2,c2].offsetY
+            targetcol = sourcecol + diffY
+            val = AE[sourcerow,sourcecol]
+            if abs(val) > 1e-14
+                _addnz(AE, targetrow,targetcol, factors[gdof] * val,1)
+                AE[sourcerow,sourcecol] = 0
             end
         end
 
-        # fix one of the dofs
-        Target.entries[sourcecolumn] = 0
-        push!(fixed_dofs,sourcecolumn)
+        # replace source row (of dofY) with equation for coupling the two dofs
+        sourcecol = A[c2,c2].offsetY + dofsY[gdof]
+        targetcol = dofsX[gdof] + A[c,c].offsetY
+        targetrow = dofsX[gdof] + A[c,c].offsetX
+        sourcerow = A[c2,c2].offsetX + dofsY[gdof]
+        _addnz(AE, sourcerow, targetcol, 1,1)
+        _addnz(AE, sourcerow, sourcecol, -factors[gdof],1)
     end
+
+    # fix one of the dofs
+    for gdof = 1 : length(Constraint.dofsX)
+        targetrow = b[c].offset + dofsX[gdof]
+        sourcerow = b[c2].offset + dofsY[gdof]
+        b.entries[targetrow] += b.entries[sourcerow]
+        #Target.entries[sourcerow] = 0
+        b.entries[sourcerow] = 0
+        #push!(fixed_dofs,sourcerow)
+    end
+    flush!(A.entries)
     return fixed_dofs
 end
 
@@ -173,9 +182,69 @@ function realize_constraint!(
     c2 = Constraint.componentY
     @debug "Moving entries of combined dofs from component $c to component $c2"
 
-    for dof = 1 : length(Constraint.dofsX)
-        Target[c2][Constraint.dofsY[dof]] = Target[c][Constraint.dofsX[dof]]
-    end 
+    #for dof = 1 : length(Constraint.dofsX)
+        #Target[c2][Constraint.dofsY[dof]] = Target[c][Constraint.dofsX[dof]]
+        #Target[c][Constraint.dofsX[dof]] = Target[c2][Constraint.dofsY[dof]]
+    #end 
 end
 
 
+
+"""
+$(TYPEDEF)
+
+fixes integral mean of the unknown to the specified value
+"""
+struct FixedDofs{T} <: AbstractGlobalConstraint
+    name::String
+    component::Int
+    dofs::AbstractArray{Int}
+    values::AbstractArray{T}
+    when_assemble::Type{<:AbstractAssemblyTrigger}
+end 
+
+
+"""
+````
+function FixedDofs(unknown_id::Int, value::Real; name::String = "")
+````
+
+constructs a FixedDofs constraint that (if assigned to a PDEDescription) ensures that the dofs are fixed to the specified values.
+
+"""
+function FixedDofs(component::Int, dofs, values; name::String = "")
+    if name == ""
+        name = "FixedDofs[$component] ($(length(dofs)) many)"
+    end
+    return FixedDofs{eltype(values)}(name, component, dofs, values, AssemblyAlways)
+end
+
+
+function apply_constraint!(
+    A::FEMatrix,
+    b::FEVector,
+    Constraint::FixedDofs,
+    Target::FEVector;
+    current_equations = "all")
+
+    c = Constraint.component
+    @logmsg DeepInfo "Ensuring fixed dofs for component $c..."
+
+    if current_equations != "all"
+        c = findfirst(isequal(c), current_equations)
+    end
+
+    dofs = Constraint.dofs
+    values = Constraint.values
+    for j = 1 : length(dofs)
+        Target[c][dofs[j]] = values[j]
+    end
+    return Constraint.dofs
+end
+
+function realize_constraint!(
+    Target::FEVector{T,Tv,Ti},
+    Constraint::FixedDofs) where {T,Tv,Ti}
+    
+    # do nothing
+end

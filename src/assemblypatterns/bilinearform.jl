@@ -141,6 +141,7 @@ function assemble!(
         @logmsg MoreInfo "Assembling $(AP.name) ($AT) into matrix"
     end
     @debug AP
+    @debug "nqweights = $(length(get_qweights(AM)))"
     @debug "offsets = [$offsetX,$offsetY], factor = $factor"
  
     # loop over items

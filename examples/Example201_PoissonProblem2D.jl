@@ -9,7 +9,7 @@ This example computes the solution ``u`` of the Poisson problem
 -\Delta u & = f \quad \text{in } \Omega
 \end{aligned}
 ```
-with some right-hand side ``f`` on the unit cube domain ``\Omega`` on a given grid.
+with some right-hand side ``f`` on the unit square domain ``\Omega`` on a given grid.
 
 =#
 

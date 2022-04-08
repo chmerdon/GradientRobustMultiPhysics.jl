@@ -104,7 +104,8 @@ function assemble!(
         @logmsg MoreInfo "Assembling $(AP.name) ($AT)"
     end
     @debug AP
-
+    @debug "nqweights = $(length(get_qweights(AM)))"
+    
     # loop over items
     offsets::Array{Int,1} = zeros(Int,nFE+1)
     basisevaler = get_basisevaler(AM, 1, 1)

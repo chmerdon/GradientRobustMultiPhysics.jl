@@ -263,14 +263,23 @@ $(TYPEDSIGNATURES)
 Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
 function addblock!(A::FEMatrixBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
+    addblock!(A, B.entries.cscmat; factor = factor, transpose = transpose)
+end
+
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds SparseMatrixCSC B to FEMatrixBlock A.
+"""
+function addblock!(A::FEMatrixBlock{Tv}, cscmat::SparseArrays.SparseMatrixCSC{Tv, Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
     AM::ExtendableSparseMatrix{Tv,Int64} = A.entries
-    cscmat::SparseMatrixCSC{Tv, Ti} = B.cscmatrix
     rows::Array{Int,1} = rowvals(cscmat)
     valsB::Array{Tv,1} = cscmat.nzval
     arow::Int = 0
     acol::Int = 0
     if transpose
-        for col = 1:size(B,2)
+        for col = 1:size(cscmat,2)
             arow = col + A.offsetX
             for r in nzrange(cscmat, col)
                 acol = rows[r] + A.offsetY
@@ -279,7 +288,7 @@ function addblock!(A::FEMatrixBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}; facto
             end
         end
     else
-        for col = 1:size(B,2)
+        for col = 1:size(cscmat,2)
             acol = col + A.offsetY
             for r in nzrange(cscmat, col)
                 arow = rows[r] + A.offsetX
@@ -296,6 +305,44 @@ function apply_penalties!(A::ExtendableSparseMatrix, fixed_dofs, penalty)
         A[dof,dof] = penalty
     end
     flush!(A)
+    return nothing
+end
+
+"""
+$(TYPEDSIGNATURES)
+
+Adds matrix-matrix product B times C to FEVectorBlock a.
+"""
+function addblock_matmul!(A::FEMatrixBlock{Tv}, cscmatB::SparseMatrixCSC{Tv,Ti}, cscmatC::SparseMatrixCSC{Tv,Ti}; factor = 1, transposed::Bool = false) where {Tv,Ti}
+    AM::ExtendableSparseMatrix{Tv,Int64} = A.entries
+    rowsB::Array{Ti,1} = rowvals(cscmatB)
+    rowsC::Array{Ti,1} = rowvals(cscmatC)
+    valsB::Array{Tv,1} = cscmatB.nzval
+    valsC::Array{Tv,1} = cscmatC.nzval
+    bcol::Int = 0
+    row::Int = 0
+    arow::Int = 0
+    if transposed
+        for i = 1:size(cscmatC, 2)
+            arow = i + A.offsetY
+            for crow in nzrange(cscmatC, i)
+                for j in nzrange(cscmatB, rowsC[crow])
+                    acol = rowsB[j] + A.offsetX
+                    _addnz(AM,arow,acol,valsB[j]*valsC[crow],factor)
+                end
+            end
+        end
+    else
+        for j = 1:size(cscmatC, 2)
+            acol = j + A.offsetY
+            for crow in nzrange(cscmatC, j)
+                for i in nzrange(cscmatB, rowsC[crow])
+                    arow = rowsB[i] + A.offsetX
+                    _addnz(AM,arow,acol,valsB[i]*valsC[crow],factor)
+                end
+            end
+        end
+    end
     return nothing
 end
 

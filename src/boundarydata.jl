@@ -87,7 +87,7 @@ end
 function boundarydata!(
     Target::FEVectorBlock{T,Tv,Ti},
     O::BoundaryOperator,
-    OtherData;
+    OtherData = [];
     time = 0,
     fixed_penalty = 1e60,
     skip_enumerations = false) where {T,Tv,Ti}
