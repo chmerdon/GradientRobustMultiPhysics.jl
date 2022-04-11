@@ -30,7 +30,7 @@ such that ``\mathbf{f} = 0`` and ``\mathbf{g}`` nonzero to match the prescribed 
 This example is designed to study the well-balanced property of a discretisation. The gradient-robust discretisation
 approximates the well-balanced state much better, i.e. has a much smaller L2 velocity error. For larger c the problem gets more incompressible which reduces
 the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density.
-See reference below for more details.
+See reference below for more details, but here implemented with a Newton scheme.
 
 !!! reference
 
@@ -42,66 +42,45 @@ See reference below for more details.
 
 =#
 
-
 module Example240_CompressibleStokes2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
+## parameters
+const c = 10
+const γ = 1
+const μ = 1e-3
+const λ = -2/3*μ
+
 ## the equation of state
-function equation_of_state!(c,γ)
-    function closure(pressure,density)
-        for j = 1 : length(density)
-            pressure[j] = c*density[j]^γ
-        end
-    end
-end
+const equation_of_state = DataFunction((p, ϱ) -> p[1] = c.*ϱ[1].^γ, [1,1])
 
-## the exact density (used for initial value of density if configured so)
-function ϱ_exact!(M,c)
-    function closure(result,x)
-        result[1] = M*(1.0 - (x[2] - 0.5)/c)
-    end
-end
-
-## gravity right-hand side (just gravity but with opposite sign!)
-function gravity!(γ,c)
-    function closure(result,x)
-        result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2) * γ # = - ϱ^(γ-2) * γ
-    end
-end   
-## gravity right-hand side (just gravity but with opposite sign!)
-function rhs!(γ,c)
-    function closure(result,x)
-        result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-1) * γ # = - ϱ^(γ-2) * γ
-    end
-end   
+## data for exact solution u = 0 and ϱ = ϱ
+const ϱ = DataFunction((result,x) -> (result[1] = (1.0 - (x[2] - 0.5)/c)), [1,2]; name = "ϱ", dependencies = "X", bonus_quadorder = 2)
+const g = DataFunction((result,x) -> (result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2) * γ), [2,2]; name = "g", dependencies = "X", bonus_quadorder = 4)
+const f = DataFunction((result,x) -> (result[2] = result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-1) * γ), [2,2]; name = "f", dependencies = "X", bonus_quadorder = 4)
 
 ## everything is wrapped in a main function
-function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ = 1e-3, λ = -2/3*μ, Plotter = nothing, nlevels = 4)
+function main(; use_gravity = true, newton = true, nlevels = 4 + newton, Plotter = nothing, verbosity = 0)
 
     ## set log level
     set_verbosity(verbosity)
 
-    ## load mesh and exact solution
+    ## load mesh and compute mass of exact ϱ 
     xgrid = simplexgrid("assets/2d_mountainrange.sg")
-    u = DataFunction([0,0]; name = "u")
-    ∇u = DataFunction([0,0,0,0]; name = "∇u")
-    ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = "ϱ", dependencies = "X", bonus_quadorder = 2)
-
-    ## compute mass of exact density on grid (bit smaller than M due to mountains)
-    Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
+    M = integrate(xgrid, ON_CELLS, ϱ, 1)
 
     ## prepare error calculation
-    VeloError = L2ErrorIntegrator(u, Identity; quadorder = 4)
-    VeloGradError = L2ErrorIntegrator(∇u, Gradient; quadorder = 2)
+    VeloError = L2NormIntegrator(2, Identity)
+    VeloGradError = L2NormIntegrator(4, Gradient)
     DensityError = L2ErrorIntegrator(ϱ, Identity; quadorder = 2)
     Results = zeros(Float64,6,nlevels)
     NDoFs = zeros(Int,nlevels)
 
     ## set finite element types [velocity, density,  pressure]
-    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel x P0
+    FETypes = [H1BR{2}, H1P0{1}] # Bernardi--Raugel x P0
 
     ## solve
     Solution = [nothing, nothing]
@@ -111,21 +90,21 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
         end
 
         ## generate FESpaces and solution vector
-        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-        Solution = [FEVector(["u_h (BR)", "ϱ_h (BR)", "p_h (BR)"],FES),FEVector(["u_h (BR+)", "ϱ_h (BR+)", "p_h (BR+)"],FES)]
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+        Solution = [FEVector(["u_h (BR)", "ϱ_h (BR)"],FES),FEVector(["u_h (BR+)", "ϱ_h (BR+)"],FES)]
         NDoFs[lvl] = length(Solution[1].entries)
 
         ## solve with and without reconstruction
         for reconstruct in [true, false]
             Target = Solution[reconstruct+1]
-            setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, c = c, M = Mreal, λ = λ, μ = μ, γ = γ)
-            Results[reconstruct ? 2 : 1,lvl] = sqrt(evaluate(VeloError,Target[1]))
-            Results[reconstruct ? 4 : 3,lvl] = sqrt(evaluate(VeloGradError,Target[1]))
-            Results[reconstruct ? 6 : 5,lvl] = sqrt(evaluate(DensityError,Target[2]))
+            setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, newton = newton, c = c, M = M, λ = λ, μ = μ, γ = γ)
+            Results[reconstruct ? 2 : 1, lvl] = sqrt(evaluate(VeloError,Target[1]))
+            Results[reconstruct ? 4 : 3, lvl] = sqrt(evaluate(VeloGradError,Target[1]))
+            Results[reconstruct ? 6 : 5, lvl] = sqrt(evaluate(DensityError,Target[2]))
 
             ## check error in mass constraint
             Md = sum(Target[2][:] .* xgrid[CellVolumes])
-            println("\tmass_error = $Mreal - $Md = $(abs(Mreal-Md))")
+            println("\tmass_error = $M - $Md = $(abs(M-Md))")
         end
     end
 
@@ -142,23 +121,20 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[2][1]; abs = true),1,:), levels = 0, title = "u_h (BR+) (abs + quiver)")
     vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution[2][1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[2,2],xgrid,view(nodevalues(Solution[2][2]),1,:), levels = 11, title = "p_h (BR+)")
-    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR)", "|| ∇(u - u_h) || (BR)", "|| ϱ - ϱ_h || (BR)"], legend = :lb, fontsize = 20)
-    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR+)", "|| ∇(u - u_h) || (BR+)", "|| ϱ - ϱ_h || (BR+)"], legend = :lb, fontsize = 20)
+    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR)", "|| ∇(u - u_h) || (BR)", "|| ϱ - ϱ_h || (BR)"], legend = :lb)
+    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR+)", "|| ∇(u - u_h) || (BR+)", "|| ϱ - ϱ_h || (BR+)"], legend = :lb)
 end
 
 function setup_and_solve!(Solution, xgrid; 
     c = 1, γ = 1, M = 1, μ = 1, λ = 0, 
     use_gravity = true,
     reconstruct = true,
-    timestep = μ / (M*c),
-    maxtimesteps = 500,
-    stationarity_threshold = c*1e-14/μ)
+    newton = true)
 
     ## generate empty PDEDescription for three unknowns (u, ϱ. p)
     Problem = PDEDescription("compressible Stokes problem")
     add_unknown!(Problem; unknown_name = "v", equation_name = "momentum equation")
     add_unknown!(Problem; unknown_name = "ϱ", equation_name = "continuity equation")
-    add_unknown!(Problem; unknown_name = "p", equation_name = "equation of state")
     add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     ## momentum equation
@@ -169,39 +145,49 @@ function setup_and_solve!(Solution, xgrid;
     if λ != 0
         add_operator!(Problem, [1,1], BilinearForm([VeloDivergence,VeloDivergence]; name = "λ (div(u),div(v))", factor = λ, store = true))
     end
-    add_operator!(Problem, [1,3], BilinearForm([Divergence,Identity]; name = "(div(v),p)", factor = -1, store = true))
+    
+    ## add pressure term -(div(v),p(ϱ))
+	add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity], feval_action(equation_of_state); factor = -1, name = "-(div v, eos(ϱ))", apply_action_to = [2], store = true))
 
+    ## add gravity either as usual or as explicit right-hand side force
     if use_gravity
-        ## discrete gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
-        g = DataFunction(gravity!(γ,c), [2,2]; name = "g", dependencies = "X", bonus_quadorder = 4)
         add_operator!(Problem, [1,2], BilinearForm([VeloIdentity,Identity], fdotv_action(g); factor = -1, name = "(g ⋅ v) ϱ", store = true))
     else
         ## exact gravity term for right-hand side
-        f = DataFunction(rhs!(γ,c), [2,2]; name = "f", dependencies = "X", bonus_quadorder = 4)
-        add_rhsdata!(Problem, 1,  LinearForm(VeloIdentity, f; store = true))
+        add_rhsdata!(Problem, 1, LinearForm(VeloIdentity, f; store = true))
     end
 
-    ## continuity equation (by FV upwind on triangles)
-    add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
-
-    ## equation of state (by best-approximation, P0 mass matrix is diagonal)
-    eos_action = Action( equation_of_state!(c,γ),[1,1]; dependencies = "", bonus_quadorder = 1)
-    add_operator!(Problem, [3,2], BilinearForm([Identity,Identity],eos_action; name = "(p,eos(ϱ))", apply_action_to = [2])) # cannot be stored if eos is nonlinear!
-    add_operator!(Problem, [3,3], BilinearForm([Identity,Identity]; name = "(p,q)", factor = -1, store = true))
-
-    ## initial values for density (constant) and pressure (by equation of state)
+    ## initial values for density (constant)
     fill!(Solution[2], M/sum(xgrid[CellVolumes]))
-    equation_of_state!(c,γ)(Solution[3],Solution[2])
 
-    ## time-dependent solver with three equations [1] velocity, [2] density, [3] pressure
-    ## solved iteratively [1] => [2] => [3] in each pseudo time step until stationarity
-    TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
-                                        subiterations = [[1],[2],[3]], # solve [1], then [2], then [3]
-                                        skip_update = [-1,1,-1], # only matrix of eq [2] changes
-                                        timedependent_equations = [2], # only eq [2] is time-dependent
-                                        maxiterations = 1,
-                                        check_nonlinear_residual = false,
-                                        show_iteration_details = false)
-    advance_until_stationarity!(TCS, timestep; maxtimesteps = maxtimesteps, stationarity_threshold = stationarity_threshold)
+    ## solve
+    if newton
+        ## add upwinded continuity equation as NonlinearForm
+        function upwind_kernel(result, input, face)
+            # input = [NormalFlux, Identity on parent 1, Identity on parent 2]
+            result[1] = input[1] * (input[1] > 0 ? input[2] : input[3])
+        end
+        add_operator!(Problem, 2, NonlinearForm(Jump(Identity), [NormalFlux,Parent{1}(Identity),Parent{2}(Identity)], [1,2,2], upwind_kernel, [1,3]; dependencies = "I", AT = ON_IFACES, name = "(div_upw(ϱ_hu_h),q_h)"))
+        
+        ## add mass constraint on density and solve
+        add_constraint!(Problem, FixedIntegralMean(2, M/sum(xgrid[CellVolumes])))
+        solve!(Solution, Problem; maxiterations = 20)
+    else
+        ## add continuity equation as linear operator and solve by pseudo timestepping
+        add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
+        ## time-dependent solver with three equations [1] velocity, [2] density
+        ## solved iteratively [1] => [2] in each pseudo time step until stationarity
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
+                                            subiterations = [[1],[2]], # solve [1], then [2]
+                                            skip_update = [-1,1], # only matrix of eq [2] changes
+                                            timedependent_equations = [2], # only eq [2] is time-dependent
+                                            maxiterations = 1,
+                                            check_nonlinear_residual = false,
+                                            show_iteration_details = false)
+        timestep = 2 * μ / (M*c)
+        maxtimesteps = 500
+        stationarity_threshold = c*1e-14/μ
+        advance_until_stationarity!(TCS, timestep; maxtimesteps = maxtimesteps, stationarity_threshold = stationarity_threshold)
+    end
 end
 end

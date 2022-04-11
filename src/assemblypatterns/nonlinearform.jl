@@ -178,7 +178,7 @@ function full_assemble!(
                         mul!(action_result,jac,action_input2)
 
                         # multiply test function operator evaluation
-                        for dof_j = 1 : get_ndofs(AM, nFE, 1)
+                        for dof_j = 1 : get_ndofs(AM, nFE, di)
                             temp = 0
                             for k = 1 : action_resultdim
                                 temp += action_result[k] * basisvals[k,dof_j,i]
@@ -188,7 +188,7 @@ function full_assemble!(
                     end 
 
                     if 1 in newton_args
-                        for dof_j = 1 : get_ndofs(AM, nFE, 1)
+                        for dof_j = 1 : get_ndofs(AM, nFE, di)
                             # multiply with jacobian
                             mul!(action_result,jac,action_input[i])
 
@@ -201,7 +201,7 @@ function full_assemble!(
                     end
                 end
 
-                itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[nFE][1]
+                itemfactor = xItemVolumes[item] * factor * AM.coeff4dofitem[nFE][di]
 
                 # copy localmatrix into global matrix
                 for dof_i = 1 : get_ndofs(AM, newton_args[1], 1)
@@ -220,8 +220,8 @@ function full_assemble!(
                 if 1 in newton_args
                     localb .*= itemfactor
                     # copy localb into global rhs
-                    for dof_i = 1 : get_ndofs(AM, nFE, 1)
-                        b[get_dof(AM, nFE, 1, dof_i) + offsetX] += localb[dof_i]      
+                    for dof_i = 1 : get_ndofs(AM, nFE, di)
+                        b[get_dof(AM, nFE, di, dof_i) + offsetX] += localb[dof_i]      
                     end
                     fill!(localb,0.0)
                 end

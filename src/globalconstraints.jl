@@ -165,11 +165,10 @@ function realize_constraint!(
 
     # move integral mean
     pmeanIntegrator = ItemIntegrator([Identity])
-    meanvalue =  evaluate(pmeanIntegrator,Target[c])
     total_area = sum(Target.FEVectorBlocks[c].FES.xgrid[CellVolumes], dims=1)[1]
-    meanvalue /= total_area
+    meanvalue = evaluate(pmeanIntegrator,Target[c])/total_area
     for dof=1:Target.FEVectorBlocks[c].FES.ndofs
-        Target[c][dof] -= meanvalue + Constraint.value
+        Target[c][dof] += Constraint.value - meanvalue
     end    
 end
 

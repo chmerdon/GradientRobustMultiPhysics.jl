@@ -926,6 +926,14 @@ function solve_fixpoint_full!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC
             LastIterate.entries .= Target.entries
         end
 
+        # REALIZE GLOBAL GLOBALCONSTRAINTS 
+        # (possibly changes some entries of Target)
+        overall_time += @elapsed for j = 1 : length(PDE.GlobalConstraints)
+            #if AssemblyFinal <: PDE.GlobalConstraints[j].when_assemble 
+                realize_constraint!(Target,PDE.GlobalConstraints[j])
+            #end
+        end
+
         # REASSEMBLE NONLINEAR PARTS
         time_reassembly = @elapsed assemble!(A, b, PDE, SC, Target; time = time, equations = 1:size(PDE.RHSOperators,1), min_trigger = AssemblyAlways)
 
