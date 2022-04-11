@@ -9,65 +9,45 @@
 \mathbf{u}(\mathbf{x}) &amp; =0\\
 \varrho(\mathbf{x}) &amp; = 1 - (x_2 - 0.5)/c\\
 p &amp;= eos(\varrho) := c \varrho^\gamma
-\end{aligned}\]</p><p>such that <span>$\mathbf{f} = 0$</span> and <span>$\mathbf{g}$</span> nonzero to match the prescribed solution.</p><p>This example is designed to study the well-balanced property of a discretisation. The gradient-robust discretisation approximates the well-balanced state much better, i.e. has a much smaller L2 velocity error. For larger c the problem gets more incompressible which reduces the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density. See reference below for more details.</p><div class="admonition is-category-reference"><header class="admonition-header">Reference</header><div class="admonition-body"><p>&quot;A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem&quot;,<br/>M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon,<br/>Computer Methods in Applied Mechanics and Engineering 367 (2020),<br/><a href="https://doi.org/10.1016/j.cma.2020.113069">&gt;Journal-Link&lt;</a> <a href="https://arxiv.org/abs/1911.01295">&gt;Preprint-Link&lt;</a></p></div></div><pre><code class="language-julia hljs">module Example240_CompressibleStokes2D
+\end{aligned}\]</p><p>such that <span>$\mathbf{f} = 0$</span> and <span>$\mathbf{g}$</span> nonzero to match the prescribed solution.</p><p>This example is designed to study the well-balanced property of a discretisation. The gradient-robust discretisation approximates the well-balanced state much better, i.e. has a much smaller L2 velocity error. For larger c the problem gets more incompressible which reduces the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density. See reference below for more details, but here implemented with a Newton scheme.</p><div class="admonition is-category-reference"><header class="admonition-header">Reference</header><div class="admonition-body"><p>&quot;A gradient-robust well-balanced scheme for the compressible isothermal Stokes problem&quot;,<br/>M. Akbas, T. Gallouet, A. Gassmann, A. Linke and C. Merdon,<br/>Computer Methods in Applied Mechanics and Engineering 367 (2020),<br/><a href="https://doi.org/10.1016/j.cma.2020.113069">&gt;Journal-Link&lt;</a> <a href="https://arxiv.org/abs/1911.01295">&gt;Preprint-Link&lt;</a></p></div></div><pre><code class="language-julia hljs">module Example240_CompressibleStokes2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
+# parameters
+const c = 10
+const γ = 1
+const μ = 1e-3
+const λ = -2/3*μ
+
 # the equation of state
-function equation_of_state!(c,γ)
-    function closure(pressure,density)
-        for j = 1 : length(density)
-            pressure[j] = c*density[j]^γ
-        end
-    end
-end
+const equation_of_state = DataFunction((p, ϱ) -&gt; p[1] = c.*ϱ[1].^γ, [1,1])
 
-# the exact density (used for initial value of density if configured so)
-function ϱ_exact!(M,c)
-    function closure(result,x)
-        result[1] = M*(1.0 - (x[2] - 0.5)/c)
-    end
-end
-
-# gravity right-hand side (just gravity but with opposite sign!)
-function gravity!(γ,c)
-    function closure(result,x)
-        result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2) * γ # = - ϱ^(γ-2) * γ
-    end
-end
-# gravity right-hand side (just gravity but with opposite sign!)
-function rhs!(γ,c)
-    function closure(result,x)
-        result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-1) * γ # = - ϱ^(γ-2) * γ
-    end
-end
+# data for exact solution u = 0 and ϱ = ϱ
+const ϱ = DataFunction((result,x) -&gt; (result[1] = (1.0 - (x[2] - 0.5)/c)), [1,2]; name = &quot;ϱ&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 2)
+const g = DataFunction((result,x) -&gt; (result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2) * γ), [2,2]; name = &quot;g&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 4)
+const f = DataFunction((result,x) -&gt; (result[2] = result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-1) * γ), [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 4)
 
 # everything is wrapped in a main function
-function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ = 1e-3, λ = -2/3*μ, Plotter = nothing, nlevels = 4)
+function main(; use_gravity = true, newton = true, nlevels = 4 + newton, Plotter = nothing, verbosity = 0)
 
     # set log level
     set_verbosity(verbosity)
 
-    # load mesh and exact solution
+    # load mesh and compute mass of exact ϱ
     xgrid = simplexgrid(&quot;assets/2d_mountainrange.sg&quot;)
-    u = DataFunction([0,0]; name = &quot;u&quot;)
-    ∇u = DataFunction([0,0,0,0]; name = &quot;∇u&quot;)
-    ϱ = DataFunction(ϱ_exact!(M,c), [1,2]; name = &quot;ϱ&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 2)
-
-    # compute mass of exact density on grid (bit smaller than M due to mountains)
-    Mreal = integrate(xgrid, ON_CELLS, ϱ, 1)
+    M = integrate(xgrid, ON_CELLS, ϱ, 1)
 
     # prepare error calculation
-    VeloError = L2ErrorIntegrator(u, Identity; quadorder = 4)
-    VeloGradError = L2ErrorIntegrator(∇u, Gradient; quadorder = 2)
+    VeloError = L2NormIntegrator(2, Identity)
+    VeloGradError = L2NormIntegrator(4, Gradient)
     DensityError = L2ErrorIntegrator(ϱ, Identity; quadorder = 2)
     Results = zeros(Float64,6,nlevels)
     NDoFs = zeros(Int,nlevels)
 
     # set finite element types [velocity, density,  pressure]
-    FETypes = [H1BR{2}, H1P0{1}, H1P0{1}] # Bernardi--Raugel x P0
+    FETypes = [H1BR{2}, H1P0{1}] # Bernardi--Raugel x P0
 
     # solve
     Solution = [nothing, nothing]
@@ -77,21 +57,21 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
         end
 
         # generate FESpaces and solution vector
-        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid), FESpace{FETypes[3]}(xgrid)]
-        Solution = [FEVector([&quot;u_h (BR)&quot;, &quot;ϱ_h (BR)&quot;, &quot;p_h (BR)&quot;],FES),FEVector([&quot;u_h (BR+)&quot;, &quot;ϱ_h (BR+)&quot;, &quot;p_h (BR+)&quot;],FES)]
+        FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
+        Solution = [FEVector([&quot;u_h (BR)&quot;, &quot;ϱ_h (BR)&quot;],FES),FEVector([&quot;u_h (BR+)&quot;, &quot;ϱ_h (BR+)&quot;],FES)]
         NDoFs[lvl] = length(Solution[1].entries)
 
         # solve with and without reconstruction
         for reconstruct in [true, false]
             Target = Solution[reconstruct+1]
-            setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, c = c, M = Mreal, λ = λ, μ = μ, γ = γ)
-            Results[reconstruct ? 2 : 1,lvl] = sqrt(evaluate(VeloError,Target[1]))
-            Results[reconstruct ? 4 : 3,lvl] = sqrt(evaluate(VeloGradError,Target[1]))
-            Results[reconstruct ? 6 : 5,lvl] = sqrt(evaluate(DensityError,Target[2]))
+            setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, newton = newton, c = c, M = M, λ = λ, μ = μ, γ = γ)
+            Results[reconstruct ? 2 : 1, lvl] = sqrt(evaluate(VeloError,Target[1]))
+            Results[reconstruct ? 4 : 3, lvl] = sqrt(evaluate(VeloGradError,Target[1]))
+            Results[reconstruct ? 6 : 5, lvl] = sqrt(evaluate(DensityError,Target[2]))
 
             # check error in mass constraint
             Md = sum(Target[2][:] .* xgrid[CellVolumes])
-            println(&quot;\tmass_error = $Mreal - $Md = $(abs(Mreal-Md))&quot;)
+            println(&quot;\tmass_error = $M - $Md = $(abs(M-Md))&quot;)
         end
     end
 
@@ -108,23 +88,20 @@ function main(; use_gravity = true, verbosity = 0, c = 10, γ = 1.4, M = 1, μ =
     scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[2][1]; abs = true),1,:), levels = 0, title = &quot;u_h (BR+) (abs + quiver)&quot;)
     vectorplot!(p[2,1],xgrid,evaluate(PointEvaluator(Solution[2][1], Identity)), spacing = 0.1, clear = false)
     scalarplot!(p[2,2],xgrid,view(nodevalues(Solution[2][2]),1,:), levels = 11, title = &quot;p_h (BR+)&quot;)
-    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR)&quot;, &quot;|| ∇(u - u_h) || (BR)&quot;, &quot;|| ϱ - ϱ_h || (BR)&quot;], legend = :lb, fontsize = 20)
-    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR+)&quot;, &quot;|| ∇(u - u_h) || (BR+)&quot;, &quot;|| ϱ - ϱ_h || (BR+)&quot;], legend = :lb, fontsize = 20)
+    convergencehistory!(p[1,3], NDoFs, Results[[1,3,5],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR)&quot;, &quot;|| ∇(u - u_h) || (BR)&quot;, &quot;|| ϱ - ϱ_h || (BR)&quot;], legend = :lb)
+    convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]&#39;; add_h_powers = [1,2], X_to_h = X -&gt; X.^(-1/2), ylabels = [&quot;|| u - u_h || (BR+)&quot;, &quot;|| ∇(u - u_h) || (BR+)&quot;, &quot;|| ϱ - ϱ_h || (BR+)&quot;], legend = :lb)
 end
 
 function setup_and_solve!(Solution, xgrid;
     c = 1, γ = 1, M = 1, μ = 1, λ = 0,
     use_gravity = true,
     reconstruct = true,
-    timestep = μ / (M*c),
-    maxtimesteps = 500,
-    stationarity_threshold = c*1e-14/μ)
+    newton = true)
 
     # generate empty PDEDescription for three unknowns (u, ϱ. p)
     Problem = PDEDescription(&quot;compressible Stokes problem&quot;)
     add_unknown!(Problem; unknown_name = &quot;v&quot;, equation_name = &quot;momentum equation&quot;)
     add_unknown!(Problem; unknown_name = &quot;ϱ&quot;, equation_name = &quot;continuity equation&quot;)
-    add_unknown!(Problem; unknown_name = &quot;p&quot;, equation_name = &quot;equation of state&quot;)
     add_boundarydata!(Problem, 1,  [1,2,3,4], HomogeneousDirichletBoundary)
 
     # momentum equation
@@ -135,68 +112,201 @@ function setup_and_solve!(Solution, xgrid;
     if λ != 0
         add_operator!(Problem, [1,1], BilinearForm([VeloDivergence,VeloDivergence]; name = &quot;λ (div(u),div(v))&quot;, factor = λ, store = true))
     end
-    add_operator!(Problem, [1,3], BilinearForm([Divergence,Identity]; name = &quot;(div(v),p)&quot;, factor = -1, store = true))
 
+    # add pressure term -(div(v),p(ϱ))
+	add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity], feval_action(equation_of_state); factor = -1, name = &quot;-(div v, eos(ϱ))&quot;, apply_action_to = [2], store = true))
+
+    # add gravity either as usual or as explicit right-hand side force
     if use_gravity
-        # discrete gravity term for right-hand side (assembled as bilinearform for faster evaluation in fixpoint iteration)
-        g = DataFunction(gravity!(γ,c), [2,2]; name = &quot;g&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 4)
         add_operator!(Problem, [1,2], BilinearForm([VeloIdentity,Identity], fdotv_action(g); factor = -1, name = &quot;(g ⋅ v) ϱ&quot;, store = true))
     else
         # exact gravity term for right-hand side
-        f = DataFunction(rhs!(γ,c), [2,2]; name = &quot;f&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 4)
-        add_rhsdata!(Problem, 1,  LinearForm(VeloIdentity, f; store = true))
+        add_rhsdata!(Problem, 1, LinearForm(VeloIdentity, f; store = true))
     end
 
-    # continuity equation (by FV upwind on triangles)
-    add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
-
-    # equation of state (by best-approximation, P0 mass matrix is diagonal)
-    eos_action = Action( equation_of_state!(c,γ),[1,1]; dependencies = &quot;&quot;, bonus_quadorder = 1)
-    add_operator!(Problem, [3,2], BilinearForm([Identity,Identity],eos_action; name = &quot;(p,eos(ϱ))&quot;, apply_action_to = [2])) # cannot be stored if eos is nonlinear!
-    add_operator!(Problem, [3,3], BilinearForm([Identity,Identity]; name = &quot;(p,q)&quot;, factor = -1, store = true))
-
-    # initial values for density (constant) and pressure (by equation of state)
+    # initial values for density (constant)
     fill!(Solution[2], M/sum(xgrid[CellVolumes]))
-    equation_of_state!(c,γ)(Solution[3],Solution[2])
 
-    # time-dependent solver with three equations [1] velocity, [2] density, [3] pressure
-    # solved iteratively [1] =&gt; [2] =&gt; [3] in each pseudo time step until stationarity
-    TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
-                                        subiterations = [[1],[2],[3]], # solve [1], then [2], then [3]
-                                        skip_update = [-1,1,-1], # only matrix of eq [2] changes
-                                        timedependent_equations = [2], # only eq [2] is time-dependent
-                                        maxiterations = 1,
-                                        check_nonlinear_residual = false,
-                                        show_iteration_details = false)
-    advance_until_stationarity!(TCS, timestep; maxtimesteps = maxtimesteps, stationarity_threshold = stationarity_threshold)
+    # solve
+    if newton
+        # add upwinded continuity equation as NonlinearForm
+        function upwind_kernel(result, input, face)</code></pre><p>input = [NormalFlux, Identity on parent 1, Identity on parent 2]</p><pre><code class="language-julia hljs">            result[1] = input[1] * (input[1] &gt; 0 ? input[2] : input[3])
+        end
+        add_operator!(Problem, 2, NonlinearForm(Jump(Identity), [NormalFlux,Parent{1}(Identity),Parent{2}(Identity)], [1,2,2], upwind_kernel, [1,3]; dependencies = &quot;I&quot;, AT = ON_IFACES, name = &quot;(div_upw(ϱ_hu_h),q_h)&quot;))
+
+        # add mass constraint on density and solve
+        add_constraint!(Problem, FixedIntegralMean(2, M/sum(xgrid[CellVolumes])))
+        solve!(Solution, Problem; maxiterations = 20)
+    else
+        # add continuity equation as linear operator and solve by pseudo timestepping
+        add_operator!(Problem, [2,2], FVConvectionDiffusionOperator(1))
+        # time-dependent solver with three equations [1] velocity, [2] density
+        # solved iteratively [1] =&gt; [2] in each pseudo time step until stationarity
+        TCS = TimeControlSolver(Problem, Solution, BackwardEuler;
+                                            subiterations = [[1],[2]], # solve [1], then [2]
+                                            skip_update = [-1,1], # only matrix of eq [2] changes
+                                            timedependent_equations = [2], # only eq [2] is time-dependent
+                                            maxiterations = 1,
+                                            check_nonlinear_residual = false,
+                                            show_iteration_details = false)
+        timestep = 2 * μ / (M*c)
+        maxtimesteps = 500
+        stationarity_threshold = c*1e-14/μ
+        advance_until_stationarity!(TCS, timestep; maxtimesteps = maxtimesteps, stationarity_threshold = stationarity_threshold)
+    end
 end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example240_CompressibleStokes2D.main()
-	mass_error = 0.8902625 - 0.8902625000000041 = 4.107825191113079e-15
-	mass_error = 0.8902625 - 0.8902625000000027 = 2.7755575615628914e-15
-	mass_error = 0.8902625 - 0.8902625000000006 = 6.661338147750939e-16
-	mass_error = 0.8902625 - 0.8902625000000002 = 2.220446049250313e-16
-	mass_error = 0.8902625 - 0.8902624999999936 = 6.328271240363392e-15
-	mass_error = 0.8902625 - 0.890262499999993 = 6.994405055138486e-15
-	mass_error = 0.8902625 - 0.8902624999999658 = 3.419486915845482e-14
-	mass_error = 0.8902625 - 0.8902624999999655 = 3.441691376337985e-14
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.334935e-15 | 9.025941e-03
+	      2   | 2.769408e-15 | 3.453686e-04
+	      3   | 2.427918e-15 | 1.321539e-05
+	      4   | 2.444971e-15 | 5.056821e-07
+	      5   | 2.174876e-15 | 1.934975e-08
+	      6   | 2.377947e-15 | 7.404118e-10
+	      7   | 2.351189e-15 | 2.833145e-11
+
+	mass_error = 0.8902625 - 0.8902625 = 0.0
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 1.673390e-15 | 7.369797e-03
+	      2   | 2.284451e-15 | 2.555029e-04
+	      3   | 2.279475e-15 | 9.060025e-06
+	      4   | 2.085749e-15 | 3.184409e-07
+	      5   | 2.179351e-15 | 1.111202e-08
+	      6   | 2.323581e-15 | 3.866124e-10
+	      7   | 2.703608e-15 | 1.343646e-11
+
+	mass_error = 0.8902625 - 0.8902625 = 0.0
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.335621e-15 | 6.342223e-03
+	      2   | 2.526213e-15 | 2.865347e-04
+	      3   | 2.436554e-15 | 1.294535e-05
+	      4   | 2.459292e-15 | 5.848577e-07
+	      5   | 2.597180e-15 | 2.642329e-08
+	      6   | 2.620260e-15 | 1.193777e-09
+	      7   | 2.516942e-15 | 5.393358e-11
+
+	mass_error = 0.8902625 - 0.8902624999999997 = 2.220446049250313e-16
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.444878e-15 | 5.325433e-03
+	      2   | 2.492341e-15 | 2.321583e-04
+	      3   | 2.847840e-15 | 1.014586e-05
+	      4   | 2.550765e-15 | 4.432975e-07
+	      5   | 2.516629e-15 | 1.936718e-08
+	      6   | 2.567049e-15 | 8.461183e-10
+	      7   | 2.616607e-15 | 3.696527e-11
+
+	mass_error = 0.8902625 - 0.8902624999999997 = 2.220446049250313e-16
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.542988e-15 | 3.654065e-03
+	      2   | 2.777975e-15 | 1.775901e-04
+	      3   | 2.457908e-15 | 8.631000e-06
+	      4   | 2.824034e-15 | 4.194726e-07
+	      5   | 2.808350e-15 | 2.038666e-08
+	      6   | 2.724899e-15 | 9.908060e-10
+	      7   | 2.367225e-15 | 4.815392e-11
+
+	mass_error = 0.8902625 - 0.8902624999999996 = 3.3306690738754696e-16
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.449836e-15 | 3.149211e-03
+	      2   | 2.821541e-15 | 1.509489e-04
+	      3   | 2.804177e-15 | 7.238324e-06
+	      4   | 2.761631e-15 | 3.471019e-07
+	      5   | 2.666146e-15 | 1.664471e-08
+	      6   | 2.748888e-15 | 7.981703e-10
+	      7   | 2.735215e-15 | 3.827510e-11
+
+	mass_error = 0.8902625 - 0.8902625000000008 = 8.881784197001252e-16
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.502817e-15 | 1.950845e-03
+	      2   | 2.855386e-15 | 9.813230e-05
+	      3   | 2.851637e-15 | 4.936297e-06
+	      4   | 2.788027e-15 | 2.483079e-07
+	      5   | 2.725412e-15 | 1.249050e-08
+	      6   | 2.691139e-15 | 6.283028e-10
+	      7   | 2.544684e-15 | 3.160532e-11
+
+	mass_error = 0.8902625 - 0.8902625000000004 = 4.440892098500626e-16
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.277760e-15 | 1.699649e-03
+	      2   | 2.859775e-15 | 8.496537e-05
+	      3   | 2.820277e-15 | 4.247817e-06
+	      4   | 2.596900e-15 | 2.123696e-07
+	      5   | 2.816532e-15 | 1.061742e-08
+	      6   | 2.866724e-15 | 5.308185e-10
+	      7   | 2.572982e-15 | 2.653822e-11
+
+	mass_error = 0.8902625 - 0.8902624999999998 = 1.1102230246251565e-16
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.349521e-15 | 1.006751e-03
+	      2   | 2.769406e-15 | 5.149642e-05
+	      3   | 2.618966e-15 | 2.634099e-06
+	      4   | 2.886412e-15 | 1.347371e-07
+	      5   | 2.866076e-15 | 6.891950e-09
+	      6   | 2.897476e-15 | 3.525308e-10
+	      7   | 2.719680e-15 | 1.803233e-11
+
+	mass_error = 0.8902625 - 0.8902625000000031 = 3.1086244689504383e-15
+Explored path: SparsityDetection.Path(Bool[], 1)
+
+	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
+	--------------------------------------
+	      1   | 2.527717e-15 | 8.814115e-04
+	      2   | 2.775152e-15 | 4.495133e-05
+	      3   | 2.883766e-15 | 2.292543e-06
+	      4   | 2.729792e-15 | 1.169212e-07
+	      5   | 2.835578e-15 | 5.963061e-09
+	      6   | 2.741973e-15 | 3.041200e-10
+	      7   | 2.889605e-15 | 1.551033e-11
+
+	mass_error = 0.8902625 - 0.8902624999999997 = 2.220446049250313e-16
 
     ndof    |  ||u-u_h|| (BR)    order |  ||u-u_h|| (BR+)   order |
 ============|==========================|==========================|
-       167  |     4.716e-01      0.00  |     1.287e-03      0.00  |
-       602  |     1.638e-01      1.65  |     3.848e-04      1.88  |
-      2282  |     4.544e-02      1.92  |     9.328e-05      2.13  |
-      8882  |     1.179e-02      1.99  |     2.321e-05      2.05  |
+       137  |     3.390e-01      0.00  |     9.292e-04      0.00  |
+       482  |     1.176e-01      1.68  |     2.773e-04      1.92  |
+      1802  |     3.261e-02      1.94  |     6.721e-05      2.15  |
+      6962  |     8.460e-03      2.00  |     1.672e-05      2.06  |
+     27362  |     2.147e-03      2.00  |     4.176e-06      2.03  |
 
     ndof    | ||∇(u-u_h)|| (BR)  order |||∇(u-u_h)|| (BR+)  order |
 ============|==========================|==========================|
-       167  |     9.542e+00      0.00  |     2.474e-02      0.00  |
-       602  |     6.818e+00      0.52  |     9.945e-03      1.42  |
-      2282  |     3.771e+00      0.89  |     2.467e-03      2.09  |
-      8882  |     1.961e+00      0.96  |     6.074e-04      2.06  |
+       137  |     6.867e+00      0.00  |     1.782e-02      0.00  |
+       482  |     4.892e+00      0.54  |     7.157e-03      1.45  |
+      1802  |     2.705e+00      0.90  |     1.776e-03      2.11  |
+      6962  |     1.406e+00      0.97  |     4.372e-04      2.07  |
+     27362  |     7.147e-01      0.99  |     1.081e-04      2.04  |
 
     ndof    |  ||ϱ-ϱ_h|| (BR)    order |  ||ϱ-ϱ_h|| (BR+)   order |
 ============|==========================|==========================|
-       167  |     6.249e-03      0.00  |     5.640e-03      0.00  |
-       602  |     2.947e-03      1.17  |     2.820e-03      1.08  |
-      2282  |     1.448e-03      1.07  |     1.410e-03      1.04  |
-      8882  |     7.198e-04      1.03  |     7.050e-04      1.02  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Friday 8 April 2022 19:53">Friday 8 April 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+       137  |     6.248e-03      0.00  |     5.640e-03      0.00  |
+       482  |     2.947e-03      1.19  |     2.820e-03      1.10  |
+      1802  |     1.448e-03      1.08  |     1.410e-03      1.05  |
+      6962  |     7.198e-04      1.03  |     7.050e-04      1.03  |
+     27362  |     3.592e-04      1.02  |     3.525e-04      1.01  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.15 on <span class="colophon-date" title="Monday 11 April 2022 20:38">Monday 11 April 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
