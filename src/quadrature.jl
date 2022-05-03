@@ -44,30 +44,78 @@ function Base.show(io::IO, Q::QuadratureRule{T,ET} where{T <: Real, ET <: Abstra
 end
 
 # sets up a quadrature rule that evaluates at vertices of element geometry
-# not optimal from quadrature point of view, but helpful when defining nodal interpolations
-function VertexRule(ET::Type{Edge1D})
-    xref = [[0],[1]]
-    w = [1//2, 1//2]
+# not optimal from quadrature point of view, but helpful when interpolating
+# order of xref matches dof order of H1Pk element
+function VertexRule(ET::Type{Edge1D}, order = 1)
+    xref = [[0],[1.0]]
+    for j = 1:order-1
+        push!(xref,[j/order])
+    end
+    w = ones(Float64, length(xref)) / length(xref)
     return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule edge", xref, w)
 end
-function VertexRule(ET::Type{Triangle2D})
-    xref = [[0, 0], [1,0], [0,1]]
-    w = [1//3, 1//3, 1//3]
+function VertexRule(ET::Type{Triangle2D}, order = 1)
+    xref = [[0, 0], [1.0,0], [0,1.0]]
+    lcen = local_celledgenodes(ET)
+    for j = 1:order-1
+        for edge = 1 : size(lcen,2)
+            push!(xref, j/order * xref[lcen[2,edge]] + (1 - j/order) * xref[lcen[1,edge]])
+        end
+    end
+    if order == 3
+        push!(xref,[1/3, 1/3])
+    end
+    if order == 4
+        push!(xref,[1/4, 1/4])
+        push!(xref,[1/2, 1/4])
+        push!(xref,[1/4, 1/1])
+    end
+    if order > 4
+        @warn "VertexRule for order > 4 on $ET not yet implemented"
+    end
+    w = ones(Float64, length(xref)) / length(xref)
     return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule triangle", xref, w)
 end
-function VertexRule(ET::Type{Parallelogram2D})
-    xref = [[0, 0], [1,0], [1,1], [0,1]]
-    w = [1//4, 1//4, 1//4, 1//4]
+function VertexRule(ET::Type{Parallelogram2D}, order = 1)
+    xref = [[0, 0], [1.0,0], [1.0,1.0], [0,1.0]]
+    lcen = local_celledgenodes(ET)
+    for j = 1:order-1
+        for edge = 1 : size(lcen,2)
+            push!(xref, j/order * xref[lcen[2,edge]] + (1 - j/order) * xref[lcen[1,edge]])
+        end
+    end
+    if order > 2
+        @warn "VertexRule for order > 2 on $ET not yet implemented"
+    end
+    w = ones(Float64, length(xref)) / length(xref)
     return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule parallelogram", xref, w)
 end
-function VertexRule(ET::Type{Tetrahedron3D})
-    xref = [[0, 0, 0], [1, 0, 0], [0,1,0], [0,0,1]]
-    w = [1//4, 1//4, 1//4, 1//4]
+function VertexRule(ET::Type{Tetrahedron3D}, order = 1)
+    xref = [[0, 0, 0], [1.0, 0, 0], [0,1.0,0], [0,0,1.0]]
+    lcen = local_celledgenodes(ET)
+    for j = 1:order-1
+        for edge = 1 : size(lcen,2)
+            push!(xref, j/order * xref[lcen[2,edge]] + (1 - j/order) * xref[lcen[1,edge]])
+        end
+    end
+    if order > 2
+        @warn "VertexRule for order > 2 on $ET not yet implemented"
+    end
+    w = ones(Float64, length(xref)) / length(xref)
     return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule tetrahedron", xref, w)
 end
-function VertexRule(ET::Type{Parallelepiped3D})
-    xref = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
-    w = [1//4, 1//4, 1//4, 1//4, 1//4, 1//4, 1//4, 1//4]
+function VertexRule(ET::Type{Parallelepiped3D}, order = 1)
+    xref = [[0, 0, 0], [1.0, 0, 0], [1.0, 1.0, 0], [0, 1.0, 0], [0, 0, 1.0], [1.0, 0, 1], [1.0, 1.0, 1.0], [0, 1.0, 1.0]]
+    lcen = local_celledgenodes(ET)
+    for j = 1:order-1
+        for edge = 1 : size(lcen,2)
+            push!(xref, j/order * xref[lcen[2,edge]] + (1 - j/order) * xref[lcen[1,edge]])
+        end
+    end
+    if order > 1
+        @warn "VertexRule for order > 2 on $ET not yet implemented"
+    end
+    w = ones(Float64, length(xref)) / length(xref)
     return SQuadratureRule{Float64, ET, dim_element(ET), length(w)}("vertex rule parallelepiped", xref, w)
 end
 
@@ -269,8 +317,9 @@ function QuadratureRule{T,ET}(order::Int; force_symmetric_rule::Bool = false) wh
   elseif order <= 8  # symmetric rule
       xref, w, name = get_symmetric_rule(ET, order)
   else
-      println("no quadrature rule with that order available")  
-      # no generic rule implemented yet
+      @warn "no quadrature rule with order $order available, will take order 8 instead"
+      xref, w, name = get_symmetric_rule(ET, 8)
+      # no higher order generic rule implemented yet
   end
   return SQuadratureRule{T, ET, dim_element(ET), length(w)}(name, xref, w)
 end
@@ -367,7 +416,7 @@ end
 
 ## recipe taken from:
 ## "A SET OF SYMMETRIC QUADRATURE RULESON TRIANGLES AND TETRAHEDRA"
-## Zhang/Cui/Lia
+## Zhang/Cui/Liu
 ## Journal of Computational Mathematics, Vol.27, No.1, 2009,89–96
 function get_symmetric_rule(::Type{Tetrahedron3D}, order::Int)
 

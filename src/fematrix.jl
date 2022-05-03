@@ -311,7 +311,7 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds matrix-matrix product B times C to FEVectorBlock a.
+Adds matrix-matrix product B times C to FEMatrixBlock A.
 """
 function addblock_matmul!(A::FEMatrixBlock{Tv}, cscmatB::SparseMatrixCSC{Tv,Ti}, cscmatC::SparseMatrixCSC{Tv,Ti}; factor = 1, transposed::Bool = false) where {Tv,Ti}
     AM::ExtendableSparseMatrix{Tv,Int64} = A.entries

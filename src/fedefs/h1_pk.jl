@@ -249,9 +249,9 @@ function get_basis(::Type{<:AssemblyType}, FEType::Type{H1Pk{ncomponents,edim,or
         if order == 3
             refbasis[3*order+1,1] = refbasis[end]*xref[1]*xref[2]*27
         elseif order == 4
-            refbasis[3*order+1,1] = refbasis[end]*xref[1]*xref[2]*(refbasis[end]-1//4)*108
-            refbasis[3*order+2,1] = refbasis[end]*xref[1]*xref[2]*(xref[1]-1//4)*108
-            refbasis[3*order+3,1] = refbasis[end]*xref[1]*xref[2]*(xref[2]-1//4)*108
+            refbasis[3*order+1,1] = refbasis[end]*xref[1]*xref[2]*(refbasis[end]-1//4)*128
+            refbasis[3*order+2,1] = refbasis[end]*xref[1]*xref[2]*(xref[1]-1//4)*128
+            refbasis[3*order+3,1] = refbasis[end]*xref[1]*xref[2]*(xref[2]-1//4)*128
         elseif order > 4
             interior_basis(view(refbasis,3*order+1:ncomponents*ndofs,:),xref)
             for k = 3*order+1:ndofs

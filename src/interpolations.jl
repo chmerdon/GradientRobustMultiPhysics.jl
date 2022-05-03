@@ -488,7 +488,7 @@ function interpolate!(
     start_cell = 1,
     only_localsearch = false,
     use_cellparents::Bool = false,
-    eps = 1e-14) where {T1,T2,Tv,Ti}
+    eps = 1e-13) where {T1,T2,Tv,Ti}
     # wrap point evaluation into function that is put into normal interpolate!
     xgrid = source.FES.xgrid
     xdim_source::Int = size(xgrid[Coordinates],1)
@@ -868,6 +868,164 @@ end
 
 
 
+"""
+````
+function continuify(
+    source::FEVectorBlock,
+    operator = Identity;
+    abs::Bool = false,
+    broken = false,
+    order = "auto",
+    factor = 1,
+    regions::Array{Int,1} = [0]) where {T,Tv,Ti,FEType,APT}
+````
+
+interpolates operator evaluation of source into a FE function of FEType H1Pk
+"""
+## interpolates operator evaluation of source into a H1Pk FE function
+function continuify(
+    source::FEVectorBlock{T,Tv,Ti,FEType,APT},
+    operator::Type{<:AbstractFunctionOperator} = Identity;
+    abs::Bool = false,
+    broken = false,
+    order = "auto",
+    factor = 1,
+    regions::Array{Int,1} = [0]) where {T,Tv,Ti,FEType,APT}
+
+    FE = source.FES
+    xgrid = FE.xgrid
+    xItemGeometries = xgrid[CellGeometries]
+    xItemRegions::GridRegionTypes{Ti} = xgrid[CellRegions]
+    xItemDofs::DofMapTypes{Ti} = FE[CellDofs]
+    xItemNodes::Adjacency{Ti} = xgrid[CellNodes]
+
+    if regions == [0]
+        try
+            regions = Array{Int,1}(Base.unique(xItemRegions[:]))
+        catch
+            regions = [xItemRegions[1]]
+        end
+    end
+
+    # setup basisevaler for each unique cell geometries
+    EG = FE.xgrid[UniqueCellGeometries]
+    ndofs4EG::Array{Int,1} = Array{Int,1}(undef,length(EG))
+    qf = Array{QuadratureRule,1}(undef,length(EG))
+    basisevaler::Array{FEEvaluator{T,Tv,Ti},1} = Array{FEEvaluator{T,Tv,Ti},1}(undef,length(EG))
+    if order == "auto"
+        order = max(get_polynomialorder(FEType, EG[1]) + QuadratureOrderShift4Operator(operator),1)
+    end
+    for j = 1 : length(EG)
+        qf[j] = VertexRule(EG[j], order)
+        basisevaler[j] = FEEvaluator(FE, operator, qf[j]; T = T)
+        ndofs4EG[j] = size(basisevaler[j].cvals,2)
+    end    
+    cvals_resultdim::Int = size(basisevaler[1].cvals,1)
+    target_resultdim::Int = abs ? 1 : cvals_resultdim
+
+    nitems::Int = num_sources(xItemDofs)
+    basisvals::Array{T,3} = basisevaler[1].cvals # pointer to operator results
+    item::Int = 0
+    itemET = EG[1]
+    nregions::Int = length(regions)
+    iEG::Int = 1
+    node::Int = 0
+    dof::Ti = 0
+    dofc::Ti = 0
+    temp::Array{T,1} = zeros(T,cvals_resultdim)
+    localT::Array{T,1} = zeros(T,cvals_resultdim)
+    weights::Array{T,1} = qf[1].w
+
+    name = "$operator(" * source.name * ")"
+    edim = dim_element(EG[1])
+    if edim in 1:2
+        FETypeC = H1Pk{cvals_resultdim,edim,order}
+    else
+        if order == 1
+            FETypeC = H1P1{cvals_resultdim}
+        elseif order == 2
+            FETypeC = H1P2{cvals_resultdim,3}
+        elseif order == 2
+            FETypeC = H1P3{cvals_resultdim,3}
+        else
+            @error "continuify target order > 3 currently not available in 3D"
+        end
+    end
+    FEScont = FESpace{FETypeC}(xgrid; broken = broken)
+    target = FEVector(name, FEScont)
+    xItemDofsC::DofMapTypes{Ti} = target[1].FES[CellDofs]
+    target_offset = broken ? Int(get_ndofs(ON_CELLS, FETypeC, EG[1]) / cvals_resultdim) : target[1].FES.coffset
+    ndofs = target_offset
+
+    if order > 2
+        @warn "continuify may not work correctly if target order is larger than 2 currently"
+    end
+    @logmsg MoreInfo "Interpolating $(source.name) ($FEType) >> $(target[1].name) ($FETypeC)"
+
+    #subset_handler! = get_basissubset(ON_CELLS, target[1].FES, EG[1])
+    #subset_ids = Array{Int,1}(1 : get_ndofs(ON_CELLS, FETypeC, EG[1]))
+
+    nneighbours = broken ? nothing : zeros(Int, ndofs)
+    for item = 1 : nitems
+        for r = 1 : nregions
+        # check if item region is in regions
+            if xItemRegions[item] == regions[r]
+
+                # find index for CellType
+                if length(EG) > 1
+                    itemET = xItemGeometries[item]
+                    for j=1:length(EG)
+                        if itemET == EG[j]
+                            iEG = j
+                            break;
+                        end
+                    end
+                    weights = qf[iEG].w
+                end
+
+                # update FEbasisevaler
+                update_basis!(basisevaler[iEG],item)
+                basisvals = basisevaler[iEG].cvals
+                #subset_handler!(subset_ids, item)
+
+               
+                for i in eachindex(weights) # dofs
+                    fill!(localT,0)
+                    for dof_i = 1 : ndofs4EG[iEG]
+                        dof = xItemDofs[dof_i,item]
+                        eval_febe!(temp, basisevaler[iEG], dof_i, i)
+                        for k = 1 : cvals_resultdim
+                            localT[k] += source[dof] * temp[k]
+                        end
+                    end
+                    localT .*= factor
+                    dofc = xItemDofsC[i,item]
+                    if !broken
+                        nneighbours[dofc] += 1
+                    end
+                    if abs
+                        for k = 1 : cvals_resultdim
+                            target.entries[dofc+(k-1)*target_offset] += localT[k]^2
+                        end
+                    else
+                        for k = 1 : cvals_resultdim
+                            target.entries[dofc+(k-1)*target_offset] += localT[k]
+                        end
+                    end
+                end  
+                break; # region for loop
+            end # if in region    
+        end # region for loop
+    end # item for loop
+
+    if !broken
+        for dofc = 1 : ndofs, k = 1 : target_resultdim
+            target.entries[dofc+(k-1)*target_offset] /= nneighbours[dofc]
+        end
+    end
+
+    return target
+end
 
 
 """

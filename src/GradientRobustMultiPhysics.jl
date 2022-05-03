@@ -77,7 +77,7 @@ export get_basis, get_coefficients, get_basissubset
 export reconstruct!
 
 export interpolate! # must be defined separately by each FEdefinition
-export nodevalues
+export nodevalues, continuify
 export nodevalues!
 export nodevalues_view
 

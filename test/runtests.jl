@@ -240,11 +240,20 @@ function run_basic_fe_tests()
         L2ErrorEvaluator = L2ErrorIntegrator(exact_function, Identity; AT = AT, quadorder = order)
         H1ErrorEvaluator = L2ErrorIntegrator(exact_gradient, Gradient; AT = AT, quadorder = max(0,order-1))
         H2ErrorEvaluator = L2ErrorIntegrator(exact_hessian, Hessian; AT = AT, quadorder = max(0,order-2))
+        
+        
         error = zeros(Float64,3)
         error[1] = sqrt(evaluate(L2ErrorEvaluator,Solution[1]))
         if FEType <: AbstractH1FiniteElement
             error[2] = sqrt(evaluate(H1ErrorEvaluator,Solution[1]))
             error[3] = sqrt(evaluate(H2ErrorEvaluator,Solution[1]))
+
+            # check continuifying of Gradient
+            if order in 2:3 && xgrid[CellGeometries][1] in [Edge1D, Triangle2D, Tetrahedron3D]
+                Grad = continuify(Solution[1], Gradient)
+                H1ErrorEvaluator2 = L2ErrorIntegrator(exact_gradient, Identity; AT = AT, quadorder = max(0,order-1))
+                push!(error, sqrt(evaluate(H1ErrorEvaluator2, Grad[1])))
+            end
         end
         println(" | error = $error")
         @test sum(error) < tolerance

@@ -201,7 +201,7 @@ end
 function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<:DofMap}) where {Tv, Ti, FEType <: AbstractFiniteElement, APT}
     ## Beware: Automatic broken DofMap generation currently only reliable for CellDofs
 
-    @logmsg MoreInfo "Generating $DM for $(FES.name)"
+    @logmsg DeepInfo "Generating $DM for $(FES.name)"
 
     ## prepare dofmap patterns
     xgrid = FES.xgrid
