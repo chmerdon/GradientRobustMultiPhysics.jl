@@ -574,29 +574,31 @@ function run_stokes_tests()
 
     # list of FETypes that should be tested
     TestCatalogTriangle2D = [
-                    [H1CR{2},H1P0{1},true],
-                    [H1MINI{2,2},H1P1{1},false],
-                    [H1BR{2},H1P0{1},true],
-                    [H1P1TEB{2},H1P1{1},false],
-                    [H1P2{2,2},H1P1{1},false],
-                    [H1P2B{2,2},H1P1{1},true],
-                    [H1P3{2,2},H1P2{1,2},false]]
+                    [H1CR{2},H1P0{1},true,false],
+                    [H1MINI{2,2},H1P1{1},false,false],
+                    [H1BR{2},H1P0{1},true,false],
+                    [H1P1TEB{2},H1P1{1},false,false],
+                    [H1P2{2,2},H1P1{1},false,false],
+                    [H1P2B{2,2},H1P1{1},true,false],
+                    [H1P3{2,2},H1P2{1,2},false,false],
+                    [H1P2{2,2},H1P1{1},true,true]]
     TestCatalogParallelogram2D = [
                     [H1CR{2},H1P0{1},true],
                   #  [H1MINI{2,2},H1CR{1},false],
                     [H1BR{2},H1P0{1},true],
                     [H1P2{2,2},H1P1{1},false]]
-    ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[1,1],[2,1],[2,1],[3,2]]
+    ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[1,1],[2,1],[2,1],[3,2],[2,1]]
     ExpectedOrdersParallelogram2D = [[1,0],[1,0],[2,1],[2,1]]
     TestCatalog3D = [
-                    [H1BR{3},H1P0{1},true],
-                    [H1CR{3},H1P0{1},true],
-                    [H1MINI{3,3},H1P1{1},false],
+                    [H1BR{3},H1P0{1},true,false],
+                    [H1CR{3},H1P0{1},true,false],
+                    [H1MINI{3,3},H1P1{1},false,false],
                   #  [H1P1TEB{3},H1P1{1},false],
-                    [H1P2{3,3},H1P1{1},false],
-                    [H1P3{3,3},H1P2{1,3},false]
+                    [H1P2{3,3},H1P1{1},false,false],
+                    [H1P3{3,3},H1P2{1,3},false,false],
+                    [H1P3{3,3},H1P2{1,3},true,true]
                     ]
-    ExpectedOrders3D = [[1,0],[1,0],[1,1],[2,1],[3,2]]
+    ExpectedOrders3D = [[1,0],[1,0],[1,1],[2,1],[3,2],[3,2]]
 
 
     function test_Stokes(xgrid, FETypes, orders, broken_p::Bool = false, RhsOp = Identity)
@@ -642,7 +644,12 @@ function run_stokes_tests()
         println("=====================================")
         xgrid = testgrid(Triangle2D)
         for n = 1 : length(TestCatalogTriangle2D)
-            test_Stokes(xgrid, TestCatalogTriangle2D[n][[1,2]], ExpectedOrdersTriangle2D[n], TestCatalogTriangle2D[n][3])
+            if TestCatalogTriangle2D[n][4]
+                xgrid_bary = barycentric_refine(xgrid)
+                test_Stokes(xgrid_bary, TestCatalogTriangle2D[n][[1,2]], ExpectedOrdersTriangle2D[n], TestCatalogTriangle2D[n][3])
+            else
+                test_Stokes(xgrid, TestCatalogTriangle2D[n][[1,2]], ExpectedOrdersTriangle2D[n], TestCatalogTriangle2D[n][3])
+            end
         end
         println("\n")
         println("==========================================")
@@ -658,7 +665,12 @@ function run_stokes_tests()
         println("=============================")
         xgrid = testgrid(Tetrahedron3D)
         for n = 1 : length(TestCatalog3D)
-            test_Stokes(xgrid, TestCatalog3D[n][[1,2]], ExpectedOrders3D[n], TestCatalog3D[n][3])
+            if TestCatalog3D[n][4]
+                xgrid_bary = barycentric_refine(xgrid)
+                test_Stokes(xgrid_bary, TestCatalog3D[n][[1,2]], ExpectedOrders3D[n], TestCatalog3D[n][3])
+            else
+                test_Stokes(xgrid, TestCatalog3D[n][[1,2]], ExpectedOrders3D[n], TestCatalog3D[n][3])
+            end
         end
         println("")
     end

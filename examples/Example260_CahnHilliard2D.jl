@@ -24,7 +24,7 @@ using GridVisualize
 using ForwardDiff
 using DifferentialEquations
 
-# parameters and initial condition
+## parameters and initial condition
 const f = (c) -> 100*c^2*(1-c)^2 
 const dfdc = (c) -> ForwardDiff.derivative(f, c)
 const M = 1.0

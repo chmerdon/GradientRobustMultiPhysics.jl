@@ -322,22 +322,24 @@ function addblock_matmul!(A::FEMatrixBlock{Tv}, cscmatB::SparseMatrixCSC{Tv,Ti},
     bcol::Int = 0
     row::Int = 0
     arow::Int = 0
-    if transposed
+    if transposed # add (B*C)'= C'*B' to A
         for i = 1:size(cscmatC, 2)
-            arow = i + A.offsetY
+            arow = i + A.offsetX
             for crow in nzrange(cscmatC, i)
                 for j in nzrange(cscmatB, rowsC[crow])
-                    acol = rowsB[j] + A.offsetX
+                    acol = rowsB[j] + A.offsetY
+                    # add b[j,crow]*c[crow,i] to a[i,j]
                     _addnz(AM,arow,acol,valsB[j]*valsC[crow],factor)
                 end
             end
         end
-    else
+    else # add B*C to A
         for j = 1:size(cscmatC, 2)
             acol = j + A.offsetY
             for crow in nzrange(cscmatC, j)
                 for i in nzrange(cscmatB, rowsC[crow])
                     arow = rowsB[i] + A.offsetX
+                    # add b[i,crow]*c[crow,j] to a[i,j]
                     _addnz(AM,arow,acol,valsB[i]*valsC[crow],factor)
                 end
             end
