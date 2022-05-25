@@ -41,6 +41,64 @@ function ∇(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
     end
 end
 
+function Δ(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 2)
+
+    argsizes = UD.argsizes
+    result = zeros(Real, argsizes[1])
+    result1 = zeros(Real, argsizes[1], argsizes[2])
+    result2 = zeros(Real, argsizes[1]*argsizes[2], argsizes[2])
+    Dresult = DiffResults.DiffResult(result,result2)
+    mask_x = 1:argsizes[1]
+
+    if is_xdependent(UD) && !is_timedependent(UD)
+    
+        function data_wrap_x(x)
+            fill!(result,0)
+            UD.kernel(result, x)
+            return result
+        end
+
+        jac_function = x -> ForwardDiff.jacobian(data_wrap_x, x)
+
+        function data_deriv_Δ_x(result, x)
+            ForwardDiff.jacobian!(Dresult, jac_function, x)
+            fill!(result,0)
+            for j = 1 : argsizes[1], k = 1 : argsizes[2]
+                result[j] += result2[(k-1)*argsizes[2] + j, k]
+            end
+        end
+    
+        return DataFunction(data_deriv_Δ_x, [argsizes[1], argsizes[2]]; name = "Δ($(UD.name))", dependencies = "X", bonus_quadorder = bonus_quadorder)
+    elseif is_xdependent(UD) && is_timedependent(UD)
+
+        function data_wrap_xt(t)
+            function closure(x)
+                fill!(result,0)
+                UD.kernel(result, x, t)
+                return result
+            end
+            return closure
+        end
+
+        jac_function(t) = x -> ForwardDiff.jacobian(data_wrap_xt(t), x)
+        
+        function data_deriv_Δ_xt(result, x, t)
+            ForwardDiff.jacobian!(Dresult, jac_function(t), view(x,mask_x))
+            fill!(result,0)
+            for j = 1 : argsizes[1], k = 1 : argsizes[2]
+                result[j] += result2[(k-1)*argsizes[2] + j, k]
+            end
+        end
+        return DataFunction(data_deriv_Δ_xt, [argsizes[1], argsizes[2]]; name = "Δ($(UD.name))", dependencies = "XT", bonus_quadorder = bonus_quadorder)
+    elseif UD.dependencies == "" || UD.dependencies == "T"
+        return DataFunction(zeros(Float64, argsizes[1]); name = "Δ($(UD.name))")
+    else
+        @error "derivatives of user functions with these dependencies not implemented yet"
+    end
+
+    
+end
+
 function curl3D(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
     argsizes = UD.argsizes
     @assert argsizes[1] == 3 && argsizes[2] == 3 "curl3D needs dimensions [3,3]"

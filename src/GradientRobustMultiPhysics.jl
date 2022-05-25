@@ -24,7 +24,7 @@ include("userdata.jl")
 export AbstractDataFunction, AbstractExtendedDataFunction
 export UserData, DataFunction, DefaultUserData, eval_data!
 export set_time!, is_timedependent, is_itemdependent, is_xrefdependent, is_xdependent
-export ∇, div, curl, CurlScalar, Curl2D, Curl3D
+export ∇, div, curl, CurlScalar, Curl2D, Curl3D, Δ
 
 include("quadrature.jl")
 export QuadratureRule
