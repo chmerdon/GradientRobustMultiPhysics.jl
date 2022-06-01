@@ -34,9 +34,9 @@ using ExtendableSparse
 using ExtendableGrids
 using GridVisualize
 
-# all problem data is provided by the function below
-# note that the right-hand side is computed automatically
-# to match the data α, β, u
+## all problem data is provided by the function below
+## note that the right-hand side is computed automatically
+## to match the data α, β, u
 function get_problem_data(q; p::Float64 = 2.7, κ::Float64 = 0.0001)
     function exact_u!(result,x)
         result[1] = x[1]*x[2]

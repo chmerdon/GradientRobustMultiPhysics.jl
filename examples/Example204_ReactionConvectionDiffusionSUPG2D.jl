@@ -24,9 +24,9 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
-# all problem data is provided by the function below
-# note that the right-hand side is computed automatically
-# to match the data α, β, u
+## all problem data is provided by the function below
+## note that the right-hand side is computed automatically
+## to match the data α, β, u
 function get_problem_data(ν)
     α = DataFunction([0.1]; name = "α")
     β = DataFunction([1,0]; name = "β")

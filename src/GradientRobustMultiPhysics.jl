@@ -11,7 +11,7 @@ using StaticArrays
 using DiffResults
 using LinearAlgebra
 using ForwardDiff
-using SparsityDetection
+using Symbolics
 using SparseDiffTools
 using DocStringExtensions
 using Printf
