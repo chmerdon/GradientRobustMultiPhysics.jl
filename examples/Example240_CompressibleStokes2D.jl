@@ -30,7 +30,7 @@ such that ``\mathbf{f} = 0`` and ``\mathbf{g}`` nonzero to match the prescribed 
 This example is designed to study the well-balanced property of a discretisation. The gradient-robust discretisation
 approximates the well-balanced state much better, i.e. has a much smaller L2 velocity error. For larger c the problem gets more incompressible which reduces
 the error further as then the right-hand side is a perfect gradient also when evaluated with the (now closer to a constant) discrete density.
-See reference below for more details, but here implemented with a Newton scheme.
+See reference below for more details.
 
 !!! reference
 
@@ -63,12 +63,12 @@ const g = DataFunction((result,x) -> (result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-2
 const f = DataFunction((result,x) -> (result[2] = result[2] = - (1.0 - (x[2] - 0.5)/c)^(γ-1) * γ), [2,2]; name = "f", dependencies = "X", bonus_quadorder = 4)
 
 ## everything is wrapped in a main function
-function main(; use_gravity = true, newton = true, nlevels = 4 + newton, Plotter = nothing, verbosity = 0)
+function main(; use_gravity = true, newton = false, nlevels = 4, Plotter = nothing, verbosity = 0)
 
     ## set log level
     set_verbosity(verbosity)
 
-    ## load mesh and compute mass of exact ϱ 
+    ## load mesh and compute mass of exact ϱ
     xgrid = simplexgrid("assets/2d_mountainrange.sg")
     M = integrate(xgrid, ON_CELLS, ϱ, 1)
 
@@ -89,12 +89,12 @@ function main(; use_gravity = true, newton = true, nlevels = 4 + newton, Plotter
             xgrid = uniform_refine(xgrid)
         end
 
-        ## generate FESpaces and solution vector
+        # generate FESpaces and solution vector
         FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid)]
         Solution = [FEVector(["u_h (BR)", "ϱ_h (BR)"],FES),FEVector(["u_h (BR+)", "ϱ_h (BR+)"],FES)]
         NDoFs[lvl] = length(Solution[1].entries)
 
-        ## solve with and without reconstruction
+        # solve with and without reconstruction
         for reconstruct in [true, false]
             Target = Solution[reconstruct+1]
             setup_and_solve!(Target, xgrid; use_gravity = use_gravity, reconstruct = reconstruct, newton = newton, c = c, M = M, λ = λ, μ = μ, γ = γ)
@@ -102,16 +102,16 @@ function main(; use_gravity = true, newton = true, nlevels = 4 + newton, Plotter
             Results[reconstruct ? 4 : 3, lvl] = sqrt(evaluate(VeloGradError,Target[1]))
             Results[reconstruct ? 6 : 5, lvl] = sqrt(evaluate(DensityError,Target[2]))
 
-            ## check error in mass constraint
+            # check error in mass constraint
             Md = sum(Target[2][:] .* xgrid[CellVolumes])
             println("\tmass_error = $M - $Md = $(abs(M-Md))")
         end
     end
 
     ## print convergence history tables
-    print_convergencehistory(NDoFs, Results[1:2,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||u-u_h|| (BR)","||u-u_h|| (BR+)"], xlabel = "ndof") 
-    print_convergencehistory(NDoFs, Results[3:4,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||∇(u-u_h)|| (BR)","||∇(u-u_h)|| (BR+)"], xlabel = "ndof") 
-    print_convergencehistory(NDoFs, Results[5:6,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||ϱ-ϱ_h|| (BR)","||ϱ-ϱ_h|| (BR+)"], xlabel = "ndof") 
+    print_convergencehistory(NDoFs, Results[1:2,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||u-u_h|| (BR)","||u-u_h|| (BR+)"], xlabel = "ndof")
+    print_convergencehistory(NDoFs, Results[3:4,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||∇(u-u_h)|| (BR)","||∇(u-u_h)|| (BR+)"], xlabel = "ndof")
+    print_convergencehistory(NDoFs, Results[5:6,:]'; X_to_h = X -> X.^(-1/2), ylabels = ["||ϱ-ϱ_h|| (BR)","||ϱ-ϱ_h|| (BR+)"], xlabel = "ndof")
 
     ## plot everything
     p = GridVisualizer(; Plotter = Plotter, layout = (2,3), clear = true, resolution = (1500,1000))
@@ -125,8 +125,8 @@ function main(; use_gravity = true, newton = true, nlevels = 4 + newton, Plotter
     convergencehistory!(p[2,3], NDoFs, Results[[2,4,6],:]'; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h || (BR+)", "|| ∇(u - u_h) || (BR+)", "|| ϱ - ϱ_h || (BR+)"], legend = :lb)
 end
 
-function setup_and_solve!(Solution, xgrid; 
-    c = 1, γ = 1, M = 1, μ = 1, λ = 0, 
+function setup_and_solve!(Solution, xgrid;
+    c = 1, γ = 1, M = 1, μ = 1, λ = 0,
     use_gravity = true,
     reconstruct = true,
     newton = true)
@@ -145,7 +145,7 @@ function setup_and_solve!(Solution, xgrid;
     if λ != 0
         add_operator!(Problem, [1,1], BilinearForm([VeloDivergence,VeloDivergence]; name = "λ (div(u),div(v))", factor = λ, store = true))
     end
-    
+
     ## add pressure term -(div(v),p(ϱ))
 	add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity], feval_action(equation_of_state); factor = -1, name = "-(div v, eos(ϱ))", apply_action_to = [2], store = true))
 
@@ -164,11 +164,15 @@ function setup_and_solve!(Solution, xgrid;
     if newton
         ## add upwinded continuity equation as NonlinearForm
         function upwind_kernel(result, input, face)
-            # input = [NormalFlux, Identity on parent 1, Identity on parent 2]
-            result[1] = input[1] * (input[1] > 0 ? input[2] : input[3])
+            ## input = [NormalFlux, Identity on parent 1, Identity on parent 2]
+            if input[1] > 0
+                result[1] = input[1] * input[2]
+            else
+                result[1] = input[1] * input[3]
+            end
         end
-        add_operator!(Problem, 2, NonlinearForm(Jump(Identity), [NormalFlux,Parent{1}(Identity),Parent{2}(Identity)], [1,2,2], upwind_kernel, [1,3]; dependencies = "I", AT = ON_IFACES, name = "(div_upw(ϱ_hu_h),q_h)"))
-        
+        add_operator!(Problem, 2, NonlinearForm(Jump(Identity), [NormalFlux,Parent{1}(Identity),Parent{2}(Identity)], [1,2,2], upwind_kernel, [1,3]; dependencies = "I", AT = ON_IFACES, sparse_jacobian = false, name = "(div_upw(ϱ_hu_h),q_h)"))
+
         ## add mass constraint on density and solve
         add_constraint!(Problem, FixedIntegralMean(2, M/sum(xgrid[CellVolumes])))
         solve!(Solution, Problem; maxiterations = 20)
