@@ -68,9 +68,11 @@ function main(;
     p = DataFunction((result, x) -> (
             result[1] = sin(x[1]+x[2]) - 2*sin(1)+sin(2)
         ), [1,2]; name = "p", dependencies = "X", bonus_quadorder = 5)
+    dt_u = eval_dt(u)
+    Δu = eval_Δ(u)
+    ∇p = eval_∇(p)
     f = DataFunction((result, x, t) -> (
-            result[1] = ν*(1+t)*cos(x[2]) + cos(x[1]+x[2]) + cos(x[2]);
-            result[2] = ν*(1+t)*sin(x[1]) + cos(x[1]+x[2]) + sin(x[1]);
+            result .= dt_u(x,t) .- ν*Δu(x,t) .+ view(∇p(x,t),:);
         ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 5)
     ∇u = ∇(u)
 

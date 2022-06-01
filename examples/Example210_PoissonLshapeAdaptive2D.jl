@@ -43,7 +43,6 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
     
     ## negotiate data functions to the package
     u = DataFunction(u!, [1,2]; name = "u", dependencies = "X", bonus_quadorder = 5)
-    ∇u = ∇(u)
 
     ## setup Poisson problem
     Problem = PoissonProblem()
@@ -52,7 +51,7 @@ function main(; verbosity = 0, maxdofs = 5000, theta = 1//3, order = 2, Plotter 
 
     ## setup exact error evaluations
     L2Error = L2ErrorIntegrator(u, Identity)
-    H1Error = L2ErrorIntegrator(∇u, Gradient)
+    H1Error = L2ErrorIntegrator(∇(u), Gradient)
 
     ## define error estimator
     ## kernel for jump term : |F| ||[[grad(u_h)*n_F]]||^2_L^2(F)

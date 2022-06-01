@@ -19,7 +19,7 @@ Here the exact data for the planar lattice flow
 p(x,y,t) & := \exp(-8 \pi^2 \nu t) ( \cos(4 \pi x) - \cos(4 \pi y)) / 4
 \end{aligned}
 ```
-is prescribed at fixed time ``t = 0`` with ``\mathbf{f} = \mathbf{u}_t - \nu \Delta \mathbf{u}``.
+is prescribed at fixed time ``t = 0`` with ``\mathbf{f} = - \nu \Delta \mathbf{u}``.
 
 In this example the Navier-Stokes equations are solved with a pressure-robust variant of the Bernardi--Raugel finite element method
 and the nonlinear convection term (that involves reconstruction operators) is automatically differentiated for a Newton iteration.
@@ -48,9 +48,9 @@ function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
     p = DataFunction((result, x, t) -> (
             result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
         ), [1,2]; name = "p", dependencies = "XT", bonus_quadorder = 4)
+    Δu = eval_Δ(u)
     f = DataFunction((result, x, t) -> (
-            result[1] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
-            result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
+            result .= -ν*Δu(x,t); # ∇p + (u ⋅ ∇)u = 0
         ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 4)
 
     ## set finite elements (Bernardi--Raugel)

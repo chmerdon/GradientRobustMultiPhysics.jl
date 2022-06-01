@@ -1,307 +1,5 @@
 abstract type AbstractUserDataType end
 
-"""
-````
-function ∇(UD::AbstractUserDataType; quadorder = UD.quadorder - 1)
-````
-
-Provides a DataFunction with the same dependencies that evaluates the gradient of the DataFunction UD. The derivatives are computed by ForwardDiff.
-"""
-function ∇(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
-    argsizes = UD.argsizes
-    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
-    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[2])
-    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
-    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-    if is_xdependent(UD) && !is_timedependent(UD)
-        cfg = ForwardDiff.JacobianConfig(UD.kernel, result_temp, input_temp)
-        function data_deriv_x(result, x)
-            ForwardDiff.vector_mode_jacobian!(Dresult, UD.kernel, result_temp, x, cfg)
-            for j = 1 : argsizes[1], k = 1 : argsizes[2]
-                result[(j-1)*argsizes[2] + k] = jac[j,k]
-            end
-            return nothing
-        end
-        return DataFunction(data_deriv_x, [argsizes[1]*argsizes[2], argsizes[2]]; name = "∇($(UD.name))", dependencies = "X", bonus_quadorder = bonus_quadorder)
-    elseif is_xdependent(UD) && is_timedependent(UD)
-        reduced_function_xt(t) = (result,x) -> UD.kernel(result,x,t)
-        cfg = ForwardDiff.JacobianConfig(reduced_function_xt(0.0), result_temp, input_temp)
-        function data_deriv_xt(result, x, t)
-            ForwardDiff.vector_mode_jacobian!(Dresult, reduced_function_xt(t), result_temp, x, cfg)
-            for j = 1 : argsizes[1], k = 1 : argsizes[2]
-                result[(j-1)*argsizes[2] + k] = jac[j,k]
-            end
-            return nothing
-        end
-        return DataFunction(data_deriv_xt, [argsizes[1]*argsizes[2], argsizes[2]]; name = "∇($(UD.name))", dependencies = "XT", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "" || UD.dependencies == "T"
-        return DataFunction(zeros(Float64, argsizes[1]*argsizes[2]); name = "∇($(UD.name))")
-    else
-        @error "derivatives of user functions with these dependencies not implemented yet"
-    end
-end
-
-function Δ(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 2)
-
-    argsizes = UD.argsizes
-    result = zeros(Real, argsizes[1])
-    result1 = zeros(Real, argsizes[1], argsizes[2])
-    result2 = zeros(Real, argsizes[1]*argsizes[2], argsizes[2])
-    Dresult = DiffResults.DiffResult(result,result2)
-    mask_x = 1:argsizes[1]
-
-    if is_xdependent(UD) && !is_timedependent(UD)
-    
-        function data_wrap_x(x)
-            fill!(result,0)
-            UD.kernel(result, x)
-            return result
-        end
-
-        jac_function = x -> ForwardDiff.jacobian(data_wrap_x, x)
-
-        function data_deriv_Δ_x(result, x)
-            ForwardDiff.jacobian!(Dresult, jac_function, x)
-            fill!(result,0)
-            for j = 1 : argsizes[1], k = 1 : argsizes[2]
-                result[j] += result2[(k-1)*argsizes[2] + j, k]
-            end
-        end
-    
-        return DataFunction(data_deriv_Δ_x, [argsizes[1], argsizes[2]]; name = "Δ($(UD.name))", dependencies = "X", bonus_quadorder = bonus_quadorder)
-    elseif is_xdependent(UD) && is_timedependent(UD)
-
-        function data_wrap_xt(t)
-            function closure(x)
-                fill!(result,0)
-                UD.kernel(result, x, t)
-                return result
-            end
-            return closure
-        end
-
-        jac_function(t) = x -> ForwardDiff.jacobian(data_wrap_xt(t), x)
-        
-        function data_deriv_Δ_xt(result, x, t)
-            ForwardDiff.jacobian!(Dresult, jac_function(t), view(x,mask_x))
-            fill!(result,0)
-            for j = 1 : argsizes[1], k = 1 : argsizes[2]
-                result[j] += result2[(k-1)*argsizes[2] + j, k]
-            end
-        end
-        return DataFunction(data_deriv_Δ_xt, [argsizes[1], argsizes[2]]; name = "Δ($(UD.name))", dependencies = "XT", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "" || UD.dependencies == "T"
-        return DataFunction(zeros(Float64, argsizes[1]); name = "Δ($(UD.name))")
-    else
-        @error "derivatives of user functions with these dependencies not implemented yet"
-    end
-
-    
-end
-
-function curl3D(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
-    argsizes = UD.argsizes
-    @assert argsizes[1] == 3 && argsizes[2] == 3 "curl3D needs dimensions [3,3]"
-    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
-    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[2])
-    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
-    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-    if is_xdependent(UD)
-        cfg = ForwardDiff.JacobianConfig(UD.kernel, result_temp, input_temp)
-        function data_deriv_x(result, x)
-            ForwardDiff.vector_mode_jacobian!(Dresult, UD.kernel, result_temp, x, cfg)
-            result[1] = jac[3,2] - jac[2,3]
-            result[2] = jac[1,3] - jac[3,1]
-            result[3] = jac[2,1] - jac[1,2]
-            return nothing
-        end
-        return DataFunction(data_deriv_x, [3, 2]; name = "curl($(UD.name))", dependencies = "X", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "XT"
-        reduced_function_xt(t) = (result,x) -> UD.kernel(result,x,t)
-        cfg = ForwardDiff.JacobianConfig(reduced_function_xt(0.0), result_temp, input_temp)
-        function data_deriv_xt(result, x, t)
-            ForwardDiff.vector_mode_jacobian!(Dresult, reduced_function_xt(t), result_temp, x, cfg)
-            result[1] = jac[3,2] - jac[2,3]
-            result[2] = jac[1,3] - jac[3,1]
-            result[3] = jac[2,1] - jac[1,2]
-            return nothing
-        end
-        return DataFunction(data_deriv_xt, [3, 2]; name = "curl($(UD.name))", dependencies = "XT", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "" || UD.dependencies == "T"
-        return DataFunction(zeros(Float64, 1); name = "curl($(UD.name))")
-    else
-        @error "derivatives of user functions with these dependencies not implemented yet"
-    end
-end
-
-function curl2D(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
-    argsizes = UD.argsizes
-    @assert argsizes[1] == 2 && argsizes[2] == 2 "curl2D needs dimensions [2,2]"
-    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
-    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[2])
-    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
-    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-    if is_xdependent(UD)
-        cfg = ForwardDiff.JacobianConfig(UD.kernel, result_temp, input_temp)
-        function data_deriv_x(result, x)
-            ForwardDiff.vector_mode_jacobian!(Dresult, UD.kernel, result_temp, x, cfg)
-            result[1] = jac[1,2] - jac[2,1]
-            return nothing
-        end
-        return DataFunction(data_deriv_x, [1, 2]; name = "curl($(UD.name))", dependencies = "X", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "XT"
-        reduced_function_xt(t) = (result,x) -> UD.kernel(result,x,t)
-        cfg = ForwardDiff.JacobianConfig(reduced_function_xt(0.0), result_temp, input_temp)
-        function data_deriv_xt(result, x, t)
-            ForwardDiff.vector_mode_jacobian!(Dresult, reduced_function_xt(t), result_temp, x, cfg)
-            result[1] = jac[1,2] - jac[2,1]
-            return nothing
-        end
-        return DataFunction(data_deriv_xt, [1,2]; name = "curl($(UD.name))", dependencies = "XT", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "" || UD.dependencies == "T"
-        return DataFunction(zeros(Float64, 1); name = "curl($(UD.name))")
-    else
-        @error "derivatives of user functions with these dependencies not implemented yet"
-    end
-end
-
-
-function curl_scalar(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
-    argsizes = UD.argsizes
-    @assert argsizes[1] == 1 && argsizes[2] == 2 "curl_scalar needs dimensions [1,2]"
-    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
-    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[2])
-    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
-    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-    if is_xdependent(UD)
-        cfg = ForwardDiff.JacobianConfig(UD.kernel, result_temp, input_temp)
-        function data_deriv_x(result, x)
-            ForwardDiff.vector_mode_jacobian!(Dresult, UD.kernel, result_temp, x, cfg)
-            result[1] = -jac[1,2]
-            result[2] = jac[1,1]
-            return nothing
-        end
-        return DataFunction(data_deriv_x, [2, 2]; name = "curl($(UD.name))", dependencies = "X", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "XT"
-        reduced_function_xt(t) = (result,x) -> UD.kernel(result,x,t)
-        cfg = ForwardDiff.JacobianConfig(reduced_function_xt(0.0), result_temp, input_temp)
-        function data_deriv_xt(result, x, t)
-            ForwardDiff.vector_mode_jacobian!(Dresult, reduced_function_xt(t), result_temp, x, cfg)
-            result[1] = -jac[1,2]
-            result[2] = jac[1,1]
-            return nothing
-        end
-        return DataFunction(data_deriv_xt, [2,2]; name = "curl($(UD.name))", dependencies = "XT", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "" || UD.dependencies == "T"
-        return DataFunction(zeros(Float64, 2); name = "curl($(UD.name))")
-    else
-        @error "derivatives of user functions with these dependencies not implemented yet"
-    end
-end
-
-"""
-````
-function curl(UD::AbstractUserDataType; quadorder = UD.quadorder - 1)
-````
-
-Provides a DataFunction with the same dependencies that evaluates the curl of the DataFunction UD. The derivatives are computed by ForwardDiff.
-Depending on the dimensions of UD, either CurlScalar (UD.argsizes == [1,2]), Curl2D (UD.argsizes == [2,2]) or Curl3D (UD.argsizes == [3,3])
-is generated.
-"""
-function curl(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
-    argsizes = UD.argsizes
-    if argsizes[1] == 1 # 2D curl of scalar-function curl(f: R^2 --> R^1) : R^2 --> R^2 = [-df/dy, df/dx]
-        curl_scalar(UD; bonus_quadorder = bonus_quadorder)
-    elseif argsizes[1] == 2 # 2D curl of vector-valued function curl(f: R^2 --> R^2) : R^2 --> R^1 = -df1/dy + df2/dx
-        curl2D(UD; bonus_quadorder = bonus_quadorder)
-    elseif argsizes[1] == 3 # 3D curl of vector-valued function curl(f: R^3 --> R^3) : R^2 --> R^1 = ∇ × f
-        curl3D(UD; bonus_quadorder = bonus_quadorder)
-    else
-        @error "curl for these function dimensions not known/implemented"
-    end
-end
-
-"""
-````
-function div(UD::AbstractUserDataType; quadorder = UD.quadorder - 1)
-````
-
-Provides a DataFunction with the same dependencies that evaluates the divergence of the DataFunction UD. The derivatives are computed by ForwardDiff.
-"""
-function Base.div(UD::AbstractUserDataType; bonus_quadorder = UD.bonus_quadorder - 1)
-    argsizes = UD.argsizes
-    @assert argsizes[1] == argsizes[2] "div needs equal dimensions"
-    result_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[1])
-    input_temp::Array{Float64,1} = Vector{Float64}(undef,argsizes[2])
-    Dresult = DiffResults.JacobianResult(result_temp,input_temp)
-    jac::Array{Float64,2} = DiffResults.jacobian(Dresult)
-    if is_xdependent(UD)
-        cfg = ForwardDiff.JacobianConfig(UD.kernel, result_temp, input_temp)
-        function data_deriv_x(result, x)
-            ForwardDiff.vector_mode_jacobian!(Dresult, UD.kernel, result_temp, x, cfg)
-            result[1] = 0
-            for j = 1 : argsizes[2]
-                result[1] += jac[j,j]
-            end
-            return nothing
-        end
-        return DataFunction(data_deriv_x, [1, argsizes[2]]; name = "div($(UD.name))", dependencies = "X", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "XT"
-        reduced_function_xt(t) = (result,x) -> UD.kernel(result,x,t)
-        cfg = ForwardDiff.JacobianConfig(reduced_function_xt(0.0), result_temp, input_temp)
-        function data_deriv_xt(result, x, t)
-            ForwardDiff.vector_mode_jacobian!(Dresult, reduced_function_xt(t), result_temp, x, cfg)
-            result[1] = 0
-            for j = 1 : argsizes[2]
-                result[1] += jac[j,j]
-            end
-            return nothing
-        end
-        return DataFunction(data_deriv_xt, [1, argsizes[2]]; name = "div($(UD.name))", dependencies = "XT", bonus_quadorder = bonus_quadorder)
-    elseif UD.dependencies == "" || UD.dependencies == "T"
-        return DataFunction(zeros(Float64, 1); name = "div($(UD.name))")
-    else
-        @error "derivatives of user functions with these dependencies not implemented yet"
-    end
-end
-
-
-"""
-````
-function nodevalues(nodevals, xgrid::ExtendableGrid{Tv,Ti}, UD::UserData; time = 0) where {Tv,Ti}
-````
-
-Returns a 2D array with the node values of the data function for the given grid.
-"""
-function nodevalues(xgrid::ExtendableGrid{Tv,Ti}, UD::AbstractUserDataType; T = Float64, time = 0) where {Tv,Ti}
-    xCoordinates::Array{Tv,2} = xgrid[Coordinates]
-    nnodes::Int = size(xCoordinates,2)
-
-    set_time!(UD, time)
-    if is_xdependent(UD) && length(UD.x) != size(xCoordinates,1)
-        UD.x = zeros(T,size(xCoordinates,1))
-    end
-    nodevals = zeros(T,UD.argsizes[1],nnodes)
-    for j = 1 : nnodes
-        if is_itemdependent(UD)
-            UD.citem[1] = cell
-            UD.citem[2] = cell
-            UD.citem[3] = xCellRegions[cell]
-        end
-        if is_xdependent(UD)
-            UD.x .= view(xCoordinates,:,j)
-        end
-        eval_data!(UD)
-        for k = 1 : UD.argsizes[1]
-            nodevals[k,j] = UD.val[k]
-        end
-    end
-    return nodevals
-end
-
-
-
-
 mutable struct DataFunction{T,Ti,dx,dt,di,dl,ndim,KernelType} <: AbstractUserDataType
     name::String                    # some name used in info messages etc.
     kernel::KernelType              # kernel function
@@ -312,27 +10,9 @@ mutable struct DataFunction{T,Ti,dx,dt,di,dl,ndim,KernelType} <: AbstractUserDat
     time::T                         # current time
     bonus_quadorder::Int            # causes increase of quadorder in any used integration
     val::Array{T,1}                 # result vector
+    eval_derivs                     # function to call evaluation of x derivatives
+    eval_derivs_t                   # function to call evaluation of time derivatives
 end
-
-set_time!(A::DataFunction, time) = (A.time = time)
-
-is_xdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dx
-is_timedependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dt
-is_itemdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = di
-is_xrefdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dl
-function dependencies(A::DataFunction; enforce = "")
-    dependencies = occursin("X", enforce) ? "X" : is_xdependent(A) ? "X" : ""
-    dependencies *= occursin("T", enforce) ? "T" : is_timedependent(A) ? "T" : ""
-    dependencies *= occursin("I", enforce) ? "I" : is_itemdependent(A) ? "I" : ""
-    dependencies *= occursin("L", enforce) ? "L" : is_xrefdependent(A) ? "L" : ""
-    return dependencies
-end
-function couple!(A::DataFunction,B::DataFunction)
-    A.xref = B.xref
-    A.x = B.x
-    A.item = B.item
-end
-    
 
 
 """
@@ -358,7 +38,7 @@ function DataFunction(kernel::Function, argsizes; Tv = Float64, Ti = Int32, depe
     di = occursin("I", dependencies)
     dl = occursin("L", dependencies)
     return DataFunction{Tv,Ti,dx,dt,di,dl,length(argsizes),typeof(kernel)}(
-        name, kernel, argsizes, zeros(Tv, 3), zeros(Tv, 3), zeros(Ti,5), 0, bonus_quadorder, zeros(Tv, argsizes[1]))
+        name, kernel, argsizes, zeros(Tv, 3), zeros(Tv, 3), zeros(Ti,5), 0, bonus_quadorder, zeros(Tv, argsizes[1]), nothing, nothing)
 end
 
 """
@@ -368,8 +48,8 @@ function DataFunction(c::Array{<:Real,1}; name = "constant user data", quadorder
 
 Directly generates a DataFunction from a given array c, i.e. a DataFunction that is constant and has no dependencies on x or t.
 """
-function DataFunction(c::Array{<:Real,1}; name = "auto", bonus_quadorder::Int = 0)
-    dimensions = [length(c),0]
+function DataFunction(c::Array{<:Real,1}; xdim = 0, name = "auto", bonus_quadorder::Int = 0)
+    dimensions = [length(c), xdim]
     function f_from_c(result)
         for j = 1 : length(c)
             result[j] = c[j]
@@ -381,6 +61,27 @@ function DataFunction(c::Array{<:Real,1}; name = "auto", bonus_quadorder::Int = 
 
     return DataFunction(f_from_c, dimensions; name = name, dependencies = "", bonus_quadorder = bonus_quadorder)
 end
+
+
+set_time!(A::DataFunction, time) = (A.time = time)
+
+is_xdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dx
+is_timedependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dt
+is_itemdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = di
+is_xrefdependent(::DataFunction{T,Ti,dx,dt,di,dl,ndim}) where {T,Ti,dx,dt,di,dl,ndim} = dl
+function dependencies(A::DataFunction; enforce = "")
+    dependencies = occursin("X", enforce) ? "X" : is_xdependent(A) ? "X" : ""
+    dependencies *= occursin("T", enforce) ? "T" : is_timedependent(A) ? "T" : ""
+    dependencies *= occursin("I", enforce) ? "I" : is_itemdependent(A) ? "I" : ""
+    dependencies *= occursin("L", enforce) ? "L" : is_xrefdependent(A) ? "L" : ""
+    return dependencies
+end
+function couple!(A::DataFunction,B::DataFunction)
+    A.xref = B.xref
+    A.x = B.x
+    A.item = B.item
+end
+
 
 function eval_data!(A::DataFunction{T,Ti,false,false,false,false}) where {T,Ti}
     A.kernel(A.val)
@@ -434,6 +135,51 @@ function eval_data!(A::DataFunction{T,Ti,true,true,true,true}) where {T,Ti}
     A.kernel(A.val, A.x, A.time, A.item, A.xref)
     return nothing
 end
+
+(A::DataFunction{T})() where {T} = (eval_data!(A); return A.val)::Vector{T}
+(A::DataFunction{T})(args...) where {T} = (eval_data!(A, args...); return A.val)::Vector{T}
+
+
+"""
+````
+function nodevalues(nodevals, xgrid::ExtendableGrid{Tv,Ti}, UD::UserData; time = 0) where {Tv,Ti}
+````
+
+Returns a 2D array with the node values of the data function for the given grid.
+"""
+function nodevalues(xgrid::ExtendableGrid{Tv,Ti}, UD::AbstractUserDataType; T = Float64, time = 0) where {Tv,Ti}
+    xCoordinates::Array{Tv,2} = xgrid[Coordinates]
+    nnodes::Int = size(xCoordinates,2)
+
+    set_time!(UD, time)
+    if is_xdependent(UD) && length(UD.x) != size(xCoordinates,1)
+        UD.x = zeros(T,size(xCoordinates,1))
+    end
+    nodevals = zeros(T,UD.argsizes[1],nnodes)
+    for j = 1 : nnodes
+        if is_itemdependent(UD)
+            UD.citem[1] = cell
+            UD.citem[2] = cell
+            UD.citem[3] = xCellRegions[cell]
+        end
+        if is_xdependent(UD)
+            UD.x .= view(xCoordinates,:,j)
+        end
+        eval_data!(UD)
+        for k = 1 : UD.argsizes[1]
+            nodevals[k,j] = UD.val[k]
+        end
+    end
+    return nodevals
+end
+
+###############################################
+## FORWARDDIFF WRAPPERS FOR AUTO-DERIVATIVES ##
+###############################################
+
+include("userdata_derivatives.jl")
+
+
 
 ###########################################
 ## STUFF USED BY NONLINEAR FORM ASSEMBLY ##

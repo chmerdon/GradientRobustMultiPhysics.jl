@@ -31,7 +31,6 @@ function main(;order::Int = 2, testmode = false)
 
     ## negotiate exact_function! and exact_curl! to the package
     u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", bonus_quadorder = 4)
-    u_curl = curl(u)
 
     ## choose commuting interpolators pair
     if order == 1
@@ -44,14 +43,14 @@ function main(;order::Int = 2, testmode = false)
     FES = [FESpace{FE[1]}(xgrid), FESpace{FE[2]}(xgrid)]
     Interpolations = FEVector(["H1-Interpolation", "Hdiv-Interpolation"], FES)
     interpolate!(Interpolations[1], u)
-    interpolate!(Interpolations[2], u_curl)
+    interpolate!(Interpolations[2], curl(u))
 
     ## Both sides of the identity are finite element functions of FEtype testFE
     ## Hence, we evaluate the error by testing the identity by all basisfunctions of this type
     
     ## Generate the test space and some matching FEVector
     FEStest = FESpace{testFE}(xgrid; broken = true)
-    error = FEVector("ErrorVector",FEStest)
+    error = FEVector("ErrorVector", FEStest)
 
     ## Define (yet undiscrete) linear forms that represents testing each side of the identity with the testspace functions
     LF1 = LinearForm(Identity, [Identity], [1]) # identity of test function is multiplied with identity of other argument

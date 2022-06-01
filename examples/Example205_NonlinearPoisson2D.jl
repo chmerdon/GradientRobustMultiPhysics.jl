@@ -6,21 +6,20 @@
 This example computes the solution ``u`` of the nonlinear Poisson problem
 ```math
 \begin{aligned}
--\mathrm{div}(q(u) \nabla u) & = f \quad \text{in } \Omega
+-\mathrm{div}(\alpha(u,\nabla u) \nabla u) & = f \quad \text{in } \Omega
 \end{aligned}
 ```
 with some right-hand side ``f`` on a series of uniform refinements of the unit square ``\Omega``.
-The quantity q(u) makes the problem nonlinear and we consider the two possibilites
+The quantity ``\alpha`` makes the problem nonlinear and we consider the two possibilites
 ```math
 \begin{aligned}
-    q_1(u) &:= 1 + u^2\\
-    q_2(u) &:= (\kappa + \lvert \nabla u \rvert)^{p-2} 
+    \alpha_1(u) &:= 1 + u^2\\
+    \alpha_2(\nabla u) &:= (\kappa + \lvert \nabla u \rvert)^{p-2} 
 \end{aligned}
 ```
-where the second one is known is the p-Laplacian (plus some small regularisation $\kappa \geq 0$ to make it solvable with the Newton solver).
+where the second one is known as the p-Laplacian (plus some small regularisation $\kappa \geq 0$ to make it solvable with the Newton solver).
 
 This example demonstrates the automatic differentation feature and explains how to setup a nonlinear expression
-(either via a function (q = 1) or a callable struct (q = 2))
 and how to assign it to the problem description. The setup is tested with some manufactured quadratic solution.
 
 Also the factorization in the linear solver can be changed to anything <:ExtendableSparse.AbstractFactorization
@@ -35,55 +34,57 @@ using ExtendableSparse
 using ExtendableGrids
 using GridVisualize
 
-## problem data
-function exact_function!(result,x)
-    result[1] = x[1]*x[2]
-    return nothing
-end
-function rhs!(q,p,κ)
-    function closure(result,x)
+# all problem data is provided by the function below
+# note that the right-hand side is computed automatically
+# to match the data α, β, u
+function get_problem_data(q; p::Float64 = 2.7, κ::Float64 = 0.0001)
+    function exact_u!(result,x)
+        result[1] = x[1]*x[2]
+    end    
+    u = DataFunction(exact_u!, [1,2]; name = "u", dependencies = "X", bonus_quadorder = 4)
+    if q == 1
+        α = DataFunction((result, u) -> (
+            result[1] = (1+u[1]^2);
+        ), [1,1]; Tv = Real, dependencies = "X", name = "1+u(x)^2")
+    elseif q == 2
+        α = DataFunction((result, ∇u) -> (
+            result[1] = (κ + ∇u[1]^2 + ∇u[2]^2)^((p-2)/2);
+        ), [1,2]; Tv = Real, dependencies = "X", name = "(κ+|∇u|^2)^((p-2)/2)")
+    end
+    Δu = eval_Δ(u)
+    Hu = eval_H(u)
+    ∇u = eval_∇(u)
+    ∇α = eval_∇(α)
+    function rhs!(result, x) # computes -div(α(u)*grad(u)) = -(∇α ∇u + αΔu)
         if q == 1
-            result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1]) # = -div((1+u^2)*grad(u))
+            u_val = u(x)
+            ∇u_val = ∇u(x)
+            result[1] = - dot(α(u_val), Δu(x)) - dot(∇α(u_val) * ∇u_val, ∇u_val)
         elseif q == 2
-            result[1] = -2*(p-2) * (κ + x[1]^2+x[2]^2)^((p-2)/2-1) * x[1] * x[2] # = -div((κ + |grad(u)|)^p-2*grad(u))
+            ∇u_val = ∇u(x)
+            ∇α_val = ∇α(∇u_val)
+            Hu_val = Hu(x)
+            result[1] = -α(∇u_val)[1] * (Hu_val[1] + Hu_val[4]) - dot(Hu_val[1:2], ∇α_val) * ∇u_val[1] - dot(Hu_val[3:4], ∇α_val) * ∇u_val[2]
         end
         return nothing
-    end
-    return closure
+    end    
+    function diffusion_kernel!(result, input)
+        if q == 1
+            ## input[1,2:3] = [u, grad(u)]
+            α_val = α(input[1])
+            result[1] = α_val[1]*input[2]
+            result[2] = α_val[1]*input[3]
+        elseif q == 2
+            ## input[1:2] = [grad(u)]
+            α_val = α(input)
+            result[1] = α_val[1]*input[1]
+            result[2] = α_val[1]*input[2]
+        end
+        return nothing
+    end 
+    f = DataFunction(rhs!, [1,2]; name = "f", dependencies = "X", bonus_quadorder = 4)
+    return α, u, ∇(u), f, diffusion_kernel!
 end
-
-## for kernels withouts parameters, closures should work fine
-function diffusion_kernel1!(result, input)
-    ## input[1,2:3] = [u, grad(u)]
-    result[1] = (1+input[1]^2)*input[2]
-    result[2] = (1+input[1]^2)*input[3]
-    return nothing
-end 
-function jac_diffusion_kernel1!(jacobian, input)
-    jacobian[1,1] = 2*input[1]*input[2]
-    jacobian[1,2] = (1+input[1]^2)
-    jacobian[2,1] = 2*input[1]*input[3]
-    jacobian[2,3] = (1+input[1]^2)
-    return nothing
-end 
-
-## alternatively callable structs are possible
-## (and currently suggested if kernel should depend on parameters)
-mutable struct diffusion_kernel2{T}
-    p::T
-    κ::T
-end
-
-(DK::diffusion_kernel2)(result,input) = (
-    result[1] = (DK.κ + input[1]^2 + input[2]^2)^((DK.p-2)/2);
-    result[2] = result[1] * input[2];
-    result[1] = result[1] * input[1];
-    return nothing
-)
-
-## needs to be initialized as const currently to avoid some internal allocations
-## (but parameters can be changed in main)
-const DK = diffusion_kernel2(0.0,1.0)
 
 ## everything is wrapped in a main function
 ## default argument trigger P1-FEM calculation, you might also want to try H1P2{1,2}
@@ -106,17 +107,13 @@ function main(;
     xgrid = grid_unitsquare(Triangle2D)
 
     ## negotiate data functions to the package
-    u = DataFunction(exact_function!, [1,2]; name = "u_exact", dependencies = "X", bonus_quadorder = 2)
-    ∇u = ∇(u)
-    f = DataFunction(rhs!(q,p,κ), [1,2]; dependencies = "X", name = "f", bonus_quadorder = 4)
+    α, u, ∇u, f, diffusion_kernel! = get_problem_data(q; p = p, κ = κ)
 
     ## prepare nonlinear expression (1+u^2)*grad(u)
     if q == 1
-        nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel1!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", bonus_quadorder = 2, jacobian = autodiff ? "auto" : jac_diffusion_kernel1!, sparse_jacobian = true) 
+        nonlin_diffusion = NonlinearForm(Gradient, [Identity, Gradient], [1,1], diffusion_kernel!, [2,3]; name = "(1+u^2) ∇u ⋅ ∇v", bonus_quadorder = 2, sparse_jacobian = false) 
     elseif q == 2
-        DK.κ = κ
-        DK.p = p
-        nonlin_diffusion = NonlinearForm(Gradient, [Gradient], [1], DK, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", bonus_quadorder = 4, jacobian = "auto", sparse_jacobian = true)   
+        nonlin_diffusion = NonlinearForm(Gradient, [Gradient], [1], diffusion_kernel!, [2,2]; name = "(κ+|∇u|^2) ∇u ⋅ ∇v", bonus_quadorder = 4, jacobian = "auto", sparse_jacobian = false)   
     else 
         @error "only q ∈ [1,2] !"
     end

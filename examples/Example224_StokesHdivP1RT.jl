@@ -34,13 +34,12 @@ function get_flowdata(ν, nonlinear)
     p = DataFunction((result, x, t) -> (
             result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
         ), [1,2]; name = "p", dependencies = "XT", bonus_quadorder = 4)
-    ∇p = ∇(p)
+    Δu = eval_Δ(u)
+    ∇p = eval_∇(p)
     f = DataFunction((result, x, t) -> (
-            result[1] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
-            result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
+            result .= -ν*Δu(x,t);
             if !nonlinear 
-                eval_data!(∇p, x, t)
-                result .+= ∇p.val;
+                result .+= view(∇p(x,t),:);
             end;
         ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 4)
     return u, p, ∇(u), f

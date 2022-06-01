@@ -24,36 +24,31 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
-## coefficient functions 
-const β = DataFunction([1,0]; name = "β")
-const α = DataFunction([0.1]; name = "α")
-
-## problem data and expected exact solution
-function exact_solution!(result,x)
-    result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
-end    
-function exact_solution_rhs!(ν)
-    function closure(result,x)
-        ## diffusion part
-        result[1] = -ν*(2*x[2]*(x[2]-1) + 2*x[1]*(x[1]-1))
-        ## convection part (beta * grad(u))
-        eval_data!(β)
-        result[1] += β.val[1] * (x[2]*(2*x[1]-1)*(x[2]-1) + 1)
-        result[1] += β.val[2] * (x[1]*(2*x[2]-1)*(x[1]-1))
-        ## reaction part (alpha*u)
-        eval_data!(α)
-        result[1] += α.val[1] * (x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1])
+# all problem data is provided by the function below
+# note that the right-hand side is computed automatically
+# to match the data α, β, u
+function get_problem_data(ν)
+    α = DataFunction([0.1]; name = "α")
+    β = DataFunction([1,0]; name = "β")
+    function exact_u!(result,x)
+        result[1] = x[1]*x[2]*(x[1]-1)*(x[2]-1) + x[1]
+    end    
+    u = DataFunction(exact_u!, [1,2]; name = "u", dependencies = "X", bonus_quadorder = 4)
+    ∇u = eval_∇(u) # handler for easy eval of AD jacobian
+    Δu = eval_Δ(u) # handler for easy eval of AD Laplacian
+    function rhs!(result, x) # computes -νΔu + β⋅∇u + αu
+        result[1] = -ν*Δu(x)[1] + dot(β(), ∇u(x)) + dot(α(), u(x))
         return nothing
-    end
-end    
+    end    
+    f = DataFunction(rhs!, [1,2]; name = "f", dependencies = "X", bonus_quadorder = 3)
+    return α, β, u, ∇(u), f
+end
 
 ## custom bilinearform that can assemble the full PDE operator
 function ReactionConvectionDiffusionOperator(α, β, ν)
     function action_kernel!(result, input)
         ## input = [u,∇u] as a vector of length 3
-        eval_data!(β)
-        eval_data!(α)
-        result[1] = α.val[1] * input[1] + β.val[1] * input[2] + β.val[2] * input[3]
+        result[1] = α()[1] * input[1] + dot(β(), view(input, 2:3))
         result[2] = ν * input[2]
         result[3] = ν * input[3]
         ## result will be multiplied with [v,∇v]
@@ -63,40 +58,34 @@ function ReactionConvectionDiffusionOperator(α, β, ν)
     return BilinearForm([OperatorPair{Identity,Gradient},OperatorPair{Identity,Gradient}], action; name = "ν(∇u,∇v) + (αu + β⋅∇u, v)", transposed_assembly = true)
 end
 
-## function that provides the SUPG left-hand side operator
-##       τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)
+# function that provides the SUPG left-hand side operator
+#       τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)
 function SUPGOperator_LHS(α, β, ν, τ, xCellDiameters)
     function action_kernel!(result, input, item)
-        ## input = [u_h,∇u_h,Δu_h] as a vector of length 4
-        eval_data!(β)
-        eval_data!(α)
-        ## compute residual -νΔu_h + (β⋅∇)u_h + αu_h
-        result[1] = - ν * input[4] + α.val[1] * input[1] + β.val[1] * input[2] + β.val[2] * input[3]
-        ## multiply stabilisation factor
+        # input = [u_h,∇u_h,Δu_h] as a vector of length 4
+        # compute residual -νΔu_h + (β⋅∇)u_h + αu_h
+        result[1] = - ν * input[4] + α()[1] * input[1] + dot(β(), view(input, 2:3))
+        # multiply stabilisation factor
         result[1] *= τ * xCellDiameters[item[1]]^2
-        ## compute coefficients for ∇ eval of test function v_h
-        result[2] = result[1] * β.val[2]  # will be multiplied with ∇v_h[2]
-        result[1] = result[1] * β.val[1]  # will be multiplied with ∇v_h[1]
+        # compute coefficients for ∇ eval of test function v_h
+        result .= result[1] * β()  # will be multiplied with ∇v_h
         return nothing
     end
     action = Action(action_kernel!, [2,4]; dependencies = "I", bonus_quadorder = max(α.bonus_quadorder,β.bonus_quadorder))
     return BilinearForm([OperatorTriple{Identity,Gradient,Laplacian},Gradient], action; name = "τ (h^2 (-ν Δu + αu + β⋅∇u), β⋅∇v)", transposed_assembly = true)
 end
 
-## function that provides the SUPG right-hand side operator 
-##                  τ (h^2 f, β⋅∇v)
+# function that provides the SUPG right-hand side operator
+#                  τ (h^2 f, β⋅∇v)
 function SUPGOperator_RHS(f, β, τ, xCellDiameters)
     function action_kernel!(result, input, x, item)
-        ## input = [v,∇v] as a vector of length 3
-        eval_data!(β)
-        eval_data!(f,x)
-        ## compute f times stabilisation factor
-        result[1] = f.val[1] * τ * xCellDiameters[item[1]]^2
-        result[2] = result[1] * β.val[2]  # will be multiplied with ∇v_h[2]
-        result[1] = result[1] * β.val[1]  # will be multiplied with ∇v_h[1]
+        # input = [v,∇v] as a vector of length 3
+        # compute f times stabilisation factor
+        result[1] = f(x)[1] * τ * xCellDiameters[item[1]]^2
+        result .= result[1] * β()  # will be multiplied with ∇v_h
         return nothing
     end
-    action = Action(action_kernel!, [2,2]; dependencies = "XI", bonus_quadorder = max(f.bonus_quadorder,β.bonus_quadorder))
+    action = Action(action_kernel!, [2,2]; xdim = 2, dependencies = "XI", bonus_quadorder = max(f.bonus_quadorder,β.bonus_quadorder))
     return LinearForm(Gradient, action; name = "τ (h^2 f, β⋅∇v)")
 end
 
@@ -122,9 +111,7 @@ function main(; verbosity = 0, Plotter = nothing, ν = 1e-5, τ = 10, nlevels = 
     xgrid = grid_unitsquare(Triangle2D)
 
     ## negotiate data functions to the package
-    u = DataFunction(exact_solution!, [1,2]; name = "u", dependencies = "X", bonus_quadorder = 4)
-    ∇u = ∇(u)
-    f = DataFunction(exact_solution_rhs!(ν), [1,2]; name = "f", dependencies = "X", bonus_quadorder = 5)
+    α, β, u, ∇u, f = get_problem_data(ν) 
 
     ## set finite element type according to chosen order
     FEType = H1Pk{1,2,order}

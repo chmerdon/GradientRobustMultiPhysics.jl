@@ -6,13 +6,15 @@
 This example computes a transient velocity ``\mathbf{u}`` solution of the nonlinear Poisson problem
 ```math
 \begin{aligned}
-\mathbf{u}_t - \mathrm{div}((1+\beta\mathbf{u}^2) \nabla \mathbf{u}) & = \mathbf{f}\\
+\mathbf{u}_t - \mathrm{div}(\alpha(u) \nabla \mathbf{u}) & = \mathbf{f}\\
 \end{aligned}
 ```
-with (some time-dependent) exterior force ``\mathbf{f}``. The parameter ``\beta`` steers the strength of the nonlinearity. 
+with (some time-dependent) exterior force ``\mathbf{f}``,
+some diffusion coefficient ``\alpha(\mathbf{u}) = (1+\beta\mathbf{u}^2)``.
+Therein parameter ``\beta`` steers the strength of the nonlinearity. 
 
 The time integration will be performed by the internal CrankNicolson rule (or optionally BackwardEuler) of GradientRobustMultiPhysics.
-A manufactureed quadratic-in-space and qaudratic-in-time solution is prescribed to test if the solver computes the exact solution.
+A manufactureed quadratic-in-space and quadratic-in-time solution is prescribed to test if the solver computes the exact solution.
 =#
 
 module Example206_NonlinearPoissonTransient2D
@@ -21,11 +23,30 @@ using GradientRobustMultiPhysics
 using ExtendableGrids
 using GridVisualize
 
+const α = DataFunction((result, u) -> (result[1] = (1+u[1]^2);), [1,1]; Tv = Real, dependencies = "X", name = "1+u(x)^2")
+    
+function get_problem_data(t_power)
+    u = DataFunction((result,x,t) -> (result[1] = x[1]*x[2]*(1-t)^t_power), [1,2]; dependencies = "XT", bonus_quadorder = 2)
+    ut = eval_dt(u)
+    Δu = eval_Δ(u)
+    ∇u = eval_∇(u)
+    ∇α = eval_∇(α)
+    function rhs!(result, x, t) # computes u_t -div(α(u)*grad(u)) = u_t -(∇α ∇u + αΔu)
+        u_val = u(x, t)
+        ∇u_val = ∇u(x, t)
+        result .= ut(x,t) .- dot(α(u_val), Δu(x)) .- dot(∇α(u_val) * ∇u_val, ∇u_val)
+        return nothing
+    end    
+    f = DataFunction(rhs!, [1,2]; name = "∇(u)", dependencies = "XT", bonus_quadorder = 4)
+    return u, f
+end
+
 ## kernel for nonlinear diffusion operator
 function diffusion_kernel!(result, input)
     ## input = [u, grad(u)]
-    result[1] = (1+input[1]^2)*input[2]
-    result[2] = (1+input[1]^2)*input[3]
+    α_val = α(input[1])
+    result[1] = α_val[1]*input[2]
+    result[2] = α_val[1]*input[3]
     return nothing
 end 
 
@@ -36,9 +57,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
     set_verbosity(verbosity)
 
     ## set exact solution and data
-    u = DataFunction((result,x,t) -> (result[1] = x[1]*x[2]*(1-t)^t_power), [1,2]; dependencies = "XT", bonus_quadorder = 2)
-    ∇u = ∇(u)
-    f = DataFunction((result,x,t) -> (result[1] = -2*(x[1]^3*x[2] + x[2]^3*x[1])*(1-t)^(3*t_power) -t_power*x[1]*x[2]*(1-t)^(t_power-1)), [1,2]; name = "∇(u)", dependencies = "XT", bonus_quadorder = 4)
+    u, f = get_problem_data(t_power)
 
     ## initial grid and final time
     xgrid = uniform_refine(grid_unitsquare(Triangle2D),1)
@@ -55,7 +74,7 @@ function main(; verbosity = 0, Plotter = nothing, nlevels = 3, timestep = 1e-1, 
 
     ## define error evaluators
     L2Error = L2ErrorIntegrator(u, Identity; time = T)
-    H1Error = L2ErrorIntegrator(∇u, Gradient; time = T)
+    H1Error = L2ErrorIntegrator(∇(u), Gradient; time = T)
     NDofs = zeros(Int,nlevels)
     Results = zeros(Float64,nlevels,2)
     

@@ -32,16 +32,13 @@ using GridVisualize
 
 ## flow data for boundary condition, right-hand side and error calculation
 function get_flowdata(μ)
-    p! = (result,x,t) -> (result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1)))
-    u! = (result,x,t) -> (
+    u = DataFunction((result,x,t) -> (
         result[1] = cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2));
-        result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)))
-    f! = (result,x,t) -> (## f= -μΔu + ∇p
-        result[1] = 2*π*π*μ*cos(t)*(sin(π*x[1]-0.7)*sin(π*x[2]+0.2)) + cos(t)*cos(x[1])*cos(x[2]);
-        result[2] = 2*π*π*μ*cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2)) - cos(t)*sin(x[1])*sin(x[2]);)
-    u = DataFunction(u!, [2,2]; dependencies = "XT", name = "u", bonus_quadorder = 5)
-    p = DataFunction(p!, [1,2]; dependencies = "XT", name = "p", bonus_quadorder = 4)
-    f = DataFunction(f!, [2,2]; dependencies = "XT", name = "f", bonus_quadorder = 5)
+        result[2] = cos(t)*(cos(π*x[1]-0.7)*cos(π*x[2]+0.2))), [2,2]; dependencies = "XT", name = "u", bonus_quadorder = 5)
+    p = DataFunction((result,x,t) -> (result[1] = cos(t)*(sin(x[1])*cos(x[2]) + (cos(1) -1)*sin(1))), [1,2]; dependencies = "XT", name = "p", bonus_quadorder = 4)
+    Δu = eval_Δ(u)
+    ∇p = eval_∇(p)
+    f = DataFunction((result,x,t) -> (result .= -μ*Δu(x) .+ view(∇p(x),:)), [2,2]; dependencies = "XT", name = "f", bonus_quadorder = 5)
     return u, p, ∇(u), f
 end
 

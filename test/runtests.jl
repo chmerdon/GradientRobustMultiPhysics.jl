@@ -2,6 +2,7 @@ using Test
 using ExtendableGrids
 using GradientRobustMultiPhysics
 
+include("test_datafunctions.jl")
 include("test_operators.jl")
 include("test_pointevaluator.jl")
 include("test_jumps.jl")
@@ -31,7 +32,7 @@ function exact_function1D(polyorder)
     exact_integral = 1 // (polyorder+1) + 1
     exact_function = DataFunction(polynomial, [1,1]; dependencies = "X", bonus_quadorder = polyorder)
     exact_hessian = DataFunction(hessian, [1,1]; dependencies = "X", bonus_quadorder = polyorder - 2)
-    return exact_function, exact_integral, ∇(exact_function), exact_hessian
+    return exact_function, exact_integral, ∇(exact_function), H(exact_function)
 end
 
 function exact_function2D(polyorder)
@@ -52,7 +53,7 @@ function exact_function2D(polyorder)
     exact_integral = [3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
     exact_function = DataFunction(polynomial, [2,2]; dependencies = "X", bonus_quadorder = polyorder)
     exact_hessian = DataFunction(hessian, [8,2]; dependencies = "X", bonus_quadorder = polyorder - 2)
-    return exact_function, exact_integral, ∇(exact_function), exact_hessian
+    return exact_function, exact_integral, ∇(exact_function), H(exact_function)
 end
 
 function exact_function3D(polyorder)
@@ -73,7 +74,7 @@ function exact_function3D(polyorder)
     exact_integral = [1 // (polyorder + 1) - 1, 3 // (polyorder+1) + 1, 2 // (polyorder+1) - 1]
     exact_function = DataFunction(polynomial, [3,3]; dependencies = "X", bonus_quadorder = polyorder)
     exact_hessian = DataFunction(hessian, [27,3]; dependencies = "X", bonus_quadorder = polyorder - 2)
-    return exact_function, exact_integral, ∇(exact_function), exact_hessian
+    return exact_function, exact_integral, ∇(exact_function), H(exact_function)
 end
 
 
@@ -794,6 +795,7 @@ end
 
 function run_all_tests()
     begin
+        run_datafunction_tests()
         run_quadrature_tests()
         run_operator_tests()
         run_pointevaluator_tests()

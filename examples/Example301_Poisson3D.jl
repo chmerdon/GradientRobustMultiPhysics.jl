@@ -20,14 +20,13 @@ using ExtendableGrids
 using GridVisualize
 
 ## problem data
-function exact_function!(result,x)
+function exact_function!(result, x)
     result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
     return nothing
 end
 
 ## negotiate data functions to the package
 const u = DataFunction(exact_function!, [1,3]; name = "u", dependencies = "X", bonus_quadorder = 2)
-const f = DataFunction([-2]; name = "f") # = -Δu = -2
 
 ## everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
@@ -45,7 +44,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     ## create Poisson problem via prototype and add data
     Problem = PoissonProblem(1.0)
     add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, Δ(u); factor = -1))
 
     ## prepare error calculation
     L2Error = L2ErrorIntegrator(u)
@@ -63,7 +62,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
         Solution = FEVector("u_h",FES)
 
         ## solve the problem
-        solve!(Solution, Problem)
+        solve!(Solution, Problem; show_statistics = true)
 
         ## calculate L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)

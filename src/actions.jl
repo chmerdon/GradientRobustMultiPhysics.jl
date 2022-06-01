@@ -50,13 +50,16 @@ Optional arguments:
 - Tv              : expected NumberType for result/input
 - Ti              : expected NumberType for grid enumeration infos (e.g. item/region numbers when "I" dependecy is used)
 """
-function Action(kernel::Function, argsizes; Tv = Float64, Ti = Int32, dependencies = "", bonus_quadorder = 0, name = "user action")
+function Action(kernel::Function, argsizes; xdim = 3, Tv = Float64, Ti = Int32, dependencies = "", bonus_quadorder = 0, name = "user action")
     dx = occursin("X", dependencies)
     dt = occursin("T", dependencies)
     di = occursin("I", dependencies)
     dl = occursin("L", dependencies)
+    if !dx && !dl
+        xdim = 0
+    end
     return DefaultUserAction{Tv,Ti,dx,dt,di,dl,length(argsizes),typeof(kernel)}(
-        name, kernel, argsizes, zeros(Tv, 3), zeros(Tv, 3), zeros(Ti,5), 0, bonus_quadorder, zeros(Tv, argsizes[1]))
+        name, kernel, argsizes, zeros(Tv, xdim), zeros(Tv, xdim), zeros(Ti,5), 0, bonus_quadorder, zeros(Tv, argsizes[1]))
 end
 
 function eval_action!(A::DefaultUserAction{T,Ti,false,false,false,false}, input_current) where {T,Ti}
@@ -119,7 +122,7 @@ function fdot_action(data::AbstractUserDataType; Tv = Float64, Ti = Int32)
     dependencies *= is_timedependent(data) ? "T" : ""
     dependencies *= is_itemdependent(data) ? "I" : ""
     dependencies *= is_xrefdependent(data) ? "L" : ""
-    action = Action(f_as_action, [data.argsizes[1], 0]; Tv = Tv, Ti = Ti, dependencies = dependencies, bonus_quadorder = data.bonus_quadorder)
+    action = Action(f_as_action, [data.argsizes[1], 0]; xdim = data.argsizes[2], Tv = Tv, Ti = Ti, dependencies = dependencies, bonus_quadorder = data.bonus_quadorder)
     set_time!(action, data.time)
     return action
 end
