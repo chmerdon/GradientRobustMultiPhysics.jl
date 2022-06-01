@@ -233,7 +233,7 @@ function OperatorWithUserJacobian(o, j, argsizes; name = "", Ti = Int32, depende
         else
             config_eval = o
         end
-        sparsity_pattern = jacobian_sparsity(config_eval,result_temp,input_temp)
+        sparsity_pattern = Symbolics.jacobian_sparsity(config_eval,result_temp,input_temp)
         jac = Float64.(sparse(sparsity_pattern))
     else
         jac = zeros(Float64,argsizes[1],argsizes[2])
