@@ -342,7 +342,7 @@ function OperatorWithADJacobian(o, argsizes; name = "", Ti = Int32, dependencies
     Dresult = DiffResults.JacobianResult(result_temp,input_temp)
     temp::Array{Float64,1} = DiffResults.value(Dresult)
     if sparse_jacobian
-        sparsity_pattern = jacobian_sparsity(config_eval,result_temp,input_temp)
+        sparsity_pattern = Symbolics.jacobian_sparsity(config_eval,result_temp,input_temp)
         jac = Float64.(sparse(sparsity_pattern))
         colors = matrix_colors(jac)
         cfg = ForwardColorJacCache(config_eval,input_temp,nothing;
