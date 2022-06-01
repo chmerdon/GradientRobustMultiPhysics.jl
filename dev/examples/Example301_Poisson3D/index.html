@@ -8,14 +8,13 @@ using ExtendableGrids
 using GridVisualize
 
 # problem data
-function exact_function!(result,x)
+function exact_function!(result, x)
     result[1] = x[1]*(x[3] - x[2]) + x[2]*x[2]
     return nothing
 end
 
 # negotiate data functions to the package
 const u = DataFunction(exact_function!, [1,3]; name = &quot;u&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 2)
-const f = DataFunction([-2]; name = &quot;f&quot;) # = -Δu = -2
 
 # everything is wrapped in a main function
 function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
@@ -33,7 +32,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
     # create Poisson problem via prototype and add data
     Problem = PoissonProblem(1.0)
     add_boundarydata!(Problem, 1, [1,2,3,4,5,6], BestapproxDirichletBoundary; data = u)
-    add_rhsdata!(Problem, 1, LinearForm(Identity, f))
+    add_rhsdata!(Problem, 1, LinearForm(Identity, Δ(u); factor = -1))
 
     # prepare error calculation
     L2Error = L2ErrorIntegrator(u)
@@ -51,7 +50,7 @@ function main(; Plotter = nothing, verbosity = 0, nlevels = 4)
         Solution = FEVector(&quot;u_h&quot;,FES)
 
         # solve the problem
-        solve!(Solution, Problem)
+        solve!(Solution, Problem; show_statistics = true)
 
         # calculate L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
@@ -75,4 +74,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
         27  |     3.386e-02      0.00  |     4.383e-01      0.00  |
        125  |     8.973e-03      2.60  |     2.259e-01      1.30  |
        729  |     2.281e-03      2.33  |     1.138e-01      1.17  |
-      4913  |     5.737e-04      2.17  |     5.702e-02      1.09  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example260_CahnHilliard2D/">« 260 : Cahn-Hilliard Equations 2D</a><a class="docs-footer-nextpage" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 25 May 2022 15:17">Wednesday 25 May 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      4913  |     5.737e-04      2.17  |     5.702e-02      1.09  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example260_CahnHilliard2D/">« 260 : Cahn-Hilliard Equations 2D</a><a class="docs-footer-nextpage" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 16:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

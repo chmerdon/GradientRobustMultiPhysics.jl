@@ -5,7 +5,7 @@
 \end{aligned}\]</p><p>with an exterior force <span>$\mathbf{f}$</span> and some viscosity parameter <span>$\nu$</span> and Dirichlet boundary data for <span>$\mathbf{u}$</span>.</p><p>Here the exact data for the planar lattice flow</p><p class="math-container">\[\begin{aligned}
 \mathbf{u}(x,y,t) &amp; := \exp(-8 \pi^2 \nu t) \begin{pmatrix} \sin(2 \pi x) sin(2 \pi y) \\ \cos(2 \pi x) cos(2 \pi y) \end{pmatrix}\\
 p(x,y,t) &amp; := \exp(-8 \pi^2 \nu t) ( \cos(4 \pi x) - \cos(4 \pi y)) / 4
-\end{aligned}\]</p><p>is prescribed at fixed time <span>$t = 0$</span> with <span>$\mathbf{f} = \mathbf{u}_t - \nu \Delta \mathbf{u}$</span>.</p><p>In this example the Navier-Stokes equations are solved with a pressure-robust variant of the Bernardi–Raugel finite element method and the nonlinear convection term (that involves reconstruction operators) is automatically differentiated for a Newton iteration.</p><pre><code class="language-julia hljs">module Example220_PlanarLatticeFlow2D
+\end{aligned}\]</p><p>is prescribed at fixed time <span>$t = 0$</span> with <span>$\mathbf{f} = - \nu \Delta \mathbf{u}$</span>.</p><p>In this example the Navier-Stokes equations are solved with a pressure-robust variant of the Bernardi–Raugel finite element method and the nonlinear convection term (that involves reconstruction operators) is automatically differentiated for a Newton iteration.</p><pre><code class="language-julia hljs">module Example220_PlanarLatticeFlow2D
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -28,9 +28,9 @@ function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
     p = DataFunction((result, x, t) -&gt; (
             result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
         ), [1,2]; name = &quot;p&quot;, dependencies = &quot;XT&quot;, bonus_quadorder = 4)
+    Δu = eval_Δ(u)
     f = DataFunction((result, x, t) -&gt; (
-            result[1] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*sin(2*pi*x[1])*sin(2*pi*x[2]);
-            result[2] = 8*pi*pi*ν*exp(-8*pi*pi*ν*t)*cos(2*pi*x[1])*cos(2*pi*x[2]);
+            result .= -ν*Δu(x,t); # ∇p + (u ⋅ ∇)u = 0
         ), [2,2]; name = &quot;f&quot;, dependencies = &quot;XT&quot;, bonus_quadorder = 4)
 
     # set finite elements (Bernardi--Raugel)
@@ -138,18 +138,18 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.89e+01/4.10e-06/1.89e+01
-	      1   | 4.243971e-17 | 8.045259e-02 | 1.95e-01/2.02e-01/1.91e+00
-	      2   | 8.756231e-17 | 1.024548e-02 | 1.92e-01/1.81e-01/3.76e-01
-	      3   | 7.591499e-17 | 4.138344e-03 | 1.91e-01/1.28e-01/3.22e-01
-	      4   | 7.553701e-17 | 7.867024e-04 | 1.91e-01/1.30e-01/3.40e-01
-	      5   | 7.573156e-17 | 1.935933e-05 | 1.91e-01/1.31e-01/3.25e-01
-	      6   | 7.489359e-17 | 6.645766e-08 | 1.90e-01/1.31e-01/3.25e-01
-	      7   | 7.339894e-17 | 3.700347e-13 | 1.91e-01/1.50e-01/3.44e-01
-	    total |                             | 2.02e+01/1.05e+00/2.43e+01
+	    init  |                             | 2.81e+01/4.40e-06/2.81e+01
+	      1   | 4.119318e-17 | 8.045259e-02 | 7.69e-01/2.49e-01/3.16e+00
+	      2   | 8.786244e-17 | 1.024548e-02 | 7.70e-01/1.93e-01/9.67e-01
+	      3   | 7.745137e-17 | 4.138344e-03 | 7.54e-01/1.66e-01/9.25e-01
+	      4   | 7.395978e-17 | 7.867024e-04 | 7.56e-01/1.61e-01/9.22e-01
+	      5   | 7.452549e-17 | 1.935933e-05 | 7.33e-01/1.77e-01/9.15e-01
+	      6   | 7.597713e-17 | 6.645766e-08 | 7.08e-01/1.64e-01/8.78e-01
+	      7   | 7.648237e-17 | 3.700353e-13 | 7.27e-01/1.97e-01/9.28e-01
+	    total |                             | 3.33e+01/1.31e+00/3.89e+01
 
-|| u - u_h || = 0.31044598969524173
-|| p - p_h || = 0.19225996887573973
+|| u - u_h || = 0.3104459896952415
+|| p - p_h || = 0.19225996887573965
 Explored path: SparsityDetection.Path(Bool[], 1)
 Problem = 
 PDE-DESCRIPTION
@@ -213,12 +213,12 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.14e+00/2.60e-06/1.14e+00
-	      1   | 4.190909e-17 | 9.171721e-02 | 2.20e-01/2.00e-01/4.25e-01
-	      2   | 1.045203e-16 | 1.199596e-05 | 2.25e-01/1.74e-01/4.02e-01
-	      3   | 1.053206e-16 | 6.220656e-08 | 2.16e-01/1.70e-01/3.89e-01
-	      4   | 1.042284e-16 | 2.059218e-14 | 2.16e-01/1.39e-01/3.58e-01
-	    total |                             | 2.02e+00/6.82e-01/2.72e+00
+	    init  |                             | 2.10e+00/4.00e-06/2.10e+00
+	      1   | 4.088006e-17 | 9.171721e-02 | 7.98e-01/2.19e-01/1.03e+00
+	      2   | 1.050425e-16 | 1.199596e-05 | 7.49e-01/2.02e-01/9.55e-01
+	      3   | 1.035643e-16 | 6.220656e-08 | 8.13e-01/2.13e-01/1.03e+00
+	      4   | 1.043253e-16 | 2.059230e-14 | 7.62e-01/1.71e-01/9.37e-01
+	    total |                             | 5.22e+00/8.05e-01/6.06e+00
 
-|| u - u_h || = 0.006284334068125392
-|| p - p_h || = 0.01672006383926796</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 25 May 2022 15:17">Wednesday 25 May 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| u - u_h || = 0.006284334068126969
+|| p - p_h || = 0.01672006383926824</code></pre><p><img src="../../images/Example220_PlanarLatticeFlow2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example215_TwoNonlinearCoupled2D/">« 215 : Two nonlinearly coupled PDEs (2D)</a><a class="docs-footer-nextpage" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 16:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -18,7 +18,6 @@ function main(;order::Int = 1, testmode = false)
 
     # negotiate exact_function! and exact_curl! to the package
     u = DataFunction(exact_function!, [3,3]; name = &quot;u_exact&quot;, dependencies = &quot;X&quot;, bonus_quadorder = 3)
-    u_curl = curl(u)
 
     # choose commuting interpolators pair
     if order == 1
@@ -29,14 +28,14 @@ function main(;order::Int = 1, testmode = false)
     FES = [FESpace{FE[1]}(xgrid), FESpace{FE[2]}(xgrid)]
     Interpolations = FEVector([&quot;Hcurl-Interpolation&quot;, &quot;Hdiv-Interpolation&quot;], FES)
     interpolate!(Interpolations[1], u)
-    interpolate!(Interpolations[2], u_curl)
+    interpolate!(Interpolations[2], curl(u))
 
     # Both sides of the identity are finite element functions of FEtype testFE
     # Hence, we evaluate the error by testing the identity by all basisfunctions of this type
 
     # Generate the test space and some matching FEVector
     FEStest = FESpace{testFE}(xgrid; broken = true)
-    error = FEVector(&quot;ErrorVector&quot;,FEStest)
+    error = FEVector(&quot;ErrorVector&quot;, FEStest)
 
     # Define (yet undiscrete) linear forms that represents testing each side of the identity with the testspace functions
     LF1 = LinearForm(Identity, [Identity]) # identity of test function is multiplied with identity of other argument
@@ -66,4 +65,4 @@ function test()
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; ExampleA03_CommutingInterpolators3D.main()
-error(Curl(I_HCURLN0{3}(psi) - I_HDIVRT0{3}(Curl(psi))) = 3.7850907633468576e-17</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA02_CommutingInterpolators2D/">« A02 : Commuting Interpolators 2D</a><a class="docs-footer-nextpage" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 25 May 2022 15:17">Wednesday 25 May 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+error(Curl(I_HCURLN0{3}(psi) - I_HDIVRT0{3}(Curl(psi))) = 3.6557652767334114e-17</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA02_CommutingInterpolators2D/">« A02 : Commuting Interpolators 2D</a><a class="docs-footer-nextpage" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 16:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
