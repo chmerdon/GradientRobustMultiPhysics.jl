@@ -1,6 +1,6 @@
 #= 
 
-# 224 : Stokes ``(P1 \oplus RT0) \times P0``
+# 224 : Stokes ``SV + RT enrichment``
 ([source code](SOURCE_URL))
 
 This example computes the velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of the incompressible Navier--Stokes problem
@@ -12,12 +12,26 @@ This example computes the velocity ``\mathbf{u}`` and pressure ``\mathbf{p}`` of
 ```
 with exterior force ``\mathbf{f}`` and some parameter ``\mu`` and inhomogeneous Dirichlet boundary data.
 
-The problem will be solved by a ``(P1 \oplus RT0) \times P0`` scheme suggested by [Li/Rui,arXiv:2012.01689 [math.NA]](https://arxiv.org/abs/2012.01689).
-The velocity space employs continuous P1 functions plus additional (only H(div)-conforming) RT0 functions and a P0 pressure space
+The problem will be solved by a ``(P_k \oplus RTenrichment) \times P_{k-1}`` scheme, which can be seen as an inf-sup stabilized Scott-Vogelius variant, see references below.
+Therein, the velocity space employs continuous Pk functions plus certain (only H(div)-conforming) Raviart-Thomas functions and a discontinuous Pk-1 pressure space
 leading to an exactly divergence-free discrete velocity.
+
+!!! reference for k = 1
+
+    "A low-order divergence-free H(div)-conforming finite element method for Stokes flows",\
+    X. Li, H. Rui,\
+    IMA Journal of Numerical Analysis (2021),\
+    [>Journal-Link<](https://doi.org/10.1093/imanum/drab080)
+    [>Preprint-Link<](https://arxiv.org/abs/2012.01689)
+
+!!! reference for k > 1
+
+    "Inf-sup stabilized Scott--Vogelius pairs on general simplicial grids by Raviart--Thomas enrichment",\
+    V. John, X. Li, C. Merdon, H. Rui,\
+    [>Preprint-Link<](https://arxiv.org/abs/2206.01242)
 =#
 
-module Example224_StokesHdivP1RT
+module Example224_StokesSVRTEnrichment
 
 using GradientRobustMultiPhysics
 using ExtendableGrids
@@ -34,25 +48,32 @@ function get_flowdata(ν, nonlinear)
     p = DataFunction((result, x, t) -> (
             result[1] = exp(-8*pi*pi*ν*t)*(cos(4*pi*x[1])-cos(4*pi*x[2])) / 4
         ), [1,2]; name = "p", dependencies = "XT", bonus_quadorder = 4)
-    Δu = eval_Δ(u)
-    ∇p = eval_∇(p)
+    Δu = Δ(u)
+    ∇p = ∇(p)
     f = DataFunction((result, x, t) -> (
-            result .= -ν*Δu(x,t);
+            eval_data!(Δu, x, t);
+            result .= -ν * Δu.val;
             if !nonlinear 
-                result .+= view(∇p(x,t),:);
+                eval_data!(∇p, x, t)
+                result .+= ∇p.val;
             end;
-        ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 4)
+        ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 6)
     return u, p, ∇(u), f
 end
 
 ## everything is wrapped in a main function
-function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0, α = 2.0, lump = true)
+function main(; μ = 1e-3, nlevels = 4, Plotter = nothing, order = 2, verbosity = 0, T = 0)
 
     ## set log level
     set_verbosity(verbosity)
 
-    ## FEType
-    FETypes = [H1P1{2}, HDIVRT0{2}, L2P0{1}]
+    ## FEType Pk + enrichment + pressure
+    @assert order in 1:4
+    if order == 1
+        FETypes = [H1P1{2}, HDIVRT0{2}, L2P0{1}]
+    else
+        FETypes = [H1Pk{2,2,order}, HDIVRTkENRICH{2, order-1}, H1Pk{1,2,order-1}]
+    end
     
     ## get exact flow data (see above)
     u,p,∇u,f = get_flowdata(μ, false)
@@ -60,15 +81,21 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
     ## define problem
     Problem = PDEDescription("Stokes problem")
     add_unknown!(Problem; equation_name = "momentum equation (Pk part)", unknown_name = "u_P1")
-    add_unknown!(Problem; equation_name = "momentum equation (RTk part)", unknown_name = "u_RT")
+    add_unknown!(Problem; equation_name = "momentum equation (RT enrichment)", unknown_name = "u_RT")
     add_unknown!(Problem; equation_name = "incompressibility constraint", unknown_name = "p")
 
-    ## add Laplacian for both velocity blocks
+    ## add Laplacian for Pk part
     add_operator!(Problem, [1,1], LaplaceOperator(μ))
 
-    ## add stabilising term(s) for RTk part
-    ARR = BilinearForm([Divergence, Divergence]; name = "α (div u_RT,div v_RT) $(lump ? "[lumped]" : "")", factor = α*μ, APT = lump ? APT_LumpedBilinearForm : APT_BilinearForm)
-    add_operator!(Problem, [2,2], ARR)
+    if order > 1 ## add consistency terms
+        add_operator!(Problem, [1,2], BilinearForm([Laplacian, Identity]; name = "μ (L(u_P1), v_RT)", factor = μ))
+        add_operator!(Problem, [2,1], BilinearForm([Identity, Laplacian]; name = "-μ (u_RT, L(v_P1))", factor = -μ))
+    else ## add stabilisation for RT0
+        α = 1.0
+        lump = true
+        ARR = BilinearForm([Divergence, Divergence]; name = "α (div u_RT,div v_RT) $(lump ? "[lumped]" : "")", factor = α*μ, APT = lump ? APT_LumpedBilinearForm : APT_BilinearForm)
+        add_operator!(Problem, [2,2], ARR)
+    end
 
     ## add Lagrange multiplier for divergence of velocity
     add_operator!(Problem, [1,3], LagrangeMultiplier(Divergence))
@@ -76,8 +103,10 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
     add_constraint!(Problem, FixedIntegralMean(3,0))
 
     ## add boundary data and right-hand side
-    P1data = add_boundarydata!(Problem, 1, [1,2,3,4], BestapproxDirichletBoundary; data = u)
-    add_boundarydata!(Problem, 2, [1,2,3,4], CorrectDirichletBoundary{1}; data = u) # <- RT part corrects (piecewise normal flux integrals of) P1 part
+    add_boundarydata!(Problem, 1, [1,2,3,4], InterpolateDirichletBoundary; data = u)
+    if order == 1
+        add_boundarydata!(Problem, 2, [1,2,3,4], CorrectDirichletBoundary{1}; data = u) # <- RT part corrects (piecewise normal flux integrals of) P1 part
+    end
     add_rhsdata!(Problem, 1, LinearForm(Identity, f))
     add_rhsdata!(Problem, 2, LinearForm(Identity, f))
 
@@ -110,7 +139,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
         Solution = FEVector(["u_P1", "u_RT", "p_h"],FES)
 
         ## solve
-        solve!(Solution, Problem; time = T, maxiterations = 50)
+        solve!(Solution, Problem; time = T)
 
         ## compute L2 and H1 errors and save data
         NDofs[level] = length(Solution.entries)
@@ -122,13 +151,10 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
     end    
 
     ## plot
-    p = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))
+    p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
     scalarplot!(p[1,1],xgrid,view(nodevalues(Solution[1]; abs = true),1,:), levels = 3, colorbarticks = 9, title = "u_P1 (abs + quiver)")
     vectorplot!(p[1,1],xgrid,evaluate(PointEvaluator(Solution[1], Identity)), spacing = 0.05, clear = false)
-    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[2]; abs = true),1,:), levels = 3, colorbarticks = 9, title = "u_RT (abs + quiver)")
-    vectorplot!(p[1,2],xgrid,evaluate(PointEvaluator(Solution[2], Identity)), spacing = 0.05, clear = false)
-    scalarplot!(p[2,1],xgrid,view(nodevalues(Solution[3]),1,:), levels = 7, title = "p_h")
-    convergencehistory!(p[2,2], NDofs, Results[:,1:3]; add_h_powers = [1,2], X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_P1) ||"])
+    scalarplot!(p[1,2],xgrid,view(nodevalues(Solution[3]),1,:), levels = 7, title = "p_h")
     
     ## print convergence history
     print_convergencehistory(NDofs, Results; X_to_h = X -> X.^(-1/2), ylabels = ["|| u - u_h ||", "|| p - p_h ||", "|| ∇(u - u_P1) ||", "|| u_R ||", "|| div(u_h) ||"])

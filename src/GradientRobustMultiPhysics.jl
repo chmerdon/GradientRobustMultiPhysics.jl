@@ -69,7 +69,7 @@ export H1BR, H1P1TEB
 
 export AbstractHdivFiniteElement
 export HDIVRT0, HDIVBDM1, HDIVRT1, HDIVRT1INT, HDIVBDM2
-export HDIVRT1BUBBLE, HDIVRT2BUBBLE
+export HDIVRTkENRICH
 
 export AbstractHcurlFiniteElement
 export HCURLN0

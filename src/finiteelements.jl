@@ -273,6 +273,7 @@ include("fedefs/hdiv_rt0.jl");
 include("fedefs/hdiv_bdm1.jl");
 include("fedefs/hdiv_rt1.jl");
 include("fedefs/hdiv_bdm2.jl");
+include("fedefs/hdiv_rtk_enrich.jl");
 
 # H1 conforming elements (also Crouzeix-Raviart)
 # no order (just for certain purposes)
