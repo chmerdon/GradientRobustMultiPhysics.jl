@@ -272,8 +272,6 @@ interior_dofs_offset(AT::Type{<:AssemblyType}, FE::Type{<:AbstractFiniteElement}
 include("fedefs/hdiv_rt0.jl");
 include("fedefs/hdiv_bdm1.jl");
 include("fedefs/hdiv_rt1.jl");
-include("fedefs/hdiv_rt1bubble.jl");
-include("fedefs/hdiv_rt2bubble.jl");
 include("fedefs/hdiv_bdm2.jl");
 
 # H1 conforming elements (also Crouzeix-Raviart)
