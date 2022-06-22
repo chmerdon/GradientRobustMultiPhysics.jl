@@ -289,7 +289,6 @@ include("fedefs/h1v_p1teb.jl"); # P1 + tangential edge bubbles (only vector-valu
 # second order
 include("fedefs/h1_p2.jl");
 include("fedefs/h1_q2.jl");
-include("fedefs/h1_p2h.jl");
 include("fedefs/h1_p2b.jl");
 # third order
 include("fedefs/h1_p3.jl");
