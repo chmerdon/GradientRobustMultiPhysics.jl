@@ -151,9 +151,9 @@ function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plott
     xgrid = grid_unitsquare(Triangle2D) # initial grid
 
     # choose finite element discretisation
-    #FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
-    FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
-    #FETypes = [H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
+    #FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
+    FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
+    #FETypes = [H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
 
     # run
     solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, Plotter = Plotter)
@@ -166,9 +166,9 @@ end
 # tests if hydrostatic problem is solved exactly by pressure-robust methods
 function test(; Plotter = nothing)
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
-    testspaces = [[H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
-                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
-                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]
+    testspaces = [[H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]
                   ]
     error = []
     for FETypes in testspaces
@@ -381,4 +381,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
         70  |     1.761e+01      0.00  |     9.635e+00      0.00  |     1.139e+00      0.00  |
        250  |     1.462e+01      0.29  |     1.954e+00      2.51  |     5.666e-01      1.10  |
        946  |     8.873e+00      0.75  |     3.876e-01      2.43  |     2.817e-01      1.05  |
-      3682  |     5.237e+00      0.78  |     1.511e-01      1.39  |     1.403e-01      1.03  |</code></pre><p><img src="../../images/Example222_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example221_StokesIterated2D/">« 221 : Stokes iterated penalty method 2D</a><a class="docs-footer-nextpage" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 18:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      3682  |     5.237e+00      0.78  |     1.511e-01      1.39  |     1.403e-01      1.03  |</code></pre><p><img src="../../images/Example222_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example221_StokesIterated2D/">« 221 : Stokes iterated penalty method 2D</a><a class="docs-footer-nextpage" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 12:07">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

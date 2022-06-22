@@ -36,13 +36,13 @@ function main(; verbosity = 0, nrefinements = 4, Plotter = nothing)
     @show Problem
 
     # choose some (inf-sup stable) finite element types
-    #FEType = [HDIVRT0{3}, H1P0{1}]
-    FEType = [HDIVBDM1{3}, H1P0{1}]
+    #FEType = [HDIVRT0{3}, L2P0{1}]
+    FEType = [HDIVBDM1{3}, L2P0{1}]
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid; broken = true)]
 
     # create a solution vector and solve the problem
     Solution = FEVector{Float64}([&quot;u_h&quot;,&quot;p_h&quot;],FES)
-    solve!(Solution, Problem)
+    solve!(Solution, Problem; show_statistics = true)
 
     # plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))
@@ -81,4 +81,4 @@ PDE-DESCRIPTION
 
 
 	L2error(Id) = 0.00017706474627459632
-	L2error(div) = 0.009878280436234928</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example301_Poisson3D/">« 301 : Poisson-Problem 3D</a><a class="docs-footer-nextpage" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 18:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	L2error(div) = 0.009878280436234928</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example301_Poisson3D/">« 301 : Poisson-Problem 3D</a><a class="docs-footer-nextpage" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 12:07">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

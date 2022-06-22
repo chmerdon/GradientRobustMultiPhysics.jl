@@ -34,7 +34,7 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4)
 
     # Bernardi--Raugel element
-    FETypes = [H1BR{2}, H1P0{1}]; PenaltyDivergence = ReconstructionDivergence{HDIVRT0{2}}
+    FETypes = [H1BR{2}, L2P0{1}]; PenaltyDivergence = ReconstructionDivergence{HDIVRT0{2}}
 
     # FE spaces
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]
@@ -146,13 +146,13 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.53e+01/2.89e-05/1.53e+01
-	      1   | 2.016697e-11 | 1.145706e-01 | 1.31e+00/1.75e-04/1.54e+00
-	      2   | 2.135999e-11 | 4.877746e-05 | 4.94e-02/1.49e-04/6.62e-02
-	      3   | 2.092422e-11 | 1.108026e-07 | 5.40e-02/1.29e-04/6.68e-02
-	      4   | 2.112839e-11 | 1.215573e-10 | 5.36e-02/1.45e-04/6.78e-02
-	      5   | 2.027201e-11 | 3.661290e-11 | 5.57e-02/1.56e-04/7.06e-02
-	    total |                             | 1.68e+01/7.83e-04/1.71e+01
+	    init  |                             | 1.38e+01/3.01e-05/1.38e+01
+	      1   | 2.016697e-11 | 1.145706e-01 | 1.25e+00/2.23e-04/1.48e+00
+	      2   | 2.135999e-11 | 4.877746e-05 | 5.00e-02/1.57e-04/6.61e-02
+	      3   | 2.092422e-11 | 1.108026e-07 | 4.99e-02/1.54e-04/6.31e-02
+	      4   | 2.112839e-11 | 1.215573e-10 | 4.94e-02/1.62e-04/6.20e-02
+	      5   | 2.027201e-11 | 3.661290e-11 | 4.95e-02/1.63e-04/6.39e-02
+	    total |                             | 1.53e+01/8.89e-04/1.56e+01
 
 || u - u_h || = 0.0001582612282699012
-|| p - p_h || = 0.02091959276125727</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example220_PlanarLatticeFlow2D/">« 220 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 18:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+|| p - p_h || = 0.02091959276125727</code></pre><p><img src="../../images/Example221_StokesIterated2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example220_PlanarLatticeFlow2D/">« 220 : Planar Lattice Flow 2D</a><a class="docs-footer-nextpage" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 12:07">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

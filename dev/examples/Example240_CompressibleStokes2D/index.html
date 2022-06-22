@@ -47,7 +47,7 @@ function main(; use_gravity = true, newton = false, nlevels = 4, Plotter = nothi
     NDoFs = zeros(Int,nlevels)
 
     # set finite element types [velocity, density,  pressure]
-    FETypes = [H1BR{2}, H1P0{1}] # Bernardi--Raugel x P0
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel x P0
 
     # solve
     Solution = [nothing, nothing]
@@ -105,7 +105,7 @@ function setup_and_solve!(Solution, xgrid;
     end
 
     # add pressure term -(div(v),p(ϱ))
-	add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity], feval_action(equation_of_state); factor = -1, name = &quot;-(div v, eos(ϱ))&quot;, apply_action_to = [2], store = true))
+	add_operator!(Problem, [1,2], BilinearForm([VeloDivergence, Identity], feval_action(equation_of_state); factor = -1, name = &quot;-(div v, eos(ϱ))&quot;, apply_action_to = [2], store = true))
 
     # add gravity either as usual or as explicit right-hand side force
     if use_gravity
@@ -153,11 +153,11 @@ function setup_and_solve!(Solution, xgrid;
     end
 end
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example240_CompressibleStokes2D.main()
-	mass_error = 0.8902625 - 0.8902625000000028 = 2.886579864025407e-15
+	mass_error = 0.8902625 - 0.8902625000000025 = 2.55351295663786e-15
 	mass_error = 0.8902625 - 0.8902625000000012 = 1.2212453270876722e-15
 	mass_error = 0.8902625 - 0.8902624999999994 = 5.551115123125783e-16
 	mass_error = 0.8902625 - 0.8902624999999998 = 1.1102230246251565e-16
-	mass_error = 0.8902625 - 0.8902624999999909 = 9.103828801926284e-15
+	mass_error = 0.8902625 - 0.890262499999991 = 8.992806499463768e-15
 	mass_error = 0.8902625 - 0.8902624999999906 = 9.325873406851315e-15
 	mass_error = 0.8902625 - 0.8902624999999429 = 5.706546346573305e-14
 	mass_error = 0.8902625 - 0.890262499999943 = 5.695444116327053e-14
@@ -181,4 +181,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
        137  |     6.248e-03      0.00  |     5.640e-03      0.00  |
        482  |     2.947e-03      1.19  |     2.820e-03      1.10  |
       1802  |     1.448e-03      1.08  |     1.410e-03      1.05  |
-      6962  |     7.198e-04      1.03  |     7.050e-04      1.03  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 18:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      6962  |     7.198e-04      1.03  |     7.050e-04      1.03  |</code></pre><p><img src="../../images/Example240_CompressibleStokes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example236_NaturalConvectionSquare2D/">« 236 : Natural Convection Square 2D</a><a class="docs-footer-nextpage" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 12:07">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -23,7 +23,7 @@ function main(; verbosity = 0, Plotter = nothing, Ra = 1e5, μ = 1, nrefinements
     xgrid = uniform_refine(xgrid, nrefinements)
 
     # types for discretisation by Bernardi--Raugel pressure-robust (BDM1 reconstruction) + P1-FEM for temperature
-    FETypes = [H1BR{2}, H1P0{1}, H1P1{1}];
+    FETypes = [H1BR{2}, L2P0{1}, H1P1{1}];
     RIdentity = ReconstructionIdentity{HDIVBDM1{2}}
 
     # load Stokes prototype and add a unknown for the temperature
@@ -165,25 +165,25 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 7.87e+00/4.90e-06/7.87e+00
-	      1   | 7.416533e-12 | 9.615916e+02 | 1.62e+00/2.67e-01/1.89e+00
-	      2   | 9.745580e-12 | 5.931504e+02 | 2.75e-01/2.93e-01/5.73e-01
-	      3   | 7.440885e-12 | 6.568060e+02 | 2.57e-01/2.86e-01/5.48e-01
-	      4   | 8.629909e-12 | 3.990824e+02 | 2.46e-01/2.22e-01/4.73e-01
-	      5   | 7.389156e-12 | 2.340174e+02 | 2.55e-01/2.42e-01/5.01e-01
-	      6   | 7.155862e-12 | 1.387982e+02 | 2.49e-01/2.03e-01/4.56e-01
-	      7   | 7.081296e-12 | 8.267079e+01 | 2.69e-01/2.22e-01/4.96e-01
-	    total |                             | 1.10e+01/1.73e+00/1.28e+01
+	    init  |                             | 7.51e+00/7.50e-06/7.51e+00
+	      1   | 7.416533e-12 | 9.615916e+02 | 1.59e+00/2.23e-01/1.82e+00
+	      2   | 9.745580e-12 | 5.931504e+02 | 2.47e-01/2.64e-01/5.17e-01
+	      3   | 7.440885e-12 | 6.568060e+02 | 2.45e-01/2.88e-01/5.38e-01
+	      4   | 8.629909e-12 | 3.990824e+02 | 2.45e-01/2.12e-01/4.61e-01
+	      5   | 7.389156e-12 | 2.340174e+02 | 2.45e-01/2.16e-01/4.66e-01
+	      6   | 7.155862e-12 | 1.387982e+02 | 2.45e-01/2.25e-01/4.74e-01
+	      7   | 7.081296e-12 | 8.267079e+01 | 2.45e-01/2.03e-01/4.54e-01
+	    total |                             | 1.06e+01/1.63e+00/1.23e+01
 
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.64e-01/3.50e-06/4.64e-01
-	      1   | 6.913961e-12 | 2.205491e+01 | 2.61e-01/2.48e-01/5.16e-01
-	      2   | 6.796984e-12 | 1.839015e+00 | 2.56e-01/2.21e-01/4.81e-01
-	      3   | 6.800815e-12 | 9.514267e-03 | 2.59e-01/2.13e-01/4.76e-01
-	      4   | 6.858711e-12 | 3.288516e-07 | 2.58e-01/2.34e-01/4.97e-01
-	      5   | 6.724920e-12 | 7.321993e-12 | 2.72e-01/2.17e-01/4.94e-01
-	    total |                             | 1.77e+00/1.13e+00/2.94e+00
+	    init  |                             | 4.35e-01/5.70e-06/4.35e-01
+	      1   | 6.913961e-12 | 2.205491e+01 | 2.43e-01/2.58e-01/5.12e-01
+	      2   | 6.796984e-12 | 1.839015e+00 | 2.42e-01/2.35e-01/4.82e-01
+	      3   | 6.800815e-12 | 9.514267e-03 | 2.42e-01/2.05e-01/4.52e-01
+	      4   | 6.858711e-12 | 3.288516e-07 | 2.43e-01/2.02e-01/4.50e-01
+	      5   | 6.724920e-12 | 7.321993e-12 | 2.42e-01/2.12e-01/4.59e-01
+	    total |                             | 1.65e+00/1.11e+00/2.80e+00
 
-	Nu = 13.978023716648313</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.18 on <span class="colophon-date" title="Wednesday 1 June 2022 18:12">Wednesday 1 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+	Nu = 13.978023716648313</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 12:07">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
