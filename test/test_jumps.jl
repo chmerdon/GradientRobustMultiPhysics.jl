@@ -5,7 +5,7 @@ function test_qpmatchup(xgrid)
 
     AT = ON_IFACES
     ncomponents = 1
-    FE = FESpace{H1P0{ncomponents}}(xgrid)
+    FE = FESpace{L2P0{ncomponents}}(xgrid)
 
     AP = DiscreteLinearForm([GradientDisc{Jump}], [FE]; AT = AT)
 
@@ -50,7 +50,7 @@ function test_disc_LF(xgrid, discontinuity)
 
     # generate constant P0 function with no jumps
     ncomponents = 1
-    FE = FESpace{H1P1{ncomponents}}(xgrid)
+    FE = FESpace{H1Q1{ncomponents}}(xgrid)
     FEFunction = FEVector{Float64}("velocity",FE)
     fill!(FEFunction[1],1)
 
@@ -85,7 +85,7 @@ function test_disc_BLF(xgrid, discontinuity)
 
     # generate constant P0 function with no jumps
     ncomponents = 1
-    FE = FESpace{H1P0{ncomponents}}(xgrid)
+    FE = FESpace{L2P0{ncomponents}}(xgrid)
     FEFunction = FEVector{Float64}("velocity",FE)
     fill!(FEFunction[1],1)
  

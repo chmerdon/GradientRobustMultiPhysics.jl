@@ -56,9 +56,9 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
 
     ## choose one of these (inf-sup stable) finite element type pairs for the flow
     #FETypes = [H1P2{2,2}, H1P1{1}]; postprocess_operator = Identity # Taylor--Hood
-    #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
-    FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
-    #FETypes = [H1BR{2}, H1P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
+    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = Identity # Bernardi--Raugel
+    FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVRT0{2}} # Bernardi--Raugel pressure-robust (RT0 reconstruction)
+    #FETypes = [H1BR{2}, L2P0{1}]; postprocess_operator = ReconstructionIdentity{HDIVBDM1{2}} # Bernardi--Raugel pressure-robust (BDM1 reconstruction)
        
     #####################################################################################
 
@@ -77,7 +77,7 @@ function main(; verbosity = 0, nrefinements = 5, Plotter = nothing, FVtransport 
     add_unknown!(Problem; unknown_name = "c", equation_name = "transport equation")
     if FVtransport == true
         ## finite volume upwind discretisation
-        FETypeTransport = H1P0{1}
+        FETypeTransport = L2P0{1}
         add_operator!(Problem, [3,3], FVConvectionDiffusionOperator(1))
     else
         ## finite element convection and diffusion (very small) operators

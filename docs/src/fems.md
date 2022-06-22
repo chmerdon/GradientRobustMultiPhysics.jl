@@ -17,12 +17,14 @@ AbstractFiniteElement
 │  │  └─ H1BR
 │  ├─ H1CR
 │  ├─ H1MINI
-│  ├─ H1P0
+│  ├─ L2P0
 │  ├─ H1P1
 │  ├─ H1P2
 │  ├─ H1P2B
 │  ├─ H1P3
-│  └─ H1Pk
+│  ├─ H1Pk
+│  ├─ H1Q1
+│  └─ H1Q2
 ├─ AbstractHcurlFiniteElement
 │  └─ HCURLN0
 └─ AbstractHdivFiniteElement
@@ -59,12 +61,15 @@ The following table lists all curently implemented finite elements and on which 
 | [`H1BUBBLE`](@ref) | ✓ (I1, 2) | ✓ (I1, 2) | ✓ (I1, 3) |   |
 | [`H1CR`](@ref) | ✓ (F1, 6) | ✓ (F1, 8) | ✓ (F1, 12) |   |
 | [`H1MINI`](@ref) | ✓ (N1I1, 8) | ✓ (N1I1, 10) | ✓ (N1I1, 15) |   |
-| [`H1P0`](@ref) | ✓ (I1, 2) | ✓ (I1, 2) | ✓ (I1, 3) | ✓ (I1, 3) |
-| [`H1P1`](@ref) | ✓ (N1, 6) | ✓ (N1, 8) | ✓ (N1, 12) | ✓ (N1, 24) |
-| [`H1P2`](@ref) | ✓ (N1F1, 12) | ✓ (N1F1, 16) | ✓ (N1E1, 30) |   |
+| [`L2P0`](@ref) | ✓ (I1, 2) | ✓ (I1, 2) | ✓ (I1, 3) | ✓ (I1, 3) |
+| [`L2P1`](@ref) | ✓ (I3, 6) | ✓ (I3, 6) | ✓ (I4, 12) | ✓ (I4, 12) |
+| [`H1P1`](@ref) | ✓ (N1, 6) |  | ✓ (N1, 12) |  |
+| [`H1P2`](@ref) | ✓ (N1F1, 12) |  | ✓ (N1E1, 30) |   |
 | [`H1P2B`](@ref) | ✓ (N1F1I1, 14) |   |   |   |
 | [`H1P3`](@ref) | ✓ (N1F2I1, 20) |   | ✓ (N1E2F1, 60)  |   |
 | [`H1Pk`](@ref) | ✓ (order-dep) |   |   |   |
+| [`H1Q1`](@ref) | ✓ (N1, 6) | ✓ (N1, 8) | ✓ (N1, 12) | ✓ (N1, 24) |
+| [`H1Q2`](@ref) | ✓ (N1F1, 12) | ✓ (N1F1I1, 18) | ✓ (N1E1, 30) |   |
 | AbstractHcurlFiniteElement |   |   |   |   |
 | [`HCURLN0`](@ref) | ✓ (f1, 3) | ✓ (f1, 4) | ✓ (e1, 6) |   |
 | AbstractHdivFiniteElement |   |   |   |   |
@@ -81,24 +86,35 @@ Note: the dofmap pattern describes the connection of the local degrees of freedo
 
 ### P0 finite element
 
-Piecewise constant finite element that has one degree of freedom on each cell of the grid. (It is masked as a H1-conforming finite element, because it uses the same transformations.)
+Piecewise constant finite element that has one degree of freedom on each cell of the grid. (It is masked as a H1-conforming finite element, because it uses the same operator evaulations.)
 
 The interpolation of a given function into this space preserves the cell integrals.
 
 ```@docs
-H1P0
+L2P0
 ```
 
 ### P1 finite element
 
-The lowest-order current finite element that has a degree of freedom on each vertex of the grid. On simplices the
-basis functions coincide with the linear barycentric coordinates, on parallelepiped bi-linear functions are used
-(also known as Q1 element).
+The lowest-order Courant finite element that has a degree of freedom on each vertex of the grid. On simplices the
+basis functions coincide with the linear barycentric coordinates. Only the L2P1 element is also defined on quads.
 
 The interpolation of a given function into this space performs point evaluations at the nodes.
 
 ```@docs
+L2P1
 H1P1
+```
+
+### Q1 finite element
+
+The lowest-order finite element that has a degree of freedom on each vertex of the grid. On simplices the
+basis functions coincide with the linear barycentric coordinates. This element is also defined on quads.
+
+The interpolation of a given function into this space performs point evaluations at the nodes.
+
+```@docs
+H1Q1
 ```
 
 
@@ -140,12 +156,23 @@ H1BR
 ### P2 finite element
 
 The P2 finite element method on simplices equals quadratic polynomials. On the Triangle2D shape the degrees of freedom
-are associated with the three vertices and the three faces of the triangle. On the Tetrahedron3D shape the degrees of freedom are associated with the four verties and the six edges. On Parallelogram2D cubic Q2 element functions are used.
+are associated with the three vertices and the three faces of the triangle. On the Tetrahedron3D shape the degrees of freedom are associated with the four verties and the six edges.
 
 The interpolation of a given function into this space performs point evaluations at the nodes and preserves its face/edge integrals in 2D/3D.
 
 ```@docs
 H1P2
+```
+
+
+### Q2 finite element
+
+A second order finite element. On simplices it equals the P2 finite element, and on Quadrilateral2D it has 9 degrees of freedom (vertices, faces and one cell bubble).
+
+The interpolation of a given function into this space performs point evaluations at the nodes and preserves lowest order face moments and (only on quads) also the cell integreal mean.
+
+```@docs
+H1Q2
 ```
 
 ### P2B finite element

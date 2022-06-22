@@ -54,7 +54,7 @@ function main(; ν = 2e-4, nrefinements = 5, verbosity = 0, Plotter = nothing)
         ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 4)
 
     ## set finite elements (Bernardi--Raugel)
-    FEType = [H1BR{2}, H1P0{1}]
+    FEType = [H1BR{2}, L2P0{1}]
 
     ## prepare comparison plot
     vis = GridVisualizer(; Plotter = Plotter, layout = (2,2), clear = true, resolution = (1000,1000))

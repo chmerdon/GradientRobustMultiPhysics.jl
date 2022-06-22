@@ -175,7 +175,7 @@ function run_basic_fe_tests()
 
     # list of FETypes that should be tested
     TestCatalog1D = [
-                    H1P0{1},
+                    L2P0{1},
                     H1P1{1}, 
                     H1P2{1,1}, 
                     H1P3{1,1},
@@ -189,34 +189,37 @@ function run_basic_fe_tests()
                     HDIVBDM1{2},
                     HDIVRT1{2},
                     HDIVBDM2{2},
-                    H1P0{2},
+                    L2P0{2},
                     H1P1{2}, 
+                    H1Q1{2},
                     H1CR{2},
                     H1MINI{2,2},
                     H1P1TEB{2},
                     H1BR{2},
                     H1P2{2,2}, 
                     H1P2B{2,2}, 
+                    H1Q2{2,2}, 
                     H1P3{2,2},
                     H1Pk{2,2,3},
                     H1Pk{2,2,4},
                     H1Pk{2,2,5}
                     ]
-    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,2,2,3,3,4,5]
+    ExpectedOrders2D = [0,0,1,1,2,0,1,1,1,1,1,1,2,2,2,3,3,4,5]
     TestCatalog3D = [
                     HCURLN0{3},
                     HDIVRT0{3},
                     HDIVBDM1{3},
                     HDIVRT1{3},
-                    H1P0{3},
+                    L2P0{3},
                     H1P1{3}, 
+                    H1Q1{3}, 
                     H1CR{3},
                     H1MINI{3,3},
                     H1P1TEB{3},
                     H1BR{3},
                     H1P2{3,3},
                     H1P3{3,3}]
-    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,1,2,3]
+    ExpectedOrders3D = [0,0,1,1,0,1,1,1,1,1,1,2,3]
 
     function test_interpolation(xgrid, FEType, order, broken::Bool = false)
         dim = dim_element(xgrid[CellGeometries][1])
@@ -276,12 +279,11 @@ function run_basic_fe_tests()
         println("============================")
         for EG in [Triangle2D, Parallelogram2D]
                 xgrid = testgrid(EG)
-                for n = 1 : length(TestCatalog2D)
-                    if GradientRobustMultiPhysics.isdefined(TestCatalog2D[n], EG)
-                        test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n])
-                        test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], true)
+                for n = 1 : length(TestCatalog2D), broken in (false,true)
+                    if GradientRobustMultiPhysics.isdefined(TestCatalog2D[n], EG, broken)
+                        test_interpolation(xgrid, TestCatalog2D[n], ExpectedOrders2D[n], broken)
                     else
-                        @warn "$(TestCatalog2D[n]) not defined on $EG (skipping test case)"
+                        @warn "$(TestCatalog2D[n]) (broken = $broken) not defined on $EG (skipping test case)"
                     end
                 end
         end
@@ -291,12 +293,11 @@ function run_basic_fe_tests()
         println("============================")
         for EG in [Tetrahedron3D, Parallelepiped3D]
             xgrid = testgrid(EG)
-            for n = 1 : length(TestCatalog3D)
-                if GradientRobustMultiPhysics.isdefined(TestCatalog3D[n], EG)
-                    test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n])
-                    test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n], true)
+            for n = 1 : length(TestCatalog3D), broken in (false,true)
+                if GradientRobustMultiPhysics.isdefined(TestCatalog3D[n], EG, broken)
+                    test_interpolation(xgrid, TestCatalog3D[n], ExpectedOrders3D[n], broken)
                 else
-                    @warn "$(TestCatalog3D[n]) not defined on $EG (skipping test case)"
+                    @warn "$(TestCatalog3D[n]) (broken = $broken) not defined on $EG (skipping test case)"
                 end
             end
         end
@@ -309,7 +310,7 @@ function run_basic_fe_tests()
 
     # list of FETypes that should be tested
     TestCatalog1D = [
-                    H1P0{1},
+                    L2P0{1},
                     H1P1{1}, 
                     H1P2{1,1},
                     H1P3{1,1},
@@ -323,7 +324,7 @@ function run_basic_fe_tests()
                     HDIVBDM1{2},
                     HDIVRT1{2},
                     HDIVBDM2{2},
-                    H1P0{2},
+                    L2P0{2},
                     H1P1{2}, 
                     H1CR{2},
                     H1MINI{2,2},
@@ -341,7 +342,7 @@ function run_basic_fe_tests()
                     HDIVRT0{3},
                     HDIVBDM1{3},
                     HDIVRT1{3},
-                    H1P0{3},
+                    L2P0{3},
                     H1P1{3},
                     H1CR{3},
                     H1MINI{3,3},
@@ -433,11 +434,11 @@ function run_basic_fe_tests()
                     H1Pk{1,1,7}]
     ExpectedOrders1D = [0,1,2,3,3,4,5,6,7]
     TestCatalog2D = [
-                    H1P1{2}, 
+                    H1Q1{2}, 
                     H1CR{2},
                     H1MINI{2,2},
                     H1BR{2},
-                    H1P2{2,2}]
+                    H1Q2{2,2}]
     ExpectedOrders2D = [1,1,1,1,2]
     TestCatalog3D = [
                     H1P1{3},
@@ -575,24 +576,24 @@ function run_stokes_tests()
 
     # list of FETypes that should be tested
     TestCatalogTriangle2D = [
-                    [H1CR{2},H1P0{1},true,false],
+                    [H1CR{2},L2P0{1},true,false],
                     [H1MINI{2,2},H1P1{1},false,false],
-                    [H1BR{2},H1P0{1},true,false],
+                    [H1BR{2},L2P0{1},true,false],
                     [H1P1TEB{2},H1P1{1},false,false],
                     [H1P2{2,2},H1P1{1},false,false],
                     [H1P2B{2,2},H1P1{1},true,false],
                     [H1P3{2,2},H1P2{1,2},false,false],
                     [H1P2{2,2},H1P1{1},true,true]]
     TestCatalogParallelogram2D = [
-                    [H1CR{2},H1P0{1},true],
+                    [H1CR{2},L2P0{1},true],
                   #  [H1MINI{2,2},H1CR{1},false],
-                    [H1BR{2},H1P0{1},true],
-                    [H1P2{2,2},H1P1{1},false]]
+                    [H1BR{2},L2P0{1},true],
+                    [H1Q2{2,2},L2P1{1},false]]
     ExpectedOrdersTriangle2D = [[1,0],[1,1],[1,0],[1,1],[2,1],[2,1],[3,2],[2,1]]
     ExpectedOrdersParallelogram2D = [[1,0],[1,0],[2,1],[2,1]]
     TestCatalog3D = [
-                    [H1BR{3},H1P0{1},true,false],
-                    [H1CR{3},H1P0{1},true,false],
+                    [H1BR{3},L2P0{1},true,false],
+                    [H1CR{3},L2P0{1},true,false],
                     [H1MINI{3,3},H1P1{1},false,false],
                   #  [H1P1TEB{3},H1P1{1},false],
                     [H1P2{3,3},H1P1{1},false,false],
@@ -682,9 +683,9 @@ function run_stokes_tests()
 
     # list of FETypes that should be tested
     TestCatalog2Dm = [
-            [H1CR{2}, H1P0{1}, HDIVRT0{2}],
-            [H1BR{2}, H1P0{1}, HDIVRT0{2}],
-            [H1BR{2}, H1P0{1}, HDIVBDM1{2}]]
+            [H1CR{2}, L2P0{1}, HDIVRT0{2}],
+            [H1BR{2}, L2P0{1}, HDIVRT0{2}],
+            [H1BR{2}, L2P0{1}, HDIVBDM1{2}]]
     ExpectedOrders2Dm = [[0,3],[0,3],[1,3]]
     TestCatalog2Ds = [
             [H1P2B{2,2}, H1P1{1}, HDIVRT1{2}],
@@ -692,9 +693,9 @@ function run_stokes_tests()
             ]
     ExpectedOrders2Ds = [[1,3],[2,3]]
     TestCatalog3D = [
-            [H1CR{3}, H1P0{1}, HDIVRT0{3}],
-            [H1BR{3}, H1P0{1}, HDIVRT0{3}],
-            [H1BR{3}, H1P0{1}, HDIVBDM1{3}]]
+            [H1CR{3}, L2P0{1}, HDIVRT0{3}],
+            [H1BR{3}, L2P0{1}, HDIVRT0{3}],
+            [H1BR{3}, L2P0{1}, HDIVBDM1{3}]]
     ExpectedOrders3D = [[0,3],[0,3],[1,3]]
 
     @testset "Reconstruction-Operators" begin

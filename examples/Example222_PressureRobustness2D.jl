@@ -175,9 +175,9 @@ function main(; problem = 2, verbosity = 0, nlevels = 4, viscosity = 1e-2, Plott
     xgrid = grid_unitsquare(Triangle2D) # initial grid
 
     ## choose finite element discretisation
-    #FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
-    FETypes = [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
-    #FETypes = [H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
+    #FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Bernardi--Raugel with RT0 reconstruction
+    FETypes = [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}] # Bernardi--Raugel with BDM1 reconstruction
+    #FETypes = [H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}] # Crouzeix--Raviart with RT0 reconstruction
 
     ## run
     solve(Problem, xgrid, FETypes, viscosity; nlevels = nlevels, Plotter = Plotter)
@@ -190,9 +190,9 @@ end
 ## tests if hydrostatic problem is solved exactly by pressure-robust methods
 function test(; Plotter = nothing)
     xgrid = uniform_refine(grid_unitsquare_mixedgeometries())
-    testspaces = [[H1CR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
-                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
-                  [H1BR{2}, H1P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]
+    testspaces = [[H1CR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVRT0{2}}],
+                  [H1BR{2}, L2P0{1}, ReconstructionIdentity{HDIVBDM1{2}}]
                   ]
     error = []
     for FETypes in testspaces

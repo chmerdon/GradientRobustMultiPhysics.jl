@@ -57,7 +57,6 @@ Set new dofmap
 Base.setindex!(FES::FESpace,v,DM::Type{<:DofMap}) = FES.dofmaps[DM] = v
 
 
-
 """
 ````
 function FESpace{FEType<:AbstractFiniteElement,AT<:AssemblyType}(
@@ -76,7 +75,7 @@ function FESpace{FEType,AT}(
     broken::Bool = false) where {Tv, Ti, FEType <:AbstractFiniteElement, AT<:AssemblyType}
 
     # piecewise constants are always broken
-    if FEType <: H1P0
+    if FEType <: L2P0
         broken = true
     end
 
@@ -175,6 +174,7 @@ get_ndofs(AT::Type{<:AssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::T
 get_basis(AT::Type{<:AssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = (refbasis,xref) -> nothing
 get_ndofs_all(AT::Type{<:AssemblyType}, FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = get_ndofs(AT, FEType, EG)
 isdefined(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}) = false
+isdefined(FEType::Type{<:AbstractFiniteElement}, EG::Type{<:AbstractElementGeometry}, ::Bool) = isdefined(FEType, EG)
 
 
 """
@@ -204,6 +204,8 @@ function count_ndofs(xgrid, FEType, broken)
     totaldofs::Int = 0
     offset4component::Int = 0
 
+    ## todo : below it is assumed that number of dofs on nodes/edges/faces is the same for all EG
+    ##        (which usually makes sense for unbroken elements, but who knows...)
     for j = 1 : length(EG)
         pattern = get_dofmap_pattern(FEType, CellDofs, EG[j])
         parsed_dofmap = ParsedDofMap(pattern, ncomponents, EG[j])
@@ -213,10 +215,9 @@ function count_ndofs(xgrid, FEType, broken)
         else
             # if not broken only count interior dofs on cell here
             totaldofs += ncells4EG[j][2] * get_ndofs(parsed_dofmap, DofTypeInterior)
+            offset4component += ncells4EG[j][2] * get_ndofs4c(parsed_dofmap, DofTypeInterior)
         end
-        ## for final EG also count continuous dofs
-        ## todo : below it is assumed that number of dofs on nodes/edges/faces is the same for all EG
-        ##        (which usually makes sense for unbroken elements, but who knows...)
+
         if j == length(EG) && !broken
             # add continuous dofs here
             totaldofs += size(xgrid[Coordinates],2) * get_ndofs(parsed_dofmap, DofTypeNode)
@@ -239,8 +240,8 @@ function count_ndofs(xgrid, FEType, broken)
                 offset4component += nedges * get_ndofs4c(parsed_dofmap, DofTypeEdge)
             end
             offset4component += num_cells(xgrid) * get_ndofs4c(parsed_dofmap, DofTypePCell)
-            nitems::Int = length(xItemGeometries)
-            offset4component += nitems * get_ndofs4c(parsed_dofmap, DofTypeInterior)
+            #nitems::Int = length(xItemGeometries)
+            #offset4component += nitems * get_ndofs4c(parsed_dofmap, DofTypeInterior)
         end
     end
 
@@ -271,20 +272,26 @@ interior_dofs_offset(AT::Type{<:AssemblyType}, FE::Type{<:AbstractFiniteElement}
 include("fedefs/hdiv_rt0.jl");
 include("fedefs/hdiv_bdm1.jl");
 include("fedefs/hdiv_rt1.jl");
+include("fedefs/hdiv_rt1bubble.jl");
+include("fedefs/hdiv_rt2bubble.jl");
 include("fedefs/hdiv_bdm2.jl");
 
 # H1 conforming elements (also Crouzeix-Raviart)
 # no order (just for certain purposes)
 include("fedefs/h1_bubble.jl");
 # lowest order
-include("fedefs/h1_p0.jl");
+include("fedefs/l2_p0.jl");
+include("fedefs/l2_p1.jl");
 include("fedefs/h1_p1.jl");
+include("fedefs/h1_q1.jl");
 include("fedefs/h1_mini.jl");
 include("fedefs/h1nc_cr.jl");
 include("fedefs/h1v_br.jl"); # Bernardi--Raugel (only vector-valued, with coefficients)
 include("fedefs/h1v_p1teb.jl"); # P1 + tangential edge bubbles (only vector-valued, with coefficients)
 # second order
 include("fedefs/h1_p2.jl");
+include("fedefs/h1_q2.jl");
+include("fedefs/h1_p2h.jl");
 include("fedefs/h1_p2b.jl");
 # third order
 include("fedefs/h1_p3.jl");
@@ -374,4 +381,25 @@ function get_reconstruction_matrix(T::Type{<:Real}, FE::FESpace, FER::FESpace)
     end
     flush!(A)
     return A
+end
+
+function get_local_coffsets(FEType, AT, EG)
+    ## get dofmap pattern
+    pattern = get_dofmap_pattern(FEType, Dofmap4AssemblyType(AT), EG)
+    ncomponents = get_ncomponents(FEType)
+    parsed_dofmap = ParsedDofMap(pattern, ncomponents, EG)
+    local_coffset = 0
+    local_coffset += num_nodes(EG) * get_ndofs4c(parsed_dofmap, DofTypeNode)
+    if get_ndofs4c(parsed_dofmap, DofTypeFace) > 0
+        local_coffset += num_faces(EG) * get_ndofs4c(parsed_dofmap, DofTypeFace)
+    end
+    if get_ndofs4c(parsed_dofmap, DofTypeEdge) > 0
+        local_coffset += num_edges(EG) * get_ndofs4c(parsed_dofmap, DofTypeEdge)
+    end
+    local_coffset += get_ndofs4c(parsed_dofmap, DofTypeInterior)
+    if local_coffset == 0
+        return Int[]
+    else
+        return 0:local_coffset:ncomponents*local_coffset
+    end
 end

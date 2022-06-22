@@ -263,7 +263,7 @@ $(TYPEDSIGNATURES)
 Adds ExtendableSparseMatrix B to FEMatrixBlock A.
 """
 function addblock!(A::FEMatrixBlock{Tv}, B::ExtendableSparseMatrix{Tv,Ti}; factor = 1, transpose::Bool = false) where {Tv, Ti <: Integer}
-    addblock!(A, B.entries.cscmat; factor = factor, transpose = transpose)
+    addblock!(A, B.cscmatrix; factor = factor, transpose = transpose)
 end
 
 

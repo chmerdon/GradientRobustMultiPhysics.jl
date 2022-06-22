@@ -25,11 +25,9 @@ get_ndofs(::Type{<:AssemblyType}, FEType::Type{<:H1P2}, EG::Type{<:AbstractEleme
 get_ndofs(::Union{Type{<:ON_EDGES}, Type{<:ON_BEDGES}}, FEType::Type{<:H1P2}, EG::Type{<:AbstractElementGeometry1D}) = 3*FEType.parameters[1]
 get_ndofs(::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2])*(FEType.parameters[2]+1)/2*FEType.parameters[1])
 get_ndofs(::Type{<:ON_CELLS},FEType::Type{<:H1P2}, EG::Type{<:Union{AbstractElementGeometry1D, Triangle2D, Tetrahedron3D}}) = Int((FEType.parameters[2]+1)*(FEType.parameters[2]+2)/2*FEType.parameters[1])
-get_ndofs(::Type{<:ON_CELLS},FEType::Type{<:H1P2}, EG::Type{<:Quadrilateral2D}) = 8*FEType.parameters[1]
 
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Edge1D}) = 2;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Triangle2D}) = 2;
-get_polynomialorder(::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = 3;
 get_polynomialorder(::Type{<:H1P2}, ::Type{<:Tetrahedron3D}) = 2;
 
 get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{CellDofs}, EG::Type{<:AbstractElementGeometry1D}) = "N1I1"
@@ -42,7 +40,6 @@ get_dofmap_pattern(FEType::Type{<:H1P2}, ::Type{EdgeDofs}, EG::Type{<:AbstractEl
 
 isdefined(FEType::Type{<:H1P2}, ::Type{<:AbstractElementGeometry1D}) = true
 isdefined(FEType::Type{<:H1P2}, ::Type{<:Triangle2D}) = true
-isdefined(FEType::Type{<:H1P2}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:H1P2}, ::Type{<:Tetrahedron3D}) = true
 
 interior_dofs_offset(::Type{<:AssemblyType}, ::Type{H1P2{ncomponents,edim}}, ::Type{Edge1D}) where {ncomponents,edim} = 2
@@ -163,25 +160,6 @@ function get_basis(::Type{<:AssemblyType},FEType::Type{H1P2{ncomponents,edim}}, 
             refbasis[10*k-2,k] = 4*xref[1]*xref[2]                          # edge 4
             refbasis[10*k-1,k] = 4*xref[1]*xref[3]                          # edge 5
             refbasis[10*k  ,k] = 4*xref[2]*xref[3]                          # edge 6
-        end
-    end
-end
-
-
-function get_basis(::Type{<:AssemblyType}, FEType::Type{H1P2{ncomponents,edim}}, ::Type{<:Quadrilateral2D}) where {ncomponents,edim}
-    function closure(refbasis, xref)
-        refbasis[1,1] = 1 - xref[1]
-        refbasis[2,1] = 1 - xref[2]
-        refbasis[3,1] = 2*xref[1]*xref[2]*(xref[1]+xref[2]-3//2);
-        refbasis[4,1] = -2*xref[2]*refbasis[1,1]*(xref[1]-xref[2]+1//2);
-        refbasis[5,1] = 4*xref[1]*refbasis[1,1]*refbasis[2,1]
-        refbasis[6,1] = 4*xref[2]*xref[1]*refbasis[2,1]
-        refbasis[7,1] = 4*xref[1]*xref[2]*refbasis[1,1]
-        refbasis[8,1] = 4*xref[2]*refbasis[1,1]*refbasis[2,1]
-        refbasis[1,1] = -2*refbasis[1,1]*refbasis[2,1]*(xref[1]+xref[2]-1//2);
-        refbasis[2,1] = -2*xref[1]*refbasis[2,1]*(xref[2]-xref[1]+1//2);
-        for k = 2 : ncomponents, j = 1 : 8
-            refbasis[8*(k-1)+j,k] = refbasis[j,1]
         end
     end
 end

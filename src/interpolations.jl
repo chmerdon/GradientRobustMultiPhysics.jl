@@ -262,7 +262,7 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
     ## get basis for moments
     ## here we assume that the FEType looks like a H1Pk element on EG (which is true for all H1Pk elements)
     if order == 0
-        FEType_moments = H1P0{ncomponents}
+        FEType_moments = L2P0{ncomponents}
     elseif order == 1
         FEType_moments = H1P1{ncomponents}
     elseif order == 2
@@ -564,7 +564,6 @@ function interpolate!(
     end
     interpolate!(target, ON_CELLS, fe_function; items = items)
 end
-
 
 
 """

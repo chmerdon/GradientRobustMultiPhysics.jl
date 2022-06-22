@@ -58,7 +58,7 @@ function main(; verbosity = 0, Plotter = nothing, λ = 1e4, μ = 1.0)
     xgrid = uniform_refine(grid_unitsquare(Triangle2D), 4)
 
     ## Bernardi--Raugel element
-    FETypes = [H1BR{2}, H1P0{1}]; PenaltyDivergence = ReconstructionDivergence{HDIVRT0{2}}
+    FETypes = [H1BR{2}, L2P0{1}]; PenaltyDivergence = ReconstructionDivergence{HDIVRT0{2}}
 
     ## FE spaces
     FES = [FESpace{FETypes[1]}(xgrid), FESpace{FETypes[2]}(xgrid; broken = true)]

@@ -131,8 +131,8 @@ end
 
 
 function get_basis(AT::Type{ON_CELLS}, FEType::Type{H1BR{2}}, EG::Type{<:Quadrilateral2D})
-    refbasis_P1 = get_basis(AT, H1P1{2}, EG)
-    offset = get_ndofs(AT, H1P1{2}, EG)
+    refbasis_P1 = get_basis(AT, H1Q1{2}, EG)
+    offset = get_ndofs(AT, H1Q1{2}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to Q1 basis
@@ -204,8 +204,8 @@ function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{H1BR{3
 end
 
 function get_basis(AT::Union{Type{<:ON_FACES}, Type{<:ON_BFACES}}, ::Type{H1BR{3}}, EG::Type{<:Quadrilateral2D})
-    refbasis_P1 = get_basis(AT, H1P1{3}, EG)
-    offset = get_ndofs(AT, H1P1{3}, EG)
+    refbasis_P1 = get_basis(AT, H1Q1{3}, EG)
+    offset = get_ndofs(AT, H1Q1{3}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to P1 basis
@@ -232,8 +232,8 @@ function get_basis(AT::Type{ON_CELLS}, ::Type{H1BR{3}}, EG::Type{<:Tetrahedron3D
 end
 
 function get_basis(AT::Type{ON_CELLS}, ::Type{H1BR{3}}, EG::Type{<:Hexahedron3D})
-    refbasis_P1 = get_basis(AT, H1P1{3}, EG)
-    offset = get_ndofs(AT, H1P1{3}, EG)
+    refbasis_P1 = get_basis(AT, H1Q1{3}, EG)
+    offset = get_ndofs(AT, H1Q1{3}, EG)
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add face bubbles to Q1 basis

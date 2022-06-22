@@ -111,7 +111,7 @@ The following two radio buttons allow to select the finite element pair and the 
 # ╔═╡ bf4a310d-b12f-4f55-a367-39b06b3ee228
 begin
 	if method == "Bernardi-Raugel"
-    	FETypes = [H1BR{2}, H1P0{1}] # Bernardi--Raugel pair
+    	FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel pair
 		offset = nnodes
 	elseif method == "enriched Taylor-Hood (P2-bubble)"
 		FETypes = [H1P2B{2,2}, H1P1{1}] # P2-bubble pair

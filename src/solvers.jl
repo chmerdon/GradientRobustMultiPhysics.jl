@@ -133,9 +133,34 @@ function set_nonzero_pattern!(A::FEMatrix, AT::Type{<:AssemblyType} = ON_CELLS)
     end
 end
 
+
+"""
+````
+SolverConfig{T,TvG,TiG}(PDE::PDEDescription; kwargs...) where {T,TvG,TiG}
+````
+
+Generates a solver configuration (that can used for triggering assembly manually).
+
+Keyword arguments:
+$(_myprint(default_solver_kwargs(),false))
+
+"""
+function SolverConfig{T,TvG,TiG}(PDE::PDEDescription; kwargs...) where {T,TvG,TiG}
+    user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
+    _update_solver_params!(user_params,kwargs)
+    return SolverConfig{T,TvG,TiG}(PDE, user_params)
+end
+
+
+function SolverConfig(PDE::PDEDescription, ::FEVector{T,TvG,TiG}; kwargs...) where {T,TvG,TiG}
+    user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
+    _update_solver_params!(user_params,kwargs)
+    return SolverConfig{T,TvG,TiG}(PDE, user_params)
+end
+
 # check if PDE is nonlinear or time-dependent and which blocks require recalculation
 # and devise some initial solver strategy
-function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_params) where {T,TvG,TiG}
+function SolverConfig{T,TvG,TiG}(PDE::PDEDescription, user_params) where {T,TvG,TiG}
 
     ## declare subiterations
     if user_params[:subiterations] == "auto"
@@ -144,6 +169,8 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     ## declare linear solver
     if user_params[:linsolver] == "UMFPACK"
         user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.LUFactorization}
+    elseif user_params[:linsolver] == "CHOLESKY"
+        user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.CholeskyFactorization}
     elseif user_params[:linsolver] == "MKLPARDISO"
         user_params[:linsolver] = LinearSystem{T, Int64, ExtendableSparse.MKLPardisoLU}
     elseif user_params[:linsolver] <: ExtendableSparse.AbstractFactorization
@@ -311,6 +338,8 @@ function SolverConfig{T}(PDE::PDEDescription, ::ExtendableGrid{TvG,TiG}, user_pa
     return SolverConfig{T,TvG,TiG}(nonlinear, timedependent, LHS_ATs, LHS_dep, RHS_ATs, RHS_dep, LHS_APs, RHS_APs, LHS_AssemblyTimes, RHS_AssemblyTimes, LHS_TotalLoopAllocations, RHS_TotalLoopAllocations, LHS_LastLoopAllocations, RHS_LastLoopAllocations, user_params)
 end
 
+
+
 function Base.show(io::IO, SC::SolverConfig)
 
     println(io, "\nSOLVER-CONFIGURATION")
@@ -397,7 +426,7 @@ function assemble!(
     time::Real = 0,
     equations = [],
     if_depends_on = [], # block is only assembled if it depends on these components
-    min_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyAlways,
+    min_trigger::Type{<:AbstractAssemblyTrigger} = AssemblyInitial,
     storage_trigger = "same as min_trigger",
     only_lhs::Bool = false,
     only_rhs::Bool = false) where {T}
@@ -603,16 +632,22 @@ function assemble!(
     return lhs_block_has_been_erased, rhs_block_has_been_erased
 end
 
+function apply_boundarydata!(A,b,Solution,k,Problem,SC; time = 0)
+    penalty = SC.user_params[:fixed_penalty]
+    fixed_dofs = boundarydata!(Solution[k], Problem.BoundaryOperators[k], Solution; time = time)
+    fixed_dofs .+= Solution[k].offset
+    @views b.entries[fixed_dofs] .= penalty * Solution.entries[fixed_dofs]
+    apply_penalties!(A.entries, fixed_dofs, penalty)
+    return fixed_dofs
+end
+
 # for linear, stationary PDEs that can be solved in one step
 function solve_direct!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescription, SC::SolverConfig{T,Tv,Ti}; time::Real = 0, show_details::Bool = false) where {T, Tv, Ti}
 
     assembly_time = @elapsed begin
-    FEs = Array{FESpace{Tv,Ti},1}([])
-    for j=1 : length(Target.FEVectorBlocks)
-        push!(FEs,Target.FEVectorBlocks[j].FES)
-    end    
 
     # ASSEMBLE SYSTEM
+    FEs = FESpaces(Target)
     A = FEMatrix{T}("SystemMatrix", FEs)
     b = FEVector{T}("SystemRhs", FEs)
     assemble!(A,b,PDE,SC,Target; equations = Array{Int,1}(1:length(FEs)), min_trigger = AssemblyInitial, time = time)
@@ -1268,6 +1303,9 @@ function solve_fixpoint_subiterations!(Target::FEVector{T,Tv,Ti}, PDE::PDEDescri
     return sqrt(sum(resnorm.^2))
 end
 
+
+
+
 """
 ````
 function solve!(
@@ -1290,10 +1328,8 @@ function solve!(
     kwargs...) where {T, Tv, Ti}
 
     ## generate solver configurations
-    xgrid = Target[1].FES.xgrid
-    user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
-    _update_solver_params!(user_params,kwargs)
-    SC = SolverConfig{T}(PDE, xgrid, user_params)
+    SC = SolverConfig{T,Tv,Ti}(PDE; kwargs...)
+    user_params = SC.user_params
 
     ## logging stuff
     if SC.is_timedependent
@@ -1445,10 +1481,8 @@ function TimeControlSolver(
     kwargs...) where {T,Tv,Ti}
 
     ## generate solver configurations
-    user_params=Dict{Symbol,Any}( k => v[1] for (k,v) in default_solver_kwargs())
-    _update_solver_params!(user_params,kwargs)
-    xgrid = InitialValues[1].FES.xgrid
-    SC = SolverConfig{T}(PDE, xgrid, user_params)
+    SC = SolverConfig{T,Tv,Ti}(PDE; kwargs...)
+    user_params = SC.user_params
     start_time = user_params[:time]
 
     # generate solver for time-independent problem

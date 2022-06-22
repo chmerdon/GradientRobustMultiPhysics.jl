@@ -50,7 +50,7 @@ function main(;
     xgrid = grid_unitsquare(Triangle2D);
 
     ## choose one of these (inf-sup stable) finite element type pairs
-    FETypes = [H1BR{2}, H1P0{1}]; # Bernardi--Raugel 
+    FETypes = [H1BR{2}, L2P0{1}]; # Bernardi--Raugel 
   
     #####################################################################################
 

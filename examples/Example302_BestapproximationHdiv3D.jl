@@ -46,13 +46,13 @@ function main(; verbosity = 0, nrefinements = 4, Plotter = nothing)
     @show Problem
 
     ## choose some (inf-sup stable) finite element types
-    #FEType = [HDIVRT0{3}, H1P0{1}]
-    FEType = [HDIVBDM1{3}, H1P0{1}]
+    #FEType = [HDIVRT0{3}, L2P0{1}]
+    FEType = [HDIVBDM1{3}, L2P0{1}]
     FES = [FESpace{FEType[1]}(xgrid),FESpace{FEType[2]}(xgrid; broken = true)]
 
     ## create a solution vector and solve the problem
     Solution = FEVector{Float64}(["u_h","p_h"],FES)
-    solve!(Solution, Problem)
+    solve!(Solution, Problem; show_statistics = true)
 
     ## plot
     p = GridVisualizer(; Plotter = Plotter, layout = (1,2), clear = true, resolution = (1000,500))

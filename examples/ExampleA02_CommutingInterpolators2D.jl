@@ -34,7 +34,7 @@ function main(;order::Int = 2, testmode = false)
 
     ## choose commuting interpolators pair
     if order == 1
-        FE = [H1P1{1},HDIVRT0{2}]; testFE = H1P0{2}
+        FE = [H1P1{1},HDIVRT0{2}]; testFE = L2P0{2}
     elseif order == 2
         FE = [H1P2{1,2},HDIVRT1{2}]; testFE = H1P1{2}
     end

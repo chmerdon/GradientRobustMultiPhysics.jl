@@ -80,7 +80,7 @@ function main(; use_gravity = true, newton = false, nlevels = 4, Plotter = nothi
     NDoFs = zeros(Int,nlevels)
 
     ## set finite element types [velocity, density,  pressure]
-    FETypes = [H1BR{2}, H1P0{1}] # Bernardi--Raugel x P0
+    FETypes = [H1BR{2}, L2P0{1}] # Bernardi--Raugel x P0
 
     ## solve
     Solution = [nothing, nothing]
@@ -147,7 +147,7 @@ function setup_and_solve!(Solution, xgrid;
     end
 
     ## add pressure term -(div(v),p(ϱ))
-	add_operator!(Problem, [1,2], BilinearForm([Divergence, Identity], feval_action(equation_of_state); factor = -1, name = "-(div v, eos(ϱ))", apply_action_to = [2], store = true))
+	add_operator!(Problem, [1,2], BilinearForm([VeloDivergence, Identity], feval_action(equation_of_state); factor = -1, name = "-(div v, eos(ϱ))", apply_action_to = [2], store = true))
 
     ## add gravity either as usual or as explicit right-hand side force
     if use_gravity

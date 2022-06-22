@@ -100,8 +100,8 @@ function get_basis(AT::Type{<:ON_CELLS}, ::Type{H1MINI{ncomponents,edim}}, EG::T
 end
 
 function get_basis(AT::Type{<:ON_CELLS}, ::Type{H1MINI{ncomponents,edim}}, EG::Type{<:Quadrilateral2D}) where {ncomponents,edim}
-    refbasis_P1 = get_basis(AT, H1P1{1}, EG)
-    offset = get_ndofs(AT, H1P1{1}, EG) + 1
+    refbasis_P1 = get_basis(AT, H1Q1{1}, EG)
+    offset = get_ndofs(AT, H1Q1{1}, EG) + 1
     function closure(refbasis, xref)
         refbasis_P1(refbasis, xref)
         # add cell bubbles to P1 basis (scaled to have unit integral)

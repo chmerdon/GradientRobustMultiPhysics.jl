@@ -52,6 +52,21 @@ function LinearAlgebra.norm(FEV::FEVector{T}, p::Real = 2) where {T}
     return norms
 end
 
+
+"""
+$(TYPEDSIGNATURES)
+
+Returns the vector of FEspaces for the blocks of the given FEVector.
+"""
+function FESpaces(FEV::FEVector{T,Tv,Ti}) where {T,Tv,Ti}
+    FEs = Array{FESpace{Tv,Ti},1}([])
+    for j=1 : length(FEV.FEVectorBlocks)
+        push!(FEs,FEV.FEVectorBlocks[j].FES)
+    end   
+    return FEs 
+end
+
+
 """
 $(TYPEDSIGNATURES)
 

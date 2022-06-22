@@ -33,7 +33,7 @@ function main(;order::Int = 1, testmode = false)
 
     ## choose commuting interpolators pair
     if order == 1
-        FE = [HCURLN0{3},HDIVRT0{3}]; testFE = H1P0{3}
+        FE = [HCURLN0{3},HDIVRT0{3}]; testFE = L2P0{3}
     end
 
     ## do the Hcurl and Hdiv interpolation of the function and its curl, resp.

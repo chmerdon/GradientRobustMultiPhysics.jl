@@ -49,7 +49,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 1,
     set_verbosity(verbosity)
 
     ## FEType (Hdiv-conforming)
-    FETypes = [HDIVBDM1{2}, H1P0{1}]
+    FETypes = [HDIVBDM1{2}, L2P0{1}]
     
     ## initial grid
     xgrid = grid_unitsquare(Triangle2D)

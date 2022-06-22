@@ -52,7 +52,7 @@ function main(; μ = 1e-3, nlevels = 5, Plotter = nothing, verbosity = 0, T = 0,
     set_verbosity(verbosity)
 
     ## FEType
-    FETypes = [H1P1{2}, HDIVRT0{2}, H1P0{1}]
+    FETypes = [H1P1{2}, HDIVRT0{2}, L2P0{1}]
     
     ## get exact flow data (see above)
     u,p,∇u,f = get_flowdata(μ, false)

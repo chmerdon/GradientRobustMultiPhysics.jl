@@ -211,6 +211,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
     need_edges::Bool = false
     maxdofs4item::Int = 0
     dofmap4EG::Array{ParsedDofMap,1} = Array{ParsedDofMap,1}(undef,length(EG))
+    has_interiordofs = zeros(Bool, length(EG))
     for j = 1 : length(EG)
         pattern = get_dofmap_pattern(FEType, DM, EG[j])
         dofmap4EG[j] = ParsedDofMap(pattern, ncomponents, EG[j])
@@ -220,6 +221,9 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
         end
         if get_ndofs(dofmap4EG[j], DofTypeEdge) > 0
             need_edges = true
+        end
+        if get_ndofs(dofmap4EG[j], DofTypeInterior) > 0
+            has_interiordofs[j] = true
         end
     end
 
@@ -272,6 +276,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
     offset::Int = 0
     pos::Int = 0
     q::Int = 0
+    item_with_interiordofs::Int = 0
     for subitem = 1 : nsubitems
         itemEG = xItemGeometries[subitem]
         item = sub2sup(subitem)
@@ -279,6 +284,9 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
             iEG = findfirst(isequal(itemEG), EG)
         end
         cpattern = dofmap4EG[iEG].segments
+        if has_interiordofs[iEG]
+            item_with_interiordofs += 1
+        end
         for c = 1 : ncomponents
             offset = (c-1)*offset4component
             for k = 1 : length(cpattern)
@@ -310,7 +318,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
                 elseif cpattern[k].type <: DofTypeInterior && cpattern[k].each_component
                     for m = 1 : q
                         pos += 1
-                        itemdofs[pos] = item + offset
+                        itemdofs[pos] = sub2sup(item_with_interiordofs) + offset
                         offset += nitems
                     end
                 end
@@ -338,7 +346,7 @@ function init_dofmap_from_pattern!(FES::FESpace{Tv, Ti, FEType, APT}, DM::Type{<
             elseif cpattern[k].type <: DofTypeInterior && !cpattern[k].each_component
                 for m = 1 : q
                     pos += 1
-                    itemdofs[pos] = item + offset
+                    itemdofs[pos] = sub2sup(item_with_interiordofs) + offset
                     offset += nitems
                 end
             end

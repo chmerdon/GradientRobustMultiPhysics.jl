@@ -57,10 +57,12 @@ export OperatorPair, OperatorTriple
 include("finiteelements.jl")
 export DofMap, CellDofs, FaceDofs, EdgeDofs, BFaceDofs, BEdgeDofs
 export AbstractFiniteElement
-export FESpace
+export FESpace, FESpaces
 
 export AbstractH1FiniteElement
-export H1BUBBLE, H1P0, H1P1, H1P2, H1P2B, H1MINI, H1CR, H1P3, H1Pk
+export H1BUBBLE, L2P0, H1P1, H1P2, H1P2B, H1MINI, H1CR, H1P3, H1Pk
+export L2P1
+export H1Q1, H1Q2
 
 export AbstractH1FiniteElementWithCoefficients
 export H1BR, H1P1TEB
@@ -86,7 +88,7 @@ export nodevalues_view
 export FEVectorBlock, FEVector
 export dot, norm
 export FEMatrixBlock, FEMatrix, _addnz
-export fill!, addblock!, addblock_matmul!, lrmatmul, add!
+export fill!, addblock!, addblock_matmul!, lrmatmul, add!, apply_penalties!
 
 export get_reconstruction_matrix
 
@@ -126,6 +128,7 @@ export PointEvaluator
 
 include("pdeoperators.jl")
 export AbstractAssemblyTrigger
+export AssemblyInitial, AssemblyEachTimeStep, AssemblyAlways, AssemblyNever
 export AbstractPDEOperator
 
 export BackwardEulerTimeDerivative
@@ -174,8 +177,9 @@ export add_constraint!
 
 include("solvers.jl")
 export AbstractLinearSystem
+export SolverConfig
 
-export solve!, assemble!
+export solve!, assemble!, apply_boundarydata!
 export TimeControlSolver, advance!, advance_until_stationarity!, advance_until_time!
 export show_statistics
 export AbstractTimeIntegrationRule
