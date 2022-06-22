@@ -505,7 +505,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
             #println("Operator $(operator[j]) for $(typeof(FE[j])) can be evaluated continuously, but is forced to full discontinuous mode by operator")
             push!(discontinuous_operators,j)
             dofitemAT[j] = ON_CELLS
-        elseif (dofitemAT[j] == AT) && FE[j].broken && AT != ON_CELLS && (discontinuous || eltype(FE[j]) <: H1P0)
+        elseif (dofitemAT[j] == AT) && FE[j].broken && AT != ON_CELLS && (discontinuous || eltype(FE[j]) <: L2P0)
             #println("Operator $(operator[j]) for $(typeof(FE[j])) is evaluated in broken mode using the basis $(dofitemAT[j])")
             push!(broken_operators,j)
             #push!(discontinuous_operators,j)
