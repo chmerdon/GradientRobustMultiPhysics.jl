@@ -16,15 +16,13 @@ The problem will be solved by a ``(P_k \oplus RTenrichment) \times P_{k-1}`` sch
 Therein, the velocity space employs continuous Pk functions plus certain (only H(div)-conforming) Raviart-Thomas functions and a discontinuous Pk-1 pressure space
 leading to an exactly divergence-free discrete velocity.
 
-!!! reference for k = 1
+!!! reference
 
     "A low-order divergence-free H(div)-conforming finite element method for Stokes flows",\
     X. Li, H. Rui,\
     IMA Journal of Numerical Analysis (2021),\
     [>Journal-Link<](https://doi.org/10.1093/imanum/drab080)
     [>Preprint-Link<](https://arxiv.org/abs/2012.01689)
-
-!!! reference for k > 1
 
     "Inf-sup stabilized Scott--Vogelius pairs on general simplicial grids by Raviart--Thomas enrichment",\
     V. John, X. Li, C. Merdon, H. Rui,\
