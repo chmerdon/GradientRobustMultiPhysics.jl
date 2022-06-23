@@ -189,6 +189,9 @@ function test(; Plotter = nothing)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example222_PressureRobustness2D.main()
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_c (classic) (H1BR{2}, ndofs = 54)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_c (classic) (L2P0{1} (broken), ndofs = 16)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -212,7 +215,14 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     18   | 1.343047e-15 | 1.615671e-02
 	     19   | 1.369564e-15 | 1.255390e-02
 	     20   | 1.243891e-15 | 5.543517e-03
+┌ Warning: maxiterations reached!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1010
 
+┌ Warning: residual was larger than desired target_residual = 1.0e-10!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1370
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_r (p-robust) (H1BR{2}, ndofs = 54)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_r (p-robust) (L2P0{1} (broken), ndofs = 16)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -236,7 +246,23 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     18   | 1.270957e-15 | 1.535328e-06
 	     19   | 1.366458e-15 | 2.103703e-07
 	     20   | 1.344636e-15 | 6.903054e-08
+┌ Warning: maxiterations reached!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1010
 
+┌ Warning: residual was larger than desired target_residual = 1.0e-10!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1370
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; Πu (H1BR{2}, ndofs = 54)
+[ Info: overall residual = 1.0708059511696986e-16
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; πp (L2P0{1} (broken), ndofs = 16)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; Su (H1BR{2}, ndofs = 54)
+[ Info: overall residual = 5.150355351091769e-15
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_c (classic) (H1BR{2}, ndofs = 186)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_c (classic) (L2P0{1} (broken), ndofs = 64)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -260,7 +286,14 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     18   | 1.325371e-15 | 4.316282e-08
 	     19   | 9.305037e-16 | 1.071468e-08
 	     20   | 1.091176e-15 | 5.244141e-09
+┌ Warning: maxiterations reached!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1010
 
+┌ Warning: residual was larger than desired target_residual = 1.0e-10!
+└ @ GradientRobustMultiPhysics ~/work/GradientRobustMultiPhysics.jl/GradientRobustMultiPhysics.jl/src/solvers.jl:1370
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_r (p-robust) (H1BR{2}, ndofs = 186)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_r (p-robust) (L2P0{1} (broken), ndofs = 64)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -284,6 +317,18 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     18   | 8.816910e-16 | 4.526090e-10
 	     19   | 1.264365e-15 | 3.113874e-11
 
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; Πu (H1BR{2}, ndofs = 186)
+[ Info: overall residual = 6.243138983955476e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; πp (L2P0{1} (broken), ndofs = 64)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; Su (H1BR{2}, ndofs = 186)
+[ Info: overall residual = 7.48951312643649e-15
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_c (classic) (H1BR{2}, ndofs = 690)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_c (classic) (L2P0{1} (broken), ndofs = 256)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -305,6 +350,9 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     16   | 1.068867e-15 | 3.259651e-10
 	     17   | 1.032335e-15 | 7.760351e-11
 
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_r (p-robust) (H1BR{2}, ndofs = 690)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_r (p-robust) (L2P0{1} (broken), ndofs = 256)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -325,6 +373,18 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     15   | 1.105387e-15 | 2.615672e-10
 	     16   | 1.100166e-15 | 5.853321e-11
 
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; Πu (H1BR{2}, ndofs = 690)
+[ Info: overall residual = 3.681383510465609e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; πp (L2P0{1} (broken), ndofs = 256)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; Su (H1BR{2}, ndofs = 690)
+[ Info: overall residual = 1.0406628315664628e-14
+┌ Info: ========== Solving Stokes problem (classical) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_c (classic) (H1BR{2}, ndofs = 2658)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_c (classic) (L2P0{1} (broken), ndofs = 1024)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -344,6 +404,9 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     14   | 1.109536e-15 | 1.989625e-10
 	     15   | 1.176217e-15 | 4.038371e-11
 
+┌ Info: ========== Solving Stokes problem (p-robust) ==========
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_r (p-robust) (H1BR{2}, ndofs = 2658)
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_r (p-robust) (L2P0{1} (broken), ndofs = 1024)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL
 	--------------------------------------
@@ -361,6 +424,15 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 	     12   | 1.259645e-15 | 1.426551e-10
 	     13   | 1.173309e-15 | 2.991988e-11
 
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; Πu (H1BR{2}, ndofs = 2658)
+[ Info: overall residual = 2.105773036618776e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; πp (L2P0{1} (broken), ndofs = 1024)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; Su (H1BR{2}, ndofs = 2658)
+[ Info: overall residual = 2.1951559936617624e-14
 
     ndofs   |     ||u-u_c||      order |     ||u-u_r||      order |     ||u-Πu||       order |
 ============|==========================|==========================|==========================|
@@ -381,4 +453,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
         70  |     1.761e+01      0.00  |     9.635e+00      0.00  |     1.139e+00      0.00  |
        250  |     1.462e+01      0.29  |     1.954e+00      2.51  |     5.666e-01      1.10  |
        946  |     8.873e+00      0.75  |     3.876e-01      2.43  |     2.817e-01      1.05  |
-      3682  |     5.237e+00      0.78  |     1.511e-01      1.39  |     1.403e-01      1.03  |</code></pre><p><img src="../../images/Example222_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example221_StokesIterated2D/">« 221 : Stokes iterated penalty method 2D</a><a class="docs-footer-nextpage" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 16:10">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      3682  |     5.237e+00      0.78  |     1.511e-01      1.39  |     1.403e-01      1.03  |</code></pre><p><img src="../../images/Example222_PressureRobustness2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example221_StokesIterated2D/">« 221 : Stokes iterated penalty method 2D</a><a class="docs-footer-nextpage" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Thursday 23 June 2022 15:10">Thursday 23 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

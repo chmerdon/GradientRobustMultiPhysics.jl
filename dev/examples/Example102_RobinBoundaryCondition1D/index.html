@@ -77,14 +77,22 @@ function main(; Plotter = nothing, verbosity = 0, h = 1e-1, h_fine = 1e-3)
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example102_RobinBoundaryCondition1D.main()
+┌ Info: ========== Solving reaction-convection-diffusion problem ==========
+└ 	Equation (1.1) reaction-convection-diffusion equation : u &gt;&gt; u_h (H1P2{1,1}, ndofs = 21)
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 1.44e+01/5.40e-06/1.44e+01
-	      1   | 7.420453e-14 | 6.400322e-01 | 1.34e+00/1.29e-04/1.69e+00
-	      2   | 4.529748e-14 | 5.344356e-02 | 4.01e-04/1.01e-04/5.72e-04
-	      3   | 5.506533e-14 | 4.413179e-05 | 1.80e-04/4.17e-05/2.40e-04
-	      4   | 4.017811e-14 | 4.725667e-11 | 1.52e-04/2.98e-05/1.92e-04
-	    total |                             | 1.57e+01/3.07e-04/1.61e+01
+	    init  |                             | 1.59e+01/6.60e-06/1.60e+01
+	      1   | 7.420453e-14 | 6.400322e-01 | 1.50e+00/1.30e-04/1.93e+00
+	      2   | 4.529748e-14 | 5.344356e-02 | 4.02e-04/9.88e-05/5.68e-04
+	      3   | 5.506533e-14 | 4.413179e-05 | 1.71e-04/3.69e-05/2.24e-04
+	      4   | 4.017811e-14 | 4.725667e-11 | 1.51e-04/2.77e-05/1.88e-04
+	    total |                             | 1.74e+01/3.00e-04/1.79e+01
 
-L2error = 1.0271403975283884e-5</code></pre><p><img src="../../images/Example102_RobinBoundaryCondition1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example101_Bestapproximation1D/">« 101 : L2-Bestapproximation 1D</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 16:10">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+┌ Info: =================================== STATISTICS ===================================
+│ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
+│ 	----------------------------------------------------------------------------------
+│ 	LHS[1,1][1] 	| 5.2247e+00 	| 4.3200e+03 	| 4.2850e+07 	| ∇u ⋅ ∇v + (u ∇u + u) ⋅ v [AD-Newton] [∂u]
+│ 	LHS[1,1][2] 	| 4.5071e+00 	| 0.0000e+00 	| 3.0030e+06 	| (g - u) ⋅ v
+└ 	RHS[1,][1] 	| 4.1799e+00 	| 0.0000e+00 	| 2.9850e+05 	| (f, id(v))
+L2error = 1.0271403975283884e-5</code></pre><p><img src="../../images/Example102_RobinBoundaryCondition1D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example101_Bestapproximation1D/">« 101 : L2-Bestapproximation 1D</a><a class="docs-footer-nextpage" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Thursday 23 June 2022 15:10">Thursday 23 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

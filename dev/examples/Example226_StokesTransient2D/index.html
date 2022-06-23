@@ -121,58 +121,122 @@ function main(;
 end
 
 end</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><p><strong>Default output:</strong></p><pre><code class="nohighlight hljs">julia&gt; Example226_StokesTransient2D.main()
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 54)
+[ Info: overall residual = 7.61897186174398e-17
+┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem using CrankNicolson -----
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (H1BR{2}, ndofs = 54), timedependent = yes
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 16), timedependent = no
+[ Info: Advancing in time from 0.0 until 0.01
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 1.5802e-13 | 3.646e+00 | 4.9651e-03  3.0773e+00 
-	     2  | 2.0000e-03 | 1.3960e-13 | 2.244e-02 | 3.6022e-03  2.3073e+00 
-	     3  | 3.0000e-03 | 1.5983e-13 | 3.554e-03 | 3.6022e-03  1.1212e-10 
-	     4  | 4.0000e-03 | 1.2742e-13 | 3.410e-03 | 3.6022e-03  1.1166e-10 
-	     5  | 5.0000e-03 | 1.1468e-13 | 3.333e-03 | 3.6022e-03  1.1204e-10 
-	     6  | 6.0000e-03 | 1.1270e-13 | 3.340e-03 | 3.6022e-03  1.1172e-10 
-	     7  | 7.0000e-03 | 1.4738e-13 | 3.290e-03 | 3.6022e-03  1.1217e-10 
-	     8  | 8.0000e-03 | 1.3092e-13 | 3.251e-03 | 3.6022e-03  1.1184e-10 
-	     9  | 9.0000e-03 | 1.4327e-13 | 3.327e-03 | 3.6022e-03  1.1219e-10 
-	    10  | 1.0000e-02 | 1.7628e-13 | 3.327e-03 | 3.6022e-03  1.1167e-10 
+	     1  | 1.0000e-03 | 1.5802e-13 | 4.114e+00 | 4.9651e-03  3.0773e+00 
+	     2  | 2.0000e-03 | 1.3960e-13 | 2.384e-02 | 3.6022e-03  2.3073e+00 
+	     3  | 3.0000e-03 | 1.5983e-13 | 3.921e-03 | 3.6022e-03  1.1212e-10 
+	     4  | 4.0000e-03 | 1.2742e-13 | 3.675e-03 | 3.6022e-03  1.1166e-10 
+	     5  | 5.0000e-03 | 1.1468e-13 | 3.816e-03 | 3.6022e-03  1.1204e-10 
+	     6  | 6.0000e-03 | 1.1270e-13 | 3.734e-03 | 3.6022e-03  1.1172e-10 
+	     7  | 7.0000e-03 | 1.4738e-13 | 3.599e-03 | 3.6022e-03  1.1217e-10 
+	     8  | 8.0000e-03 | 1.3092e-13 | 3.630e-03 | 3.6022e-03  1.1184e-10 
+	     9  | 9.0000e-03 | 1.4327e-13 | 3.566e-03 | 3.6022e-03  1.1219e-10 
+	    10  | 1.0000e-02 | 1.7628e-13 | 3.731e-03 | 3.6022e-03  1.1167e-10 
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 54)
+[ Info: overall residual = 6.847215279489668e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; L2-Bestapproximation pressure (L2P0{1} (broken), ndofs = 16)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 54)
+[ Info: overall residual = 1.242746260799772e-15
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 186)
+[ Info: overall residual = 3.491875884044018e-17
+┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem using CrankNicolson -----
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (H1BR{2}, ndofs = 186), timedependent = yes
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 64), timedependent = no
+[ Info: Advancing in time from 0.0 until 0.01
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 8.1882e-14 | 1.412e-02 | 5.6703e-03  2.8195e+00 
-	     2  | 2.0000e-03 | 8.4871e-14 | 1.094e-02 | 6.4012e-03  1.1598e+00 
-	     3  | 3.0000e-03 | 6.8600e-14 | 1.091e-02 | 6.4012e-03  1.4694e-10 
-	     4  | 4.0000e-03 | 9.1571e-14 | 1.077e-02 | 6.4012e-03  1.4507e-10 
-	     5  | 5.0000e-03 | 7.7620e-14 | 1.085e-02 | 6.4012e-03  1.4605e-10 
-	     6  | 6.0000e-03 | 8.5619e-14 | 1.083e-02 | 6.4012e-03  1.4575e-10 
-	     7  | 7.0000e-03 | 8.6174e-14 | 1.091e-02 | 6.4012e-03  1.4593e-10 
-	     8  | 8.0000e-03 | 8.7061e-14 | 1.085e-02 | 6.4012e-03  1.4594e-10 
-	     9  | 9.0000e-03 | 9.0481e-14 | 1.080e-02 | 6.4012e-03  1.4631e-10 
-	    10  | 1.0000e-02 | 7.7570e-14 | 1.076e-02 | 6.4012e-03  1.4530e-10 
+	     1  | 1.0000e-03 | 8.1882e-14 | 1.589e-02 | 5.6703e-03  2.8195e+00 
+	     2  | 2.0000e-03 | 8.4871e-14 | 1.207e-02 | 6.4012e-03  1.1598e+00 
+	     3  | 3.0000e-03 | 6.8600e-14 | 1.197e-02 | 6.4012e-03  1.4694e-10 
+	     4  | 4.0000e-03 | 9.1571e-14 | 1.200e-02 | 6.4012e-03  1.4507e-10 
+	     5  | 5.0000e-03 | 7.7620e-14 | 1.164e-02 | 6.4012e-03  1.4605e-10 
+	     6  | 6.0000e-03 | 8.5619e-14 | 1.200e-02 | 6.4012e-03  1.4575e-10 
+	     7  | 7.0000e-03 | 8.6174e-14 | 1.193e-02 | 6.4012e-03  1.4593e-10 
+	     8  | 8.0000e-03 | 8.7061e-14 | 1.193e-02 | 6.4012e-03  1.4594e-10 
+	     9  | 9.0000e-03 | 9.0481e-14 | 1.228e-02 | 6.4012e-03  1.4631e-10 
+	    10  | 1.0000e-02 | 7.7570e-14 | 1.207e-02 | 6.4012e-03  1.4530e-10 
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 186)
+[ Info: overall residual = 3.0391619957323214e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; L2-Bestapproximation pressure (L2P0{1} (broken), ndofs = 64)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 186)
+[ Info: overall residual = 2.3048572313369617e-15
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 690)
+[ Info: overall residual = 1.514517705506503e-17
+┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem using CrankNicolson -----
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (H1BR{2}, ndofs = 690), timedependent = yes
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 256), timedependent = no
+[ Info: Advancing in time from 0.0 until 0.01
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 4.7968e-14 | 5.134e-02 | 1.1430e-02  4.0417e+00 
-	     2  | 2.0000e-03 | 4.1015e-14 | 3.928e-02 | 1.2040e-02  5.7953e-01 
-	     3  | 3.0000e-03 | 4.2155e-14 | 3.901e-02 | 1.2040e-02  9.5445e-11 
-	     4  | 4.0000e-03 | 4.3693e-14 | 3.945e-02 | 1.2040e-02  9.4442e-11 
-	     5  | 5.0000e-03 | 4.2751e-14 | 4.085e-02 | 1.2040e-02  9.5560e-11 
-	     6  | 6.0000e-03 | 4.2978e-14 | 4.125e-02 | 1.2040e-02  9.4661e-11 
-	     7  | 7.0000e-03 | 4.3022e-14 | 6.772e-02 | 1.2040e-02  9.5561e-11 
-	     8  | 8.0000e-03 | 4.4409e-14 | 3.904e-02 | 1.2040e-02  9.4654e-11 
-	     9  | 9.0000e-03 | 4.3503e-14 | 3.927e-02 | 1.2040e-02  9.5739e-11 
-	    10  | 1.0000e-02 | 4.2385e-14 | 3.913e-02 | 1.2040e-02  9.4780e-11 
+	     1  | 1.0000e-03 | 4.7968e-14 | 5.895e-02 | 1.1430e-02  4.0417e+00 
+	     2  | 2.0000e-03 | 4.1015e-14 | 4.381e-02 | 1.2040e-02  5.7953e-01 
+	     3  | 3.0000e-03 | 4.2155e-14 | 4.426e-02 | 1.2040e-02  9.5445e-11 
+	     4  | 4.0000e-03 | 4.3693e-14 | 4.440e-02 | 1.2040e-02  9.4442e-11 
+	     5  | 5.0000e-03 | 4.2751e-14 | 7.228e-02 | 1.2040e-02  9.5560e-11 
+	     6  | 6.0000e-03 | 4.2978e-14 | 4.360e-02 | 1.2040e-02  9.4661e-11 
+	     7  | 7.0000e-03 | 4.3022e-14 | 4.328e-02 | 1.2040e-02  9.5561e-11 
+	     8  | 8.0000e-03 | 4.4409e-14 | 4.299e-02 | 1.2040e-02  9.4654e-11 
+	     9  | 9.0000e-03 | 4.3503e-14 | 4.350e-02 | 1.2040e-02  9.5739e-11 
+	    10  | 1.0000e-02 | 4.2385e-14 | 4.383e-02 | 1.2040e-02  9.4780e-11 
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 690)
+[ Info: overall residual = 1.569075043917697e-17
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; L2-Bestapproximation pressure (L2P0{1} (broken), ndofs = 256)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 690)
+[ Info: overall residual = 4.541029325719007e-15
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 2658)
+[ Info: overall residual = 8.192328913652911e-18
+┌ Info: ----- Preparing time control solver for incompressible Stokes-Problem using CrankNicolson -----
+│ 	Equation (1.1) momentum equation : u &gt;&gt; u_h (H1BR{2}, ndofs = 2658), timedependent = yes
+└ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 1024), timedependent = no
+[ Info: Advancing in time from 0.0 until 0.01
 
 	  STEP  |    TIME    | LSRESIDUAL |  RUNTIME  |   CHANGE               
 	        |            |  (total)   |    (s)          u           p     
-	     1  | 1.0000e-03 | 2.1598e-14 | 2.246e-01 | 2.2994e-02  7.3187e+00 
-	     2  | 2.0000e-03 | 2.1870e-14 | 1.524e-01 | 2.3341e-02  2.8899e-01 
-	     3  | 3.0000e-03 | 2.2059e-14 | 1.726e-01 | 2.3341e-02  6.5739e-09 
-	     4  | 4.0000e-03 | 2.2603e-14 | 1.774e-01 | 2.3341e-02  6.5552e-09 
-	     5  | 5.0000e-03 | 2.2108e-14 | 1.520e-01 | 2.3341e-02  6.5245e-09 
-	     6  | 6.0000e-03 | 2.2276e-14 | 1.763e-01 | 2.3341e-02  6.5042e-09 
-	     7  | 7.0000e-03 | 2.1357e-14 | 1.529e-01 | 2.3341e-02  6.4750e-09 
-	     8  | 8.0000e-03 | 2.1900e-14 | 1.747e-01 | 2.3341e-02  6.4536e-09 
-	     9  | 9.0000e-03 | 2.1835e-14 | 1.523e-01 | 2.3341e-02  6.4247e-09 
-	    10  | 1.0000e-02 | 2.2630e-14 | 1.751e-01 | 2.3341e-02  6.4071e-09 
+	     1  | 1.0000e-03 | 2.1598e-14 | 2.474e-01 | 2.2994e-02  7.3187e+00 
+	     2  | 2.0000e-03 | 2.1870e-14 | 1.922e-01 | 2.3341e-02  2.8899e-01 
+	     3  | 3.0000e-03 | 2.2059e-14 | 1.711e-01 | 2.3341e-02  6.5739e-09 
+	     4  | 4.0000e-03 | 2.2603e-14 | 1.942e-01 | 2.3341e-02  6.5552e-09 
+	     5  | 5.0000e-03 | 2.2108e-14 | 1.709e-01 | 2.3341e-02  6.5245e-09 
+	     6  | 6.0000e-03 | 2.2276e-14 | 1.927e-01 | 2.3341e-02  6.5042e-09 
+	     7  | 7.0000e-03 | 2.1357e-14 | 1.718e-01 | 2.3341e-02  6.4750e-09 
+	     8  | 8.0000e-03 | 2.1900e-14 | 1.928e-01 | 2.3341e-02  6.4536e-09 
+	     9  | 9.0000e-03 | 2.1835e-14 | 1.706e-01 | 2.3341e-02  6.4247e-09 
+	    10  | 1.0000e-02 | 2.2630e-14 | 1.942e-01 | 2.3341e-02  6.4071e-09 
+┌ Info: ========== Solving L2-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) L2-bestapproximation equation : u &gt;&gt; L2-Bestapproximation velocity (H1BR{2}, ndofs = 2658)
+[ Info: overall residual = 8.732588284264897e-18
+┌ Info: ========== Solving L2-Bestapproximation problem ==========
+└ 	Equation (1.1) L2-bestapproximation equation : p &gt;&gt; L2-Bestapproximation pressure (L2P0{1} (broken), ndofs = 1024)
+[ Info: overall residual = 0.0
+┌ Info: ========== Solving H1-Bestapproximation problem (at fixed time 0.01) ==========
+└ 	Equation (1.1) H1-bestapproximation equation : u &gt;&gt; H1-Bestapproximation velocity (H1BR{2}, ndofs = 2658)
+[ Info: overall residual = 9.944619447493298e-15
 
     ndofs   |     ||u-u_h||      order |     ||u-Πu||       order |
 ============|==========================|==========================|
@@ -193,4 +257,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
         70  |     5.128e-02      0.00  |     4.815e-02      0.00  |
        250  |     2.592e-02      1.07  |     2.389e-02      1.10  |
        946  |     1.309e-02      1.03  |     1.187e-02      1.05  |
-      3682  |     6.529e-03      1.02  |     5.909e-03      1.03  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example225_NavierStokesAnderson2D/">« 225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Wednesday 22 June 2022 16:10">Wednesday 22 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      3682  |     6.529e-03      1.02  |     5.909e-03      1.03  |</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example225_NavierStokesAnderson2D/">« 225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a><a class="docs-footer-nextpage" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Thursday 23 June 2022 15:10">Thursday 23 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
