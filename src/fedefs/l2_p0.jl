@@ -23,7 +23,7 @@ get_dofmap_pattern(FEType::Type{<:L2P0}, ::Union{Type{FaceDofs},Type{BFaceDofs}}
 
 isdefined(FEType::Type{<:L2P0}, ::Type{<:AbstractElementGeometry}) = true
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {T,Tv,Ti,FEType <: L2P0,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = time) where {T,Tv,Ti,FEType <: L2P0,APT}
     xCellVolumes = FE.xgrid[CellVolumes]
     ncells = num_sources(FE.xgrid[CellNodes])
     if items == []
@@ -43,7 +43,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     end    
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: L2P0,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: L2P0,APT}
     # delegate to node cell interpolation
     subitems = slice(FE.xgrid[FaceCells], items)
     interpolate!(Target, FE, ON_CELLS, exact_function!; items = subitems, time = time)

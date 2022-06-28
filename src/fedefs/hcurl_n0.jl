@@ -37,7 +37,7 @@ isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Triangle2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Quadrilateral2D}) = true
 isdefined(FEType::Type{<:HCURLN0}, ::Type{<:Tetrahedron3D}) = true
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 3
         if items == []
@@ -56,7 +56,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     end
 end
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 2
         if items == []
@@ -80,7 +80,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {Tv,Ti,FEType <: HCURLN0,APT}
     edim = get_ncomponents(FEType)
     if edim == 2
         # delegate cell faces to face interpolation

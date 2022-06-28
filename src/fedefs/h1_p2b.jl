@@ -35,7 +35,7 @@ interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{H1P2B{ncomponents,edim}}, ::Type
 
 get_ref_cellmoments(::Type{<:H1P2B}, ::Type{<:Triangle2D}) = [0//1, 0//1, 0//1, 1//3, 1//3, 1//3, 1//1] # integrals of 1D basis functions over reference cell (divided by volume)
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{AT_NODES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
     edim = get_edim(FEType)
     nnodes = size(FE.xgrid[Coordinates],2)
     offset = nnodes + num_sources(FE.xgrid[CellNodes])
@@ -48,7 +48,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     point_evaluation!(Target, FE, AT_NODES, exact_function!; items = items, component_offset = offset, time = time)
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_EDGES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
     edim = get_edim(FEType)
     if edim == 3
         # delegate edge nodes to node interpolation
@@ -60,7 +60,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
     edim = get_edim(FEType)
     if edim == 2
         # delegate face nodes to node interpolation
@@ -83,7 +83,7 @@ function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,
     end
 end
 
-function interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{<:Real,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, exact_function!; items = [], time = 0) where {Tv,Ti,FEType <: H1P2B,APT}
     edim = get_edim(FEType)
     if edim == 2
         # delegate cell faces to face interpolation

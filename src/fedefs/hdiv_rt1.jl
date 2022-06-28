@@ -39,7 +39,7 @@ isdefined(FEType::Type{<:HDIVRT1}, ::Type{<:Tetrahedron3D}) = true
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{2}}, ::Type{<:Triangle2D}) = 6
 interior_dofs_offset(::Type{<:ON_CELLS}, ::Type{<:HDIVRT1{3}}, ::Type{<:Tetrahedron3D}) = 9
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_FACES}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
     ncomponents = get_ncomponents(FEType)
     if items == []
         items = 1 : num_sources(FE.xgrid[FaceNodes])
@@ -63,7 +63,7 @@ function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT},
     integrate!(Target, FE.xgrid, ON_FACES, edata_function; items = items, time = time, index_offsets = [0, nfaces, 2*nfaces])
 end
 
-function interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
+function ExtendableGrids.interpolate!(Target::AbstractArray{T,1}, FE::FESpace{Tv,Ti,FEType,APT}, ::Type{ON_CELLS}, data; items = [], time = 0) where {T,Tv,Ti,FEType <: HDIVRT1,APT}
     # delegate cell faces to face interpolation
     subitems = slice(FE.xgrid[CellFaces], items)
     interpolate!(Target, FE, ON_FACES, data; items = subitems)

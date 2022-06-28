@@ -383,7 +383,7 @@ function ensure_moments!(target::AbstractArray{T,1}, FE::FESpace{Tv, Ti, FEType,
 end
 
 # remap boundary face interpolation to faces by using BFaceFaces (if there is no special function by the finite element defined)
-function interpolate!(target::FEVectorBlock, FES::FESpace, ::Type{ON_BFACES}, source; items = items, time = time)
+function ExtendableGrids.interpolate!(target::FEVectorBlock, FES::FESpace, ::Type{ON_BFACES}, source; items = items, time = time)
     if length(items) == 0
         items = FES.xgrid[BFaceFaces]
     else
@@ -394,7 +394,7 @@ end
 
 """
 ````
-function interpolate!(target::FEVectorBlock,
+function ExtendableGrids.interpolate!(target::FEVectorBlock,
      AT::Type{<:AssemblyType},
      source::UserData{AbstractDataFunction};
      items = [],
@@ -404,7 +404,7 @@ function interpolate!(target::FEVectorBlock,
 Interpolates the given source into the finite elements space assigned to the target FEVectorBlock with the specified AssemblyType
 (usualy ON_CELLS). The optional time argument is only used if the source depends on time.
 """
-function interpolate!(
+function ExtendableGrids.interpolate!(
     target::FEVectorBlock{T,Tv,Ti},
     AT::Type{<:AssemblyType},
     source::AbstractUserDataType;
@@ -442,7 +442,7 @@ end
 
 """
 ````
-function interpolate!(target::FEVectorBlock,
+function ExtendableGrids.interpolate!(target::FEVectorBlock,
      source::UserData{AbstractDataFunction};
      items = [],
      time = 0)
@@ -451,14 +451,14 @@ function interpolate!(target::FEVectorBlock,
 Interpolates the given source into the finite element space assigned to the target FEVectorBlock. The optional time argument
 is only used if the source depends on time.
 """
-function interpolate!(target::FEVectorBlock, source::AbstractUserDataType; time = 0)
+function ExtendableGrids.interpolate!(target::FEVectorBlock, source::AbstractUserDataType; time = 0)
     interpolate!(target, ON_CELLS, source; time = time)
 end
 
 
 """
 ````
-function interpolate!(
+function ExtendableGrids.interpolate!(
     target::FEVectorBlock{T1,Tv,Ti},
     source::FEVectorBlock{T2,Tv,Ti};
     operator = Identity,
@@ -478,7 +478,7 @@ further postprocessed (done by the called point evaluator).
 Note: discontinuous quantities at vertices of the target grid will be evaluted in the first found cell of the
 source grid. No averaging is performed.
 """
-function interpolate!(
+function ExtendableGrids.interpolate!(
     target::FEVectorBlock{T1,Tv,Ti},
     source::FEVectorBlock{T2,Tv,Ti};
     operator = Identity,
