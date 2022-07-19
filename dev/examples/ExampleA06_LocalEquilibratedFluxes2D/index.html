@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>A06 : Local Equilibrated Fluxes 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.044/juliamono.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li class="is-active"><a class="tocitem" href>A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>A06 : Local Equilibrated Fluxes 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>A06 : Local Equilibrated Fluxes 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/ExampleA06_LocalEquilibratedFluxes2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="A06-:-Local-Equilibrated-Fluxes-2D"><a class="docs-heading-anchor" href="#A06-:-Local-Equilibrated-Fluxes-2D">A06 : Local Equilibrated Fluxes 2D</a><a id="A06-:-Local-Equilibrated-Fluxes-2D-1"></a><a class="docs-heading-anchor-permalink" href="#A06-:-Local-Equilibrated-Fluxes-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/ExampleA06_LocalEquilibratedFluxes2D.jl">source code</a>)</p><p>This example computes a local equilibration error estimator for the <span>$H^1$</span> error of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(\sigma_h) := \| \sigma_h - \nabla u_h \|^2_{L^2(T)}\]</p><p>where <span>$\sigma_h$</span> discretisates the exact <span>$\sigma$</span> in the dual mixed problem</p><p class="math-container">\[\sigma - \nabla u = 0
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>A06 : Local Equilibrated Fluxes 2D · GradientRobustMultiPhysics.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">GradientRobustMultiPhysics.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../package_index/">Index</a></li><li><span class="tocitem">Problem Description</span><ul><li><a class="tocitem" href="../../pdedescription/">PDE Description</a></li><li><a class="tocitem" href="../../pdeoperators/">PDE Operators</a></li><li><a class="tocitem" href="../../functionoperators/">Function Operators</a></li><li><a class="tocitem" href="../../userdata/">User Data and Actions</a></li><li><a class="tocitem" href="../../boundarydata/">Boundary Data</a></li><li><a class="tocitem" href="../../globalconstraints/">Global Constraints</a></li><li><a class="tocitem" href="../../pdeprototypes/">PDE Prototypes</a></li></ul></li><li><span class="tocitem">Discretisation</span><ul><li><a class="tocitem" href="../../meshing/">Meshing</a></li><li><a class="tocitem" href="../../fems/">Implemented Finite Elements</a></li><li><a class="tocitem" href="../../fespace/">Finite Element Spaces and Arrays</a></li><li><a class="tocitem" href="../../interpolations/">Finite Element Interpolations</a></li></ul></li><li><span class="tocitem">Solving</span><ul><li><a class="tocitem" href="../../pdesolvers/">Fixed-Time Solvers</a></li><li><a class="tocitem" href="../../timecontrolsolver/">Time-Dependent Solvers</a></li></ul></li><li><span class="tocitem">Postprocessing</span><ul><li><a class="tocitem" href="../../itemintegrators/">Item Integrators</a></li><li><a class="tocitem" href="../../pointevaluators/">Point Evaluators</a></li><li><a class="tocitem" href="../../viewers/">Viewers</a></li><li><a class="tocitem" href="../../export/">Data Export</a></li></ul></li><li><span class="tocitem">Low-Level Structures</span><ul><li><a class="tocitem" href="../../quadrature/">Quadrature</a></li><li><a class="tocitem" href="../../assemblypatterns/">Assembly Patterns</a></li><li><a class="tocitem" href="../../febasisevaluators/">FE Evaluators</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../examples_intro/">About the examples</a></li><li><a class="tocitem" href="../Example101_Bestapproximation1D/">101 : L2-Bestapproximation 1D</a></li><li><a class="tocitem" href="../Example102_RobinBoundaryCondition1D/">102 : Robin-Boundary Conditions 1D</a></li><li><a class="tocitem" href="../Example201_PoissonProblem2D/">201 : Poisson-Problem 2D</a></li><li><a class="tocitem" href="../Example202_LinearElasticity2D/">202 : Linear Elasticity</a></li><li><a class="tocitem" href="../Example203_ReactionConvectionDiffusion2D/">203 : Reaction-Convection-Diffusion-Problem 2D</a></li><li><a class="tocitem" href="../Example204_ReactionConvectionDiffusionSUPG2D/">204 : Reaction-Convection-Diffusion-Problem SUPG 2D</a></li><li><a class="tocitem" href="../Example205_NonlinearPoisson2D/">205 : Nonlinear Poisson Problem 2D</a></li><li><a class="tocitem" href="../Example206_NonlinearPoissonTransient2D/">206 : Nonlinear Poisson Transient 2D</a></li><li><a class="tocitem" href="../Example207_NonlinearElasticityBimetal2D/">207 : Nonlinear Elasticity Bimetal 2D</a></li><li><a class="tocitem" href="../Example208_ObstacleProblem2D/">208 : Obstacle Problem 2D</a></li><li><a class="tocitem" href="../Example209_FaceLagrangeMultiplier2D/">209 : Lagrange Multiplier on Faces</a></li><li><a class="tocitem" href="../Example210_PoissonLshapeAdaptive2D/">210 : Poisson L-shape Adaptive Mesh Refinement</a></li><li><a class="tocitem" href="../Example212_WaveEquation2D/">212 : Wave Equation 2D</a></li><li><a class="tocitem" href="../Example215_TwoNonlinearCoupled2D/">215 : Two nonlinearly coupled PDEs (2D)</a></li><li><a class="tocitem" href="../Example220_PlanarLatticeFlow2D/">220 : Planar Lattice Flow 2D</a></li><li><a class="tocitem" href="../Example221_StokesIterated2D/">221 : Stokes iterated penalty method 2D</a></li><li><a class="tocitem" href="../Example222_PressureRobustness2D/">222 : Pressure-robustness 2D</a></li><li><a class="tocitem" href="../Example223_StokesHdivDG2D/">223 : Stokes Hdiv-DG 2D</a></li><li><a class="tocitem" href="../Example224_StokesSVRTEnrichment/">224 : Stokes <span>$SV + RT enrichment$</span></a></li><li><a class="tocitem" href="../Example225_NavierStokesAnderson2D/">225 : Navier-Stokes Lid-driven cavity + Anderson Acceleration</a></li><li><a class="tocitem" href="../Example226_StokesTransient2D/">226 : Stokes Transient 2D</a></li><li><a class="tocitem" href="../Example227_FlowTransport2D/">227 : Flow + Transport 2D</a></li><li><a class="tocitem" href="../Example230_FlowAroundCylinder2D/">230 : Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example231_TransientFlowAroundCylinder2D/">231 : Transient Flow around a cylinder 2D</a></li><li><a class="tocitem" href="../Example235_NaturalConvectionTriangle2D/">235 : Natural Convection Triangle 2D</a></li><li><a class="tocitem" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D</a></li><li><a class="tocitem" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D</a></li><li><a class="tocitem" href="../Example250_LevelSetMethod2D/">250 : Level Set Method 2D</a></li><li><a class="tocitem" href="../Example260_CahnHilliard2D/">260 : Cahn-Hilliard Equations 2D</a></li><li><a class="tocitem" href="../Example301_Poisson3D/">301 : Poisson-Problem 3D</a></li><li><a class="tocitem" href="../Example302_BestapproximationHdiv3D/">302 : Bestapproximation Hdiv 3D</a></li><li><a class="tocitem" href="../ExampleA01_RationalMassMatrix/">A01 : Rational Mass Matrix</a></li><li><a class="tocitem" href="../ExampleA02_CommutingInterpolators2D/">A02 : Commuting Interpolators 2D</a></li><li><a class="tocitem" href="../ExampleA03_CommutingInterpolators3D/">A03 : Commuting Interpolators 3D</a></li><li><a class="tocitem" href="../ExampleA04_CustomLinearSolver/">A04 : Custom Linear Solvers</a></li><li><a class="tocitem" href="../ExampleA05_DiffEQ/">A05 : Comparison with DifferentialEquations.jl</a></li><li class="is-active"><a class="tocitem" href>A06 : Local Equilibrated Fluxes 2D</a></li><li><a class="tocitem" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes</a></li><li><a class="tocitem" href="../ExampleA08_BasisPlotter/">A08 : Basis-Plotter</a></li><li><a class="tocitem" href="../ExampleA09_PoissonLowLevel/">A09 : Poisson-Problem with low level structures</a></li><li><a class="tocitem" href="../ExampleA10_PoissonPeriodic/">A10 : Poisson-Problem with periodic boundary</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>A06 : Local Equilibrated Fluxes 2D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>A06 : Local Equilibrated Fluxes 2D</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/blob/master/docs/src/examples/ExampleA06_LocalEquilibratedFluxes2D.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="A06-:-Local-Equilibrated-Fluxes-2D"><a class="docs-heading-anchor" href="#A06-:-Local-Equilibrated-Fluxes-2D">A06 : Local Equilibrated Fluxes 2D</a><a id="A06-:-Local-Equilibrated-Fluxes-2D-1"></a><a class="docs-heading-anchor-permalink" href="#A06-:-Local-Equilibrated-Fluxes-2D" title="Permalink"></a></h1><p>(<a href="https://github.com/chmerdon/GradientRobustMultiPhysics.jl/raw/master/examples/ExampleA06_LocalEquilibratedFluxes2D.jl">source code</a>)</p><p>This example computes a local equilibration error estimator for the <span>$H^1$</span> error of some <span>$H^1$</span>-conforming approximation <span>$u_h$</span> to the solution <span>$u$</span> of some Poisson problem <span>$-\Delta u = f$</span> on an L-shaped domain, i.e.</p><p class="math-container">\[\eta^2(\sigma_h) := \| \sigma_h - \nabla u_h \|^2_{L^2(T)}\]</p><p>where <span>$\sigma_h$</span> discretisates the exact <span>$\sigma$</span> in the dual mixed problem</p><p class="math-container">\[\sigma - \nabla u = 0
 \quad \text{and} \quad
 \mathrm{div}(\sigma) + f = 0\]</p><p>by some local equilibration strategy, see reference below for details.</p><p>This examples demonstrates the use of low-level structures to assemble individual problems and a strategy to solve several small problems in parallel by use of non-overlapping node patch groups.</p><div class="admonition is-category-reference"><header class="admonition-header">Reference</header><div class="admonition-body"><p>&#39;&#39;A posteriori error estimates for efficiency and error control in numerical simulations&#39;&#39; Lecture Notes by M. Vohralik <a href="https://who.rocq.inria.fr/Martin.Vohralik/Enseig/APost/a_posteriori.pdf">&gt;Link&lt;</a></p></div></div><pre><code class="language-julia hljs">module ExampleA06_LocalEquilibratedFluxes2D
 
@@ -334,206 +334,206 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 21)
 [ Info: overall residual = 1.076401158743041e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.736782638s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.898755621s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.001211513s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.001568362s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.001034811s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.001323152s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 43)
-[ Info: overall residual = 1.5100665727558131e-15
+[ Info: overall residual = 1.5592607100143473e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.001744519s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.002200785s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.002335326s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.002866411s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.001488016s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.001886173s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.001751819s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.002187185s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.000617907s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.000852933s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 66)
-[ Info: overall residual = 1.461852203983726e-15
+[ Info: overall residual = 1.7505826822829505e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.003673639s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.004411371s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.001969522s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.002485596s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.003444637s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.004284566s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.003282036s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.004113559s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 92)
-[ Info: overall residual = 2.1354213470239682e-15
+[ Info: overall residual = 2.1494000908616575e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.005632661s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.006996871s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.000995711s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.001388054s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.005200556s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.006536453s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.005117455s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.006337946s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.000709808s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.000988038s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 118)
-[ Info: overall residual = 1.7684244523575197e-15
+[ Info: overall residual = 2.5176999872823827e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.006929275s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.008321223s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.001990122s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.002558499s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.007319679s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.008709338s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.006358369s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.007773902s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 144)
-[ Info: overall residual = 2.7985772921421596e-15
+[ Info: overall residual = 3.143265326249717e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.008704494s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.010506107s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.002063522s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.002496997s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.008388791s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.010380502s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.00830079s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.010063891s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 209)
-[ Info: overall residual = 2.4815666491634552e-15
+[ Info: overall residual = 2.3876879113359915e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.011571425s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.014127448s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.004330246s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.005311706s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.011851328s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.014346256s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.011353322s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.013757633s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.00183982s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.002200486s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 308)
-[ Info: overall residual = 3.20283560215447e-15
+[ Info: overall residual = 3.487925025781605e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.015524767s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.01829641s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.011848427s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.014623667s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.01481926s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.017910595s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.014606058s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.017741388s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.004126745s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.004954292s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 376)
-[ Info: overall residual = 4.822631726370404e-15
+[ Info: overall residual = 4.816810770932452e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.018471499s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.022176761s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.014033251s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.016967658s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.020637322s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.024852664s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.01764689s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.02161954s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.003062733s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.003701345s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 504)
-[ Info: overall residual = 4.240718523958502e-15
+[ Info: overall residual = 5.127112797235328e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.025205371s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.030775704s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.020322019s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.024681566s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.025862879s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.030837006s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.02599378s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.031396528s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.002913732s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.003660743s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 797)
-[ Info: overall residual = 5.516487836227995e-15
+[ Info: overall residual = 5.707881889398438e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.071812074s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.046846033s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.038000909s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.08001293s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.041271345s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.049892652s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.035789086s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.043116386s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.004311746s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.00538331s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 1092)
-[ Info: overall residual = 6.2616653746467645e-15
+[ Info: overall residual = 7.315400706631599e-15
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.052767568s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.063710092s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.048303221s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.058632093s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.053309674s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.064590827s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.050028639s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.061066789s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.013356844s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.016378941s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 1540)
-[ Info: overall residual = 8.63154728775347e-15
+[ Info: overall residual = 1.0394323843854769e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.074996608s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.12347073s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.065090302s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.079429707s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.074116098s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.087278914s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.074648705s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.090843654s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.050002239s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.027214565s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 2168)
-[ Info: overall residual = 1.0531957047722167e-14
+[ Info: overall residual = 1.0053721458734567e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.104671528s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.127346982s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.094592019s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.132830197s 
 [ Info:   Starting equilibrating patch group 6 on thread 1... 
-[ Info: Finished equilibration patch group 6 on thread 1 in 0.002474927s 
+[ Info: Finished equilibration patch group 6 on thread 1 in 0.003310529s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.103168612s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.125035792s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.030408228s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.037542069s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.103182411s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.125208799s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 3228)
-[ Info: overall residual = 1.2344958158776227e-14
+[ Info: overall residual = 1.2325674690063401e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.160134126s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.215323524s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.133614839s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.163236386s 
 [ Info:   Starting equilibrating patch group 6 on thread 1... 
-[ Info: Finished equilibration patch group 6 on thread 1 in 0.003875842s 
+[ Info: Finished equilibration patch group 6 on thread 1 in 0.004911392s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.156722989s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.19145929s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.045090886s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.05494295s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.158127504s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.194253199s 
 ┌ Info: ========== Solving Poisson problem ==========
 └ 	Equation (1.1) Poisson equation : u &gt;&gt; u_h (H1P2{1,2}, ndofs = 4776)
-[ Info: overall residual = 1.6523394443251836e-14
+[ Info: overall residual = 1.6991441042497213e-14
 [ Info:   Starting equilibrating patch group 2 on thread 1... 
-[ Info: Finished equilibration patch group 2 on thread 1 in 0.229469773s 
+[ Info: Finished equilibration patch group 2 on thread 1 in 0.280137359s 
 [ Info:   Starting equilibrating patch group 4 on thread 1... 
-[ Info: Finished equilibration patch group 4 on thread 1 in 0.202773285s 
+[ Info: Finished equilibration patch group 4 on thread 1 in 0.267343359s 
 [ Info:   Starting equilibrating patch group 6 on thread 1... 
-[ Info: Finished equilibration patch group 6 on thread 1 in 0.010799716s 
+[ Info: Finished equilibration patch group 6 on thread 1 in 0.013411524s 
 [ Info:   Starting equilibrating patch group 1 on thread 1... 
-[ Info: Finished equilibration patch group 1 on thread 1 in 0.249025783s 
+[ Info: Finished equilibration patch group 1 on thread 1 in 0.282654058s 
 [ Info:   Starting equilibrating patch group 5 on thread 1... 
-[ Info: Finished equilibration patch group 5 on thread 1 in 0.074168499s 
+[ Info: Finished equilibration patch group 5 on thread 1 in 0.09047974s 
 [ Info:   Starting equilibrating patch group 3 on thread 1... 
-[ Info: Finished equilibration patch group 3 on thread 1 in 0.231336293s 
+[ Info: Finished equilibration patch group 3 on thread 1 in 0.281653619s 
 
     ndofs   |   || u - u_h ||    order | || ∇(u - u_h) ||   order |         η          order |  || ∇u - σ_h ||    order |
 ============|==========================|==========================|==========================|==========================|
@@ -552,4 +552,4 @@ end</code></pre><hr/><p><em>This page was generated using <a href="https://githu
       1540  |     4.139e-05      3.74  |     3.177e-03      2.16  |     3.295e-03      2.20  |     8.058e-04      2.66  |
       2168  |     2.488e-05      2.98  |     2.156e-03      2.27  |     2.227e-03      2.29  |     5.414e-04      2.33  |
       3228  |     1.311e-05      3.22  |     1.451e-03      1.99  |     1.494e-03      2.01  |     3.478e-04      2.22  |
-      4776  |     6.827e-06      3.33  |     9.602e-04      2.11  |     9.893e-04      2.11  |     2.199e-04      2.34  |</code></pre><p><img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA05_DiffEQ/">« A05 : Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.19 on <span class="colophon-date" title="Tuesday 28 June 2022 13:16">Tuesday 28 June 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+      4776  |     6.827e-06      3.33  |     9.602e-04      2.11  |     9.893e-04      2.11  |     2.199e-04      2.34  |</code></pre><p><img src="../../images/ExampleA06_LocalEquilibratedFluxes2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../ExampleA05_DiffEQ/">« A05 : Comparison with DifferentialEquations.jl</a><a class="docs-footer-nextpage" href="../ExampleA07_InterpolationBetweenMeshes/">A07 : Interpolation Between Meshes »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.21 on <span class="colophon-date" title="Tuesday 19 July 2022 12:15">Tuesday 19 July 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
