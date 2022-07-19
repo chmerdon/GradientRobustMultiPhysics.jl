@@ -790,6 +790,10 @@ function run_examples()
         println("\n2D PRESSURE_ROBUSTNESS")
         include("../examples/Example222_PressureRobustness2D.jl")
         @test eval(Meta.parse("Example222_PressureRobustness2D.test()")) < 1e-15
+
+        println("\nSV-RT-ENRICHMENT")
+        include("../examples/Example224_StokesSVRTEnrichment.jl")
+        @test eval(Meta.parse("Example224_StokesSVRTEnrichment.test()")) < 1e-13
     end
 end
 
