@@ -196,13 +196,7 @@ function test(; μ = 1e-3, Plotter = nothing)
 
 
         ## generate unstructured grid
-        xgrid = simplexgrid(Triangulate;
-                    points=[0 0 ; 0 1 ; 1 1 ; 1 0]',
-                    bfaces=[1 2 ; 2 3 ; 3 4 ; 4 1 ]',
-                    bfaceregions=[1, 2, 3, 4],
-                    regionpoints=[0.5 0.5;]',
-                    regionnumbers=[1],
-                    regionvolumes=[1.0/8])
+        xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
 
         ## generate FES spaces and solution vector
         if order == 1
