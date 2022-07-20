@@ -49,11 +49,9 @@ function get_flowdata(ν, nonlinear)
     Δu = Δ(u)
     ∇p = ∇(p)
     f = DataFunction((result, x, t) -> (
-            eval_data!(Δu, x, t);
-            result .= -ν * Δu.val;
+            result .= -ν * Δu(x,t);
             if !nonlinear 
-                eval_data!(∇p, x, t)
-                result .+= ∇p.val;
+                result .+= ∇p(x,t);
             end;
         ), [2,2]; name = "f", dependencies = "XT", bonus_quadorder = 6)
     return u, p, ∇(u), f
@@ -196,7 +194,13 @@ function test(; μ = 1e-3, Plotter = nothing)
 
 
         ## generate unstructured grid
-        xgrid = uniform_refine(grid_unitsquare(Triangle2D),3)
+        xgrid = simplexgrid(Triangulate;
+                    points=[0 0 ; 0 1 ; 1 1 ; 1 0]',
+                    bfaces=[1 2 ; 2 3 ; 3 4 ; 4 1 ]',
+                    bfaceregions=[1, 2, 3, 4],
+                    regionpoints=[0.5 0.5;]',
+                    regionnumbers=[1],
+                    regionvolumes=[1.0/8])
 
         ## generate FES spaces and solution vector
         if order == 1
