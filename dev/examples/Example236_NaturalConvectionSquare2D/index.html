@@ -165,27 +165,27 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.11e+00/3.80e-06/4.11e+00
-	      1   | 1.169434e-11 | 1.710197e+03 | 2.56e-01/2.93e-01/5.56e-01
-	      2   | 5.316549e-12 | 1.029414e+03 | 2.44e-01/3.31e-01/5.79e-01
-	      3   | 4.390361e-12 | 6.245192e+02 | 2.41e-01/2.42e-01/4.87e-01
-	      4   | 3.972413e-12 | 3.852044e+02 | 2.39e-01/2.40e-01/4.83e-01
-	      5   | 4.024692e-12 | 2.482485e+02 | 2.39e-01/2.50e-01/4.93e-01
-	      6   | 4.016058e-12 | 1.980286e+02 | 2.39e-01/2.23e-01/4.66e-01
-	      7   | 4.163604e-12 | 1.111594e+02 | 2.40e-01/2.55e-01/5.00e-01
-	      8   | 4.106407e-12 | 6.100656e+01 | 2.39e-01/2.68e-01/5.12e-01
-	    total |                             | 6.05e+00/2.10e+00/8.21e+00
+	    init  |                             | 5.81e+00/4.30e-06/5.81e+00
+	      1   | 1.169593e-11 | 1.710197e+03 | 3.13e-01/7.17e-01/1.04e+00
+	      2   | 5.376810e-12 | 1.029414e+03 | 2.93e-01/3.24e-01/6.22e-01
+	      3   | 4.365558e-12 | 6.245192e+02 | 3.05e-01/3.24e-01/6.34e-01
+	      4   | 4.092836e-12 | 3.852044e+02 | 2.92e-01/2.70e-01/5.67e-01
+	      5   | 3.877222e-12 | 2.482485e+02 | 2.99e-01/2.93e-01/5.97e-01
+	      6   | 4.030183e-12 | 1.980286e+02 | 2.85e-01/2.60e-01/5.50e-01
+	      7   | 4.015658e-12 | 1.111594e+02 | 3.01e-01/2.68e-01/5.74e-01
+	      8   | 3.987872e-12 | 6.100656e+01 | 2.86e-01/2.85e-01/5.76e-01
+	    total |                             | 8.18e+00/2.74e+00/1.10e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 9.1875e-02 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.5528e+00 	| 5.1624e+05 	| 7.6097e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 2.1798e-02 	| 1.9619e+06 	| 1.9619e+06 	| (div(v),q)
-│ 	LHS[1,3][1] 	| 1.6998e+00 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.2200e+00 	| 5.7360e+05 	| 8.1259e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 1.2946e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 2.5191e-01 	| 5.7360e+05 	| 6.3986e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
+│ 	LHS[1,1][1] 	| 1.1104e-01 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 1.8816e+00 	| 5.1624e+05 	| 7.6097e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 2.8263e-02 	| 1.9619e+06 	| 1.9619e+06 	| (div(v),q)
+│ 	LHS[1,3][1] 	| 2.7047e+00 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.8636e+00 	| 5.7360e+05 	| 8.1259e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.6033e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 3.0849e-01 	| 5.7360e+05 	| 6.3986e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
 ┌ Info: ========== Solving natural convection problem ==========
 │ 	Equation (1.1) momentum equation : u &gt;&gt; v_h (H1BR{2}, ndofs = 10434)
 │ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 4096)
@@ -193,20 +193,20 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.28e-01/3.20e-06/4.28e-01
-	      1   | 4.036917e-12 | 3.366297e+00 | 2.38e-01/2.70e-01/5.14e-01
-	      2   | 4.022511e-12 | 6.899417e-03 | 2.38e-01/2.47e-01/4.89e-01
-	      3   | 3.862878e-12 | 4.473130e-07 | 2.39e-01/2.49e-01/4.92e-01
-	      4   | 3.969568e-12 | 4.091917e-12 | 2.43e-01/2.46e-01/4.94e-01
-	    total |                             | 1.39e+00/1.01e+00/2.43e+00
+	    init  |                             | 5.22e-01/3.40e-06/5.22e-01
+	      1   | 4.057918e-12 | 3.366297e+00 | 2.64e-01/3.07e-01/5.78e-01
+	      2   | 4.013509e-12 | 6.899417e-03 | 2.48e-01/2.69e-01/5.24e-01
+	      3   | 3.897177e-12 | 4.473131e-07 | 2.61e-01/2.64e-01/5.30e-01
+	      4   | 3.937999e-12 | 4.209496e-12 | 2.65e-01/2.90e-01/5.61e-01
+	    total |                             | 1.56e+00/1.13e+00/2.73e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 8.1487e-02 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 8.6912e-01 	| 5.1624e+05 	| 6.3402e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 2.0834e-02 	| 1.9619e+06 	| 1.9619e+06 	| (div(v),q)
-│ 	LHS[1,3][1] 	| 6.4938e-02 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.1026e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 1.2171e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 1.2142e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.21 on <span class="colophon-date" title="Wednesday 20 July 2022 10:48">Wednesday 20 July 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 1.0325e-01 	| 7.1589e+06 	| 7.1589e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 9.4713e-01 	| 5.1624e+05 	| 6.3402e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 2.8882e-02 	| 1.9619e+06 	| 1.9619e+06 	| (div(v),q)
+│ 	LHS[1,3][1] 	| 8.9453e-02 	| 2.8874e+06 	| 2.8874e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.3659e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.6040e-02 	| 6.5885e+05 	| 6.5885e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 1.3296e-01 	| 5.7360e+05 	| 2.8680e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]</code></pre><p><img src="../../images/Example236_NaturalConvectionSquare2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example235_NaturalConvectionTriangle2D/">« 235 : Natural Convection Triangle 2D</a><a class="docs-footer-nextpage" href="../Example240_CompressibleStokes2D/">240 : Compressible Stokes 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.21 on <span class="colophon-date" title="Wednesday 20 July 2022 11:19">Wednesday 20 July 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

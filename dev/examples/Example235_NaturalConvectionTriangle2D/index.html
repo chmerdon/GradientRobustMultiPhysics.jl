@@ -169,26 +169,26 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 7.42e+00/3.70e-06/7.42e+00
-	      1   | 7.503909e-12 | 9.615916e+02 | 1.65e+00/2.33e-01/1.89e+00
-	      2   | 9.520283e-12 | 5.931504e+02 | 2.42e-01/2.81e-01/5.49e-01
-	      3   | 7.916694e-12 | 6.568060e+02 | 2.36e-01/2.72e-01/5.13e-01
-	      4   | 8.255649e-12 | 3.990824e+02 | 2.37e-01/2.39e-01/4.80e-01
-	      5   | 7.334596e-12 | 2.340174e+02 | 2.36e-01/2.51e-01/4.92e-01
-	      6   | 7.076259e-12 | 1.387982e+02 | 2.37e-01/2.30e-01/4.72e-01
-	      7   | 6.990516e-12 | 8.267079e+01 | 2.39e-01/2.59e-01/5.02e-01
-	    total |                             | 1.05e+01/1.77e+00/1.24e+01
+	    init  |                             | 9.15e+00/3.90e-06/9.15e+00
+	      1   | 7.363057e-12 | 9.615916e+02 | 1.93e+00/3.49e-01/2.28e+00
+	      2   | 9.714639e-12 | 5.931504e+02 | 3.28e-01/3.52e-01/6.86e-01
+	      3   | 7.978807e-12 | 6.568060e+02 | 2.84e-01/3.38e-01/6.29e-01
+	      4   | 8.156717e-12 | 3.990824e+02 | 2.96e-01/3.08e-01/6.09e-01
+	      5   | 7.334999e-12 | 2.340174e+02 | 2.61e-01/3.01e-01/5.66e-01
+	      6   | 7.113541e-12 | 1.387982e+02 | 2.80e-01/2.78e-01/5.63e-01
+	      7   | 6.764794e-12 | 8.267079e+01 | 2.72e-01/2.93e-01/5.71e-01
+	    total |                             | 1.28e+01/2.22e+00/1.51e+01
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 8.6955e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.3661e+00 	| 5.1624e+05 	| 7.0975e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 1.1984e+00 	| 1.0832e+06 	| 1.0832e+06 	| (div(v),q)
-│ 	LHS[1,3][1] 	| 2.4427e+00 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.3158e+00 	| 5.7360e+05 	| 8.7961e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 1.2635e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 2.2450e-01 	| 5.7360e+05 	| 5.8284e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
+│ 	LHS[1,1][1] 	| 9.9601e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 1.5699e+00 	| 5.1624e+05 	| 7.0975e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 1.4696e+00 	| 1.0832e+06 	| 1.0832e+06 	| (div(v),q)
+│ 	LHS[1,3][1] 	| 2.9780e+00 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.9634e+00 	| 5.7360e+05 	| 8.7961e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.5278e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 2.7036e-01 	| 5.7360e+05 	| 5.8284e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
 ┌ Info: ========== Solving natural convection problem ==========
 │ 	Equation (1.1) momentum equation : u &gt;&gt; v_h (H1BR{2}, ndofs = 10530)
 │ 	Equation (1.2) incompressibility constraint : p &gt;&gt; p_h (L2P0{1} (broken), ndofs = 4096)
@@ -196,22 +196,22 @@ SOLVER-CONFIGURATION
 
 	ITERATION |  LSRESIDUAL  |  NLRESIDUAL  | TIME ASSEMBLY/SOLVE/TOTAL (s)
 	-----------------------------------------------------------------------
-	    init  |                             | 4.30e-01/3.10e-06/4.31e-01
-	      1   | 6.907411e-12 | 2.205491e+01 | 2.38e-01/2.78e-01/5.22e-01
-	      2   | 6.847721e-12 | 1.839015e+00 | 2.44e-01/2.38e-01/4.86e-01
-	      3   | 6.721596e-12 | 9.514267e-03 | 2.39e-01/2.28e-01/4.71e-01
-	      4   | 6.917912e-12 | 3.288516e-07 | 2.41e-01/2.44e-01/4.90e-01
-	      5   | 6.782614e-12 | 7.281309e-12 | 2.39e-01/2.65e-01/5.08e-01
-	    total |                             | 1.63e+00/1.25e+00/2.92e+00
+	    init  |                             | 4.97e-01/3.90e-06/4.97e-01
+	      1   | 6.870201e-12 | 2.205491e+01 | 2.68e-01/3.71e-01/6.49e-01
+	      2   | 6.985939e-12 | 1.839015e+00 | 2.62e-01/2.78e-01/5.46e-01
+	      3   | 6.904900e-12 | 9.514267e-03 | 2.66e-01/2.85e-01/5.56e-01
+	      4   | 6.796168e-12 | 3.288516e-07 | 2.69e-01/3.27e-01/6.02e-01
+	      5   | 6.916146e-12 | 7.316572e-12 | 2.85e-01/2.81e-01/5.72e-01
+	    total |                             | 1.85e+00/1.54e+00/3.44e+00
 
 ┌ Info: =================================== STATISTICS ===================================
 │ 	op position 	| runtime (s) 	| last alloc 	| total alloc 	| op name
 │ 	----------------------------------------------------------------------------------
-│ 	LHS[1,1][1] 	| 8.0166e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
-│ 	LHS[1,1][2] 	| 1.0442e+00 	| 5.1624e+05 	| 3.0974e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
-│ 	LHS[1,2][1] 	| 2.0357e-02 	| 1.0832e+06 	| 1.0832e+06 	| (div(v),q)
-│ 	LHS[1,3][1] 	| 6.3822e-02 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
-│ 	LHS[3,1][1] 	| 2.5484e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
-│ 	LHS[3,3][1] 	| 1.2665e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
-└ 	LHS[3,3][2] 	| 1.4503e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
-	Nu = 13.978023716648316</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.21 on <span class="colophon-date" title="Wednesday 20 July 2022 10:48">Wednesday 20 July 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│ 	LHS[1,1][1] 	| 9.0457e-02 	| 3.6023e+06 	| 3.6023e+06 	| (∇u,∇v)
+│ 	LHS[1,1][2] 	| 1.1748e+00 	| 5.1624e+05 	| 3.0974e+06 	| ((R(u) ⋅ ∇) u, R(v)) [Newton] [∂u]
+│ 	LHS[1,2][1] 	| 2.6592e-02 	| 1.0832e+06 	| 1.0832e+06 	| (div(v),q)
+│ 	LHS[1,3][1] 	| 8.1869e-02 	| 2.8887e+06 	| 2.8887e+06 	| -Ra v⋅g T
+│ 	LHS[3,1][1] 	| 2.8784e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂u]
+│ 	LHS[3,3][1] 	| 1.4945e-02 	| 6.5971e+05 	| 6.5971e+05 	| ∇(T)⋅∇(V)
+└ 	LHS[3,3][2] 	| 1.6164e-01 	| 5.7360e+05 	| 3.4416e+06 	| (R(u)⋅∇(T)) V [Newton] [∂T]
+	Nu = 13.978023716648314</code></pre><p><img src="../../images/Example235_NaturalConvectionTriangle2D_1.png" alt/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Example231_TransientFlowAroundCylinder2D/">« 231 : Transient Flow around a cylinder 2D</a><a class="docs-footer-nextpage" href="../Example236_NaturalConvectionSquare2D/">236 : Natural Convection Square 2D »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.21 on <span class="colophon-date" title="Wednesday 20 July 2022 11:19">Wednesday 20 July 2022</span>. Using Julia version 1.7.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
