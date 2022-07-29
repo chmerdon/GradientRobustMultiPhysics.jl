@@ -1778,6 +1778,14 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
             end
         end    
 
+        # PREPARE GLOBALCONSTRAINTS
+        for j = 1 : length(PDE.GlobalConstraints)
+            if PDE.GlobalConstraints[j].component in subiterations[s]
+                additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],x[s]; current_equations = subiterations[s])
+                append!(fixed_dofs, additional_fixed_dofs)
+            end
+        end
+
         ## START (NONLINEAR) ITERATION(S)
         for iteration = 1 : maxiterations
             statistics[s,4] = iteration.^2 # will be square-rooted later
@@ -1857,6 +1865,14 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                     # add new matrix A
                     add!(S[s],A[s])
                     rhs[s].entries .+= b[s].entries
+                end
+                
+                # PREPARE GLOBALCONSTRAINTS
+                for j = 1 : length(PDE.GlobalConstraints)
+                    if PDE.GlobalConstraints[j].component in subiterations[s]
+                        additional_fixed_dofs = apply_constraint!(A[s],b[s],PDE.GlobalConstraints[j],x[s]; current_equations = subiterations[s])
+                        append!(fixed_dofs, additional_fixed_dofs)
+                    end
                 end
 
                 # CHECK NONLINEAR RESIDUAL

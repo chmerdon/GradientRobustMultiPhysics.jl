@@ -50,7 +50,7 @@ combines specified degrees of freedom of two unknown (can be the same), which al
 """
 struct CombineDofs{T} <: AbstractGlobalConstraint
     name::String
-    componentX::Int                  # component nr for dofsX
+    component::Int                  # component nr for dofsX
     componentY::Int                  # component nr for dofsY
     dofsX::Array{Int,1}     # dofsX that should be the same as dofsY in Y component
     dofsY::Array{Int,1}
@@ -102,7 +102,7 @@ function apply_constraint!(
 
     fixed_dofs = []
 
-    c = Constraint.componentX
+    c = Constraint.component
     c2 = Constraint.componentY
     dofsX = Constraint.dofsX
     dofsY = Constraint.dofsY
@@ -177,14 +177,14 @@ function realize_constraint!(
     Target::FEVector,
     Constraint::CombineDofs)
 
-    c = Constraint.componentX
+    c = Constraint.component
     c2 = Constraint.componentY
     @debug "Moving entries of combined dofs from component $c to component $c2"
 
-    #for dof = 1 : length(Constraint.dofsX)
+    for dof = 1 : length(Constraint.dofsX)
         #Target[c2][Constraint.dofsY[dof]] = Target[c][Constraint.dofsX[dof]]
         #Target[c][Constraint.dofsX[dof]] = Target[c2][Constraint.dofsY[dof]]
-    #end 
+    end 
 end
 
 
