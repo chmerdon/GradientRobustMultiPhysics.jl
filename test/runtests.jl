@@ -794,6 +794,10 @@ function run_examples()
         println("\nSV-RT-ENRICHMENT")
         include("../examples/Example224_StokesSVRTEnrichment.jl")
         @test eval(Meta.parse("Example224_StokesSVRTEnrichment.test()")) < 1e-13
+
+        println("\n2D NSE FIXED-POINT-ITERATIONS")
+        include("../examples/ExampleA11_NavierStokesFixpointIterations.jl")
+        @test eval(Meta.parse("ExampleA11_NavierStokesFixpointIterations.test()")) < 1e-12
     end
 end
 

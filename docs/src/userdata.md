@@ -20,18 +20,21 @@ Also note that all functions are expected to write their result into the first a
 
 ## Data Function
 
-The simplest form of user data is called DataFunction which allows additional dependencies on space or time coordinates. The following tables lists all allowed substrings of "XTRIL"
-and the expected interface of the function provided by the user.
+DataFunctions can be used to define boundary data, right-hand side functions and can be interpolated by the finite element standard interpolations. The have to be conform to the interface
 
+```julia
+function datafunction_kernel!(result,[X,T,I,L])
+    # X = space coordinates
+    # T = time
+    # I = item information (vector with item number (w.r.t. AT), parent number and region  number)
+    # L = local coordinates on item reference domain
+end
+```
 
-| dependency string  | Expected interface                                                     |
-| :----------------: | :--------------------------------------------------------------------- | 
-| ""                 | function f!(result) ... end  (constant data)                           | 
-| "X"                | function f!(result,x) ... end  (space-dependent data)                  | 
-| "T"                | function f!(result,t) ... end  (time-dependent constant-in-space data) | 
-| "XT"               | function f!(result,x,t) ... end  (space and time-dependent data)       |
+```@docs
+DataFunction
+```
 
-DataFunctions can be used to define boundary data, right-hand side functions and can be interpolated by the finite element standard interpolations.
 There are also derivatives defined for DataFunctions that generate another DataFunction where the derivative is calculated via ForwardDiff.
 
 ```@docs
@@ -39,15 +42,9 @@ DataFunction
 ∇
 div
 curl
+Δ 
 ```
 
-## Extended Data Function
-
-There are also ExtendedDataFunction that allow the additional dependencies R (region), I (item number) and L (local coordinates). The dependencies are stated via a string in the constructor that should be a substring of "XTIL". However, extended data functions cannot be used everywhere. The two types will be overhauled and combined in a future update.
-
-```@docs
-ExtendedDataFunction
-```
 
 ## Action
 

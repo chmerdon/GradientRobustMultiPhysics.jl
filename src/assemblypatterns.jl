@@ -616,9 +616,9 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
 
             # generate new quadrature rules on neighbouring cells
             # where quadrature points of face are mapped to quadrature points of cells
-            startEG[j] = EGoffset+j
             qf[EGoffset + j] = SQuadratureRule{T,EGdofitem[j],xrefdim,length(qf4face.xref)}(qf4face.name * " (shape faces)",Array{Array{T,1},1}(undef,length(qf4face.xref)),qf4face.w)
             for k in discontinuous_operators
+                startEG[k] = EGoffset+j
                 xrefFACE2CELL = xrefFACE2xrefCELL(EGdofitem[j])
                 EGface = facetype_of_cellface(EGdofitem[j], 1)
                 xrefFACE2OFACE = xrefFACE2xrefOFACE(EGface)
@@ -628,6 +628,7 @@ function prepare_assembly!(AP::AssemblyPattern{APT,T,AT}, FE::Array{<:FESpace{Tv
                         #println("face $f orientation $orientation : mapping  $(qf4face.xref[i]) to $(qf[EGoffset + j].xref[i])")
                     end
                     basisevaler[EGoffset + j,k,f,orientation] = FEEvaluator(FE[k], operator[k], qf[EGoffset + j]; T = T, AT = dofitemAT[k])
+                    #println("adding evaluator for EG position $(EGoffset+j) and operator $k")
                 end
                 ndofs4EG[k][EGoffset+j] = size(basisevaler[EGoffset + j,k,1,1].cvals,2)
             end

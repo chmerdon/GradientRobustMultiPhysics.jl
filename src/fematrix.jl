@@ -237,8 +237,9 @@ function addblock!(A::FEMatrixBlock{Tv,Ti}, B::FEMatrixBlock{Tv,Ti}; factor = 1,
         for col = B.offsetY+1:B.last_indexY
             arow = col - B.offsetY + A.offsetX
             for r in nzrange(cscmat, col)
-                if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
+                if rows[r] > B.offsetX && rows[r] <= B.last_indexX
                     acol = rows[r] - B.offsetX + A.offsetY
+                    ## add B[rows[r], col] to A[col, rows[r]]
                     _addnz(AM,arow,acol,valsB[r],factor)
                 end
             end
@@ -247,8 +248,9 @@ function addblock!(A::FEMatrixBlock{Tv,Ti}, B::FEMatrixBlock{Tv,Ti}; factor = 1,
         for col = B.offsetY+1:B.last_indexY
             acol = col - B.offsetY + A.offsetY
             for r in nzrange(cscmat, col)
-                if rows[r] >= B.offsetX && rows[r] <= B.last_indexX
+                if rows[r] > B.offsetX && rows[r] <= B.last_indexX
                     arow = rows[r] - B.offsetX + A.offsetX
+                    ## add B[rows[r], col] to A[rows[r], col]
                     _addnz(AM,arow,acol,valsB[r],factor)
                 end
             end
@@ -351,32 +353,34 @@ end
 """
 $(TYPEDSIGNATURES)
 
-Adds matrix-vector product B times b to FEVectorBlock a.
+Adds matrix-vector product B times b (or B' times b if transposed = true) to FEVectorBlock a.
 """
 function addblock_matmul!(a::FEVectorBlock{Tv}, B::FEMatrixBlock{Tv,Ti}, b::FEVectorBlock{Tv}; factor = 1, transposed::Bool = false) where {Tv,Ti}
     cscmat::SparseMatrixCSC{Tv,Ti} = B.entries.cscmatrix
     rows::Array{Ti,1} = rowvals(cscmat)
     valsB::Array{Tv,1} = cscmat.nzval
-    bcol::Int = 0
     row::Int = 0
-    arow::Int = 0
     if transposed
+        brow::Int = 0
+        acol::Int = 0
         for col = B.offsetY+1:B.last_indexY
-            bcol = col-B.offsetY+a.offset
+            acol = col-B.offsetY+a.offset
             for r in nzrange(cscmat, col)
                 row = rows[r]
-                if row >= B.offsetX && row <= B.last_indexX
-                    arow = row - B.offsetX + b.offset
-                    a.entries[bcol] += valsB[r] * b.entries[arow] * factor 
+                if row > B.offsetX && row <= B.last_indexX
+                    brow = row - B.offsetX + b.offset
+                    a.entries[acol] += valsB[r] * b.entries[brow] * factor 
                 end
             end
         end
     else
+        bcol::Int = 0
+        arow::Int = 0
         for col = B.offsetY+1:B.last_indexY
             bcol = col-B.offsetY+b.offset
             for r in nzrange(cscmat, col)
                 row = rows[r]
-                if row >= B.offsetX && row <= B.last_indexX
+                if row > B.offsetX && row <= B.last_indexX
                     arow = row - B.offsetX + a.offset
                     a.entries[arow] += valsB[r] * b.entries[bcol] * factor 
                 end
@@ -403,7 +407,7 @@ function addblock_matmul!(a::AbstractVector{Tv}, B::FEMatrixBlock{Tv,Ti}, b::Abs
             bcol = col-B.offsetY
             for r in nzrange(cscmat, col)
                 row = rows[r]
-                if row >= B.offsetX && row <= B.last_indexX
+                if row > B.offsetX && row <= B.last_indexX
                     arow = row - B.offsetX
                     a[bcol] += valsB[r] * b[arow] * factor 
                 end
@@ -414,7 +418,7 @@ function addblock_matmul!(a::AbstractVector{Tv}, B::FEMatrixBlock{Tv,Ti}, b::Abs
             bcol = col-B.offsetY
             for r in nzrange(cscmat, col)
                 row = rows[r]
-                if row >= B.offsetX && row <= B.last_indexX
+                if row > B.offsetX && row <= B.last_indexX
                     arow = row - B.offsetX
                     a[arow] += valsB[r] * b[bcol] * factor 
                 end
