@@ -1700,14 +1700,27 @@ function advance!(TCS::TimeControlSolver{T,Tt,TiM,Tv,Ti,TIR}, timestep::Real = 1
                 ## update mass matrix and add time derivative
                 TCS.massmatrix_assembler(TCS, s; force = false)
                 add!(A[s], AM[s]; factor = 1.0/timestep)
-                b[s].entries .+= (1.0/timestep) * AM[s].entries * LastIterate.entries
+
+                for k = 1 : nsubitblocks
+                    for j = 1 : nsubitblocks
+                        d = subiterations[s][k]
+                        addblock_matmul!(b[s][j], AM[s][j,k],LastIterate[d]; factor = 1.0/timestep)
+                    end
+                end
+                #b[s].entries .+= (1.0/timestep) * AM[s].entries * LastIterate.entries
                 flush!(A[s].entries)
             else # only update rhs
                 fill!(b[s].entries,0)
                 assemble!(A[s],b[s],PDE,SC,X; equations = subiterations[s], time = TCS.ctime, min_trigger = AssemblyInitial, storage_trigger = AssemblyEachTimeStep, only_rhs = true)
 
                 ## add time derivative
-                b[s].entries .+= (1.0/timestep) * AM[s].entries * LastIterate.entries
+                for k = 1 : nsubitblocks
+                    for j = 1 : nsubitblocks
+                        d = subiterations[s][k]
+                        addblock_matmul!(b[s][j], AM[s][j,k],LastIterate[d]; factor = 1.0/timestep)
+                    end
+                end
+                #b[s].entries .+= (1.0/timestep) * AM[s].entries * LastIterate.entries
             end
         elseif TIR == CrankNicolson # S and A are separate, A[s] contains spacial discretisation of last timestep
 
